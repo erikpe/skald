@@ -7,6 +7,7 @@ from pprint import pprint
 from lexer import Lexer
 from parser import Parser
 from symbols import build_global_symbols
+from typecheck import typecheck_program
 
 
 def main() -> None:
@@ -22,6 +23,11 @@ def main() -> None:
         action="store_true",
         help="Print global symbols and struct layouts",
     )
+    parser.add_argument(
+        "--typecheck",
+        action="store_true",
+        help="Typecheck the parsed program",
+    )
     args = parser.parse_args()
 
     source = Path(args.path).read_text(encoding="utf-8")
@@ -33,6 +39,10 @@ def main() -> None:
     if args.symbols:
         symbols = build_global_symbols(program)
         pprint(symbols)
+    elif args.typecheck:
+        symbols = build_global_symbols(program)
+        typecheck_program(program, symbols)
+        print("Typecheck OK")
     else:
         pprint(program)
 
