@@ -17,7 +17,7 @@ from ast_nodes import (
     Goto,
     If,
     IntLit,
-    Label,
+    LabeledBlock,
     NamedType,
     NullLit,
     Program,
@@ -150,7 +150,7 @@ def _check_stmt(stmt, env: TypeEnv, symbols: GlobalSymbols, ret_ty: Ty) -> None:
     if isinstance(stmt, ExprStmt):
         _check_expr(stmt.expr, env, symbols)
         return
-    if isinstance(stmt, (Label, Goto)):
+    if isinstance(stmt, (Goto, LabeledBlock)):
         return
     raise TypeCheckError(f"Unknown statement type: {type(stmt)}")
 

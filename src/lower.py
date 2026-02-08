@@ -14,7 +14,7 @@ from ast_nodes import (
     Goto,
     If,
     IntLit,
-    Label,
+    LabeledBlock,
     NamedType,
     NullLit,
     Program,
@@ -50,11 +50,8 @@ def _lower_fn(fn: FnDecl) -> FnDecl:
         init = _default_value_expr(fn.ret)
         stmts.append(VarDecl(ret_var, fn.ret, init))
     stmts.extend(lowered_body.stmts)
-    stmts.append(Label(exit_label))
-    if ret_var is not None:
-        stmts.append(Return(Var(ret_var)))
-    else:
-        stmts.append(Return(None))
+    exit_stmts = [Return(Var(ret_var))] if ret_var is not None else [Return(None)]
+    stmts.append(LabeledBlock(exit_label, Block(exit_stmts)))
 
     return FnDecl(fn.name, fn.params, fn.ret, Block(stmts))
 
@@ -94,7 +91,7 @@ def _lower_stmt(stmt, ret_var: Optional[str], exit_label: str) -> List:
         return lowered
     if isinstance(stmt, ExprStmt):
         return [stmt]
-    if isinstance(stmt, (Label, Goto)):
+    if isinstance(stmt, (Goto, LabeledBlock)):
         return [stmt]
     raise ValueError(f"Unsupported statement: {type(stmt)}")
 

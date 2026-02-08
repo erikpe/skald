@@ -1,0 +1,17 @@
+extern fn print_i64(x: i64) -> unit;
+
+fn main() -> i64 {
+  var x: i64 = 0;
+  defer {
+    print_i64(100);
+  }
+
+  if x == 0 {
+    defer {
+      print_i64(200);
+    }
+    return 1;
+  }
+
+  return 2;
+}
