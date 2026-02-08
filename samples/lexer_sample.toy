@@ -1,0 +1,18 @@
+extern fn print_i64(x: i64) -> unit;
+
+struct Pair {
+  a: i64;
+  b: i64;
+}
+
+fn main() -> i64 {
+  var x: i64 = 41;
+  var y: i64 = x + 1;
+  if y == 42 {
+    print_i64(y);
+  } else {
+    print_i64(0);
+  }
+
+  return 0;
+}
