@@ -107,7 +107,17 @@ class ExprStmt:
     expr: Expr
 
 
-Stmt = Block | VarDecl | Defer | If | While | Return | ExprStmt
+@dataclass(frozen=True)
+class Label:
+    name: str
+
+
+@dataclass(frozen=True)
+class Goto:
+    label: str
+
+
+Stmt = Block | VarDecl | Defer | If | While | Return | ExprStmt | Label | Goto
 
 
 # Expressions

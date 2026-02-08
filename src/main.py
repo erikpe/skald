@@ -5,6 +5,7 @@ from pathlib import Path
 from pprint import pprint
 
 from lexer import Lexer
+from lower import lower_program
 from parser import Parser
 from symbols import build_global_symbols
 from typecheck import typecheck_program
@@ -28,6 +29,11 @@ def main() -> None:
         action="store_true",
         help="Typecheck the parsed program",
     )
+    parser.add_argument(
+        "--lower",
+        action="store_true",
+        help="Lower returns to single-exit form (dump lowered AST)",
+    )
     args = parser.parse_args()
 
     source = Path(args.path).read_text(encoding="utf-8")
@@ -43,6 +49,9 @@ def main() -> None:
         symbols = build_global_symbols(program)
         typecheck_program(program, symbols)
         print("Typecheck OK")
+    elif args.lower:
+        lowered = lower_program(program)
+        pprint(lowered)
     else:
         pprint(program)
 
