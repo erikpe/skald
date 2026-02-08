@@ -2,19 +2,29 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from pprint import pprint
 
 from lexer import Lexer
+from parser import Parser
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Lex a source file and print tokens")
+    parser = argparse.ArgumentParser(description="Lex and parse a source file")
     parser.add_argument("path", help="Path to source file")
+    parser.add_argument(
+        "--tokens",
+        action="store_true",
+        help="Print tokens before parsing",
+    )
     args = parser.parse_args()
 
     source = Path(args.path).read_text(encoding="utf-8")
     tokens = Lexer(source).tokenize()
-    for tok in tokens:
-        print(f"{tok.line}:{tok.col} {tok.kind} {tok.lexeme}")
+    if args.tokens:
+        for tok in tokens:
+            print(f"{tok.line}:{tok.col} {tok.kind} {tok.lexeme}")
+    program = Parser(tokens).parse_program()
+    pprint(program)
 
 
 if __name__ == "__main__":
