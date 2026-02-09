@@ -179,6 +179,10 @@ def _type_size_align(
     raise SymbolError(f"Unknown type AST: {type(type_ast)}")
 
 
+def type_size_align(type_ast: TypeAst, symbols: GlobalSymbols) -> tuple[int, int]:
+    return _type_size_align(type_ast, symbols.structs, symbols.struct_layouts, [])
+
+
 def _align_up(value: int, align: int) -> int:
     if align <= 1:
         return value

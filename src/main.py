@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 from pprint import pprint
 
+from codegen import Codegen
 from lexer import Lexer
 from lower import lower_program
 from parser import Parser
@@ -34,6 +35,12 @@ def main() -> None:
         action="store_true",
         help="Lower returns to single-exit form (dump lowered AST)",
     )
+    parser.add_argument(
+        "--emit",
+        nargs="?",
+        const="-",
+        help="Emit x86-64 assembly (optional path, default stdout)",
+    )
     args = parser.parse_args()
 
     source = Path(args.path).read_text(encoding="utf-8")
@@ -52,6 +59,15 @@ def main() -> None:
     elif args.lower:
         lowered = lower_program(program)
         pprint(lowered)
+    elif args.emit is not None:
+        symbols = build_global_symbols(program)
+        typecheck_program(program, symbols)
+        lowered = lower_program(program)
+        asm = Codegen(symbols).emit_program(lowered)
+        if args.emit == "-":
+            print(asm)
+        else:
+            Path(args.emit).write_text(asm, encoding="utf-8")
     else:
         pprint(program)
 
