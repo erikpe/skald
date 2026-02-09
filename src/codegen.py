@@ -101,6 +101,8 @@ class Codegen:
         self.lines = []
         self._emit_line(".intel_syntax noprefix")
         self._emit_line(".text")
+        self._emit_line(".section .note.GNU-stack,\"\",@progbits")
+        self._emit_line(".text")
         for decl in program.decls:
             if isinstance(decl, FnDecl):
                 self._emit_fn(decl)

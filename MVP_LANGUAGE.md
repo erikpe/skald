@@ -223,8 +223,8 @@ Minimal runtime functions (C)
 - realloc(p: *u8, size: u64) -> *u8
 
 Toolchain
-- Emit .s and link with clang/gcc:
-  clang out.s runtime.c -o prog
+- Emit .s and link with gcc:
+  gcc out.s runtime.c -o prog
 - Target Linux x86-64 SysV ABI
 
 

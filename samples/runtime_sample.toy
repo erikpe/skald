@@ -1,0 +1,6 @@
+extern fn print_i64(x: i64) -> unit;
+
+fn main() -> i64 {
+  print_i64(123);
+  return 0;
+}
