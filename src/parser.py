@@ -9,7 +9,7 @@ from ast_nodes import (
     Block,
     BoolLit,
     Call,
-    Defer,
+    DeferCall,
     Expr,
     ExprStmt,
     ExternFnDecl,
@@ -149,8 +149,9 @@ class Parser:
         if self.ts.match(TokenKind.KW_VAR):
             return self._parse_var_decl()
         if self.ts.match(TokenKind.KW_DEFER):
-            block = self._parse_block()
-            return Defer(block)
+            call = self._parse_defer_call()
+            self.ts.consume(TokenKind.SEMI, "Expected ';' after defer call")
+            return DeferCall(call)
         if self.ts.match(TokenKind.KW_IF):
             return self._parse_if()
         if self.ts.match(TokenKind.KW_WHILE):
@@ -323,6 +324,12 @@ class Parser:
             self.ts.consume(TokenKind.RPAREN, "Expected ')' after expression")
             return expr
         raise ParseError(f"Unexpected token {tok.kind} at {tok.line}:{tok.col}")
+
+    def _parse_defer_call(self) -> Call:
+        expr = self._parse_expression()
+        if not isinstance(expr, Call):
+            raise ParseError("defer requires a call expression")
+        return expr
 
     def _is_lvalue(self, expr: Expr) -> bool:
         return isinstance(expr, (Var, Field)) or (

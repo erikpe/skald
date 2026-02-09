@@ -72,7 +72,7 @@ Step 5: Type Checking
 Step 6: Defer Lowering (Single Exit)
 - Add a hidden return slot for non-unit functions.
 - Rewrite return statements to store into ret_slot and jump to fn_exit.
-- Maintain a stack of scopes with defer lists for codegen.
+- Defer is call-form: defer f(args); capture args at registration.
 
 Step 7: Codegen (Intel x86-64)
 - Emit prologue/epilogue and stack allocation.

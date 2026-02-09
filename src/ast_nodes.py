@@ -80,8 +80,8 @@ class VarDecl:
 
 
 @dataclass(frozen=True)
-class Defer:
-    block: Block
+class DeferCall:
+    call: Call
 
 
 @dataclass(frozen=True)
@@ -118,7 +118,7 @@ class LabeledBlock:
     block: Block
 
 
-Stmt = Block | VarDecl | Defer | If | While | Return | ExprStmt | Goto | LabeledBlock
+Stmt = Block | VarDecl | DeferCall | If | While | Return | ExprStmt | Goto | LabeledBlock
 
 
 # Expressions

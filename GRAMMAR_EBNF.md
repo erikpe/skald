@@ -70,7 +70,7 @@ statement    = block
 
 var_decl     = "var" , identifier , ":" , type , "=" , expression , ";" ;
 
-defer_stmt   = "defer" , block ;
+defer_stmt   = "defer" , call_expr , ";" ;
 
 if_stmt      = "if" , expression , block , [ "else" , block ] ;
 
@@ -110,6 +110,8 @@ call_suffix  = "(" , [ arguments ] , ")" ;
 field_suffix = "." , identifier ;
 
 arguments    = expression , { "," , expression } ;
+
+call_expr    = primary , call_suffix ;
 
 primary      = integer
              | "true"

@@ -9,7 +9,7 @@ from ast_nodes import (
     Block,
     BoolLit,
     Call,
-    Defer,
+    DeferCall,
     Expr,
     ExprStmt,
     ExternFnDecl,
@@ -95,7 +95,7 @@ class Codegen:
         self.symbols = symbols
         self.lines: List[str] = []
         self.label_id = 0
-        self.defer_stack: List[List[Block]] = []
+        self.defer_stack: List[List[Call]] = []
 
     def emit_program(self, program: Program) -> str:
         self.lines = []
@@ -154,8 +154,7 @@ class Codegen:
         if isinstance(stmt, VarDecl):
             sizer.allocate(stmt.type_ast)
             return
-        if isinstance(stmt, Defer):
-            self._size_block(stmt.block, sizer)
+        if isinstance(stmt, DeferCall):
             return
         if isinstance(stmt, If):
             self._size_block(stmt.then_block, sizer)
@@ -187,8 +186,8 @@ class Codegen:
             self._emit_expr(stmt.init, env)
             self._store_rax(info.offset, info.type_ast)
             return
-        if isinstance(stmt, Defer):
-            self.defer_stack[-1].append(stmt.block)
+        if isinstance(stmt, DeferCall):
+            self.defer_stack[-1].append(stmt.call)
             return
         if isinstance(stmt, If):
             else_label = self._new_label(".else")
@@ -521,14 +520,14 @@ class Codegen:
             raise CodegenError(f"Unknown struct: {name}")
         return layout
 
-    def _emit_defers(self, defers: List[Block], env: LocalEnv) -> None:
-        for block in reversed(defers):
-            self._emit_block(block, env)
+    def _emit_defers(self, defers: List[Call], env: LocalEnv) -> None:
+        for call in reversed(defers):
+            self._emit_call(call, env)
 
     def _emit_defers_all(self, env: LocalEnv) -> None:
         for scope in reversed(self.defer_stack):
-            for block in reversed(scope):
-                self._emit_block(block, env)
+            for call in reversed(scope):
+                self._emit_call(call, env)
 
     def _push_defer_scope(self) -> None:
         self.defer_stack.append([])

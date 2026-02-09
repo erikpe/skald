@@ -9,7 +9,7 @@ from ast_nodes import (
     Block,
     BoolLit,
     Call,
-    Defer,
+    DeferCall,
     Expr,
     ExprStmt,
     Field,
@@ -115,8 +115,10 @@ def _check_stmt(stmt, env: TypeEnv, symbols: GlobalSymbols, ret_ty: Ty) -> None:
             )
         env.define(stmt.name, var_ty)
         return
-    if isinstance(stmt, Defer):
-        _check_block(stmt.block, env, symbols, ret_ty)
+    if isinstance(stmt, DeferCall):
+        call_ty = _check_call(stmt.call, env, symbols)
+        if not isinstance(call_ty, TyUnit):
+            raise TypeCheckError("defer call must return unit")
         return
     if isinstance(stmt, If):
         cond_ty = _check_expr(stmt.cond, env, symbols)

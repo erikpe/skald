@@ -57,12 +57,13 @@ def main() -> None:
         typecheck_program(program, symbols)
         print("Typecheck OK")
     elif args.lower:
-        lowered = lower_program(program)
+        symbols = build_global_symbols(program)
+        lowered = lower_program(program, symbols)
         pprint(lowered)
     elif args.emit is not None:
         symbols = build_global_symbols(program)
         typecheck_program(program, symbols)
-        lowered = lower_program(program)
+        lowered = lower_program(program, symbols)
         asm = Codegen(symbols).emit_program(lowered)
         if args.emit == "-":
             print(asm)

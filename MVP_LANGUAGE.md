@@ -83,7 +83,7 @@ Examples
 - if / else
 - while
 - return expr; or return; (only in unit-returning functions)
-- defer { ... }
+- defer f(x, y);
 
 ### Expressions
 - Literals: integer, true, false, null
@@ -103,7 +103,8 @@ Memory model (MVP)
 - Pointers are raw and copy by value (no ownership tracking).
 
 Defer
-- defer { ... } registers a block to run when the current lexical scope exits.
+- defer f(x, y); registers a call to run when the current lexical scope exits.
+- Arguments are captured at the point of registration.
 - Defers run in LIFO order per scope.
 - Defers run on normal scope exit and on return that exits the scope.
 - No exceptions in MVP. If a later panic/abort is added, define it as "no defers".
@@ -262,7 +263,7 @@ Suggested test cases
 
 fn main() -> i64 {
   var p: *u8 = malloc(16);
-  defer { free(p); }
+  defer free_ptr(p);
 
   print_i64(123);
   return 0;
