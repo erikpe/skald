@@ -91,11 +91,13 @@ class FrameSizer:
 
 
 class Codegen:
-    def __init__(self, symbols: GlobalSymbols) -> None:
+    def __init__(self, symbols: GlobalSymbols, sources: Dict[str, List[str]]) -> None:
         self.symbols = symbols
+        self.sources = sources
         self.lines: List[str] = []
         self.label_id = 0
         self.defer_stack: List[List[Call]] = []
+        self._last_loc: Optional[tuple[str, int]] = None
 
     def emit_program(self, program: Program) -> str:
         self.lines = []
@@ -182,14 +184,17 @@ class Codegen:
             self._emit_block(stmt, env)
             return
         if isinstance(stmt, VarDecl):
+            self._emit_loc(stmt.span)
             info = env.define(stmt.name, stmt.type_ast)
             self._emit_expr(stmt.init, env)
             self._store_rax(info.offset, info.type_ast)
             return
         if isinstance(stmt, DeferCall):
+            self._emit_loc(stmt.span)
             self.defer_stack[-1].append(stmt.call)
             return
         if isinstance(stmt, If):
+            self._emit_loc(stmt.span)
             else_label = self._new_label(".else")
             end_label = self._new_label(".endif")
             self._emit_expr(stmt.cond, env)
@@ -203,6 +208,7 @@ class Codegen:
             self._emit_line(f"{end_label}:")
             return
         if isinstance(stmt, While):
+            self._emit_loc(stmt.span)
             start_label = self._new_label(".while")
             end_label = self._new_label(".endwhile")
             self._emit_line(f"{start_label}:")
@@ -214,17 +220,21 @@ class Codegen:
             self._emit_line(f"{end_label}:")
             return
         if isinstance(stmt, ExprStmt):
+            self._emit_loc(stmt.span)
             self._emit_expr(stmt.expr, env)
             return
         if isinstance(stmt, Goto):
+            self._emit_loc(stmt.span)
             self._emit_defers_all(env)
             self._emit_line(f"  jmp {stmt.label}")
             return
         if isinstance(stmt, LabeledBlock):
+            self._emit_loc(stmt.span)
             self._emit_line(f"{stmt.label}:")
             self._emit_block(stmt.block, env)
             return
         if isinstance(stmt, Return):
+            self._emit_loc(stmt.span)
             if stmt.value is not None:
                 self._emit_expr(stmt.value, env)
             self._emit_epilogue()
@@ -549,6 +559,29 @@ class Codegen:
 
     def _emit_line(self, line: str) -> None:
         self.lines.append(line)
+
+    def _emit_loc(self, span) -> None:
+        if span is None:
+            return
+        key = (span.filepath, span.line)
+        if self._last_loc == key:
+            return
+        self._last_loc = key
+        line_text = self._source_line(span.filepath, span.line)
+        if line_text is None:
+            self._emit_line(f"  # {span.filepath}:{span.line}:{span.col}")
+            return
+        self._emit_line(
+            f"  # {span.filepath}:{span.line}:{span.col} | {line_text}"
+        )
+
+    def _source_line(self, filepath: str, line: int) -> Optional[str]:
+        lines = self.sources.get(filepath)
+        if lines is None:
+            return None
+        if line <= 0 or line > len(lines):
+            return None
+        return lines[line - 1].rstrip("\n")
 
 
 def _align_up(value: int, align: int) -> int:

@@ -22,6 +22,7 @@ from ast_nodes import (
     NullLit,
     Program,
     Return,
+    Span,
     Unary,
     Var,
     VarDecl,
@@ -282,4 +283,4 @@ def _is_lvalue(expr: Expr) -> bool:
 
 
 def _builtin_named(name: str):
-    return NamedType(name)
+    return NamedType(name, Span("<builtin>", 0, 0))

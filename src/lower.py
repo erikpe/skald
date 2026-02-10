@@ -22,6 +22,7 @@ from ast_nodes import (
     Program,
     PtrType,
     Return,
+    Span,
     StructDecl,
     TypeAst,
     Var,
@@ -58,13 +59,18 @@ class Lowerer:
         lowered_body = self._lower_block(fn.body, ret_var, exit_label, {})
         stmts = []
         if ret_var is not None:
-            init = _default_value_expr(fn.ret)
-            stmts.append(VarDecl(ret_var, fn.ret, init))
+            init = _default_value_expr(fn.ret, fn.span)
+            stmts.append(VarDecl(ret_var, fn.ret, init, fn.span))
         stmts.extend(lowered_body.stmts)
-        exit_stmts = [Return(Var(ret_var))] if ret_var is not None else [Return(None)]
-        stmts.append(LabeledBlock(exit_label, Block(exit_stmts)))
+        exit_span = fn.span
+        exit_stmts = (
+            [Return(Var(ret_var, exit_span), exit_span)]
+            if ret_var is not None
+            else [Return(None, exit_span)]
+        )
+        stmts.append(LabeledBlock(exit_label, Block(exit_stmts, exit_span), exit_span))
 
-        return FnDecl(fn.name, fn.params, fn.ret, Block(stmts))
+        return FnDecl(fn.name, fn.params, fn.ret, Block(stmts, fn.span), fn.span)
 
     def _lower_block(
         self,
@@ -76,7 +82,7 @@ class Lowerer:
         stmts = []
         for stmt in block.stmts:
             stmts.extend(self._lower_stmt(stmt, ret_var, exit_label, env))
-        return Block(stmts)
+        return Block(stmts, block.span)
 
     def _lower_stmt(
         self,
@@ -102,17 +108,22 @@ class Lowerer:
                 if stmt.else_block is not None
                 else None
             )
-            return [If(stmt.cond, then_block, else_block)]
+            return [If(stmt.cond, then_block, else_block, stmt.span)]
         if isinstance(stmt, While):
             body = self._lower_block(stmt.body, ret_var, exit_label, env.copy())
-            return [While(stmt.cond, body)]
+            return [While(stmt.cond, body, stmt.span)]
         if isinstance(stmt, Return):
             lowered = []
             if stmt.value is not None:
                 if ret_var is None:
                     raise ValueError("Return value in unit function")
-                lowered.append(ExprStmt(Assign(Var(ret_var), stmt.value)))
-            lowered.append(Goto(exit_label))
+                lowered.append(
+                    ExprStmt(
+                        Assign(Var(ret_var, stmt.span), stmt.value, stmt.span),
+                        stmt.span,
+                    )
+                )
+            lowered.append(Goto(exit_label, stmt.span))
             return lowered
         if isinstance(stmt, ExprStmt):
             return [stmt]
@@ -141,23 +152,23 @@ class Lowerer:
             self.temp_id += 1
             temp_type = param.type_ast
             env[temp_name] = temp_type
-            lowered_stmts.append(VarDecl(temp_name, temp_type, arg))
-            temp_args.append(Var(temp_name))
+            lowered_stmts.append(VarDecl(temp_name, temp_type, arg, stmt.span))
+            temp_args.append(Var(temp_name, stmt.span))
 
-        lowered_stmts.append(DeferCall(Call(call.callee, temp_args)))
+        lowered_stmts.append(DeferCall(Call(call.callee, temp_args, stmt.span), stmt.span))
         return lowered_stmts
 
 
-def _default_value_expr(type_ast: TypeAst) -> Expr:
+def _default_value_expr(type_ast: TypeAst, span: Span) -> Expr:
     if isinstance(type_ast, PtrType):
-        return NullLit()
+        return NullLit(span)
     if isinstance(type_ast, NamedType):
         if type_ast.name in {"i64", "u64", "i32", "u32"}:
-            return IntLit(0)
+            return IntLit(0, span)
         if type_ast.name == "bool":
-            return BoolLit(False)
+            return BoolLit(False, span)
         if type_ast.name == "unit":
-            return NullLit()
+            return NullLit(span)
         raise ValueError(f"No default value for struct return type: {type_ast.name}")
     raise ValueError(f"Unsupported return type: {type(type_ast)}")
 

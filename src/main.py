@@ -64,7 +64,8 @@ def main() -> None:
         symbols = build_global_symbols(program)
         typecheck_program(program, symbols)
         lowered = lower_program(program, symbols)
-        asm = Codegen(symbols).emit_program(lowered)
+        sources = {args.path: source.splitlines()}
+        asm = Codegen(symbols, sources).emit_program(lowered)
         if args.emit == "-":
             print(asm)
         else:
