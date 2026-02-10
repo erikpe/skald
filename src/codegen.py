@@ -409,6 +409,11 @@ class Codegen:
         self._emit_line(f"  call {expr.callee.name}")
 
     def _emit_assign(self, expr: Assign, env: LocalEnv) -> None:
+        if isinstance(expr.target, Var):
+            info = env.lookup(expr.target.name)
+            self._emit_expr(expr.value, env)
+            self._store_rax(info.offset, info.type_ast)
+            return
         self._emit_addr(expr.target, env)
         self._emit_line("  push rax")
         self._emit_expr(expr.value, env)
