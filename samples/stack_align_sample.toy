@@ -1,0 +1,9 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn foo() -> i64;
+
+fn main() -> i64 {
+  // This forces a call while the left operand is still on the stack.
+  var x: i64 = 1 + foo();
+  print_i64(x);
+  return 0;
+}

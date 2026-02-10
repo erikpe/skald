@@ -79,6 +79,7 @@ Step 7: Codegen (Intel x86-64)
 - Generate assembly for expressions and statements.
 - Implement short-circuit for && and || with labels.
 - Respect SysV ABI for calls.
+- Stack alignment: ensure 16-byte alignment at call sites by inserting a temporary 8-byte pad when needed.
 
 Step 8: Runtime (C)
 - Implement minimal runtime:

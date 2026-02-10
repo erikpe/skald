@@ -98,6 +98,7 @@ class Codegen:
         self.label_id = 0
         self.defer_stack: List[List[Call]] = []
         self._last_loc: Optional[tuple[str, int]] = None
+        self.stack_depth = 0
 
     def emit_program(self, program: Program) -> str:
         self.lines = []
@@ -119,6 +120,7 @@ class Codegen:
         self._emit_line("  mov rbp, rsp")
         if frame_size > 0:
             self._emit_line(f"  sub rsp, {frame_size}")
+        self.stack_depth = 0
 
         env = LocalEnv(self.symbols)
         env.push()
@@ -320,9 +322,9 @@ class Codegen:
             return
 
         self._emit_expr(expr.left, env)
-        self._emit_line("  push rax")
+        self._push_reg("rax")
         self._emit_expr(expr.right, env)
-        self._emit_line("  pop rcx")
+        self._pop_reg("rcx")
 
         if expr.op == "+":
             self._emit_line("  add rcx, rax")
@@ -401,12 +403,16 @@ class Codegen:
 
         for arg in expr.args:
             self._emit_expr(arg, env)
-            self._emit_line("  push rax")
+            self._push_reg("rax")
 
         for i in range(len(expr.args) - 1, -1, -1):
-            self._emit_line(f"  pop {arg_regs[i]}")
+            self._pop_reg(arg_regs[i])
 
+        pad = self._align_for_call()
         self._emit_line(f"  call {expr.callee.name}")
+        if pad:
+            self._emit_line("  add rsp, 8")
+            self.stack_depth -= 8
 
     def _emit_assign(self, expr: Assign, env: LocalEnv) -> None:
         if isinstance(expr.target, Var):
@@ -415,9 +421,9 @@ class Codegen:
             self._store_rax(info.offset, info.type_ast)
             return
         self._emit_addr(expr.target, env)
-        self._emit_line("  push rax")
+        self._push_reg("rax")
         self._emit_expr(expr.value, env)
-        self._emit_line("  pop rcx")
+        self._pop_reg("rcx")
         target_type = self._lvalue_type(expr.target, env)
         self._store_indirect_from_rax("rcx", target_type)
 
@@ -584,6 +590,21 @@ class Codegen:
 
     def _emit_line(self, line: str) -> None:
         self.lines.append(line)
+
+    def _push_reg(self, reg: str) -> None:
+        self._emit_line(f"  push {reg}")
+        self.stack_depth += 8
+
+    def _pop_reg(self, reg: str) -> None:
+        self._emit_line(f"  pop {reg}")
+        self.stack_depth -= 8
+
+    def _align_for_call(self) -> bool:
+        if self.stack_depth % 16 == 0:
+            return False
+        self._emit_line("  sub rsp, 8")
+        self.stack_depth += 8
+        return True
 
     def _emit_loc(self, span) -> None:
         if span is None:
