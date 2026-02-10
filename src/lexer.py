@@ -6,9 +6,10 @@ from tokens import KEYWORDS, Token, TokenKind
 
 
 class Lexer:
-    def __init__(self, source: str) -> None:
+    def __init__(self, source: str, filepath: str) -> None:
         self.source = source
         self.length = len(source)
+        self.filepath = filepath
         self.index = 0
         self.line = 1
         self.col = 1
@@ -18,7 +19,7 @@ class Lexer:
         while True:
             self._skip_whitespace_and_comments()
             if self._is_at_end():
-                tokens.append(Token(TokenKind.EOF, "", self.line, self.col))
+                tokens.append(Token(TokenKind.EOF, "", self.filepath, self.line, self.col))
                 return tokens
 
             start_line = self.line
@@ -28,18 +29,18 @@ class Lexer:
             if ch.isalpha() or ch == "_":
                 ident = ch + self._consume_while(self._is_ident_tail)
                 kind = KEYWORDS.get(ident, TokenKind.IDENT)
-                tokens.append(Token(kind, ident, start_line, start_col))
+                tokens.append(Token(kind, ident, self.filepath, start_line, start_col))
                 continue
 
             if ch.isdigit():
                 num = ch + self._consume_while(str.isdigit)
-                tokens.append(Token(TokenKind.INT, num, start_line, start_col))
+                tokens.append(Token(TokenKind.INT, num, self.filepath, start_line, start_col))
                 continue
 
             matched = self._match_operator_or_punct(ch)
             if matched is not None:
                 kind, lexeme = matched
-                tokens.append(Token(kind, lexeme, start_line, start_col))
+                tokens.append(Token(kind, lexeme, self.filepath, start_line, start_col))
                 continue
 
             raise ValueError(f"Unexpected character '{ch}' at {start_line}:{start_col}")

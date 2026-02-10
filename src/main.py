@@ -44,10 +44,10 @@ def main() -> None:
     args = parser.parse_args()
 
     source = Path(args.path).read_text(encoding="utf-8")
-    tokens = Lexer(source).tokenize()
+    tokens = Lexer(source, args.path).tokenize()
     if args.tokens:
         for tok in tokens:
-            print(f"{tok.line}:{tok.col} {tok.kind} {tok.lexeme}")
+            print(f"{tok.filepath}:{tok.line}:{tok.col} {tok.kind} {tok.lexeme}")
     program = Parser(tokens).parse_program()
     if args.symbols:
         symbols = build_global_symbols(program)

@@ -76,5 +76,6 @@ KEYWORDS: Dict[str, TokenKind] = {
 class Token:
     kind: TokenKind
     lexeme: str
+    filepath: str
     line: int
     col: int
