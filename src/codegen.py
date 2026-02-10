@@ -175,7 +175,24 @@ class Codegen:
         self._push_defer_scope()
         for stmt in block.stmts:
             self._emit_stmt(stmt, env)
-        self._emit_defers(self.defer_stack[-1], env)
+        if not self._is_synthetic_exit_tail(block):
+            self._emit_defers(self.defer_stack[-1], env)
+        self._pop_defer_scope(env)
+        env.pop()
+
+    def _is_synthetic_exit_tail(self, block: Block) -> bool:
+        if not block.stmts:
+            return False
+        last = block.stmts[-1]
+        if isinstance(last, LabeledBlock) and last.label.startswith("__fn_exit_"):
+            return True
+        return False
+
+    def _emit_block_no_defers(self, block: Block, env: LocalEnv) -> None:
+        env.push()
+        self._push_defer_scope()
+        for stmt in block.stmts:
+            self._emit_stmt(stmt, env)
         self._pop_defer_scope(env)
         env.pop()
 
@@ -231,7 +248,10 @@ class Codegen:
         if isinstance(stmt, LabeledBlock):
             self._emit_loc(stmt.span)
             self._emit_line(f"{stmt.label}:")
-            self._emit_block(stmt.block, env)
+            if stmt.label.startswith("__fn_exit_"):
+                self._emit_block_no_defers(stmt.block, env)
+            else:
+                self._emit_block(stmt.block, env)
             return
         if isinstance(stmt, Return):
             self._emit_loc(stmt.span)

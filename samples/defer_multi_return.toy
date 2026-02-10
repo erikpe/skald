@@ -1,9 +1,13 @@
 extern fn print_i64(x: i64) -> unit;
 
+fn foo() -> i64 {
+    return 999;
+}
+
 fn main() -> i64 {
   var x: i64 = 100;
   defer print_i64(x + 1);
-  x = 200;
+  x = foo();
   defer print_i64(x + 2);
 
   print_i64(333);
