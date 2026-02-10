@@ -1,0 +1,20 @@
+extern fn print_i64(x: i64) -> unit;
+
+fn main() -> i64 {
+  var n: i64 = 2;
+  while n <= 1000 {
+    var d: i64 = 2;
+    var is_prime: bool = true;
+    while d * d <= n {
+      if n % d == 0 {
+        is_prime = false;
+        d = n;
+      }
+      d = d + 1;
+    }
+    if is_prime {
+      print_i64(n);
+    }
+    n = n + 1;
+  }
+}
