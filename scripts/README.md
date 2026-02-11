@@ -10,3 +10,7 @@ build.ps1
 
 Notes
 - Requires gcc inside WSL2 or Linux.
+
+run_golden.sh
+- Run inside WSL2 or Linux
+- Usage: ./run_golden.sh

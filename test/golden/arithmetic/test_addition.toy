@@ -1,0 +1,46 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn print_u64(x: u64) -> unit;
+
+fn main() -> i64 {
+  var i64_min: i64 = -9223372036854775808;
+  var i64_max: i64 = 9223372036854775807;
+  var i64_zero: i64 = 0;
+  var i64_one: i64 = 1;
+  var i64_neg1: i64 = -1;
+  var i64_mid: i64 = 123456789;
+
+  var r1: i64 = i64_zero + i64_zero;
+  var r2: i64 = i64_min + i64_one;
+  var r3: i64 = i64_max + i64_neg1;
+  var r4: i64 = i64_mid + i64_one;
+  var r5: i64 = i64_neg1 + i64_neg1;
+  var r6: i64 = i64_one + i64_zero;
+
+  print_i64(r1);
+  print_i64(r2);
+  print_i64(r3);
+  print_i64(r4);
+  print_i64(r5);
+  print_i64(r6);
+
+  var u64_zero: u64 = 0;
+  var u64_one: u64 = 1;
+  var u64_max: u64 = 18446744073709551615;
+  var u64_mid: u64 = 1000000000;
+  var u64_big: u64 = 4000000000000000000;
+
+  var u1: u64 = u64_zero + u64_zero;
+  var u2: u64 = u64_max + u64_zero;
+  var u3: u64 = u64_one + u64_one;
+  var u4: u64 = u64_mid + u64_one;
+  var u5: u64 = u64_mid + u64_mid;
+  var u6: u64 = u64_big + u64_one;
+
+  print_u64(u1);
+  print_u64(u2);
+  print_u64(u3);
+  print_u64(u4);
+  print_u64(u5);
+  print_u64(u6);
+  return 0;
+}

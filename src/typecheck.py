@@ -32,6 +32,7 @@ from symbols import GlobalSymbols
 from typesys import (
     Ty,
     TyBool,
+    TyIntLit,
     TyNull,
     TyPtr,
     TyStruct,
@@ -160,7 +161,7 @@ def _check_stmt(stmt, env: TypeEnv, symbols: GlobalSymbols, ret_ty: Ty) -> None:
 
 def _check_expr(expr: Expr, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
     if isinstance(expr, IntLit):
-        return resolve_type(_builtin_named("i64"), symbols)
+        return TyIntLit(expr.value)
     if isinstance(expr, BoolLit):
         return resolve_type(_builtin_named("bool"), symbols)
     if isinstance(expr, NullLit):
@@ -205,6 +206,8 @@ def _check_unary(expr: Unary, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
     if expr.op == "-":
         if not is_int(inner):
             raise TypeCheckError(f"Unary '-' expects int, got {type_name(inner)}")
+        if isinstance(inner, TyIntLit):
+            return TyIntLit(-inner.value)
         return inner
     if expr.op == "!":
         if not is_bool(inner):
@@ -226,13 +229,11 @@ def _check_binary(expr: Binary, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
     right = _check_expr(expr.right, env, symbols)
 
     if expr.op in {"+", "-", "*", "/", "%"}:
-        if not is_int(left) or not is_int(right) or left != right:
-            raise TypeCheckError("Arithmetic operators require matching integer types")
-        return left
+        return _int_bin_result(expr.op, left, right)
 
     if expr.op in {"<", "<=", ">", ">="}:
-        if not is_int(left) or not is_int(right) or left != right:
-            raise TypeCheckError("Relational operators require matching integer types")
+        if not is_int(left) or not is_int(right):
+            raise TypeCheckError("Relational operators require integer types")
         return TyBool()
 
     if expr.op in {"==", "!="}:
@@ -284,3 +285,34 @@ def _is_lvalue(expr: Expr) -> bool:
 
 def _builtin_named(name: str):
     return NamedType(name, Span("<builtin>", 0, 0))
+
+
+def _int_bin_result(op: str, left: Ty, right: Ty) -> Ty:
+    if isinstance(left, TyIntLit) and isinstance(right, TyIntLit):
+        value = _eval_int_bin(op, left.value, right.value)
+        return TyIntLit(value)
+    if isinstance(left, TyIntLit) and is_int(right):
+        return right
+    if isinstance(right, TyIntLit) and is_int(left):
+        return left
+    if is_int(left) and is_int(right) and type(left) is type(right):
+        return left
+    raise TypeCheckError("Arithmetic operators require matching integer types")
+
+
+def _eval_int_bin(op: str, left: int, right: int) -> int:
+    if op == "+":
+        return left + right
+    if op == "-":
+        return left - right
+    if op == "*":
+        return left * right
+    if op == "/":
+        if right == 0:
+            return 0
+        return int(left / right)
+    if op == "%":
+        if right == 0:
+            return 0
+        return left % right
+    raise TypeCheckError(f"Unknown int op: {op}")

@@ -47,6 +47,11 @@ class TyNull:
 
 
 @dataclass(frozen=True)
+class TyIntLit:
+    value: int
+
+
+@dataclass(frozen=True)
 class TyPtr:
     inner: Ty
 
@@ -56,7 +61,18 @@ class TyStruct:
     name: str
 
 
-Ty = TyI64 | TyU64 | TyI32 | TyU32 | TyBool | TyUnit | TyNull | TyPtr | TyStruct
+Ty = (
+    TyI64
+    | TyU64
+    | TyI32
+    | TyU32
+    | TyBool
+    | TyUnit
+    | TyNull
+    | TyIntLit
+    | TyPtr
+    | TyStruct
+)
 
 
 _BUILTIN_TYPES: Dict[str, Ty] = {
@@ -83,7 +99,7 @@ def resolve_type(type_ast: TypeAst, symbols: GlobalSymbols) -> Ty:
 
 
 def is_int(ty: Ty) -> bool:
-    return isinstance(ty, (TyI64, TyU64, TyI32, TyU32))
+    return isinstance(ty, (TyI64, TyU64, TyI32, TyU32, TyIntLit))
 
 
 def is_bool(ty: Ty) -> bool:
@@ -117,10 +133,26 @@ def type_name(ty: Ty) -> str:
         return "unit"
     if isinstance(ty, TyNull):
         return "null"
+    if isinstance(ty, TyIntLit):
+        return "int literal"
     return "<unknown>"
 
 
 def is_assignable(target: Ty, value: Ty) -> bool:
+    if isinstance(value, TyIntLit) and is_int(target):
+        return _intlit_fits(value.value, target)
     if isinstance(value, TyNull) and isinstance(target, TyPtr):
         return True
     return target == value
+
+
+def _intlit_fits(value: int, target: Ty) -> bool:
+    if isinstance(target, TyI64):
+        return -(2**63) <= value <= 2**63 - 1
+    if isinstance(target, TyU64):
+        return 0 <= value <= 2**64 - 1
+    if isinstance(target, TyI32):
+        return -(2**31) <= value <= 2**31 - 1
+    if isinstance(target, TyU32):
+        return 0 <= value <= 2**32 - 1
+    return False
