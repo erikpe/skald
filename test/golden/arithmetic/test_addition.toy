@@ -9,19 +9,89 @@ fn main() -> i64 {
   var i64_neg1: i64 = -1;
   var i64_mid: i64 = 123456789;
 
-  var r1: i64 = i64_zero + i64_zero;
-  var r2: i64 = i64_min + i64_one;
-  var r3: i64 = i64_max + i64_neg1;
-  var r4: i64 = i64_mid + i64_one;
-  var r5: i64 = i64_neg1 + i64_neg1;
-  var r6: i64 = i64_one + i64_zero;
+  var r_i64_00: i64 = i64_min + i64_min;  // = 0 (wrap-around)
+  var r_i64_01: i64 = i64_min + i64_max;  // = -1
+  var r_i64_02: i64 = i64_min + i64_zero; // = -9223372036854775808
+  var r_i64_03: i64 = i64_min + i64_one;  // = -9223372036854775807
+  var r_i64_04: i64 = i64_min + i64_neg1; // = 9223372036854775807 (wrap-around)
+  var r_i64_05: i64 = i64_min + i64_mid;  // = -9223372036731319019
 
-  print_i64(r1);
-  print_i64(r2);
-  print_i64(r3);
-  print_i64(r4);
-  print_i64(r5);
-  print_i64(r6);
+  var r_i64_10: i64 = i64_max + i64_min;  // = -1
+  var r_i64_11: i64 = i64_max + i64_max;  // = -2 (wrap-around)
+  var r_i64_12: i64 = i64_max + i64_zero; // = 9223372036854775807
+  var r_i64_13: i64 = i64_max + i64_one;  // = -9223372036854775808 (wrap-around)
+  var r_i64_14: i64 = i64_max + i64_neg1; // = 9223372036854775806
+  var r_i64_15: i64 = i64_max + i64_mid;  // = -9223372036731319020 (wrap-around)
+
+  var r_i64_20: i64 = i64_zero + i64_min;  // = -9223372036854775808
+  var r_i64_21: i64 = i64_zero + i64_max;  // = 9223372036854775807
+  var r_i64_22: i64 = i64_zero + i64_zero; // = 0
+  var r_i64_23: i64 = i64_zero + i64_one;  // = 1
+  var r_i64_24: i64 = i64_zero + i64_neg1; // = -1
+  var r_i64_25: i64 = i64_zero + i64_mid;  // = 123456789
+
+  var r_i64_30: i64 = i64_one + i64_min;   // = -9223372036854775807
+  var r_i64_31: i64 = i64_one + i64_max;   // = -9223372036854775808 (wrap-around)
+  var r_i64_32: i64 = i64_one + i64_zero;  // = 1
+  var r_i64_33: i64 = i64_one + i64_one;   // = 2
+  var r_i64_34: i64 = i64_one + i64_neg1;  // = 0
+  var r_i64_35: i64 = i64_one + i64_mid;   // = 123456790
+
+  var r_i64_40: i64 = i64_neg1 + i64_min;  // = 9223372036854775807 (wrap-around)
+  var r_i64_41: i64 = i64_neg1 + i64_max;  // = 9223372036854775806
+  var r_i64_42: i64 = i64_neg1 + i64_zero; // = -1
+  var r_i64_43: i64 = i64_neg1 + i64_one;  // = 0
+  var r_i64_44: i64 = i64_neg1 + i64_neg1; // = -2
+  var r_i64_45: i64 = i64_neg1 + i64_mid;  // = 123456788
+
+  var r_i64_50: i64 = i64_mid + i64_min;   // = -9223372036731319019
+  var r_i64_51: i64 = i64_mid + i64_max;   // = -9223372036731319020 (wrap-around)
+  var r_i64_52: i64 = i64_mid + i64_zero;  // = 123456789
+  var r_i64_53: i64 = i64_mid + i64_one;   // = 123456790
+  var r_i64_54: i64 = i64_mid + i64_neg1;  // = 123456788
+  var r_i64_55: i64 = i64_mid + i64_mid;   // = 246913578
+
+  print_i64(r_i64_00);
+  print_i64(r_i64_01);
+  print_i64(r_i64_02);
+  print_i64(r_i64_03);
+  print_i64(r_i64_04);
+  print_i64(r_i64_05);
+
+  print_i64(r_i64_10);
+  print_i64(r_i64_11);
+  print_i64(r_i64_12);
+  print_i64(r_i64_13);
+  print_i64(r_i64_14);
+  print_i64(r_i64_15);
+
+  print_i64(r_i64_20);
+  print_i64(r_i64_21);
+  print_i64(r_i64_22);
+  print_i64(r_i64_23);
+  print_i64(r_i64_24);
+  print_i64(r_i64_25);
+
+  print_i64(r_i64_30);
+  print_i64(r_i64_31);
+  print_i64(r_i64_32);
+  print_i64(r_i64_33);
+  print_i64(r_i64_34);
+  print_i64(r_i64_35);
+
+  print_i64(r_i64_40);
+  print_i64(r_i64_41);
+  print_i64(r_i64_42);
+  print_i64(r_i64_43);
+  print_i64(r_i64_44);
+  print_i64(r_i64_45);
+
+  print_i64(r_i64_50);
+  print_i64(r_i64_51);
+  print_i64(r_i64_52);
+  print_i64(r_i64_53);
+  print_i64(r_i64_54);
+  print_i64(r_i64_55);
 
   var u64_zero: u64 = 0;
   var u64_one: u64 = 1;
@@ -29,18 +99,64 @@ fn main() -> i64 {
   var u64_mid: u64 = 1000000000;
   var u64_big: u64 = 4000000000000000000;
 
-  var u1: u64 = u64_zero + u64_zero;
-  var u2: u64 = u64_max + u64_zero;
-  var u3: u64 = u64_one + u64_one;
-  var u4: u64 = u64_mid + u64_one;
-  var u5: u64 = u64_mid + u64_mid;
-  var u6: u64 = u64_big + u64_one;
+  var r_u64_00: u64 = u64_zero + u64_zero; // = 0
+  var r_u64_01: u64 = u64_zero + u64_one;  // = 1
+  var r_u64_02: u64 = u64_zero + u64_max;  // = 18446744073709551615
+  var r_u64_03: u64 = u64_zero + u64_mid;  // = 1000000000
+  var r_u64_04: u64 = u64_zero + u64_big;  // = 4000000000000000000
 
-  print_u64(u1);
-  print_u64(u2);
-  print_u64(u3);
-  print_u64(u4);
-  print_u64(u5);
-  print_u64(u6);
+  var r_u64_10: u64 = u64_one + u64_zero; // = 1
+  var r_u64_11: u64 = u64_one + u64_one;  // = 2
+  var r_u64_12: u64 = u64_one + u64_max;  // = 0 (wrap-around)
+  var r_u64_13: u64 = u64_one + u64_mid;  // = 1000000001
+  var r_u64_14: u64 = u64_one + u64_big;  // = 4000000000000000001
+
+  var r_u64_20: u64 = u64_max + u64_zero; // = 18446744073709551615
+  var r_u64_21: u64 = u64_max + u64_one;  // = 0 (wrap-around)
+  var r_u64_22: u64 = u64_max + u64_max;  // = 18446744073709551614 (wrap-around)
+  var r_u64_23: u64 = u64_max + u64_mid;  // = 999999999 (wrap-around)
+  var r_u64_24: u64 = u64_max + u64_big;  // = 3999999999999999999 (wrap-around)
+
+  var r_u64_30: u64 = u64_mid + u64_zero; // = 1000000000
+  var r_u64_31: u64 = u64_mid + u64_one;  // = 1000000001
+  var r_u64_32: u64 = u64_mid + u64_max;  // = 999999999 (wrap-around)
+  var r_u64_33: u64 = u64_mid + u64_mid;  // = 2000000000
+  var r_u64_34: u64 = u64_mid + u64_big;  // = 4000000001000000000
+
+  var r_u64_40: u64 = u64_big + u64_zero; // = 4000000000000000000
+  var r_u64_41: u64 = u64_big + u64_one;  // = 4000000000000000001
+  var r_u64_42: u64 = u64_big + u64_max;  // = 3999999999999999999 (wrap-around)
+  var r_u64_43: u64 = u64_big + u64_mid;  // = 4000000001000000000
+  var r_u64_44: u64 = u64_big + u64_big;  // = 8000000000000000000
+
+  print_u64(r_u64_00);
+  print_u64(r_u64_01);
+  print_u64(r_u64_02);
+  print_u64(r_u64_03);
+  print_u64(r_u64_04);
+
+  print_u64(r_u64_10);
+  print_u64(r_u64_11);
+  print_u64(r_u64_12);
+  print_u64(r_u64_13);
+  print_u64(r_u64_14);
+
+  print_u64(r_u64_20);
+  print_u64(r_u64_21);
+  print_u64(r_u64_22);
+  print_u64(r_u64_23);
+  print_u64(r_u64_24);
+
+  print_u64(r_u64_30);
+  print_u64(r_u64_31);
+  print_u64(r_u64_32);
+  print_u64(r_u64_33);
+  print_u64(r_u64_34);
+
+  print_u64(r_u64_40);
+  print_u64(r_u64_41);
+  print_u64(r_u64_42);
+  print_u64(r_u64_43);
+  print_u64(r_u64_44);
   return 0;
 }
