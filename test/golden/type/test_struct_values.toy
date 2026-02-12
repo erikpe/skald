@@ -67,6 +67,37 @@ fn test_nested_structs() -> unit {
   print_bool(copy.ok);
 }
 
+// Helper: consume a struct by value and return a scalar summary.
+fn sum_pair(p: Pair) -> i64 {
+  return p.left + p.right;
+}
+
+// Helper: consume and return struct by value.
+fn bump_left(p: Pair, delta: i64) -> Pair {
+  var out: Pair = p;
+  out.left = out.left + delta;
+  return out;
+}
+
+// By-value call and return behavior using hidden out-pointer ABI.
+fn test_by_value_calls_and_returns() -> unit {
+  var src: Pair = Pair{ left: 8, right: 9 };
+
+  // Passing struct by value as an argument.
+  print_i64(sum_pair(src));
+
+  // Returning struct by value into a destination.
+  var ret: Pair = bump_left(src, 5);
+  print_i64(src.left);
+  print_i64(src.right);
+  print_i64(ret.left);
+  print_i64(ret.right);
+
+  // Nested call: struct return value passed by value to another call.
+  print_i64(sum_pair(bump_left(src, 1)));
+  print_i64(src.left);
+}
+
 fn main() -> i64 {
   // 1) Struct literal creation and field access.
   test_struct_literals();
@@ -79,6 +110,9 @@ fn main() -> i64 {
 
   // 4) Nested struct literal + copy semantics.
   test_nested_structs();
+
+  // 5) By-value call argument and return behavior.
+  test_by_value_calls_and_returns();
 
   return 0;
 }

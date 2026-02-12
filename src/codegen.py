@@ -24,6 +24,7 @@ from ast_nodes import (
     Program,
     PtrType,
     Return,
+    Span,
     StructFieldInit,
     StructDecl,
     StructLit,
@@ -101,6 +102,8 @@ class Codegen:
         self.defer_stack: List[List[Call]] = []
         self._last_loc: Optional[tuple[str, int]] = None
         self.stack_depth = 0
+        self._current_fn_ret: Optional[TypeAst] = None
+        self._current_ret_out_name: Optional[str] = None
 
     def emit_program(self, program: Program) -> str:
         self.lines = []
@@ -128,21 +131,39 @@ class Codegen:
         env.push()
         self.defer_stack = []
         self._push_defer_scope()
+        self._current_fn_ret = fn.ret
+        self._current_ret_out_name = None
 
         arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-        if len(fn.params) > len(arg_regs):
+        arg_start = 0
+        if self._is_struct_type_ast(fn.ret):
+            self._current_ret_out_name = "__skald$ret_out_ptr"
+            ret_ptr_info = env.define(self._current_ret_out_name, self._ptr_type(fn.ret))
+            self._store_from_reg(arg_regs[0], ret_ptr_info.offset, ret_ptr_info.type_ast)
+            arg_start = 1
+
+        if len(fn.params) + arg_start > len(arg_regs):
             raise CodegenError("More than 6 parameters not supported")
+
         for i, param in enumerate(fn.params):
             info = env.define(param.name, param.type_ast)
-            self._store_from_reg(arg_regs[i], info.offset, info.type_ast)
+            src_reg = arg_regs[i + arg_start]
+            if self._is_struct_type_ast(param.type_ast):
+                self._copy_struct_from_reg_ptr_to_local(src_reg, info.offset, param.type_ast)
+            else:
+                self._store_from_reg(src_reg, info.offset, info.type_ast)
 
         self._emit_block(fn.body, env)
 
         self._pop_defer_scope(env)
         env.pop()
+        self._current_fn_ret = None
+        self._current_ret_out_name = None
 
     def _compute_frame_size(self, fn: FnDecl) -> int:
         sizer = FrameSizer(self.symbols)
+        if self._is_struct_type_ast(fn.ret):
+            sizer.allocate(self._ptr_type(fn.ret))
         for param in fn.params:
             sizer.allocate(param.type_ast)
         self._size_block(fn.body, sizer)
@@ -264,7 +285,19 @@ class Codegen:
         if isinstance(stmt, Return):
             self._emit_loc(stmt.span)
             if stmt.value is not None:
-                self._emit_expr(stmt.value, env)
+                if self._current_fn_ret is not None and self._is_struct_type_ast(
+                    self._current_fn_ret
+                ):
+                    if self._current_ret_out_name is None:
+                        raise CodegenError("Missing return out pointer for struct return")
+                    out_info = env.lookup(self._current_ret_out_name)
+                    self._load_to_rax(out_info.offset, out_info.type_ast)
+                    self._emit_line("  mov rdi, rax")
+                    self._emit_struct_value_to_addr(
+                        stmt.value, self._current_fn_ret, "rdi", env
+                    )
+                else:
+                    self._emit_expr(stmt.value, env)
             self._emit_epilogue()
             return
         raise CodegenError(f"Unsupported statement: {type(stmt)}")
@@ -294,6 +327,9 @@ class Codegen:
             self._emit_binary(expr, env)
             return
         if isinstance(expr, Call):
+            fn = self._call_sig(expr)
+            if self._is_struct_type_ast(fn.ret):
+                raise CodegenError("Struct call result requires destination context")
             self._emit_call(expr, env)
             return
         if isinstance(expr, Field):
@@ -407,17 +443,92 @@ class Codegen:
             return
 
     def _emit_call(self, expr: Call, env: LocalEnv) -> None:
-        if not isinstance(expr.callee, Var):
-            raise CodegenError("Call target must be a function name")
+        self._emit_call_impl(expr, env, ret_out_reg=None)
+
+    def _emit_call_impl(
+        self, expr: Call, env: LocalEnv, ret_out_reg: Optional[str]
+    ) -> None:
+        fn = self._call_sig(expr)
+        ret_is_struct = self._is_struct_type_ast(fn.ret)
         arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-        if len(expr.args) > len(arg_regs):
+
+        if ret_is_struct and ret_out_reg is None:
+            raise CodegenError("Struct call result requires destination context")
+        if (len(expr.args) + (1 if ret_is_struct else 0)) > len(arg_regs):
             raise CodegenError("More than 6 arguments not supported")
 
-        for arg in expr.args:
-            self._emit_expr(arg, env)
-            self._push_reg("rax")
+        struct_offsets: List[Optional[int]] = [None] * len(expr.args)
+        hidden_save_offset: Optional[int] = None
+        temp_bytes = 0
+        for i, param in enumerate(fn.params):
+            if not self._is_struct_type_ast(param.type_ast):
+                continue
+            size, align = type_size_align(param.type_ast, self.symbols)
+            temp_bytes = _align_up(temp_bytes, align)
+            struct_offsets[i] = temp_bytes
+            temp_bytes += size
 
-        for i in range(len(expr.args) - 1, -1, -1):
+        if ret_is_struct:
+            temp_bytes = _align_up(temp_bytes, 8)
+            hidden_save_offset = temp_bytes
+            temp_bytes += 8
+
+        if temp_bytes > 0:
+            self._emit_line(f"  sub rsp, {temp_bytes}")
+            self.stack_depth += temp_bytes
+
+        if ret_is_struct:
+            if hidden_save_offset is None:
+                raise CodegenError("Missing hidden return save offset")
+            if hidden_save_offset == 0:
+                self._emit_line(f"  mov qword ptr [rsp], {ret_out_reg}")
+            else:
+                self._emit_line(
+                    f"  mov qword ptr [rsp + {hidden_save_offset}], {ret_out_reg}"
+                )
+
+        for i, (arg_expr, param) in enumerate(zip(expr.args, fn.params, strict=True)):
+            if not self._is_struct_type_ast(param.type_ast):
+                continue
+            offset = struct_offsets[i]
+            if offset is None:
+                raise CodegenError("Missing struct temporary offset")
+            if offset == 0:
+                self._emit_line("  lea rdi, [rsp]")
+            else:
+                self._emit_line(f"  lea rdi, [rsp + {offset}]")
+            self._emit_struct_value_to_addr(arg_expr, param.type_ast, "rdi", env)
+
+        pushed = 0
+        if ret_is_struct:
+            if hidden_save_offset is None:
+                raise CodegenError("Missing hidden return save offset")
+            if hidden_save_offset == 0:
+                self._emit_line("  mov rax, qword ptr [rsp]")
+            else:
+                self._emit_line(f"  mov rax, qword ptr [rsp + {hidden_save_offset}]")
+            self._push_reg("rax")
+            pushed += 1
+
+        for i, (arg_expr, param) in enumerate(zip(expr.args, fn.params, strict=True)):
+            if self._is_struct_type_ast(param.type_ast):
+                offset = struct_offsets[i]
+                if offset is None:
+                    raise CodegenError("Missing struct temporary offset")
+                ptr_offset = pushed * 8 + offset
+                if ptr_offset == 0:
+                    self._emit_line("  lea rax, [rsp]")
+                else:
+                    self._emit_line(f"  lea rax, [rsp + {ptr_offset}]")
+                self._push_reg("rax")
+                pushed += 1
+            else:
+                self._emit_expr(arg_expr, env)
+                self._push_reg("rax")
+                pushed += 1
+
+        total_regs = len(expr.args) + (1 if ret_is_struct else 0)
+        for i in range(total_regs - 1, -1, -1):
             self._pop_reg(arg_regs[i])
 
         pad = self._align_for_call()
@@ -425,6 +536,10 @@ class Codegen:
         if pad:
             self._emit_line("  add rsp, 8")
             self.stack_depth -= 8
+
+        if temp_bytes > 0:
+            self._emit_line(f"  add rsp, {temp_bytes}")
+            self.stack_depth -= temp_bytes
 
     def _emit_assign(self, expr: Assign, env: LocalEnv) -> None:
         target_type = self._lvalue_type(expr.target, env)
@@ -593,6 +708,12 @@ class Codegen:
     ) -> None:
         if not self._is_struct_type_ast(type_ast):
             raise CodegenError("Expected struct type for struct copy")
+        if isinstance(expr, Call):
+            fn = self._call_sig(expr)
+            if not self._same_type_ast(fn.ret, type_ast):
+                raise CodegenError("Struct call result type mismatch")
+            self._emit_call_impl(expr, env, ret_out_reg=dst_reg)
+            return
         if isinstance(expr, StructLit):
             self._emit_struct_lit_to_addr(expr, type_ast, dst_reg, env)
             return
@@ -679,6 +800,30 @@ class Codegen:
             self._emit_line(f"  mov r11b, byte ptr [{src}]")
             self._emit_line(f"  mov byte ptr [{dst}], r11b")
             copied += 1
+
+    def _copy_struct_from_reg_ptr_to_local(
+        self, src_reg: str, dst_offset: int, type_ast: TypeAst
+    ) -> None:
+        if src_reg != "rsi":
+            self._emit_line(f"  mov rsi, {src_reg}")
+        self._emit_line(f"  lea rdi, [rbp - {dst_offset}]")
+        size, _ = type_size_align(type_ast, self.symbols)
+        self._emit_memcpy_fixed("rdi", "rsi", size)
+
+    def _call_sig(self, expr: Call):
+        if not isinstance(expr.callee, Var):
+            raise CodegenError("Call target must be a function name")
+        fn = self.symbols.functions.get(expr.callee.name)
+        if fn is None:
+            raise CodegenError(f"Unknown function: {expr.callee.name}")
+        if len(expr.args) != len(fn.params):
+            raise CodegenError(
+                f"Argument count mismatch for {expr.callee.name}: expected {len(fn.params)}"
+            )
+        return fn
+
+    def _ptr_type(self, inner: TypeAst) -> TypeAst:
+        return PtrType(inner, Span("<codegen>", 0, 0))
 
     def _emit_defers(self, defers: List[Call], env: LocalEnv) -> None:
         for call in reversed(defers):

@@ -1,0 +1,99 @@
+extern fn print_i64(x: i64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct Big {
+  a: i64;
+  b: i64;
+  c: i64;
+  d: i64;
+  e: i64;
+  f: i64;
+  g: i64;
+  h: i64;
+}
+
+// Consume struct by value and produce a scalar.
+fn pair_sum(p: Pair) -> i64 {
+  return p.left + p.right;
+}
+
+// Consume struct by value plus scalar, return struct by value.
+fn bump_left(p: Pair, delta: i64) -> Pair {
+  var out: Pair = p;
+  out.left = out.left + delta;
+  return out;
+}
+
+// Return a freshly materialized struct by value.
+fn make_pair(a: i64, b: i64) -> Pair {
+  return Pair{ left: a, right: b };
+}
+
+// Pass struct by value through a chain and return by value.
+fn chain(p: Pair) -> Pair {
+  var step1: Pair = bump_left(p, 2);
+  var step2: Pair = bump_left(step1, 3);
+  return step2;
+}
+
+// Consume a large struct by value (larger than register pass size).
+fn big_sum(v: Big) -> i64 {
+  return v.a + v.b + v.c + v.d + v.e + v.f + v.g + v.h;
+}
+
+// Return a large struct by value after mutation.
+fn bump_big(v: Big, delta: i64) -> Big {
+  var out: Big = v;
+  out.a = out.a + delta;
+  out.h = out.h + delta;
+  return out;
+}
+
+fn main() -> i64 {
+  var base: Pair = Pair{ left: 10, right: 20 };
+
+  // By-value struct argument to scalar-returning function.
+  print_i64(pair_sum(base));
+
+  // By-value struct return into local destination.
+  var b1: Pair = bump_left(base, 5);
+  print_i64(base.left);
+  print_i64(base.right);
+  print_i64(b1.left);
+  print_i64(b1.right);
+
+  // By-value return from struct-literal-producing function.
+  var made: Pair = make_pair(7, 8);
+  print_i64(made.left);
+  print_i64(made.right);
+  print_i64(pair_sum(made));
+
+  // Nested by-value call: returned struct used as by-value arg.
+  print_i64(pair_sum(bump_left(base, 1)));
+
+  // Chained by-value return path through multiple calls.
+  var c: Pair = chain(base);
+  print_i64(c.left);
+  print_i64(c.right);
+  print_i64(pair_sum(c));
+
+  // Original remains unchanged (copy semantics).
+  print_i64(base.left);
+  print_i64(base.right);
+
+  // Large-struct by-value call/return path (must go through memory ABI).
+  var big0: Big = Big{ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
+  print_i64(big_sum(big0));
+  var big1: Big = bump_big(big0, 10);
+  print_i64(big0.a);
+  print_i64(big0.h);
+  print_i64(big1.a);
+  print_i64(big1.h);
+  print_i64(big_sum(big1));
+
+  return 0;
+}

@@ -1,0 +1,108 @@
+extern fn print_i64(x: i64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct Wrap {
+  inner: Pair;
+  flag: bool;
+}
+
+struct Huge {
+  a: i64;
+  b: i64;
+  c: i64;
+  d: i64;
+  e: i64;
+  f: i64;
+  g: i64;
+  h: i64;
+}
+
+// Return a direct struct literal by value.
+fn make_pair(a: i64, b: i64) -> Pair {
+  return Pair{ left: a, right: b };
+}
+
+// Return a copied and modified struct by value.
+fn bump_left(p: Pair, delta: i64) -> Pair {
+  var out: Pair = p;
+  out.left = out.left + delta;
+  return out;
+}
+
+// Return nested struct by value (contains another struct field).
+fn make_wrap(p: Pair, flag: bool) -> Wrap {
+  return Wrap{ inner: p, flag: flag };
+}
+
+// Return through an intermediate local to exercise copy on return path.
+fn identity_wrap(w: Wrap) -> Wrap {
+  var copy: Wrap = w;
+  return copy;
+}
+
+// Return a large struct literal by value.
+fn make_huge(seed: i64) -> Huge {
+  return Huge{
+    a: seed,
+    b: seed + 1,
+    c: seed + 2,
+    d: seed + 3,
+    e: seed + 4,
+    f: seed + 5,
+    g: seed + 6,
+    h: seed + 7,
+  };
+}
+
+// Return a copied-and-modified large struct by value.
+fn nudge_huge(h: Huge, delta: i64) -> Huge {
+  var out: Huge = h;
+  out.c = out.c + delta;
+  out.h = out.h + delta;
+  return out;
+}
+
+fn main() -> i64 {
+  var p0: Pair = make_pair(3, 4);
+  print_i64(p0.left);
+  print_i64(p0.right);
+
+  var p1: Pair = bump_left(p0, 10);
+  print_i64(p0.left);
+  print_i64(p0.right);
+  print_i64(p1.left);
+  print_i64(p1.right);
+
+  var w0: Wrap = make_wrap(p1, true);
+  print_i64(w0.inner.left);
+  print_i64(w0.inner.right);
+  if w0.flag {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+
+  var w1: Wrap = identity_wrap(w0);
+  w1.inner.left = 99;
+
+  // Ensure return-by-value produced independent copies.
+  print_i64(w0.inner.left);
+  print_i64(w1.inner.left);
+
+  // Large-struct return path (larger than register return size).
+  var h0: Huge = make_huge(20);
+  print_i64(h0.a);
+  print_i64(h0.h);
+
+  var h1: Huge = nudge_huge(h0, 7);
+  print_i64(h0.c);
+  print_i64(h0.h);
+  print_i64(h1.c);
+  print_i64(h1.h);
+
+  return 0;
+}
