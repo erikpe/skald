@@ -24,6 +24,8 @@ from ast_nodes import (
     Return,
     Span,
     StructDecl,
+    StructFieldInit,
+    StructLit,
     TypeAst,
     Var,
     VarDecl,
@@ -59,7 +61,7 @@ class Lowerer:
         lowered_body = self._lower_block(fn.body, ret_var, exit_label, {})
         stmts = []
         if ret_var is not None:
-            init = _default_value_expr(fn.ret, fn.span)
+            init = self._default_value_expr(fn.ret, fn.span)
             stmts.append(VarDecl(ret_var, fn.ret, init, fn.span))
         stmts.extend(lowered_body.stmts)
         exit_span = fn.span
@@ -158,19 +160,37 @@ class Lowerer:
         lowered_stmts.append(DeferCall(Call(call.callee, temp_args, stmt.span), stmt.span))
         return lowered_stmts
 
-
-def _default_value_expr(type_ast: TypeAst, span: Span) -> Expr:
-    if isinstance(type_ast, PtrType):
-        return NullLit(span)
-    if isinstance(type_ast, NamedType):
-        if type_ast.name in {"i64", "u64", "i32", "u32"}:
-            return IntLit(0, span)
-        if type_ast.name == "bool":
-            return BoolLit(False, span)
-        if type_ast.name == "unit":
+    def _default_value_expr(
+        self, type_ast: TypeAst, span: Span, visiting: Optional[set[str]] = None
+    ) -> Expr:
+        if isinstance(type_ast, PtrType):
             return NullLit(span)
-        raise ValueError(f"No default value for struct return type: {type_ast.name}")
-    raise ValueError(f"Unsupported return type: {type(type_ast)}")
+        if isinstance(type_ast, NamedType):
+            if type_ast.name in {"i64", "u64", "i32", "u32"}:
+                return IntLit(0, span)
+            if type_ast.name == "bool":
+                return BoolLit(False, span)
+            if type_ast.name == "unit":
+                return NullLit(span)
+
+            struct_decl = self.symbols.structs.get(type_ast.name)
+            if struct_decl is None:
+                raise ValueError(f"No default value for unknown type: {type_ast.name}")
+
+            if visiting is None:
+                visiting = set()
+            if type_ast.name in visiting:
+                raise ValueError(f"Recursive default value for struct type: {type_ast.name}")
+
+            visiting.add(type_ast.name)
+            fields: List[StructFieldInit] = []
+            for field in struct_decl.fields:
+                field_default = self._default_value_expr(field.type_ast, span, visiting)
+                fields.append(StructFieldInit(field.name, field_default, span))
+            visiting.remove(type_ast.name)
+            return StructLit(type_ast.name, fields, span)
+
+        raise ValueError(f"Unsupported return type: {type(type_ast)}")
 
 
 def _is_unit_type(type_ast: TypeAst) -> bool:

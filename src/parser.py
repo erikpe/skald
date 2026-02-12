@@ -49,6 +49,12 @@ class TokenStream:
     def peek(self) -> Token:
         return self.tokens[self.index]
 
+    def peek_n(self, n: int) -> Token:
+        i = self.index + n
+        if i >= len(self.tokens):
+            return self.tokens[-1]
+        return self.tokens[i]
+
     def advance(self) -> Token:
         tok = self.tokens[self.index]
         self.index += 1
@@ -359,7 +365,7 @@ class Parser:
             return NullLit(span)
         if self.ts.match(TokenKind.IDENT):
             span = self._span_from_token(tok)
-            if self.ts.peek().kind == TokenKind.LBRACE:
+            if self._starts_struct_lit():
                 return self._parse_struct_lit(tok.lexeme, span)
             return Var(tok.lexeme, span)
         if self.ts.match(TokenKind.LPAREN):
@@ -384,6 +390,13 @@ class Parser:
                     break
         self.ts.consume(TokenKind.RBRACE, "Expected '}' after struct literal")
         return StructLit(type_name, fields, span)
+
+    def _starts_struct_lit(self) -> bool:
+        if self.ts.peek().kind != TokenKind.LBRACE:
+            return False
+        first = self.ts.peek_n(1)
+        second = self.ts.peek_n(2)
+        return first.kind == TokenKind.IDENT and second.kind == TokenKind.COLON
 
     def _parse_defer_call(self) -> Call:
         expr = self._parse_expression()

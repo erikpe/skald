@@ -1,0 +1,84 @@
+extern fn print_i64(x: i64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct Wrapper {
+  pair: *Pair;
+  ok: bool;
+}
+
+// Helper: print bool as 1/0 for golden outputs.
+fn print_bool(value: bool) -> unit {
+  if value {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+}
+
+// Struct literal materialization and field reads.
+fn test_struct_literals() -> unit {
+  var p: Pair = Pair{ left: 10, right: 20 };
+  print_i64(p.left);
+  print_i64(p.right);
+  print_i64(p.left + p.right);
+}
+
+// Copy on variable initialization: mutating the copy must not affect source.
+fn test_copy_on_init() -> unit {
+  var src: Pair = Pair{ left: 10, right: 20 };
+  var dst: Pair = src;
+
+  dst.left = 7;
+
+  print_i64(src.left);
+  print_i64(src.right);
+  print_i64(dst.left);
+  print_i64(dst.right);
+}
+
+// Copy on assignment: assigning structs copies bytes by value.
+fn test_copy_on_assignment() -> unit {
+  var a: Pair = Pair{ left: 1, right: 2 };
+  var b: Pair = Pair{ left: 3, right: 4 };
+
+  a = b;
+  b.right = 99;
+
+  print_i64(a.left);
+  print_i64(a.right);
+  print_i64(b.left);
+  print_i64(b.right);
+}
+
+// Nested struct literals and nested-field copy behavior.
+fn test_nested_structs() -> unit {
+  var base: Wrapper = Wrapper{ pair: null, ok: true };
+  var copy: Wrapper = base;
+
+  copy.ok = false;
+
+  print_bool(base.pair == null);
+  print_bool(copy.pair == null);
+  print_bool(base.ok);
+  print_bool(copy.ok);
+}
+
+fn main() -> i64 {
+  // 1) Struct literal creation and field access.
+  test_struct_literals();
+
+  // 2) Copy semantics during var initialization.
+  test_copy_on_init();
+
+  // 3) Copy semantics during assignment.
+  test_copy_on_assignment();
+
+  // 4) Nested struct literal + copy semantics.
+  test_nested_structs();
+
+  return 0;
+}

@@ -24,7 +24,9 @@ from ast_nodes import (
     Program,
     PtrType,
     Return,
+    StructFieldInit,
     StructDecl,
+    StructLit,
     TypeAst,
     Unary,
     Var,
@@ -205,8 +207,12 @@ class Codegen:
         if isinstance(stmt, VarDecl):
             self._emit_loc(stmt.span)
             info = env.define(stmt.name, stmt.type_ast)
-            self._emit_expr(stmt.init, env)
-            self._store_rax(info.offset, info.type_ast)
+            if self._is_struct_type_ast(stmt.type_ast):
+                self._emit_line(f"  lea rdi, [rbp - {info.offset}]")
+                self._emit_struct_value_to_addr(stmt.init, stmt.type_ast, "rdi", env)
+            else:
+                self._emit_expr(stmt.init, env)
+                self._store_rax(info.offset, info.type_ast)
             return
         if isinstance(stmt, DeferCall):
             self._emit_loc(stmt.span)
@@ -275,8 +281,12 @@ class Codegen:
             return
         if isinstance(expr, Var):
             info = env.lookup(expr.name)
+            if self._is_struct_type_ast(info.type_ast):
+                raise CodegenError("Struct value expression requires copy context")
             self._load_to_rax(info.offset, info.type_ast)
             return
+        if isinstance(expr, StructLit):
+            raise CodegenError("Struct literal requires destination context")
         if isinstance(expr, Unary):
             self._emit_unary(expr, env)
             return
@@ -287,8 +297,10 @@ class Codegen:
             self._emit_call(expr, env)
             return
         if isinstance(expr, Field):
-            self._emit_addr(expr, env)
             field_type = self._field_type(expr, env)
+            if self._is_struct_type_ast(field_type):
+                raise CodegenError("Struct field value requires copy context")
+            self._emit_addr(expr, env)
             self._load_indirect_to_rax("rax", field_type)
             return
         if isinstance(expr, Assign):
@@ -415,16 +427,28 @@ class Codegen:
             self.stack_depth -= 8
 
     def _emit_assign(self, expr: Assign, env: LocalEnv) -> None:
+        target_type = self._lvalue_type(expr.target, env)
+        if self._is_struct_type_ast(target_type):
+            if isinstance(expr.target, Var):
+                info = env.lookup(expr.target.name)
+                self._emit_line(f"  lea rdi, [rbp - {info.offset}]")
+            else:
+                self._emit_addr(expr.target, env)
+                self._emit_line("  mov rdi, rax")
+            self._emit_struct_value_to_addr(expr.value, target_type, "rdi", env)
+            self._emit_line("  mov rax, rdi")
+            return
+
         if isinstance(expr.target, Var):
             info = env.lookup(expr.target.name)
             self._emit_expr(expr.value, env)
             self._store_rax(info.offset, info.type_ast)
             return
+
         self._emit_addr(expr.target, env)
         self._push_reg("rax")
         self._emit_expr(expr.value, env)
         self._pop_reg("rcx")
-        target_type = self._lvalue_type(expr.target, env)
         self._store_indirect_from_rax("rcx", target_type)
 
     def _emit_addr(self, expr: Expr, env: LocalEnv) -> None:
@@ -560,6 +584,101 @@ class Codegen:
         if layout is None:
             raise CodegenError(f"Unknown struct: {name}")
         return layout
+
+    def _is_struct_type_ast(self, type_ast: TypeAst) -> bool:
+        return isinstance(type_ast, NamedType) and type_ast.name in self.symbols.structs
+
+    def _emit_struct_value_to_addr(
+        self, expr: Expr, type_ast: TypeAst, dst_reg: str, env: LocalEnv
+    ) -> None:
+        if not self._is_struct_type_ast(type_ast):
+            raise CodegenError("Expected struct type for struct copy")
+        if isinstance(expr, StructLit):
+            self._emit_struct_lit_to_addr(expr, type_ast, dst_reg, env)
+            return
+
+        self._emit_struct_expr_addr(expr, type_ast, "rsi", env)
+        size, _ = type_size_align(type_ast, self.symbols)
+        self._emit_memcpy_fixed(dst_reg, "rsi", size)
+
+    def _emit_struct_lit_to_addr(
+        self, lit: StructLit, type_ast: TypeAst, dst_reg: str, env: LocalEnv
+    ) -> None:
+        if not isinstance(type_ast, NamedType):
+            raise CodegenError("Struct literal destination must be a named struct type")
+        if lit.name != type_ast.name:
+            raise CodegenError(
+                f"Struct literal type mismatch: {lit.name} into {type_ast.name}"
+            )
+
+        layout = self._struct_layout(type_ast.name)
+        field_inits = {field.name: field for field in lit.fields}
+        for field in layout.fields:
+            init = field_inits.get(field.name)
+            if init is None:
+                raise CodegenError(f"Missing field {field.name} in struct literal")
+            field_base = dst_reg if field.offset == 0 else f"{dst_reg} + {field.offset}"
+            if self._is_struct_type_ast(field.type_ast):
+                self._emit_line(f"  lea rdi, [{field_base}]")
+                self._emit_struct_value_to_addr(init.value, field.type_ast, "rdi", env)
+            else:
+                self._emit_expr(init.value, env)
+                self._store_indirect_from_rax(field_base, field.type_ast)
+
+    def _emit_struct_expr_addr(
+        self, expr: Expr, type_ast: TypeAst, out_reg: str, env: LocalEnv
+    ) -> None:
+        if isinstance(expr, Var):
+            info = env.lookup(expr.name)
+            if not self._same_type_ast(info.type_ast, type_ast):
+                raise CodegenError("Struct source type mismatch")
+            self._emit_line(f"  lea {out_reg}, [rbp - {info.offset}]")
+            return
+        if isinstance(expr, Field):
+            field_type = self._field_type(expr, env)
+            if not self._same_type_ast(field_type, type_ast):
+                raise CodegenError("Struct field source type mismatch")
+            self._emit_addr(expr, env)
+            self._emit_line(f"  mov {out_reg}, rax")
+            return
+        if isinstance(expr, Unary) and expr.op == "*":
+            ptr_type = self._expr_type(expr.expr, env)
+            if not isinstance(ptr_type, PtrType) or not self._same_type_ast(
+                ptr_type.inner, type_ast
+            ):
+                raise CodegenError("Struct pointer source type mismatch")
+            self._emit_expr(expr.expr, env)
+            self._emit_line(f"  mov {out_reg}, rax")
+            return
+        raise CodegenError("Unsupported struct value source expression")
+
+    def _same_type_ast(self, left: TypeAst, right: TypeAst) -> bool:
+        if isinstance(left, NamedType) and isinstance(right, NamedType):
+            return left.name == right.name
+        if isinstance(left, PtrType) and isinstance(right, PtrType):
+            return self._same_type_ast(left.inner, right.inner)
+        return False
+
+    def _emit_memcpy_fixed(self, dst_reg: str, src_reg: str, size: int) -> None:
+        copied = 0
+        while copied + 8 <= size:
+            dst = f"{dst_reg} + {copied}" if copied else dst_reg
+            src = f"{src_reg} + {copied}" if copied else src_reg
+            self._emit_line(f"  mov r11, qword ptr [{src}]")
+            self._emit_line(f"  mov qword ptr [{dst}], r11")
+            copied += 8
+        while copied + 4 <= size:
+            dst = f"{dst_reg} + {copied}" if copied else dst_reg
+            src = f"{src_reg} + {copied}" if copied else src_reg
+            self._emit_line(f"  mov r11d, dword ptr [{src}]")
+            self._emit_line(f"  mov dword ptr [{dst}], r11d")
+            copied += 4
+        while copied < size:
+            dst = f"{dst_reg} + {copied}" if copied else dst_reg
+            src = f"{src_reg} + {copied}" if copied else src_reg
+            self._emit_line(f"  mov r11b, byte ptr [{src}]")
+            self._emit_line(f"  mov byte ptr [{dst}], r11b")
+            copied += 1
 
     def _emit_defers(self, defers: List[Call], env: LocalEnv) -> None:
         for call in reversed(defers):

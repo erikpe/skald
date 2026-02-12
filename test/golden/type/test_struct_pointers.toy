@@ -1,0 +1,54 @@
+extern fn print_i64(x: i64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct Wrapper {
+  pair: *Pair;
+  ok: bool;
+}
+
+struct Node {
+  next: *Node;
+  value: i64;
+}
+
+// Helper: test null checks for struct pointers.
+fn is_null_pair(p: *Pair) -> bool {
+  return p == null;
+}
+
+// Helper: test pointer equality on the same struct type.
+fn same_pair(a: *Pair, b: *Pair) -> bool {
+  return a == b;
+}
+
+// Helper: print bool as 1/0 for golden outputs.
+fn print_bool(value: bool) -> unit {
+  if value {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+}
+
+// Pointer-only struct typing checks, including recursive struct pointers.
+fn test_struct_pointer_types() -> unit {
+  var p0: *Pair = null;
+  var p1: *Pair = p0;
+  var w: *Wrapper = null;
+  var n: *Node = null;
+
+  print_bool(is_null_pair(p0));
+  print_bool(same_pair(p0, p1));
+  print_bool(w == null);
+  print_bool(!(n != null));
+}
+
+fn main() -> i64 {
+  // 1) Pointer/null behavior for struct pointer types.
+  test_struct_pointer_types();
+  return 0;
+}
