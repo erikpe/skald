@@ -98,6 +98,16 @@ fn test_by_value_calls_and_returns() -> unit {
   print_i64(src.left);
 }
 
+// Field access through a dereferenced struct pointer.
+fn test_deref_field_access() -> unit {
+  var p: Pair = Pair{ left: 40, right: 2 };
+  var ptr: *Pair = &p;
+
+  print_i64((*ptr).left);
+  (*ptr).right = 77;
+  print_i64(p.right);
+}
+
 fn main() -> i64 {
   // 1) Struct literal creation and field access.
   test_struct_literals();
@@ -113,6 +123,9 @@ fn main() -> i64 {
 
   // 5) By-value call argument and return behavior.
   test_by_value_calls_and_returns();
+
+  // 6) Field access through dereferenced pointers.
+  test_deref_field_access();
 
   return 0;
 }

@@ -688,8 +688,13 @@ class Codegen:
             ty = env.lookup(expr.name).type_ast
         elif isinstance(expr, Field):
             ty = self._lvalue_type(expr, env)
+        elif isinstance(expr, Unary) and expr.op == "*":
+            ptr_ty = self._expr_type(expr.expr, env)
+            if not isinstance(ptr_ty, PtrType):
+                raise CodegenError("Struct base dereference must be a pointer")
+            ty = ptr_ty.inner
         else:
-            raise CodegenError("Struct base must be a variable or field")
+            raise CodegenError("Struct base must be a variable, field, or dereference")
         if isinstance(ty, NamedType):
             return ty.name
         raise CodegenError("Struct base must be a struct type")
