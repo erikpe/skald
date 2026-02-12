@@ -23,6 +23,7 @@ from ast_nodes import (
     Program,
     Return,
     Span,
+    StructLit,
     Unary,
     Var,
     VarDecl,
@@ -171,6 +172,39 @@ def _check_expr(expr: Expr, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
         if ty is None:
             raise TypeCheckError(f"Unknown variable: {expr.name}")
         return ty
+    if isinstance(expr, StructLit):
+        layout = symbols.struct_layouts.get(expr.name)
+        if layout is None:
+            raise TypeCheckError(f"Unknown struct: {expr.name}")
+
+        seen_fields: set[str] = set()
+        for field_init in expr.fields:
+            if field_init.name in seen_fields:
+                raise TypeCheckError(
+                    f"Duplicate field {field_init.name} in struct literal {expr.name}"
+                )
+            seen_fields.add(field_init.name)
+
+            field = layout.field_map.get(field_init.name)
+            if field is None:
+                raise TypeCheckError(
+                    f"Unknown field {field_init.name} in struct literal {expr.name}"
+                )
+
+            value_ty = _check_expr(field_init.value, env, symbols)
+            field_ty = resolve_type(field.type_ast, symbols)
+            if not is_assignable(field_ty, value_ty):
+                raise TypeCheckError(
+                    f"Field type mismatch for {expr.name}.{field_init.name}: expected {type_name(field_ty)}, got {type_name(value_ty)}"
+                )
+
+        for declared in layout.fields:
+            if declared.name not in seen_fields:
+                raise TypeCheckError(
+                    f"Missing field {declared.name} in struct literal {expr.name}"
+                )
+
+        return TyStruct(expr.name)
     if isinstance(expr, Unary):
         return _check_unary(expr, env, symbols)
     if isinstance(expr, Binary):

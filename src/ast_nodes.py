@@ -171,6 +171,20 @@ class Var:
 
 
 @dataclass(frozen=True)
+class StructFieldInit:
+    name: str
+    value: Expr
+    span: Span
+
+
+@dataclass(frozen=True)
+class StructLit:
+    name: str
+    fields: List[StructFieldInit]
+    span: Span
+
+
+@dataclass(frozen=True)
 class Unary:
     op: str
     expr: Expr
@@ -211,6 +225,7 @@ Expr = (
     | BoolLit
     | NullLit
     | Var
+    | StructLit
     | Unary
     | Binary
     | Call

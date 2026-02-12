@@ -26,6 +26,8 @@ from ast_nodes import (
     Span,
     StructDecl,
     StructField,
+    StructFieldInit,
+    StructLit,
     TypeAst,
     Unary,
     Var,
@@ -357,12 +359,31 @@ class Parser:
             return NullLit(span)
         if self.ts.match(TokenKind.IDENT):
             span = self._span_from_token(tok)
+            if self.ts.peek().kind == TokenKind.LBRACE:
+                return self._parse_struct_lit(tok.lexeme, span)
             return Var(tok.lexeme, span)
         if self.ts.match(TokenKind.LPAREN):
             expr = self._parse_expression()
             self.ts.consume(TokenKind.RPAREN, "Expected ')' after expression")
             return expr
         raise ParseError(f"Unexpected token {tok.kind} at {tok.line}:{tok.col}")
+
+    def _parse_struct_lit(self, type_name: str, span: Span) -> StructLit:
+        self.ts.consume(TokenKind.LBRACE, "Expected '{' in struct literal")
+        fields: List[StructFieldInit] = []
+        if self.ts.peek().kind != TokenKind.RBRACE:
+            while True:
+                field_span = self._span_here()
+                field_name = self._consume_ident("Expected field name in struct literal")
+                self.ts.consume(TokenKind.COLON, "Expected ':' after struct literal field")
+                field_value = self._parse_expression()
+                fields.append(StructFieldInit(field_name, field_value, field_span))
+                if not self.ts.match(TokenKind.COMMA):
+                    break
+                if self.ts.peek().kind == TokenKind.RBRACE:
+                    break
+        self.ts.consume(TokenKind.RBRACE, "Expected '}' after struct literal")
+        return StructLit(type_name, fields, span)
 
     def _parse_defer_call(self) -> Call:
         expr = self._parse_expression()

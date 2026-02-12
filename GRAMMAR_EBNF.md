@@ -117,9 +117,16 @@ primary      = integer
              | "true"
              | "false"
              | "null"
+             | struct_lit
              | identifier
              | "(" , expression , ")"
              ;
+
+struct_lit   = identifier , "{" , [ struct_init_list ] , "}" ;
+
+struct_init_list = struct_init , { "," , struct_init } , [ "," ] ;
+
+struct_init  = identifier , ":" , expression ;
 
 
 ## Parser Notes (for Implementation)
