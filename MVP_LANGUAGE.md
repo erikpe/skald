@@ -92,6 +92,7 @@ Examples
 - Binary: + - * / %  == != < <= > >=  && ||
 - Calls: f(a, b)
 - Field access: expr.field
+- Pointer field access sugar: ptr->field (equivalent to (*ptr).field)
 - Compile-time size query: sizeof(T)
 - Explicit casts: expr as Type
 - Grouping: (expr)

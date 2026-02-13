@@ -357,6 +357,11 @@ class Parser:
                 name = self._consume_ident("Expected field name after '.'")
                 expr = Field(expr, name, span)
                 continue
+            if self.ts.match(TokenKind.ARROW):
+                span = self._span_from_last()
+                name = self._consume_ident("Expected field name after '->'")
+                expr = Field(Unary("*", expr, span), name, span)
+                continue
             if self.ts.match(TokenKind.LBRACKET):
                 span = self._span_from_last()
                 idx = self._parse_expression()

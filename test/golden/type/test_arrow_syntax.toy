@@ -1,0 +1,52 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn malloc_u64(size: u64) -> *u8;
+extern fn free_ptr(p: *u8) -> unit;
+
+struct Node {
+  next: *Node;
+  value: i64;
+  arr: *i64;
+}
+
+fn pick_node(p: *Node) -> *Node {
+  return p;
+}
+
+fn main() -> i64 {
+  var raw: *u8 = malloc_u64(3 * sizeof(i64));
+  if raw == null {
+    return 1;
+  }
+  defer free_ptr(raw);
+
+  var arr: *i64 = raw as *i64;
+  arr[0] = 10;
+  arr[1] = 20;
+  arr[2] = 30;
+
+  var tail: Node = Node{ next: null, value: 42, arr: arr };
+  var head: Node = Node{ next: &tail, value: 7, arr: arr };
+  var p: *Node = &head;
+
+  // Basic pointer field sugar.
+  print_i64(p->value);
+
+  // Chained pointer field sugar.
+  print_i64(p->next->value);
+
+  // Pointer field + index chaining.
+  print_i64(p->arr[2]);
+  var idx: u64 = 1;
+  print_i64(p->next->arr[idx]);
+
+  // Mixed explicit deref and arrow.
+  print_i64((*p).next->arr[0]);
+
+  // Arithmetic with multiple arrow expressions.
+  print_i64(p->next->value + p->arr[0]);
+
+  // Call postfix + arrow chaining.
+  print_i64(pick_node(p)->next->value);
+
+  return 0;
+}

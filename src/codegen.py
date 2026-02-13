@@ -709,6 +709,9 @@ class Codegen:
             return env.lookup(expr.name).type_ast
         if isinstance(expr, Cast):
             return expr.type_ast
+        if isinstance(expr, Call):
+            fn = self._call_sig(expr)
+            return fn.ret
         if isinstance(expr, Field):
             return self._lvalue_type(expr, env)
         if isinstance(expr, Index):

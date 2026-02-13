@@ -16,37 +16,37 @@ fn vec_i64_destroy(v: *VecI64) -> unit {
   if v == null {
     return;
   }
-  if (*v).data != null {
-    free_ptr((*v).data as *u8);
+  if v->data != null {
+    free_ptr(v->data as *u8);
   }
-  (*v).data = null;
-  (*v).len = 0;
-  (*v).cap = 0;
+  v->data = null;
+  v->len = 0;
+  v->cap = 0;
 }
 
 fn vec_i64_reserve(v: *VecI64, min_cap: u64) -> bool {
   if v == null {
     return false;
   }
-  if min_cap <= (*v).cap {
+  if min_cap <= v->cap {
     return true;
   }
 
   var bytes: u64 = min_cap * sizeof(i64);
   var raw: *u8 = null;
 
-  if (*v).data == null {
+  if v->data == null {
     raw = malloc_u64(bytes);
   } else {
-    raw = realloc_ptr((*v).data as *u8, bytes);
+    raw = realloc_ptr(v->data as *u8, bytes);
   }
 
   if raw == null {
     return false;
   }
 
-  (*v).data = raw as *i64;
-  (*v).cap = min_cap;
+  v->data = raw as *i64;
+  v->cap = min_cap;
   return true;
 }
 
@@ -55,18 +55,18 @@ fn vec_i64_push(v: *VecI64, value: i64) -> bool {
     return false;
   }
 
-  if (*v).len == (*v).cap {
+  if v->len == v->cap {
     var new_cap: u64 = 4;
-    if (*v).cap > 0 {
-      new_cap = (*v).cap * 2;
+    if v->cap > 0 {
+      new_cap = v->cap * 2;
     }
     if !vec_i64_reserve(v, new_cap) {
       return false;
     }
   }
 
-  (*v).data[(*v).len] = value;
-  (*v).len = (*v).len + 1;
+  v->data[v->len] = value;
+  v->len = v->len + 1;
   return true;
 }
 
@@ -74,13 +74,13 @@ fn vec_i64_pop(v: *VecI64, out: *i64) -> bool {
   if v == null {
     return false;
   }
-  if (*v).len == 0 {
+  if v->len == 0 {
     return false;
   }
 
-  var idx: u64 = (*v).len - 1;
-  *out = (*v).data[idx];
-  (*v).len = idx;
+  var idx: u64 = v->len - 1;
+  *out = v->data[idx];
+  v->len = idx;
   return true;
 }
 
@@ -88,11 +88,11 @@ fn vec_i64_get(v: *VecI64, idx: u64, out: *i64) -> bool {
   if v == null {
     return false;
   }
-  if idx >= (*v).len {
+  if idx >= v->len {
     return false;
   }
 
-  *out = (*v).data[idx];
+  *out = v->data[idx];
   return true;
 }
 
@@ -100,11 +100,11 @@ fn vec_i64_set(v: *VecI64, idx: u64, value: i64) -> bool {
   if v == null {
     return false;
   }
-  if idx >= (*v).len {
+  if idx >= v->len {
     return false;
   }
 
-  (*v).data[idx] = value;
+  v->data[idx] = value;
   return true;
 }
 
@@ -112,12 +112,12 @@ fn vec_i64_len(v: *VecI64) -> u64 {
   if v == null {
     return 0;
   }
-  return (*v).len;
+  return v->len;
 }
 
 fn vec_i64_clear(v: *VecI64) -> unit {
   if v == null {
     return;
   }
-  (*v).len = 0;
+  v->len = 0;
 }

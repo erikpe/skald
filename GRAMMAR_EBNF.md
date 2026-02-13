@@ -105,11 +105,13 @@ unary        = ( "-" | "!" | "*" | "&" ) , unary
              | postfix
              ;
 
-postfix      = primary , { call_suffix | field_suffix | index_suffix } ;
+postfix      = primary , { call_suffix | field_suffix | ptr_field_suffix | index_suffix } ;
 
 call_suffix  = "(" , [ arguments ] , ")" ;
 
 field_suffix = "." , identifier ;
+
+ptr_field_suffix = "->" , identifier ;
 
 index_suffix = "[" , expression , "]" ;
 
@@ -141,5 +143,6 @@ struct_init  = identifier , ":" , expression ;
 - assignment is right-associative (a = b = c parses as a = (b = c)).
 - The left side of assignment must be an lvalue (identifier, deref, or field).
 - postfix chains allow calls and field access in any order: f(x).y(z)
+- ptr->field is syntactic sugar for (*ptr).field
 - If you later add arrays, add postfix indexing: [ expr ]
 
