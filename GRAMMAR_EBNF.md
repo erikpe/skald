@@ -52,7 +52,7 @@ type         = pointer_type | base_type | identifier ;
 
 pointer_type = "*" , type ;
 
-base_type    = "i64" | "u64" | "i32" | "u32" | "bool" | "unit" ;
+base_type    = "i64" | "u64" | "i32" | "u32" | "u8" | "bool" | "unit" ;
 
 
 ## Statements

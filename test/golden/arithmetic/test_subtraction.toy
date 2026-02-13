@@ -1,7 +1,8 @@
 extern fn print_i64(x: i64) -> unit;
 extern fn print_u64(x: u64) -> unit;
+extern fn print_u8(x: u8) -> unit;
 
-fn main() -> i64 {
+fn test_i64() -> unit {
   var i64_min: i64 = -9223372036854775808;
   var i64_max: i64 = 9223372036854775807;
   var i64_zero: i64 = 0;
@@ -92,7 +93,9 @@ fn main() -> i64 {
   print_i64(r_i64_53);
   print_i64(r_i64_54);
   print_i64(r_i64_55);
+}
 
+fn test_u64() -> unit {
   var u64_zero: u64 = 0;
   var u64_one: u64 = 1;
   var u64_max: u64 = 18446744073709551615;
@@ -158,6 +161,79 @@ fn main() -> i64 {
   print_u64(r_u64_42);
   print_u64(r_u64_43);
   print_u64(r_u64_44);
+}
 
+fn test_u8() -> unit {
+  var u8_zero: u8 = 0;
+  var u8_one: u8 = 1;
+  var u8_max: u8 = 255;
+  var u8_mid: u8 = 17;
+  var u8_big: u8 = 200;
+
+  var r_u8_00: u8 = u8_zero - u8_zero; // = 0
+  var r_u8_01: u8 = u8_zero - u8_one;  // = 255 (wrap-around)
+  var r_u8_02: u8 = u8_zero - u8_max;  // = 1 (wrap-around)
+  var r_u8_03: u8 = u8_zero - u8_mid;  // = 239 (wrap-around)
+  var r_u8_04: u8 = u8_zero - u8_big;  // = 56 (wrap-around)
+
+  var r_u8_10: u8 = u8_one - u8_zero; // = 1
+  var r_u8_11: u8 = u8_one - u8_one;  // = 0
+  var r_u8_12: u8 = u8_one - u8_max;  // = 2 (wrap-around)
+  var r_u8_13: u8 = u8_one - u8_mid;  // = 240 (wrap-around)
+  var r_u8_14: u8 = u8_one - u8_big;  // = 57 (wrap-around)
+
+  var r_u8_20: u8 = u8_max - u8_zero; // = 255
+  var r_u8_21: u8 = u8_max - u8_one;  // = 254
+  var r_u8_22: u8 = u8_max - u8_max;  // = 0
+  var r_u8_23: u8 = u8_max - u8_mid;  // = 238
+  var r_u8_24: u8 = u8_max - u8_big;  // = 55
+
+  var r_u8_30: u8 = u8_mid - u8_zero; // = 17
+  var r_u8_31: u8 = u8_mid - u8_one;  // = 16
+  var r_u8_32: u8 = u8_mid - u8_max;  // = 18 (wrap-around)
+  var r_u8_33: u8 = u8_mid - u8_mid;  // = 0
+  var r_u8_34: u8 = u8_mid - u8_big;  // = 73 (wrap-around)
+
+  var r_u8_40: u8 = u8_big - u8_zero; // = 200
+  var r_u8_41: u8 = u8_big - u8_one;  // = 199
+  var r_u8_42: u8 = u8_big - u8_max;  // = 201 (wrap-around)
+  var r_u8_43: u8 = u8_big - u8_mid;  // = 183
+  var r_u8_44: u8 = u8_big - u8_big;  // = 0
+
+  print_u8(r_u8_00);
+  print_u8(r_u8_01);
+  print_u8(r_u8_02);
+  print_u8(r_u8_03);
+  print_u8(r_u8_04);
+
+  print_u8(r_u8_10);
+  print_u8(r_u8_11);
+  print_u8(r_u8_12);
+  print_u8(r_u8_13);
+  print_u8(r_u8_14);
+
+  print_u8(r_u8_20);
+  print_u8(r_u8_21);
+  print_u8(r_u8_22);
+  print_u8(r_u8_23);
+  print_u8(r_u8_24);
+
+  print_u8(r_u8_30);
+  print_u8(r_u8_31);
+  print_u8(r_u8_32);
+  print_u8(r_u8_33);
+  print_u8(r_u8_34);
+
+  print_u8(r_u8_40);
+  print_u8(r_u8_41);
+  print_u8(r_u8_42);
+  print_u8(r_u8_43);
+  print_u8(r_u8_44);
+}
+
+fn main() -> i64 {
+  test_i64();
+  test_u64();
+  test_u8();
   return 0;
 }

@@ -54,7 +54,7 @@ Non-goals (MVP)
 
 ### Types
 Built-in:
-- i64, u64, i32, u32, bool, unit
+- i64, u64, i32, u32, u8, bool, unit
 
 Pointer types:
 - *T

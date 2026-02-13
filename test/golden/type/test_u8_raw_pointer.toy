@@ -1,0 +1,41 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn malloc_u64(size: u64) -> *u8;
+extern fn free_ptr(p: *u8) -> unit;
+
+fn main() -> i64 {
+  // Raw pointer allocation and byte indexing.
+  var p: *u8 = malloc_u64(4);
+  if p == null {
+    return 1;
+  }
+  defer free_ptr(p);
+
+  p[0] = 7;
+  p[1] = 8;
+  p[2] = 9;
+  p[3] = 255;
+
+  // Compare against integer literals to validate u8 reads.
+  if p[0] == 7 {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+  if p[1] == 8 {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+  if p[2] == 9 {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+  if p[3] == 255 {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+
+  return 0;
+}

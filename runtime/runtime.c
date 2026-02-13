@@ -10,6 +10,10 @@ void print_u64(uint64_t x) {
     printf("%llu\n", (unsigned long long)x);
 }
 
+void print_u8(uint8_t x) {
+    printf("%u\n", (unsigned int)x);
+}
+
 int64_t read_i64(void) {
     long long x = 0;
     if (scanf("%lld", &x) != 1) {
