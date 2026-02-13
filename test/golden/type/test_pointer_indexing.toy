@@ -1,0 +1,51 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn malloc_u64(size: u64) -> *i64;
+extern fn free_ptr(p: *i64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct PairBlock2 {
+  p0: Pair;
+  p1: Pair;
+}
+
+fn main() -> i64 {
+  // i64 pointer indexing: write/read with scaling by element size.
+  var p: *i64 = malloc_u64(3 * 8);
+  if p == null {
+    return 1;
+  }
+  defer free_ptr(p);
+
+  p[0] = 11;
+  p[1] = 22;
+  p[2] = 33;
+
+  print_i64(p[0]);
+  print_i64(p[1]);
+  print_i64(p[2]);
+
+  // Struct pointer indexing: p[i].field via indexed base.
+  var block: PairBlock2 = PairBlock2{
+    p0: Pair{ left: 0, right: 0 },
+    p1: Pair{ left: 0, right: 0 },
+  };
+  var pairs: *Pair = &block.p0;
+
+  pairs[0].left = 7;
+  pairs[0].right = 8;
+  pairs[1].left = 9;
+  pairs[1].right = 10;
+
+  print_i64(pairs[0].left + pairs[0].right);
+  print_i64(pairs[1].left + pairs[1].right);
+
+  // Explicit deref + index combined.
+  var first_left: i64 = (*pairs).left;
+  print_i64(first_left);
+
+  return 0;
+}

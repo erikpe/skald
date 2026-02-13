@@ -16,6 +16,7 @@ from ast_nodes import (
     Field,
     FnDecl,
     If,
+    Index,
     IntLit,
     NamedType,
     NullLit,
@@ -346,6 +347,12 @@ class Parser:
                 name = self._consume_ident("Expected field name after '.'")
                 expr = Field(expr, name, span)
                 continue
+            if self.ts.match(TokenKind.LBRACKET):
+                span = self._span_from_last()
+                idx = self._parse_expression()
+                self.ts.consume(TokenKind.RBRACKET, "Expected ']' after index")
+                expr = Index(expr, idx, span)
+                continue
             break
         return expr
 
@@ -414,7 +421,7 @@ class Parser:
         return Span(tok.filepath, tok.line, tok.col)
 
     def _is_lvalue(self, expr: Expr) -> bool:
-        return isinstance(expr, (Var, Field)) or (
+        return isinstance(expr, (Var, Field, Index)) or (
             isinstance(expr, Unary) and expr.op == "*"
         )
 

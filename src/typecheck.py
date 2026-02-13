@@ -15,6 +15,7 @@ from ast_nodes import (
     Field,
     FnDecl,
     Goto,
+    Index,
     If,
     IntLit,
     LabeledBlock,
@@ -222,6 +223,18 @@ def _check_expr(expr: Expr, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
             raise TypeCheckError(f"Unknown field {expr.name} on {base_ty.name}")
         field = layout.field_map[expr.name]
         return resolve_type(field.type_ast, symbols)
+    if isinstance(expr, Index):
+        base_ty = _check_expr(expr.base, env, symbols)
+        idx_ty = _check_expr(expr.index, env, symbols)
+        if not isinstance(base_ty, TyPtr):
+            raise TypeCheckError(
+                f"Indexing requires pointer base, got {type_name(base_ty)}"
+            )
+        if not is_int(idx_ty):
+            raise TypeCheckError(
+                f"Indexing requires integer index, got {type_name(idx_ty)}"
+            )
+        return base_ty.inner
     if isinstance(expr, Assign):
         if not _is_lvalue(expr.target):
             raise TypeCheckError("Invalid assignment target")
@@ -312,7 +325,7 @@ def _check_call(expr: Call, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
 
 
 def _is_lvalue(expr: Expr) -> bool:
-    return isinstance(expr, (Var, Field)) or (
+    return isinstance(expr, (Var, Field, Index)) or (
         isinstance(expr, Unary) and expr.op == "*"
     )
 

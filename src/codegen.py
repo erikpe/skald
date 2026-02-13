@@ -17,6 +17,7 @@ from ast_nodes import (
     FnDecl,
     Goto,
     If,
+    Index,
     IntLit,
     LabeledBlock,
     NamedType,
@@ -339,6 +340,13 @@ class Codegen:
             self._emit_addr(expr, env)
             self._load_indirect_to_rax("rax", field_type)
             return
+        if isinstance(expr, Index):
+            elem_type = self._lvalue_type(expr, env)
+            if self._is_struct_type_ast(elem_type):
+                raise CodegenError("Struct index value requires copy context")
+            self._emit_addr(expr, env)
+            self._load_indirect_to_rax("rax", elem_type)
+            return
         if isinstance(expr, Assign):
             self._emit_assign(expr, env)
             return
@@ -584,6 +592,20 @@ class Codegen:
             if field.offset:
                 self._emit_line(f"  add rax, {field.offset}")
             return
+        if isinstance(expr, Index):
+            elem_type = self._lvalue_type(expr, env)
+            elem_size, _ = type_size_align(elem_type, self.symbols)
+
+            self._emit_expr(expr.base, env)
+            self._push_reg("rax")
+            self._emit_expr(expr.index, env)
+            self._pop_reg("rcx")
+
+            if elem_size != 1:
+                self._emit_line(f"  imul rax, {elem_size}")
+            self._emit_line("  add rcx, rax")
+            self._emit_line("  mov rax, rcx")
+            return
         raise CodegenError("Expression is not addressable")
 
     def _load_to_rax(self, offset: int, type_ast: TypeAst) -> None:
@@ -660,6 +682,11 @@ class Codegen:
             if field is None:
                 raise CodegenError(f"Unknown field {expr.name} on {base_type}")
             return field.type_ast
+        if isinstance(expr, Index):
+            base_ty = self._expr_type(expr.base, env)
+            if isinstance(base_ty, PtrType):
+                return base_ty.inner
+            raise CodegenError("Index base must be a pointer type")
         if isinstance(expr, Unary) and expr.op == "*":
             ptr_ty = self._expr_type(expr.expr, env)
             if isinstance(ptr_ty, PtrType):
@@ -670,6 +697,8 @@ class Codegen:
         if isinstance(expr, Var):
             return env.lookup(expr.name).type_ast
         if isinstance(expr, Field):
+            return self._lvalue_type(expr, env)
+        if isinstance(expr, Index):
             return self._lvalue_type(expr, env)
         if isinstance(expr, Unary) and expr.op == "*":
             return self._lvalue_type(expr, env)
@@ -687,6 +716,8 @@ class Codegen:
         if isinstance(expr, Var):
             ty = env.lookup(expr.name).type_ast
         elif isinstance(expr, Field):
+            ty = self._lvalue_type(expr, env)
+        elif isinstance(expr, Index):
             ty = self._lvalue_type(expr, env)
         elif isinstance(expr, Unary) and expr.op == "*":
             ptr_ty = self._expr_type(expr.expr, env)
@@ -764,6 +795,13 @@ class Codegen:
             field_type = self._field_type(expr, env)
             if not self._same_type_ast(field_type, type_ast):
                 raise CodegenError("Struct field source type mismatch")
+            self._emit_addr(expr, env)
+            self._emit_line(f"  mov {out_reg}, rax")
+            return
+        if isinstance(expr, Index):
+            index_type = self._lvalue_type(expr, env)
+            if not self._same_type_ast(index_type, type_ast):
+                raise CodegenError("Struct index source type mismatch")
             self._emit_addr(expr, env)
             self._emit_line(f"  mov {out_reg}, rax")
             return

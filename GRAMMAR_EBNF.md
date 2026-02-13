@@ -103,11 +103,13 @@ unary        = ( "-" | "!" | "*" | "&" ) , unary
              | postfix
              ;
 
-postfix      = primary , { call_suffix | field_suffix } ;
+postfix      = primary , { call_suffix | field_suffix | index_suffix } ;
 
 call_suffix  = "(" , [ arguments ] , ")" ;
 
 field_suffix = "." , identifier ;
+
+index_suffix = "[" , expression , "]" ;
 
 arguments    = expression , { "," , expression } ;
 

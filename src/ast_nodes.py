@@ -214,6 +214,13 @@ class Field:
 
 
 @dataclass(frozen=True)
+class Index:
+    base: Expr
+    index: Expr
+    span: Span
+
+
+@dataclass(frozen=True)
 class Assign:
     target: Expr
     value: Expr
@@ -230,5 +237,6 @@ Expr = (
     | Binary
     | Call
     | Field
+    | Index
     | Assign
 )
