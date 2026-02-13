@@ -29,6 +29,7 @@ from ast_nodes import (
     StructField,
     StructFieldInit,
     StructLit,
+    Sizeof,
     TypeAst,
     Unary,
     Var,
@@ -370,6 +371,12 @@ class Parser:
         if self.ts.match(TokenKind.KW_NULL):
             span = self._span_from_token(tok)
             return NullLit(span)
+        if self.ts.match(TokenKind.KW_SIZEOF):
+            span = self._span_from_last()
+            self.ts.consume(TokenKind.LPAREN, "Expected '(' after sizeof")
+            type_ast = self._parse_type()
+            self.ts.consume(TokenKind.RPAREN, "Expected ')' after sizeof type")
+            return Sizeof(type_ast, span)
         if self.ts.match(TokenKind.IDENT):
             span = self._span_from_token(tok)
             if self._starts_struct_lit():

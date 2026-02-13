@@ -119,10 +119,13 @@ primary      = integer
              | "true"
              | "false"
              | "null"
+             | sizeof_expr
              | struct_lit
              | identifier
              | "(" , expression , ")"
              ;
+
+sizeof_expr  = "sizeof" , "(" , type , ")" ;
 
 struct_lit   = identifier , "{" , [ struct_init_list ] , "}" ;
 

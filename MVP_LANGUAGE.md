@@ -92,6 +92,7 @@ Examples
 - Binary: + - * / %  == != < <= > >=  && ||
 - Calls: f(a, b)
 - Field access: expr.field
+- Compile-time size query: sizeof(T)
 - Grouping: (expr)
 
 

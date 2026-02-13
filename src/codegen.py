@@ -25,6 +25,7 @@ from ast_nodes import (
     Program,
     PtrType,
     Return,
+    Sizeof,
     Span,
     StructFieldInit,
     StructDecl,
@@ -321,6 +322,10 @@ class Codegen:
             return
         if isinstance(expr, StructLit):
             raise CodegenError("Struct literal requires destination context")
+        if isinstance(expr, Sizeof):
+            size, _ = type_size_align(expr.type_ast, self.symbols)
+            self._emit_line(f"  mov rax, {size}")
+            return
         if isinstance(expr, Unary):
             self._emit_unary(expr, env)
             return

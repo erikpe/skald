@@ -185,6 +185,12 @@ class StructLit:
 
 
 @dataclass(frozen=True)
+class Sizeof:
+    type_ast: TypeAst
+    span: Span
+
+
+@dataclass(frozen=True)
 class Unary:
     op: str
     expr: Expr
@@ -233,6 +239,7 @@ Expr = (
     | NullLit
     | Var
     | StructLit
+    | Sizeof
     | Unary
     | Binary
     | Call

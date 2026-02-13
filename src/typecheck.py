@@ -23,6 +23,7 @@ from ast_nodes import (
     NullLit,
     Program,
     Return,
+    Sizeof,
     Span,
     StructLit,
     Unary,
@@ -38,6 +39,7 @@ from typesys import (
     TyNull,
     TyPtr,
     TyStruct,
+    TyU64,
     TyUnit,
     is_assignable,
     is_bool,
@@ -206,6 +208,9 @@ def _check_expr(expr: Expr, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
                 )
 
         return TyStruct(expr.name)
+    if isinstance(expr, Sizeof):
+        resolve_type(expr.type_ast, symbols)
+        return TyU64()
     if isinstance(expr, Unary):
         return _check_unary(expr, env, symbols)
     if isinstance(expr, Binary):

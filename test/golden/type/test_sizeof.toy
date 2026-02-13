@@ -1,0 +1,37 @@
+extern fn print_u64(x: u64) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+struct Padded {
+  a: u8;
+  b: u64;
+  c: u8;
+}
+
+struct Nested {
+  p: Pair;
+  x: u8;
+}
+
+fn main() -> i64 {
+  // Builtins
+  print_u64(sizeof(u8));
+  print_u64(sizeof(u32));
+  print_u64(sizeof(u64));
+  print_u64(sizeof(i64));
+  print_u64(sizeof(bool));
+
+  // Pointers
+  print_u64(sizeof(*u8));
+  print_u64(sizeof(*Pair));
+
+  // Structs (including alignment/padding)
+  print_u64(sizeof(Pair));
+  print_u64(sizeof(Padded));
+  print_u64(sizeof(Nested));
+
+  return 0;
+}
