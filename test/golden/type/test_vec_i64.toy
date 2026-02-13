@@ -1,0 +1,54 @@
+// stdlib: vec_i64
+
+extern fn print_i64(x: i64) -> unit;
+extern fn print_u64(x: u64) -> unit;
+
+fn print_bool(x: bool) -> unit {
+  if x {
+    print_i64(1);
+  } else {
+    print_i64(0);
+  }
+}
+
+fn main() -> i64 {
+  var v: VecI64 = vec_i64_new();
+  defer vec_i64_destroy(&v);
+
+  print_u64(vec_i64_len(&v));
+
+  print_bool(vec_i64_reserve(&v, 3));
+  print_u64(v.cap);
+
+  print_bool(vec_i64_push(&v, 10));
+  print_bool(vec_i64_push(&v, 20));
+  print_bool(vec_i64_push(&v, 30));
+  print_u64(vec_i64_len(&v));
+
+  var x: i64 = 0;
+  print_bool(vec_i64_get(&v, 1, &x));
+  print_i64(x);
+
+  print_bool(vec_i64_set(&v, 1, 99));
+  print_bool(vec_i64_get(&v, 1, &x));
+  print_i64(x);
+
+  print_bool(vec_i64_pop(&v, &x));
+  print_i64(x);
+  print_u64(vec_i64_len(&v));
+
+  print_bool(vec_i64_pop(&v, &x));
+  print_i64(x);
+  print_u64(vec_i64_len(&v));
+
+  vec_i64_clear(&v);
+  print_u64(vec_i64_len(&v));
+
+  print_bool(vec_i64_reserve(&v, 1));
+  print_u64(v.cap);
+
+  print_bool(vec_i64_get(&v, 0, &x));
+  print_bool(vec_i64_pop(&v, &x));
+
+  return 0;
+}

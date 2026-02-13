@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -38,8 +39,10 @@ def main() -> int:
             failures.append(f"{rel}: no expected output files")
             continue
 
+        compile_src = prepare_compile_source(root, toy_path, build_root, test_id)
+
         total_compiles += 1
-        compile_ok = compile_program(root, toy_path, out_s, out_bin)
+        compile_ok = compile_program(root, compile_src, out_s, out_bin)
         print_result(f"COMPILE {rel}", compile_ok)
         if compile_ok:
             passed_compiles += 1
@@ -100,6 +103,55 @@ def compile_program(root: Path, src: Path, out_s: Path, out_bin: Path) -> bool:
         return False
 
     return True
+
+
+def prepare_compile_source(root: Path, src: Path, build_root: Path, test_id: str) -> Path:
+    source_text = src.read_text(encoding="utf-8")
+    libs = parse_stdlib_directives(source_text)
+    if not libs:
+        return src
+
+    merged_parts: List[str] = []
+    for lib in libs:
+        lib_path = root / "stdlib" / f"{lib}.toy"
+        if not lib_path.exists():
+            raise SystemExit(f"Missing stdlib file for {src}: {lib_path}")
+        merged_parts.append(lib_path.read_text(encoding="utf-8").rstrip())
+
+    filtered_lines = [
+        line for line in source_text.splitlines() if not _is_stdlib_directive_line(line)
+    ]
+    merged_parts.append("\n".join(filtered_lines).rstrip())
+
+    merged_source = "\n\n".join(part for part in merged_parts if part) + "\n"
+    merged_path = build_root / f"{test_id}.merged.toy"
+    merged_path.write_text(merged_source, encoding="utf-8")
+    return merged_path
+
+
+def parse_stdlib_directives(source_text: str) -> List[str]:
+    libs: List[str] = []
+    seen: set[str] = set()
+    for line in source_text.splitlines():
+        if not _is_stdlib_directive_line(line):
+            continue
+        match = re.match(r"\s*//\s*stdlib\s*:\s*(.*)$", line)
+        if match is None:
+            continue
+        names = [part.strip() for part in match.group(1).split(",")]
+        for name in names:
+            if not name:
+                continue
+            if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+                raise SystemExit(f"Invalid stdlib module name in directive: {name}")
+            if name not in seen:
+                seen.add(name)
+                libs.append(name)
+    return libs
+
+
+def _is_stdlib_directive_line(line: str) -> bool:
+    return re.match(r"\s*//\s*stdlib\s*:", line) is not None
 
 
 def collect_cases(src: Path) -> List[Tuple[Path | None, Path]]:
