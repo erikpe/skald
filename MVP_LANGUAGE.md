@@ -54,7 +54,7 @@ Non-goals (MVP)
 
 ### Types
 Built-in:
-- i64, u64, i32, u32, u8, bool, unit
+- i64, u64, u8, bool, unit
 
 Pointer types:
 - *T
@@ -143,6 +143,7 @@ AST nodes (example minimal set)
 
 Types (semantic, after type check)
 - TyI64, TyU64, TyI32, TyU32, TyBool, TyUnit
+- TyI64, TyU64, TyU8, TyBool, TyUnit
 - TyPtr(pointee)
 - TyStruct(name)
 - TyFn(params, ret)

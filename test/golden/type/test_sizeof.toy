@@ -19,7 +19,6 @@ struct Nested {
 fn main() -> i64 {
   // Builtins
   print_u64(sizeof(u8));
-  print_u64(sizeof(u32));
   print_u64(sizeof(u64));
   print_u64(sizeof(i64));
   print_u64(sizeof(bool));

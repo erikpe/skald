@@ -166,7 +166,7 @@ class Lowerer:
         if isinstance(type_ast, PtrType):
             return NullLit(span)
         if isinstance(type_ast, NamedType):
-            if type_ast.name in {"i64", "u64", "i32", "u32", "u8"}:
+            if type_ast.name in {"i64", "u64", "u8"}:
                 return IntLit(0, span)
             if type_ast.name == "bool":
                 return BoolLit(False, span)

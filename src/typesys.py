@@ -22,16 +22,6 @@ class TyU64:
 
 
 @dataclass(frozen=True)
-class TyI32:
-    pass
-
-
-@dataclass(frozen=True)
-class TyU32:
-    pass
-
-
-@dataclass(frozen=True)
 class TyU8:
     pass
 
@@ -69,8 +59,6 @@ class TyStruct:
 Ty = (
     TyI64
     | TyU64
-    | TyI32
-    | TyU32
     | TyU8
     | TyBool
     | TyUnit
@@ -84,8 +72,6 @@ Ty = (
 _BUILTIN_TYPES: Dict[str, Ty] = {
     "i64": TyI64(),
     "u64": TyU64(),
-    "i32": TyI32(),
-    "u32": TyU32(),
     "u8": TyU8(),
     "bool": TyBool(),
     "unit": TyUnit(),
@@ -106,7 +92,7 @@ def resolve_type(type_ast: TypeAst, symbols: GlobalSymbols) -> Ty:
 
 
 def is_int(ty: Ty) -> bool:
-    return isinstance(ty, (TyI64, TyU64, TyI32, TyU32, TyU8, TyIntLit))
+    return isinstance(ty, (TyI64, TyU64, TyU8, TyIntLit))
 
 
 def is_bool(ty: Ty) -> bool:
@@ -130,10 +116,6 @@ def type_name(ty: Ty) -> str:
         return "i64"
     if isinstance(ty, TyU64):
         return "u64"
-    if isinstance(ty, TyI32):
-        return "i32"
-    if isinstance(ty, TyU32):
-        return "u32"
     if isinstance(ty, TyU8):
         return "u8"
     if isinstance(ty, TyBool):
@@ -160,10 +142,6 @@ def _intlit_fits(value: int, target: Ty) -> bool:
         return -(2**63) <= value <= 2**63 - 1
     if isinstance(target, TyU64):
         return 0 <= value <= 2**64 - 1
-    if isinstance(target, TyI32):
-        return -(2**31) <= value <= 2**31 - 1
-    if isinstance(target, TyU32):
-        return 0 <= value <= 2**32 - 1
     if isinstance(target, TyU8):
         return 0 <= value <= 2**8 - 1
     return False
