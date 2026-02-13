@@ -1,0 +1,42 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn print_u64(x: u64) -> unit;
+extern fn print_u8(x: u8) -> unit;
+extern fn malloc_u64(size: u64) -> *u8;
+extern fn free_ptr(p: *u8) -> unit;
+
+struct Pair {
+  left: i64;
+  right: i64;
+}
+
+fn main() -> i64 {
+  // Pointer cast from raw allocation to typed struct pointer.
+  var raw: *u8 = malloc_u64(2 * sizeof(Pair));
+  if raw == null {
+    return 1;
+  }
+  var pairs: *Pair = raw as *Pair;
+  defer free_ptr(pairs as *u8);
+
+  pairs[0].left = 7;
+  pairs[0].right = 8;
+  pairs[1].left = 100;
+  pairs[1].right = 200;
+
+  print_i64(pairs[0].left + pairs[0].right);
+  print_i64(pairs[1].left + pairs[1].right);
+
+  // Integer casts with explicit narrowing/widening.
+  var narrowed1: u8 = 300 as u8;
+  var widened: u64 = narrowed1 as u64;
+  var narrowed2: u8 = 1000 as u8;
+  var wrapped: u8 = (-1) as u8;
+
+  print_u8(narrowed1);
+  print_u64(widened);
+  print_u8(narrowed2);
+  print_u8(wrapped);
+  print_i64((wrapped as i64) - 200);
+
+  return 0;
+}

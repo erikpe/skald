@@ -18,7 +18,7 @@ letter       = 'A'..'Z' | 'a'..'z' | '_' ;
 digit        = '0'..'9' ;
 
 Keywords
-- fn struct var if else while return defer true false null extern
+- fn struct var if else while return defer true false null extern sizeof as
 
 Operators and punctuation
 - + - * / % == != < <= > >= && || ! & =
@@ -97,7 +97,9 @@ relational   = additive , { ( "<" | "<=" | ">" | ">=" ) , additive } ;
 
 additive     = multiplicative , { ( "+" | "-" ) , multiplicative } ;
 
-multiplicative = unary , { ( "*" | "/" | "%" ) , unary } ;
+multiplicative = cast , { ( "*" | "/" | "%" ) , cast } ;
+
+cast         = unary , { "as" , type } ;
 
 unary        = ( "-" | "!" | "*" | "&" ) , unary
              | postfix

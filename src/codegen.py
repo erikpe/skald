@@ -8,6 +8,7 @@ from ast_nodes import (
     Binary,
     Block,
     BoolLit,
+    Cast,
     Call,
     DeferCall,
     Expr,
@@ -325,6 +326,11 @@ class Codegen:
         if isinstance(expr, Sizeof):
             size, _ = type_size_align(expr.type_ast, self.symbols)
             self._emit_line(f"  mov rax, {size}")
+            return
+        if isinstance(expr, Cast):
+            self._emit_expr(expr.expr, env)
+            if isinstance(expr.type_ast, NamedType) and expr.type_ast.name == "u8":
+                self._emit_line("  movzx rax, al")
             return
         if isinstance(expr, Unary):
             self._emit_unary(expr, env)
@@ -701,6 +707,8 @@ class Codegen:
     def _expr_type(self, expr: Expr, env: LocalEnv) -> TypeAst:
         if isinstance(expr, Var):
             return env.lookup(expr.name).type_ast
+        if isinstance(expr, Cast):
+            return expr.type_ast
         if isinstance(expr, Field):
             return self._lvalue_type(expr, env)
         if isinstance(expr, Index):

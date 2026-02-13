@@ -8,6 +8,7 @@ from ast_nodes import (
     Binary,
     Block,
     BoolLit,
+    Cast,
     Call,
     DeferCall,
     Expr,
@@ -297,22 +298,30 @@ class Parser:
                 return expr
 
     def _parse_multiplicative(self) -> Expr:
-        expr = self._parse_unary()
+        expr = self._parse_cast()
         while True:
             if self.ts.match(TokenKind.STAR):
                 span = self._span_from_last()
-                right = self._parse_unary()
+                right = self._parse_cast()
                 expr = Binary("*", expr, right, span)
             elif self.ts.match(TokenKind.SLASH):
                 span = self._span_from_last()
-                right = self._parse_unary()
+                right = self._parse_cast()
                 expr = Binary("/", expr, right, span)
             elif self.ts.match(TokenKind.PERCENT):
                 span = self._span_from_last()
-                right = self._parse_unary()
+                right = self._parse_cast()
                 expr = Binary("%", expr, right, span)
             else:
                 return expr
+
+    def _parse_cast(self) -> Expr:
+        expr = self._parse_unary()
+        while self.ts.match(TokenKind.KW_AS):
+            span = self._span_from_last()
+            type_ast = self._parse_type()
+            expr = Cast(expr, type_ast, span)
+        return expr
 
     def _parse_unary(self) -> Expr:
         if self.ts.match(TokenKind.MINUS):

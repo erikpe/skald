@@ -8,6 +8,7 @@ from ast_nodes import (
     Binary,
     Block,
     BoolLit,
+    Cast,
     Call,
     DeferCall,
     Expr,
@@ -211,6 +212,14 @@ def _check_expr(expr: Expr, env: TypeEnv, symbols: GlobalSymbols) -> Ty:
     if isinstance(expr, Sizeof):
         resolve_type(expr.type_ast, symbols)
         return TyU64()
+    if isinstance(expr, Cast):
+        value_ty = _check_expr(expr.expr, env, symbols)
+        cast_ty = resolve_type(expr.type_ast, symbols)
+        if not _is_explicit_cast_allowed(value_ty, cast_ty):
+            raise TypeCheckError(
+                f"Invalid cast: {type_name(value_ty)} as {type_name(cast_ty)}"
+            )
+        return cast_ty
     if isinstance(expr, Unary):
         return _check_unary(expr, env, symbols)
     if isinstance(expr, Binary):
@@ -368,3 +377,11 @@ def _eval_int_bin(op: str, left: int, right: int) -> int:
             return 0
         return left % right
     raise TypeCheckError(f"Unknown int op: {op}")
+
+
+def _is_explicit_cast_allowed(value_ty: Ty, cast_ty: Ty) -> bool:
+    if is_int(value_ty) and is_int(cast_ty):
+        return True
+    if isinstance(value_ty, TyPtr) and isinstance(cast_ty, TyPtr):
+        return True
+    return False

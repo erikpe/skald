@@ -23,6 +23,7 @@ class TokenKind(str, Enum):
     KW_NULL = "KW_NULL"
     KW_EXTERN = "KW_EXTERN"
     KW_SIZEOF = "KW_SIZEOF"
+    KW_AS = "KW_AS"
 
     PLUS = "PLUS"
     MINUS = "MINUS"
@@ -71,6 +72,7 @@ KEYWORDS: Dict[str, TokenKind] = {
     "null": TokenKind.KW_NULL,
     "extern": TokenKind.KW_EXTERN,
     "sizeof": TokenKind.KW_SIZEOF,
+    "as": TokenKind.KW_AS,
 }
 
 

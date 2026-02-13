@@ -191,6 +191,13 @@ class Sizeof:
 
 
 @dataclass(frozen=True)
+class Cast:
+    expr: Expr
+    type_ast: TypeAst
+    span: Span
+
+
+@dataclass(frozen=True)
 class Unary:
     op: str
     expr: Expr
@@ -240,6 +247,7 @@ Expr = (
     | Var
     | StructLit
     | Sizeof
+    | Cast
     | Unary
     | Binary
     | Call

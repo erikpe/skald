@@ -50,7 +50,7 @@ Non-goals (MVP)
 - Integer literals: decimal only.
 - Comments: // line comment, /* ... */ block comment (optional but easy).
 - Keywords:
-  fn, struct, let (optional), var, if, else, while, return, defer, true, false, null, extern
+  fn, struct, let (optional), var, if, else, while, return, defer, true, false, null, extern, sizeof, as
 
 ### Types
 Built-in:
@@ -93,6 +93,7 @@ Examples
 - Calls: f(a, b)
 - Field access: expr.field
 - Compile-time size query: sizeof(T)
+- Explicit casts: expr as Type
 - Grouping: (expr)
 
 
