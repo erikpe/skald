@@ -8,10 +8,6 @@ build.ps1
 - Run in Windows PowerShell
 - Usage: .\build.ps1 -Source path\to\program.toy -Output program
 
-run_golden.sh
-- Run inside WSL2 or Linux
-- Usage: ./run_golden.sh
-
 Golden stdlib directive
 - Golden test sources may include a directive line: // stdlib: module_name
 - Multiple modules are allowed: // stdlib: vec_i64,other_module
@@ -20,3 +16,7 @@ Golden stdlib directive
 
 Notes
 - Requires gcc inside WSL2 or Linux.
+
+run_golden.sh
+- Run inside WSL2 or Linux
+- Usage: ./run_golden.sh

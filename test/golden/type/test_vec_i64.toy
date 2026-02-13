@@ -2,14 +2,7 @@
 
 extern fn print_i64(x: i64) -> unit;
 extern fn print_u64(x: u64) -> unit;
-
-fn print_bool(x: bool) -> unit {
-  if x {
-    print_i64(1);
-  } else {
-    print_i64(0);
-  }
-}
+extern fn print_bool(x: bool) -> unit;
 
 fn main() -> i64 {
   var v: VecI64 = vec_i64_new();

@@ -1,4 +1,5 @@
 extern fn print_i64(x: i64) -> unit;
+extern fn print_bool(x: bool) -> unit;
 
 struct Pair {
   left: i64;
@@ -23,15 +24,6 @@ fn is_null_pair(p: *Pair) -> bool {
 // Helper: test pointer equality on the same struct type.
 fn same_pair(a: *Pair, b: *Pair) -> bool {
   return a == b;
-}
-
-// Helper: print bool as 1/0 for golden outputs.
-fn print_bool(value: bool) -> unit {
-  if value {
-    print_i64(1);
-  } else {
-    print_i64(0);
-  }
 }
 
 // Pointer-only struct typing checks, including recursive struct pointers.

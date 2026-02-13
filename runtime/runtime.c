@@ -14,6 +14,14 @@ void print_u8(uint8_t x) {
     printf("%u\n", (unsigned int)x);
 }
 
+void print_bool(uint8_t x) {
+    if (x != 0) {
+        printf("true\n");
+    } else {
+        printf("false\n");
+    }
+}
+
 int64_t read_i64(void) {
     long long x = 0;
     if (scanf("%lld", &x) != 1) {
