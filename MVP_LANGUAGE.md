@@ -1,6 +1,6 @@
-# Toy Language MVP Specification (Stage-0)
+# Skald Language MVP Specification (Stage-0)
 
-This document defines a minimal, self-contained MVP language and compiler plan for a toy, statically typed language. It is written to be usable by both humans and AI agents. The goal is to build a handcrafted lexer, parser, type checker, and x86-64 code generator (Linux SysV ABI). The compiler is first implemented in a host language (e.g., Python) and later reimplemented in the toy language for self-hosting.
+This document defines a minimal, self-contained MVP language and compiler plan for a Skald, statically typed language. It is written to be usable by both humans and AI agents. The goal is to build a handcrafted lexer, parser, type checker, and x86-64 code generator (Linux SysV ABI). The compiler is first implemented in a host language (e.g., Python) and later reimplemented in the Skald language for self-hosting.
 
 Contents
 - Goals and non-goals
@@ -240,7 +240,7 @@ Stage-0
 - Build a tiny runtime in C.
 
 Stage-1
-- Reimplement lexer and parser in the toy language.
+- Reimplement lexer and parser in the Skald language.
 - Compile them with stage-0.
 
 Stage-2

@@ -27,7 +27,7 @@ For every data structure instance:
 
 Pattern:
 
-```toy
+```ska
 var v: VecI64 = vec_i64_new();
 defer vec_i64_destroy(&v);
 ```
@@ -40,7 +40,7 @@ If a container stores pointers, the container owns only pointer slots, not point
 
 ## Visible Struct Shape
 
-```toy
+```ska
 struct VecI64 {
   data: *i64;
   len: u64;
@@ -57,7 +57,7 @@ Equivalent typed variants can be generated for other element types:
 
 ## Functions
 
-```toy
+```ska
 extern fn vec_i64_new() -> VecI64;
 extern fn vec_i64_destroy(v: *VecI64) -> unit;
 extern fn vec_i64_reserve(v: *VecI64, min_cap: u64) -> bool;
@@ -76,7 +76,7 @@ Semantics:
 
 ## Example
 
-```toy
+```ska
 extern fn print_i64(x: i64) -> unit;
 
 fn vec_demo() -> unit {
@@ -102,7 +102,7 @@ Start with `u64` keys for simplicity and performance.
 
 ## Visible Struct Shape
 
-```toy
+```ska
 struct MapU64I64 {
   keys: *u64;
   vals: *i64;
@@ -122,7 +122,7 @@ Equivalent generated variants:
 
 ## Functions
 
-```toy
+```ska
 extern fn map_u64_i64_new() -> MapU64I64;
 extern fn map_u64_i64_destroy(m: *MapU64I64) -> unit;
 extern fn map_u64_i64_reserve(m: *MapU64I64, min_cap: u64) -> bool;
@@ -138,7 +138,7 @@ extern fn map_u64_i64_clear(m: *MapU64I64) -> unit;
 
 Because there are no function pointers, use index-based iteration:
 
-```toy
+```ska
 extern fn map_u64_i64_iter_begin(m: *MapU64I64) -> u64;
 extern fn map_u64_i64_iter_next(m: *MapU64I64, idx: u64) -> u64; // returns cap when done
 extern fn map_u64_i64_iter_key(m: *MapU64I64, idx: u64) -> u64;
@@ -165,7 +165,7 @@ This avoids casts and keeps type checking simple.
 Add a small generator script (`scripts/gen_ds_api.py`) that takes a list of concrete types and emits:
 
 - C runtime wrappers (`runtime/ds_generated.c/.h`)
-- toy extern declarations (`stdlib/ds_generated.toy`)
+- Skald extern declarations (`stdlib/ds_generated.ska`)
 
 Input example:
 

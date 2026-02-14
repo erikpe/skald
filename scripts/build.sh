@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <source.toy> [output]"
+  echo "Usage: $0 <source.ska> [output]"
   exit 1
 fi
 

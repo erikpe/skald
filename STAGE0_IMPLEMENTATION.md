@@ -26,7 +26,7 @@ This document outlines concrete steps to get the stage-0 language subset operati
 - runtime/
   - runtime.c
 - tests/
-  - *.toy
+  - *.ska
   - *.out
 
 
@@ -88,7 +88,7 @@ Step 8: Runtime (C)
 - Keep runtime ABI compatible with your language.
 
 Step 9: Build/Run Pipeline
-- Compile .toy -> out.s (your compiler)
+- Compile .ska -> out.s (your compiler)
 - Link with runtime:
   - clang out.s runtime/runtime.c -o prog
 - Run and compare output.
@@ -107,12 +107,12 @@ You can wire a simple driver:
 ## 6) Testing Strategy
 
 Golden tests
-- tests/add.toy, tests/add.out
-- tests/while_sum.toy, tests/while_sum.out
-- tests/defer_return.toy, tests/defer_return.out
+- tests/add.ska, tests/add.out
+- tests/while_sum.ska, tests/while_sum.out
+- tests/defer_return.ska, tests/defer_return.out
 
 Test runner (optional)
-- A Python script that compiles each .toy, links with runtime, runs, and diffs output.
+- A Python script that compiles each .ska, links with runtime, runs, and diffs output.
 
 
 ## 7) Quick Milestones
@@ -134,6 +134,6 @@ Test runner (optional)
 
 ## 9) Next Steps (After Stage-0)
 
-- Implement lexer/parser in the toy language and compile with stage-0.
+- Implement lexer/parser in the Skald language and compile with stage-0.
 - Port type checker and codegen.
 - Gradually expand the language (arrays, casts, etc.).

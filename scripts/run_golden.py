@@ -15,8 +15,8 @@ def main() -> int:
         print(f"Golden test root not found: {golden_root}")
         return 1
 
-    toy_files = sorted(golden_root.rglob("test_*.toy"))
-    if not toy_files:
+    skald_files = sorted(golden_root.rglob("test_*.ska"))
+    if not skald_files:
         print(f"No golden tests found under {golden_root}")
         return 1
 
@@ -28,18 +28,18 @@ def main() -> int:
     passed_execs = 0
     total_compiles = 0
     passed_compiles = 0
-    for toy_path in toy_files:
-        rel = toy_path.relative_to(golden_root)
+    for skald_path in skald_files:
+        rel = skald_path.relative_to(golden_root)
         test_id = "__".join(rel.with_suffix("").parts)
         out_s = build_root / f"{test_id}.s"
         out_bin = build_root / f"{test_id}.out"
 
-        cases = collect_cases(toy_path)
+        cases = collect_cases(skald_path)
         if not cases:
             failures.append(f"{rel}: no expected output files")
             continue
 
-        compile_src = prepare_compile_source(root, toy_path, build_root, test_id)
+        compile_src = prepare_compile_source(root, skald_path, build_root, test_id)
 
         total_compiles += 1
         compile_ok = compile_program(root, compile_src, out_s, out_bin)
@@ -61,7 +61,7 @@ def main() -> int:
                 passed_execs += 1
 
     print("\nSummary:")
-    print(f"- Programs: {len(toy_files)}")
+    print(f"- Programs: {len(skald_files)}")
     print(f"- Compiles: {passed_compiles}/{total_compiles}")
     print(f"- Runs:     {passed_execs}/{total_execs}")
 
@@ -71,7 +71,7 @@ def main() -> int:
             print(f"- {item}")
         return 1
 
-    print(f"All tests passed ({len(toy_files)} programs).")
+    print(f"All tests passed ({len(skald_files)} programs).")
     return 0
 
 
@@ -113,7 +113,7 @@ def prepare_compile_source(root: Path, src: Path, build_root: Path, test_id: str
 
     merged_parts: List[str] = []
     for lib in libs:
-        lib_path = root / "stdlib" / f"{lib}.toy"
+        lib_path = root / "stdlib" / f"{lib}.ska"
         if not lib_path.exists():
             raise SystemExit(f"Missing stdlib file for {src}: {lib_path}")
         merged_parts.append(lib_path.read_text(encoding="utf-8").rstrip())
@@ -124,7 +124,7 @@ def prepare_compile_source(root: Path, src: Path, build_root: Path, test_id: str
     merged_parts.append("\n".join(filtered_lines).rstrip())
 
     merged_source = "\n\n".join(part for part in merged_parts if part) + "\n"
-    merged_path = build_root / f"{test_id}.merged.toy"
+    merged_path = build_root / f"{test_id}.merged.ska"
     merged_path.write_text(merged_source, encoding="utf-8")
     return merged_path
 
