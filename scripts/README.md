@@ -4,10 +4,6 @@ build.sh
 - Run inside WSL2 or Linux
 - Usage: ./build.sh path/to/program.ska [output]
 
-build.ps1
-- Run in Windows PowerShell
-- Usage: .\build.ps1 -Source path\to\program.ska -Output program
-
 Golden stdlib directive
 - Golden test sources may include a directive line: // stdlib: module_name
 - Multiple modules are allowed: // stdlib: vec_i64,other_module
