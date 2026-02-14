@@ -16,6 +16,6 @@ ASM="$BUILD_DIR/out.s"
 mkdir -p "$BUILD_DIR"
 
 python3 "$ROOT_DIR/src/main.py" "$SRC" --emit "$ASM"
-gcc "$ASM" "$ROOT_DIR/runtime/runtime.c" -o "$OUT"
+gcc "$ASM" "$ROOT_DIR/runtime/runtime.c" -rdynamic -o "$OUT"
 
 echo "Built: $OUT"

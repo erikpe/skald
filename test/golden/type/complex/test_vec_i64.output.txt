@@ -21,3 +21,12 @@ true
 3
 false
 false
+true
+1000
+true
+500500
+11
+33
+99
+33
+2

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <execinfo.h>
+#include <unistd.h>
 
 void print_i64(int64_t x) {
     printf("%lld\n", (long long)x);
@@ -40,4 +42,48 @@ void free_ptr(void *p) {
 
 void *realloc_ptr(void *p, uint64_t size) {
     return realloc(p, (size_t)size);
+}
+
+static void emit_stack_trace(void) {
+    void *frames[64];
+    int count = backtrace(frames, 64);
+    fprintf(stderr, "stack trace (%d frames):\n", count);
+    backtrace_symbols_fd(frames, count, STDERR_FILENO);
+}
+
+static void panic_common(const char *message) {
+    fflush(stdout);
+    fprintf(stderr, "PANIC: %s\n", message);
+    emit_stack_trace();
+    abort();
+}
+
+void panic(void) {
+    panic_common("explicit panic");
+}
+
+void panic_vec_i64_null(void) {
+    panic_common("VecI64 operation on null pointer");
+}
+
+void panic_vec_i64_oob(uint64_t idx, uint64_t len) {
+    fflush(stdout);
+    fprintf(stderr, "PANIC: VecI64 index out of bounds (idx=%llu, len=%llu)\n",
+            (unsigned long long)idx,
+            (unsigned long long)len);
+    emit_stack_trace();
+    abort();
+}
+
+void panic_vec_i64_empty_pop(void) {
+    panic_common("VecI64 pop on empty vector");
+}
+
+void panic_vec_i64_oom(uint64_t requested_cap) {
+    fflush(stdout);
+    fprintf(stderr,
+            "PANIC: VecI64 allocation failed while growing (requested_cap=%llu)\n",
+            (unsigned long long)requested_cap);
+    emit_stack_trace();
+    abort();
 }

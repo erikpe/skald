@@ -17,7 +17,7 @@ $WslRoot = ($Root -replace '^([A-Za-z]):', '/mnt/$1').Replace('\\','/')
 wsl.exe bash -lc "python3 $WslRoot/src/main.py $WslSource --emit $WslAsm"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-wsl.exe bash -lc "gcc $WslAsm $WslRoot/runtime/runtime.c -o $Output"
+wsl.exe bash -lc "gcc $WslAsm $WslRoot/runtime/runtime.c -rdynamic -o $Output"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Built: $Output"

@@ -1,6 +1,11 @@
 extern fn malloc_u64(size: u64) -> *u8;
 extern fn realloc_ptr(p: *u8, size: u64) -> *u8;
 extern fn free_ptr(p: *u8) -> unit;
+extern fn panic() -> unit;
+extern fn panic_vec_i64_null() -> unit;
+extern fn panic_vec_i64_oob(idx: u64, len: u64) -> unit;
+extern fn panic_vec_i64_empty_pop() -> unit;
+extern fn panic_vec_i64_oom(requested_cap: u64) -> unit;
 
 struct VecI64 {
   data: *i64;
@@ -120,4 +125,45 @@ fn vec_i64_clear(v: *VecI64) -> unit {
     return;
   }
   v->len = 0;
+}
+
+fn vec_i64_get_or_panic(v: *VecI64, idx: u64) -> i64 {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if idx >= v->len {
+    panic_vec_i64_oob(idx, v->len);
+  }
+  return v->data[idx];
+}
+
+fn vec_i64_set_or_panic(v: *VecI64, idx: u64, value: i64) -> unit {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if idx >= v->len {
+    panic_vec_i64_oob(idx, v->len);
+  }
+  v->data[idx] = value;
+}
+
+fn vec_i64_pop_or_panic(v: *VecI64) -> i64 {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if v->len == 0 {
+    panic_vec_i64_empty_pop();
+  }
+
+  v->len = v->len - 1;
+  return v->data[v->len];
+}
+
+fn vec_i64_push_or_panic(v: *VecI64, value: i64) -> unit {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if !vec_i64_push(v, value) {
+    panic_vec_i64_oom(v->len + 1);
+  }
 }

@@ -1,0 +1,125 @@
+extern fn print_i64(x: i64) -> unit;
+extern fn print_u64(x: u64) -> unit;
+extern fn malloc_u64(size: u64) -> *u8;
+extern fn realloc_ptr(p: *u8, size: u64) -> *u8;
+extern fn free_ptr(p: *u8) -> unit;
+extern fn panic_vec_i64_null() -> unit;
+extern fn panic_vec_i64_oob(idx: u64, len: u64) -> unit;
+extern fn panic_vec_i64_oom(requested_cap: u64) -> unit;
+
+struct VecI64 {
+  data: *i64;
+  len: u64;
+  cap: u64;
+}
+
+fn vec_i64_new() -> VecI64 {
+  return VecI64{ data: null, len: 0, cap: 0 };
+}
+
+fn vec_i64_destroy(v: *VecI64) -> unit {
+  if v == null {
+    return;
+  }
+  if v->data != null {
+    free_ptr(v->data as *u8);
+  }
+  v->data = null;
+  v->len = 0;
+  v->cap = 0;
+}
+
+fn vec_i64_reserve(v: *VecI64, min_cap: u64) -> bool {
+  if v == null {
+    return false;
+  }
+  if min_cap <= v->cap {
+    return true;
+  }
+
+  var bytes: u64 = min_cap * sizeof(i64);
+  var raw: *u8 = null;
+
+  if v->data == null {
+    raw = malloc_u64(bytes);
+  } else {
+    raw = realloc_ptr(v->data as *u8, bytes);
+  }
+
+  if raw == null {
+    return false;
+  }
+
+  v->data = raw as *i64;
+  v->cap = min_cap;
+  return true;
+}
+
+fn vec_i64_push(v: *VecI64, value: i64) -> bool {
+  if v == null {
+    return false;
+  }
+
+  if v->len == v->cap {
+    var new_cap: u64 = 4;
+    if v->cap > 0 {
+      new_cap = v->cap * 2;
+    }
+    if !vec_i64_reserve(v, new_cap) {
+      return false;
+    }
+  }
+
+  v->data[v->len] = value;
+  v->len = v->len + 1;
+  return true;
+}
+
+fn vec_i64_push_or_panic(v: *VecI64, value: i64) -> unit {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if !vec_i64_push(v, value) {
+    panic_vec_i64_oom(v->len + 1);
+  }
+}
+
+fn vec_i64_get_or_panic(v: *VecI64, idx: u64) -> i64 {
+  if v == null {
+    panic_vec_i64_null();
+  }
+  if idx >= v->len {
+    panic_vec_i64_oob(idx, v->len);
+  }
+  return v->data[idx];
+}
+
+fn leaf_illegal_read(v: *VecI64) -> i64 {
+  return vec_i64_get_or_panic(v, 999);
+}
+
+fn level3(v: *VecI64) -> i64 {
+  return leaf_illegal_read(v);
+}
+
+fn level2(v: *VecI64) -> i64 {
+  return level3(v);
+}
+
+fn level1(v: *VecI64) -> i64 {
+  return level2(v);
+}
+
+fn main() -> i64 {
+  var v: VecI64 = vec_i64_new();
+  defer vec_i64_destroy(&v);
+
+  vec_i64_push_or_panic(&v, 10);
+  vec_i64_push_or_panic(&v, 20);
+  vec_i64_push_or_panic(&v, 30);
+
+  print_u64(v.len);
+  print_i64(level1(&v));
+
+  return 0;
+}

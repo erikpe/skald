@@ -93,6 +93,7 @@ def compile_program(root: Path, src: Path, out_s: Path, out_bin: Path) -> bool:
         "gcc",
         str(out_s),
         str(root / "runtime" / "runtime.c"),
+        "-rdynamic",
         "-o",
         str(out_bin),
     ]
