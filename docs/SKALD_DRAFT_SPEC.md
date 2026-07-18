@@ -1,8 +1,8 @@
-# Niflheim2 Draft Language Specification
+# Skald Draft Language Specification
 
 Status: exploratory draft.
 
-This document defines a new language temporarily called **Niflheim2**. Niflheim2 is inspired by Niflheim, but it is not a backwards-compatible revision of Niflheim. The central difference is the memory model: Niflheim2 is not garbage collected. It uses deterministic object lifetimes, value semantics, built-in shared ownership, and call-scoped borrowed parameters.
+This document defines the **Skald** programming language. Skald began as a design exploration derived from Niflheim, but it is a distinct language rather than a backwards-compatible revision. Its central departure is the memory model: Skald is not garbage collected. It uses deterministic object lifetimes, value semantics, built-in shared ownership, and call-scoped alias parameters.
 
 The goal of this document is to describe the language itself, not its standard library.
 
@@ -10,7 +10,9 @@ The goal of this document is to describe the language itself, not its standard l
 
 ## 1. Purpose and Scope
 
-Niflheim2 is a learning-oriented, statically typed, compiled language. It should be practical for small personal projects while remaining simple enough that the compiler and runtime can be understood by one person.
+Skald is a learning-oriented, statically typed, compiled language. It should be practical for small personal projects while remaining simple enough that the compiler and runtime can be understood by one person.
+
+The canonical filename suffix for Skald source code is `.ska`. The Skald compiler is named `skac`.
 
 Primary goals:
 
@@ -42,29 +44,29 @@ Checked exceptions are part of the intended language design because they affect 
 
 ## 2. Design Summary
 
-Niflheim2 distinguishes four important ways an object can be used:
+Skald distinguishes four important ways an object can be used:
 
-```nif
+```ska
 fn takes_value(dog: Dog) -> unit;         // copies an inline Dog value
-fn takes_ref(dog: ref Dog) -> unit;       // borrows a Dog for this call
-fn takes_mut(dog: mut ref Dog) -> unit;   // mutably borrows a Dog for this call
+fn takes_ref(ref dog: Dog) -> unit;       // aliases a Dog read-only for this call
+fn takes_mut(mut ref dog: Dog) -> unit;   // aliases a Dog mutably for this call
 fn takes_shared(dog: shared Dog) -> unit; // copies a shared heap handle
 ```
 
 Example call behavior:
 
-```nif
+```ska
 var d: Dog = Dog();
 var s: shared Dog = new Dog();
 
 takes_value(d);       // copies Dog
 takes_value(s);       // illegal unless an explicit pointee-copy form is later added
 
-takes_ref(d);         // borrows inline Dog
-takes_ref(s);         // borrows shared pointee
+takes_ref(d);         // aliases inline Dog
+takes_ref(s);         // aliases shared pointee
 
-takes_mut(d);         // mutably borrows inline Dog
-takes_mut(s);         // mutably borrows the shared pointee; s itself is not rebound
+takes_mut(d);         // mutably aliases inline Dog
+takes_mut(s);         // mutably aliases the shared pointee; s itself is not rebound
 
 takes_shared(s);      // copies shared handle; increments reference count
 takes_shared(d);      // illegal; inline Dog is not heap/shared
@@ -74,19 +76,21 @@ Key memory-model decisions:
 
 - `Dog` is an inline value type.
 - `shared Dog` is a non-null owning reference-counted heap handle.
-- `ref Dog` and `mut ref Dog` are parameter modes, not general value types.
-- `ref` parameters cannot be stored, returned, captured, assigned, or converted to `shared`.
-- every borrowed argument has a caller-owned anchor that keeps its storage alive for the complete call;
+- `ref name: Dog` and `mut ref name: Dog` are alias-binding forms; `Dog` remains the bound name's type.
+- In the first implementation, alias bindings exist only for parameters and cannot be stored, returned, captured, assigned, or converted to `shared`.
+- every alias-bound argument has a caller-owned anchor that keeps its storage alive for the complete call;
 - ordinary instance `fn` methods have read-only receivers, while `mut fn` methods have mutable receivers;
-- `mut ref` is mutable but not exclusive. Two `mut ref` parameters may refer to the same object.
+- `mut ref` is mutable but not exclusive. Two mutable alias parameters may refer to the same object.
 - Optional values are explicit using postfix `?`, for example `Dog?` or `shared Dog?`.
-- Plain `Dog`, `shared Dog`, `ref Dog`, and `mut ref Dog` are never null.
+- Plain `Dog` and `shared Dog` are never null, and an alias binding must always designate a live `Dog` place.
 
 ---
 
 ## 3. Source Files, Modules, and Visibility
 
-Niflheim2 keeps Niflheim's module-oriented shape unless a later design decision replaces it.
+Skald uses a module-oriented source organization.
+
+Skald source files use the canonical `.ska` suffix. The `skac` compiler accepts `.ska` source files as compilation inputs.
 
 Supported declaration kinds:
 
@@ -96,9 +100,9 @@ Supported declaration kinds:
 - top-level functions;
 - external functions.
 
-Module import forms are inherited from Niflheim:
+Module import forms:
 
-```nif
+```ska
 import a.b;
 import a.b as b;
 import a.b as x.y;
@@ -114,7 +118,7 @@ Symbols are private to the defining module by default. `export` makes declaratio
 
 Qualified names are explicit:
 
-```nif
+```ska
 util.Counter
 util.make_counter()
 ```
@@ -123,11 +127,11 @@ Unqualified names resolve local-first. If multiple imports provide the same unqu
 
 ---
 
-## 4. Types
+## 4. Types and Binding Modes
 
 ### 4.1 Primitive Types
 
-Niflheim2 uses the same primitive value types as Niflheim:
+Skald provides the following primitive value types:
 
 - `i64`
 - `u64`
@@ -148,11 +152,11 @@ Default values:
 
 Class types are inline object types by default:
 
-```nif
+```ska
 var dog: Dog = Dog();
 ```
 
-An inline object has deterministic lifetime. It is constructed at initialization and destroyed when its storage lifetime ends. Assignment updates an already-live object and does not end its lifetime or invoke its destructor.
+An inline object has deterministic lifetime. It is constructed at initialization and destroyed when its storage lifetime ends. Assignment updates an already-live object and does not end its lifetime or invoke its `destroy` member.
 
 The word "inline" describes language semantics, not a required physical stack layout. A compiler may place values in registers, stack slots, caller-provided return storage, or optimized-away storage as long as observable construction/destruction behavior is preserved.
 
@@ -160,7 +164,7 @@ The word "inline" describes language semantics, not a required physical stack la
 
 `shared T` is a built-in owning heap handle:
 
-```nif
+```ska
 var dog: shared Dog = new Dog();
 ```
 
@@ -183,59 +187,77 @@ Reference cycles are allowed to leak in the initial language. A later version ma
 
 `Obj` is the universal root type for object hierarchies.
 
-In Niflheim2, `Obj` is usually meaningful as a borrowed or shared polymorphic type:
+In Skald, `Obj` is usually meaningful through a polymorphic alias or shared handle:
 
-```nif
-fn describe(value: ref Obj) -> Str;
+```ska
+fn describe(ref value: Obj) -> Str;
 fn retain(value: shared Obj) -> unit;
 ```
 
 Standalone inline variables of type `Obj` are not allowed initially:
 
-```nif
+```ska
 var value: Obj = Dog(); // illegal
 ```
 
-This avoids slicing arbitrary object values down to an empty or partial root object. Concrete object values should use their concrete class type, while polymorphic APIs should use `ref Obj`, `mut ref Obj`, or `shared Obj`.
+This avoids slicing arbitrary object values down to an empty or partial root object. Concrete object values should use their concrete class type, while polymorphic APIs should use read-only or mutable alias parameters of type `Obj`, or `shared Obj`.
 
-### 4.5 Borrowed Parameter Modes
+### 4.5 Alias Binding Modes
 
-`ref T` and `mut ref T` are only valid in function, method, constructor, and interface method parameter declarations.
+Every variable or parameter name denotes a typed storage place. Skald separates the place's object type from the way the name is bound. A value parameter `name: T` owns local parameter storage initialized by copying the argument. A read-only alias parameter `ref name: T` and a mutable alias parameter `mut ref name: T` instead name an existing `T` place owned elsewhere.
 
-They are not general types. The following are illegal:
+The source place may be inline storage or the pointee of a `shared T` handle. This distinction is not observable through the alias: member access, virtual dispatch, and further calls operate on the same `T` object in either case. Inline versus shared ownership is a caller-side concern, not a parameter-type distinction. The callee receives no ownership-provenance tag and cannot test whether an alias originated from inline or shared storage.
 
-```nif
-var local_ref: ref Dog = ...;
-fn get_dog() -> ref Dog;
+Within the callee, an alias name otherwise participates as a `T` place. Supplying it to a value parameter copies the underlying `T`; supplying it to another compatible alias parameter forwards access to the same place. Neither operation creates a storable reference value.
+
+`ref` and `mut ref` are binding modes, not type constructors or general reference value types. In the first implementation, explicit alias bindings are valid only on function, method, `init`, and interface-method parameters. The compiler must reject these modifiers in every local, field, element, static, return, or capture position. Locally declared alias bindings are reserved for a later stage and are described in Section 4.5.2.
+
+Alias fields and alias returns are not permitted:
+
+```ska
+fn get_dog() -> ref Dog; // illegal: alias returns are not a language feature
 class Kennel {
-    dog: ref Dog;
+    ref dog: Dog;         // illegal: alias fields are not a language feature
 }
 ```
 
-`ref T`:
+`ref name: T`:
 
 - provides read-only access to an existing object for the duration of the call;
 - may bind to an inline `T`;
 - may bind to the pointee of a `shared T`;
-- may call read-only instance methods but not `mut fn` methods on the borrowed object or its inline subobjects;
-- cannot assign fields of the borrowed object or pass the object or its inline subobjects as `mut ref` arguments;
+- may call read-only instance methods but not `mut fn` methods on the aliased object or its inline subobjects;
+- cannot assign fields of the aliased object or pass the object or its inline subobjects as mutable alias arguments;
 - cannot be assigned or rebound;
 - cannot escape the call.
 
-`mut ref T`:
+`mut ref name: T`:
 
 - provides mutable access to an existing object for the duration of the call;
-- may bind to a mutable inline `T`, including a `final` inline field reached through mutable containing-object access, because `mut ref` cannot replace the whole borrowed object;
+- may bind to a mutable inline `T`, including a `final` inline field reached through mutable containing-object access, because a mutable alias cannot replace the whole aliased object;
 - may bind to the pointee of a `shared T` handle even when the handle is stored in a `final` field, because finality of the handle is shallow;
 - may call both read-only `fn` methods and mutable `mut fn` methods;
 - cannot be assigned or rebound;
 - cannot escape the call;
 - does not imply exclusive access.
 
+All alias bindings, including the future local form, obey these invariants:
+
+- an alias is initialized once and its identity cannot be rebound;
+- an alias never owns the referenced object and cannot itself be copied as an ordinary value; the underlying `T` may still be copied when a value context requests it;
+- an alias cannot be stored in a field, array element, static variable, heap object, or closure, and cannot be returned;
+- an alias is confined to a statically apparent lexical or call scope and cannot escape that scope;
+- the source place must remain alive and at a stable address for the entire alias scope, using a compiler-managed anchor when ownership alone does not guarantee this;
+- mutable access cannot be obtained from a read-only source binding;
+- mutable aliases are non-exclusive and may overlap other read-only or mutable aliases;
+- conditionally alive storage, such as an optional payload, requires a dedicated scoped binding rule that prevents the payload from disappearing while aliased.
+
+These restrictions make alias validity syntax-directed. They apply to parameter aliases in the first implementation and constrain the design of local aliases when those are added. Skald does not require general lifetime inference or an exclusivity-based borrow checker.
+
 Example:
 
-```nif
-fn rename(dog: mut ref Dog, name: Str) -> unit {
+```ska
+fn rename(mut ref dog: Dog, name: Str) -> unit {
     dog.name = name;
 }
 
@@ -248,8 +270,8 @@ rename(s, "Turing");
 
 Aliasing is allowed:
 
-```nif
-fn swap_names(a: mut ref Dog, b: mut ref Dog) -> unit {
+```ska
+fn swap_names(mut ref a: Dog, mut ref b: Dog) -> unit {
     var tmp: Str = a.name;
     a.name = b.name;
     b.name = tmp;
@@ -259,13 +281,13 @@ var dog: Dog = Dog();
 swap_names(dog, dog); // allowed; both parameters refer to the same object
 ```
 
-This may produce surprising program behavior. It remains memory-safe because borrowed parameters cannot outlive the call and because the caller keeps the storage behind every borrow alive until the call returns.
+This may produce surprising program behavior. It remains memory-safe because alias parameters cannot outlive the call and because the caller keeps the storage behind every alias alive until the call returns.
 
-Read-only access is an access restriction, not a guarantee that the object remains observably unchanged. Another aliased `mut ref` parameter may mutate the same object during the call. Code using a `ref T` simply cannot perform that mutation through the `ref T` access path.
+Read-only access is an access restriction, not a guarantee that the object remains observably unchanged. Another mutable alias parameter may mutate the same object during the call. Code using `ref name: T` simply cannot perform that mutation through that name.
 
 #### 4.5.1 Borrow Anchors
 
-Every `ref T` or `mut ref T` argument has a **borrow anchor** owned by the caller. The anchor guarantees that the storage containing the borrowed object remains alive for the complete dynamic execution of the call, including nested calls and exceptional cleanup. A borrowed parameter is still passed as a non-owning address; the anchor is caller-side state and is not part of the callee-visible parameter value.
+Every argument bound to a `ref` or `mut ref` parameter has a **borrow anchor** owned by the caller. The anchor guarantees that the storage containing the aliased object remains alive for the complete dynamic execution of the call, including nested calls and exceptional cleanup. An alias parameter is still passed as a non-owning address; the anchor is caller-side state and is not part of the callee-visible binding.
 
 Anchor selection is based on the source expression and its storage provenance:
 
@@ -275,11 +297,11 @@ Anchor selection is based on the source expression and its storage provenance:
 - an inline field or base subobject reached through a shared object is anchored by a shared handle to the allocation that physically contains it;
 - an inline array element is anchored by the array storage that physically contains it;
 - an inline or shared temporary used as a borrowed argument has its lifetime extended until the call completes;
-- forwarding an existing borrowed parameter to a nested call reuses the outer call's lifetime guarantee and does not create ownership from the borrow.
+- forwarding an existing alias parameter to a nested call reuses the outer call's lifetime guarantee and does not create ownership from the alias.
 
 A stable shared local is the common zero-overhead heap-object case:
 
-```nif
+```ska
 var dog: shared Dog = new Dog();
 inspect(dog); // dog itself keeps the pointee alive; no shared copy is required
 ```
@@ -288,13 +310,13 @@ The callee cannot rebind a shared local belonging to its caller. Rebinding some 
 
 A replaceable shared place requires a hidden shared copy because code executed by the call may reach and overwrite the original place through another alias:
 
-```nif
+```ska
 inspect(owner.dog); // owner.dog has type shared Dog
 ```
 
 Conceptually, but not as user-visible source syntax, the caller lowers this as:
 
-```nif
+```ska
 var __borrow_guard: shared Dog = owner.dog;
 inspect_raw_address_of_pointee(__borrow_guard);
 // __borrow_guard is released after normal or exceptional call completion
@@ -302,9 +324,9 @@ inspect_raw_address_of_pointee(__borrow_guard);
 
 The hidden copy performs an ordinary `shared` retain and release. It does not allocate another pointee.
 
-If the borrowed value is an inline field inside a shared object, the containing allocation is anchored instead:
+If the aliased value is an inline field inside a shared object, the containing allocation is anchored instead:
 
-```nif
+```ska
 class Owner {
     dog: Dog;
 }
@@ -314,7 +336,7 @@ inspect(registry.current_owner.dog);
 
 If `registry.current_owner` is a replaceable `shared Owner` place, the conceptual lowering is:
 
-```nif
+```ska
 var __owner_guard: shared Owner = registry.current_owner;
 inspect_raw_address_of_inline_field(__owner_guard, dog);
 // __owner_guard is released after the call
@@ -324,7 +346,7 @@ The guard is a hidden `shared Owner` handle held in the caller's activation reco
 
 If a function or indexing operation returns a `shared Owner` value, the returned shared temporary itself may serve as the anchor:
 
-```nif
+```ska
 inspect(registry.find_owner(id).dog);
 ```
 
@@ -332,15 +354,39 @@ Here the result of `find_owner` remains alive until `inspect` returns. No additi
 
 The compiler establishes each required anchor as part of evaluating the corresponding argument, before later evaluation or user code can invalidate the source place. Hidden anchors are destroyed after the call in the ordinary cleanup order. Multiple borrows may use the same anchor; implementations may coalesce redundant hidden guards when doing so preserves observable retain, release, and destruction behavior.
 
-Anchor selection is syntax-directed and local to expression lowering. It does not require a runtime ownership search, object-graph traversal, interprocedural lifetime inference, or general borrow checking. Safe code can maintain this property because borrowed values cannot be stored or returned and raw pointer construction is unavailable.
+Anchor selection is syntax-directed and local to expression lowering. It does not require a runtime ownership search, object-graph traversal, interprocedural lifetime inference, or general borrow checking. Safe code can maintain this property because aliases cannot be stored or returned and raw pointer construction is unavailable.
 
-The initial language does not allow a borrow to target a conditionally alive payload, such as the contained `T` inside a `T?`, if another alias could remove that payload during the call. A later presence-binding design may add such borrows together with rules that preserve the payload lifetime.
+The initial language does not allow an alias to target a conditionally alive payload, such as the contained `T` inside a `T?`, if another alias could remove that payload during the call. A later presence-binding design may add such aliases together with rules that preserve the payload lifetime.
+
+#### 4.5.2 Deferred Local Alias Bindings
+
+Locally declared aliases are expected in a later language stage, but are not accepted by the first implementation. The reserved design direction is:
+
+```ska
+ref local_dog: Dog = existing_dog;
+mut ref mutable_dog: Dog = existing_dog;
+```
+
+A local alias would use the same binding semantics as an alias parameter, except that its lifetime would be its statically apparent lexical scope rather than one call. In addition to the common invariants in Section 4.5, it must obey these restrictions:
+
+- the declaration has exactly one initializer, and neither ordinary assignment nor control-flow merging can rebind the alias;
+- an inline source place must have a storage scope that encloses the complete alias scope, and no operation may end or relocate that place while the alias exists;
+- a source reached through shared ownership is protected by a compiler-managed shared anchor for the complete alias scope when the original handle is not itself guaranteed to remain available;
+- a temporary source has its lifetime extended through the complete alias scope;
+- optional payloads and any other conditionally alive subobjects cannot be directly aliased without a dedicated scoped binding construct;
+- the alias remains unusable in fields, elements, statics, returns, captures, heap storage, and every other escaping position.
+
+These rules permit an inline local alias to lower to an ordinary address with no allocation or reference-count operation. A local alias reached through shared ownership may additionally require a hidden retained handle, just as a call argument may require a borrow anchor. The compiler chooses the anchor from the initializer expression; it does not infer arbitrary lifetimes or search an object graph.
 
 ### 4.6 Optional Types
 
+**Specification status:** provisional and intentionally incomplete. Optionals are deferred until after the first vertical compiler slice. This section reserves the `T?` and `none` design direction, but it does not yet define a usable optional feature.
+
+Before optionals are implementation-ready, the specification must define presence testing and binding, extraction by copy or borrow, conversion from `T` to `T?`, type inference for `none`, copy/assignment/destruction behavior, nested optionals, subtype conversions, and the interaction between optional payload lifetime and borrowing. Examples in this section are design sketches rather than a complete normative contract.
+
 Optionality is explicit and part of the type.
 
-```nif
+```ska
 var dog: Dog? = maybe_get_dog();
 var heap_dog: shared Dog? = maybe_get_shared_dog();
 ```
@@ -349,32 +395,32 @@ var heap_dog: shared Dog? = maybe_get_shared_dog();
 
 Plain non-optional values are never null:
 
-```nif
+```ska
 var dog: Dog;             // always contains a Dog after definite initialization
 var heap_dog: shared Dog; // always contains a valid shared handle
 ```
 
 Optionality applies to the complete preceding type:
 
-```nif
+```ska
 Dog?              // optional inline Dog
 shared Dog?       // optional shared Dog handle
 ```
 
-Because `ref` and `mut ref` are parameter modes rather than general types, optional borrowed parameters are written as:
+Because `ref` and `mut ref` are binding modes rather than type constructors, alias parameters whose object type is optional are written as:
 
-```nif
-fn inspect(dog: ref Dog?) -> unit;
-fn rename_if_present(dog: mut ref Dog?) -> unit;
+```ska
+fn inspect(ref dog: Dog?) -> unit;
+fn rename_if_present(mut ref dog: Dog?) -> unit;
 ```
 
-In this draft, `ref Dog?` means "borrow an optional Dog value". It does not mean "an optional borrow". Since borrowed parameters cannot be stored or returned, optional borrow values are not part of the initial model.
+Here the parameter aliases a `Dog?` place: the optional container, rather than only its conditionally alive payload, is the object type of the binding. The alias itself is not optional and always designates that place. Since aliases are bindings rather than values, optional alias values are not part of the model.
 
-Open question: if later versions make `ref` a first-class type, the language should distinguish `(ref Dog)?` from `ref (Dog?)`.
+Later optional presence-binding syntax may introduce a scoped alias to the contained `Dog`. Such an alias must obey the stability rules in Section 4.5 so that the payload cannot disappear during its scope.
 
 The draft spelling for the empty optional value is:
 
-```nif
+```ska
 none
 ```
 
@@ -382,9 +428,13 @@ Using a value of type `T?` requires explicit presence handling. The exact patter
 
 ### 4.7 Array Types
 
-Niflheim2 uses the same fixed-size array type constructor as Niflheim:
+**Specification status:** provisional and intentionally incomplete. Arrays, indexing, slicing, and array iteration are deferred until after the first vertical compiler slice. The syntax and properties below record the current design direction, not a complete implementation contract.
 
-```nif
+Before arrays are implementation-ready, the specification must finalize construction forms, copy and assignment semantics, element and slice mutation, destruction and partial-construction cleanup, nested-array behavior, element borrowing, iteration behavior, and the observable consequences of the chosen storage model.
+
+Skald uses a built-in fixed-size array type constructor:
+
+```ska
 u8[]
 i64[]
 Dog[]
@@ -394,7 +444,7 @@ Dog[][]
 
 Array construction:
 
-```nif
+```ska
 var bytes: u8[] = u8[](1024);
 var dogs: Dog[] = Dog[](8);
 var heap_dogs: shared Dog?[] = shared Dog?[](8);
@@ -402,7 +452,7 @@ var heap_dogs: shared Dog?[] = shared Dog?[](8);
 
 Default array construction is valid only when the element type has a default value:
 
-```nif
+```ska
 var bytes: u8[] = u8[](1024);              // ok: u8 defaults to 0u8
 var dogs: Dog[] = Dog[](8);                // ok if Dog is default-constructible
 var maybe_dogs: Dog?[] = Dog?[](8);        // ok: elements default to none
@@ -431,17 +481,17 @@ Default element initialization:
 - non-optional `shared T` elements have no default value and therefore cannot be default array-constructed;
 - optional elements default to no value.
 
-Later versions may add explicit initialization forms for non-defaultable element types, such as initializer lists, fill constructors, or per-element generator syntax. For the first MVP implementation, `shared Dog[](8)` is illegal and `shared Dog?[](8)` is legal.
+Later versions may add explicit initialization forms for non-defaultable element types, such as initializer lists, fill constructors, or per-element generator syntax. For a later array-focused MVP slice, the current direction is that `shared Dog[](8)` is illegal and `shared Dog?[](8)` is legal.
 
 ### 4.8 Str
 
 `Str` is the built-in immutable string type.
 
-`Str` is a small inline value, not a garbage-collected reference. It is backed by immutable byte storage containing `u8` bytes. The language assigns no Unicode or text-normalization semantics initially; string contents are raw bytes, as in Niflheim.
+`Str` is a small inline value, not a garbage-collected reference. It is backed by immutable byte storage containing `u8` bytes. The language assigns no Unicode or text-normalization semantics initially; string contents are raw bytes.
 
 Conceptual shape:
 
-```nif
+```ska
 class Str {
     private storage: shared StrStorage;
     private start: u64;
@@ -457,12 +507,12 @@ Properties:
 - String bytes cannot be mutated through a `Str`.
 - Copying a `Str` copies only the small descriptor/handle, not the bytes.
 - Slicing a `Str` may share the same immutable backing storage.
-- String manipulation should be implementable mostly in Niflheim2 code using `Str` methods and separate mutable builder/buffer types.
+- String manipulation should be implementable mostly in Skald code using `Str` methods and separate mutable builder/buffer types.
 - A future `StrBuf` or byte-buffer type should provide mutable construction and editing, then produce an immutable `Str`.
 
 String literals have type `Str`.
 
-```nif
+```ska
 var greeting: Str = "hello";
 ```
 
@@ -487,22 +537,24 @@ All strategies must preserve the same observable semantics:
 
 ### 5.1 Local Variables
 
-Niflheim2 keeps Niflheim's local declaration syntax:
+Initial local declarations use the following syntax:
 
-```nif
+```ska
 var name: Type = initializer;
 ```
 
+`var` creates an owning value binding with its own storage. Initializing it from another inline value copies that value; initializing a `shared T` local copies the handle. It does not create an alias binding. The future local `ref` and `mut ref` forms are described separately in Section 4.5.2.
+
 Examples:
 
-```nif
+```ska
 var count: i64 = 0;
 var dog: Dog = Dog();
 var maybe_dog: Dog? = none;
 var heap_dog: shared Dog = new Dog();
 ```
 
-Statement terminators are kept as in Niflheim; ordinary statements and declarations use semicolons where Niflheim requires them.
+Ordinary statements and declarations use semicolon terminators.
 
 Variables must be definitely initialized before use. Uninitialized values must not be observable.
 
@@ -510,18 +562,20 @@ Variables must be definitely initialized before use. Uninitialized values must n
 
 Function declarations:
 
-```nif
+```ska
 fn name(param1: Type, param2: Type) -> ReturnType {
     ...
 }
 ```
 
-Parameters may use value types, `shared` types, and borrowed parameter modes:
+Binding modifiers precede the parameter name; they are not written as part of `Type`.
 
-```nif
+Parameters may use value bindings, `shared` value types, and alias-binding modes:
+
+```ska
 fn copy_in(dog: Dog) -> unit;
-fn borrow_in(dog: ref Dog) -> unit;
-fn mutate_in(dog: mut ref Dog) -> unit;
+fn borrow_in(ref dog: Dog) -> unit;
+fn mutate_in(mut ref dog: Dog) -> unit;
 fn share_in(dog: shared Dog) -> unit;
 ```
 
@@ -529,21 +583,26 @@ Parameter passing:
 
 - `T` copies the argument into the callee.
 - `shared T` copies the shared handle into the callee.
-- `ref T` passes a call-scoped read-only borrow.
-- `mut ref T` passes a call-scoped mutable borrow.
+- `ref name: T` binds the parameter name as a call-scoped read-only alias.
+- `mut ref name: T` binds the parameter name as a call-scoped mutable alias.
 
-Return values may be primitives, inline objects, optionals, arrays, function values, or `shared` handles. Returning `ref` or `mut ref` is illegal.
+At a call site, both inline `T` storage and a `shared T` pointee can supply the place for an alias parameter. The callee declares only the access mode it needs; it does not provide separate overloads for inline and shared ownership.
+
+Return values may be primitives, inline objects, optionals, arrays, function values, or `shared` handles. Alias bindings cannot be returned.
 
 ### 5.3 Function Values
 
-Niflheim2 initially keeps Niflheim's capture-free function value model.
+Skald initially uses capture-free function values.
 
 Type syntax:
 
-```nif
+```ska
 fn(i64, i64) -> i64
 fn(ref Dog) -> unit
+fn(mut ref Dog) -> unit
 ```
+
+In function-type syntax, `ref T` and `mut ref T` record the unnamed parameter binding mode. They do not construct reference types.
 
 Function values may refer to:
 
@@ -563,11 +622,11 @@ Function types are invariant and require exact parameter and return types.
 
 Class declarations:
 
-```nif
+```ska
 class Dog extends Animal implements Named {
     name: Str;
 
-    constructor(name: Str) {
+    init(name: Str) {
         self.name = name;
     }
 
@@ -580,10 +639,9 @@ class Dog extends Animal implements Named {
 Classes support:
 
 - fields;
-- constructors;
-- copy constructors;
-- copy assignment;
-- destructors;
+- `init` declarations, including copy constructors;
+- `assign` declarations for copy assignment;
+- `destroy` declarations;
 - instance methods;
 - static methods;
 - static variables;
@@ -594,11 +652,29 @@ Classes support:
 - explicitly declared virtual methods;
 - explicit `override` for overridden methods.
 
+`init`, `assign`, and `destroy` are contextual special-member introducers when used directly in a class body with their corresponding declaration syntax. They are not globally reserved identifiers and the special declarations do not introduce ordinary methods. Because ordinary methods require `fn`, the same spellings remain available to user code:
+
+```ska
+class Example {
+    init() { ... }                    // special initialization member
+    assign(ref other: Example) { ... } // special assignment member
+    destroy { ... }                   // special destruction member
+
+    fn init() -> unit { ... }         // ordinary method named init
+    fn assign(value: i64) -> unit { ... }
+    fn destroy() -> unit { ... }
+
+    init_count: i64;                  // ordinary field
+}
+```
+
+The words may likewise be used for locals, parameters, top-level functions, and other ordinary identifiers where the special class-member grammar is not being parsed.
+
 #### 5.4.1 Instance-Method Receiver Mutability
 
 Every instance method has an implicit receiver access mode. Ordinary `fn` methods have a read-only receiver by default. Methods that may mutate the receiver are declared with `mut fn`:
 
-```nif
+```ska
 class Dog {
     name: Str;
 
@@ -617,7 +693,7 @@ The modifier describes access through the implicit `self` receiver:
 - in an ordinary instance `fn`, `self` is read-only;
 - in a `mut fn`, `self` is mutable;
 - when combined with existing member modifiers, `mut` immediately precedes `fn`, for example `private mut fn`, `virtual mut fn`, and `override mut fn`;
-- constructors, copy constructors, copy assignment members, and destructors have an implicitly mutable `self` and do not use the `mut fn` spelling;
+- `init`, copy assignment, and `destroy` members have an implicitly mutable `self` and do not use the `mut fn` spelling;
 - static methods and top-level functions have no receiver, so `mut` is not valid on them;
 - receiver mutability is not part of capture-free function-value type syntax because instance method values are out of scope initially.
 
@@ -626,13 +702,13 @@ In a read-only instance method, code cannot:
 - assign an instance field of `self`;
 - call a `mut fn` method on `self`;
 - mutate an inline field, base subobject, or inline array element contained in `self`;
-- pass `self` or any of those inline subobjects to a `mut ref` parameter.
+- pass `self` or any of those inline subobjects to a mutable alias parameter.
 
 It may read and copy fields, call read-only methods, allocate objects, perform I/O, and modify separate objects or static state when otherwise permitted. Receiver read-only access is not a purity or side-effect annotation.
 
 Read-only access is shallow across shared ownership. A read-only method cannot replace a `shared T` field of `self`, but receiver read-only access does not extend through the handle to the `T` pointee. The pointee remains mutable through a copied or otherwise available shared handle, even if runtime aliasing causes that pointee to be the same object as one reached through another read-only path:
 
-```nif
+```ska
 class Owner {
     child: shared Dog;
 
@@ -650,70 +726,72 @@ class Owner {
 }
 ```
 
-Access through `ref T` uses the same read-only receiver rules. Access through `mut ref T`, a mutable inline object, or a `shared T` pointee may call both `fn` and `mut fn` methods. Restricting mutable access to read-only access is allowed and requires no runtime conversion; granting mutable access through an existing read-only path is illegal.
+Access through a `ref` parameter uses the same read-only receiver rules. Access through a `mut ref` parameter, a mutable inline object, or a `shared T` pointee may call both `fn` and `mut fn` methods. Restricting mutable access to read-only access is allowed and requires no runtime conversion; granting mutable access through an existing read-only path is illegal.
 
-```nif
-fn inspect(dog: ref Dog) -> Str {
+```ska
+fn inspect(ref dog: Dog) -> Str {
     dog.rename("Rex");       // illegal: rename has a mutable receiver
     return dog.get_name();   // allowed
 }
 
-fn update(dog: mut ref Dog) -> unit {
+fn update(mut ref dog: Dog) -> unit {
     var old_name: Str = dog.get_name(); // allowed
     dog.rename("Rex");                  // allowed
 }
 ```
 
-The initial language has no separate `const T` type syntax. The compiler tracks receiver access mode during type checking, and binding an object to `ref T` restricts the available access rather than casting the object to a different type. This does not create a distinct runtime representation, change object layout, or emit a runtime cast. Access mode propagates through inline fields and base subobjects because those values are physically part of the receiver.
+The initial language has no separate `const T` type syntax. The compiler tracks receiver access mode during type checking, and binding an object through `ref name: T` restricts the available access rather than casting the object to a different type. This does not create a distinct runtime object representation, change object layout, or emit a runtime cast. Access mode propagates through inline fields and base subobjects because those values are physically part of the receiver.
 
 `final` is independent of receiver mutability and is shallow. A final field can be initialized during construction but cannot later be reassigned as a whole. A final inline object field may still be changed through its own `mut fn` methods when reached through a mutable containing object, and a final `shared T` field may still be used to mutate its separately allocated pointee. Finality prevents whole-field reassignment; it does not recursively freeze the field's internal state or an object graph.
 
-### 5.5 Constructors
+### 5.5 Initialization Members
 
-Constructors initialize object storage.
+An `init` declaration defines a constructor that initializes object storage.
 
-```nif
-constructor(name: Str) {
+```ska
+init(name: Str) {
     self.name = name;
 }
 ```
 
 Rules:
 
-- a class may declare zero or more constructors;
-- if no constructor is declared, a default or compatibility constructor may be synthesized when all fields can be initialized;
-- copy constructors use `constructor(copy other: ref T)` syntax;
-- subclass constructors must initialize the base subobject before subclass fields;
-- `super(...)` is constructor-only in the initial language;
+- a class may declare zero or more `init` members;
+- if no applicable `init` member is declared, a default or compatibility constructor may be synthesized when all fields can be initialized;
+- an `init` member with exactly one read-only alias parameter of the enclosing class type is its copy constructor, using `init(ref other: T)` syntax;
+- subclass initialization must initialize the base subobject before subclass fields;
+- `super(...)` is valid only within `init` in the initial language;
 - if construction fails in a later exception-enabled language, only fully constructed subobjects are destroyed.
 
 ### 5.6 Copy Constructors and Copy Assignment
 
 Copy construction initializes a new object from an existing object of the same type.
 
-```nif
-constructor(copy other: ref Dog) {
+```ska
+init(ref other: Dog) {
     self.name = other.name;
 }
 ```
 
 Copy assignment updates the value of an already-initialized object from an existing object of the same type. The destination object remains alive throughout the operation.
 
-```nif
-assign(copy other: ref Dog) {
+```ska
+assign(ref other: Dog) {
     self.name = other.name;
 }
 ```
 
 Rules:
 
-- `constructor(copy other: ref T)` is the copy constructor for class `T`;
-- `assign(copy other: ref T)` is the copy assignment member for class `T`;
+- `init(ref other: T)` inside class `T` is the copy constructor for `T`;
+- `assign(ref other: T)` inside class `T` is the copy assignment member for `T`;
+- the parameter name is not significant, but the single parameter's binding mode and exact type are significant;
+- a class may declare at most one copy constructor and at most one copy assignment member;
 - copy constructors initialize uninitialized storage;
 - copy assignment operates on an already-initialized object;
 - copy construction initializes final fields like any other construction, but copy assignment cannot reassign a final field;
 - copy assignment should handle self-assignment correctly;
-- user-defined constructors, copy constructors, copy assignment members, and destructors may have side effects;
+- user-defined `init`, copy-construction `init`, `assign`, and `destroy` members may have side effects;
 - the compiler may synthesize copy construction when the base subobject and all fields support copy construction;
 - the compiler may synthesize copy assignment only when the base subobject and all fields support copy assignment and no final field would need to be reassigned;
 - synthesized copy construction copies fields in declaration order;
@@ -721,36 +799,36 @@ Rules:
 - synthesized `shared T` field copy increments the shared handle reference count;
 - synthesized `shared T` field assignment must retain the new handle before releasing the old handle to handle self-assignment and aliasing safely.
 
-### 5.7 Destructors
+### 5.7 Destruction Members
 
-Destructors run deterministically when an object's lifetime ends.
+A `destroy` declaration defines the class-specific destruction body that runs deterministically when an object's lifetime ends.
 
-Draft syntax:
+Syntax:
 
-```nif
-destructor {
+```ska
+destroy {
     ...
 }
 ```
 
 Rules:
 
-- each class may declare at most one destructor;
-- destructors take no parameters and return `unit`;
-- destructors must not throw in the initial exception design; if an exception escapes a destructor, the program terminates;
-- destruction begins with the destructor body of the most-derived class;
-- after a class's destructor body, its fields are destroyed in reverse declaration order;
+- each class may declare at most one `destroy` member;
+- `destroy` takes no parameters and returns `unit` implicitly;
+- `destroy` must not throw in the initial exception design; if an exception escapes it, the program terminates;
+- destruction begins with the `destroy` body of the most-derived class;
+- after a class's `destroy` body, its fields are destroyed in reverse declaration order;
 - after that class's fields, its direct base subobject is destroyed using the same body-then-reverse-fields procedure;
 - destruction continues through the base-class chain until the complete object has been destroyed;
-- an absent user-declared destructor is treated as an empty destructor body, so fields and the base subobject are still destroyed;
+- an absent user-declared `destroy` member is treated as an empty `destroy` body, so fields and the base subobject are still destroyed;
 - destroying a `shared T` handle may trigger complete dynamic destruction of the pointee if it was the last owner;
-- assigning to an inline object never invokes that object's destructor or ends its lifetime, although its assignment member may release or destroy values owned by its fields.
+- assigning to an inline object never invokes that object's `destroy` member or ends its lifetime, although its assignment member may release or destroy values owned by its fields.
 
 For example, destruction of a heap-allocated `Dog extends Animal` occurs in this order:
 
-1. `Dog` destructor body;
+1. `Dog` `destroy` body;
 2. `Dog` fields in reverse declaration order;
-3. `Animal` destructor body;
+3. `Animal` `destroy` body;
 4. `Animal` fields in reverse declaration order;
 5. the same procedure for any further base subobject;
 6. deallocation of the original heap allocation after complete-object destruction finishes.
@@ -768,51 +846,51 @@ Objects are destroyed:
 
 ## 6. Assignment, Copying, and Object Lifetime
 
-Niflheim2 uses copy semantics by default. Move semantics are not part of the initial language.
+Skald uses copy semantics by default. Move semantics are not part of the initial language.
 
 Assignment to an inline object updates an already-initialized value:
 
-```nif
+```ska
 var dog: Dog = Dog("A");
 dog = Dog("B");
 ```
 
-This invokes the class assignment rules and leaves `dog` containing the new value. Assignment does not end `dog`'s lifetime and does not run `Dog`'s destructor. The assignment member may release or destroy old field values as part of updating them.
+This invokes the class assignment rules and leaves `dog` containing the new value. Assignment does not end `dog`'s lifetime and does not run `Dog`'s `destroy` member. The assignment member may release or destroy old field values as part of updating them.
 
 Copying:
 
 - primitives copy by value;
-- inline objects use `constructor(copy other: ref T)` or synthesized fieldwise copy construction;
-- arrays copy according to the array copy policy, initially expected to be deep element copy;
+- inline objects use `init(ref other: T)` or synthesized fieldwise copy construction;
+- array copying follows the future array copy policy; deep element copy is the current direction but is not yet normative;
 - `shared T` copies the handle and increments the reference count;
 - copying `shared T` does not invoke `T`'s copy constructor;
-- `ref` and `mut ref` parameters cannot be copied as values.
+- alias parameters cannot be copied as alias values.
 
 Assignment:
 
 - primitives assign by value;
-- inline objects use `assign(copy other: ref T)` or synthesized fieldwise assignment;
+- inline objects use `assign(ref other: T)` or synthesized fieldwise assignment;
 - `shared T` assignment copies the new handle and releases the old handle;
-- `ref` and `mut ref` parameters are not assignable or rebindable.
+- alias parameters are not assignable or rebindable.
 
 Classes with ownership-sensitive fields follow a "rule of three" style:
 
-- if a class defines a destructor, it likely also needs explicit copy construction and copy assignment;
+- if a class defines `destroy`, it likely also needs explicit copy construction and copy assignment;
 - if a class defines copy construction or copy assignment, it likely needs the other;
 - the compiler may synthesize these operations when the base subobject and fields support them, subject to the final-field restriction on copy assignment above.
 
-Constructors, copy constructors, copy assignment members, and destructors are not assumed to be side-effect-free. The compiler may optimize them only when the language explicitly permits elision or when it can prove observable behavior is unchanged.
+`init`, copy-construction `init`, `assign`, and `destroy` members are not assumed to be side-effect-free. The compiler may optimize them only when the language explicitly permits elision or when it can prove observable behavior is unchanged.
 
 ### 6.1 Optional Copy Elision
 
-Niflheim2 permits, but does not require, copy elision in two cases involving a fresh inline object constructor expression of the exact destination type:
+Skald permits, but does not require, copy elision in two cases involving a fresh inline object constructor expression of the exact destination type:
 
 1. direct initialization of a new object;
 2. returning a freshly constructed object from a function.
 
 Direct-initialization example:
 
-```nif
+```ska
 var dog: Dog = Dog("Rex");
 ```
 
@@ -820,7 +898,7 @@ Without elision, the constructor expression creates a temporary `Dog`, `dog` is 
 
 Return example:
 
-```nif
+```ska
 fn make_dog() -> Dog {
     return Dog("Rex");
 }
@@ -840,12 +918,12 @@ The permission to omit side-effectful copy construction and destruction is a spe
 
 Assignment to an already-initialized object remains assignment:
 
-```nif
+```ska
 var dog: Dog = Dog("Old");
 dog = Dog("New");
 ```
 
-The constructor expression creates a source temporary, `dog.assign(copy ...)` or synthesized copy assignment updates the existing `dog`, and the source temporary is then destroyed. This is semantically assignment, not destruction followed by construction, and it is not eligible for the optional copy-elision rule. The compiler may replace it with another implementation only when it proves that construction, assignment, destruction, and borrow-visible behavior remain unchanged.
+The constructor expression creates a source temporary, `dog.assign(...)` or synthesized copy assignment updates the existing `dog`, and the source temporary is then destroyed. This is semantically assignment, not destruction followed by construction, and it is not eligible for the optional copy-elision rule. The compiler may replace it with another implementation only when it proves that construction, assignment, destruction, and alias-visible behavior remain unchanged.
 
 Move-only values are out of scope for the initial language.
 
@@ -853,8 +931,8 @@ Move-only values are out of scope for the initial language.
 
 Value parameters are local variables inside the callee:
 
-```nif
-fn f(dog1: Dog, dog2: ref Dog, dog3: mut ref Dog, dog4: shared Dog) -> unit {
+```ska
+fn f(dog1: Dog, ref dog2: Dog, mut ref dog3: Dog, dog4: shared Dog) -> unit {
     dog1 = Dog();      // ok: assigns to the local copy
     dog2 = Dog();      // illegal: ref parameter is not assignable
     dog3 = Dog();      // illegal: mut ref parameter is not assignable/rebindable
@@ -862,10 +940,10 @@ fn f(dog1: Dog, dog2: ref Dog, dog3: mut ref Dog, dog4: shared Dog) -> unit {
 }
 ```
 
-Mutation through `mut ref` is allowed:
+Mutation through a `mut ref` binding is allowed:
 
-```nif
-fn rename(dog: mut ref Dog, name: Str) -> unit {
+```ska
+fn rename(mut ref dog: Dog, name: Str) -> unit {
     dog.name = name;   // ok
 }
 ```
@@ -878,7 +956,7 @@ Whole-object replacement through `mut ref` is not part of the initial language b
 
 Heap allocation is explicit:
 
-```nif
+```ska
 var dog: shared Dog = new Dog("Rex");
 ```
 
@@ -892,14 +970,14 @@ var dog: shared Dog = new Dog("Rex");
 
 Reassigning a `shared T` variable releases the old handle:
 
-```nif
+```ska
 var dog: shared Dog = new Dog("A");
 dog = new Dog("B");
 ```
 
 If the old handle was the last owner, the old heap object is destroyed immediately unless a caller-side borrow anchor still owns it. In that case, replacement releases the original handle, while the anchor delays destruction until the anchored call completes.
 
-Borrow anchors also prevent replacement through another alias during a call from leaving a dangling borrowed parameter. Reassigning a `shared` variable after the anchored call has returned cannot leave a dangling `ref` value in user code because borrowed values cannot escape the call.
+Borrow anchors also prevent replacement through another alias during a call from leaving a dangling alias parameter. Reassigning a `shared` variable after the anchored call has returned cannot leave a dangling alias in user code because parameter aliases cannot escape the call.
 
 ---
 
@@ -909,7 +987,7 @@ Borrow anchors also prevent replacement through another alias during a call from
 
 Assigning a derived inline value to a base inline variable slices:
 
-```nif
+```ska
 var derived: Dog = Dog();
 var base: Animal = derived;
 ```
@@ -920,7 +998,7 @@ var base: Animal = derived;
 
 `shared Derived` may be implicitly upcast to `shared Base` when `Derived extends Base`:
 
-```nif
+```ska
 var dog: shared Dog = new Dog();
 var animal: shared Animal = dog;
 ```
@@ -929,12 +1007,12 @@ This copies the shared handle. The underlying heap object remains a `Dog`. The c
 
 If `animal` becomes the last owner, releasing it runs the complete `Dog` destruction sequence and then frees the original `Dog` allocation. The static type `Animal` controls which operations are available through the handle, but it never selects shared destruction.
 
-### 8.3 Borrowed Upcasts
+### 8.3 Alias-Parameter Upcasts
 
-`Derived` may be passed to a `ref Base` or `mut ref Base` parameter:
+An existing `Derived` object may supply the place for a read-only or mutable alias parameter of type `Base`:
 
-```nif
-fn speak(animal: ref Animal) -> unit {
+```ska
+fn speak(ref animal: Animal) -> unit {
     animal.speak();
 }
 
@@ -945,7 +1023,7 @@ speak(dog);
 speak(heap_dog);
 ```
 
-The borrow refers to the original object or shared pointee. No slicing occurs for borrowed parameters.
+The alias refers to the original object or shared pointee. No slicing occurs for alias parameters.
 
 ### 8.4 Virtual Dispatch
 
@@ -957,7 +1035,7 @@ Complete-object destruction of a shared allocation is separate from user-visible
 
 Example:
 
-```nif
+```ska
 class Animal {
     virtual fn speak() -> unit {
         ...
@@ -980,21 +1058,21 @@ Rules:
 - only methods declared `virtual` in a base class may be overridden;
 - overriding requires explicit `override`;
 - override compatibility is exact initially, including receiver mutability;
-- private methods, static methods, and constructors are not virtual;
+- private methods, static methods, and `init` members are not virtual;
 - non-virtual method calls are statically resolved;
-- virtual read-only `fn` calls through `ref Base`, `mut ref Base`, and `shared Base` dispatch according to the dynamic object type;
-- virtual `mut fn` calls require mutable receiver access and therefore cannot be made through `ref Base`;
+- virtual read-only `fn` calls through read-only aliases, mutable aliases, and `shared Base` handles dispatch according to the dynamic object type;
+- virtual `mut fn` calls require mutable receiver access and therefore cannot be made through a read-only alias parameter of type `Base`;
 - calls on sliced inline base values dispatch as the sliced base value.
 
 ---
 
 ## 9. Interfaces
 
-Niflheim2 keeps Niflheim's interface concept, adjusted to the new value/shared/ref model.
+Skald interfaces participate in the inline-value, shared-ownership, and alias-binding model described by this specification.
 
 Interface declarations contain method signatures:
 
-```nif
+```ska
 interface Hashable {
     fn hash_code() -> u64;
 }
@@ -1007,7 +1085,7 @@ interface Named {
 
 Classes declare conformance:
 
-```nif
+```ska
 class Key implements Hashable {
     fn hash_code() -> u64 {
         return 42u;
@@ -1026,10 +1104,10 @@ Initial interface rules:
 - interface `fn` signatures require read-only implementations and `mut fn` signatures require mutable implementations;
 - method signature compatibility is exact, including receiver mutability.
 
-Interface use should primarily happen through borrowed parameters and shared handles:
+Interface use should primarily happen through alias parameters and shared handles:
 
-```nif
-fn print_hash(value: ref Hashable) -> unit {
+```ska
+fn print_hash(ref value: Hashable) -> unit {
     var h: u64 = value.hash_code();
 }
 
@@ -1042,17 +1120,17 @@ print_hash(heap_key);
 
 Standalone inline variables of interface type are not allowed initially:
 
-```nif
+```ska
 var value: Hashable = Key(); // illegal
 ```
 
-Interface use should go through `ref Interface`, `mut ref Interface`, and `shared Interface`. This avoids needing a general inline interface-object representation.
+Interface use should go through read-only or mutable alias parameters of the interface type, or through `shared Interface`. This avoids needing a general inline interface-object representation.
 
-A `ref Interface` receiver may call only read-only interface methods. A `mut ref Interface` receiver may call both read-only and mutable interface methods. Interface dispatch does not change these access rules.
+A read-only interface alias may call only read-only interface methods. A mutable interface alias may call both read-only and mutable interface methods. Interface dispatch does not change these access rules.
 
 A `shared C` handle may be implicitly converted to `shared I` when class `C` implements interface `I`:
 
-```nif
+```ska
 var heap_key: shared Key = new Key();
 var hashable: shared Hashable = heap_key;
 ```
@@ -1063,7 +1141,11 @@ The interface conversion copies the same owning handle and preserves the complet
 
 ## 10. Expressions and Statements
 
-Niflheim2 keeps the ordinary expression and statement surface from Niflheim where it remains compatible with the new type model.
+Skald supports the following expression and statement forms.
+
+**Specification status for loops:** provisional and intentionally incomplete. Looping and iteration are deferred until after the first vertical compiler slice. The `while`, `for ... in`, `break`, and `continue` entries below reserve the current design direction, but do not yet form an implementation-ready contract.
+
+Before loops are implementation-ready, the specification must define loop-variable scope, condition and collection evaluation order, cleanup on `break` and `continue`, targets in nested loops, mutation of a collection during iteration, whether produced elements are copied or borrowed, and the exact iterator protocol and lifetime rules. This does not make `if`, blocks, or `return` provisional.
 
 Statements:
 
@@ -1077,7 +1159,7 @@ Statements:
 - `return`;
 - `break`;
 - `continue`;
-- constructor-only `super(...)`.
+- `init`-only `super(...)`.
 
 Expressions:
 
@@ -1087,7 +1169,7 @@ Expressions:
 - static member access;
 - function calls;
 - method calls;
-- constructor calls;
+- construction expressions such as `T(...)`;
 - `new` heap allocation;
 - unary and binary operators;
 - explicit casts;
@@ -1097,22 +1179,27 @@ Expressions:
 
 ### 10.1 Operators
 
-Primitive operator rules match Niflheim initially:
+Primitive operator rules:
 
-- arithmetic operators require matching numeric operand types;
+- arithmetic operators (`+`, `-`, `*`, `/`, `%`) require matching numeric operand types;
 - signed/unsigned mixing requires explicit casts;
 - unary minus is valid for `i64` and `double`;
-- bitwise operators are valid for integer types;
-- shift counts are checked;
+- exponentiation (`**`) is integer-only initially: the left operand is `i64`, `u64`, or `u8`, the right operand is `u64`, and the result has the left operand's type;
+- bitwise operators are valid for `i64`, `u64`, and `u8` and require matching operand types;
+- shift operators accept an `i64`, `u64`, or `u8` left operand and a `u64` right operand, and the result has the left operand's type;
+- right shift is arithmetic for `i64` and logical for `u64` and `u8`;
+- shift counts greater than or equal to the left operand's bit width panic and abort;
 - primitive casts are explicit.
 
-Signed integer division and remainder follow the existing Niflheim policy unless revised: division rounds toward negative infinity, and the remainder has the divisor's sign.
+Signed integer division rounds toward negative infinity, and signed remainder has the divisor's sign.
 
 ### 10.2 Indexing, Slicing, and For-In
 
+This subsection is a provisional sketch. Indexing and slicing depend on the deferred array design, and the structural iteration protocol is not yet normative.
+
 Arrays support:
 
-```nif
+```ska
 arr.len()
 arr[index]
 arr[index] = value
@@ -1122,7 +1209,7 @@ arr[start:end] = value
 
 Indexing and slicing syntax may also be structural sugar over methods:
 
-```nif
+```ska
 x[i]       // x.index_get(i)
 x[i] = v   // x.index_set(i, v)
 x[a:b]     // x.slice_get(a, b)
@@ -1136,11 +1223,11 @@ Structural read operations require read-only receiver methods, while structural 
 - `fn slice_get(i64, i64) -> U`;
 - `mut fn slice_set(i64, i64, U) -> unit`.
 
-Consequently, indexing and slicing reads are available through both read-only and mutable receiver access. Index and slice assignment require mutable receiver access. For built-in arrays, the same rule means that an array reached as an inline subobject through `ref T` can be read but not modified.
+Consequently, indexing and slicing reads are available through both read-only and mutable receiver access. Index and slice assignment require mutable receiver access. For built-in arrays, the same rule means that an array reached as an inline subobject through a read-only alias cannot be modified.
 
-`for ... in` uses the existing Niflheim structural iteration shape:
+`for ... in` uses the following structural iteration shape:
 
-```nif
+```ska
 for item in collection {
     ...
 }
@@ -1157,26 +1244,34 @@ The collection expression is evaluated once, and the iteration length is snapsho
 
 ## 11. Casts, Type Tests, and Equality
 
-Primitive casts are explicit and use Niflheim's existing primitive cast semantics.
+Primitive casts are explicit. Casts involving `unit` are invalid. Other primitive casts use the following rules:
+
+- `bool` converts to integer zero or one and to `double` zero or one;
+- integers convert to `bool` as false for zero and true for nonzero;
+- `double` converts to `bool` as false for positive or negative zero and true for every other value;
+- integer-to-integer casts truncate to the target width and then interpret the resulting bits using the target signedness; these casts do not panic;
+- integer-to-`double` casts use the source signedness and may lose precision;
+- `double`-to-integer casts truncate toward zero and then range-check the result; NaN, infinity, and out-of-range values panic and abort.
 
 Object casts:
 
 - derived-to-base inline assignment slices;
-- derived-to-base `ref` and `shared` conversions are implicit;
-- class-to-implemented-interface `ref` and `shared` conversions are implicit;
-- interface-to-`Obj` `ref` and `shared` conversions are implicit;
+- binding a derived place to a base-typed alias parameter is an implicit non-slicing upcast;
+- binding a class place to an implemented-interface alias parameter is implicit;
+- binding an interface alias to an `Obj` alias parameter is implicit;
+- the corresponding derived-to-base, class-to-interface, and interface-to-`Obj` conversions of `shared` handles are implicit;
 - downcasts are explicit and checked at runtime;
 - interface casts are explicit and checked at runtime when not statically known;
 - every conversion or checked cast of a shared handle preserves its ownership pointer, allocation identity, reference count, and complete dynamic class metadata.
 
-`is` performs a runtime type/conformance test for object, shared, and borrowed receiver forms.
+`is` performs a runtime type/conformance test for inline objects, shared handles, and alias-bound receivers.
 
 Equality:
 
 - primitive equality is value equality;
 - inline object equality is not implicit unless a later operator-overload or protocol rule is added;
 - `shared T` equality compares object identity by default;
-- borrowed object identity comparison may be provided explicitly later, but is not needed for the initial core;
+- object identity comparison through aliases may be provided explicitly later, but is not needed for the initial core;
 - optional equality is defined only when the contained type has equality.
 
 ---
@@ -1195,16 +1290,18 @@ These failures panic and abort, unless a future rule explicitly maps a specific 
 
 ### 12.1 Checked Exceptions
 
-Checked exceptions are part of the Niflheim2 language design, but a first implementation may stage them after basic RAII, calls, and destruction are working.
+**Specification status:** provisional and intentionally incomplete. Checked exceptions are part of the intended Skald design, but are deferred until after the first vertical compiler slice. The syntax and rules below constrain the eventual design; they do not yet define a usable exception feature.
+
+Before checked exceptions are implementation-ready, the specification must define `throw` and rethrow syntax, exception-set typing and subtyping, catch-clause ordering and binding ownership, compatibility rules for functions, overrides, interfaces, and function values, cleanup after partially completed construction or copying, and the propagation ABI or lowering. `try`, `catch`, `throw`, and `throws` should therefore be treated as reserved design syntax for now.
 
 Draft syntax:
 
-```nif
+```ska
 class IoError extends Exception {
     message: Str;
 }
 
-fn read_file(path: ref Str) -> Str throws IoError {
+fn read_file(ref path: Str) -> Str throws IoError {
     ...
 }
 
@@ -1227,12 +1324,12 @@ Rules:
 - catch clauses match by exception type, with ordinary subtype rules;
 - `finally` is deferred unless a later design needs it.
 
-Design constraints already implied by Niflheim2:
+Design constraints already implied by Skald:
 
 - unwinding must run destructors for all fully constructed inline locals, fields, arrays, and shared handles;
-- destructors must not throw initially;
+- `destroy` members must not throw initially;
 - throwing during destruction terminates the program;
-- constructors that throw must destroy fully constructed subobjects but not run the destructor for the incomplete whole object;
+- an `init` member that throws must destroy fully constructed subobjects but must not run `destroy` for the incomplete whole object;
 - all compiler IR that can branch to exceptional control flow must preserve cleanup ordering.
 
 Implementation may initially lower exceptions to an explicit hidden result/exception channel rather than native platform unwinding. This keeps the runtime smaller and makes destructor cleanup paths visible in the compiler.
@@ -1241,7 +1338,7 @@ Implementation may initially lower exceptions to an explicit hidden result/excep
 
 ## 13. Runtime Model
 
-Niflheim2's runtime should be much smaller than Niflheim's GC runtime.
+Skald is designed around a small runtime with no garbage collector.
 
 Runtime responsibilities:
 
@@ -1265,7 +1362,7 @@ Heap object layout must support:
 
 The initial single-inheritance ABI places the direct base subobject at offset zero. A shared class, `Obj`, or interface handle stores the address of the complete object payload, or an equivalent representation from which both the complete payload and reference-count header are recovered without consulting the handle's static type. Shared upcasts, interface conversions, and checked shared casts do not adjust or replace this ownership pointer.
 
-Each concrete class's dynamic type metadata contains a compiler-generated complete-object destruction entry or equivalent operation. Given the complete object payload, this entry runs the most-derived destructor body, destroys fields and base subobjects in the language-defined order, and returns without freeing an adjusted base or interface view address. The shared runtime frees the original allocation only after this entry completes.
+Each concrete class's dynamic type metadata contains a compiler-generated complete-object destruction entry or equivalent operation. Given the complete object payload, this entry runs the most-derived `destroy` body, destroys fields and base subobjects in the language-defined order, and returns without freeing an adjusted base or interface view address. The shared runtime frees the original allocation only after this entry completes.
 
 Reference-count operations:
 
@@ -1274,20 +1371,22 @@ Reference-count operations:
 - when release reaches zero, load the allocation's dynamic type metadata and invoke its complete-object destruction entry;
 - after complete-object destruction, free the original allocation exactly once.
 
-The static type of the releasing handle is not an input to destruction. A release through `shared Derived`, `shared Base`, `shared Obj`, or `shared Interface` follows the same allocation header and therefore selects the same most-derived destruction entry. This dynamic destruction is mandatory for all shared allocations and does not depend on whether any destructor or ordinary instance method was declared `virtual`.
+The static type of the releasing handle is not an input to destruction. A release through `shared Derived`, `shared Base`, `shared Obj`, or `shared Interface` follows the same allocation header and therefore selects the same most-derived destruction entry. This dynamic destruction is mandatory for all shared allocations; `destroy` does not use `virtual`, and safe shared destruction does not depend on an opt-in declaration.
 
-Borrow anchors do not require a runtime ownership search or a separate runtime ownership structure. A hidden shared anchor uses the same retain and release operations as any other shared copy. Direct inline storage, stable shared locals and parameters, forwarded borrowed parameters, and already-owning temporaries require no additional reference-count operation solely for the borrow. Hidden anchors are compiler-managed caller temporaries and must participate in normal and exceptional cleanup.
+Borrow anchors do not require a runtime ownership search or a separate runtime ownership structure. A hidden shared anchor uses the same retain and release operations as any other shared copy. Direct inline storage, stable shared locals and parameters, forwarded alias parameters, and already-owning temporaries require no additional reference-count operation solely for the alias. Hidden anchors are compiler-managed caller temporaries and must participate in normal and exceptional cleanup.
 
 Thread-safe reference counting is out of scope unless concurrency is added later.
 
 ---
 
-## 14. Compatibility with Niflheim
+## 14. Relationship to Niflheim
 
-Niflheim2 intentionally keeps many Niflheim ideas:
+Skald originated in an exploratory draft called Niflheim2, which used the earlier Niflheim language and compiler as a design starting point. The memory model and several related semantics diverged enough that the project became a distinct language with a new name, compiler, source suffix, and repository. Niflheim remains historical context rather than a compatibility target or normative dependency of this specification.
+
+Skald intentionally retains several ideas explored in Niflheim:
 
 - statically typed compiled language;
-- Niflheim primitive types;
+- the primitive types `i64`, `u64`, `u8`, `bool`, `double`, and `unit`;
 - fixed-size arrays;
 - modules/imports/exports;
 - classes;
@@ -1300,7 +1399,7 @@ Niflheim2 intentionally keeps many Niflheim ideas:
 - immutable byte-backed `Str`;
 - function values without captures.
 
-Niflheim2 intentionally changes or removes:
+Skald intentionally changes or removes:
 
 - garbage-collected references;
 - nullable reference values by default;
@@ -1309,36 +1408,70 @@ Niflheim2 intentionally changes or removes:
 - ordinary reference-typed locals/fields/returns;
 - GC root/safepoint semantics;
 - null as the default value for reference-like types;
-- absence of recoverable exceptions; Niflheim2 adds checked exceptions to the design.
+- absence of recoverable exceptions; Skald adds checked exceptions to the design.
 
-Old Niflheim code should not be expected to compile as Niflheim2 code without changes.
+Niflheim code should not be expected to compile as Skald code without substantial changes. The Niflheim repository may be consulted for historical implementation context, but Skald behavior is defined by Skald's own specification and documentation.
 
 ---
 
-## 15. Open Design Questions
+## 15. Specification Status and Open Design Questions
+
+### 15.1 Features Deferred Beyond the First Vertical Slice
+
+The following intended features are deliberately not specified well enough to implement yet:
+
+- optionals, including presence binding, extraction, conversions, payload lifetime, and ownership behavior;
+- arrays, including construction, element lifetime, copying, mutation, indexing, and slicing;
+- loops and iteration, including `while`, `for ... in`, `break`, `continue`, and the iterator contract;
+- checked exceptions, including throwing, catching, exception-set checking, cleanup, and lowering;
+- locally declared alias bindings and scoped narrowing aliases; parameter aliases are the only supported alias-binding form in the first implementation.
+
+Their existing sections preserve design direction and reserve likely syntax, but are non-normative where they do not give a complete rule. A compiler may omit these features from the first vertical slice without being considered inconsistent with this draft.
+
+### 15.2 Other Major Underspecified Areas
+
+The following are also substantial gaps. They need not all be part of the first vertical slice, but each must be settled before the corresponding language area is considered complete:
+
+- **Lexical and grammatical definition:** a complete grammar, token and comment rules, literal spelling, operator precedence and associativity, and rules for resolving syntactic ambiguities.
+- **Name, type, and call resolution:** forward references, declaration cycles, overload availability or prohibition, candidate selection, implicit-conversion ranking, and generic diagnostics for ambiguous or invalid calls.
+- **Primitive edge-case semantics:** integer overflow and underflow, division or remainder by zero, the signed minimum divided by negative one, floating-point conformance and exceptional values, and whether constant evaluation diagnoses or reproduces runtime failures.
+- **Evaluation and cleanup ordering:** operand, receiver, and argument evaluation order; full-expression boundaries; temporary destruction order; and cleanup sequencing for every control-flow exit. This becomes a prerequisite before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.
+- **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
+- **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
+- **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
+- **Modules, build model, linkage, and foreign interfaces:** source-to-module mapping, import discovery, entry points, separate compilation, symbol visibility, ABI boundaries, and ownership rules for foreign calls.
+- **Required library and runtime surface:** the minimum facilities for I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+
+The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
+
+### 15.3 Open Design Questions
 
 The following decisions are intentionally not finalized by this draft:
 
 1. Should whole-object replacement through `mut ref` exist with explicit syntax?
 2. Which explicit array initialization forms should be added for non-defaultable element types?
-3. How much of the old Niflheim unsafe systems-layer proposal should exist in Niflheim2, if any?
+3. How much of the old Niflheim unsafe systems-layer proposal should exist in Skald, if any?
 4. What is the exact checked-exception syntax and lowering strategy?
+
+### 15.4 Resolved Decisions
 
 Resolved decisions in this draft:
 
-- local declarations keep Niflheim's `var name: Type` syntax;
-- statement terminators stay as in Niflheim;
-- destructor declarations use the name `destructor`;
-- instance methods and constructors use `self`, not `__self`, for the current object;
+- the language is named Skald, its compiler is named `skac`, and source files use the `.ska` suffix;
+- local declarations use `var name: Type` syntax;
+- ordinary statements and declarations use semicolon terminators;
+- lifecycle declarations use the contextual special-member introducers `init`, `assign`, and `destroy` without `fn`;
+- those contextual words remain available as ordinary identifiers and special members do not occupy the ordinary method namespace;
+- instance methods and special members use `self`, not `__self`, for the current object;
 - virtual dispatch is opt-in with `virtual`;
 - inline interface-typed variables are not allowed initially;
-- `Obj` remains the universal root type, mainly for `ref Obj`, `mut ref Obj`, and `shared Obj`.
+- `Obj` remains the universal root type, mainly for read-only and mutable alias parameters and `shared Obj`.
 - default array construction is valid only for element types with default values;
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- copy construction uses `constructor(copy other: ref T)`;
-- copy assignment uses `assign(copy other: ref T)`;
+- copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
+- copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;
 - direct initialization and returning freshly constructed values permit optional copy elision;
 - optional copy elision may omit side-effectful copy construction and temporary destruction, but never changes assignment into construction;
@@ -1346,12 +1479,16 @@ Resolved decisions in this draft:
 - receiver mutability is enforced statically, propagates through inline subobjects, and has no runtime representation;
 - read-only receiver access and `final` fields are shallow across `shared` ownership;
 - receiver mutability is part of exact virtual-override and interface-method compatibility;
+- `ref name: T` and `mut ref name: T` are non-owning alias-binding modes, not reference value types;
+- parameter aliases are the only alias bindings in the first implementation, while restricted lexical local aliases are reserved for a later stage;
+- alias parameters accept both inline places and matching shared pointees without separate function variants;
+- all aliases are non-rebindable and non-escaping, and future local aliases remain subject to the same syntax-directed lifetime restrictions;
 - every shared allocation retains its complete dynamic type metadata across base, `Obj`, and interface conversions;
 - final shared release invokes the most-derived complete-object destruction entry and frees the original allocation exactly once;
-- shared destruction is automatically dynamic and does not require a virtual destructor declaration;
-- every borrowed argument has a caller-owned anchor for the complete call;
+- shared destruction is automatically dynamic and does not require `destroy` to be declared virtual;
+- every alias-bound argument has a caller-owned anchor for the complete call;
 - stable locals and parameters can serve as zero-overhead anchors, while replaceable shared places use hidden shared copies;
 - borrowing an inline subobject reached through shared storage anchors the containing shared allocation;
 - borrow-anchor selection is syntax-directed and never performs a runtime object-graph search.
 
-These questions are not blockers for the core memory-model direction.
+The remaining open questions do not invalidate the core memory-model direction, but some must be resolved before their associated features become normative.
