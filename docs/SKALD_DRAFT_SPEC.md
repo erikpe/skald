@@ -1252,8 +1252,9 @@ Expressions:
 
 ### 10.1 Conditional Statements
 
-**Implementation status:** implemented end-to-end by C5 in the stage-0
-x86-64 compiler, including exact diagnostics and native behavior coverage.
+**Implementation status:** implemented end-to-end by C5 and hardened by C6 in
+the stage-0 x86-64 compiler, including nested native behavior, exact
+diagnostics, return analysis, and repeated-process determinism coverage.
 
 The initial conditional form follows Niflheim's chained-arm spelling:
 

@@ -49,6 +49,11 @@ the AST, resolved, and HIR dumps. Its MIR dump exposes the corresponding false
 continuation chain and join directly, making evaluation order and omitted
 unreachable joins inspectable without reading assembly.
 
+C6 exercises these representations through nested native conditionals and
+relies on the golden runner's two independent compiler processes for every
+successful assembly and every failure diagnostic. Determinism is therefore an
+externally checked compiler property rather than an assumption from unit dumps.
+
 Assembly is directly available through the public compiler command:
 
 ```text

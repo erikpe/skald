@@ -27,6 +27,10 @@ C5 adds exact conditional parser, scope, condition-type, and definite-return
 failures. Its native conditional case uses observable condition functions to
 prove left-to-right evaluation, skipped later arms, `else` selection, and
 fallthrough when no arm is selected.
+C6 adds omitted-condition and omitted-closing-parenthesis snapshots plus a
+nested native case whose value-returning function relies entirely on exhaustive
+conditional arms. Together with the non-exhaustive failure case, this covers
+both sides of branch-aware return analysis.
 
 Run it from the repository root with:
 

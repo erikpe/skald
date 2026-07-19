@@ -264,6 +264,11 @@ tests, flow-sensitive narrowing, loops, or branch optimization. Constant
 conditions retain ordinary source semantics; optimization is not required for
 correctness.
 
+C6 completes this grammar slice's external coverage with nested exhaustive
+conditionals, non-exhaustive return rejection, exact parser and semantic
+diagnostics, and repeated-process determinism checks. It does not expand the
+grammar or introduce any of the excluded forms above.
+
 ## First vertical slice name resolution
 
 M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.

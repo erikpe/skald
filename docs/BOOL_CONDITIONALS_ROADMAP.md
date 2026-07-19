@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0–C5 complete; C6 is the next implementation task.
+Status: complete (C0–C6).
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -79,6 +79,27 @@ Those features may build on this slice, but none should enter incidentally.
 In particular, short-circuit logical operators require expression-level CFG
 lowering and should receive their own contract instead of being represented as
 ordinary eager binary operations.
+
+### Remaining design questions after this slice
+
+The completed slice deliberately leaves these decisions to later roadmaps:
+
+- which equality, ordering, negation, and short-circuit logical operators are
+  added, and their exact precedence and evaluation rules;
+- whether explicit casts between `bool` and integer types exist, and which
+  integer values a conversion to `bool` accepts;
+- whether constant-branch folding, unreachable-code diagnostics, and CFG
+  simplification preserve observable condition evaluation and diagnostic
+  stability before or after MIR verification;
+- how `bool` is represented and normalized at non-x86-64 and broader foreign
+  ABI boundaries, including additional calling conventions and aggregate use;
+- whether conditional expressions are introduced, and how their result values
+  join without prematurely committing MIR to SSA or phi nodes;
+- how short-circuit expressions, loops, `break`, `continue`, and exceptional
+  edges compose with lexical scopes, definite return, cleanup, and future
+  ownership operations.
+
+These are extension points, not ambiguities in the implemented statement form.
 
 ### Language contract for this slice
 
@@ -163,7 +184,7 @@ C1 adds the public symbol in runtime ABI version 3.
 - [x] C3 — Add multi-block MIR and control-flow verification
 - [x] C4 — Lower multi-block control flow on x86-64 System V
 - [x] C5 — Implement `if` / `elif` / `else` end-to-end
-- [ ] C6 — Add comprehensive golden coverage and harden the slice
+- [x] C6 — Add comprehensive golden coverage and harden the slice
 
 Milestone checkboxes below should be marked as implementation progresses. A
 task is complete only when its acceptance criteria and relevant quality gates
@@ -373,26 +394,26 @@ x86-64 execution.
 **Purpose:** Prove externally observable behavior and reconcile all public
 documentation with the completed implementation.
 
-- [ ] Add exact stdout goldens for `true`, `false`, locals, parameters,
+- [x] Add exact stdout goldens for `true`, `false`, locals, parameters,
       function returns, and consecutive boolean output calls.
-- [ ] Cover a true first arm, false fallthrough to `elif`, selection among
+- [x] Cover a true first arm, false fallthrough to `elif`, selection among
       multiple `elif` arms, final `else`, and no-arm-selected behavior without
       `else`.
-- [ ] Use condition functions with observable output to prove left-to-right
+- [x] Use condition functions with observable output to prove left-to-right
       evaluation and that later conditions are skipped after a match.
-- [ ] Cover nested conditionals and both exhaustive and non-exhaustive return
+- [x] Cover nested conditionals and both exhaustive and non-exhaustive return
       analysis.
-- [ ] Keep stdout and process exit status independently asserted.
-- [ ] Add exact compile-failure goldens for every new lexer, parser, resolution,
+- [x] Keep stdout and process exit status independently asserted.
+- [x] Add exact compile-failure goldens for every new lexer, parser, resolution,
       and type-check diagnostic category not already covered.
-- [ ] Confirm repeated compiler runs produce identical assembly and diagnostics
+- [x] Confirm repeated compiler runs produce identical assembly and diagnostics
       for boolean and multi-block programs.
-- [ ] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
+- [x] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
       `docs/DEBUGGING.md`, `docs/NEXT_SLICE_BOUNDARIES.md`, runtime and golden
       test documentation, and the draft specification where status changed.
-- [ ] Record remaining boolean-operation, conversion, optimization, FFI, and
+- [x] Record remaining boolean-operation, conversion, optimization, FFI, and
       control-flow questions explicitly.
-- [ ] Run the complete repository quality gates from a clean build state.
+- [x] Run the complete repository quality gates from a clean build state.
 
 **Tests:** All compiler and CLI tests, runtime tests, successful and
 compile-failure goldens, formatting, Clippy with warnings denied, and
@@ -408,14 +429,14 @@ documents describe the implemented boundary consistently.
 Each implementation PR must run the relevant focused tests and, before being
 marked complete, the full applicable repository checks:
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test` when the runtime or ABI is touched
-- [ ] `make golden-test` when source behavior, diagnostics, MIR, backend,
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test` when the runtime or ABI is touched
+- [x] `make golden-test` when source behavior, diagnostics, MIR, backend,
       runtime linking, or golden expectations are touched
-- [ ] `git diff --check`
+- [x] `git diff --check`
 
 These global checkboxes describe the final clean-build gate for C6. Individual
 tasks should record their own gate results in their implementation change; they

@@ -50,7 +50,9 @@ C3 adds verified target-independent multi-block MIR with explicit jumps and
 boolean branches. C4 lowers that control flow to deterministic x86-64 System V
 labels and branches. C5 implements Niflheim-style `if` / `elif` / `else`
 statements end-to-end, including lexical arm scopes, exact boolean conditions,
-definite-return analysis, and source-ordered native branch behavior.
+definite-return analysis, and source-ordered native branch behavior. C6
+completes the slice with exact nested-conditional, return-analysis, diagnostic,
+and cross-process determinism coverage.
 
 ## Development
 

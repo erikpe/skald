@@ -1,0 +1,26 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn classify(outer: bool, inner: bool) -> i64 {
+    if (outer) {
+        if (inner) {
+            return 11;
+        }
+        else {
+            return 12;
+        }
+    }
+    elif (inner) {
+        return 21;
+    }
+    else {
+        return 22;
+    }
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(classify(true, true));
+    ska_rt_println_i64(classify(true, false));
+    ska_rt_println_i64(classify(false, true));
+    ska_rt_println_i64(classify(false, false));
+    return 76;
+}

@@ -36,15 +36,16 @@ For each new construct or type:
 
 ## Likely next-slice pressure points
 
-The selected next slice is `bool` and Niflheim-style
-`if` / `elif` / `else`. Its C0 contract, C1–C2 boolean support, C3 verified
-multi-block MIR, C4 x86-64 branch lowering, and C5 source conditionals are
-complete; its remaining hardening and coverage work is planned in
-[`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It introduces a
+The `bool` and Niflheim-style `if` / `elif` / `else` slice is complete through
+C6 in [`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It adds a
 semantic boolean type in HIR and MIR, multiple MIR blocks with explicit
 conditional and unconditional terminators, control-flow-aware MIR verification,
-and branch selection in the backend. C5 preserves that boundary: branches are
+branch selection in the backend, and exact native and failure coverage. The
+implementation preserves the phase boundary: branches are
 ordinary MIR control flow and the backend never rediscovers high-level syntax.
+
+The next language slice has not been selected. The candidates below describe
+distinct architectural pressures and should receive their own scoped roadmap.
 
 Adding the first inline object instead stresses layout, construction state, assignment, cleanup order, receiver access, and return conventions. That slice needs a written ABI/layout contract before code generation and should not be combined casually with shared ownership or exceptions.
 
@@ -52,7 +53,7 @@ Broader integer operations primarily stress specified edge-case semantics and in
 
 Arrays, optionals, loops/iterators, checked exceptions, shared ownership, and general local reference aliases remain deferred. Each crosses several of the boundaries above and should receive its own scoped roadmap rather than entering as an incidental parser feature.
 
-The completed output and straight-line boolean slices intentionally do not
+The completed output and boolean/conditional slices intentionally do not
 generalize foreign linkage or I/O. External declarations remain exact-symbol
 C-ABI declarations over by-value `i64` or `bool` parameters and `i64`, `bool`,
 or `unit` results. Alternate link names, variadic calls, additional ABI types, ownership-bearing arguments,
