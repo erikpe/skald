@@ -10,8 +10,13 @@ pub fn dump_ast(ast: &CompilationUnit) -> String {
     let mut dumper = AstDumper::default();
     dumper.line("CompilationUnit", ast.span);
     dumper.indented(|dumper| {
-        for function in &ast.functions {
-            dumper.function(function);
+        for declaration in &ast.declarations {
+            match declaration {
+                TopLevelDeclaration::Function(function) => dumper.function(function),
+                TopLevelDeclaration::ExternalFunction(function) => {
+                    dumper.external_function(function)
+                }
+            }
         }
     });
     dumper.output
@@ -28,20 +33,32 @@ impl AstDumper {
         self.line("Function", function.span);
         self.indented(|dumper| {
             dumper.named("Name", &function.name.text, function.name.span);
-            dumper.heading("Parameters");
-            dumper.indented(|dumper| {
-                for parameter in &function.parameters {
-                    dumper.line("Parameter", parameter.span);
-                    dumper.indented(|dumper| {
-                        dumper.named("Name", &parameter.name.text, parameter.name.span);
-                        dumper.type_syntax(&parameter.type_syntax);
-                    });
-                }
-            });
-            dumper.heading("ReturnType");
-            dumper.indented(|dumper| dumper.type_syntax(&function.return_type));
+            dumper.parameters_and_return(&function.parameters, &function.return_type);
             dumper.block(&function.body);
         });
+    }
+
+    fn external_function(&mut self, function: &ExternalFunctionDecl) {
+        self.line("ExternalFunction", function.span);
+        self.indented(|dumper| {
+            dumper.named("Name", &function.name.text, function.name.span);
+            dumper.parameters_and_return(&function.parameters, &function.return_type);
+        });
+    }
+
+    fn parameters_and_return(&mut self, parameters: &[Parameter], return_type: &TypeSyntax) {
+        self.heading("Parameters");
+        self.indented(|dumper| {
+            for parameter in parameters {
+                dumper.line("Parameter", parameter.span);
+                dumper.indented(|dumper| {
+                    dumper.named("Name", &parameter.name.text, parameter.name.span);
+                    dumper.type_syntax(&parameter.type_syntax);
+                });
+            }
+        });
+        self.heading("ReturnType");
+        self.indented(|dumper| dumper.type_syntax(return_type));
     }
 
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {

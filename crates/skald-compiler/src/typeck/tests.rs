@@ -11,6 +11,11 @@ use crate::{
 };
 
 fn check_text(text: &str) -> TypeCheckOutput {
+    let resolved = resolve_text(text);
+    type_check(&resolved)
+}
+
+fn resolve_text(text: &str) -> crate::resolve::ResolvedProgram {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("test.ska", text);
     let source = sources.get(source_id).unwrap();
@@ -26,7 +31,7 @@ fn check_text(text: &str) -> TypeCheckOutput {
         resolved.diagnostics.is_empty(),
         "test source must resolve cleanly"
     );
-    type_check(&resolved.program)
+    resolved.program
 }
 
 fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {
@@ -157,6 +162,66 @@ fn checks_unit_functions_returns_and_call_statements() {
     assert!(dump.contains("ReturnType unit"));
     assert!(dump.contains("CallStatement"));
     assert!(dump.contains("DirectCall f0 : unit"));
+}
+
+#[test]
+fn checks_external_calls_from_bodyless_signatures() {
+    let output = check_text(concat!(
+        "extern fn read_value(seed: i64) -> i64;\n",
+        "extern fn emit(value: i64) -> unit;\n",
+        "fn main() -> i64 { var value: i64 = read_value(7); emit(value); return value; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let hir = output.hir.unwrap();
+    for id in [
+        crate::resolve::FunctionId::new(0),
+        crate::resolve::FunctionId::new(1),
+    ] {
+        assert!(matches!(
+            hir.declarations.get(id).unwrap().linkage,
+            crate::hir::HirFunctionLinkage::External { .. }
+        ));
+        assert!(hir.definitions.get(id).is_none());
+    }
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Declaration f0 \"read_value\" external \"read_value\""));
+    assert!(dump.contains("Declaration f1 \"emit\" external \"emit\""));
+    assert!(!dump.contains("Definition f0"));
+    assert!(!dump.contains("Definition f1"));
+}
+
+#[test]
+fn rejects_an_external_main_even_with_the_entry_signature() {
+    let output = check_text("extern fn main() -> i64;");
+
+    assert!(output.hir.is_none());
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, INVALID_ENTRY_POINT);
+    assert!(diagnostic.message.contains("fn main() -> i64"));
+    assert!(diagnostic
+        .labels
+        .iter()
+        .any(|label| label.message.contains("cannot be the entry point")));
+}
+
+#[test]
+fn rejects_external_signatures_outside_the_restricted_abi_profile() {
+    let mut resolved = resolve_text(concat!(
+        "extern fn emit(value: i64) -> unit;\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    resolved.declarations.entries_mut_for_test()[0].parameters[0]
+        .type_syntax
+        .kind = crate::resolve::ResolvedTypeKind::Unit;
+
+    let output = type_check(&resolved);
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_EXTERNAL_DECLARATION
+            && diagnostic.message.contains("unsupported signature")
+    }));
 }
 
 #[test]

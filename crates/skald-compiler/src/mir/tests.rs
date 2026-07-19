@@ -271,20 +271,64 @@ fn verifier_rejects_ids_owned_by_another_function() {
 
 #[test]
 fn verifier_accepts_an_external_declaration_without_a_definition() {
+    let mir = lower_text(concat!(
+        "extern fn foreign(value: i64) -> i64;\n",
+        "fn main() -> i64 { return foreign(7); }\n",
+    ));
+    let foreign = FunctionId::new(0);
+
+    assert!(verify_mir(&mir).is_ok());
+    assert!(mir.declarations.get(foreign).is_some());
+    assert!(mir.definitions.get(foreign).is_none());
+    assert!(dump_mir(&mir).contains("Declaration f0 \"foreign\" external \"foreign\""));
+}
+
+#[test]
+fn verifier_rejects_invalid_external_symbol_metadata() {
     let mut mir = lower_text(concat!(
-        "fn foreign(value: i64) -> i64 { return value; }\n",
+        "extern fn foreign(value: i64) -> i64;\n",
         "fn main() -> i64 { return foreign(7); }\n",
     ));
     let foreign = FunctionId::new(0);
     mir.declarations.entries_mut_for_test()[foreign.index()].linkage =
         MirFunctionLinkage::External {
-            symbol: "foreign".to_owned(),
+            symbol: "wrong-symbol".to_owned(),
         };
-    mir.definitions.remove_for_test(foreign);
 
-    assert!(verify_mir(&mir).is_ok());
-    assert!(mir.declarations.get(foreign).is_some());
-    assert!(mir.definitions.get(foreign).is_none());
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("external symbol must be the declaration's exact source identifier")));
+}
+
+#[test]
+fn verifier_checks_external_call_signature_and_result_presence() {
+    let mut mir = lower_text(concat!(
+        "extern fn foreign(value: i64) -> i64;\n",
+        "fn main() -> i64 { return foreign(7); }\n",
+    ));
+    let main = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let call = main.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) => Some(call),
+            _ => None,
+        })
+        .unwrap();
+    call.arguments.clear();
+    call.result = None;
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("has 0 arguments but requires 1")));
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("value-returning call has no result")));
 }
 
 #[test]

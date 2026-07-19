@@ -9,8 +9,9 @@ mod parser;
 
 pub use ast::{
     BinaryExpr, BinaryOperator, Block, CallExpr, CompilationUnit, Expression, ExpressionStatement,
-    FunctionDecl, GroupedExpr, IdentifierExpr, IntegerExpr, LocalDecl, Name, Parameter,
-    ReturnStatement, Statement, TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
+    ExternalFunctionDecl, FunctionDecl, GroupedExpr, IdentifierExpr, IntegerExpr, LocalDecl, Name,
+    Parameter, ReturnStatement, Statement, TopLevelDeclaration, TypeKind, TypeSyntax, UnaryExpr,
+    UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

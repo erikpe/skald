@@ -11,6 +11,13 @@ fn parse_text(text: &str) -> (SourceDatabase, ParseOutput) {
     (sources, parsed)
 }
 
+fn function(ast: &CompilationUnit, index: usize) -> &FunctionDecl {
+    let TopLevelDeclaration::Function(function) = &ast.declarations[index] else {
+        panic!("expected a local function definition");
+    };
+    function
+}
+
 fn return_value(function: &FunctionDecl) -> &Expression {
     let Statement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
@@ -33,13 +40,13 @@ fn parses_the_vertical_slice_demonstration_program() {
     let (_, output) = parse_text(source);
 
     assert!(!output.has_errors());
-    assert_eq!(output.ast.functions.len(), 2);
-    assert_eq!(output.ast.functions[0].name.text, "twice");
-    assert_eq!(output.ast.functions[0].parameters.len(), 1);
-    assert_eq!(output.ast.functions[1].name.text, "main");
-    assert_eq!(output.ast.functions[1].body.statements.len(), 2);
+    assert_eq!(output.ast.declarations.len(), 2);
+    assert_eq!(function(&output.ast, 0).name.text, "twice");
+    assert_eq!(function(&output.ast, 0).parameters.len(), 1);
+    assert_eq!(function(&output.ast, 1).name.text, "main");
+    assert_eq!(function(&output.ast, 1).body.statements.len(), 2);
 
-    let Statement::Local(local) = &output.ast.functions[1].body.statements[0] else {
+    let Statement::Local(local) = &function(&output.ast, 1).body.statements[0] else {
         panic!("expected local declaration");
     };
     let Expression::Call(call) = &local.initializer else {
@@ -53,7 +60,7 @@ fn precedence_and_associativity_are_explicit() {
     let (_, output) = parse_text("fn main() -> i64 { return -a * b + c - d; }");
     assert!(!output.has_errors());
 
-    let Expression::Binary(subtract) = return_value(&output.ast.functions[0]) else {
+    let Expression::Binary(subtract) = return_value(function(&output.ast, 0)) else {
         panic!("outer expression must be subtraction");
     };
     assert_eq!(subtract.operator, BinaryOperator::Subtract);
@@ -77,7 +84,7 @@ fn precedence_and_associativity_are_explicit() {
 #[test]
 fn grouping_overrides_binary_precedence_and_preserves_its_span() {
     let (_, output) = parse_text("fn main() -> i64 { return (1 + 2) * 3; }");
-    let Expression::Binary(multiply) = return_value(&output.ast.functions[0]) else {
+    let Expression::Binary(multiply) = return_value(function(&output.ast, 0)) else {
         panic!("expected multiplication");
     };
     let Expression::Grouped(grouped) = multiply.left.as_ref() else {
@@ -100,7 +107,7 @@ fn parser_does_not_perform_semantic_name_lookup() {
         parse_text("fn main() -> i64 { var value: i64 = unknown(missing); return value; }");
 
     assert!(output.diagnostics.is_empty());
-    assert_eq!(output.ast.functions.len(), 1);
+    assert_eq!(output.ast.declarations.len(), 1);
 }
 
 #[test]
@@ -111,8 +118,8 @@ fn malformed_function_does_not_hide_the_next_declaration() {
     ));
 
     assert!(output.has_errors());
-    assert_eq!(output.ast.functions.len(), 1);
-    assert_eq!(output.ast.functions[0].name.text, "main");
+    assert_eq!(output.ast.declarations.len(), 1);
+    assert_eq!(function(&output.ast, 0).name.text, "main");
     assert!(!output.diagnostics.is_empty());
 }
 
@@ -128,8 +135,8 @@ fn missing_punctuation_is_diagnosed_with_useful_recovery() {
 
     assert!(output.has_errors());
     assert_eq!(output.diagnostics.len(), 2);
-    assert_eq!(output.ast.functions.len(), 1);
-    assert_eq!(output.ast.functions[0].body.statements.len(), 3);
+    assert_eq!(output.ast.declarations.len(), 1);
+    assert_eq!(function(&output.ast, 0).body.statements.len(), 3);
     assert!(output
         .diagnostics
         .iter()
@@ -148,7 +155,7 @@ fn independent_statement_errors_are_both_reported() {
 
     assert!(output.has_errors());
     assert!(output.diagnostics.len() >= 2);
-    assert!(output.ast.functions[0]
+    assert!(function(&output.ast, 0)
         .body
         .statements
         .iter()
@@ -163,12 +170,12 @@ fn parses_unit_returns_and_expression_statements_with_complete_spans() {
     ));
 
     assert!(!output.has_errors());
-    assert_eq!(output.ast.functions[0].return_type.kind, TypeKind::Unit);
-    let Statement::Return(unit_return) = &output.ast.functions[0].body.statements[0] else {
+    assert_eq!(function(&output.ast, 0).return_type.kind, TypeKind::Unit);
+    let Statement::Return(unit_return) = &function(&output.ast, 0).body.statements[0] else {
         panic!("expected unit return");
     };
     assert!(unit_return.value.is_none());
-    let Statement::Expression(statement) = &output.ast.functions[1].body.statements[0] else {
+    let Statement::Expression(statement) = &function(&output.ast, 1).body.statements[0] else {
         panic!("expected expression statement");
     };
     assert!(matches!(statement.expression, Expression::Grouped(_)));
@@ -178,6 +185,43 @@ fn parses_unit_returns_and_expression_statements_with_complete_spans() {
     assert_eq!(dump, dump_ast(&output.ast));
     assert!(dump.contains("Type Unit"));
     assert!(dump.contains("ExpressionStatement"));
+}
+
+#[test]
+fn parses_external_functions_as_bodyless_top_level_declarations() {
+    let (_, output) = parse_text(concat!(
+        "extern fn emit(value: i64) -> unit;\n",
+        "fn main() -> i64 { emit(7); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    assert_eq!(output.ast.declarations.len(), 2);
+    let TopLevelDeclaration::ExternalFunction(external) = &output.ast.declarations[0] else {
+        panic!("expected external function declaration");
+    };
+    assert_eq!(external.name.text, "emit");
+    assert_eq!(external.parameters.len(), 1);
+    assert_eq!(external.return_type.kind, TypeKind::Unit);
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump, dump_ast(&output.ast));
+    assert!(dump.contains("ExternalFunction @0..35"));
+    assert!(dump.contains("Name \"emit\" @10..14"));
+    assert!(dump.contains("Type Unit @30..34"));
+}
+
+#[test]
+fn missing_external_semicolon_recovers_at_the_next_declaration() {
+    let (_, output) = parse_text(concat!(
+        "extern fn emit(value: i64) -> unit\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.has_errors());
+    assert_eq!(output.ast.declarations.len(), 2);
+    assert!(output.diagnostics.iter().any(|diagnostic| diagnostic
+        .message
+        .contains("`;` after the external function declaration")));
+    assert_eq!(function(&output.ast, 1).name.text, "main");
 }
 
 #[test]
@@ -192,7 +236,7 @@ fn missing_call_statement_semicolon_recovers_at_return() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.message.contains("`;` after the call expression")));
-    assert!(output.ast.functions[1]
+    assert!(function(&output.ast, 1)
         .body
         .statements
         .iter()
@@ -203,6 +247,7 @@ fn missing_call_statement_semicolon_recovers_at_return() {
 fn unit_is_not_accepted_for_parameter_or_local_storage() {
     for source in [
         "fn bad(value: unit) -> unit {} fn main() -> i64 { return 0; }",
+        "extern fn bad(value: unit) -> unit; fn main() -> i64 { return 0; }",
         "fn main() -> i64 { var value: unit = 0; return 0; }",
     ] {
         let (_, output) = parse_text(source);
@@ -222,8 +267,8 @@ fn missing_block_close_recovers_at_the_next_function() {
     ));
 
     assert!(output.has_errors());
-    assert_eq!(output.ast.functions.len(), 2);
-    assert_eq!(output.ast.functions[1].name.text, "second");
+    assert_eq!(output.ast.declarations.len(), 2);
+    assert_eq!(function(&output.ast, 1).name.text, "second");
 }
 
 #[test]

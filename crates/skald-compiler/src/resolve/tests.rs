@@ -89,6 +89,69 @@ fn resolves_call_statements_through_the_same_stable_function_identity() {
 }
 
 #[test]
+fn external_declarations_share_the_callable_namespace_and_have_no_body() {
+    let output = resolve_text(concat!(
+        "extern fn emit(value: i64) -> unit;\n",
+        "fn main() -> i64 { emit(7); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let external = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert!(matches!(
+        &external.linkage,
+        ResolvedFunctionLinkage::External { symbol } if symbol == "emit"
+    ));
+    assert!(output.program.definitions.get(external.id).is_none());
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedStatement::Expression(statement) = &main.body.statements[0] else {
+        panic!("expected call statement");
+    };
+    let ResolvedExpression::DirectCall(call) = &statement.expression else {
+        panic!("expected resolved direct call");
+    };
+    assert_eq!(call.function, external.id);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Declaration f0 \"emit\" external \"emit\""));
+    assert!(!dump.contains("Definition f0"));
+}
+
+#[test]
+fn diagnoses_duplicate_names_across_all_external_and_defined_combinations() {
+    for source in [
+        "extern fn same() -> unit; extern fn same() -> unit; fn main() -> i64 { return 0; }",
+        "extern fn same() -> unit; fn same() -> unit {} fn main() -> i64 { return 0; }",
+        "fn same() -> unit {} extern fn same() -> unit; fn main() -> i64 { return 0; }",
+    ] {
+        let output = resolve_text(source);
+        assert_eq!(output.diagnostics.len(), 1);
+        assert_eq!(
+            output.diagnostics.iter().next().unwrap().code,
+            DUPLICATE_FUNCTION
+        );
+        assert_eq!(output.program.declarations.len(), 2);
+    }
+}
+
+#[test]
+fn diagnoses_duplicate_external_parameter_names() {
+    let output = resolve_text(concat!(
+        "extern fn emit(value: i64, value: i64) -> unit;\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        DUPLICATE_BINDING
+    );
+}
+
+#[test]
 fn assigns_dense_owner_qualified_ids_in_source_order() {
     let output = resolve_text(concat!(
         "fn add(left: i64, right: i64) -> i64 {\n",
@@ -333,7 +396,10 @@ fn parsed_source_ast_still_contains_names_before_resolution() {
     let source = sources.get(source_id).unwrap();
     let tokens = lex(source).tokens;
     let ast = parse(source, &tokens).ast;
-    let Statement::Return(statement) = &ast.functions[0].body.statements[0] else {
+    let syntax::TopLevelDeclaration::Function(function) = &ast.declarations[0] else {
+        panic!("expected function definition");
+    };
+    let Statement::Return(statement) = &function.body.statements[0] else {
         panic!("expected return");
     };
     assert!(matches!(

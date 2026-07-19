@@ -1,11 +1,33 @@
-//! Source-shaped AST for the first vertical slice.
+//! Source-shaped AST for the implemented language subset.
 
 use crate::source::Span;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationUnit {
-    pub functions: Vec<FunctionDecl>,
+    pub declarations: Vec<TopLevelDeclaration>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TopLevelDeclaration {
+    Function(FunctionDecl),
+    ExternalFunction(ExternalFunctionDecl),
+}
+
+impl TopLevelDeclaration {
+    pub const fn name(&self) -> &Name {
+        match self {
+            Self::Function(function) => &function.name,
+            Self::ExternalFunction(function) => &function.name,
+        }
+    }
+
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Function(function) => function.span,
+            Self::ExternalFunction(function) => function.span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -14,6 +36,14 @@ pub struct FunctionDecl {
     pub parameters: Vec<Parameter>,
     pub return_type: TypeSyntax,
     pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExternalFunctionDecl {
+    pub name: Name,
+    pub parameters: Vec<Parameter>,
+    pub return_type: TypeSyntax,
     pub span: Span,
 }
 

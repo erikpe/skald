@@ -1,4 +1,4 @@
-//! Recovering recursive-descent parser for the first vertical slice.
+//! Recovering recursive-descent parser for the implemented source subset.
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
@@ -67,7 +67,7 @@ impl<'source> Parser<'source> {
     }
 
     fn parse(mut self) -> ParseOutput {
-        let mut functions = Vec::new();
+        let mut declarations = Vec::new();
 
         while !self.at(TokenKind::Eof) {
             if self.at(TokenKind::Invalid) {
@@ -76,26 +76,28 @@ impl<'source> Parser<'source> {
                 continue;
             }
 
-            if !self.at(TokenKind::Fn) {
+            let declaration = if self.at(TokenKind::Fn) {
+                self.parse_function().map(TopLevelDeclaration::Function)
+            } else if self.at(TokenKind::Extern) {
+                self.parse_external_function()
+                    .map(TopLevelDeclaration::ExternalFunction)
+            } else {
                 self.report(
                     EXPECTED_DECLARATION,
                     "expected a function declaration",
                     self.peek().span,
-                    "expected `fn` at file scope",
+                    "expected `fn` or `extern fn` at file scope",
                 );
-                self.synchronize_declaration();
-                continue;
-            }
-
-            if let Some(function) = self.parse_function() {
-                functions.push(function);
-            } else {
-                self.synchronize_declaration();
+                None
+            };
+            match declaration {
+                Some(declaration) => declarations.push(declaration),
+                None => self.synchronize_declaration(),
             }
         }
 
         let ast = CompilationUnit {
-            functions,
+            declarations,
             span: self
                 .source
                 .span(0, self.source.len())
@@ -133,6 +135,33 @@ impl<'source> Parser<'source> {
         })
     }
 
+    fn parse_external_function(&mut self) -> Option<ExternalFunctionDecl> {
+        let extern_token = self.advance();
+        self.expect(TokenKind::Fn, "`fn` after `extern`")?;
+        let name = self.parse_name("expected a function name after `extern fn`");
+        let parameters = self.parse_parameter_list();
+        self.expect(TokenKind::Arrow, "`->` after the parameter list");
+        let return_type = self.parse_type("expected a return type after `->`");
+        let semicolon = self.expect(
+            TokenKind::Semicolon,
+            "`;` after the external function declaration",
+        );
+
+        let (name, parameters, return_type) = match (name, parameters, return_type) {
+            (Some(name), Some(parameters), Some(return_type)) => (name, parameters, return_type),
+            _ => return None,
+        };
+        let end_span = semicolon
+            .map(|token| token.span)
+            .unwrap_or(return_type.span);
+        Some(ExternalFunctionDecl {
+            name,
+            parameters,
+            return_type,
+            span: self.cover(extern_token.span, end_span),
+        })
+    }
+
     fn parse_parameter_list(&mut self) -> Option<Vec<Parameter>> {
         self.expect(TokenKind::LeftParen, "`(` after the function name");
         let mut parameters = Vec::new();
@@ -147,6 +176,9 @@ impl<'source> Parser<'source> {
                 TokenKind::RightParen,
                 TokenKind::Arrow,
                 TokenKind::LeftBrace,
+                TokenKind::Semicolon,
+                TokenKind::Fn,
+                TokenKind::Extern,
                 TokenKind::Eof,
             ]) {
                 break;
@@ -165,7 +197,7 @@ impl<'source> Parser<'source> {
                         EXPECTED_TOKEN,
                         "expected a parameter after `,`",
                         self.peek().span,
-                        "trailing commas are not part of the M2 grammar",
+                        "trailing commas are not supported",
                     );
                     valid = false;
                     break;
@@ -259,7 +291,7 @@ impl<'source> Parser<'source> {
         let mut statements = Vec::new();
 
         while !self.at_any(&[TokenKind::RightBrace, TokenKind::Eof]) {
-            if self.at(TokenKind::Fn) {
+            if self.at_any(&[TokenKind::Fn, TokenKind::Extern]) {
                 // A top-level declaration is a strong indication that the
                 // preceding block is missing its closing brace.
                 break;
@@ -489,7 +521,7 @@ impl<'source> Parser<'source> {
                         EXPECTED_EXPRESSION,
                         "expected a call argument after `,`",
                         self.peek().span,
-                        "trailing commas are not part of the M2 grammar",
+                        "trailing commas are not supported",
                     );
                     valid = false;
                     break;
@@ -585,7 +617,7 @@ impl<'source> Parser<'source> {
     }
 
     fn synchronize_declaration(&mut self) {
-        while !self.at_any(&[TokenKind::Fn, TokenKind::Eof]) {
+        while !self.at_any(&[TokenKind::Fn, TokenKind::Extern, TokenKind::Eof]) {
             self.advance();
         }
     }
@@ -596,6 +628,9 @@ impl<'source> Parser<'source> {
             TokenKind::RightParen,
             TokenKind::Arrow,
             TokenKind::LeftBrace,
+            TokenKind::Semicolon,
+            TokenKind::Fn,
+            TokenKind::Extern,
             TokenKind::Eof,
         ]) {
             self.advance();
@@ -617,6 +652,7 @@ impl<'source> Parser<'source> {
                 TokenKind::LeftBrace,
                 TokenKind::RightBrace,
                 TokenKind::Fn,
+                TokenKind::Extern,
             ]) {
                 return;
             }

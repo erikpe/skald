@@ -1,0 +1,5 @@
+extern fn emit(value: unit) -> unit;
+
+fn main() -> i64 {
+    return 0;
+}

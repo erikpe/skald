@@ -1,0 +1,5 @@
+error[PAR002]: expected the parameter type `i64`
+ --> tests/golden/compile_fail/invalid_external_parameter.ska:1:23
+   |
+1 | extern fn emit(value: unit) -> unit;
+   |                       ^^^^ parameters and locals must have type `i64`

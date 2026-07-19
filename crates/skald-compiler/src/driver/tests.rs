@@ -160,6 +160,47 @@ fn linker_failure_is_a_driver_error_not_a_panic() {
 }
 
 #[test]
+fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
+    let directory = test_directory("unresolved-external");
+    let input = directory.join("unresolved.ska");
+    let output = directory.join("unresolved");
+    fs::write(
+        &input,
+        concat!(
+            "extern fn definitely_missing_skald_test_symbol() -> unit;\n",
+            "fn main() -> i64 { definitely_missing_skald_test_symbol(); return 0; }\n",
+        ),
+    )
+    .unwrap();
+    let empty_archive = directory.join("empty-runtime.a");
+    fs::write(&empty_archive, b"!<arch>\n").unwrap();
+    let args = [
+        OsString::from("skac"),
+        input.into_os_string(),
+        OsString::from("-o"),
+        output.clone().into_os_string(),
+    ];
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+
+    let status = run_cli_with_context(
+        args,
+        &mut stdout,
+        &mut stderr,
+        &Toolchain::new("cc", empty_archive),
+    )
+    .unwrap();
+
+    assert_eq!(status, EXIT_COMPILE_ERROR);
+    assert!(stdout.is_empty());
+    assert!(String::from_utf8(stderr)
+        .unwrap()
+        .contains("skac: toolchain `cc` failed with exit status"));
+    assert!(!output.exists());
+    fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn composes_the_complete_frontend_and_backend_pipeline() {
     let artifact = compile_source_to_assembly(
         "complete.ska",
@@ -208,6 +249,10 @@ fn malformed_first_slice_sources_never_panic() {
         "fn main() -> i64 { if 1 { return 0; } }",
         "fn main() -> bool { return 0; }",
         "fn main() -> i64 { return unknown(1, 2); }",
+        "extern",
+        "extern fn",
+        "extern fn missing(",
+        "extern fn missing() -> unit fn main() -> i64 { return 0; }",
     ]);
 
     for (index, source) in malformed.into_iter().enumerate() {

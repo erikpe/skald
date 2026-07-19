@@ -7,8 +7,8 @@ use crate::{
     backend::{emit_assembly, Target},
     hir::HirProgram,
     lexer::lex,
-    mir::{lower_hir, verify_mir, BlockId, MirBasicBlock, MirFunctionLinkage, MirProgram},
-    resolve::{resolve, FunctionId},
+    mir::{lower_hir, verify_mir, BlockId, MirBasicBlock, MirProgram},
+    resolve::resolve,
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
@@ -150,18 +150,12 @@ fn emits_a_c_compatible_entry_boundary() {
 
 #[test]
 fn external_calls_use_the_declared_symbol_without_emitting_a_body() {
-    let mut mir = lower_text(concat!(
-        "fn foreign(value: i64) -> i64 { return value; }\n",
-        "fn main() -> i64 { return foreign(9); }\n",
+    let mir = lower_text(concat!(
+        // Deliberately resembles an old internal symbol. The leading dot on
+        // target-private symbols keeps the two namespaces disjoint.
+        "extern fn ska_fn_1(value: i64) -> i64;\n",
+        "fn main() -> i64 { return ska_fn_1(9); }\n",
     ));
-    let foreign = FunctionId::new(0);
-    mir.declarations.entries_mut_for_test()[foreign.index()].linkage =
-        MirFunctionLinkage::External {
-            // Deliberately resembles an old internal symbol. The leading dot
-            // on target-private symbols keeps the two namespaces disjoint.
-            symbol: "ska_fn_1".to_owned(),
-        };
-    mir.definitions.remove_for_test(foreign);
 
     let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
 

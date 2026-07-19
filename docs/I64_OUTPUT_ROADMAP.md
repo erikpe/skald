@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0–O4 complete; O5–O6 planned.
+Status: O0–O5 complete; O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -90,7 +90,7 @@ interface and ownership model identified as open in the draft specification.
 - [x] O2 — Separate callable declarations from local function bodies
 - [x] O3 — Implement `unit`, unit returns, and call statements end-to-end
 - [x] O4 — Add and directly test the runtime `i64` output ABI
-- [ ] O5 — Implement restricted external declarations and calls end-to-end
+- [x] O5 — Implement restricted external declarations and calls end-to-end
 - [ ] O6 — Add observable golden coverage and harden the completed slice
 
 Milestone checkboxes below should be marked as each PR is completed. A
@@ -259,24 +259,24 @@ pass without compiler involvement.
 **Purpose:** Connect ordinary Skald call semantics to the runtime ABI without a
 name-based intrinsic or backend special case.
 
-- [ ] Lex and parse `extern fn name(parameters) -> type;` with recovery and
+- [x] Lex and parse `extern fn name(parameters) -> type;` with recovery and
       deterministic AST output.
-- [ ] Collect external declarations in the same callable namespace as local
+- [x] Collect external declarations in the same callable namespace as local
       definitions and diagnose all duplicate combinations consistently.
-- [ ] Preserve the source external name as explicit linkage metadata selected
+- [x] Preserve the source external name as explicit linkage metadata selected
       during resolution.
-- [ ] Enforce the O0 restricted external signature and entry-point rules during
+- [x] Enforce the O0 restricted external signature and entry-point rules during
       semantic analysis.
-- [ ] Carry external signatures and linkage through HIR and MIR declarations;
+- [x] Carry external signatures and linkage through HIR and MIR declarations;
       do not synthesize empty function bodies.
-- [ ] Extend MIR verification to validate external call arity, argument types,
+- [x] Extend MIR verification to validate external call arity, argument types,
       result presence, and symbol metadata.
-- [ ] Emit external calls through the existing target call-lowering path and
+- [x] Emit external calls through the existing target call-lowering path and
       x86-64 System V ABI argument rules.
-- [ ] Ensure only local definitions are emitted as assembly function bodies.
-- [ ] Ensure unresolved external symbols fail in the linker/toolchain layer
+- [x] Ensure only local definitions are emitted as assembly function bodies.
+- [x] Ensure unresolved external symbols fail in the linker/toolchain layer
       with a driver error and never cause a compiler panic.
-- [ ] Add deterministic dumps that visibly distinguish defined and external
+- [x] Add deterministic dumps that visibly distinguish defined and external
       callable declarations.
 
 **Tests:** Phase-level valid and recovery cases, duplicate-name diagnostics,

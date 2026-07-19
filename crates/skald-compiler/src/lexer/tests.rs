@@ -67,6 +67,15 @@ fn recognizes_unit_as_a_keyword() {
 }
 
 #[test]
+fn recognizes_extern_as_a_keyword() {
+    let (_, _, output) = lex_text("extern external");
+
+    assert_eq!(output.tokens[0].kind, TokenKind::Extern);
+    assert_eq!(output.tokens[1].kind, TokenKind::Identifier);
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn skips_ascii_whitespace_and_line_comments() {
     let (_, _, output) = lex_text("// before\r\n\tvar value: i64 = 7; // after");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

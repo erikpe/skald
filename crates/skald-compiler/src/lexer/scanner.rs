@@ -99,6 +99,7 @@ impl<'source> Lexer<'source> {
         let text = &self.source.text()[start..self.offset];
         let kind = match text {
             "fn" => TokenKind::Fn,
+            "extern" => TokenKind::Extern,
             "var" => TokenKind::Var,
             "return" => TokenKind::Return,
             "i64" => TokenKind::I64,

@@ -5,6 +5,7 @@ use crate::source::Span;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TokenKind {
     Fn,
+    Extern,
     Var,
     Return,
     I64,
@@ -31,6 +32,7 @@ impl TokenKind {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Fn => "FN",
+            Self::Extern => "EXTERN",
             Self::Var => "VAR",
             Self::Return => "RETURN",
             Self::I64 => "I64",

@@ -71,14 +71,10 @@ Parser recovery may synthesize missing punctuation to retain a useful source AST
 
 ## `i64` output extension contract
 
-O0 fixes the following grammar and semantic contract for the post-M8 `i64`
-output extension. Later O-series milestones implement it through the existing
-pipeline. Until those milestones are complete, the first vertical slice
-grammar above remains the accepted grammar.
-
-O3 implements `unit`, unit returns, and restricted call statements for local
-function definitions. O5 adds the remaining `extern` declaration syntax. The
-complete extension grammar is:
+O0 fixed the following grammar and semantic contract for the post-M8 `i64`
+output extension. O3 implemented `unit`, unit returns, and restricted call
+statements; O5 implements the remaining `extern` declaration syntax. The
+accepted extension grammar is:
 
 ```text
 compilation-unit = top-level-declaration* EOF
@@ -123,7 +119,7 @@ named `main` is a compile-time error.
 
 ### Restricted external-function profile
 
-The O-series implementation supports only top-level external declarations
+The implemented O-series profile supports only top-level external declarations
 whose parameters are by-value `i64` values and whose result is `i64` or
 `unit`. Parameter names are mandatory. Alias parameters, `shared`, objects,
 arrays, optionals, function values, variadic arguments, alternate link names,
@@ -156,6 +152,15 @@ verify the definition supplied to the linker. A missing symbol is a link error;
 a supplied definition with an incompatible C ABI type is outside Skald's
 language guarantees. General foreign linkage, cross-module declaration
 coalescing, and ownership-bearing foreign calls remain unspecified.
+
+Resolution assigns external and defined functions dense callable IDs in their
+shared source order. Resolved IR, HIR, and MIR retain every external signature
+and its exact-symbol linkage but allocate no definition/body entry for it.
+Calls below resolution use only the stable ID. The x86-64 backend selects the
+external symbol from declaration metadata and sends arguments through the same
+System V call-lowering path used for Skald definitions. An unavailable symbol
+therefore remains valid through compilation and fails only when the driver
+invokes the linker.
 
 ## First vertical slice name resolution
 

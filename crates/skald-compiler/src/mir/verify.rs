@@ -130,6 +130,14 @@ impl Verifier<'_> {
                     "function parameters cannot have type `unit`",
                 );
             }
+            if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
+                if symbol != &declaration.name || !is_source_identifier(symbol) {
+                    self.function_error(
+                        declaration.id,
+                        "external symbol must be the declaration's exact source identifier",
+                    );
+                }
+            }
         }
 
         let mut defined_functions = HashSet::new();
@@ -629,4 +637,13 @@ impl Verifier<'_> {
             message: message.into(),
         });
     }
+}
+
+fn is_source_identifier(symbol: &str) -> bool {
+    let mut bytes = symbol.bytes();
+    let Some(first) = bytes.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == b'_')
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }

@@ -68,12 +68,19 @@ impl<'ast> Resolver<'ast> {
         let mut function_declarations = Vec::with_capacity(declarations.len());
         let mut function_definitions = Vec::with_capacity(declarations.len());
         for (id, ast_index) in declarations {
-            let function = &self.ast.functions[ast_index];
-            let (declaration, definition) =
-                FunctionResolver::new(id, &self.functions_by_name, &mut self.diagnostics)
-                    .resolve(function);
-            function_declarations.push(declaration);
-            function_definitions.push(Some(definition));
+            let resolver =
+                FunctionResolver::new(id, &self.functions_by_name, &mut self.diagnostics);
+            match &self.ast.declarations[ast_index] {
+                syntax::TopLevelDeclaration::Function(function) => {
+                    let (declaration, definition) = resolver.resolve_definition(function);
+                    function_declarations.push(declaration);
+                    function_definitions.push(Some(definition));
+                }
+                syntax::TopLevelDeclaration::ExternalFunction(function) => {
+                    function_declarations.push(resolver.resolve_external(function));
+                    function_definitions.push(None);
+                }
+            }
         }
 
         ResolveOutput {
@@ -88,14 +95,15 @@ impl<'ast> Resolver<'ast> {
     }
 
     fn collect_functions(&mut self) {
-        for (ast_index, function) in self.ast.functions.iter().enumerate() {
-            if let Some(previous) = self.functions_by_name.get(&function.name.text) {
+        for (ast_index, declaration) in self.ast.declarations.iter().enumerate() {
+            let name = declaration.name();
+            if let Some(previous) = self.functions_by_name.get(&name.text) {
                 self.diagnostics.push(
                     Diagnostic::error(
                         DUPLICATE_FUNCTION,
-                        format!("duplicate function `{}`", function.name.text),
+                        format!("duplicate function `{}`", name.text),
                     )
-                    .with_primary_label(function.name.span, "redeclared here")
+                    .with_primary_label(name.span, "redeclared here")
                     .with_secondary_label(previous.name_span, "first declared here"),
                 );
                 continue;
@@ -103,10 +111,10 @@ impl<'ast> Resolver<'ast> {
 
             let id = FunctionId::new(self.declarations.len());
             self.functions_by_name.insert(
-                function.name.text.clone(),
+                name.text.clone(),
                 FunctionSymbol {
                     id,
-                    name_span: function.name.span,
+                    name_span: name.span,
                 },
             );
             self.declarations.push((id, ast_index));
@@ -145,13 +153,11 @@ impl<'program> FunctionResolver<'program> {
         }
     }
 
-    fn resolve(
+    fn resolve_definition(
         mut self,
         function: &syntax::FunctionDecl,
     ) -> (ResolvedFunctionDeclaration, ResolvedFunctionDefinition) {
-        for parameter in &function.parameters {
-            self.declare_parameter(parameter);
-        }
+        self.resolve_parameters(&function.parameters);
         let body = self.resolve_block(&function.body, false);
 
         (
@@ -171,6 +177,30 @@ impl<'program> FunctionResolver<'program> {
                 span: function.span,
             },
         )
+    }
+
+    fn resolve_external(
+        mut self,
+        function: &syntax::ExternalFunctionDecl,
+    ) -> ResolvedFunctionDeclaration {
+        self.resolve_parameters(&function.parameters);
+        ResolvedFunctionDeclaration {
+            id: self.function_id,
+            name: function.name.text.clone(),
+            name_span: function.name.span,
+            parameters: self.parameters,
+            return_type: resolve_type(&function.return_type),
+            linkage: ResolvedFunctionLinkage::External {
+                symbol: function.name.text.clone(),
+            },
+            span: function.span,
+        }
+    }
+
+    fn resolve_parameters(&mut self, parameters: &[syntax::Parameter]) {
+        for parameter in parameters {
+            self.declare_parameter(parameter);
+        }
     }
 
     fn declare_parameter(&mut self, parameter: &syntax::Parameter) {
