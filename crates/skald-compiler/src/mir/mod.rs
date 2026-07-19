@@ -1,5 +1,15 @@
 //! Target-independent mid-level IR.
 //!
-//! MIR will make evaluation order, control flow, temporaries, calls, and
-//! cleanup explicit. The initial form need not be SSA, but must leave room for
-//! an SSA representation or conversion pass later.
+//! MIR makes storage, evaluation order, temporaries, calls, and control-flow
+//! termination explicit. It is not SSA, but value and block identities leave a
+//! clean path to SSA conversion later.
+
+mod dump;
+mod lower;
+mod model;
+mod verify;
+
+pub use dump::dump_mir;
+pub use lower::lower_hir;
+pub use model::*;
+pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};

@@ -30,7 +30,7 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 ## Status
 
-Skald is currently an exploratory language design. The repository baseline (M0), source/diagnostic/lexer phase (M1), source AST/parser phase (M2), declaration/resolution phase (M3), and type-checking/typed-HIR phase (M4) are implemented; MIR lowering and all later compiler phases remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
+Skald is currently an exploratory language design. The repository baseline (M0), source/diagnostic/lexer phase (M1), source AST/parser phase (M2), declaration/resolution phase (M3), type-checking/typed-HIR phase (M4), and MIR lowering/verifier phase (M5) are implemented; native backend lowering and all later compiler phases remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
 
 ## Development
 

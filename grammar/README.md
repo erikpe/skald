@@ -105,3 +105,20 @@ This special treatment of `i64::MIN` is signed-literal normalization, not genera
 Every first-slice function returns `i64` and must contain an unconditional return. Because M4 has no conditional control flow, a return in an unconditionally executed nested block also satisfies this requirement. The entry candidate selected by M3 must exist and have the exact signature `fn main() -> i64`.
 
 Type checking accumulates diagnostics across functions but emits an executable `HirProgram` only when the entire resolved program succeeds. Consequently, every expression in an available HIR program has a concrete type, every operation is selected, every call has a checked arity and exact target, and the entry function is valid.
+
+## First vertical slice evaluation and MIR
+
+M5 fixes expression evaluation order to left-to-right. A binary expression completely evaluates its left operand before its right operand. A direct call evaluates arguments completely in source order before performing the call. Nested expressions follow the same recursive rule. This ordering is part of the first-slice language behavior, even where current `i64`-only expressions have no visible side effects beyond calls.
+
+MIR separates addressable storage from transient computed values:
+
+- parameters and source locals receive dense, owner-qualified storage IDs;
+- constants, loads, unary and binary results, and call results receive dense, owner-qualified value IDs;
+- local initialization becomes an explicit value computation followed by a store;
+- reading a parameter or local becomes an explicit load;
+- arithmetic and direct calls are ordered three-address instructions;
+- return is a basic-block terminator using an already computed value.
+
+The first slice has no branches, so each lowered function has one entry basic block. Unconditionally unreachable statements after a return are not lowered. Blocks still have explicit IDs and terminators, allowing conditional control-flow edges and additional blocks to be introduced without redesigning instruction or function representation.
+
+Successful lowering runs the MIR verifier in debug builds. The verifier checks function ownership and density of storage, value, and block IDs; parameter storage order; single definitions and use-before-definition; operand and storage types; direct-call targets, argument counts, and signature types; return types; entry blocks; and block termination. Backends consume verified MIR and do not inspect HIR, resolved source names, or the AST.

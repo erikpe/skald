@@ -128,7 +128,7 @@ Progress summary:
 - [x] M2 — Parser and AST
 - [x] M3 — Declaration collection and resolution
 - [x] M4 — Type checking and typed HIR
-- [ ] M5 — MIR lowering and verification
+- [x] M5 — MIR lowering and verification
 - [ ] M6 — x86-64 System V backend
 - [ ] M7 — Runtime, link driver, and native execution
 - [ ] M8 — Vertical-slice hardening
@@ -187,13 +187,13 @@ Progress summary:
 
 ### M5 — MIR lowering and verification
 
-- [ ] Explicit function bodies, local storage/value IDs, calls, arithmetic, and returns.
-- [ ] Deterministic left-to-right evaluation.
-- [ ] Basic blocks and terminators, even though the slice has no conditional branch.
-- [ ] MIR verifier for ownership of IDs, operand types, call signatures, and terminated blocks.
-- [ ] Deterministic MIR dump.
+- [x] Explicit function bodies, local storage/value IDs, calls, arithmetic, and returns.
+- [x] Deterministic left-to-right evaluation.
+- [x] Basic blocks and terminators, even though the slice has no conditional branch.
+- [x] MIR verifier for ownership of IDs, operand types, call signatures, and terminated blocks.
+- [x] Deterministic MIR dump.
 
-- [ ] **Exit criterion:** no source-name lookup or AST traversal is required below MIR lowering.
+- [x] **Exit criterion:** no source-name lookup or AST traversal is required below MIR lowering.
 
 ### M6 — x86-64 System V backend
 

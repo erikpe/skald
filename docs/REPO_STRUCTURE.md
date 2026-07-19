@@ -218,6 +218,10 @@ The initial MIR need not use static single assignment form. IDs and control-flow
 
 That choice should be made when real optimization requirements exist. The current architecture must make it possible without prematurely building an SSA framework.
 
+M5 implements a three-address MIR with separate owner-qualified storage, transient value, and basic-block IDs. Source parameters and locals map to explicit storage slots, while instruction results are immutable value IDs; this hybrid keeps mutation visible without committing the entire IR to SSA. Expression lowering emits instructions recursively in deterministic left-to-right order. The branch-free first slice produces one entry block per function with an explicit return terminator and omits unreachable statements after that return.
+
+The MIR verifier is a separate public boundary and checks tables, ID ownership, parameter order, definitions, use ordering, storage/value types, direct-call signatures, return types, entry blocks, and terminators. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes the exact instruction and evaluation order consumed by backends.
+
 ### Passes and verification
 
 Each IR has a deterministic textual dump suitable for tests. MIR should have a verifier that checks IDs, block termination, operand types, call signatures, and target-independent invariants.

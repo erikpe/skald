@@ -1,0 +1,249 @@
+//! Data model for target-independent MIR.
+
+use std::fmt;
+
+use crate::{
+    resolve::{BindingId, FunctionId},
+    source::Span,
+};
+
+macro_rules! owned_id {
+    ($name:ident, $prefix:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub struct $name {
+            function: FunctionId,
+            index: usize,
+        }
+
+        impl $name {
+            pub const fn function(self) -> FunctionId {
+                self.function
+            }
+
+            pub const fn index(self) -> usize {
+                self.index
+            }
+
+            pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
+                Self { function, index }
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "{}:{}{}", self.function(), $prefix, self.index())
+            }
+        }
+    };
+}
+
+owned_id!(StorageId, "s");
+owned_id!(ValueId, "v");
+owned_id!(BlockId, "b");
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirType {
+    I64,
+}
+
+impl MirType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::I64 => "i64",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirProgram {
+    pub functions: MirFunctionTable,
+    pub entry_function: FunctionId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirFunctionTable {
+    entries: Vec<MirFunction>,
+}
+
+impl MirFunctionTable {
+    pub(crate) fn new(entries: Vec<MirFunction>) -> Self {
+        Self { entries }
+    }
+
+    pub fn get(&self, id: FunctionId) -> Option<&MirFunction> {
+        self.entries
+            .get(id.index())
+            .filter(|function| function.id == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirFunction> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirFunction] {
+        &mut self.entries
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirFunction {
+    pub id: FunctionId,
+    pub name: String,
+    pub parameters: Vec<StorageId>,
+    pub return_type: MirType,
+    pub storage: Vec<MirStorage>,
+    pub values: Vec<MirValue>,
+    pub body: MirBody,
+    pub span: Span,
+}
+
+impl MirFunction {
+    pub fn storage(&self, id: StorageId) -> Option<&MirStorage> {
+        (id.function() == self.id)
+            .then(|| self.storage.get(id.index()))
+            .flatten()
+            .filter(|storage| storage.id == id)
+    }
+
+    pub fn value(&self, id: ValueId) -> Option<&MirValue> {
+        (id.function() == self.id)
+            .then(|| self.values.get(id.index()))
+            .flatten()
+            .filter(|value| value.id == id)
+    }
+
+    pub fn block(&self, id: BlockId) -> Option<&MirBasicBlock> {
+        (id.function() == self.id)
+            .then(|| self.body.blocks.get(id.index()))
+            .flatten()
+            .filter(|block| block.id == id)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirStorageKind {
+    Parameter,
+    Local,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirStorage {
+    pub id: StorageId,
+    pub source: BindingId,
+    pub name: String,
+    pub kind: MirStorageKind,
+    pub ty: MirType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirValue {
+    pub id: ValueId,
+    pub ty: MirType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirBody {
+    pub entry: BlockId,
+    pub blocks: Vec<MirBasicBlock>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirBasicBlock {
+    pub id: BlockId,
+    pub instructions: Vec<MirInstruction>,
+    /// `None` is representable while constructing MIR so the verifier can
+    /// diagnose unfinished blocks. Successful lowering always sets it.
+    pub terminator: Option<MirTerminator>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirInstruction {
+    Assign(MirAssignment),
+    Store(MirStore),
+}
+
+impl MirInstruction {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Assign(instruction) => instruction.span,
+            Self::Store(instruction) => instruction.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirAssignment {
+    pub result: ValueId,
+    pub rvalue: MirRvalue,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirStore {
+    pub storage: StorageId,
+    pub value: ValueId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirRvalue {
+    pub kind: MirRvalueKind,
+    pub ty: MirType,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirRvalueKind {
+    ConstantI64(i64),
+    Load(StorageId),
+    Unary {
+        operation: MirUnaryOperation,
+        operand: ValueId,
+    },
+    Binary {
+        operation: MirBinaryOperation,
+        left: ValueId,
+        right: ValueId,
+    },
+    DirectCall {
+        function: FunctionId,
+        arguments: Vec<ValueId>,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirUnaryOperation {
+    NegateI64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirBinaryOperation {
+    AddI64,
+    SubtractI64,
+    MultiplyI64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirTerminator {
+    Return { value: ValueId, span: Span },
+}
+
+impl MirTerminator {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Return { span, .. } => *span,
+        }
+    }
+}
