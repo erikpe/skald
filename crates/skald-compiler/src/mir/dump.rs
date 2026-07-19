@@ -15,20 +15,47 @@ pub fn dump_mir(program: &MirProgram) -> String {
         program.span.range().end()
     );
     let _ = writeln!(output, "  Entry {}", program.entry_function);
-    output.push_str("  Functions\n");
-    for function in program.functions.iter() {
-        dump_function(&mut output, function);
+    output.push_str("  Declarations\n");
+    for declaration in program.declarations.iter() {
+        dump_declaration(&mut output, declaration);
+    }
+    output.push_str("  Definitions\n");
+    for definition in program.definitions.iter() {
+        dump_definition(&mut output, definition);
     }
     output
 }
 
-fn dump_function(output: &mut String, function: &MirFunction) {
+fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
     let _ = writeln!(
         output,
-        "    Function {} \"{}\" -> {} @{}..{}",
-        function.id,
-        escape(&function.name),
-        function.return_type.name(),
+        "    Declaration {} \"{}\" {} @{}..{}",
+        declaration.id,
+        escape(&declaration.name),
+        match &declaration.linkage {
+            MirFunctionLinkage::Internal => "internal".to_owned(),
+            MirFunctionLinkage::External { symbol } => {
+                format!("external \"{}\"", escape(symbol))
+            }
+        },
+        declaration.span.range().start(),
+        declaration.span.range().end()
+    );
+    output.push_str("      Signature (");
+    for (index, parameter) in declaration.parameter_types.iter().enumerate() {
+        if index != 0 {
+            output.push_str(", ");
+        }
+        output.push_str(parameter.name());
+    }
+    let _ = writeln!(output, ") -> {}", declaration.return_type.name());
+}
+
+fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
+    let _ = writeln!(
+        output,
+        "    Definition {} @{}..{}",
+        function.function,
         function.span.range().start(),
         function.span.range().end()
     );
@@ -88,6 +115,21 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_rvalue(output, &assignment.rvalue);
                 write_span(output, assignment.span);
             }
+            MirInstruction::Call(call) => {
+                if let Some(result) = call.result {
+                    let _ = write!(output, "{result} = ");
+                }
+                let MirCallTarget::Direct(target) = call.target;
+                let _ = write!(output, "call {target}(");
+                for (index, argument) in call.arguments.iter().enumerate() {
+                    if index != 0 {
+                        output.push_str(", ");
+                    }
+                    let _ = write!(output, "{argument}");
+                }
+                output.push(')');
+                write_span(output, call.span);
+            }
             MirInstruction::Store(store) => {
                 let _ = write!(output, "store {}, {}", store.storage, store.value);
                 write_span(output, store.span);
@@ -131,19 +173,6 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 MirBinaryOperation::MultiplyI64 => "mul.i64",
             };
             let _ = write!(output, "{operation} {left}, {right}");
-        }
-        MirRvalueKind::DirectCall {
-            function,
-            arguments,
-        } => {
-            let _ = write!(output, "call {function}(");
-            for (index, argument) in arguments.iter().enumerate() {
-                if index != 0 {
-                    output.push_str(", ");
-                }
-                let _ = write!(output, "{argument}");
-            }
-            output.push(')');
         }
     }
     let _ = write!(output, " : {}", rvalue.ty.name());

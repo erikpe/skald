@@ -170,7 +170,7 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
     .unwrap();
 
     assert!(artifact.report.diagnostics.is_empty());
-    assert!(artifact.assembly.contains("call ska_fn_0"));
+    assert!(artifact.assembly.contains("call .Lska_fn_0"));
     assert!(artifact.assembly.contains(".globl main"));
 }
 

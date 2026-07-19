@@ -7,8 +7,8 @@ use crate::{
     backend::{emit_assembly, Target},
     hir::HirProgram,
     lexer::lex,
-    mir::{lower_hir, verify_mir, BlockId, MirBasicBlock, MirProgram},
-    resolve::resolve,
+    mir::{lower_hir, verify_mir, BlockId, MirBasicBlock, MirFunctionLinkage, MirProgram},
+    resolve::{resolve, FunctionId},
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
@@ -44,8 +44,8 @@ fn emits_a_deterministic_minimal_function() {
     let expected = concat!(
         ".text\n",
         ".p2align 4\n",
-        ".type ska_fn_0, @function\n",
-        "ska_fn_0:\n",
+        ".type .Lska_fn_0, @function\n",
+        ".Lska_fn_0:\n",
         "    pushq %rbp\n",
         "    movq %rsp, %rbp\n",
         "    subq $16, %rsp\n",
@@ -54,7 +54,7 @@ fn emits_a_deterministic_minimal_function() {
         "    movq -8(%rbp), %rax\n",
         "    leave\n",
         "    ret\n",
-        ".size ska_fn_0, .-ska_fn_0\n",
+        ".size .Lska_fn_0, .-.Lska_fn_0\n",
         "\n",
         ".p2align 4\n",
         ".globl main\n",
@@ -62,7 +62,7 @@ fn emits_a_deterministic_minimal_function() {
         "main:\n",
         "    pushq %rbp\n",
         "    movq %rsp, %rbp\n",
-        "    call ska_fn_0\n",
+        "    call .Lska_fn_0\n",
         "    leave\n",
         "    ret\n",
         ".size main, .-main\n",
@@ -86,7 +86,7 @@ fn selects_every_first_slice_arithmetic_operation_and_storage_copy() {
     assert!(output.contains("imulq %rcx, %rax"));
     assert!(output.contains("subq %rcx, %rax"));
     assert!(output.contains("addq %rcx, %rax"));
-    assert!(output.contains("call ska_fn_0"));
+    assert!(output.contains("call .Lska_fn_0"));
     assert!(output.contains("movq %rax, -8(%rbp)"));
 }
 
@@ -111,7 +111,7 @@ fn lowers_register_and_stack_arguments_at_the_abi_boundary() {
     assert!(output.contains("movq 16(%rbp), %rax"));
     assert!(output.contains("subq $16, %rsp"));
     assert!(output.contains("movq %rax, (%rsp)"));
-    assert!(output.contains("call ska_fn_0\n    addq $16, %rsp"));
+    assert!(output.contains("call .Lska_fn_0\n    addq $16, %rsp"));
 }
 
 #[test]
@@ -130,17 +130,42 @@ fn emits_a_c_compatible_entry_boundary() {
     let output = assembly("fn helper() -> i64 { return 1; } fn main() -> i64 { return 2; }");
 
     assert!(output.contains(".globl main\n.type main, @function\nmain:"));
-    assert!(output.contains("main:\n    pushq %rbp\n    movq %rsp, %rbp\n    call ska_fn_1"));
-    assert!(!output.contains(".globl ska_fn_"));
+    assert!(output.contains("main:\n    pushq %rbp\n    movq %rsp, %rbp\n    call .Lska_fn_1"));
+    assert!(!output.contains(".globl .Lska_fn_"));
+}
+
+#[test]
+fn external_calls_use_the_declared_symbol_without_emitting_a_body() {
+    let mut mir = lower_text(concat!(
+        "fn foreign(value: i64) -> i64 { return value; }\n",
+        "fn main() -> i64 { return foreign(9); }\n",
+    ));
+    let foreign = FunctionId::new(0);
+    mir.declarations.entries_mut_for_test()[foreign.index()].linkage =
+        MirFunctionLinkage::External {
+            // Deliberately resembles an old internal symbol. The leading dot
+            // on target-private symbols keeps the two namespaces disjoint.
+            symbol: "ska_fn_1".to_owned(),
+        };
+    mir.definitions.remove_for_test(foreign);
+
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+
+    assert!(output.contains("call ska_fn_1"));
+    assert!(!output.contains("\nska_fn_1:\n"));
+    assert!(output.contains(".Lska_fn_1:"));
 }
 
 #[test]
 fn rejects_verified_mir_outside_the_initial_target_shape() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
-    let function = &mut mir.functions.entries_mut_for_test()[0];
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
     let original = &function.body.blocks[0];
     function.body.blocks.push(MirBasicBlock {
-        id: BlockId::new(function.id, 1),
+        id: BlockId::new(function.function, 1),
         instructions: Vec::new(),
         terminator: original.terminator.clone(),
         span: original.span,

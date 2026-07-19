@@ -20,35 +20,36 @@ impl Type {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
-    pub functions: HirFunctionTable,
+    pub declarations: HirFunctionDeclarationTable,
+    pub definitions: HirFunctionDefinitionTable,
     pub entry_function: FunctionId,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct HirFunctionTable {
-    entries: Vec<HirFunction>,
+pub struct HirFunctionDeclarationTable {
+    entries: Vec<HirFunctionDeclaration>,
 }
 
-impl HirFunctionTable {
-    pub(crate) fn new(entries: Vec<HirFunction>) -> Self {
+impl HirFunctionDeclarationTable {
+    pub(crate) fn new(entries: Vec<HirFunctionDeclaration>) -> Self {
         debug_assert!(
             entries
                 .iter()
                 .enumerate()
-                .all(|(index, function)| function.id.index() == index),
-            "HIR function table must be dense and ordered by ID"
+                .all(|(index, declaration)| declaration.id.index() == index),
+            "HIR function declaration table must be dense and ordered by ID"
         );
         Self { entries }
     }
 
-    pub fn get(&self, id: FunctionId) -> Option<&HirFunction> {
+    pub fn get(&self, id: FunctionId) -> Option<&HirFunctionDeclaration> {
         self.entries
             .get(id.index())
-            .filter(|function| function.id == id)
+            .filter(|declaration| declaration.id == id)
     }
 
-    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirFunction> {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirFunctionDeclaration> {
         self.entries.iter()
     }
 
@@ -62,27 +63,79 @@ impl HirFunctionTable {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirFunction {
+pub struct HirFunctionDeclaration {
     pub id: FunctionId,
     pub name: String,
     pub name_span: Span,
     pub parameters: Vec<HirParameter>,
     pub return_type: Type,
-    pub locals: Vec<HirLocal>,
-    pub body: HirBlock,
+    pub linkage: HirFunctionLinkage,
     pub span: Span,
 }
 
-impl HirFunction {
+impl HirFunctionDeclaration {
     pub fn parameter(&self, id: ParameterId) -> Option<&HirParameter> {
         (id.function() == self.id)
             .then(|| self.parameters.get(id.index()))
             .flatten()
             .filter(|parameter| parameter.id == id)
     }
+}
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirFunctionLinkage {
+    Internal,
+    External { symbol: String },
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HirFunctionDefinitionTable {
+    entries: Vec<Option<HirFunctionDefinition>>,
+    definition_count: usize,
+}
+
+impl HirFunctionDefinitionTable {
+    pub(crate) fn new(entries: Vec<Option<HirFunctionDefinition>>) -> Self {
+        debug_assert!(entries.iter().enumerate().all(|(index, definition)| {
+            definition
+                .as_ref()
+                .is_none_or(|definition| definition.function.index() == index)
+        }));
+        let definition_count = entries.iter().flatten().count();
+        Self {
+            entries,
+            definition_count,
+        }
+    }
+
+    pub fn get(&self, function: FunctionId) -> Option<&HirFunctionDefinition> {
+        self.entries.get(function.index())?.as_ref()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &HirFunctionDefinition> {
+        self.entries.iter().flatten()
+    }
+
+    pub const fn len(&self) -> usize {
+        self.definition_count
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.definition_count == 0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFunctionDefinition {
+    pub function: FunctionId,
+    pub locals: Vec<HirLocal>,
+    pub body: HirBlock,
+    pub span: Span,
+}
+
+impl HirFunctionDefinition {
     pub fn local(&self, id: LocalId) -> Option<&HirLocal> {
-        (id.function() == self.id)
+        (id.function() == self.function)
             .then(|| self.locals.get(id.index()))
             .flatten()
             .filter(|local| local.id == id)

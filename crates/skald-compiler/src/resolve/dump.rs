@@ -17,10 +17,16 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
             }
             None => dumper.output.push_str("Entry <none>\n"),
         }
-        dumper.heading("Functions");
+        dumper.heading("Declarations");
         dumper.indented(|dumper| {
-            for function in program.functions.iter() {
-                dumper.function(function);
+            for declaration in program.declarations.iter() {
+                dumper.declaration(declaration);
+            }
+        });
+        dumper.heading("Definitions");
+        dumper.indented(|dumper| {
+            for definition in program.definitions.iter() {
+                dumper.definition(definition);
             }
         });
     });
@@ -34,17 +40,24 @@ struct ResolvedDumper {
 }
 
 impl ResolvedDumper {
-    fn function(&mut self, function: &ResolvedFunction) {
+    fn declaration(&mut self, declaration: &ResolvedFunctionDeclaration) {
         self.write_indentation();
-        let _ = write!(self.output, "Function {} ", function.id);
-        write_quoted(&mut self.output, &function.name);
-        write_span(&mut self.output, function.span);
+        let _ = write!(self.output, "Declaration {} ", declaration.id);
+        write_quoted(&mut self.output, &declaration.name);
+        let linkage = match &declaration.linkage {
+            ResolvedFunctionLinkage::Internal => "internal".to_owned(),
+            ResolvedFunctionLinkage::External { symbol } => {
+                format!("external \"{}\"", escaped(symbol))
+            }
+        };
+        let _ = write!(self.output, " {linkage}");
+        write_span(&mut self.output, declaration.span);
         self.output.push('\n');
 
         self.indented(|dumper| {
             dumper.heading("Parameters");
             dumper.indented(|dumper| {
-                for parameter in &function.parameters {
+                for parameter in &declaration.parameters {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Parameter {} ", parameter.id);
                     write_quoted(&mut dumper.output, &parameter.name);
@@ -55,11 +68,20 @@ impl ResolvedDumper {
             });
 
             dumper.heading("ReturnType");
-            dumper.indented(|dumper| dumper.type_syntax(&function.return_type));
+            dumper.indented(|dumper| dumper.type_syntax(&declaration.return_type));
+        });
+    }
 
+    fn definition(&mut self, definition: &ResolvedFunctionDefinition) {
+        self.line(
+            &format!("Definition {}", definition.function),
+            definition.span,
+        );
+
+        self.indented(|dumper| {
             dumper.heading("Locals");
             dumper.indented(|dumper| {
-                for local in &function.locals {
+                for local in &definition.locals {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Local {} ", local.id);
                     write_quoted(&mut dumper.output, &local.name);
@@ -69,7 +91,7 @@ impl ResolvedDumper {
                 }
             });
 
-            dumper.block(&function.body);
+            dumper.block(&definition.body);
         });
     }
 
@@ -176,10 +198,12 @@ impl ResolvedDumper {
 
 fn write_quoted(output: &mut String, text: &str) {
     output.push('"');
-    for character in text.chars() {
-        output.extend(character.escape_default());
-    }
+    output.push_str(&escaped(text));
     output.push('"');
+}
+
+fn escaped(text: &str) -> String {
+    text.chars().flat_map(char::escape_default).collect()
 }
 
 fn write_span(output: &mut String, span: Span) {

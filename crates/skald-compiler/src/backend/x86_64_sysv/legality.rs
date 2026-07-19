@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    mir::{verify_mir, MirInstruction, MirProgram, MirRvalueKind},
+    mir::{verify_mir, MirInstruction, MirProgram},
 };
 
 use super::{abi, frame::FrameLayout};
@@ -16,11 +16,11 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         )
     })?;
 
-    for function in program.functions.iter() {
+    for function in program.definitions.iter() {
         if function.body.blocks.len() != 1 {
             return Err(BackendError::new(
                 Target::X86_64SysV,
-                Some(function.id),
+                Some(function.function),
                 format!(
                     "the initial backend supports exactly one basic block, found {}",
                     function.body.blocks.len()
@@ -30,7 +30,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         if function.body.blocks[0].id != function.body.entry {
             return Err(BackendError::new(
                 Target::X86_64SysV,
-                Some(function.id),
+                Some(function.function),
                 "the sole basic block is not the function entry block",
             ));
         }
@@ -38,24 +38,23 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         FrameLayout::plan(function)?;
         for parameter_index in 0..function.parameters.len() {
             if abi::incoming_argument(parameter_index).is_none() {
-                return Err(abi_limit(function.id, "incoming argument area"));
+                return Err(abi_limit(function.function, "incoming argument area"));
             }
         }
         for block in &function.body.blocks {
             for instruction in &block.instructions {
-                let MirInstruction::Assign(assignment) = instruction else {
+                let MirInstruction::Call(call) = instruction else {
                     continue;
                 };
-                if let MirRvalueKind::DirectCall { arguments, .. } = &assignment.rvalue.kind {
-                    if abi::outgoing_stack_size(arguments.len()).is_none()
-                        || arguments
-                            .iter()
-                            .enumerate()
-                            .skip(abi::ARGUMENT_REGISTERS.len())
-                            .any(|(index, _)| abi::outgoing_argument_offset(index).is_none())
-                    {
-                        return Err(abi_limit(function.id, "outgoing argument area"));
-                    }
+                if abi::outgoing_stack_size(call.arguments.len()).is_none()
+                    || call
+                        .arguments
+                        .iter()
+                        .enumerate()
+                        .skip(abi::ARGUMENT_REGISTERS.len())
+                        .any(|(index, _)| abi::outgoing_argument_offset(index).is_none())
+                {
+                    return Err(abi_limit(function.function, "outgoing argument area"));
                 }
             }
         }

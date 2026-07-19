@@ -65,18 +65,21 @@ impl<'ast> Resolver<'ast> {
 
         let entry_function = self.functions_by_name.get("main").map(|symbol| symbol.id);
         let declarations = self.declarations.clone();
-        let mut functions = Vec::with_capacity(declarations.len());
+        let mut function_declarations = Vec::with_capacity(declarations.len());
+        let mut function_definitions = Vec::with_capacity(declarations.len());
         for (id, ast_index) in declarations {
-            let declaration = &self.ast.functions[ast_index];
-            functions.push(
+            let function = &self.ast.functions[ast_index];
+            let (declaration, definition) =
                 FunctionResolver::new(id, &self.functions_by_name, &mut self.diagnostics)
-                    .resolve(declaration),
-            );
+                    .resolve(function);
+            function_declarations.push(declaration);
+            function_definitions.push(Some(definition));
         }
 
         ResolveOutput {
             program: ResolvedProgram {
-                functions: FunctionTable::new(functions),
+                declarations: ResolvedFunctionDeclarationTable::new(function_declarations),
+                definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 entry_function,
                 span: self.ast.span,
             },
@@ -142,22 +145,32 @@ impl<'program> FunctionResolver<'program> {
         }
     }
 
-    fn resolve(mut self, function: &syntax::FunctionDecl) -> ResolvedFunction {
+    fn resolve(
+        mut self,
+        function: &syntax::FunctionDecl,
+    ) -> (ResolvedFunctionDeclaration, ResolvedFunctionDefinition) {
         for parameter in &function.parameters {
             self.declare_parameter(parameter);
         }
         let body = self.resolve_block(&function.body, false);
 
-        ResolvedFunction {
-            id: self.function_id,
-            name: function.name.text.clone(),
-            name_span: function.name.span,
-            parameters: self.parameters,
-            return_type: resolve_type(&function.return_type),
-            locals: self.locals,
-            body,
-            span: function.span,
-        }
+        (
+            ResolvedFunctionDeclaration {
+                id: self.function_id,
+                name: function.name.text.clone(),
+                name_span: function.name.span,
+                parameters: self.parameters,
+                return_type: resolve_type(&function.return_type),
+                linkage: ResolvedFunctionLinkage::Internal,
+                span: function.span,
+            },
+            ResolvedFunctionDefinition {
+                function: self.function_id,
+                locals: self.locals,
+                body,
+                span: function.span,
+            },
+        )
     }
 
     fn declare_parameter(&mut self, parameter: &syntax::Parameter) {

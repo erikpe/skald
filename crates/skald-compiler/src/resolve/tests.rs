@@ -43,10 +43,15 @@ fn collects_functions_before_resolving_forward_calls() {
     ));
 
     assert!(!output.has_errors());
-    assert_eq!(output.program.functions.len(), 2);
+    assert_eq!(output.program.declarations.len(), 2);
+    assert_eq!(output.program.definitions.len(), 2);
     assert_eq!(output.program.entry_function.unwrap().index(), 0);
 
-    let main = output.program.functions.iter().next().unwrap();
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
     let ResolvedExpression::DirectCall(call) = return_value(&main.body.statements[0]) else {
         panic!("expected a resolved direct call");
     };
@@ -63,19 +68,26 @@ fn assigns_dense_owner_qualified_ids_in_source_order() {
         "  return first;\n",
         "}\n",
     ));
-    let function = output.program.functions.iter().next().unwrap();
+    let declaration = output.program.declarations.iter().next().unwrap();
+    let definition = output.program.definitions.get(declaration.id).unwrap();
 
-    assert_eq!(function.id.index(), 0);
-    assert_eq!(function.parameters[0].id.index(), 0);
-    assert_eq!(function.parameters[1].id.index(), 1);
-    assert_eq!(function.locals[0].id.index(), 0);
-    assert_eq!(function.locals[1].id.index(), 1);
-    assert_eq!(function.locals[1].id.function(), function.id);
+    assert_eq!(declaration.id.index(), 0);
+    assert_eq!(declaration.parameters[0].id.index(), 0);
+    assert_eq!(declaration.parameters[1].id.index(), 1);
+    assert_eq!(definition.locals[0].id.index(), 0);
+    assert_eq!(definition.locals[1].id.index(), 1);
+    assert_eq!(definition.locals[1].id.function(), declaration.id);
     assert_eq!(
-        function.parameter(function.parameters[1].id).unwrap().name,
+        declaration
+            .parameter(declaration.parameters[1].id)
+            .unwrap()
+            .name,
         "right"
     );
-    assert_eq!(function.local(function.locals[0].id).unwrap().name, "first");
+    assert_eq!(
+        definition.local(definition.locals[0].id).unwrap().name,
+        "first"
+    );
 }
 
 #[test]
@@ -88,20 +100,21 @@ fn nested_blocks_shadow_and_then_restore_outer_bindings() {
         "}\n",
     ));
     assert!(!output.has_errors());
-    let function = output.program.functions.iter().next().unwrap();
-    assert_eq!(function.locals.len(), 2);
+    let declaration = output.program.declarations.iter().next().unwrap();
+    let definition = output.program.definitions.get(declaration.id).unwrap();
+    assert_eq!(definition.locals.len(), 2);
 
     let ResolvedExpression::Binding(initial_value) =
-        local_initializer(&function.body.statements[0])
+        local_initializer(&definition.body.statements[0])
     else {
         panic!("outer initializer must resolve to the parameter");
     };
     assert_eq!(
         initial_value.binding,
-        BindingId::Parameter(function.parameters[0].id)
+        BindingId::Parameter(declaration.parameters[0].id)
     );
 
-    let ResolvedStatement::Block(nested) = &function.body.statements[1] else {
+    let ResolvedStatement::Block(nested) = &definition.body.statements[1] else {
         panic!("expected nested block");
     };
     let ResolvedExpression::Binding(nested_value) = return_value(&nested.statements[1]) else {
@@ -109,14 +122,17 @@ fn nested_blocks_shadow_and_then_restore_outer_bindings() {
     };
     assert_eq!(
         nested_value.binding,
-        BindingId::Local(function.locals[1].id)
+        BindingId::Local(definition.locals[1].id)
     );
 
-    let ResolvedExpression::Binding(outer_value) = return_value(&function.body.statements[2])
+    let ResolvedExpression::Binding(outer_value) = return_value(&definition.body.statements[2])
     else {
         panic!("outer return must resolve to a local");
     };
-    assert_eq!(outer_value.binding, BindingId::Local(function.locals[0].id));
+    assert_eq!(
+        outer_value.binding,
+        BindingId::Local(definition.locals[0].id)
+    );
 }
 
 #[test]
@@ -128,9 +144,16 @@ fn diagnoses_duplicate_functions_and_keeps_the_first() {
     ));
 
     assert!(output.has_errors());
-    assert_eq!(output.program.functions.len(), 2);
+    assert_eq!(output.program.declarations.len(), 2);
     assert_eq!(
-        output.program.functions.iter().nth(1).unwrap().id.index(),
+        output
+            .program
+            .declarations
+            .iter()
+            .nth(1)
+            .unwrap()
+            .id
+            .index(),
         1
     );
     let diagnostic = output.diagnostics.iter().next().unwrap();
@@ -146,21 +169,22 @@ fn diagnoses_duplicate_parameters_and_outer_block_locals() {
         "  return value;\n",
         "}\n",
     ));
-    let function = output.program.functions.iter().next().unwrap();
+    let declaration = output.program.declarations.iter().next().unwrap();
+    let definition = output.program.definitions.get(declaration.id).unwrap();
 
     assert_eq!(output.diagnostics.len(), 2);
     assert!(output
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == DUPLICATE_BINDING));
-    assert_eq!(function.parameters.len(), 1);
-    assert!(function.locals.is_empty());
-    let ResolvedExpression::Binding(binding) = return_value(&function.body.statements[0]) else {
+    assert_eq!(declaration.parameters.len(), 1);
+    assert!(definition.locals.is_empty());
+    let ResolvedExpression::Binding(binding) = return_value(&definition.body.statements[0]) else {
         panic!("return must resolve to the first parameter");
     };
     assert_eq!(
         binding.binding,
-        BindingId::Parameter(function.parameters[0].id)
+        BindingId::Parameter(declaration.parameters[0].id)
     );
 }
 
@@ -172,16 +196,17 @@ fn local_is_not_visible_in_its_own_initializer_but_is_visible_afterward() {
         "  return value;\n",
         "}\n",
     ));
-    let function = output.program.functions.iter().next().unwrap();
+    let declaration = output.program.declarations.iter().next().unwrap();
+    let definition = output.program.definitions.get(declaration.id).unwrap();
 
     assert_eq!(output.diagnostics.len(), 1);
     assert_eq!(output.diagnostics.iter().next().unwrap().code, UNKNOWN_NAME);
-    assert_eq!(function.locals.len(), 1);
-    assert_eq!(function.body.statements.len(), 1);
-    let ResolvedExpression::Binding(binding) = return_value(&function.body.statements[0]) else {
+    assert_eq!(definition.locals.len(), 1);
+    assert_eq!(definition.body.statements.len(), 1);
+    let ResolvedExpression::Binding(binding) = return_value(&definition.body.statements[0]) else {
         panic!("later use must resolve to the local");
     };
-    assert_eq!(binding.binding, BindingId::Local(function.locals[0].id));
+    assert_eq!(binding.binding, BindingId::Local(definition.locals[0].id));
 }
 
 #[test]
@@ -252,13 +277,15 @@ fn resolved_dump_is_deterministic_and_exposes_only_ids_at_uses() {
         concat!(
             "ResolvedProgram @0..44\n",
             "  Entry f0\n",
-            "  Functions\n",
-            "    Function f0 \"main\" @0..44\n",
+            "  Declarations\n",
+            "    Declaration f0 \"main\" internal @0..44\n",
             "      Parameters\n",
             "        Parameter f0:p0 \"value\" @8..18\n",
             "          Type I64 @15..18\n",
             "      ReturnType\n",
             "        Type I64 @23..26\n",
+            "  Definitions\n",
+            "    Definition f0 @0..44\n",
             "      Locals\n",
             "      Block @27..44\n",
             "        Return @29..42\n",

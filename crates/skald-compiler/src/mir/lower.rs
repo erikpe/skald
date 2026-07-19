@@ -2,8 +2,9 @@
 
 use crate::{
     hir::{
-        HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunction, HirProgram,
-        HirStatement, HirUnaryOperation, Type,
+        HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunctionDeclaration,
+        HirFunctionDefinition, HirFunctionLinkage, HirProgram, HirStatement, HirUnaryOperation,
+        Type,
     },
     resolve::BindingId,
 };
@@ -11,9 +12,19 @@ use crate::{
 use super::model::*;
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    let functions = hir.functions.iter().map(FunctionLowerer::lower).collect();
+    let declarations = hir.declarations.iter().map(lower_declaration).collect();
+    let definitions = hir
+        .declarations
+        .iter()
+        .map(|declaration| {
+            hir.definitions
+                .get(declaration.id)
+                .map(|definition| FunctionLowerer::lower(declaration, definition))
+        })
+        .collect();
     let mir = MirProgram {
-        functions: MirFunctionTable::new(functions),
+        declarations: MirFunctionDeclarationTable::new(declarations),
+        definitions: MirFunctionDefinitionTable::new(definitions),
         entry_function: hir.entry_function,
         span: hir.span,
     };
@@ -25,8 +36,29 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     mir
 }
 
+fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclaration {
+    MirFunctionDeclaration {
+        id: declaration.id,
+        name: declaration.name.clone(),
+        parameter_types: declaration
+            .parameters
+            .iter()
+            .map(|parameter| lower_type(parameter.ty))
+            .collect(),
+        return_type: lower_type(declaration.return_type),
+        linkage: match &declaration.linkage {
+            HirFunctionLinkage::Internal => MirFunctionLinkage::Internal,
+            HirFunctionLinkage::External { symbol } => MirFunctionLinkage::External {
+                symbol: symbol.clone(),
+            },
+        },
+        span: declaration.span,
+    }
+}
+
 struct FunctionLowerer<'hir> {
-    function: &'hir HirFunction,
+    declaration: &'hir HirFunctionDeclaration,
+    definition: &'hir HirFunctionDefinition,
     parameter_storage: Vec<StorageId>,
     local_storage: Vec<StorageId>,
     storage: Vec<MirStorage>,
@@ -36,29 +68,31 @@ struct FunctionLowerer<'hir> {
 }
 
 impl<'hir> FunctionLowerer<'hir> {
-    fn lower(function: &'hir HirFunction) -> MirFunction {
+    fn lower(
+        declaration: &'hir HirFunctionDeclaration,
+        definition: &'hir HirFunctionDefinition,
+    ) -> MirFunctionDefinition {
         let mut lowerer = Self {
-            function,
-            parameter_storage: Vec::with_capacity(function.parameters.len()),
-            local_storage: Vec::with_capacity(function.locals.len()),
-            storage: Vec::with_capacity(function.parameters.len() + function.locals.len()),
+            declaration,
+            definition,
+            parameter_storage: Vec::with_capacity(declaration.parameters.len()),
+            local_storage: Vec::with_capacity(definition.locals.len()),
+            storage: Vec::with_capacity(declaration.parameters.len() + definition.locals.len()),
             values: Vec::new(),
             instructions: Vec::new(),
             terminator: None,
         };
         lowerer.allocate_storage();
-        lowerer.lower_block(&function.body);
+        lowerer.lower_block(&definition.body);
         assert!(
             lowerer.terminator.is_some(),
             "type-checked function must lower to a terminated entry block"
         );
 
-        let entry = BlockId::new(function.id, 0);
-        MirFunction {
-            id: function.id,
-            name: function.name.clone(),
+        let entry = BlockId::new(declaration.id, 0);
+        MirFunctionDefinition {
+            function: declaration.id,
             parameters: lowerer.parameter_storage,
-            return_type: lower_type(function.return_type),
             storage: lowerer.storage,
             values: lowerer.values,
             body: MirBody {
@@ -67,16 +101,16 @@ impl<'hir> FunctionLowerer<'hir> {
                     id: entry,
                     instructions: lowerer.instructions,
                     terminator: lowerer.terminator,
-                    span: function.body.span,
+                    span: definition.body.span,
                 }],
             },
-            span: function.span,
+            span: definition.span,
         }
     }
 
     fn allocate_storage(&mut self) {
-        for parameter in &self.function.parameters {
-            let id = StorageId::new(self.function.id, self.storage.len());
+        for parameter in &self.declaration.parameters {
+            let id = StorageId::new(self.declaration.id, self.storage.len());
             self.parameter_storage.push(id);
             self.storage.push(MirStorage {
                 id,
@@ -87,8 +121,8 @@ impl<'hir> FunctionLowerer<'hir> {
                 span: parameter.span,
             });
         }
-        for local in &self.function.locals {
-            let id = StorageId::new(self.function.id, self.storage.len());
+        for local in &self.definition.locals {
+            let id = StorageId::new(self.declaration.id, self.storage.len());
             self.local_storage.push(id);
             self.storage.push(MirStorage {
                 id,
@@ -190,32 +224,37 @@ impl<'hir> FunctionLowerer<'hir> {
                     .iter()
                     .map(|argument| self.lower_expression(argument))
                     .collect();
-                self.assign(
-                    MirRvalueKind::DirectCall {
-                        function: *function,
-                        arguments,
-                    },
-                    lower_type(expression.ty),
-                    expression.span,
-                )
+                let result = self.new_value(lower_type(expression.ty), expression.span);
+                self.instructions.push(MirInstruction::Call(MirCall {
+                    target: MirCallTarget::Direct(*function),
+                    arguments,
+                    result: Some(result),
+                    span: expression.span,
+                }));
+                result
             }
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
         }
     }
 
     fn assign(&mut self, kind: MirRvalueKind, ty: MirType, span: crate::source::Span) -> ValueId {
-        let result = ValueId::new(self.function.id, self.values.len());
-        self.values.push(MirValue {
-            id: result,
-            ty,
-            span,
-        });
+        let result = self.new_value(ty, span);
         self.instructions
             .push(MirInstruction::Assign(MirAssignment {
                 result,
                 rvalue: MirRvalue { kind, ty },
                 span,
             }));
+        result
+    }
+
+    fn new_value(&mut self, ty: MirType, span: crate::source::Span) -> ValueId {
+        let result = ValueId::new(self.declaration.id, self.values.len());
+        self.values.push(MirValue {
+            id: result,
+            ty,
+            span,
+        });
         result
     }
 }

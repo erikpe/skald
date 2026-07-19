@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
     hir::{
-        dump_hir, HirBinaryOperation, HirExpression, HirExpressionKind, HirFunction, HirStatement,
-        Type,
+        dump_hir, HirBinaryOperation, HirExpression, HirExpressionKind, HirFunctionDefinition,
+        HirStatement, Type,
     },
     lexer::lex,
     resolve::resolve,
@@ -29,7 +29,7 @@ fn check_text(text: &str) -> TypeCheckOutput {
     type_check(&resolved.program)
 }
 
-fn returned_expression(function: &HirFunction) -> &HirExpression {
+fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {
     let HirStatement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
     };
@@ -67,17 +67,19 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
     assert!(!output.has_errors());
     let hir = output.hir.unwrap();
     assert_eq!(hir.entry_function.index(), 1);
-    assert_eq!(hir.functions.len(), 2);
+    assert_eq!(hir.declarations.len(), 2);
+    assert_eq!(hir.definitions.len(), 2);
 
-    for function in hir.functions.iter() {
-        assert_eq!(function.return_type, Type::I64);
-        for parameter in &function.parameters {
+    for declaration in hir.declarations.iter() {
+        assert_eq!(declaration.return_type, Type::I64);
+        for parameter in &declaration.parameters {
             assert_eq!(parameter.ty, Type::I64);
         }
-        for local in &function.locals {
+        let definition = hir.definitions.get(declaration.id).unwrap();
+        for local in &definition.locals {
             assert_eq!(local.ty, Type::I64);
         }
-        for statement in &function.body.statements {
+        for statement in &definition.body.statements {
             match statement {
                 HirStatement::Local(local) => assert_expression_is_fully_typed(&local.initializer),
                 HirStatement::Return(statement) => {
@@ -88,7 +90,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
         }
     }
 
-    let main = hir.functions.get(hir.entry_function).unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
     let HirStatement::Local(local) = &main.body.statements[0] else {
         panic!("expected local declaration");
     };
@@ -172,7 +174,7 @@ fn positive_i64_maximum_is_accepted() {
     let hir = output.hir.unwrap();
 
     assert!(matches!(
-        returned_expression(hir.functions.get(hir.entry_function).unwrap()).kind,
+        returned_expression(hir.definitions.get(hir.entry_function).unwrap()).kind,
         HirExpressionKind::Integer(i64::MAX)
     ));
 }
@@ -181,7 +183,7 @@ fn positive_i64_maximum_is_accepted() {
 fn unary_minus_admits_the_i64_minimum_boundary() {
     let output = check_text("fn main() -> i64 { return -9223372036854775808; }");
     let hir = output.hir.unwrap();
-    let expression = returned_expression(hir.functions.get(hir.entry_function).unwrap());
+    let expression = returned_expression(hir.definitions.get(hir.entry_function).unwrap());
 
     assert_eq!(expression.ty, Type::I64);
     assert!(matches!(
@@ -225,10 +227,12 @@ fn hir_dump_is_deterministic_and_records_types_and_operations() {
         concat!(
             "HirProgram @0..35\n",
             "  Entry f0\n",
-            "  Functions\n",
-            "    Function f0 \"main\" @0..35\n",
+            "  Declarations\n",
+            "    Declaration f0 \"main\" internal @0..35\n",
             "      Parameters\n",
             "      ReturnType i64\n",
+            "  Definitions\n",
+            "    Definition f0 @0..35\n",
             "      Locals\n",
             "      Block @17..35\n",
             "        Return @19..33\n",

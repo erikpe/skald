@@ -47,7 +47,12 @@ mod tests {
     #[test]
     fn pipeline_rejects_invalid_mir_before_a_backend_sees_it() {
         let mut mir = lowered_program();
-        mir.functions.entries_mut_for_test()[0].body.blocks[0].terminator = None;
+        mir.definitions
+            .get_mut_for_test(mir.entry_function)
+            .unwrap()
+            .body
+            .blocks[0]
+            .terminator = None;
 
         let errors = run_mir_pipeline(mir).unwrap_err();
         assert!(errors.to_string().contains("block has no terminator"));

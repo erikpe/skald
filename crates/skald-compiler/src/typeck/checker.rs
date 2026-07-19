@@ -3,12 +3,14 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunction,
-        HirFunctionTable, HirLocal, HirLocalDecl, HirParameter, HirProgram, HirReturn,
+        HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunctionDeclaration,
+        HirFunctionDeclarationTable, HirFunctionDefinition, HirFunctionDefinitionTable,
+        HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter, HirProgram, HirReturn,
         HirStatement, HirUnaryOperation, Type,
     },
     resolve::{
-        BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression, ResolvedFunction,
+        BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression,
+        ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedFunctionLinkage,
         ResolvedProgram, ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryOperator,
     },
     source::Span,
@@ -37,17 +39,23 @@ impl TypeCheckOutput {
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
     let entry_function = check_entry_point(program, &mut diagnostics);
-    let functions = program
-        .functions
+    let declarations = program.declarations.iter().map(lower_declaration).collect();
+    let definitions = program
+        .declarations
         .iter()
-        .map(|function| check_function(program, function, &mut diagnostics))
+        .map(|declaration| {
+            program.definitions.get(declaration.id).map(|definition| {
+                check_definition(program, declaration, definition, &mut diagnostics)
+            })
+        })
         .collect();
 
     let hir = if diagnostics.has_errors() {
         None
     } else {
         Some(HirProgram {
-            functions: HirFunctionTable::new(functions),
+            declarations: HirFunctionDeclarationTable::new(declarations),
+            definitions: HirFunctionDefinitionTable::new(definitions),
             entry_function: entry_function.expect("valid program must have an entry function"),
             span: program.span,
         })
@@ -72,9 +80,9 @@ fn check_entry_point(
         return None;
     };
     let entry = program
-        .functions
+        .declarations
         .get(entry_id)
-        .expect("resolved entry ID must exist in the function table");
+        .expect("resolved entry ID must exist in the declaration table");
     let return_type = lower_type(&entry.return_type);
 
     if !entry.parameters.is_empty() || return_type != Type::I64 {
@@ -97,11 +105,7 @@ fn check_entry_point(
     Some(entry_id)
 }
 
-fn check_function(
-    program: &ResolvedProgram,
-    function: &ResolvedFunction,
-    diagnostics: &mut Diagnostics,
-) -> HirFunction {
+fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDeclaration {
     let parameters = function
         .parameters
         .iter()
@@ -113,7 +117,30 @@ fn check_function(
             span: parameter.span,
         })
         .collect();
-    let locals = function
+
+    HirFunctionDeclaration {
+        id: function.id,
+        name: function.name.clone(),
+        name_span: function.name_span,
+        parameters,
+        return_type: lower_type(&function.return_type),
+        linkage: match &function.linkage {
+            ResolvedFunctionLinkage::Internal => HirFunctionLinkage::Internal,
+            ResolvedFunctionLinkage::External { symbol } => HirFunctionLinkage::External {
+                symbol: symbol.clone(),
+            },
+        },
+        span: function.span,
+    }
+}
+
+fn check_definition(
+    program: &ResolvedProgram,
+    declaration: &ResolvedFunctionDeclaration,
+    definition: &ResolvedFunctionDefinition,
+    diagnostics: &mut Diagnostics,
+) -> HirFunctionDefinition {
+    let locals = definition
         .locals
         .iter()
         .map(|local| HirLocal {
@@ -124,42 +151,46 @@ fn check_function(
             span: local.span,
         })
         .collect();
-    let return_type = lower_type(&function.return_type);
-    let body = check_block(program, function, &function.body, return_type, diagnostics);
+    let return_type = lower_type(&declaration.return_type);
+    let body = check_block(
+        program,
+        declaration,
+        definition,
+        &definition.body,
+        return_type,
+        diagnostics,
+    );
 
-    if !block_guarantees_return(&function.body) {
+    if !block_guarantees_return(&definition.body) {
         diagnostics.push(
             Diagnostic::error(
                 MISSING_RETURN,
-                format!("function `{}` does not return a value", function.name),
+                format!("function `{}` does not return a value", declaration.name),
             )
             .with_primary_label(
-                function.body.span,
+                definition.body.span,
                 "a return value is required on every path",
             )
             .with_note(format!(
                 "function `{}` declares return type `{}`",
-                function.name,
+                declaration.name,
                 return_type.name()
             )),
         );
     }
 
-    HirFunction {
-        id: function.id,
-        name: function.name.clone(),
-        name_span: function.name_span,
-        parameters,
-        return_type,
+    HirFunctionDefinition {
+        function: definition.function,
         locals,
         body,
-        span: function.span,
+        span: definition.span,
     }
 }
 
 fn check_block(
     program: &ResolvedProgram,
-    function: &ResolvedFunction,
+    declaration: &ResolvedFunctionDeclaration,
+    definition: &ResolvedFunctionDefinition,
     block: &ResolvedBlock,
     return_type: Type,
     diagnostics: &mut Diagnostics,
@@ -168,7 +199,14 @@ fn check_block(
         .statements
         .iter()
         .filter_map(|statement| {
-            check_statement(program, function, statement, return_type, diagnostics)
+            check_statement(
+                program,
+                declaration,
+                definition,
+                statement,
+                return_type,
+                diagnostics,
+            )
         })
         .collect();
 
@@ -180,18 +218,25 @@ fn check_block(
 
 fn check_statement(
     program: &ResolvedProgram,
-    function: &ResolvedFunction,
+    declaration: &ResolvedFunctionDeclaration,
+    definition: &ResolvedFunctionDefinition,
     statement: &ResolvedStatement,
     return_type: Type,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirStatement> {
     match statement {
         ResolvedStatement::Local(local) => {
-            let metadata = function
+            let metadata = definition
                 .local(local.local)
                 .expect("resolved local declaration must reference local metadata");
             let expected = lower_type(&metadata.type_syntax);
-            let initializer = check_expression(program, function, &local.initializer, diagnostics)?;
+            let initializer = check_expression(
+                program,
+                declaration,
+                definition,
+                &local.initializer,
+                diagnostics,
+            )?;
             if !require_type(
                 initializer.ty,
                 expected,
@@ -208,7 +253,13 @@ fn check_statement(
             }))
         }
         ResolvedStatement::Return(statement) => {
-            let value = check_expression(program, function, &statement.value, diagnostics)?;
+            let value = check_expression(
+                program,
+                declaration,
+                definition,
+                &statement.value,
+                diagnostics,
+            )?;
             if !require_type(
                 value.ty,
                 return_type,
@@ -225,7 +276,8 @@ fn check_statement(
         }
         ResolvedStatement::Block(block) => Some(HirStatement::Block(check_block(
             program,
-            function,
+            declaration,
+            definition,
             block,
             return_type,
             diagnostics,
@@ -235,13 +287,14 @@ fn check_statement(
 
 fn check_expression(
     program: &ResolvedProgram,
-    function: &ResolvedFunction,
+    declaration: &ResolvedFunctionDeclaration,
+    definition: &ResolvedFunctionDefinition,
     expression: &ResolvedExpression,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirExpression> {
     match expression {
         ResolvedExpression::Binding(binding) => {
-            let ty = binding_type(function, binding.binding);
+            let ty = binding_type(declaration, definition, binding.binding);
             Some(HirExpression {
                 kind: HirExpressionKind::Binding(binding.binding),
                 ty,
@@ -275,7 +328,13 @@ fn check_expression(
                 }
             }
 
-            let operand = check_expression(program, function, &unary.operand, diagnostics)?;
+            let operand = check_expression(
+                program,
+                declaration,
+                definition,
+                &unary.operand,
+                diagnostics,
+            )?;
             if !require_type(
                 operand.ty,
                 Type::I64,
@@ -297,8 +356,10 @@ fn check_expression(
             })
         }
         ResolvedExpression::Binary(binary) => {
-            let left = check_expression(program, function, &binary.left, diagnostics);
-            let right = check_expression(program, function, &binary.right, diagnostics);
+            let left =
+                check_expression(program, declaration, definition, &binary.left, diagnostics);
+            let right =
+                check_expression(program, declaration, definition, &binary.right, diagnostics);
             let (left, right) = match (left, right) {
                 (Some(left), Some(right)) => (left, right),
                 _ => return None,
@@ -337,13 +398,13 @@ fn check_expression(
         }
         ResolvedExpression::DirectCall(call) => {
             let target = program
-                .functions
+                .declarations
                 .get(call.function)
                 .expect("resolved direct-call target must exist");
             let mut arguments = Vec::with_capacity(call.arguments.len());
             let mut valid = true;
             for argument in &call.arguments {
-                match check_expression(program, function, argument, diagnostics) {
+                match check_expression(program, declaration, definition, argument, diagnostics) {
                     Some(argument) => arguments.push(argument),
                     None => valid = false,
                 }
@@ -399,7 +460,13 @@ fn check_expression(
             })
         }
         ResolvedExpression::Grouped(grouped) => {
-            let inner = check_expression(program, function, &grouped.expression, diagnostics)?;
+            let inner = check_expression(
+                program,
+                declaration,
+                definition,
+                &grouped.expression,
+                diagnostics,
+            )?;
             let ty = inner.ty;
             Some(HirExpression {
                 kind: HirExpressionKind::Grouped(Box::new(inner)),
@@ -410,21 +477,25 @@ fn check_expression(
     }
 }
 
-fn binding_type(function: &ResolvedFunction, binding: BindingId) -> Type {
+fn binding_type(
+    declaration: &ResolvedFunctionDeclaration,
+    definition: &ResolvedFunctionDefinition,
+    binding: BindingId,
+) -> Type {
     assert_eq!(
         binding.function(),
-        function.id,
+        declaration.id,
         "resolved binding must belong to the current function"
     );
     match binding {
         BindingId::Parameter(id) => lower_type(
-            &function
+            &declaration
                 .parameter(id)
                 .expect("resolved parameter ID must exist")
                 .type_syntax,
         ),
         BindingId::Local(id) => lower_type(
-            &function
+            &definition
                 .local(id)
                 .expect("resolved local ID must exist")
                 .type_syntax,

@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    mir::{MirFunction, StorageId, ValueId},
+    mir::{MirFunctionDefinition, StorageId, ValueId},
 };
 
 use super::abi;
@@ -17,7 +17,7 @@ pub(super) struct FrameLayout {
 }
 
 impl FrameLayout {
-    pub(super) fn plan(function: &MirFunction) -> Result<Self, BackendError> {
+    pub(super) fn plan(function: &MirFunctionDefinition) -> Result<Self, BackendError> {
         let slot_count = function
             .storage
             .len()
@@ -71,10 +71,10 @@ fn slot_offset(index: usize) -> Option<i32> {
     magnitude.checked_neg()
 }
 
-fn frame_too_large(function: &MirFunction) -> BackendError {
+fn frame_too_large(function: &MirFunctionDefinition) -> BackendError {
     BackendError::new(
         Target::X86_64SysV,
-        Some(function.id),
+        Some(function.function),
         "stack frame is too large for x86-64 frame-relative addressing",
     )
 }

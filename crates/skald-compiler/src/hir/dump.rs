@@ -12,10 +12,16 @@ pub fn dump_hir(program: &HirProgram) -> String {
     dumper.indented(|dumper| {
         dumper.write_indentation();
         let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
-        dumper.heading("Functions");
+        dumper.heading("Declarations");
         dumper.indented(|dumper| {
-            for function in program.functions.iter() {
-                dumper.function(function);
+            for declaration in program.declarations.iter() {
+                dumper.declaration(declaration);
+            }
+        });
+        dumper.heading("Definitions");
+        dumper.indented(|dumper| {
+            for definition in program.definitions.iter() {
+                dumper.definition(definition);
             }
         });
     });
@@ -29,17 +35,24 @@ struct HirDumper {
 }
 
 impl HirDumper {
-    fn function(&mut self, function: &HirFunction) {
+    fn declaration(&mut self, declaration: &HirFunctionDeclaration) {
         self.write_indentation();
-        let _ = write!(self.output, "Function {} ", function.id);
-        write_quoted(&mut self.output, &function.name);
-        write_span(&mut self.output, function.span);
+        let _ = write!(self.output, "Declaration {} ", declaration.id);
+        write_quoted(&mut self.output, &declaration.name);
+        match &declaration.linkage {
+            HirFunctionLinkage::Internal => self.output.push_str(" internal"),
+            HirFunctionLinkage::External { symbol } => {
+                self.output.push_str(" external ");
+                write_quoted(&mut self.output, symbol);
+            }
+        }
+        write_span(&mut self.output, declaration.span);
         self.output.push('\n');
 
         self.indented(|dumper| {
             dumper.heading("Parameters");
             dumper.indented(|dumper| {
-                for parameter in &function.parameters {
+                for parameter in &declaration.parameters {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Parameter {} ", parameter.id);
                     write_quoted(&mut dumper.output, &parameter.name);
@@ -50,11 +63,24 @@ impl HirDumper {
             });
 
             dumper.write_indentation();
-            let _ = writeln!(dumper.output, "ReturnType {}", function.return_type.name());
+            let _ = writeln!(
+                dumper.output,
+                "ReturnType {}",
+                declaration.return_type.name()
+            );
+        });
+    }
 
+    fn definition(&mut self, definition: &HirFunctionDefinition) {
+        self.line(
+            &format!("Definition {}", definition.function),
+            definition.span,
+        );
+
+        self.indented(|dumper| {
             dumper.heading("Locals");
             dumper.indented(|dumper| {
-                for local in &function.locals {
+                for local in &definition.locals {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Local {} ", local.id);
                     write_quoted(&mut dumper.output, &local.name);
@@ -64,7 +90,7 @@ impl HirDumper {
                 }
             });
 
-            dumper.block(&function.body);
+            dumper.block(&definition.body);
         });
     }
 

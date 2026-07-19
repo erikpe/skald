@@ -3,10 +3,10 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirBinaryOperation, MirFunction, MirInstruction, MirProgram, MirRvalueKind, MirTerminator,
+        MirBinaryOperation, MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition,
+        MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind, MirTerminator,
         MirUnaryOperation, StorageId, ValueId,
     },
-    resolve::FunctionId,
 };
 
 use super::{
@@ -17,15 +17,29 @@ use super::{
 
 pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendError> {
     let mut functions = program
-        .functions
+        .definitions
         .iter()
-        .map(lower_function)
+        .map(|function| {
+            let declaration = program
+                .declarations
+                .get(function.function)
+                .expect("verified definition must have a declaration");
+            lower_function(program, declaration, function)
+        })
         .collect::<Result<Vec<_>, _>>()?;
-    functions.push(entry_wrapper(program.entry_function));
+    let entry = program
+        .declarations
+        .get(program.entry_function)
+        .expect("verified entry declaration must exist");
+    functions.push(entry_wrapper(entry));
     Ok(AssemblyProgram { functions })
 }
 
-fn lower_function(function: &MirFunction) -> Result<AssemblyFunction, BackendError> {
+fn lower_function(
+    program: &MirProgram,
+    declaration: &MirFunctionDeclaration,
+    function: &MirFunctionDefinition,
+) -> Result<AssemblyFunction, BackendError> {
     let frame = FrameLayout::plan(function)?;
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
@@ -41,7 +55,7 @@ fn lower_function(function: &MirFunction) -> Result<AssemblyFunction, BackendErr
     spill_parameters(function, &frame, &mut instructions)?;
     let block = &function.body.blocks[0];
     for instruction in &block.instructions {
-        select_instruction(instruction, &frame, &mut instructions)?;
+        select_instruction(program, function, instruction, &frame, &mut instructions)?;
     }
     select_terminator(
         block.terminator.as_ref().expect("target legality checked"),
@@ -50,7 +64,7 @@ fn lower_function(function: &MirFunction) -> Result<AssemblyFunction, BackendErr
     );
 
     Ok(AssemblyFunction {
-        symbol: symbol_for(function.id),
+        symbol: symbol_for(declaration),
         exported: false,
         instructions,
     })
@@ -59,7 +73,7 @@ fn lower_function(function: &MirFunction) -> Result<AssemblyFunction, BackendErr
 /// C-compatible process entry boundary. Returning the Skald `i64` in `%rax`
 /// exposes its low 32 bits as C `main`'s `int`; Linux subsequently observes
 /// the low eight bits as the process exit status.
-fn entry_wrapper(entry_function: FunctionId) -> AssemblyFunction {
+fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
     AssemblyFunction {
         symbol: "main".to_owned(),
         exported: true,
@@ -69,7 +83,7 @@ fn entry_wrapper(entry_function: FunctionId) -> AssemblyFunction {
                 source: Register::Rsp.into(),
                 destination: Register::Rbp.into(),
             },
-            Instruction::Call(symbol_for(entry_function)),
+            Instruction::Call(symbol_for(entry)),
             Instruction::Leave,
             Instruction::Return,
         ],
@@ -77,7 +91,7 @@ fn entry_wrapper(entry_function: FunctionId) -> AssemblyFunction {
 }
 
 fn spill_parameters(
-    function: &MirFunction,
+    function: &MirFunctionDefinition,
     frame: &FrameLayout,
     instructions: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
@@ -85,7 +99,7 @@ fn spill_parameters(
         let incoming = abi::incoming_argument(index).ok_or_else(|| {
             BackendError::new(
                 Target::X86_64SysV,
-                Some(function.id),
+                Some(function.function),
                 "incoming argument area exceeds the x86-64 ABI encoding limits",
             )
         })?;
@@ -111,6 +125,8 @@ fn spill_parameters(
 }
 
 fn select_instruction(
+    program: &MirProgram,
+    function: &MirFunctionDefinition,
     instruction: &MirInstruction,
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
@@ -164,11 +180,10 @@ fn select_instruction(
                     });
                     store_rax(destination, output);
                 }
-                MirRvalueKind::DirectCall {
-                    function,
-                    arguments,
-                } => select_call(*function, arguments, destination, frame, output)?,
             }
+        }
+        MirInstruction::Call(call) => {
+            select_call(program, function, call, frame, output)?;
         }
         MirInstruction::Store(store) => {
             load_rax(frame_value(frame, store.value), output);
@@ -179,16 +194,22 @@ fn select_instruction(
 }
 
 fn select_call(
-    function: FunctionId,
-    arguments: &[ValueId],
-    destination: Operand,
+    program: &MirProgram,
+    function: &MirFunctionDefinition,
+    call: &MirCall,
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
+    let MirCallTarget::Direct(target_id) = call.target;
+    let target = program
+        .declarations
+        .get(target_id)
+        .expect("verified call target must be declared");
+    let arguments = &call.arguments;
     let stack_size = abi::outgoing_stack_size(arguments.len()).ok_or_else(|| {
         BackendError::new(
             Target::X86_64SysV,
-            None,
+            Some(function.function),
             "outgoing argument area exceeds the x86-64 ABI encoding limits",
         )
     })?;
@@ -212,11 +233,13 @@ fn select_call(
         });
     }
 
-    output.push(Instruction::Call(symbol_for(function)));
+    output.push(Instruction::Call(symbol_for(target)));
     if stack_size != 0 {
         output.push(Instruction::ReleaseStack(stack_size));
     }
-    store_rax(destination, output);
+    if let Some(result) = call.result {
+        store_rax(frame_value(frame, result), output);
+    }
     Ok(())
 }
 
@@ -260,6 +283,9 @@ fn memory(base: Register, displacement: i32) -> Operand {
     Operand::Memory { base, displacement }
 }
 
-fn symbol_for(function: FunctionId) -> String {
-    format!("ska_fn_{}", function.index())
+fn symbol_for(function: &MirFunctionDeclaration) -> String {
+    match &function.linkage {
+        MirFunctionLinkage::Internal => format!(".Lska_fn_{}", function.id.index()),
+        MirFunctionLinkage::External { symbol } => symbol.clone(),
+    }
 }

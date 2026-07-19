@@ -209,3 +209,13 @@ MIR separates addressable storage from transient computed values:
 The first slice has no branches, so each lowered function has one entry basic block. Unconditionally unreachable statements after a return are not lowered. Blocks still have explicit IDs and terminators, allowing conditional control-flow edges and additional blocks to be introduced without redesigning instruction or function representation.
 
 Successful lowering runs the MIR verifier in debug builds. The verifier checks function ownership and density of storage, value, and block IDs; parameter storage order; single definitions and use-before-definition; operand and storage types; direct-call targets, argument counts, and signature types; return types; entry blocks; and block termination. Backends consume verified MIR and do not inspect HIR, resolved source names, or the AST.
+
+O2 changes the compiler representation without changing this first-slice
+language behavior. Resolved IR, typed HIR, and MIR now store dense callable
+declarations separately from optional local definitions. A declaration owns
+the stable function ID, canonical signature, and linkage; a definition owns
+the body and body-local state. MIR calls are dedicated instructions with an
+explicit direct target and optional result ID. Every currently accepted `i64`
+call has a result, while the optional representation is ready for unit-returning
+calls. The backend derives internal or external symbols from declaration
+linkage; call instructions never contain linker-symbol strings.

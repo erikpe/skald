@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0–O1 complete; O2–O6 planned.
+Status: O0–O2 complete; O3–O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -87,7 +87,7 @@ interface and ownership model identified as open in the draft specification.
 
 - [x] O0 — Specify the implemented output and external-call contract
 - [x] O1 — Add exact stdout expectations to the golden runner
-- [ ] O2 — Separate callable declarations from local function bodies
+- [x] O2 — Separate callable declarations from local function bodies
 - [ ] O3 — Implement `unit`, unit returns, and call statements end-to-end
 - [ ] O4 — Add and directly test the runtime `i64` output ABI
 - [ ] O5 — Implement restricted external declarations and calls end-to-end
@@ -163,23 +163,23 @@ semantics.
 **Purpose:** Prepare the IR for bodyless external declarations without adding
 new source syntax or changing existing language behavior.
 
-- [ ] Introduce an explicit callable/function declaration model containing a
+- [x] Introduce an explicit callable/function declaration model containing a
       stable identity, source name for diagnostics, signature, and linkage.
-- [ ] Represent a Skald function definition as a declaration plus a body rather
+- [x] Represent a Skald function definition as a declaration plus a body rather
       than assuming every callable identity indexes a body.
-- [ ] Preserve dense, deterministic identities and source declaration order.
-- [ ] Update resolved IR, HIR, MIR, dumps, and verifier APIs so call signature
+- [x] Preserve dense, deterministic identities and source declaration order.
+- [x] Update resolved IR, HIR, MIR, dumps, and verifier APIs so call signature
       lookup does not require a local body.
-- [ ] Give executable call IR an explicit target abstraction suitable for both
+- [x] Give executable call IR an explicit target abstraction suitable for both
       local and external calls; do not encode the distinction in symbol-name
       strings scattered through the backend.
-- [ ] Generalize call results to be optional at the MIR representation boundary
+- [x] Generalize call results to be optional at the MIR representation boundary
       while retaining the invariant that every currently emitted `i64` call
       has a result.
-- [ ] Keep local symbol generation owned by the backend, deterministic, and in
+- [x] Keep local symbol generation owned by the backend, deterministic, and in
       a target-private namespace that cannot collide with exact external
       identifiers.
-- [ ] Avoid compatibility fields or parallel legacy/new call paths once the
+- [x] Avoid compatibility fields or parallel legacy/new call paths once the
       migration is complete.
 
 **Tests:** Update resolution, HIR, MIR lowering, MIR verification, dump, and
@@ -189,8 +189,9 @@ refactor has no observable effect.
 
 **Acceptance criteria:** No phase below resolution chooses a call by source
 name; signatures can exist without bodies; calls can represent an absent
-result; all first-slice programs emit byte-stable assembly and behave exactly
-as before.
+result; all first-slice programs retain deterministic assembly and identical
+runtime behavior. Internal assembly symbols intentionally change to the
+collision-proof target-private spelling fixed by O0.
 
 ### O3 — Implement `unit`, unit returns, and call statements end-to-end
 

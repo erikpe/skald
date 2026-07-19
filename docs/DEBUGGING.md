@@ -23,6 +23,12 @@ cargo test -p skald-compiler mir_dump -- --nocapture
 
 The snapshots normally assert rather than print the artifact. While debugging a phase, its public renderer can be called from the colocated test and printed with `eprintln!`; `--nocapture` then exposes it without adding a second serialization path.
 
+Resolved, HIR, and MIR dumps render callable declarations separately from
+local definitions. This makes a bodyless external declaration visible without
+inventing an empty body, and keeps signature/linkage inspection independent of
+executable control flow. MIR calls display stable function IDs rather than
+backend symbols.
+
 Assembly is directly available through the public compiler command:
 
 ```text

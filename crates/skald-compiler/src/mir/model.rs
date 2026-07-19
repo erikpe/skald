@@ -56,28 +56,33 @@ impl MirType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
-    pub functions: MirFunctionTable,
+    pub declarations: MirFunctionDeclarationTable,
+    pub definitions: MirFunctionDefinitionTable,
     pub entry_function: FunctionId,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct MirFunctionTable {
-    entries: Vec<MirFunction>,
+pub struct MirFunctionDeclarationTable {
+    entries: Vec<MirFunctionDeclaration>,
 }
 
-impl MirFunctionTable {
-    pub(crate) fn new(entries: Vec<MirFunction>) -> Self {
+impl MirFunctionDeclarationTable {
+    pub(crate) fn new(entries: Vec<MirFunctionDeclaration>) -> Self {
+        debug_assert!(entries
+            .iter()
+            .enumerate()
+            .all(|(index, declaration)| declaration.id.index() == index));
         Self { entries }
     }
 
-    pub fn get(&self, id: FunctionId) -> Option<&MirFunction> {
+    pub fn get(&self, id: FunctionId) -> Option<&MirFunctionDeclaration> {
         self.entries
             .get(id.index())
-            .filter(|function| function.id == id)
+            .filter(|declaration| declaration.id == id)
     }
 
-    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirFunction> {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirFunctionDeclaration> {
         self.entries.iter()
     }
 
@@ -90,40 +95,115 @@ impl MirFunctionTable {
     }
 
     #[cfg(test)]
-    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirFunction] {
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirFunctionDeclaration] {
         &mut self.entries
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirFunction {
+pub struct MirFunctionDeclaration {
     pub id: FunctionId,
     pub name: String,
-    pub parameters: Vec<StorageId>,
+    pub parameter_types: Vec<MirType>,
     pub return_type: MirType,
+    pub linkage: MirFunctionLinkage,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirFunctionLinkage {
+    Internal,
+    External { symbol: String },
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirFunctionDefinitionTable {
+    entries: Vec<Option<MirFunctionDefinition>>,
+    definition_count: usize,
+}
+
+impl MirFunctionDefinitionTable {
+    pub(crate) fn new(entries: Vec<Option<MirFunctionDefinition>>) -> Self {
+        debug_assert!(entries.iter().enumerate().all(|(index, definition)| {
+            definition
+                .as_ref()
+                .is_none_or(|definition| definition.function.index() == index)
+        }));
+        let definition_count = entries.iter().flatten().count();
+        Self {
+            entries,
+            definition_count,
+        }
+    }
+
+    pub fn get(&self, function: FunctionId) -> Option<&MirFunctionDefinition> {
+        self.entries.get(function.index())?.as_ref()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &MirFunctionDefinition> {
+        self.entries.iter().flatten()
+    }
+
+    pub const fn len(&self) -> usize {
+        self.definition_count
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.definition_count == 0
+    }
+
+    pub(crate) fn slots(&self) -> &[Option<MirFunctionDefinition>] {
+        &self.entries
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_mut_for_test(
+        &mut self,
+        function: FunctionId,
+    ) -> Option<&mut MirFunctionDefinition> {
+        self.entries.get_mut(function.index())?.as_mut()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn remove_for_test(&mut self, function: FunctionId) {
+        if self
+            .entries
+            .get_mut(function.index())
+            .and_then(Option::take)
+            .is_some()
+        {
+            self.definition_count -= 1;
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirFunctionDefinition {
+    pub function: FunctionId,
+    pub parameters: Vec<StorageId>,
     pub storage: Vec<MirStorage>,
     pub values: Vec<MirValue>,
     pub body: MirBody,
     pub span: Span,
 }
 
-impl MirFunction {
+impl MirFunctionDefinition {
     pub fn storage(&self, id: StorageId) -> Option<&MirStorage> {
-        (id.function() == self.id)
+        (id.function() == self.function)
             .then(|| self.storage.get(id.index()))
             .flatten()
             .filter(|storage| storage.id == id)
     }
 
     pub fn value(&self, id: ValueId) -> Option<&MirValue> {
-        (id.function() == self.id)
+        (id.function() == self.function)
             .then(|| self.values.get(id.index()))
             .flatten()
             .filter(|value| value.id == id)
     }
 
     pub fn block(&self, id: BlockId) -> Option<&MirBasicBlock> {
-        (id.function() == self.id)
+        (id.function() == self.function)
             .then(|| self.body.blocks.get(id.index()))
             .flatten()
             .filter(|block| block.id == id)
@@ -172,6 +252,7 @@ pub struct MirBasicBlock {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirInstruction {
     Assign(MirAssignment),
+    Call(MirCall),
     Store(MirStore),
 }
 
@@ -179,6 +260,7 @@ impl MirInstruction {
     pub const fn span(&self) -> Span {
         match self {
             Self::Assign(instruction) => instruction.span,
+            Self::Call(instruction) => instruction.span,
             Self::Store(instruction) => instruction.span,
         }
     }
@@ -199,6 +281,19 @@ pub struct MirStore {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCall {
+    pub target: MirCallTarget,
+    pub arguments: Vec<ValueId>,
+    pub result: Option<ValueId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirCallTarget {
+    Direct(FunctionId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirRvalue {
     pub kind: MirRvalueKind,
     pub ty: MirType,
@@ -216,10 +311,6 @@ pub enum MirRvalueKind {
         operation: MirBinaryOperation,
         left: ValueId,
         right: ValueId,
-    },
-    DirectCall {
-        function: FunctionId,
-        arguments: Vec<ValueId>,
     },
 }
 

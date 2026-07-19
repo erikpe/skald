@@ -9,9 +9,9 @@ The first vertical slice is complete. The next slice may add language behavior, 
 1. **Source and diagnostics** own files, UTF-8 byte spans, line maps, structured diagnostics, and stable rendering. New phases reuse these types rather than inventing phase-local locations or printing errors directly.
 2. **Lexing** owns spelling and token formation only. It does not decide names, types, or constant semantics.
 3. **Syntax** owns grammatical source shape and recovery. AST nodes may grow, but they remain unresolved and preserve source spans.
-4. **Resolution** is the only source-name-to-declaration selection phase. Every executable reference below it uses a typed stable ID.
-5. **Typed HIR** owns language-level types and selected semantic operations. A successful HIR contains no unresolved calls, untyped expressions, or placeholder error nodes.
-6. **MIR** owns executable evaluation order, storage, temporaries, basic blocks, and terminators without target registers or ABI rules.
+4. **Resolution** is the only source-name-to-declaration selection phase. Every executable reference below it uses a typed stable ID. Callable declarations own signatures and linkage independently of optional local definitions.
+5. **Typed HIR** owns language-level types and selected semantic operations. It preserves the callable declaration/definition split, and a successful HIR contains no unresolved calls, untyped expressions, or placeholder error nodes.
+6. **MIR** owns executable evaluation order, storage, temporaries, calls with optional results, basic blocks, and terminators without target registers or ABI rules. Calls consult canonical declarations rather than definition storage.
 7. **The MIR pass pipeline** is the visible home for target-independent verification and transformations. Correctness does not depend on an optimization pass.
 8. **Backends** own target legality, ABI lowering, frame and register decisions, target instructions, entry wrappers, symbols, and assembly formatting. Unsupported valid MIR is rejected explicitly until implemented.
 9. **The driver/toolchain layer** owns file I/O, phase orchestration, artifact publication, subprocesses, and process exit codes. Compiler phases never invoke host tools.

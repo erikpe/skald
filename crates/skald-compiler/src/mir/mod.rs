@@ -12,10 +12,11 @@ mod verify;
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{
-    BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody, MirFunction,
-    MirFunctionTable, MirInstruction, MirProgram, MirRvalue, MirRvalueKind, MirStorage,
-    MirStorageKind, MirStore, MirTerminator, MirType, MirUnaryOperation, MirValue, StorageId,
-    ValueId,
+    BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody, MirCall, MirCallTarget,
+    MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,
+    MirFunctionDefinitionTable, MirFunctionLinkage, MirInstruction, MirProgram, MirRvalue,
+    MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirUnaryOperation,
+    MirValue, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 
