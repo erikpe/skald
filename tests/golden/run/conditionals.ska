@@ -1,0 +1,51 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn first() -> bool {
+    ska_rt_println_i64(1);
+    return false;
+}
+
+fn second() -> bool {
+    ska_rt_println_i64(2);
+    return true;
+}
+
+fn third() -> bool {
+    ska_rt_println_i64(3);
+    return true;
+}
+
+fn main() -> i64 {
+    if (first()) {
+        ska_rt_println_i64(10);
+    }
+    elif (second()) {
+        ska_rt_println_i64(20);
+    }
+    elif (third()) {
+        ska_rt_println_i64(30);
+    }
+    else {
+        ska_rt_println_i64(40);
+    }
+
+    if (false) {
+        ska_rt_println_i64(30);
+    }
+    else {
+        ska_rt_println_i64(40);
+    }
+
+    if (true) {
+        ska_rt_println_i64(50);
+    }
+    else {
+        ska_rt_println_i64(60);
+    }
+
+    if (false) {
+        ska_rt_println_i64(60);
+    }
+    ska_rt_println_i64(70);
+    return 75;
+}

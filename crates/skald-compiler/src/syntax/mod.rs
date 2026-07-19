@@ -8,10 +8,10 @@ mod dump;
 mod parser;
 
 pub use ast::{
-    BinaryExpr, BinaryOperator, Block, BooleanExpr, CallExpr, CompilationUnit, Expression,
-    ExpressionStatement, ExternalFunctionDecl, FunctionDecl, GroupedExpr, IdentifierExpr,
-    IntegerExpr, LocalDecl, Name, Parameter, ReturnStatement, Statement, TopLevelDeclaration,
-    TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, Block, BooleanExpr, CallExpr, CompilationUnit, ConditionalArm,
+    ConditionalStatement, Expression, ExpressionStatement, ExternalFunctionDecl, FunctionDecl,
+    GroupedExpr, IdentifierExpr, IntegerExpr, LocalDecl, Name, Parameter, ReturnStatement,
+    Statement, TopLevelDeclaration, TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

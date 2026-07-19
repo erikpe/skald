@@ -184,6 +184,7 @@ pub enum HirStatement {
     Local(HirLocalDecl),
     Return(HirReturn),
     Call(HirCallStatement),
+    Conditional(HirConditional),
     Block(HirBlock),
 }
 
@@ -193,6 +194,7 @@ impl HirStatement {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Call(statement) => statement.span,
+            Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -214,6 +216,20 @@ pub struct HirReturn {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCallStatement {
     pub call: HirExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirConditional {
+    pub arms: Vec<HirConditionalArm>,
+    pub else_block: Option<HirBlock>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirConditionalArm {
+    pub condition: HirExpression,
+    pub body: HirBlock,
     pub span: Span,
 }
 

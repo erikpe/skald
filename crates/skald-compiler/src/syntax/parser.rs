@@ -299,10 +299,25 @@ impl<'source> Parser<'source> {
     }
 
     fn parse_block(&mut self) -> Option<Block> {
+        self.parse_block_with_recovery(false)
+    }
+
+    fn parse_conditional_arm_block(&mut self) -> Option<Block> {
+        self.parse_block_with_recovery(true)
+    }
+
+    fn parse_block_with_recovery(
+        &mut self,
+        stop_at_conditional_continuation: bool,
+    ) -> Option<Block> {
         let left_brace = self.expect(TokenKind::LeftBrace, "`{` to start a block")?;
         let mut statements = Vec::new();
 
         while !self.at_any(&[TokenKind::RightBrace, TokenKind::Eof]) {
+            if stop_at_conditional_continuation && self.at_any(&[TokenKind::Elif, TokenKind::Else])
+            {
+                break;
+            }
             if self.at_any(&[TokenKind::Fn, TokenKind::Extern]) {
                 // A top-level declaration is a strong indication that the
                 // preceding block is missing its closing brace.
@@ -343,6 +358,13 @@ impl<'source> Parser<'source> {
         if self.at(TokenKind::Return) {
             return self.parse_return().map(Statement::Return);
         }
+        if self.at(TokenKind::If) {
+            return self.parse_conditional().map(Statement::Conditional);
+        }
+        if self.at_any(&[TokenKind::Elif, TokenKind::Else]) {
+            self.parse_misplaced_conditional_continuation();
+            return None;
+        }
         if self.at(TokenKind::LeftBrace) {
             return self.parse_block().map(Statement::Block);
         }
@@ -355,9 +377,123 @@ impl<'source> Parser<'source> {
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, a call expression, or a nested block",
+            "expected `var`, `return`, `if`, a call expression, or a nested block",
         );
         None
+    }
+
+    fn parse_conditional(&mut self) -> Option<ConditionalStatement> {
+        let if_token = self.advance();
+        let if_arm = self.parse_conditional_arm(if_token, "if");
+        let mut elif_arms = Vec::new();
+        let mut valid = if_arm.is_some();
+
+        while let Some(elif_token) = self.consume(TokenKind::Elif) {
+            match self.parse_conditional_arm(elif_token, "elif") {
+                Some(arm) => elif_arms.push(arm),
+                None => valid = false,
+            }
+        }
+
+        let else_block = if self.consume(TokenKind::Else).is_some() {
+            let block = self.parse_block();
+            if block.is_none() {
+                valid = false;
+            }
+            block
+        } else {
+            None
+        };
+
+        let if_arm = if_arm?;
+        let end_span = else_block
+            .as_ref()
+            .map(|block| block.span)
+            .or_else(|| elif_arms.last().map(|arm| arm.span))
+            .unwrap_or(if_arm.span);
+        valid.then_some(ConditionalStatement {
+            if_arm,
+            elif_arms,
+            else_block,
+            span: self.cover(if_token.span, end_span),
+        })
+    }
+
+    fn parse_conditional_arm(
+        &mut self,
+        keyword: Token,
+        keyword_name: &'static str,
+    ) -> Option<ConditionalArm> {
+        self.expect(
+            TokenKind::LeftParen,
+            if keyword_name == "if" {
+                "`(` after `if`"
+            } else {
+                "`(` after `elif`"
+            },
+        );
+        let condition = if self.at_any(&[
+            TokenKind::RightParen,
+            TokenKind::LeftBrace,
+            TokenKind::Elif,
+            TokenKind::Else,
+            TokenKind::RightBrace,
+            TokenKind::Eof,
+        ]) {
+            self.report(
+                EXPECTED_EXPRESSION,
+                format!("expected a condition after `{keyword_name} (`"),
+                self.peek().span,
+                "expected a boolean expression here",
+            );
+            None
+        } else {
+            self.parse_expression()
+        };
+        self.expect(
+            TokenKind::RightParen,
+            if keyword_name == "if" {
+                "`)` after the `if` condition"
+            } else {
+                "`)` after the `elif` condition"
+            },
+        );
+        let body = self.parse_conditional_arm_block();
+
+        match (condition, body) {
+            (Some(condition), Some(body)) => Some(ConditionalArm {
+                span: self.cover(keyword.span, body.span),
+                condition,
+                body,
+            }),
+            _ => None,
+        }
+    }
+
+    fn parse_misplaced_conditional_continuation(&mut self) {
+        let keyword = self.advance();
+        let name = if keyword.kind == TokenKind::Elif {
+            "elif"
+        } else {
+            "else"
+        };
+        self.report(
+            EXPECTED_STATEMENT,
+            format!("`{name}` has no matching `if`"),
+            keyword.span,
+            format!("standalone `{name}` is not a statement"),
+        );
+
+        if keyword.kind == TokenKind::Elif {
+            self.expect(TokenKind::LeftParen, "`(` after `elif`");
+            if !self.at(TokenKind::RightParen) {
+                let _ = self.parse_expression();
+            }
+            self.expect(TokenKind::RightParen, "`)` after the `elif` condition");
+        }
+        if self.at(TokenKind::LeftBrace) {
+            let _ = self.parse_block();
+        }
     }
 
     fn parse_local(&mut self) -> Option<LocalDecl> {
@@ -671,6 +807,9 @@ impl<'source> Parser<'source> {
             if self.at_any(&[
                 TokenKind::Var,
                 TokenKind::Return,
+                TokenKind::If,
+                TokenKind::Elif,
+                TokenKind::Else,
                 TokenKind::Identifier,
                 TokenKind::IntegerLiteral,
                 TokenKind::True,

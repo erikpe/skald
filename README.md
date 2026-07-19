@@ -48,7 +48,9 @@ implements straight-line `bool` values throughout the compiler, including
 ordinary source-to-runtime boolean output and the restricted external ABI.
 C3 adds verified target-independent multi-block MIR with explicit jumps and
 boolean branches. C4 lowers that control flow to deterministic x86-64 System V
-labels and branches. Conditional source syntax remains C5 work.
+labels and branches. C5 implements Niflheim-style `if` / `elif` / `else`
+statements end-to-end, including lexical arm scopes, exact boolean conditions,
+definite-return analysis, and source-ordered native branch behavior.
 
 ## Development
 

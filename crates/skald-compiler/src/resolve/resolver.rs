@@ -267,10 +267,47 @@ impl<'program> FunctionResolver<'program> {
                     span: statement.span,
                 }))
             }
+            syntax::Statement::Conditional(statement) => self
+                .resolve_conditional(statement)
+                .map(ResolvedStatement::Conditional),
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
             }
         }
+    }
+
+    fn resolve_conditional(
+        &mut self,
+        conditional: &syntax::ConditionalStatement,
+    ) -> Option<ResolvedConditional> {
+        let source_arms = std::iter::once(&conditional.if_arm).chain(&conditional.elif_arms);
+        let mut arms = Vec::with_capacity(1 + conditional.elif_arms.len());
+        let mut valid = true;
+        for arm in source_arms {
+            // Conditions deliberately resolve before entering their arm's
+            // child scope. An earlier arm can never leak bindings into a later
+            // condition or body.
+            let condition = self.resolve_expression(&arm.condition);
+            let body = self.resolve_block(&arm.body, true);
+            match condition {
+                Some(condition) => arms.push(ResolvedConditionalArm {
+                    condition,
+                    body,
+                    span: arm.span,
+                }),
+                None => valid = false,
+            }
+        }
+        let else_block = conditional
+            .else_block
+            .as_ref()
+            .map(|block| self.resolve_block(block, true));
+
+        valid.then_some(ResolvedConditional {
+            arms,
+            else_block,
+            span: conditional.span,
+        })
     }
 
     fn resolve_local(&mut self, local: &syntax::LocalDecl) -> Option<ResolvedLocalDecl> {

@@ -165,9 +165,9 @@ invokes the linker.
 ## `bool` and conditional extension contract
 
 C0 fixed the source and semantic contract for the C-series slice. C2 implements
-the straight-line boolean grammar below through the x86-64 target. The
-conditional grammar remains planned for C5; C3 multi-block MIR and C4 backend
-branch support are now complete.
+the straight-line boolean grammar below through the x86-64 target. C3 and C4
+provide verified multi-block MIR and backend branch support, and C5 implements
+the conditional grammar below end-to-end.
 
 The implemented straight-line subset adds these keywords:
 
@@ -175,7 +175,7 @@ The implemented straight-line subset adds these keywords:
 bool true false
 ```
 
-The planned conditional subset later adds `if`, `elif`, and `else`. All use
+The implemented conditional subset adds `if`, `elif`, and `else`. All use
 only punctuation already present in the lexer. `true` and `false` are boolean
 literals, not identifiers.
 
@@ -221,7 +221,7 @@ calls, and user-selected calling conventions remain unsupported.
 
 ### Conditional grammar and semantics
 
-C5 adds one statement production:
+C5 adds the implemented statement production:
 
 ```text
 statement    = local-declaration
@@ -297,9 +297,9 @@ Decimal literals are converted during M4:
 
 This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
 
-An `i64` function must contain an unconditional value return. Because the
-implemented subset has no conditional control flow, a return in an
-unconditionally executed nested block also satisfies this requirement. A
+An `i64` or `bool` function must return a value on every reachable path. A
+return in an unconditionally executed nested block satisfies this requirement,
+as does an `if` statement with a final `else` when every arm definitely returns. A
 `unit` function may use `return;` or reach its closing brace; attaching any
 expression to its return is invalid. Conversely, `return;` is invalid in an
 `i64` function. Unit-returning calls have type `unit`, which cannot be used in
@@ -324,13 +324,12 @@ MIR separates addressable storage from transient computed values:
 - return is a basic-block terminator with an optional operand selected by the
   declared result type.
 
-The implemented source language still has no branches, so HIR lowering
-currently produces one entry block per function and omits unconditionally
-unreachable statements after a return. C3 extends the target-independent MIR
-itself with explicit `Goto` and boolean `Branch` terminators. Blocks and branch
-targets have stable owner-qualified IDs, and terminators expose successors in
-semantic order. This infrastructure is intentionally available before source
-conditionals begin producing it.
+C3 extends target-independent MIR with explicit `Goto` and boolean `Branch`
+terminators. Blocks and branch targets have stable owner-qualified IDs, and
+terminators expose successors in semantic order. C5 lowers source conditionals
+to explicit condition, arm, false-continuation, and optional join blocks. It
+omits a join when every exhaustive arm terminates and continues to omit source
+statements after an unconditional return.
 
 Successful lowering runs the MIR verifier in debug builds. The verifier checks
 function ownership and density of storage, value, and block IDs; parameter

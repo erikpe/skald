@@ -1,0 +1,5 @@
+error[PAR002]: expected `{` to start a block
+ --> tests/golden/compile_fail/conditional_missing_block.ska:3:5
+   |
+3 |     else {
+   |     ^^^^ found ELSE

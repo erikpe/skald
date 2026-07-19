@@ -100,8 +100,32 @@ impl AstDumper {
                 self.line("ExpressionStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.expression));
             }
+            Statement::Conditional(statement) => self.conditional(statement),
             Statement::Block(block) => self.block(block),
         }
+    }
+
+    fn conditional(&mut self, statement: &ConditionalStatement) {
+        self.line("Conditional", statement.span);
+        self.indented(|dumper| {
+            dumper.conditional_arm("IfArm", &statement.if_arm);
+            for arm in &statement.elif_arms {
+                dumper.conditional_arm("ElifArm", arm);
+            }
+            if let Some(block) = &statement.else_block {
+                dumper.heading("ElseArm");
+                dumper.indented(|dumper| dumper.block(block));
+            }
+        });
+    }
+
+    fn conditional_arm(&mut self, name: &str, arm: &ConditionalArm) {
+        self.line(name, arm.span);
+        self.indented(|dumper| {
+            dumper.heading("Condition");
+            dumper.indented(|dumper| dumper.expression(&arm.condition));
+            dumper.block(&arm.body);
+        });
     }
 
     fn expression(&mut self, expression: &Expression) {

@@ -1,0 +1,5 @@
+error[PAR003]: `else` has no matching `if`
+ --> tests/golden/compile_fail/standalone_else.ska:2:5
+   |
+2 |     else {
+   |     ^^^^ standalone `else` is not a statement

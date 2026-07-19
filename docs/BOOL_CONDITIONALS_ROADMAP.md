@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0–C4 complete; C5 is the next implementation task.
+Status: C0–C5 complete; C6 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -162,7 +162,7 @@ C1 adds the public symbol in runtime ABI version 3.
 - [x] C2 — Implement straight-line `bool` values end-to-end
 - [x] C3 — Add multi-block MIR and control-flow verification
 - [x] C4 — Lower multi-block control flow on x86-64 System V
-- [ ] C5 — Implement `if` / `elif` / `else` end-to-end
+- [x] C5 — Implement `if` / `elif` / `else` end-to-end
 - [ ] C6 — Add comprehensive golden coverage and harden the slice
 
 Milestone checkboxes below should be marked as implementation progresses. A
@@ -332,26 +332,26 @@ apart from deliberately documented assembly formatting improvements.
 **Purpose:** Enable structured source conditionals only after their semantic IR
 and target execution path are ready.
 
-- [ ] Lex `if`, `elif`, and `else` as distinct keywords.
-- [ ] Parse one `if` arm, an ordered vector of zero or more `elif` arms, and an
+- [x] Lex `if`, `elif`, and `else` as distinct keywords.
+- [x] Parse one `if` arm, an ordered vector of zero or more `elif` arms, and an
       optional `else` block with complete spans.
-- [ ] Recover cleanly from missing parentheses, conditions, blocks, and
+- [x] Recover cleanly from missing parentheses, conditions, blocks, and
       malformed or misplaced `elif`/`else` tokens.
-- [ ] Preserve the flat source arm structure in deterministic AST dumps.
-- [ ] Resolve each condition in the containing scope and every arm body in an
+- [x] Preserve the flat source arm structure in deterministic AST dumps.
+- [x] Resolve each condition in the containing scope and every arm body in an
       independent child scope.
-- [ ] Add an explicit typed HIR conditional statement with ordered boolean
+- [x] Add an explicit typed HIR conditional statement with ordered boolean
       conditions and blocks.
-- [ ] Diagnose non-boolean conditions without implicit truthiness.
-- [ ] Generalize definite-return analysis so a conditional returns only when
+- [x] Diagnose non-boolean conditions without implicit truthiness.
+- [x] Generalize definite-return analysis so a conditional returns only when
       it has `else` and all arms definitely return.
-- [ ] Lower condition evaluation, true arms, false continuation, and the
+- [x] Lower condition evaluation, true arms, false continuation, and the
       optional join into explicit deterministic MIR blocks.
-- [ ] Avoid creating fallthrough joins that are unreachable because every arm
+- [x] Avoid creating fallthrough joins that are unreachable because every arm
       terminates.
-- [ ] Preserve source-order condition side effects and skip all conditions and
+- [x] Preserve source-order condition side effects and skip all conditions and
       bodies after the first selected arm.
-- [ ] Compile at least one source conditional through assembly, linking, and
+- [x] Compile at least one source conditional through assembly, linking, and
       native execution in this task.
 
 **Tests:** Parser shape/recovery and dump tests; resolver scope tests; HIR type

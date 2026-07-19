@@ -95,6 +95,25 @@ fn recognizes_boolean_type_and_literal_keywords() {
 }
 
 #[test]
+fn recognizes_conditional_keywords_without_reserving_prefixes() {
+    let (_, _, output) = lex_text("if elif else iffy elseif");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        vec![
+            TokenKind::If,
+            TokenKind::Elif,
+            TokenKind::Else,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn skips_ascii_whitespace_and_line_comments() {
     let (_, _, output) = lex_text("// before\r\n\tvar value: i64 = 7; // after");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

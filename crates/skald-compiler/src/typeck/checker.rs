@@ -3,10 +3,10 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        HirBinaryOperation, HirBlock, HirCallStatement, HirExpression, HirExpressionKind,
-        HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
-        HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter,
-        HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
+        HirBinaryOperation, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
+        HirExpression, HirExpressionKind, HirFunctionDeclaration, HirFunctionDeclarationTable,
+        HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal,
+        HirLocalDecl, HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
     },
     resolve::{
         BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression,
@@ -394,6 +394,61 @@ fn check_statement(
                 span: statement.span,
             }))
         }
+        ResolvedStatement::Conditional(statement) => {
+            let mut arms = Vec::with_capacity(statement.arms.len());
+            let mut valid = true;
+            for arm in &statement.arms {
+                let condition = check_expression(
+                    program,
+                    declaration,
+                    definition,
+                    &arm.condition,
+                    diagnostics,
+                );
+                let body = check_block(
+                    program,
+                    declaration,
+                    definition,
+                    &arm.body,
+                    return_type,
+                    diagnostics,
+                );
+                match condition {
+                    Some(condition)
+                        if require_type(
+                            condition.ty,
+                            Type::Bool,
+                            condition.span,
+                            "conditional condition",
+                            diagnostics,
+                        ) =>
+                    {
+                        arms.push(HirConditionalArm {
+                            condition,
+                            body,
+                            span: arm.span,
+                        })
+                    }
+                    _ => valid = false,
+                }
+            }
+            let else_block = statement.else_block.as_ref().map(|block| {
+                check_block(
+                    program,
+                    declaration,
+                    definition,
+                    block,
+                    return_type,
+                    diagnostics,
+                )
+            });
+
+            valid.then_some(HirStatement::Conditional(HirConditional {
+                arms,
+                else_block,
+                span: statement.span,
+            }))
+        }
         ResolvedStatement::Block(block) => Some(HirStatement::Block(check_block(
             program,
             declaration,
@@ -736,6 +791,16 @@ fn block_guarantees_return(block: &ResolvedBlock) -> bool {
     block.statements.iter().any(|statement| match statement {
         ResolvedStatement::Return(_) => true,
         ResolvedStatement::Block(block) => block_guarantees_return(block),
+        ResolvedStatement::Conditional(conditional) => {
+            conditional
+                .else_block
+                .as_ref()
+                .is_some_and(block_guarantees_return)
+                && conditional
+                    .arms
+                    .iter()
+                    .all(|arm| block_guarantees_return(&arm.body))
+        }
         ResolvedStatement::Local(_) | ResolvedStatement::Expression(_) => false,
     })
 }

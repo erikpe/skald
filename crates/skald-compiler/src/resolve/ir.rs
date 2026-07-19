@@ -273,6 +273,7 @@ pub enum ResolvedStatement {
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
     Expression(ResolvedExpressionStatement),
+    Conditional(ResolvedConditional),
     Block(ResolvedBlock),
 }
 
@@ -282,6 +283,7 @@ impl ResolvedStatement {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
+            Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -303,6 +305,20 @@ pub struct ResolvedReturn {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedExpressionStatement {
     pub expression: ResolvedExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedConditional {
+    pub arms: Vec<ResolvedConditionalArm>,
+    pub else_block: Option<ResolvedBlock>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedConditionalArm {
+    pub condition: ResolvedExpression,
+    pub body: ResolvedBlock,
     pub span: Span,
 }
 

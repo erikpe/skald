@@ -84,6 +84,7 @@ pub enum Statement {
     Local(LocalDecl),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
+    Conditional(ConditionalStatement),
     Block(Block),
 }
 
@@ -93,6 +94,7 @@ impl Statement {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
+            Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -115,6 +117,21 @@ pub struct ReturnStatement {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExpressionStatement {
     pub expression: Expression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConditionalStatement {
+    pub if_arm: ConditionalArm,
+    pub elif_arms: Vec<ConditionalArm>,
+    pub else_block: Option<Block>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConditionalArm {
+    pub condition: Expression,
+    pub body: Block,
     pub span: Span,
 }
 

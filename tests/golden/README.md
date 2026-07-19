@@ -23,6 +23,10 @@ source-to-runtime output path, ordered consecutive writes, representative
 computed values, both `i64` extrema, and a process status independent of its
 exact stdout expectation. The C2 `println_bool` case likewise covers boolean
 literals, locals, parameters, function returns, and ordinary runtime linkage.
+C5 adds exact conditional parser, scope, condition-type, and definite-return
+failures. Its native conditional case uses observable condition functions to
+prove left-to-right evaluation, skipped later arms, `else` selection, and
+fallthrough when no arm is selected.
 
 Run it from the repository root with:
 

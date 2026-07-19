@@ -8,8 +8,8 @@ mod ir;
 
 pub use dump::dump_hir;
 pub use ir::{
-    HirBinaryOperation, HirBlock, HirCallStatement, HirExpression, HirExpressionKind,
-    HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
-    HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter,
-    HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
+    HirBinaryOperation, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
+    HirExpression, HirExpressionKind, HirFunctionDeclaration, HirFunctionDeclarationTable,
+    HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal, HirLocalDecl,
+    HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
 };

@@ -226,7 +226,7 @@ The initial MIR need not use static single assignment form. IDs and control-flow
 
 That choice should be made when real optimization requirements exist. The current architecture must make it possible without prematurely building an SSA framework.
 
-M5 implements a three-address MIR with separate owner-qualified storage, transient value, and basic-block IDs. MIR has a dense callable declaration table containing canonical signatures and linkage, plus a sparse definition table containing executable bodies. Source parameters and locals map to explicit storage slots, while instruction results are immutable value IDs; this hybrid keeps mutation visible without committing the entire IR to SSA. Calls are effectful instructions with explicit stable targets, argument lists, and optional result IDs. Expression lowering emits instructions recursively in deterministic left-to-right order. The branch-free source subset still produces one entry block per defined function and omits unreachable statements after a return.
+M5 implements a three-address MIR with separate owner-qualified storage, transient value, and basic-block IDs. MIR has a dense callable declaration table containing canonical signatures and linkage, plus a sparse definition table containing executable bodies. Source parameters and locals map to explicit storage slots, while instruction results are immutable value IDs; this hybrid keeps mutation visible without committing the entire IR to SSA. Calls are effectful instructions with explicit stable targets, argument lists, and optional result IDs. Expression lowering emits instructions recursively in deterministic left-to-right order.
 
 C3 adds target-independent `Goto` and boolean `Branch` terminators alongside
 `Return`. The public MIR body builder allocates dense blocks in stable order,
@@ -235,6 +235,13 @@ terminator, and rejects duplicate termination. Terminators expose deterministic
 successors, with a branch's true edge before its false edge. Transient values
 are block-local in this non-SSA MIR; state crossing an edge must use explicit
 storage.
+
+C5 adds structured conditional statements to AST, resolved IR, and typed HIR
+while preserving their flat source-ordered arms. HIR-to-MIR lowering expands
+them into deterministic condition, body, false-continuation, and optional join
+blocks. Conditions remain in the containing lexical scope, each body has its
+own child scope, transient MIR values do not cross block edges, and lowering
+omits unreachable joins when every exhaustive arm terminates.
 
 The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, block-local use ordering, storage/value types, direct-call targets and result presence, return types, dense block IDs, entry blocks, boolean branch conditions, control-flow target ownership and existence, and terminators. It validates unreachable blocks as well as reachable ones. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes declarations separately from definitions and shows instructions, terminators, and stable control-flow targets in block-ID order.
 

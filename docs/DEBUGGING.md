@@ -44,13 +44,18 @@ C4 assembly uses matching deterministic function-and-block labels of the form
 in `BlockId` order, not traversal order. This makes forward jumps, back edges,
 diamonds, joins, and all return paths directly comparable with the MIR dump.
 
+C5 preserves `IfArm`, ordered `ElifArm` entries, and an optional `ElseArm` in
+the AST, resolved, and HIR dumps. Its MIR dump exposes the corresponding false
+continuation chain and join directly, making evaluation order and omitted
+unreachable joins inspectable without reading assembly.
+
 Assembly is directly available through the public compiler command:
 
 ```text
 cargo run -p skac -- input.ska --emit asm -o build/input.s
 ```
 
-The golden runner compiles every successful program to assembly twice in separate `skac` processes and compares the bytes. It likewise compiles every failure twice and compares exact stderr snapshots. This catches nondeterminism in IDs, ordering, paths, labels, formatting, and diagnostics at the externally visible boundary. Native cases then compare stdout bytes and process status independently. In particular, `tests/golden/run/println_i64.ska` exercises exact-symbol external call lowering and the runtime output ABI while its `.stdout` and nonzero `.exit` sidecars keep the two observations separate.
+The golden runner compiles every successful program to assembly twice in separate `skac` processes and compares the bytes. It likewise compiles every failure twice and compares exact stderr snapshots. This catches nondeterminism in IDs, ordering, paths, labels, formatting, and diagnostics at the externally visible boundary. Native cases then compare stdout bytes and process status independently. In particular, `tests/golden/run/println_i64.ska` exercises exact-symbol external call lowering and the runtime output ABI while its `.stdout` and nonzero `.exit` sidecars keep the two observations separate. `tests/golden/run/conditionals.ska` uses output-producing condition functions to expose left-to-right testing, skipped later conditions, selected-arm-only execution, `else`, and fallthrough without `else`.
 
 MIR verification runs:
 

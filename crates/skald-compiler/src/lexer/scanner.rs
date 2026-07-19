@@ -106,6 +106,9 @@ impl<'source> Lexer<'source> {
             "bool" => TokenKind::Bool,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
+            "if" => TokenKind::If,
+            "elif" => TokenKind::Elif,
+            "else" => TokenKind::Else,
             "unit" => TokenKind::Unit,
             _ => TokenKind::Identifier,
         };

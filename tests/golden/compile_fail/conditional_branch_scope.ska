@@ -1,0 +1,9 @@
+fn main() -> i64 {
+    if (true) {
+        var hidden: i64 = 1;
+    }
+    else {
+        var hidden: i64 = 2;
+    }
+    return hidden;
+}

@@ -347,6 +347,24 @@ fn emits_a_deterministic_minimal_function() {
 }
 
 #[test]
+fn lowers_source_conditionals_to_deterministic_block_branches() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  if (false) { return 1; }\n",
+        "  elif (true) { return 2; }\n",
+        "  else { return 3; }\n",
+        "}\n",
+    );
+
+    let output = assembly(source);
+    assert_eq!(output, assembly(source));
+    assert!(output.contains(".Lska_fn_0_block_0:"));
+    assert!(output.contains("jne .Lska_fn_0_block_1"));
+    assert!(output.contains("jmp .Lska_fn_0_block_2"));
+    assert!(output.contains(".Lska_fn_0_block_4:"));
+}
+
+#[test]
 fn selects_every_first_slice_arithmetic_operation_and_storage_copy() {
     let output = assembly(concat!(
         "fn helper(a: i64) -> i64 { return -a; }\n",

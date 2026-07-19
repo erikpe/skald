@@ -129,8 +129,27 @@ impl ResolvedDumper {
                 self.line("ExpressionStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.expression));
             }
+            ResolvedStatement::Conditional(statement) => self.conditional(statement),
             ResolvedStatement::Block(block) => self.block(block),
         }
+    }
+
+    fn conditional(&mut self, statement: &ResolvedConditional) {
+        self.line("Conditional", statement.span);
+        self.indented(|dumper| {
+            for (index, arm) in statement.arms.iter().enumerate() {
+                dumper.line(if index == 0 { "IfArm" } else { "ElifArm" }, arm.span);
+                dumper.indented(|dumper| {
+                    dumper.heading("Condition");
+                    dumper.indented(|dumper| dumper.expression(&arm.condition));
+                    dumper.block(&arm.body);
+                });
+            }
+            if let Some(block) = &statement.else_block {
+                dumper.heading("ElseArm");
+                dumper.indented(|dumper| dumper.block(block));
+            }
+        });
     }
 
     fn expression(&mut self, expression: &ResolvedExpression) {

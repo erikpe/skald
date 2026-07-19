@@ -10,12 +10,13 @@ mod resolver;
 pub use dump::dump_resolved;
 pub use ir::{
     BindingId, FunctionId, LocalId, ParameterId, ResolvedBinaryExpr, ResolvedBinaryOperator,
-    ResolvedBindingExpr, ResolvedBlock, ResolvedBooleanExpr, ResolvedDirectCallExpr,
-    ResolvedExpression, ResolvedExpressionStatement, ResolvedFunctionDeclaration,
-    ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable,
-    ResolvedFunctionLinkage, ResolvedGroupedExpr, ResolvedIntegerExpr, ResolvedLocal,
-    ResolvedLocalDecl, ResolvedParameter, ResolvedProgram, ResolvedReturn, ResolvedStatement,
-    ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedBindingExpr, ResolvedBlock, ResolvedBooleanExpr, ResolvedConditional,
+    ResolvedConditionalArm, ResolvedDirectCallExpr, ResolvedExpression,
+    ResolvedExpressionStatement, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
+    ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage,
+    ResolvedGroupedExpr, ResolvedIntegerExpr, ResolvedLocal, ResolvedLocalDecl, ResolvedParameter,
+    ResolvedProgram, ResolvedReturn, ResolvedStatement, ResolvedType, ResolvedTypeKind,
+    ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_FUNCTION, FUNCTION_USED_AS_VALUE,

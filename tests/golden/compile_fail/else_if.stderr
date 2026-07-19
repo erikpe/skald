@@ -1,0 +1,5 @@
+error[PAR002]: expected `{` to start a block
+ --> tests/golden/compile_fail/else_if.ska:5:10
+   |
+5 |     else if (true) {
+   |          ^^ found IF

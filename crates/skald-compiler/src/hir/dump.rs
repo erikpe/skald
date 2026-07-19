@@ -119,8 +119,27 @@ impl HirDumper {
                 self.line("CallStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.call));
             }
+            HirStatement::Conditional(statement) => self.conditional(statement),
             HirStatement::Block(block) => self.block(block),
         }
+    }
+
+    fn conditional(&mut self, statement: &HirConditional) {
+        self.line("Conditional", statement.span);
+        self.indented(|dumper| {
+            for (index, arm) in statement.arms.iter().enumerate() {
+                dumper.line(if index == 0 { "IfArm" } else { "ElifArm" }, arm.span);
+                dumper.indented(|dumper| {
+                    dumper.heading("Condition");
+                    dumper.indented(|dumper| dumper.expression(&arm.condition));
+                    dumper.block(&arm.body);
+                });
+            }
+            if let Some(block) = &statement.else_block {
+                dumper.heading("ElseArm");
+                dumper.indented(|dumper| dumper.block(block));
+            }
+        });
     }
 
     fn expression(&mut self, expression: &HirExpression) {
