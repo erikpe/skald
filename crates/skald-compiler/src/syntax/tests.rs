@@ -15,7 +15,7 @@ fn return_value(function: &FunctionDecl) -> &Expression {
     let Statement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
     };
-    &statement.value
+    statement.value.as_ref().expect("expected a return value")
 }
 
 #[test]
@@ -141,7 +141,7 @@ fn independent_statement_errors_are_both_reported() {
     let (_, output) = parse_text(concat!(
         "fn main() -> i64 {\n",
         "    var : i64 = 1;\n",
-        "    return ;\n",
+        "    return +;\n",
         "    return 0;\n",
         "}\n",
     ));
@@ -153,6 +153,65 @@ fn independent_statement_errors_are_both_reported() {
         .statements
         .iter()
         .any(|statement| matches!(statement, Statement::Return(_))));
+}
+
+#[test]
+fn parses_unit_returns_and_expression_statements_with_complete_spans() {
+    let (_, output) = parse_text(concat!(
+        "fn notify(value: i64) -> unit { return; }\n",
+        "fn main() -> i64 { (notify(7)); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    assert_eq!(output.ast.functions[0].return_type.kind, TypeKind::Unit);
+    let Statement::Return(unit_return) = &output.ast.functions[0].body.statements[0] else {
+        panic!("expected unit return");
+    };
+    assert!(unit_return.value.is_none());
+    let Statement::Expression(statement) = &output.ast.functions[1].body.statements[0] else {
+        panic!("expected expression statement");
+    };
+    assert!(matches!(statement.expression, Expression::Grouped(_)));
+    assert_eq!(statement.span.range().start(), 61);
+    assert_eq!(statement.span.range().end(), 73);
+    let dump = dump_ast(&output.ast);
+    assert_eq!(dump, dump_ast(&output.ast));
+    assert!(dump.contains("Type Unit"));
+    assert!(dump.contains("ExpressionStatement"));
+}
+
+#[test]
+fn missing_call_statement_semicolon_recovers_at_return() {
+    let (_, output) = parse_text(concat!(
+        "fn notify() -> unit {}\n",
+        "fn main() -> i64 { notify() return 0; }\n",
+    ));
+
+    assert!(output.has_errors());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("`;` after the call expression")));
+    assert!(output.ast.functions[1]
+        .body
+        .statements
+        .iter()
+        .any(|statement| matches!(statement, Statement::Return(_))));
+}
+
+#[test]
+fn unit_is_not_accepted_for_parameter_or_local_storage() {
+    for source in [
+        "fn bad(value: unit) -> unit {} fn main() -> i64 { return 0; }",
+        "fn main() -> i64 { var value: unit = 0; return 0; }",
+    ] {
+        let (_, output) = parse_text(source);
+        assert!(output.has_errors());
+        assert!(output.diagnostics.iter().any(|diagnostic| diagnostic
+            .labels
+            .iter()
+            .any(|label| label.message.contains("must have type `i64`"))));
+    }
 }
 
 #[test]

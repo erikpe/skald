@@ -1,4 +1,4 @@
-error[PAR002]: expected `;` after the return value
+error[PAR002]: expected `;` after the return statement
  --> tests/golden/compile_fail/missing_semicolon.ska:3:1
    |
 3 | }

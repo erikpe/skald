@@ -98,6 +98,7 @@ impl ResolvedDumper {
     fn type_syntax(&mut self, type_syntax: &ResolvedType) {
         let name = match type_syntax.kind {
             ResolvedTypeKind::I64 => "I64",
+            ResolvedTypeKind::Unit => "Unit",
         };
         self.line(&format!("Type {name}"), type_syntax.span);
     }
@@ -119,7 +120,13 @@ impl ResolvedDumper {
             }
             ResolvedStatement::Return(statement) => {
                 self.line("Return", statement.span);
-                self.indented(|dumper| dumper.expression(&statement.value));
+                if let Some(value) = &statement.value {
+                    self.indented(|dumper| dumper.expression(value));
+                }
+            }
+            ResolvedStatement::Expression(statement) => {
+                self.line("ExpressionStatement", statement.span);
+                self.indented(|dumper| dumper.expression(&statement.expression));
             }
             ResolvedStatement::Block(block) => self.block(block),
         }

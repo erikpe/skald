@@ -247,6 +247,7 @@ pub struct ResolvedLocal {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedTypeKind {
     I64,
+    Unit,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -265,6 +266,7 @@ pub struct ResolvedBlock {
 pub enum ResolvedStatement {
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
+    Expression(ResolvedExpressionStatement),
     Block(ResolvedBlock),
 }
 
@@ -273,6 +275,7 @@ impl ResolvedStatement {
         match self {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Expression(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -287,7 +290,13 @@ pub struct ResolvedLocalDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedReturn {
-    pub value: ResolvedExpression,
+    pub value: Option<ResolvedExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedExpressionStatement {
+    pub expression: ResolvedExpression,
     pub span: Span,
 }
 

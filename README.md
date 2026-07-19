@@ -30,7 +30,15 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 ## Status
 
-Skald is currently an exploratory language design. Milestones M0 through M8 are implemented, completing the first vertical slice: the stage-0 compiler accepts the documented subset, emits deterministic x86-64 System V assembly, links it with the minimal runtime, produces native executables, and has source-to-process and exact compile-failure golden coverage. Later language features remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as further slices are implemented and tested.
+Skald is currently an exploratory language design. Milestones M0 through M8
+complete the first vertical slice, and output-roadmap milestones O0 through O3
+add exact stdout expectations plus local `unit` functions, payload-free unit
+returns, and effect-only call statements. The stage-0 compiler emits
+deterministic x86-64 System V assembly, links it with the minimal runtime, and
+has source-to-process and exact compile-failure golden coverage. External
+declarations and integer output remain later O-series work. The language
+specification remains a draft, and syntax, semantics, and implementation
+interfaces may change as further slices are implemented and tested.
 
 ## Development
 

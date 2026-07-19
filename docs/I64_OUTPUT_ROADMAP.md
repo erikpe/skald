@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0–O2 complete; O3–O6 planned.
+Status: O0–O3 complete; O4–O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -88,7 +88,7 @@ interface and ownership model identified as open in the draft specification.
 - [x] O0 — Specify the implemented output and external-call contract
 - [x] O1 — Add exact stdout expectations to the golden runner
 - [x] O2 — Separate callable declarations from local function bodies
-- [ ] O3 — Implement `unit`, unit returns, and call statements end-to-end
+- [x] O3 — Implement `unit`, unit returns, and call statements end-to-end
 - [ ] O4 — Add and directly test the runtime `i64` output ABI
 - [ ] O5 — Implement restricted external declarations and calls end-to-end
 - [ ] O6 — Add observable golden coverage and harden the completed slice
@@ -198,20 +198,20 @@ collision-proof target-private spelling fixed by O0.
 **Purpose:** Add the language semantics required to invoke output naturally,
 without fake integer return values or ignored temporary storage.
 
-- [ ] Lex and parse `unit` types, `return;`, and the restricted call statement.
-- [ ] Add corresponding AST nodes with complete spans and deterministic dumps.
-- [ ] Resolve call statements through the same name-resolution path as call
+- [x] Lex and parse `unit` types, `return;`, and the restricted call statement.
+- [x] Add corresponding AST nodes with complete spans and deterministic dumps.
+- [x] Resolve call statements through the same name-resolution path as call
       expressions.
-- [ ] Add `unit` to resolved types, typed HIR, and MIR.
-- [ ] Enforce the documented return rules and diagnose value/unit mismatches.
-- [ ] Represent unit call statements as effectful MIR instructions with no
+- [x] Add `unit` to resolved types, typed HIR, and MIR.
+- [x] Enforce the documented return rules and diagnose value/unit mismatches.
+- [x] Represent unit call statements as effectful MIR instructions with no
       result `ValueId`.
-- [ ] Represent unit function returns without a return operand.
-- [ ] Verify call result presence, return operand presence, and types against
+- [x] Represent unit function returns without a return operand.
+- [x] Verify call result presence, return operand presence, and types against
       their signatures.
-- [ ] Lower local unit calls and unit returns for x86-64 System V without
+- [x] Lower local unit calls and unit returns for x86-64 System V without
       reading or storing a fictitious `%rax` result.
-- [ ] Preserve `fn main() -> i64` as the only valid entry signature.
+- [x] Preserve `fn main() -> i64` as the only valid entry signature.
 
 **Tests:** Lexer/parser recovery tests; resolver and type-checker diagnostics;
 HIR/MIR dump tests; verifier mutation tests; backend assembly-shape tests; and

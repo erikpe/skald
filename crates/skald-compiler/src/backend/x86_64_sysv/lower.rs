@@ -250,7 +250,9 @@ fn select_terminator(
 ) {
     match terminator {
         MirTerminator::Return { value, .. } => {
-            load_rax(frame_value(frame, *value), output);
+            if let Some(value) = value {
+                load_rax(frame_value(frame, *value), output);
+            }
             output.push(Instruction::Leave);
             output.push(Instruction::Return);
         }

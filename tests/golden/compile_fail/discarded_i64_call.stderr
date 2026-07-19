@@ -1,0 +1,6 @@
+error[TYP008]: a call statement must call a function returning `unit`
+ --> tests/golden/compile_fail/discarded_i64_call.ska:6:5
+   |
+6 |     value();
+   |     ^^^^^^^^ this call returns `i64`
+  = note: use the returned value instead of discarding it

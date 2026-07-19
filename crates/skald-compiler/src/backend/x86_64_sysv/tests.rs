@@ -91,6 +91,20 @@ fn selects_every_first_slice_arithmetic_operation_and_storage_copy() {
 }
 
 #[test]
+fn unit_calls_and_returns_do_not_move_a_fictitious_result() {
+    let output = assembly(concat!(
+        "fn notify(value: i64) -> unit {}\n",
+        "fn main() -> i64 { notify(42); return 7; }\n",
+    ));
+
+    assert!(output.contains("call .Lska_fn_0\n    movabsq $7, %rax"));
+    assert!(!output.contains("call .Lska_fn_0\n    movq %rax,"));
+    assert!(output.contains(
+        ".Lska_fn_0:\n    pushq %rbp\n    movq %rsp, %rbp\n    subq $16, %rsp\n    movq %rdi, -8(%rbp)\n    leave\n    ret"
+    ));
+}
+
+#[test]
 fn lowers_register_and_stack_arguments_at_the_abi_boundary() {
     let output = assembly(concat!(
         "fn seventh(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, ",

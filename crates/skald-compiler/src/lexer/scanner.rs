@@ -102,6 +102,7 @@ impl<'source> Lexer<'source> {
             "var" => TokenKind::Var,
             "return" => TokenKind::Return,
             "i64" => TokenKind::I64,
+            "unit" => TokenKind::Unit,
             _ => TokenKind::Identifier,
         };
         self.push_token(kind, start);

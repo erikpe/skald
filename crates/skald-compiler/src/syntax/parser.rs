@@ -193,7 +193,7 @@ impl<'source> Parser<'source> {
     fn parse_parameter(&mut self) -> Option<Parameter> {
         let name = self.parse_name("expected a parameter name");
         self.expect(TokenKind::Colon, "`:` after the parameter name");
-        let type_syntax = self.parse_type("expected the parameter type `i64`");
+        let type_syntax = self.parse_i64_type("expected the parameter type `i64`");
 
         match (name, type_syntax) {
             (Some(name), Some(type_syntax)) => {
@@ -215,14 +215,40 @@ impl<'source> Parser<'source> {
                 span: token.span,
             });
         }
+        if let Some(token) = self.consume(TokenKind::Unit) {
+            return Some(TypeSyntax {
+                kind: TypeKind::Unit,
+                span: token.span,
+            });
+        }
 
         self.report(
             EXPECTED_TOKEN,
             message,
             self.peek().span,
-            "the first vertical slice supports only `i64`",
+            "expected `i64` or `unit`",
         );
         if self.at(TokenKind::Identifier) {
+            self.advance();
+        }
+        None
+    }
+
+    fn parse_i64_type(&mut self, message: &'static str) -> Option<TypeSyntax> {
+        if let Some(token) = self.consume(TokenKind::I64) {
+            return Some(TypeSyntax {
+                kind: TypeKind::I64,
+                span: token.span,
+            });
+        }
+
+        self.report(
+            EXPECTED_TOKEN,
+            message,
+            self.peek().span,
+            "parameters and locals must have type `i64`",
+        );
+        if self.at_any(&[TokenKind::Identifier, TokenKind::Unit]) {
             self.advance();
         }
         None
@@ -277,11 +303,15 @@ impl<'source> Parser<'source> {
             return self.parse_block().map(Statement::Block);
         }
 
+        if self.starts_expression() {
+            return self.parse_expression_statement().map(Statement::Expression);
+        }
+
         self.report(
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, or a nested block",
+            "expected `var`, `return`, a call expression, or a nested block",
         );
         None
     }
@@ -290,7 +320,7 @@ impl<'source> Parser<'source> {
         let var_token = self.advance();
         let name = self.parse_name("expected a local name after `var`");
         self.expect(TokenKind::Colon, "`:` after the local name");
-        let type_syntax = self.parse_type("expected the local type `i64`");
+        let type_syntax = self.parse_i64_type("expected the local type `i64`");
         self.expect(TokenKind::Equal, "`=` before the local initializer");
         let initializer = self.parse_expression();
         let semicolon = self.expect(TokenKind::Semicolon, "`;` after the local declaration");
@@ -313,16 +343,30 @@ impl<'source> Parser<'source> {
 
     fn parse_return(&mut self) -> Option<ReturnStatement> {
         let return_token = self.advance();
-        let value = self.parse_expression();
-        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the return value");
-        let value = value?;
+        let value = (!self.at(TokenKind::Semicolon))
+            .then(|| self.parse_expression())
+            .flatten();
+        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the return statement");
         let end_span = semicolon
             .map(|token| token.span)
-            .unwrap_or_else(|| value.span());
+            .or_else(|| value.as_ref().map(Expression::span))
+            .unwrap_or(return_token.span);
 
         Some(ReturnStatement {
             value,
             span: self.cover(return_token.span, end_span),
+        })
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
+        let expression = self.parse_expression()?;
+        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the call expression");
+        let end_span = semicolon
+            .map(|token| token.span)
+            .unwrap_or_else(|| expression.span());
+        Some(ExpressionStatement {
+            span: self.cover(expression.span(), end_span),
+            expression,
         })
     }
 
@@ -566,6 +610,10 @@ impl<'source> Parser<'source> {
             if self.at_any(&[
                 TokenKind::Var,
                 TokenKind::Return,
+                TokenKind::Identifier,
+                TokenKind::IntegerLiteral,
+                TokenKind::Minus,
+                TokenKind::LeftParen,
                 TokenKind::LeftBrace,
                 TokenKind::RightBrace,
                 TokenKind::Fn,

@@ -33,6 +33,7 @@ pub struct Name {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TypeKind {
     I64,
+    Unit,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -51,6 +52,7 @@ pub struct Block {
 pub enum Statement {
     Local(LocalDecl),
     Return(ReturnStatement),
+    Expression(ExpressionStatement),
     Block(Block),
 }
 
@@ -59,6 +61,7 @@ impl Statement {
         match self {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Expression(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -74,7 +77,13 @@ pub struct LocalDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReturnStatement {
-    pub value: Expression,
+    pub value: Option<Expression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExpressionStatement {
+    pub expression: Expression,
     pub span: Span,
 }
 

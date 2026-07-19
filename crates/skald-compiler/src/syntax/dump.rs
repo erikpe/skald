@@ -47,6 +47,7 @@ impl AstDumper {
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {
         let kind = match type_syntax.kind {
             TypeKind::I64 => "I64",
+            TypeKind::Unit => "Unit",
         };
         self.line(&format!("Type {kind}"), type_syntax.span);
     }
@@ -73,7 +74,13 @@ impl AstDumper {
             }
             Statement::Return(statement) => {
                 self.line("Return", statement.span);
-                self.indented(|dumper| dumper.expression(&statement.value));
+                if let Some(value) = &statement.value {
+                    self.indented(|dumper| dumper.expression(value));
+                }
+            }
+            Statement::Expression(statement) => {
+                self.line("ExpressionStatement", statement.span);
+                self.indented(|dumper| dumper.expression(&statement.expression));
             }
             Statement::Block(block) => self.block(block),
         }

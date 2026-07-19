@@ -140,7 +140,10 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
     output.push_str("          ");
     match &block.terminator {
         Some(MirTerminator::Return { value, span }) => {
-            let _ = write!(output, "return {value}");
+            output.push_str("return");
+            if let Some(value) = value {
+                let _ = write!(output, " {value}");
+            }
             write_span(output, *span);
         }
         None => output.push_str("<unterminated>"),

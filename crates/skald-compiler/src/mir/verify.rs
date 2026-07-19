@@ -102,6 +102,11 @@ impl Verifier<'_> {
                     self.program.entry_function
                 ));
             }
+            if entry_declaration.is_some_and(|declaration| {
+                !declaration.parameter_types.is_empty() || declaration.return_type != MirType::I64
+            }) {
+                self.program_error("entry function must have signature `fn main() -> i64`");
+            }
         }
 
         let declarations: Vec<_> = self.program.declarations.iter().collect();
@@ -118,6 +123,12 @@ impl Verifier<'_> {
             }
             if !seen.insert(declaration.id) {
                 self.function_error(declaration.id, "duplicate function declaration ID");
+            }
+            if declaration.parameter_types.contains(&MirType::Unit) {
+                self.function_error(
+                    declaration.id,
+                    "function parameters cannot have type `unit`",
+                );
             }
         }
 
@@ -252,6 +263,15 @@ impl Verifier<'_> {
                     ),
                 );
             }
+            if storage.ty == MirType::Unit {
+                self.function_error(
+                    function.function,
+                    format!(
+                        "storage {} cannot have payload-free type `unit`",
+                        storage.id
+                    ),
+                );
+            }
         }
     }
 
@@ -267,6 +287,12 @@ impl Verifier<'_> {
                 self.function_error(
                     function.function,
                     format!("value table index {index} contains {}", value.id),
+                );
+            }
+            if value.ty == MirType::Unit {
+                self.function_error(
+                    function.function,
+                    format!("value {} cannot have payload-free type `unit`", value.id),
                 );
             }
         }
@@ -390,14 +416,28 @@ impl Verifier<'_> {
 
         match &block.terminator {
             Some(MirTerminator::Return { value, .. }) => {
-                if let Some(ty) = self.verify_value_use(function, block, *value, defined) {
-                    if ty != declaration.return_type {
-                        self.block_error(
-                            function.function,
-                            block.id,
-                            "return operand type mismatch",
-                        );
+                if let Some(value) = value {
+                    if let Some(ty) = self.verify_value_use(function, block, *value, defined) {
+                        if declaration.return_type == MirType::Unit {
+                            self.block_error(
+                                function.function,
+                                block.id,
+                                "unit function return must not have an operand",
+                            );
+                        } else if ty != declaration.return_type {
+                            self.block_error(
+                                function.function,
+                                block.id,
+                                "return operand type mismatch",
+                            );
+                        }
                     }
+                } else if declaration.return_type != MirType::Unit {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "value-returning function return has no operand",
+                    );
                 }
             }
             None => self.block_error(function.function, block.id, "block has no terminator"),
@@ -470,11 +510,17 @@ impl Verifier<'_> {
             }
         }
 
-        match result_ty {
-            Some(result_ty) if result_ty != target.return_type => {
+        match (target.return_type, result_ty) {
+            (MirType::Unit, Some(_)) => self.block_error(
+                function.function,
+                block.id,
+                "unit-returning call must not have a result",
+            ),
+            (MirType::Unit, None) => {}
+            (_, Some(result_ty)) if result_ty != target.return_type => {
                 self.block_error(function.function, block.id, "call result type mismatch")
             }
-            None => self.block_error(
+            (_, None) => self.block_error(
                 function.function,
                 block.id,
                 "value-returning call has no result",

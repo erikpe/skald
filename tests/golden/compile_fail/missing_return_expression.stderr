@@ -1,5 +1,5 @@
-error[PAR004]: expected an expression
- --> tests/golden/compile_fail/missing_return_expression.ska:2:12
+error[TYP007]: an `i64` function must return a value
+ --> tests/golden/compile_fail/missing_return_expression.ska:2:5
    |
 2 |     return ;
-   |            ^ expected an identifier, decimal integer, unary `-`, or `(`
+   |     ^^^^^^^^ expected `return expression;`

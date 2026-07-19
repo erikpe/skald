@@ -98,6 +98,43 @@ fn nested_call_arguments_lower_in_deterministic_left_to_right_order() {
 }
 
 #[test]
+fn lowers_unit_calls_and_returns_without_payload_values() {
+    let mir = lower_text(concat!(
+        "fn explicit(value: i64) -> unit { return; }\n",
+        "fn implicit() -> unit {}\n",
+        "fn main() -> i64 { explicit(7); implicit(); return 3; }\n",
+    ));
+
+    assert!(verify_mir(&mir).is_ok());
+    for id in [FunctionId::new(0), FunctionId::new(1)] {
+        let function = mir.definitions.get(id).unwrap();
+        assert!(matches!(
+            function.body.blocks[0].terminator,
+            Some(MirTerminator::Return { value: None, .. })
+        ));
+        assert!(function
+            .values
+            .iter()
+            .all(|value| value.ty != MirType::Unit));
+    }
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    let calls: Vec<_> = main.body.blocks[0]
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Call(call) => Some(call),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(calls.len(), 2);
+    assert!(calls.iter().all(|call| call.result.is_none()));
+    let dump = dump_mir(&mir);
+    assert_eq!(dump, dump_mir(&mir));
+    assert!(dump.contains("call f0(f2:v0)"));
+    assert!(dump.contains("return @"));
+}
+
+#[test]
 fn lowering_discards_statements_after_an_unconditional_return() {
     let mir = lower_text("fn main() -> i64 { { return 1; } return 2; }");
     let main = mir.definitions.get(mir.entry_function).unwrap();
@@ -314,6 +351,65 @@ fn verifier_rejects_a_missing_value_call_result() {
     assert!(errors
         .iter()
         .any(|error| error.message.contains("value-returning call has no result")));
+}
+
+#[test]
+fn verifier_rejects_a_result_on_a_unit_call() {
+    let mut mir = lower_text(concat!(
+        "fn notify() -> unit {}\n",
+        "fn main() -> i64 { notify(); return 0; }\n",
+    ));
+    let main = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let result = ValueId::new(main.function, main.values.len());
+    main.values.push(MirValue {
+        id: result,
+        ty: MirType::I64,
+        span: main.span,
+    });
+    let call = main.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) => Some(call),
+            _ => None,
+        })
+        .unwrap();
+    call.result = Some(result);
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("unit-returning call must not have a result")));
+}
+
+#[test]
+fn verifier_rejects_return_operand_presence_mismatches() {
+    let mut unit_with_value = lower_text(concat!(
+        "fn helper() -> i64 { return 1; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    unit_with_value.declarations.entries_mut_for_test()[0].return_type = MirType::Unit;
+    let errors = verify_mir(&unit_with_value).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("unit function return must not have an operand")));
+
+    let mut value_without_operand = lower_text("fn main() -> i64 { return 0; }");
+    let main = value_without_operand
+        .definitions
+        .get_mut_for_test(value_without_operand.entry_function)
+        .unwrap();
+    let Some(MirTerminator::Return { value, .. }) = &mut main.body.blocks[0].terminator else {
+        panic!("expected return terminator");
+    };
+    *value = None;
+    let errors = verify_mir(&value_without_operand).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("value-returning function return has no operand")));
 }
 
 #[test]

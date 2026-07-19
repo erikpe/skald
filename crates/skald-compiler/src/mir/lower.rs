@@ -84,6 +84,12 @@ impl<'hir> FunctionLowerer<'hir> {
         };
         lowerer.allocate_storage();
         lowerer.lower_block(&definition.body);
+        if lowerer.terminator.is_none() && declaration.return_type == Type::Unit {
+            lowerer.terminator = Some(MirTerminator::Return {
+                value: None,
+                span: definition.body.span,
+            });
+        }
         assert!(
             lowerer.terminator.is_some(),
             "type-checked function must lower to a terminated entry block"
@@ -142,7 +148,9 @@ impl<'hir> FunctionLowerer<'hir> {
             }
             match statement {
                 HirStatement::Local(local) => {
-                    let value = self.lower_expression(&local.initializer);
+                    let value = self
+                        .lower_expression(&local.initializer)
+                        .expect("typed local initializer must produce a value");
                     let storage = self.local_storage[local.local.index()];
                     self.instructions.push(MirInstruction::Store(MirStore {
                         storage,
@@ -151,38 +159,47 @@ impl<'hir> FunctionLowerer<'hir> {
                     }));
                 }
                 HirStatement::Return(statement) => {
-                    let value = self.lower_expression(&statement.value);
+                    let value = statement.value.as_ref().map(|value| {
+                        self.lower_expression(value)
+                            .expect("typed return expression must produce a value")
+                    });
                     self.terminator = Some(MirTerminator::Return {
                         value,
                         span: statement.span,
                     });
+                }
+                HirStatement::Call(statement) => {
+                    let result = self.lower_expression(&statement.call);
+                    assert!(result.is_none(), "typed call statement must return unit");
                 }
                 HirStatement::Block(block) => self.lower_block(block),
             }
         }
     }
 
-    fn lower_expression(&mut self, expression: &HirExpression) -> ValueId {
+    fn lower_expression(&mut self, expression: &HirExpression) -> Option<ValueId> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => {
                 let storage = match binding {
                     BindingId::Parameter(id) => self.parameter_storage[id.index()],
                     BindingId::Local(id) => self.local_storage[id.index()],
                 };
-                self.assign(
+                Some(self.assign(
                     MirRvalueKind::Load(storage),
                     lower_type(expression.ty),
                     expression.span,
-                )
+                ))
             }
-            HirExpressionKind::Integer(value) => self.assign(
+            HirExpressionKind::Integer(value) => Some(self.assign(
                 MirRvalueKind::ConstantI64(*value),
                 lower_type(expression.ty),
                 expression.span,
-            ),
+            )),
             HirExpressionKind::Unary { operation, operand } => {
-                let operand = self.lower_expression(operand);
-                self.assign(
+                let operand = self
+                    .lower_expression(operand)
+                    .expect("typed unary operand must produce a value");
+                Some(self.assign(
                     MirRvalueKind::Unary {
                         operation: match operation {
                             HirUnaryOperation::NegateI64 => MirUnaryOperation::NegateI64,
@@ -191,7 +208,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     },
                     lower_type(expression.ty),
                     expression.span,
-                )
+                ))
             }
             HirExpressionKind::Binary {
                 operation,
@@ -199,9 +216,13 @@ impl<'hir> FunctionLowerer<'hir> {
                 right,
             } => {
                 // This order is semantic: left is fully lowered before right.
-                let left = self.lower_expression(left);
-                let right = self.lower_expression(right);
-                self.assign(
+                let left = self
+                    .lower_expression(left)
+                    .expect("typed binary operand must produce a value");
+                let right = self
+                    .lower_expression(right)
+                    .expect("typed binary operand must produce a value");
+                Some(self.assign(
                     MirRvalueKind::Binary {
                         operation: match operation {
                             HirBinaryOperation::AddI64 => MirBinaryOperation::AddI64,
@@ -213,7 +234,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     },
                     lower_type(expression.ty),
                     expression.span,
-                )
+                ))
             }
             HirExpressionKind::DirectCall {
                 function,
@@ -222,13 +243,17 @@ impl<'hir> FunctionLowerer<'hir> {
                 // Argument evaluation is likewise fixed left-to-right.
                 let arguments = arguments
                     .iter()
-                    .map(|argument| self.lower_expression(argument))
+                    .map(|argument| {
+                        self.lower_expression(argument)
+                            .expect("typed call argument must produce a value")
+                    })
                     .collect();
-                let result = self.new_value(lower_type(expression.ty), expression.span);
+                let result = (expression.ty != Type::Unit)
+                    .then(|| self.new_value(lower_type(expression.ty), expression.span));
                 self.instructions.push(MirInstruction::Call(MirCall {
                     target: MirCallTarget::Direct(*function),
                     arguments,
-                    result: Some(result),
+                    result,
                     span: expression.span,
                 }));
                 result
@@ -262,5 +287,6 @@ impl<'hir> FunctionLowerer<'hir> {
 const fn lower_type(ty: Type) -> MirType {
     match ty {
         Type::I64 => MirType::I64,
+        Type::Unit => MirType::Unit,
     }
 }

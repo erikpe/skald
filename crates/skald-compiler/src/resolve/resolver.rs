@@ -221,9 +221,19 @@ impl<'program> FunctionResolver<'program> {
                 self.resolve_local(local).map(ResolvedStatement::Local)
             }
             syntax::Statement::Return(statement) => {
-                let value = self.resolve_expression(&statement.value)?;
+                let value = match &statement.value {
+                    Some(value) => Some(self.resolve_expression(value)?),
+                    None => None,
+                };
                 Some(ResolvedStatement::Return(ResolvedReturn {
                     value,
+                    span: statement.span,
+                }))
+            }
+            syntax::Statement::Expression(statement) => {
+                let expression = self.resolve_expression(&statement.expression)?;
+                Some(ResolvedStatement::Expression(ResolvedExpressionStatement {
+                    expression,
                     span: statement.span,
                 }))
             }
@@ -451,6 +461,7 @@ fn resolve_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
     ResolvedType {
         kind: match type_syntax.kind {
             syntax::TypeKind::I64 => ResolvedTypeKind::I64,
+            syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
         },
         span: type_syntax.span,
     }

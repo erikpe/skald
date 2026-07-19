@@ -3,10 +3,10 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunctionDeclaration,
-        HirFunctionDeclarationTable, HirFunctionDefinition, HirFunctionDefinitionTable,
-        HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter, HirProgram, HirReturn,
-        HirStatement, HirUnaryOperation, Type,
+        HirBinaryOperation, HirBlock, HirCallStatement, HirExpression, HirExpressionKind,
+        HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
+        HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter,
+        HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
     },
     resolve::{
         BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression,
@@ -22,6 +22,8 @@ pub const INTEGER_LITERAL_OUT_OF_RANGE: &str = "TYP003";
 pub const WRONG_ARGUMENT_COUNT: &str = "TYP004";
 pub const TYPE_MISMATCH: &str = "TYP005";
 pub const MISSING_RETURN: &str = "TYP006";
+pub const INVALID_RETURN: &str = "TYP007";
+pub const INVALID_CALL_STATEMENT: &str = "TYP008";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -161,7 +163,7 @@ fn check_definition(
         diagnostics,
     );
 
-    if !block_guarantees_return(&definition.body) {
+    if return_type == Type::I64 && !block_guarantees_return(&definition.body) {
         diagnostics.push(
             Diagnostic::error(
                 MISSING_RETURN,
@@ -253,24 +255,75 @@ fn check_statement(
             }))
         }
         ResolvedStatement::Return(statement) => {
-            let value = check_expression(
+            match (return_type, &statement.value) {
+                (Type::I64, Some(value)) => {
+                    let value =
+                        check_expression(program, declaration, definition, value, diagnostics)?;
+                    if !require_type(value.ty, Type::I64, value.span, "return value", diagnostics) {
+                        return None;
+                    }
+                    Some(HirStatement::Return(HirReturn {
+                        value: Some(value),
+                        span: statement.span,
+                    }))
+                }
+                (Type::I64, None) => {
+                    diagnostics.push(
+                        Diagnostic::error(INVALID_RETURN, "an `i64` function must return a value")
+                            .with_primary_label(statement.span, "expected `return expression;`"),
+                    );
+                    None
+                }
+                (Type::Unit, Some(value)) => {
+                    // Check the expression as well so independent errors in it
+                    // are not hidden by the invalid return form.
+                    let _ = check_expression(program, declaration, definition, value, diagnostics);
+                    diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_RETURN,
+                            "a `unit` function cannot return a value",
+                        )
+                        .with_primary_label(statement.span, "use `return;` instead"),
+                    );
+                    None
+                }
+                (Type::Unit, None) => Some(HirStatement::Return(HirReturn {
+                    value: None,
+                    span: statement.span,
+                })),
+            }
+        }
+        ResolvedStatement::Expression(statement) => {
+            let expression = check_expression(
                 program,
                 declaration,
                 definition,
-                &statement.value,
+                &statement.expression,
                 diagnostics,
             )?;
-            if !require_type(
-                value.ty,
-                return_type,
-                value.span,
-                "return value",
-                diagnostics,
-            ) {
+            if !is_direct_call_through_groups(&statement.expression) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CALL_STATEMENT,
+                        "only function calls can be used as expression statements",
+                    )
+                    .with_primary_label(statement.span, "this expression is not a call"),
+                );
                 return None;
             }
-            Some(HirStatement::Return(HirReturn {
-                value,
+            if expression.ty != Type::Unit {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CALL_STATEMENT,
+                        "a call statement must call a function returning `unit`",
+                    )
+                    .with_primary_label(statement.span, "this call returns `i64`")
+                    .with_note("use the returned value instead of discarding it"),
+                );
+                return None;
+            }
+            Some(HirStatement::Call(HirCallStatement {
+                call: expression,
                 span: statement.span,
             }))
         }
@@ -594,6 +647,15 @@ fn require_type(
 fn lower_type(type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
+        ResolvedTypeKind::Unit => Type::Unit,
+    }
+}
+
+fn is_direct_call_through_groups(expression: &ResolvedExpression) -> bool {
+    match expression {
+        ResolvedExpression::DirectCall(_) => true,
+        ResolvedExpression::Grouped(grouped) => is_direct_call_through_groups(&grouped.expression),
+        _ => false,
     }
 }
 
@@ -601,6 +663,6 @@ fn block_guarantees_return(block: &ResolvedBlock) -> bool {
     block.statements.iter().any(|statement| match statement {
         ResolvedStatement::Return(_) => true,
         ResolvedStatement::Block(block) => block_guarantees_return(block),
-        ResolvedStatement::Local(_) => false,
+        ResolvedStatement::Local(_) | ResolvedStatement::Expression(_) => false,
     })
 }

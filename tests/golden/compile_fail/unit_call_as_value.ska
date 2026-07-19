@@ -1,0 +1,6 @@
+fn notify() -> unit {
+}
+
+fn main() -> i64 {
+    return notify();
+}

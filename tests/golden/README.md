@@ -13,7 +13,9 @@ If a run case has no `.stdout` sidecar, its expected stdout is empty. Stdout com
 
 The runner builds the runtime, invokes the public `skac` executable, and reports all cases. Every successful source is compiled to assembly twice and compared byte-for-byte before native execution. Every failing source is compiled twice and must produce the same exact stderr snapshot, no stdout, and compiler exit status 1.
 
-The failure corpus covers every diagnostic family reachable from first-slice source. The generic type-mismatch diagnostic becomes source-reachable only after a second semantic type is added and must gain a golden case in that feature slice.
+The failure corpus covers every diagnostic family reachable from implemented
+source. O3 adds exact cases for invalid unit/value returns, using a unit call as
+an `i64` value, and discarding an `i64` call statement.
 
 Run it from the repository root with:
 

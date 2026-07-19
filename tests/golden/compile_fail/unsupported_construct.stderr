@@ -1,5 +1,11 @@
-error[PAR003]: expected a statement
- --> tests/golden/compile_fail/unsupported_construct.ska:2:5
+error[PAR002]: expected `;` after the call expression
+ --> tests/golden/compile_fail/unsupported_construct.ska:2:8
    |
 2 |     if 1 {
-   |     ^^ expected `var`, `return`, or a nested block
+   |        ^ found INTEGER_LITERAL
+
+error[PAR002]: expected `;` after the call expression
+ --> tests/golden/compile_fail/unsupported_construct.ska:2:10
+   |
+2 |     if 1 {
+   |          ^ found LEFT_BRACE

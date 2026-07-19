@@ -1,0 +1,5 @@
+error[TYP007]: a `unit` function cannot return a value
+ --> tests/golden/compile_fail/value_return_from_unit.ska:2:5
+   |
+2 |     return 1;
+   |     ^^^^^^^^^ use `return;` instead

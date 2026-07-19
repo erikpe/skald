@@ -8,12 +8,14 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     I64,
+    Unit,
 }
 
 impl Type {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
+            Self::Unit => "unit",
         }
     }
 }
@@ -170,6 +172,7 @@ pub struct HirBlock {
 pub enum HirStatement {
     Local(HirLocalDecl),
     Return(HirReturn),
+    Call(HirCallStatement),
     Block(HirBlock),
 }
 
@@ -178,6 +181,7 @@ impl HirStatement {
         match self {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Call(statement) => statement.span,
             Self::Block(block) => block.span,
         }
     }
@@ -192,7 +196,13 @@ pub struct HirLocalDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirReturn {
-    pub value: HirExpression,
+    pub value: Option<HirExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCallStatement {
+    pub call: HirExpression,
     pub span: Span,
 }
 

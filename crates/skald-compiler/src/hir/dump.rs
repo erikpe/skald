@@ -111,7 +111,13 @@ impl HirDumper {
             }
             HirStatement::Return(statement) => {
                 self.line("Return", statement.span);
-                self.indented(|dumper| dumper.expression(&statement.value));
+                if let Some(value) = &statement.value {
+                    self.indented(|dumper| dumper.expression(value));
+                }
+            }
+            HirStatement::Call(statement) => {
+                self.line("CallStatement", statement.span);
+                self.indented(|dumper| dumper.expression(&statement.call));
             }
             HirStatement::Block(block) => self.block(block),
         }

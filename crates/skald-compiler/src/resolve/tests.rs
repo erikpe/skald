@@ -32,7 +32,7 @@ fn return_value(statement: &ResolvedStatement) -> &ResolvedExpression {
     let ResolvedStatement::Return(statement) = statement else {
         panic!("expected return statement");
     };
-    &statement.value
+    statement.value.as_ref().expect("expected a return value")
 }
 
 #[test]
@@ -57,6 +57,35 @@ fn collects_functions_before_resolving_forward_calls() {
     };
     assert_eq!(call.function.index(), 1);
     assert_eq!(call.arguments.len(), 1);
+}
+
+#[test]
+fn resolves_call_statements_through_the_same_stable_function_identity() {
+    let output = resolve_text(concat!(
+        "fn notify(value: i64) -> unit {}\n",
+        "fn main() -> i64 { (notify(7)); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedStatement::Expression(statement) = &main.body.statements[0] else {
+        panic!("expected resolved expression statement");
+    };
+    let ResolvedExpression::Grouped(grouped) = &statement.expression else {
+        panic!("expected source grouping to be preserved");
+    };
+    let ResolvedExpression::DirectCall(call) = grouped.expression.as_ref() else {
+        panic!("expected resolved direct call");
+    };
+    assert_eq!(call.function.index(), 0);
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump, dump_resolved(&output.program));
+    assert!(dump.contains("ExpressionStatement"));
+    assert!(dump.contains("DirectCall f0"));
 }
 
 #[test]
@@ -307,5 +336,8 @@ fn parsed_source_ast_still_contains_names_before_resolution() {
     let Statement::Return(statement) = &ast.functions[0].body.statements[0] else {
         panic!("expected return");
     };
-    assert!(matches!(statement.value, syntax::Expression::Identifier(_)));
+    assert!(matches!(
+        statement.value,
+        Some(syntax::Expression::Identifier(_))
+    ));
 }

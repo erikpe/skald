@@ -29,6 +29,11 @@ inventing an empty body, and keeps signature/linkage inspection independent of
 executable control flow. MIR calls display stable function IDs rather than
 backend symbols.
 
+Calls and returns make payload presence explicit in MIR dumps. An `i64` call
+defines a value and an `i64` return names one; a `unit` call and return omit the
+value entirely. This makes accidental fictitious unit values visible at the
+phase boundary and enforceable by the verifier.
+
 Assembly is directly available through the public compiler command:
 
 ```text

@@ -44,12 +44,14 @@ owned_id!(BlockId, "b");
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirType {
     I64,
+    Unit,
 }
 
 impl MirType {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
+            Self::Unit => "unit",
         }
     }
 }
@@ -328,7 +330,7 @@ pub enum MirBinaryOperation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirTerminator {
-    Return { value: ValueId, span: Span },
+    Return { value: Option<ValueId>, span: Span },
 }
 
 impl MirTerminator {

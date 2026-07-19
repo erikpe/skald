@@ -33,7 +33,7 @@ fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {
     let HirStatement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
     };
-    &statement.value
+    statement.value.as_ref().expect("expected a return value")
 }
 
 fn assert_expression_is_fully_typed(expression: &HirExpression) {
@@ -83,8 +83,11 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
             match statement {
                 HirStatement::Local(local) => assert_expression_is_fully_typed(&local.initializer),
                 HirStatement::Return(statement) => {
-                    assert_expression_is_fully_typed(&statement.value)
+                    if let Some(value) = &statement.value {
+                        assert_expression_is_fully_typed(value);
+                    }
                 }
+                HirStatement::Call(statement) => assert_expression_is_fully_typed(&statement.call),
                 HirStatement::Block(_) => {}
             }
         }
@@ -108,6 +111,115 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
         panic!("expected typed addition");
     };
     assert_eq!(*operation, HirBinaryOperation::AddI64);
+}
+
+#[test]
+fn checks_unit_functions_returns_and_call_statements() {
+    let output = check_text(concat!(
+        "fn explicit() -> unit { return; }\n",
+        "fn implicit() -> unit {}\n",
+        "fn main() -> i64 { (explicit()); implicit(); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let hir = output.hir.unwrap();
+    assert_eq!(
+        hir.declarations
+            .get(crate::resolve::FunctionId::new(0))
+            .unwrap()
+            .return_type,
+        Type::Unit
+    );
+    assert_eq!(
+        hir.declarations
+            .get(crate::resolve::FunctionId::new(1))
+            .unwrap()
+            .return_type,
+        Type::Unit
+    );
+    let explicit = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(0))
+        .unwrap();
+    let HirStatement::Return(statement) = &explicit.body.statements[0] else {
+        panic!("expected explicit unit return");
+    };
+    assert!(statement.value.is_none());
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    assert!(main.body.statements[..2].iter().all(|statement| {
+        matches!(
+            statement,
+            HirStatement::Call(call) if call.call.ty == Type::Unit
+        )
+    }));
+    let dump = dump_hir(&hir);
+    assert_eq!(dump, dump_hir(&hir));
+    assert!(dump.contains("ReturnType unit"));
+    assert!(dump.contains("CallStatement"));
+    assert!(dump.contains("DirectCall f0 : unit"));
+}
+
+#[test]
+fn diagnoses_invalid_unit_and_value_return_forms() {
+    for (source, message) in [
+        (
+            "fn bad() -> unit { return 1; } fn main() -> i64 { return 0; }",
+            "cannot return a value",
+        ),
+        ("fn main() -> i64 { return; }", "must return a value"),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none());
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_RETURN && diagnostic.message.contains(message)
+        }));
+    }
+}
+
+#[test]
+fn rejects_unit_calls_in_value_contexts() {
+    let output = check_text(concat!(
+        "fn notify() -> unit {}\n",
+        "fn main() -> i64 { return notify(); }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == TYPE_MISMATCH
+            && diagnostic
+                .message
+                .contains("type `unit` but `i64` is required")
+    }));
+}
+
+#[test]
+fn rejects_discarded_i64_calls_and_non_call_expression_statements() {
+    for (source, message) in [
+        (
+            "fn value() -> i64 { return 1; } fn main() -> i64 { value(); return 0; }",
+            "returning `unit`",
+        ),
+        (
+            "fn main() -> i64 { 1 + 2; return 0; }",
+            "only function calls",
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none());
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_CALL_STATEMENT && diagnostic.message.contains(message)
+        }));
+    }
+}
+
+#[test]
+fn main_must_remain_i64_returning() {
+    let output = check_text("fn main() -> unit {}");
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_ENTRY_POINT && diagnostic.message.contains("fn main() -> i64")
+    }));
 }
 
 #[test]

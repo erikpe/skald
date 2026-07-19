@@ -76,8 +76,9 @@ output extension. Later O-series milestones implement it through the existing
 pipeline. Until those milestones are complete, the first vertical slice
 grammar above remains the accepted grammar.
 
-The extension adds the keywords `extern` and `unit` and expands the grammar as
-follows:
+O3 implements `unit`, unit returns, and restricted call statements for local
+function definitions. O5 adds the remaining `extern` declaration syntax. The
+complete extension grammar is:
 
 ```text
 compilation-unit = top-level-declaration* EOF
@@ -189,7 +190,16 @@ Decimal literals are converted during M4:
 
 This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
 
-Every first-slice function returns `i64` and must contain an unconditional return. Because M4 has no conditional control flow, a return in an unconditionally executed nested block also satisfies this requirement. The entry candidate selected by M3 must exist and have the exact signature `fn main() -> i64`.
+An `i64` function must contain an unconditional value return. Because the
+implemented subset has no conditional control flow, a return in an
+unconditionally executed nested block also satisfies this requirement. A
+`unit` function may use `return;` or reach its closing brace; attaching any
+expression to its return is invalid. Conversely, `return;` is invalid in an
+`i64` function. Unit-returning calls have type `unit`, which cannot be used in
+an `i64` value context. Expression statements accept only calls returning
+`unit`; in particular, an `i64` call cannot be silently discarded. The entry
+candidate selected by resolution must still have the exact signature
+`fn main() -> i64`.
 
 Type checking accumulates diagnostics across functions but emits an executable `HirProgram` only when the entire resolved program succeeds. Consequently, every expression in an available HIR program has a concrete type, every operation is selected, every call has a checked arity and exact target, and the entry function is valid.
 
@@ -200,22 +210,25 @@ M5 fixes expression evaluation order to left-to-right. A binary expression compl
 MIR separates addressable storage from transient computed values:
 
 - parameters and source locals receive dense, owner-qualified storage IDs;
-- constants, loads, unary and binary results, and call results receive dense, owner-qualified value IDs;
+- constants, loads, unary and binary results, and value-returning call results receive dense, owner-qualified value IDs;
 - local initialization becomes an explicit value computation followed by a store;
 - reading a parameter or local becomes an explicit load;
 - arithmetic and direct calls are ordered three-address instructions;
-- return is a basic-block terminator using an already computed value.
+- return is a basic-block terminator with an optional operand selected by the
+  declared result type.
 
 The first slice has no branches, so each lowered function has one entry basic block. Unconditionally unreachable statements after a return are not lowered. Blocks still have explicit IDs and terminators, allowing conditional control-flow edges and additional blocks to be introduced without redesigning instruction or function representation.
 
 Successful lowering runs the MIR verifier in debug builds. The verifier checks function ownership and density of storage, value, and block IDs; parameter storage order; single definitions and use-before-definition; operand and storage types; direct-call targets, argument counts, and signature types; return types; entry blocks; and block termination. Backends consume verified MIR and do not inspect HIR, resolved source names, or the AST.
 
-O2 changes the compiler representation without changing this first-slice
-language behavior. Resolved IR, typed HIR, and MIR now store dense callable
+O2 changed the compiler representation without changing first-slice language
+behavior. Resolved IR, typed HIR, and MIR store dense callable
 declarations separately from optional local definitions. A declaration owns
 the stable function ID, canonical signature, and linkage; a definition owns
 the body and body-local state. MIR calls are dedicated instructions with an
-explicit direct target and optional result ID. Every currently accepted `i64`
-call has a result, while the optional representation is ready for unit-returning
-calls. The backend derives internal or external symbols from declaration
+explicit direct target and optional result ID. O3 uses that representation:
+every `i64` call has a result, while a `unit` call has none. Unit returns also
+have no MIR operand, and implicit fallthrough in a unit function lowers to the
+same payload-free return. The verifier rejects unit-typed storage and transient
+values, making the no-payload rule explicit. The backend derives internal or external symbols from declaration
 linkage; call instructions never contain linker-symbol strings.
