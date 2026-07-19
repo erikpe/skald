@@ -125,6 +125,54 @@ util.make_counter()
 
 Unqualified names resolve local-first. If multiple imports provide the same unqualified name and there is no local declaration shadowing them, unqualified use is a compile-time ambiguity error.
 
+### 3.1 Restricted Bootstrap External Functions
+
+The first post-vertical-slice output extension defines this deliberately narrow
+external declaration form:
+
+```ska
+extern fn external_name(value: i64) -> unit;
+extern fn external_value(value: i64) -> i64;
+```
+
+It is a top-level declaration terminated by a semicolon and has no Skald body.
+Parameter names are mandatory. This bootstrap profile permits only by-value
+`i64` parameters and an `i64` or `unit` result. It does not permit alias
+parameters, `shared`, objects, arrays, optionals, function values, variadic
+arguments, alternate link names, or user-selected calling conventions.
+
+Defined and external functions share one non-overloaded top-level function
+namespace. Any repeated name is a compile-time error, including two identical
+external declarations or an external declaration and a Skald definition. An
+external declaration named `main` is illegal and cannot satisfy the entry-point
+requirement; the entry point remains a source-defined `fn main() -> i64`.
+
+The external function's source identifier is its exact linker symbol. The
+compiler does not add a module prefix or other mangling and this profile has no
+source-level symbol override. Below resolution, the compiler represents the
+selected declaration with a stable callable identity; later phases must not
+repeat name lookup or recognize individual runtime functions by spelling.
+Compiler-generated symbols for Skald definitions must use a target-private
+spelling that cannot equal any valid external source identifier. This keeps
+exact external symbols collision-free without reserving an ordinary Skald
+identifier prefix for compiler use.
+
+Calls use the selected target's C ABI. For the initial Linux x86-64 System V
+target, Skald `i64` corresponds to C `int64_t`, and a Skald `unit` result
+corresponds to C `void`. `unit` has no runtime payload. Argument evaluation is
+left to right, as for a call to a Skald-defined function.
+
+An external declaration is a trusted assertion about the definition supplied
+at link time. `skac` checks Skald uses against the declared signature, and the
+linker diagnoses a missing symbol, but the compiler cannot verify that a
+supplied foreign definition has a compatible ABI type. An incompatible linked
+definition is outside the language's safety and behavior guarantees.
+
+This profile is sufficient to declare the bootstrap output function in Section
+13.1. It does not settle imports, export and visibility behavior, cross-module
+coalescing of ABI declarations, separate compilation, ownership transfer, or
+the complete foreign-function interface. Those remain specification gaps.
+
 ---
 
 ## 4. Types and Binding Modes
@@ -1177,7 +1225,32 @@ Expressions:
 - indexing and slicing;
 - array construction.
 
-### 10.1 Operators
+### 10.1 Returns and Call Statements
+
+Function return syntax follows the declared result type:
+
+- an `i64` function returns with `return expression;`, where the expression
+  must have type `i64`;
+- a `unit` function returns with `return;` and cannot attach an expression;
+- reaching the closing brace of a `unit` function is an implicit `return;`;
+- every reachable path through a non-`unit` function must return a value, so
+  reaching its closing brace is a compile-time error.
+
+The first post-vertical-slice implementation supports expression statements
+only for calls whose result is `unit`:
+
+```ska
+do_work();       // valid when do_work returns unit
+value_call();    // invalid when value_call returns i64
+1 + 2;           // invalid
+```
+
+Grouping parentheses do not change whether the outer operation is a call. This
+restricted call-statement rule avoids accidental discarded values and is
+narrower than the complete statement list above; broader expression statements
+may be specified later.
+
+### 10.2 Operators
 
 Primitive operator rules:
 
@@ -1193,7 +1266,7 @@ Primitive operator rules:
 
 Signed integer division rounds toward negative infinity, and signed remainder has the divisor's sign.
 
-### 10.2 Indexing, Slicing, and For-In
+### 10.3 Indexing, Slicing, and For-In
 
 This subsection is a provisional sketch. Indexing and slicing depend on the deferred array design, and the structural iteration protocol is not yet normative.
 
@@ -1284,9 +1357,14 @@ The initial language keeps unrecoverable runtime failures:
 - out-of-bounds array access;
 - invalid primitive casts such as out-of-range `double -> i64`;
 - explicit panic;
-- out-of-memory.
+- out-of-memory;
+- failure to complete a bootstrap runtime stdout write.
 
-These failures panic and abort, unless a future rule explicitly maps a specific operation into checked exception handling.
+These failures are unrecoverable and terminate the process unsuccessfully,
+normally through runtime panic/abort machinery, unless a future rule explicitly
+maps an operation into checked exception handling. Unless an individual
+operation says otherwise, the exact exit status or terminating signal is not a
+language guarantee.
 
 ### 12.1 Checked Exceptions
 
@@ -1377,6 +1455,39 @@ Borrow anchors do not require a runtime ownership search or a separate runtime o
 
 Thread-safe reference counting is out of scope unless concurrency is added later.
 
+### 13.1 Bootstrap `i64` Output
+
+Until strings and the standard I/O library exist, the runtime exposes one
+low-level output operation:
+
+```c
+void ska_rt_println_i64(int64_t value);
+```
+
+Skald source accesses it through the ordinary external declaration mechanism:
+
+```ska
+extern fn ska_rt_println_i64(value: i64) -> unit;
+```
+
+One successful call writes the shortest ASCII decimal representation of
+`value` to stdout followed by exactly one line-feed byte (`0x0a`). Zero is
+written as `0`; negative values have one leading ASCII `-`; positive values
+have no sign; and there is no padding, grouping, locale-specific digit or
+separator, carriage return, or extra whitespace. The operation is defined for
+every `i64`, including `-9223372036854775808` and
+`9223372036854775807`.
+
+The operation completes and checks the entire record before returning. A
+detected formatting, write, or flush failure is an unrecoverable runtime error:
+the process terminates unsuccessfully rather than returning normally or
+exposing a partial-success result to Skald. The exact diagnostic text, exit
+status, or terminating signal is not part of this ABI contract.
+
+This function exists to bootstrap observable tests. It is not the final
+user-facing I/O API; a future Skald standard library may wrap lower-level
+runtime facilities with ordinary functions and richer error handling.
+
 ---
 
 ## 14. Relationship to Niflheim
@@ -1439,8 +1550,8 @@ The following are also substantial gaps. They need not all be part of the first 
 - **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
-- **Modules, build model, linkage, and foreign interfaces:** source-to-module mapping, import discovery, entry points, separate compilation, symbol visibility, ABI boundaries, and ownership rules for foreign calls.
-- **Required library and runtime surface:** the minimum facilities for I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64` and `unit`. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
+- **Required library and runtime surface:** Section 13.1 defines only a bootstrap `i64` line-output operation. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
 
@@ -1470,6 +1581,12 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
+- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` parameters and `i64` or `unit` results, and treats declarations as trusted ABI assertions;
+- compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
+- external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;
+- `unit` functions use `return;` or implicit fallthrough, while non-`unit` functions must return a value on every reachable path;
+- the first implemented expression-statement subset contains only unit-producing calls;
+- `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;

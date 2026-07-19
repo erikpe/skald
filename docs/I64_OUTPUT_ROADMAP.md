@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: planned post-M8 extension.
+Status: O0 complete; O1–O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -85,7 +85,7 @@ interface and ownership model identified as open in the draft specification.
 
 ## 2. Progress Summary
 
-- [ ] O0 — Specify the implemented output and external-call contract
+- [x] O0 — Specify the implemented output and external-call contract
 - [ ] O1 — Add exact stdout expectations to the golden runner
 - [ ] O2 — Separate callable declarations from local function bodies
 - [ ] O3 — Implement `unit`, unit returns, and call statements end-to-end
@@ -104,25 +104,24 @@ quality gates pass.
 **Purpose:** Settle the deliberately narrow behavior required by this slice
 before encoding it independently in several compiler phases.
 
-- [ ] Add the restricted `extern fn` grammar to `grammar/README.md`.
-- [ ] Specify `unit` returns, `return;`, and call expression statements for the
+- [x] Add the restricted `extern fn` grammar to `grammar/README.md`.
+- [x] Specify `unit` returns, `return;`, and call expression statements for the
       implemented subset.
-- [ ] Specify that non-unit functions require `return expression;` and unit
+- [x] Specify that non-unit functions require `return expression;` and unit
       functions use `return;` or may reach the end of their body.
-- [ ] Decide and document whether expression statements are restricted to
-      unit-producing calls. The recommended initial rule is to accept only a
-      call expression of type `unit`, preventing accidental discarded values
-      without adding general expression-statement semantics prematurely.
-- [ ] Specify the initial external ABI surface: `i64` parameters and `i64` or
+- [x] Restrict expression statements initially to call expressions of type
+      `unit`, preventing accidental discarded values without adding general
+      expression-statement semantics prematurely.
+- [x] Specify the initial external ABI surface: `i64` parameters and `i64` or
       `unit` results, by value, using the target C ABI.
-- [ ] Specify external symbol naming, duplicate-name behavior, and that an
+- [x] Specify external symbol naming, duplicate-name behavior, and that an
       external declaration cannot provide the program entry point.
-- [ ] Specify `ska_rt_println_i64`: signed decimal spelling, one trailing LF,
+- [x] Specify `ska_rt_println_i64`: signed decimal spelling, one trailing LF,
       no leading padding, and behavior for the entire `i64` range.
-- [ ] Record stdout write failure behavior. Until checked I/O exists, the
-      recommended contract is an unrecoverable runtime failure with a nonzero
-      process result rather than silently reporting success.
-- [ ] Update `docs/SKALD_DRAFT_SPEC.md` to distinguish this implemented,
+- [x] Define a detected stdout write or flush failure as an unrecoverable
+      runtime error with unsuccessful process termination rather than silent
+      success; its exact status and diagnostic remain unspecified.
+- [x] Update `docs/SKALD_DRAFT_SPEC.md` to distinguish this implemented,
       restricted subset from the still-open complete FFI and library design.
 
 **Tests:** Documentation examples are checked manually against the grammar and
@@ -177,7 +176,9 @@ new source syntax or changing existing language behavior.
 - [ ] Generalize call results to be optional at the MIR representation boundary
       while retaining the invariant that every currently emitted `i64` call
       has a result.
-- [ ] Keep local symbol generation owned by the backend and deterministic.
+- [ ] Keep local symbol generation owned by the backend, deterministic, and in
+      a target-private namespace that cannot collide with exact external
+      identifiers.
 - [ ] Avoid compatibility fields or parallel legacy/new call paths once the
       migration is complete.
 

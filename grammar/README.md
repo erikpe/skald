@@ -1,6 +1,6 @@
 # Grammar
 
-This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The contracts below are normative only for the implemented vertical-slice milestones.
+This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice contracts below describe implemented behavior. The `i64` output extension contract is normative for the O-series roadmap, but its syntax is not accepted until the corresponding implementation milestone is complete.
 
 ## First vertical slice lexical contract
 
@@ -68,6 +68,93 @@ Operator precedence, from highest to lowest, is:
 Unary `-` associates right-to-left. The binary operators and repeated postfix calls associate left-to-right. Parentheses override precedence.
 
 Parser recovery may synthesize missing punctuation to retain a useful source AST. Structurally incomplete declarations and statements are omitted from that AST, diagnostics are accumulated, and later semantic phases must not run when parsing reports errors.
+
+## `i64` output extension contract
+
+O0 fixes the following grammar and semantic contract for the post-M8 `i64`
+output extension. Later O-series milestones implement it through the existing
+pipeline. Until those milestones are complete, the first vertical slice
+grammar above remains the accepted grammar.
+
+The extension adds the keywords `extern` and `unit` and expands the grammar as
+follows:
+
+```text
+compilation-unit = top-level-declaration* EOF
+
+top-level-declaration          = function-declaration
+                               | external-function-declaration
+function-declaration           = "fn" identifier parameter-list "->" type block
+external-function-declaration  = "extern" "fn" identifier parameter-list "->" type ";"
+parameter-list                 = "(" [ parameter ("," parameter)* ] ")"
+parameter                      = identifier ":" "i64"
+type                           = "i64" | "unit"
+
+block                 = "{" statement* "}"
+statement             = local-declaration
+                      | return-statement
+                      | call-statement
+                      | block
+local-declaration     = "var" identifier ":" "i64" "=" expression ";"
+return-statement      = "return" [ expression ] ";"
+call-statement        = expression ";"
+```
+
+The expression grammar and precedence remain unchanged. Although
+`call-statement` is parsed through the general expression grammar, semantic
+analysis accepts it only when, after ignoring grouping parentheses, its
+outermost operation is a function call and its result type is `unit`. An
+arithmetic expression, binding, literal, or value-returning call cannot be
+discarded as a statement in this extension. This is intentionally narrower
+than the complete draft language's eventual expression-statement rules.
+
+Return behavior is determined by the declared function result type:
+
+- an `i64` function uses `return expression;`, the expression must have type
+  `i64`, and every reachable path must return a value;
+- a `unit` function uses `return;` and must not provide an expression;
+- reaching the closing brace of a `unit` function is an implicit `return;`;
+- reaching the closing brace of an `i64` function is a compile-time error.
+
+The entry point remains a source-defined `fn main() -> i64`. An external
+declaration never supplies the entry point, and declaring an external function
+named `main` is a compile-time error.
+
+### Restricted external-function profile
+
+The O-series implementation supports only top-level external declarations
+whose parameters are by-value `i64` values and whose result is `i64` or
+`unit`. Parameter names are mandatory. Alias parameters, `shared`, objects,
+arrays, optionals, function values, variadic arguments, alternate link names,
+and user-selected calling conventions are outside this profile.
+
+Defined and external functions occupy one non-overloaded top-level function
+namespace. Repeating a name is a compile-time error in every combination,
+including two identical external declarations and an external declaration plus
+a definition. As in the first slice, the first declaration remains selected
+only for diagnostic recovery. Locals may shadow functions under the existing
+lexical rules.
+
+The source identifier of an external declaration is its exact linker symbol;
+there is no mangling, module prefix, or `link_name` override in this profile.
+Calls use stable resolved callable identities below name resolution rather than
+reselecting the declaration by this string. Compiler-generated symbols for
+Skald-defined functions must use a target-private spelling that cannot equal
+any valid external source identifier. The compiler must not reserve an
+otherwise valid identifier prefix merely to avoid its own symbol collisions.
+
+External calls use the selected target's C ABI. On the initial Linux x86-64
+System V target, Skald `i64` corresponds to C `int64_t`, and a Skald `unit`
+result corresponds to C `void`. `unit` has no ABI payload or meaningful result
+register. Calls evaluate arguments from left to right before entering the
+external function, consistently with ordinary Skald calls.
+
+An external declaration is a trusted statement about the linked symbol. The
+compiler checks Skald call sites against the declared signature but cannot
+verify the definition supplied to the linker. A missing symbol is a link error;
+a supplied definition with an incompatible C ABI type is outside Skald's
+language guarantees. General foreign linkage, cross-module declaration
+coalescing, and ownership-bearing foreign calls remain unspecified.
 
 ## First vertical slice name resolution
 
