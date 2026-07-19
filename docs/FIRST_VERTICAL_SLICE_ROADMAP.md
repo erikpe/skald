@@ -129,7 +129,7 @@ Progress summary:
 - [x] M3 — Declaration collection and resolution
 - [x] M4 — Type checking and typed HIR
 - [x] M5 — MIR lowering and verification
-- [ ] M6 — x86-64 System V backend
+- [x] M6 — x86-64 System V backend
 - [ ] M7 — Runtime, link driver, and native execution
 - [ ] M8 — Vertical-slice hardening
 
@@ -197,17 +197,17 @@ Progress summary:
 
 ### M6 — x86-64 System V backend
 
-- [ ] Target registry with `x86_64-sysv` as the only accepted target.
-- [ ] Integer argument and return lowering for the required arities.
-- [ ] Stack-frame layout for parameters, locals, calls, and temporaries.
-- [ ] Instruction selection for literals, copies, calls, negation, addition, subtraction, and multiplication.
-- [ ] Correct stack alignment and callee-saved register behavior.
-- [ ] Deterministic GNU-compatible textual assembly.
-- [ ] Target legality checks that reject unsupported MIR rather than miscompile it.
+- [x] Target registry with `x86_64-sysv` as the only accepted target.
+- [x] Integer argument and return lowering for the required arities.
+- [x] Stack-frame layout for parameters, locals, calls, and temporaries.
+- [x] Instruction selection for literals, copies, calls, negation, addition, subtraction, and multiplication.
+- [x] Correct stack alignment and callee-saved register behavior.
+- [x] Deterministic GNU-compatible textual assembly.
+- [x] Target legality checks that reject unsupported MIR rather than miscompile it.
 
 The simplest correct register strategy is acceptable initially, including stack-heavy code. Register allocation is an isolated backend concern and can improve later without changing MIR.
 
-- [ ] **Exit criterion:** assembly-shape tests cover ABI edges and generated assembly can be assembled successfully.
+- [x] **Exit criterion:** assembly-shape tests cover ABI edges and generated assembly can be assembled successfully.
 
 ### M7 — Runtime, link driver, and native execution
 

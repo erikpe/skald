@@ -250,7 +250,13 @@ An AArch64 Linux backend is expected after the x86-64 pipeline is established. A
 - assembly-shape tests runnable without executing the target;
 - native execution tests gated by the host architecture or an explicit emulator.
 
-Target-specific machine IR may be introduced when backend complexity justifies it. It must remain owned by the backend and must not leak target registers or ABI details into MIR.
+M6 implements the first backend behind a small target registry that currently accepts only `x86_64-sysv`. Target legality is checked before lowering: target-independent MIR verification runs first, and the initial backend then rejects valid MIR shapes it cannot yet represent, such as multi-block functions. Backend failures are structured errors rather than panics or silently altered code.
+
+The x86-64 implementation separates ABI classification, frame planning, instruction selection, a typed target assembly model, and GNU textual emission. Every MIR storage slot and transient value initially receives an eight-byte stack home in a 16-byte-aligned fixed frame. This intentionally stack-heavy strategy uses `%rax` and `%rcx` as caller-saved scratch registers and preserves only the frame pointer; future register allocation can therefore replace a contained location-planning decision without changing MIR.
+
+System V integer parameters arrive in `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and `%r9`, followed by stack arguments. Parameters are spilled into their frame homes on entry, and `i64` results are returned in `%rax`. Calls reserve an independently 16-byte-aligned outgoing stack area when more than six arguments are present. Stable ID-derived symbols and the target assembly model make textual output deterministic. Assembly-shape tests cover the register/stack ABI boundary, frame and scratch-register policy, all initial instructions, legality rejection, and acceptance by the system assembler.
+
+The target-specific assembly model remains owned by the backend and does not leak target registers or ABI details into MIR.
 
 ## 6. Assembly, Runtime, and Link Boundary
 
