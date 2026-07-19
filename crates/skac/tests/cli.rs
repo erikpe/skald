@@ -15,7 +15,7 @@ fn help_succeeds_through_the_binary_entry_point() {
 }
 
 #[test]
-fn compilation_is_an_explicit_usage_error_until_m1() {
+fn compilation_is_an_explicit_usage_error_until_the_pipeline_is_connected() {
     let output = Command::new(env!("CARGO_BIN_EXE_skac"))
         .arg("input.ska")
         .output()

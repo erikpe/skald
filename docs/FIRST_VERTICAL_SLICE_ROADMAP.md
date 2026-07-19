@@ -124,7 +124,7 @@ Each milestone ends with tests and a deterministic dump or artifact. Later miles
 Progress summary:
 
 - [x] M0 — Repository and quality baseline
-- [ ] M1 — Source ownership, diagnostics, and lexing
+- [x] M1 — Source ownership, diagnostics, and lexing
 - [ ] M2 — Parser and AST
 - [ ] M3 — Declaration collection and resolution
 - [ ] M4 — Type checking and typed HIR
@@ -147,13 +147,13 @@ Progress summary:
 
 ### M1 — Source ownership, diagnostics, and lexing
 
-- [ ] Source IDs, byte ranges, line maps, and spans.
-- [ ] Structured diagnostics with stable plain-text rendering.
-- [ ] Tokens for the included subset.
-- [ ] Decimal `i64` literal scanning with malformed-literal diagnostics.
-- [ ] Deterministic token dump.
+- [x] Source IDs, byte ranges, line maps, and spans.
+- [x] Structured diagnostics with stable plain-text rendering.
+- [x] Tokens for the included subset.
+- [x] Decimal `i64` literal scanning with malformed-literal diagnostics; range checking remains owned by type checking.
+- [x] Deterministic token dump.
 
-- [ ] **Exit criterion:** lexer unit tests cover valid tokens, whitespace/comments selected by the grammar, invalid characters, malformed literals, and accurate spans.
+- [x] **Exit criterion:** lexer unit tests cover valid tokens, whitespace/comments selected by the grammar, invalid characters, malformed literals, recovery, UTF-8-aware locations, and accurate spans.
 
 ### M2 — Parser and AST
 

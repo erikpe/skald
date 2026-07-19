@@ -30,7 +30,7 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 ## Status
 
-Skald is currently an exploratory language design with an initial compiler repository scaffold. The language specification remains a draft. Syntax, semantics, and implementation interfaces may change as the first vertical compiler slices are implemented and tested.
+Skald is currently an exploratory language design. The repository and quality baseline (M0) and the first source/diagnostic/lexer phase (M1) are implemented; parsing and all later compiler phases remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
 
 ## Development
 

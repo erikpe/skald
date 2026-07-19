@@ -179,6 +179,10 @@ Each arrow is an explicit API boundary. Initial implementations may combine a sm
 
 All phases use a common span representation backed by the source database. Diagnostics contain structured severity, message, labels, and notes; terminal rendering happens at the driver edge. Tests should be able to assert diagnostic structure without depending on terminal colors or absolute paths.
 
+M1 establishes UTF-8 byte offsets as the internal span unit and one-based Unicode-scalar line/column locations for display. Source IDs follow deterministic insertion order. The plain-text diagnostic renderer is color-free and stable for tests; richer terminal or editor renderers can consume the same diagnostic structures later.
+
+The implemented M1 lexer returns a token stream and accumulated diagnostics together, preserving `Invalid` tokens for recovery instead of aborting on the first lexical error. Its deliberately narrow lexical contract is recorded in [`grammar/README.md`](../grammar/README.md).
+
 ### Syntax AST
 
 The AST mirrors source constructs and preserves spans. It must not become the long-lived semantic representation. In particular, later phases should not repeatedly resolve strings or attach growing sets of optional semantic fields to parser nodes.
