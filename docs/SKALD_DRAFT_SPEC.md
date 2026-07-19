@@ -1549,8 +1549,9 @@ Thread-safe reference counting is out of scope unless concurrency is added later
 
 ### 13.1 Bootstrap `i64` Output
 
-**Implementation status:** implemented by the stage-0 x86-64 compiler and ABI
-version 2 runtime, with exact source-to-stdout golden coverage.
+**Implementation status:** implemented by the stage-0 x86-64 compiler,
+introduced in runtime ABI version 2, and retained in ABI version 3, with exact
+source-to-stdout golden coverage.
 
 Until strings and the standard I/O library exist, the runtime exposes one
 low-level output operation:
@@ -1585,11 +1586,11 @@ runtime facilities with ordinary functions and richer error handling.
 
 ### 13.2 Bootstrap `bool` Output
 
-**Specification status:** fixed by C0 for the next implementation slice. The
-runtime symbol is added by C1 and the Skald source-to-runtime path by C2; it is
-not part of runtime ABI version 2.
+**Implementation status:** the runtime symbol is implemented by C1 in ABI
+version 3. The Skald source-to-runtime path remains C2 work; the current
+compiler does not yet accept the declaration below.
 
-The next runtime ABI exposes:
+Runtime ABI version 3 exposes:
 
 ```c
 #include <stdbool.h>
@@ -1615,8 +1616,8 @@ The function completes and checks the entire record before returning. A
 detected write or flush failure is an unrecoverable runtime error and
 terminates the process unsuccessfully under the same policy as
 `ska_rt_println_i64`. The exact diagnostic, status, or terminating signal is
-not guaranteed. Adding this public symbol changes the runtime ABI and requires
-an increment of `SKALD_RUNTIME_ABI_VERSION`.
+not guaranteed. Adding this public symbol changed
+`SKALD_RUNTIME_ABI_VERSION` from 2 to 3.
 
 This operation exists only for bootstrap observability. It does not introduce
 formatting, recoverable I/O, or a final standard-library printing API, and no
@@ -1684,8 +1685,8 @@ The following are also substantial gaps. They need not all be part of the first 
 - **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
-- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`; the `bool` portion is specified for the C-series slice but is not implemented at C0. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
-- **Required library and runtime surface:** Sections 13.1 and 13.2 define only bootstrap `i64` and `bool` line-output operations; boolean output is specified but not implemented at C0. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`; source/compiler support for its `bool` portion remains C2 work even though the runtime sink exists after C1. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
+- **Required library and runtime surface:** Sections 13.1 and 13.2 define only bootstrap `i64` and `bool` line-output operations; boolean output exists in runtime ABI version 3 but is not source-accessible until C2. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
 
@@ -1715,14 +1716,14 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` and `bool` parameters and `i64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions; the `bool` extension is specified by C0 and implemented in a later task;
+- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` and `bool` parameters and `i64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions; source/compiler support for the `bool` extension remains C2 work;
 - on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
 - compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
 - external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;
 - `unit` functions use `return;` or implicit fallthrough, while non-`unit` functions must return a value on every reachable path;
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
-- `ska_rt_println_bool` writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
+- runtime ABI version 3 implements `ska_rt_println_bool`, which writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
 - conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
 - conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
 - a conditional definitely returns only when it has `else` and every arm definitely returns;

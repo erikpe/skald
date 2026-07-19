@@ -41,6 +41,12 @@ static void ska_rt_output_failure(void) {
     _Exit(EXIT_FAILURE);
 }
 
+static void ska_rt_write_stdout_record(const char* record, size_t length) {
+    if (fwrite(record, sizeof(record[0]), length, stdout) != length || fflush(stdout) == EOF) {
+        ska_rt_output_failure();
+    }
+}
+
 uint64_t ska_rt_abi_version(void) {
     return SKALD_RUNTIME_ABI_VERSION;
 }
@@ -49,8 +55,16 @@ void ska_rt_println_i64(int64_t value) {
     char output[SKA_RT_I64_LINE_CAPACITY];
     const size_t output_length = ska_rt_format_i64_line(output, value);
 
-    if (fwrite(output, sizeof(output[0]), output_length, stdout) != output_length ||
-        fflush(stdout) == EOF) {
-        ska_rt_output_failure();
+    ska_rt_write_stdout_record(output, output_length);
+}
+
+void ska_rt_println_bool(bool value) {
+    static const char false_record[] = "false\n";
+    static const char true_record[] = "true\n";
+
+    if (value) {
+        ska_rt_write_stdout_record(true_record, sizeof(true_record) - 1);
+    } else {
+        ska_rt_write_stdout_record(false_record, sizeof(false_record) - 1);
     }
 }

@@ -42,9 +42,10 @@ and syntax, semantics, and implementation interfaces may change as further
 slices are implemented and tested.
 
 C0 specifies the next slice's `bool` type, restricted external ABI extension,
-bootstrap boolean output, and `if` / `elif` / `else` semantics. This is a
-forward contract for C1–C6; the current compiler does not yet accept that new
-source surface.
+bootstrap boolean output, and `if` / `elif` / `else` semantics. C1 implements
+and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. The
+compiler does not yet accept the new boolean source surface; that remains C2
+work.
 
 ## Development
 

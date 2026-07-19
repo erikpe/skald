@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0 complete; C1 is the next implementation task.
+Status: C0–C1 complete; C2 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -129,7 +129,7 @@ void ska_rt_println_bool(bool value);
 It writes exactly `true\n` or `false\n`, using lowercase ASCII and no other
 bytes. Like `ska_rt_println_i64`, it completes and flushes the record before
 returning, and a detected write or flush failure terminates unsuccessfully.
-Adding the public symbol requires a runtime ABI version increment.
+C1 adds the public symbol in runtime ABI version 3.
 
 ### Architectural rules
 
@@ -158,7 +158,7 @@ Adding the public symbol requires a runtime ABI version increment.
 ## 2. Progress Summary
 
 - [x] C0 — Specify boolean and conditional behavior
-- [ ] C1 — Add and directly test the runtime boolean output ABI
+- [x] C1 — Add and directly test the runtime boolean output ABI
 - [ ] C2 — Implement straight-line `bool` values end-to-end
 - [ ] C3 — Add multi-block MIR and control-flow verification
 - [ ] C4 — Lower multi-block control flow on x86-64 System V
@@ -205,18 +205,18 @@ and observable output, without silently expanding the slice.
 **Purpose:** Establish boolean output independently of compiler parsing,
 typing, or code generation.
 
-- [ ] Add `ska_rt_println_bool(bool value)` to the public C runtime header.
-- [ ] Include the standard C boolean type without exposing implementation-only
+- [x] Add `ska_rt_println_bool(bool value)` to the public C runtime header.
+- [x] Include the standard C boolean type without exposing implementation-only
       libc types through the public ABI.
-- [ ] Emit exactly `true\n` or `false\n` and reuse a small common checked-write
+- [x] Emit exactly `true\n` or `false\n` and reuse a small common checked-write
       boundary where that improves clarity without over-generalizing I/O.
-- [ ] Preserve the existing unrecoverable detected-write-failure policy.
-- [ ] Increment `SKALD_RUNTIME_ABI_VERSION`.
-- [ ] Extend the direct C runtime harness with exact output for `false`, `true`,
+- [x] Preserve the existing unrecoverable detected-write-failure policy.
+- [x] Increment `SKALD_RUNTIME_ABI_VERSION`.
+- [x] Extend the direct C runtime harness with exact output for `false`, `true`,
       and consecutive mixed calls.
-- [ ] Verify header/archive ABI-version agreement and unsuccessful termination
+- [x] Verify header/archive ABI-version agreement and unsuccessful termination
       after a forced boolean-output failure.
-- [ ] Update runtime ABI and runtime-test documentation.
+- [x] Update runtime ABI and runtime-test documentation.
 
 **Tests:** `make runtime-test` under C11, `-Wall -Wextra -Werror`, including
 exact captured bytes, consecutive calls, ABI version agreement, and the

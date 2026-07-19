@@ -17,8 +17,13 @@ captures stdout and compares the exact bytes produced by
 `INT64_MIN`, `INT64_MAX`, and consecutive calls. The expected representation
 uses ASCII decimal digits followed by exactly one LF per call.
 
-The harness additionally runs the output function in a child process whose
-stdout descriptor is closed. The child must terminate unsuccessfully, proving
+Runtime ABI version 3 also exposes `ska_rt_println_bool(bool)`. The harness
+checks exact lowercase `false` and `true` records and consecutive mixed calls.
+The public header supplies the standard C `bool` type; runtime implementation
+details such as `FILE *` remain private.
+
+The harness additionally runs each output function in a child process whose
+stdout descriptor is closed. Each child must terminate unsuccessfully, proving
 that a detected write or flush failure cannot be reported as a successful
-Skald runtime operation. Tests write nothing to stdout or stderr when they
-pass and compile under C11 with `-Wall -Wextra -Werror`.
+Skald runtime operation. Tests write nothing to stdout or stderr when they pass
+and compile under C11 with `-Wall -Wextra -Werror`.
