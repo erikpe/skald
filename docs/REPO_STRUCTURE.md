@@ -197,6 +197,8 @@ M3 implements resolution as declaration collection followed by body resolution. 
 
 Each function resolver owns an explicit lexical scope stack. Parameters share the outer function-body scope, nested blocks push scopes, and local initializers are resolved before their binding is introduced. Duplicate and lookup failures produce structured diagnostics with source labels. The precise first-slice rules are recorded in [`grammar/README.md`](../grammar/README.md).
 
+M4 lowers successful resolved input into a distinct typed HIR. The initial semantic type is `i64`; every HIR expression stores its type, primitive operators are explicit typed operations, and calls retain exact checked function IDs. Decimal spelling is converted here, including normalization of the signed `i64::MIN` boundary. Entry-signature, call-arity, expression, initializer, return-value, and mandatory-return checks accumulate diagnostics across the program. HIR is deliberately all-or-nothing: failed type checking returns diagnostics but no executable `HirProgram`, preventing M5 from consuming partial typed state.
+
 ### MIR
 
 MIR is target-independent and executable in shape. It should eventually use explicit basic blocks and terminators even if the earliest vertical slice can be lowered trivially. It owns facts such as:

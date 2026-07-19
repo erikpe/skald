@@ -127,7 +127,7 @@ Progress summary:
 - [x] M1 — Source ownership, diagnostics, and lexing
 - [x] M2 — Parser and AST
 - [x] M3 — Declaration collection and resolution
-- [ ] M4 — Type checking and typed HIR
+- [x] M4 — Type checking and typed HIR
 - [ ] M5 — MIR lowering and verification
 - [ ] M6 — x86-64 System V backend
 - [ ] M7 — Runtime, link driver, and native execution
@@ -177,13 +177,13 @@ Progress summary:
 
 ### M4 — Type checking and typed HIR
 
-- [ ] The sole semantic type `i64`.
-- [ ] Function signature and entry-point validation.
-- [ ] Type checking for literals, locals, calls, return values, and arithmetic.
-- [ ] Explicit typed operation and direct-call nodes in HIR.
-- [ ] Deterministic HIR dump.
+- [x] The sole semantic type `i64`.
+- [x] Function signature and entry-point validation.
+- [x] Type checking for literals, locals, calls, return values, and arithmetic.
+- [x] Explicit typed operation and direct-call nodes in HIR.
+- [x] Deterministic HIR dump.
 
-- [ ] **Exit criterion:** every executable HIR expression has a type and every call has an exact target and checked arity.
+- [x] **Exit criterion:** every executable HIR expression has a type and every call has an exact target and checked arity.
 
 ### M5 — MIR lowering and verification
 

@@ -1,4 +1,4 @@
-//! Deterministic textual rendering of the resolved program.
+//! Deterministic textual rendering of typed HIR.
 
 use std::fmt::Write;
 
@@ -6,17 +6,12 @@ use crate::source::Span;
 
 use super::ir::*;
 
-pub fn dump_resolved(program: &ResolvedProgram) -> String {
-    let mut dumper = ResolvedDumper::default();
-    dumper.line("ResolvedProgram", program.span);
+pub fn dump_hir(program: &HirProgram) -> String {
+    let mut dumper = HirDumper::default();
+    dumper.line("HirProgram", program.span);
     dumper.indented(|dumper| {
         dumper.write_indentation();
-        match program.entry_function {
-            Some(function) => {
-                let _ = writeln!(dumper.output, "Entry {function}");
-            }
-            None => dumper.output.push_str("Entry <none>\n"),
-        }
+        let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
         dumper.heading("Functions");
         dumper.indented(|dumper| {
             for function in program.functions.iter() {
@@ -28,13 +23,13 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
 }
 
 #[derive(Default)]
-struct ResolvedDumper {
+struct HirDumper {
     output: String,
     indentation: usize,
 }
 
-impl ResolvedDumper {
-    fn function(&mut self, function: &ResolvedFunction) {
+impl HirDumper {
+    fn function(&mut self, function: &HirFunction) {
         self.write_indentation();
         let _ = write!(self.output, "Function {} ", function.id);
         write_quoted(&mut self.output, &function.name);
@@ -48,14 +43,14 @@ impl ResolvedDumper {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Parameter {} ", parameter.id);
                     write_quoted(&mut dumper.output, &parameter.name);
+                    let _ = write!(dumper.output, " : {}", parameter.ty.name());
                     write_span(&mut dumper.output, parameter.span);
                     dumper.output.push('\n');
-                    dumper.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
                 }
             });
 
-            dumper.heading("ReturnType");
-            dumper.indented(|dumper| dumper.type_syntax(&function.return_type));
+            dumper.write_indentation();
+            let _ = writeln!(dumper.output, "ReturnType {}", function.return_type.name());
 
             dumper.heading("Locals");
             dumper.indented(|dumper| {
@@ -63,9 +58,9 @@ impl ResolvedDumper {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Local {} ", local.id);
                     write_quoted(&mut dumper.output, &local.name);
+                    let _ = write!(dumper.output, " : {}", local.ty.name());
                     write_span(&mut dumper.output, local.span);
                     dumper.output.push('\n');
-                    dumper.indented(|dumper| dumper.type_syntax(&local.type_syntax));
                 }
             });
 
@@ -73,14 +68,7 @@ impl ResolvedDumper {
         });
     }
 
-    fn type_syntax(&mut self, type_syntax: &ResolvedType) {
-        let name = match type_syntax.kind {
-            ResolvedTypeKind::I64 => "I64",
-        };
-        self.line(&format!("Type {name}"), type_syntax.span);
-    }
-
-    fn block(&mut self, block: &ResolvedBlock) {
+    fn block(&mut self, block: &HirBlock) {
         self.line("Block", block.span);
         self.indented(|dumper| {
             for statement in &block.statements {
@@ -89,64 +77,74 @@ impl ResolvedDumper {
         });
     }
 
-    fn statement(&mut self, statement: &ResolvedStatement) {
+    fn statement(&mut self, statement: &HirStatement) {
         match statement {
-            ResolvedStatement::Local(local) => {
+            HirStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| dumper.expression(&local.initializer));
             }
-            ResolvedStatement::Return(statement) => {
+            HirStatement::Return(statement) => {
                 self.line("Return", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.value));
             }
-            ResolvedStatement::Block(block) => self.block(block),
+            HirStatement::Block(block) => self.block(block),
         }
     }
 
-    fn expression(&mut self, expression: &ResolvedExpression) {
-        match expression {
-            ResolvedExpression::Binding(binding) => {
-                self.line(&format!("Binding {}", binding.binding), binding.span);
+    fn expression(&mut self, expression: &HirExpression) {
+        match &expression.kind {
+            HirExpressionKind::Binding(binding) => {
+                self.typed_line(&format!("Binding {binding}"), expression);
             }
-            ResolvedExpression::Integer(integer) => {
-                self.write_indentation();
-                self.output.push_str("Integer ");
-                write_quoted(&mut self.output, &integer.spelling);
-                write_span(&mut self.output, integer.span);
-                self.output.push('\n');
+            HirExpressionKind::Integer(value) => {
+                self.typed_line(&format!("Integer {value}"), expression);
             }
-            ResolvedExpression::Unary(unary) => {
-                let operator = match unary.operator {
-                    ResolvedUnaryOperator::Negate => "Negate",
+            HirExpressionKind::Unary { operation, operand } => {
+                let operation = match operation {
+                    HirUnaryOperation::NegateI64 => "NegateI64",
                 };
-                self.line(&format!("Unary {operator}"), unary.span);
-                self.indented(|dumper| dumper.expression(&unary.operand));
+                self.typed_line(&format!("Unary {operation}"), expression);
+                self.indented(|dumper| dumper.expression(operand));
             }
-            ResolvedExpression::Binary(binary) => {
-                let operator = match binary.operator {
-                    ResolvedBinaryOperator::Add => "Add",
-                    ResolvedBinaryOperator::Subtract => "Subtract",
-                    ResolvedBinaryOperator::Multiply => "Multiply",
+            HirExpressionKind::Binary {
+                operation,
+                left,
+                right,
+            } => {
+                let operation = match operation {
+                    HirBinaryOperation::AddI64 => "AddI64",
+                    HirBinaryOperation::SubtractI64 => "SubtractI64",
+                    HirBinaryOperation::MultiplyI64 => "MultiplyI64",
                 };
-                self.line(&format!("Binary {operator}"), binary.span);
+                self.typed_line(&format!("Binary {operation}"), expression);
                 self.indented(|dumper| {
-                    dumper.expression(&binary.left);
-                    dumper.expression(&binary.right);
+                    dumper.expression(left);
+                    dumper.expression(right);
                 });
             }
-            ResolvedExpression::DirectCall(call) => {
-                self.line(&format!("DirectCall {}", call.function), call.span);
+            HirExpressionKind::DirectCall {
+                function,
+                arguments,
+            } => {
+                self.typed_line(&format!("DirectCall {function}"), expression);
                 self.indented(|dumper| {
-                    for argument in &call.arguments {
+                    for argument in arguments {
                         dumper.expression(argument);
                     }
                 });
             }
-            ResolvedExpression::Grouped(grouped) => {
-                self.line("Grouped", grouped.span);
-                self.indented(|dumper| dumper.expression(&grouped.expression));
+            HirExpressionKind::Grouped(inner) => {
+                self.typed_line("Grouped", expression);
+                self.indented(|dumper| dumper.expression(inner));
             }
         }
+    }
+
+    fn typed_line(&mut self, name: &str, expression: &HirExpression) {
+        self.write_indentation();
+        let _ = write!(self.output, "{name} : {}", expression.ty.name());
+        write_span(&mut self.output, expression.span);
+        self.output.push('\n');
     }
 
     fn heading(&mut self, name: &str) {

@@ -1,5 +1,7 @@
 //! Name-resolved, but not yet type-checked, program representation.
 
+use std::fmt;
+
 use crate::source::Span;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -12,6 +14,12 @@ impl FunctionId {
 
     pub(crate) const fn new(index: usize) -> Self {
         Self(index)
+    }
+}
+
+impl fmt::Display for FunctionId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "f{}", self.index())
     }
 }
 
@@ -35,6 +43,12 @@ impl ParameterId {
     }
 }
 
+impl fmt::Display for ParameterId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}:p{}", self.function(), self.index())
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LocalId {
     function: FunctionId,
@@ -55,6 +69,12 @@ impl LocalId {
     }
 }
 
+impl fmt::Display for LocalId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}:l{}", self.function(), self.index())
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BindingId {
     Parameter(ParameterId),
@@ -66,6 +86,15 @@ impl BindingId {
         match self {
             Self::Parameter(id) => id.function(),
             Self::Local(id) => id.function(),
+        }
+    }
+}
+
+impl fmt::Display for BindingId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Parameter(id) => id.fmt(formatter),
+            Self::Local(id) => id.fmt(formatter),
         }
     }
 }

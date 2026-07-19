@@ -86,3 +86,22 @@ Name visibility follows these rules:
 - a local binding shadows a function name, including at a call site.
 
 The first slice has no function values. A bare function name is therefore invalid as a value. A direct-call target must be an unparenthesized identifier that resolves to a function; calling a local, calling an unknown name, or calling another expression form is diagnosed. Resolution returns a partial resolved program with accumulated diagnostics, but later semantic phases must not run when resolution reports errors.
+
+## First vertical slice type checking
+
+M4 has one semantic type, `i64`. Every function parameter, local, return value, literal, binding expression, call, grouped expression, and arithmetic expression has that type. Local initializers and return expressions must match their declarations, unary `-` requires `i64`, and binary `+`, `-`, and `*` require two `i64` operands and produce `i64`. The typed HIR records these choices as `NegateI64`, `AddI64`, `SubtractI64`, and `MultiplyI64` operations rather than carrying unresolved source operators forward.
+
+Every direct call is checked against the already resolved function ID. Its argument count must exactly match the target's parameter count, argument types are checked positionally, and the HIR call retains the same exact function ID. Argument and operand evaluation order remains a later MIR concern; M4 preserves source order in its vectors and expression tree.
+
+Decimal literals are converted during M4:
+
+- `0` through `9223372036854775807` are valid positive `i64` values;
+- unary minus may directly enclose, with optional grouping parentheses, the magnitude `9223372036854775808`, producing `-9223372036854775808` (`i64::MIN`);
+- that magnitude is invalid without the enclosing unary minus;
+- larger positive or negative magnitudes are diagnosed as out of range.
+
+This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
+
+Every first-slice function returns `i64` and must contain an unconditional return. Because M4 has no conditional control flow, a return in an unconditionally executed nested block also satisfies this requirement. The entry candidate selected by M3 must exist and have the exact signature `fn main() -> i64`.
+
+Type checking accumulates diagnostics across functions but emits an executable `HirProgram` only when the entire resolved program succeeds. Consequently, every expression in an available HIR program has a concrete type, every operation is selected, every call has a checked arity and exact target, and the entry function is valid.
