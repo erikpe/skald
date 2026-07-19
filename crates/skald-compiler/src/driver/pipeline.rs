@@ -7,6 +7,7 @@ use crate::{
     diagnostics::Diagnostics,
     lexer::lex,
     mir::lower_hir,
+    passes::run_mir_pipeline,
     resolve::resolve,
     source::SourceDatabase,
     syntax::parse,
@@ -28,6 +29,7 @@ pub struct AssemblyArtifact {
 #[derive(Debug)]
 pub enum CompilationError {
     Diagnostics(CompilationReport),
+    MirVerification(crate::mir::MirVerificationErrors),
     Backend(BackendError),
 }
 
@@ -71,7 +73,7 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    let mir = lower_hir(&hir);
+    let mir = run_mir_pipeline(lower_hir(&hir)).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {
@@ -124,5 +126,44 @@ mod tests {
         let rendered = render_diagnostics(&report.sources, &report.diagnostics);
         assert!(rendered.contains("error[LEX001]: unexpected character `@`"));
         assert!(!rendered.contains("PAR"));
+    }
+
+    #[test]
+    fn malformed_first_slice_sources_never_panic() {
+        let valid = "fn main() -> i64 { var value: i64 = 1; return value + 2; }";
+        let mut malformed: Vec<&str> = valid
+            .char_indices()
+            .map(|(offset, _)| &valid[..offset])
+            .collect();
+        malformed.extend([
+            "@",
+            "fn",
+            "fn main(",
+            "fn main() -> i64 { return ; }",
+            "fn main() -> i64 { var x: i64 = ; return 0; }",
+            "fn main() -> i64 { (((((((; }",
+            "fn main() -> i64 { return 12abc; }",
+            "fn main() -> i64 { if 1 { return 0; } }",
+            "fn main() -> bool { return 0; }",
+            "fn main() -> i64 { return unknown(1, 2); }",
+        ]);
+
+        for (index, source) in malformed.into_iter().enumerate() {
+            let result = std::panic::catch_unwind(|| {
+                compile_source_to_assembly(
+                    format!("malformed-{index}.ska"),
+                    source,
+                    Target::X86_64SysV,
+                )
+            });
+            assert!(
+                result.is_ok(),
+                "compiler panicked for malformed input {source:?}"
+            );
+            assert!(
+                matches!(result.unwrap(), Err(CompilationError::Diagnostics(_))),
+                "malformed input did not produce source diagnostics: {source:?}"
+            );
+        }
     }
 }

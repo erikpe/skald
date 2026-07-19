@@ -1,0 +1,5 @@
+error[RES003]: unknown name `absent`
+ --> tests/golden/compile_fail/unknown_local.ska:2:12
+   |
+2 |     return absent;
+   |            ^^^^^^ not declared in this scope

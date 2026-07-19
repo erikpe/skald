@@ -1,0 +1,5 @@
+error[PAR003]: expected a statement
+ --> tests/golden/compile_fail/unsupported_construct.ska:2:5
+   |
+2 |     if 1 {
+   |     ^^ expected `var`, `return`, or a nested block

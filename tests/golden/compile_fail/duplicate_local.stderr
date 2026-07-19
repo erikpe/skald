@@ -1,0 +1,8 @@
+error[RES002]: duplicate local binding `value`
+ --> tests/golden/compile_fail/duplicate_local.ska:3:9
+   |
+3 |     var value: i64 = 2;
+   |         ^^^^^ redeclared here
+   |
+2 |     var value: i64 = 1;
+   |         ----- first declared here

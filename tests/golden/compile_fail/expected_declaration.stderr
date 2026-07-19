@@ -1,0 +1,5 @@
+error[PAR001]: expected a function declaration
+ --> tests/golden/compile_fail/expected_declaration.ska:1:1
+   |
+1 | var value: i64 = 1;
+   | ^^^ expected `fn` at file scope

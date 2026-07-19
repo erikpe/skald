@@ -1,0 +1,8 @@
+error[RES004]: binding `value` is not callable
+ --> tests/golden/compile_fail/invalid_call_target.ska:3:12
+   |
+3 |     return value();
+   |            ^^^^^ called here
+   |
+2 |     var value: i64 = 1;
+   |         ----- binding declared here

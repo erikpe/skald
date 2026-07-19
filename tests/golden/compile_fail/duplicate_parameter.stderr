@@ -1,0 +1,8 @@
+error[RES002]: duplicate parameter `value`
+ --> tests/golden/compile_fail/duplicate_parameter.ska:1:23
+   |
+1 | fn helper(value: i64, value: i64) -> i64 {
+   |                       ^^^^^ redeclared here
+   |
+1 | fn helper(value: i64, value: i64) -> i64 {
+   |           ----- first declared here

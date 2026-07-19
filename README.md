@@ -30,7 +30,7 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 ## Status
 
-Skald is currently an exploratory language design. Milestones M0 through M7 are implemented: the stage-0 compiler now accepts the first-slice language subset, emits x86-64 System V assembly, links it with the minimal runtime, and produces native executables. Vertical-slice hardening and later language features remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
+Skald is currently an exploratory language design. Milestones M0 through M8 are implemented, completing the first vertical slice: the stage-0 compiler accepts the documented subset, emits deterministic x86-64 System V assembly, links it with the minimal runtime, produces native executables, and has source-to-process and exact compile-failure golden coverage. Later language features remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as further slices are implemented and tested.
 
 ## Development
 
@@ -74,6 +74,8 @@ In the current development checkout, the Niflheim repository is available as the
 - [Skald draft language specification](docs/SKALD_DRAFT_SPEC.md) — the canonical description of the language design.
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md) — design principles, phase boundaries, backend layout, runtime boundary, and testing structure.
 - [First vertical slice roadmap](docs/FIRST_VERTICAL_SLICE_ROADMAP.md) — the minimal end-to-end implementation plan and completion criteria.
+- [Compiler debugging artifacts](docs/DEBUGGING.md) — deterministic phase dumps, assembly inspection, and verifier boundaries.
+- [Next-slice boundaries](docs/NEXT_SLICE_BOUNDARIES.md) — responsibilities and extension rules that future language work should preserve.
 - [Niflheim language specification](../niflheim/docs/LANGUAGE_MVP_SPEC_V0.1.md) — historical background for the language from which the first Skald draft was derived.
 
 Skald documentation takes precedence whenever its behavior differs from Niflheim.

@@ -1,0 +1,6 @@
+error[TYP003]: integer literal `9223372036854775808` is out of range for `i64`
+ --> tests/golden/compile_fail/integer_out_of_range.ska:2:12
+   |
+2 |     return 9223372036854775808;
+   |            ^^^^^^^^^^^^^^^^^^^ value is not representable as `i64`
+  = note: the inclusive `i64` range is -9223372036854775808 through 9223372036854775807

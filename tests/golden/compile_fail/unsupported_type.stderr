@@ -1,0 +1,5 @@
+error[PAR002]: expected a return type after `->`
+ --> tests/golden/compile_fail/unsupported_type.ska:1:14
+   |
+1 | fn main() -> bool {
+   |              ^^^^ the first vertical slice supports only `i64`

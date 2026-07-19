@@ -1,0 +1,5 @@
+error[LEX001]: unexpected character `@`
+ --> tests/golden/compile_fail/invalid_token.ska:2:12
+   |
+2 |     return @;
+   |            ^ not valid in the M1 grammar

@@ -136,6 +136,10 @@ fn compile<Stderr: Write>(
             writeln!(stderr, "skac: internal {error}")?;
             return Ok(EXIT_COMPILE_ERROR);
         }
+        Err(CompilationError::MirVerification(errors)) => {
+            writeln!(stderr, "skac: internal MIR verification failed:\n{errors}")?;
+            return Ok(EXIT_COMPILE_ERROR);
+        }
     };
 
     if !artifact.report.diagnostics.is_empty() {

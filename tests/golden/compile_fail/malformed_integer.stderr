@@ -1,0 +1,6 @@
+error[LEX002]: malformed decimal integer literal `12abc`
+ --> tests/golden/compile_fail/malformed_integer.ska:2:12
+   |
+2 |     return 12abc;
+   |            ^^^^^ expected decimal digits only
+  = note: integer range checking occurs during type checking

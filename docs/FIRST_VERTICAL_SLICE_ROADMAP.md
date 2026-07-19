@@ -1,6 +1,6 @@
 # First Vertical Slice Roadmap
 
-Status: active implementation roadmap.
+Status: completed implementation record.
 
 The first vertical slice proves that the complete Skald toolchain can translate one source file into an observable native Linux program. Its purpose is to validate architecture and interfaces, not to approximate the full language prematurely.
 
@@ -131,7 +131,7 @@ Progress summary:
 - [x] M5 — MIR lowering and verification
 - [x] M6 — x86-64 System V backend
 - [x] M7 — Runtime, link driver, and native execution
-- [ ] M8 — Vertical-slice hardening
+- [x] M8 — Vertical-slice hardening
 
 ### M0 — Repository and quality baseline
 
@@ -221,14 +221,14 @@ The simplest correct register strategy is acceptable initially, including stack-
 
 ### M8 — Vertical-slice hardening
 
-- [ ] Compile-failure golden cases for every supported syntactic and semantic category.
-- [ ] Deterministic output checked across repeated runs.
-- [ ] No Rust panic for malformed source in the supported grammar surface.
-- [ ] MIR verifier run in tests and appropriate debug/development paths.
-- [ ] Architecture documentation reconciled with implementation.
-- [ ] A clean boundary list for the next language slice.
+- [x] Compile-failure golden cases for every supported syntactic and semantic category.
+- [x] Deterministic output checked across repeated runs.
+- [x] No Rust panic for malformed source in the supported grammar surface.
+- [x] MIR verifier run in tests and appropriate debug/development paths.
+- [x] Architecture documentation reconciled with implementation.
+- [x] A clean boundary list for the next language slice.
 
-- [ ] **Exit criterion:** all compiler, runtime, and golden suites pass from a clean checkout using documented commands.
+- [x] **Exit criterion:** all compiler, runtime, and golden suites pass from a clean checkout using documented commands.
 
 ## 6. Test Matrix for the Slice
 
@@ -244,14 +244,14 @@ Minimum successful golden cases:
 
 Minimum compile-failure cases:
 
-- [ ] Invalid token and malformed integer literal.
-- [ ] Missing semicolon, delimiter, or return expression.
-- [ ] Duplicate function, parameter, or local name where prohibited.
-- [ ] Unknown local or function.
-- [ ] Wrong call arity.
-- [ ] Unsupported type.
-- [ ] Missing or invalid `main`.
-- [ ] Unsupported language construct with a clear diagnostic.
+- [x] Invalid token and malformed integer literal.
+- [x] Missing semicolon, delimiter, or return expression.
+- [x] Duplicate function, parameter, or local name where prohibited.
+- [x] Unknown local or function.
+- [x] Wrong call arity.
+- [x] Unsupported type.
+- [x] Missing or invalid `main`.
+- [x] Unsupported language construct with a clear diagnostic.
 
 Minimum backend/runtime checks:
 
@@ -271,8 +271,8 @@ The vertical slice is not complete merely because one program runs. Completion r
 - [x] Runtime C build and runtime ABI smoke test are available and currently pass.
 - [x] Golden suite passes on Linux x86-64.
 - [x] `git diff --check` currently passes.
-- [ ] Documented phase dumps are usable for debugging.
-- [ ] No known phase-boundary shortcut remains that later work must immediately undo.
+- [x] Documented phase dumps are usable for debugging.
+- [x] No known phase-boundary shortcut remains that later work must immediately undo.
 
 Compile-time performance should be measured once a meaningful corpus exists. The first slice should avoid obviously expensive architecture—especially repeated whole-program scans and repeated string-based lookup—but should not build caching or incremental compilation before measurements justify it.
 

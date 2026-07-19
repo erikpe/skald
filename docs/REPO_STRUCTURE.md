@@ -1,8 +1,8 @@
 # Repository Structure and Compiler Architecture
 
-Status: initial architecture direction.
+Status: implemented first-vertical-slice architecture and forward design contract.
 
-This document defines the intended structure of the stage-0 Skald compiler repository. It is an architectural contract rather than a claim that every listed component is already implemented.
+This document describes the implemented structure of the stage-0 Skald compiler repository and records the architectural contract for extending it. Future-facing components are identified explicitly rather than implied to exist.
 
 ## 1. Design Principles
 
@@ -142,7 +142,7 @@ These commands are convenience entry points, not replacements for Cargo or the r
 
 ## 4. Compiler Pipeline
 
-The intended baseline pipeline is:
+The implemented first-slice pipeline is:
 
 ```text
 compilation request
@@ -152,7 +152,7 @@ compilation request
     → resolved program
     → typed HIR
     → target-independent MIR
-    → MIR verification and passes
+    → explicit MIR verification/pass pipeline
     → target backend lowering
     → target machine/assembly model
     → textual assembly
@@ -160,7 +160,7 @@ compilation request
     → Linux executable
 ```
 
-Each arrow is an explicit API boundary. Initial implementations may combine a small amount of orchestration, but they should not erase these conceptual products.
+Each arrow is an explicit API boundary. The driver composes them through `compile_source_to_assembly`; phase implementations remain independently callable and do not depend on the driver.
 
 | Phase | Primary input | Primary output | Must establish |
 |---|---|---|---|
@@ -202,7 +202,7 @@ M4 lowers successful resolved input into a distinct typed HIR. The initial seman
 
 ### MIR
 
-MIR is target-independent and executable in shape. It should eventually use explicit basic blocks and terminators even if the earliest vertical slice can be lowered trivially. It owns facts such as:
+MIR is target-independent and executable in shape. It uses explicit basic blocks and terminators even though the first slice lowers only straight-line functions. It owns facts such as:
 
 - exact evaluation order;
 - explicit temporaries and local identities;
@@ -225,9 +225,9 @@ The MIR verifier is a separate public boundary and checks tables, ID ownership, 
 
 ### Passes and verification
 
-Each IR has a deterministic textual dump suitable for tests. MIR should have a verifier that checks IDs, block termination, operand types, call signatures, and target-independent invariants.
+Each implemented IR has a deterministic textual dump suitable for tests. The public renderers and focused debugging workflow are indexed in [`DEBUGGING.md`](DEBUGGING.md). MIR has a verifier that checks IDs, block termination, operand types, call signatures, and target-independent invariants.
 
-Passes declare what analyses they require or invalidate. The pass pipeline is assembled in one visible location. Correctness must never depend on an optimization pass having run.
+The explicit MIR pass pipeline currently performs unconditional verification and no transformations. Future passes must declare what analyses they require or invalidate, and their ordering belongs at this visible boundary. Correctness must never depend on an optimization pass having run.
 
 ## 5. Backend Structure
 
@@ -299,7 +299,7 @@ Small C harnesses compile directly against runtime sources or the archive. This 
 
 Golden cases exercise the complete public behavior. A case may specify expected diagnostics, assembly fragments, process exit status, or a combination. Test metadata should use repository-relative paths and avoid unstable absolute filenames or incidental temporary labels.
 
-M7 provides a deliberately small Rust native runner. It discovers `.ska` files under `tests/golden/run/`, reads the expected process status from a matching `.exit` sidecar, builds the runtime archive, invokes the public `skac` binary, executes the result, and reports every case before returning failure. It covers constants, unary arithmetic, local storage, direct and nested calls, register arguments, and the first stack-passed argument. `make golden-test` runs this suite directly; it is also part of the workspace test suite.
+M7 provides a deliberately small Rust native runner. It discovers `.ska` files under `tests/golden/run/`, reads the expected process status from a matching `.exit` sidecar, builds the runtime archive, invokes the public `skac` binary, executes the result, and reports every case before returning failure. M8 extends the same runner with `tests/golden/compile_fail/` and exact `.stderr` snapshots. Successful assembly and failed diagnostics are each produced twice in independent compiler processes and compared for determinism. `make golden-test` runs this suite directly; it is also part of the workspace test suite.
 
 Every implemented language feature should normally receive:
 
@@ -331,4 +331,4 @@ This diagram describes allowed knowledge, not necessarily Rust crate dependencie
 
 The first vertical slice should not introduce infrastructure merely because a mature compiler might eventually need it. In particular, it does not need parallel compilation, incremental queries, a general optimization manager, SSA, object-file writing, a package manager, or a large runtime.
 
-It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The concrete first-slice scope and milestones are defined in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md).
+It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The completed first-slice scope and milestones are recorded in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md), and the extension contract for the next slice is listed in [NEXT_SLICE_BOUNDARIES.md](NEXT_SLICE_BOUNDARIES.md).
