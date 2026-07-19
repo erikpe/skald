@@ -1,0 +1,270 @@
+# First Vertical Slice Roadmap
+
+Status: proposed implementation roadmap.
+
+The first vertical slice proves that the complete Skald toolchain can translate one source file into an observable native Linux program. Its purpose is to validate architecture and interfaces, not to approximate the full language prematurely.
+
+## 1. Completion Demonstration
+
+The slice is complete when this kind of program can be compiled, linked, and observed through its process exit status:
+
+```ska
+fn twice(value: i64) -> i64 {
+    return value * 2;
+}
+
+fn main() -> i64 {
+    var result: i64 = twice(20);
+    return result + 2;
+}
+```
+
+The expected observable result is exit status `42` on Linux.
+
+The end-to-end path must be the real intended path:
+
+```text
+.ska source
+  → lexer
+  → parser
+  → resolution
+  → type checking and typed HIR
+  → MIR
+  → x86-64 SysV backend
+  → textual assembly
+  → system assembler/linker + Skald C runtime
+  → executable
+  → exit status
+```
+
+No phase may be bypassed with hard-coded assembly for the demonstration program.
+
+## 2. Language Subset
+
+### Included
+
+- one UTF-8 source file with the canonical `.ska` suffix;
+- top-level functions defined in that file;
+- one primitive type: `i64`;
+- function parameters passed by value;
+- local `var` declarations with mandatory initializers;
+- decimal `i64` literals;
+- local references;
+- direct calls to functions in the same file;
+- `return` statements;
+- parentheses;
+- unary negation and binary `+`, `-`, and `*` over `i64`;
+- semicolon-terminated declarations and statements where required by the language syntax;
+- an entry function with exact signature `fn main() -> i64`.
+
+In this roadmap, “local functions” means functions defined in the same single-file compilation unit. Nested function declarations are not included.
+
+### Explicitly excluded
+
+- additional source files, modules, imports, or exports;
+- external functions or foreign calls;
+- classes, methods, `init`, `assign`, and `destroy`;
+- `shared`, alias parameters, object lifetime operations, or heap allocation;
+- every primitive type other than `i64`;
+- optionals and arrays;
+- strings, standard-library facilities, input, or printed output;
+- conditionals, loops, `break`, and `continue`;
+- checked exceptions and panic handling;
+- function values, closures, interfaces, inheritance, and virtual dispatch;
+- global or static variables;
+- casts, type tests, indexing, and slicing;
+- user-selectable optimization levels;
+- AArch64 code generation.
+
+Unsupported syntax must produce a diagnostic or be rejected by the grammar. It must not be silently accepted with placeholder semantics.
+
+### Deliberately narrow semantic edge cases
+
+The vertical slice tests use arithmetic whose mathematical result is representable by `i64`. Full overflow, division, and remainder behavior are specification gaps and are not silently settled by this roadmap. Division and remainder are excluded from the slice.
+
+Function arguments and expression operands should be lowered in a deterministic documented order from the start. The initial implementation should use left-to-right evaluation so calls introduced into expressions do not later expose accidental backend ordering.
+
+## 3. Entry Point and Observable Behavior
+
+The source program must define exactly one valid `main` function:
+
+```ska
+fn main() -> i64
+```
+
+It takes no parameters. Missing, duplicate, parameterized, or incorrectly typed entry functions are compile-time errors.
+
+The generated executable returns the result of Skald `main` to the Linux process environment. Shell-visible exit status is limited by Linux/POSIX process conventions, so golden execution cases should use expected results in `0..=255`. The Skald function still computes an `i64`; narrowing at the process boundary is an entry-wrapper/toolchain concern and must be documented by the initial ABI implementation.
+
+There is no source-level input or output in this slice. Compiler diagnostics use stderr, but compiled Skald programs communicate only through exit status.
+
+## 4. Initial CLI Contract
+
+The desired user-facing commands are:
+
+```text
+skac input.ska --emit asm -o build/input.s
+skac input.ska -o build/input
+```
+
+The assembly-only form stops after deterministic textual assembly emission. The executable form emits assembly and then invokes the host C compiler driver to assemble and link it with `libskald_runtime.a`.
+
+Initial constraints:
+
+- host and target are Linux x86-64 System V;
+- the system C compiler driver is used as assembler/linker frontend;
+- subprocess failures are reported clearly, including which tool failed;
+- normal diagnostics do not include unstable absolute paths when a repository-relative path is available;
+- `--help` and `--version` work independently of compilation.
+
+## 5. Milestones
+
+Each milestone ends with tests and a deterministic dump or artifact. Later milestones consume the public output of earlier ones.
+
+### M0 — Repository and quality baseline
+
+- Cargo workspace with thin `skac` binary and `skald-compiler` library;
+- explicit phase modules matching the architecture document;
+- minimal buildable C runtime archive;
+- compiler, runtime, and golden test categories;
+- formatting, lint, and test commands documented;
+- no third-party Rust dependencies until a concrete need appears.
+
+Exit criterion: the Rust workspace checks, the C runtime builds, and repository structure matches its documentation.
+
+### M1 — Source ownership, diagnostics, and lexing
+
+- source IDs, byte ranges, line maps, and spans;
+- structured diagnostics with stable plain-text rendering;
+- tokens for the included subset;
+- decimal `i64` literal scanning with malformed-literal diagnostics;
+- deterministic token dump.
+
+Exit criterion: lexer unit tests cover valid tokens, whitespace/comments selected by the grammar, invalid characters, malformed literals, and accurate spans.
+
+### M2 — Parser and AST
+
+- source AST for functions, parameters, blocks, local declarations, returns, calls, and included expressions;
+- explicit precedence and associativity for unary negation and `+`, `-`, `*`;
+- recovery sufficient to report more than one independent syntax error when practical;
+- deterministic AST dump.
+
+Exit criterion: parser tests cover the demonstration program, precedence, malformed declarations, missing punctuation, and recovery without semantic lookup.
+
+### M3 — Declaration collection and resolution
+
+- stable function, parameter, and local IDs;
+- single-file function table;
+- lexical local scopes;
+- duplicate declaration, unknown name, and invalid call-target diagnostics;
+- direct calls resolved to function IDs.
+
+Exit criterion: later phases never resolve source strings to choose declarations.
+
+### M4 — Type checking and typed HIR
+
+- the sole semantic type `i64`;
+- function signature and entry-point validation;
+- type checking for literals, locals, calls, return values, and arithmetic;
+- explicit typed operation and direct-call nodes in HIR;
+- deterministic HIR dump.
+
+Exit criterion: every executable HIR expression has a type and every call has an exact target and checked arity.
+
+### M5 — MIR lowering and verification
+
+- explicit function bodies, local storage/value IDs, calls, arithmetic, and returns;
+- deterministic left-to-right evaluation;
+- basic blocks and terminators, even though the slice has no conditional branch;
+- MIR verifier for ownership of IDs, operand types, call signatures, and terminated blocks;
+- deterministic MIR dump.
+
+Exit criterion: no source-name lookup or AST traversal is required below MIR lowering.
+
+### M6 — x86-64 System V backend
+
+- target registry with `x86_64-sysv` as the only accepted target;
+- integer argument and return lowering for the required arities;
+- stack-frame layout for parameters, locals, calls, and temporaries;
+- instruction selection for literals, copies, calls, negation, addition, subtraction, and multiplication;
+- correct stack alignment and callee-saved register behavior;
+- deterministic GNU-compatible textual assembly;
+- target legality checks that reject unsupported MIR rather than miscompile it.
+
+The simplest correct register strategy is acceptable initially, including stack-heavy code. Register allocation is an isolated backend concern and can improve later without changing MIR.
+
+Exit criterion: assembly-shape tests cover ABI edges and generated assembly can be assembled successfully.
+
+### M7 — Runtime, link driver, and native execution
+
+- versioned minimal runtime ABI and static archive;
+- generated or linked entry-point boundary for `fn main() -> i64`;
+- driver support for assembly-only and executable output;
+- robust host tool invocation and failure reporting;
+- native golden runner recording process exit status.
+
+Exit criterion: the demonstration program and several function/call/arithmetic variants produce their expected exit statuses.
+
+### M8 — Vertical-slice hardening
+
+- compile-failure golden cases for every supported syntactic and semantic category;
+- deterministic output checked across repeated runs;
+- no Rust panic for malformed source in the supported grammar surface;
+- MIR verifier run in tests and appropriate debug/development paths;
+- architecture documentation reconciled with implementation;
+- a clean boundary list for the next language slice.
+
+Exit criterion: all compiler, runtime, and golden suites pass from a clean checkout using documented commands.
+
+## 6. Test Matrix for the Slice
+
+Minimum successful golden cases:
+
+- constant exit value;
+- unary negative value routed through in-range arithmetic to a nonnegative exit status;
+- local initialization and return;
+- one direct function call;
+- multiple parameters within register-passed SysV arguments;
+- a call result used by another arithmetic expression;
+- nested calls that validate evaluation and temporary handling.
+
+Minimum compile-failure cases:
+
+- invalid token and malformed integer literal;
+- missing semicolon, delimiter, or return expression;
+- duplicate function, parameter, or local name where prohibited;
+- unknown local or function;
+- wrong call arity;
+- unsupported type;
+- missing or invalid `main`;
+- unsupported language construct with a clear diagnostic.
+
+Minimum backend/runtime checks:
+
+- assembly accepted by the system toolchain;
+- runtime archive builds with warnings treated as errors;
+- stack alignment across a nested call;
+- exit status propagation for representative values;
+- toolchain failure produces a driver error rather than a compiler panic.
+
+## 7. Quality Gates
+
+The vertical slice is not complete merely because one program runs. Completion requires:
+
+- `cargo fmt --check`;
+- `cargo clippy --workspace --all-targets` with no warnings selected as denied by repository policy;
+- `cargo test --workspace`;
+- runtime C build and runtime tests;
+- golden suite on Linux x86-64;
+- `git diff --check`;
+- documented phase dumps usable for debugging;
+- no known phase-boundary shortcut that later work must immediately undo.
+
+Compile-time performance should be measured once a meaningful corpus exists. The first slice should avoid obviously expensive architecture—especially repeated whole-program scans and repeated string-based lookup—but should not build caching or incremental compilation before measurements justify it.
+
+## 8. Immediately Following the Slice
+
+The next feature slice should be selected from demonstrated architectural needs rather than from a desire to maximize syntax quickly. Plausible next steps include `bool` and `if`, broader primitive arithmetic, additional statements, or the first deterministic inline object. Arrays, optionals, loops/iterators, and checked exceptions remain explicitly deferred in the language specification.
+
+AArch64 should follow after the target interface and MIR have survived enough x86-64 work to expose their real boundaries. Its implementation is an architectural test: semantic phases should remain unchanged, while ABI lowering, instruction selection, frame/register planning, and assembly emission are supplied by the new backend.
+

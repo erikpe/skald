@@ -1,0 +1,289 @@
+# Repository Structure and Compiler Architecture
+
+Status: initial architecture direction.
+
+This document defines the intended structure of the stage-0 Skald compiler repository. It is an architectural contract rather than a claim that every listed component is already implemented.
+
+## 1. Design Principles
+
+The initial `skac` compiler is written in Rust and targets Linux. Its design should optimize first for clarity, maintainability, and extension rather than cleverness or premature optimization.
+
+The following principles guide the implementation:
+
+1. **A visible pipeline.** Compilation is a sequence of named phases with explicit inputs, outputs, and invariants. The driver orchestrates phases but does not absorb their logic.
+2. **One semantic authority per phase.** Tokens own lexical facts, syntax owns source structure, resolution owns symbol identity, typed HIR owns language-level type facts, and MIR owns executable evaluation and cleanup order.
+3. **Forward-only dependencies.** A later phase may depend on the output model of an earlier phase. Earlier phases must not depend on later phases, and backends must not inspect AST or type-checker internals.
+4. **Data across boundaries.** Phase interfaces should primarily exchange explicit, inspectable data structures rather than callbacks into mutable phase state.
+5. **No hidden global compilation state.** Source files, diagnostics, target selection, options, interning, and caches belong to an explicit compilation session or request.
+6. **Stable identities after resolution.** Later phases refer to declarations, locals, blocks, and values through typed IDs rather than source names or object identity.
+7. **Diagnostics survive lowering.** Source spans and useful origin information remain available as syntax becomes progressively less source-shaped.
+8. **Deterministic output.** Diagnostics, IR dumps, symbol ordering, generated labels, and assembly should be stable across runs.
+9. **Verify phase invariants.** Important IR boundaries have inexpensive verifier passes. Invalid compiler state is caught close to the phase that produced it.
+10. **User errors are not panics.** Invalid Skald programs produce structured diagnostics. Rust panics indicate compiler defects or violated internal invariants.
+11. **Optimization is explicit.** Analysis and transformation passes live in named pipelines. They are not hidden inside parsing, type checking, or assembly emission.
+12. **Keep the runtime small.** Skald has no garbage collector. The C runtime should contain only facilities that cannot reasonably or safely live in generated code or the future Skald standard library.
+13. **Keep targets isolated.** Target ABI rules, instruction selection, register and frame planning, and assembly syntax stay behind a backend interface.
+14. **Build for replacement.** A phase implementation may evolve without forcing unrelated phases to change, provided its documented output contract remains stable.
+
+## 2. Relationship to Niflheim
+
+The sibling Niflheim repository at `../niflheim` is an important design reference. It contains useful language behavior, diagnostics, test organization, runtime conventions, compiler passes, ABI work, and backend experience that Skald should consult frequently.
+
+Reference does not mean direct architectural inheritance. Niflheim grew organically and accumulated coupling and technical debt as its scope expanded. Skald should reuse proven decisions and test ideas while deliberately improving:
+
+- phase ownership and boundaries;
+- typed, stable IDs;
+- separation between syntax, semantic IR, and executable IR;
+- explicit pass orchestration and verification;
+- separation of common backend contracts from target code;
+- compiler/runtime ABI documentation;
+- deterministic dumps and diagnostics;
+- avoidance of legacy and replacement pipelines living indefinitely beside one another.
+
+Niflheim is neither a source dependency nor a normative dependency. Skald's specification and repository documentation take precedence.
+
+## 3. Top-Level Layout
+
+```text
+skald/
+├── Cargo.toml
+├── README.md
+├── crates/
+│   ├── skac/
+│   └── skald-compiler/
+├── docs/
+├── grammar/
+├── runtime/
+│   ├── include/
+│   └── src/
+├── std/
+├── tests/
+│   ├── compiler/
+│   ├── runtime/
+│   └── golden/
+├── samples/
+└── scripts/
+```
+
+### `crates/skac/`
+
+The `skac` binary crate is intentionally thin. It owns process-level concerns such as command-line arguments and process exit codes, then delegates compilation to `skald-compiler`.
+
+It must not contain lexer, parser, type-checker, IR, or target implementation logic.
+
+### `crates/skald-compiler/`
+
+The Rust library containing the compiler pipeline. It begins as one library crate with strongly separated modules. A phase should become its own crate only when that produces a concrete build, reuse, or dependency benefit; the initial architecture should not pay a multi-crate tax for every small phase.
+
+```text
+src/
+├── lib.rs
+├── driver.rs
+├── source.rs
+├── diagnostics.rs
+├── lexer/
+├── syntax/
+├── resolve/
+├── hir/
+├── typeck/
+├── mir/
+├── passes/
+└── backend/
+    └── x86_64_sysv/
+```
+
+### `runtime/`
+
+The minimal C runtime and its public ABI header. It builds as a static archive and is linked with generated assembly by the system C toolchain.
+
+The first vertical slice does not need runtime services beyond a buildable ABI placeholder. Later likely responsibilities include allocation, reference-count operations, panic reporting, runtime type metadata helpers, and other narrowly defined primitives. Garbage collection, root stacks, tracing, safepoints, and write barriers do not belong here.
+
+### `grammar/`
+
+Canonical grammar sources and parser-facing notes. The language grammar is not yet complete, so this directory initially records that status rather than pretending a partial grammar is normative.
+
+### `std/`
+
+Future Skald standard-library source. It is separate from the C runtime: functionality that can be expressed safely and efficiently in Skald should eventually live here.
+
+### `tests/`
+
+- `compiler/` contains phase-level compiler tests, cross-phase integration tests, and shared fixtures. Small Rust unit tests may also live beside their implementation, following Rust convention.
+- `runtime/` contains direct C tests of the runtime ABI and implementation.
+- `golden/` contains complete source-to-diagnostic, source-to-assembly, and source-to-executable cases.
+
+### `samples/`
+
+Small demonstration and bring-up programs. Samples are not substitutes for regression tests.
+
+### `scripts/`
+
+Thin wrappers for repeated repository workflows. Compiler behavior must remain available through `skac` or library APIs rather than existing only inside shell scripts.
+
+## 4. Compiler Pipeline
+
+The intended baseline pipeline is:
+
+```text
+compilation request
+    → source database
+    → tokens
+    → syntax AST
+    → resolved program
+    → typed HIR
+    → target-independent MIR
+    → MIR verification and passes
+    → target backend lowering
+    → target machine/assembly model
+    → textual assembly
+    → system assembler and linker + C runtime
+    → Linux executable
+```
+
+Each arrow is an explicit API boundary. Initial implementations may combine a small amount of orchestration, but they should not erase these conceptual products.
+
+| Phase | Primary input | Primary output | Must establish |
+|---|---|---|---|
+| Driver/session | CLI or library request | compilation session and ordered phase execution | options, target, source ownership, diagnostic policy |
+| Source | paths and bytes | source IDs, text, spans, line maps | stable source identity and valid offset ranges |
+| Lexer | one source | token stream | token kinds, literal spelling, trivia policy, precise spans |
+| Parser | token stream | source AST | grammatical structure without semantic lookup |
+| Resolution | AST declarations and names | resolved program and typed symbol IDs | unique identities, scopes, duplicate and missing-name diagnostics |
+| Type checking | resolved program | typed HIR | expression types, legal calls and operations, no unresolved semantic choices |
+| MIR lowering | typed HIR | target-independent executable IR | explicit evaluation order, temporaries, calls, branches, returns, and eventually cleanup |
+| MIR passes | verified MIR | verified MIR plus analyses | named, ordered transformations with preserved semantics |
+| Backend | MIR and target options | target-specific machine/assembly model | ABI lowering, instruction selection, frame and register decisions |
+| Assembly emission | target model | deterministic textual assembly | valid toolchain input and stable symbol/section conventions |
+| Toolchain/link | assembly and runtime archive | executable | object generation and Linux linkage |
+
+### Source and diagnostics
+
+All phases use a common span representation backed by the source database. Diagnostics contain structured severity, message, labels, and notes; terminal rendering happens at the driver edge. Tests should be able to assert diagnostic structure without depending on terminal colors or absolute paths.
+
+### Syntax AST
+
+The AST mirrors source constructs and preserves spans. It must not become the long-lived semantic representation. In particular, later phases should not repeatedly resolve strings or attach growing sets of optional semantic fields to parser nodes.
+
+### Resolution and typed HIR
+
+Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.
+
+### MIR
+
+MIR is target-independent and executable in shape. It should eventually use explicit basic blocks and terminators even if the earliest vertical slice can be lowered trivially. It owns facts such as:
+
+- exact evaluation order;
+- explicit temporaries and local identities;
+- direct call targets;
+- control-flow edges and returns;
+- primitive operations with defined types;
+- later, construction state, cleanup edges, alias anchors, retain/release operations, and exceptional exits.
+
+The initial MIR need not use static single assignment form. IDs and control-flow APIs should nevertheless avoid assuming that mutable local slots are the only possible representation. SSA can later be introduced as:
+
+- a distinct IR between MIR construction and backend lowering;
+- an optional conversion and optimization pipeline over MIR; or
+- a replacement internal representation behind a preserved MIR/backend contract.
+
+That choice should be made when real optimization requirements exist. The current architecture must make it possible without prematurely building an SSA framework.
+
+### Passes and verification
+
+Each IR has a deterministic textual dump suitable for tests. MIR should have a verifier that checks IDs, block termination, operand types, call signatures, and target-independent invariants.
+
+Passes declare what analyses they require or invalidate. The pass pipeline is assembled in one visible location. Correctness must never depend on an optimization pass having run.
+
+## 5. Backend Structure
+
+The backend interface accepts verified target-independent MIR, layout information defined by the compiler/runtime ABI, and target options. It returns target-specific output or structured diagnostics.
+
+The initial backend is `x86_64_sysv`, targeting Linux with the System V AMD64 ABI. Its internal concerns should remain separated even if initially implemented in few files:
+
+- target legality checks;
+- ABI classification and call lowering;
+- instruction selection;
+- virtual register or value-location planning;
+- stack-frame layout;
+- physical register allocation;
+- prologue/epilogue and call-site emission;
+- symbol mangling and section policy;
+- deterministic assembly formatting.
+
+An AArch64 Linux backend is expected after the x86-64 pipeline is established. Adding it should require a new target module and registry entry, not conditionals scattered through semantic phases. Cross-target tests should distinguish:
+
+- semantic tests shared by every backend;
+- assembly-shape tests runnable without executing the target;
+- native execution tests gated by the host architecture or an explicit emulator.
+
+Target-specific machine IR may be introduced when backend complexity justifies it. It must remain owned by the backend and must not leak target registers or ABI details into MIR.
+
+## 6. Assembly, Runtime, and Link Boundary
+
+`skac` emits textual assembly rather than machine code or object files. The assembly is an inspectable compiler artifact and a stable debugging boundary.
+
+The build flow is:
+
+1. `skac` compiles `.ska` input to a target assembly file;
+2. the system C compiler driver assembles that file;
+3. the generated object is linked with the Skald runtime archive and required system libraries;
+4. the result is a Linux executable.
+
+The CLI should eventually support both an assembly-only mode and a convenience mode that drives assembly and linking. Tool invocation belongs in the driver/toolchain layer, not in the backend emitter.
+
+Compiler-generated calls into C use a versioned, documented ABI with a consistent symbol prefix such as `ska_rt_`. Runtime headers are the C authority; matching compiler-side declarations and layout constants should be centralized and tested for parity.
+
+## 7. Testing Strategy
+
+Testing follows the useful high-level split from Niflheim while adapting it to Rust.
+
+### Compiler tests
+
+- lexer and parser tests assert tokens, AST shape, spans, and recovery;
+- resolution and type-check tests assert stable IDs, semantic types, and diagnostics;
+- HIR and MIR tests use deterministic dumps and verifier failures;
+- pass tests check one transformation at a time plus semantic preservation where practical;
+- backend tests assert ABI decisions and emitted assembly without requiring native execution;
+- driver tests check CLI behavior, phase selection, and toolchain command construction.
+
+Fast Rust unit tests should usually live beside the module under test. Larger compiler fixtures and cross-module tests belong under `tests/compiler/`.
+
+### Runtime tests
+
+Small C harnesses compile directly against runtime sources or the archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early.
+
+### Golden tests
+
+Golden cases exercise the complete public behavior. A case may specify expected diagnostics, assembly fragments, process exit status, or a combination. Test metadata should use repository-relative paths and avoid unstable absolute filenames or incidental temporary labels.
+
+Every implemented language feature should normally receive:
+
+- focused phase-level tests;
+- at least one successful end-to-end case;
+- compile-failure coverage for its most important invalid forms;
+- runtime coverage when it changes the C ABI or ownership implementation.
+
+## 8. Dependency Direction
+
+The desired logical dependency direction is:
+
+```text
+source + diagnostics
+        ↑
+lexer → syntax → resolve → typeck/HIR → MIR → passes
+                                           ↓
+                                      backend API
+                                      ↙         ↘
+                              x86_64_sysv     aarch64 (later)
+
+driver depends on and orchestrates all phases
+runtime shares only an explicit ABI contract with code generation
+```
+
+This diagram describes allowed knowledge, not necessarily Rust crate dependencies. Cycles across these boundaries are architectural defects and should be corrected rather than hidden behind broad utility modules.
+
+## 9. Near-Term Restraint
+
+The first vertical slice should not introduce infrastructure merely because a mature compiler might eventually need it. In particular, it does not need parallel compilation, incremental queries, a general optimization manager, SSA, object-file writing, a package manager, or a large runtime.
+
+It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The concrete first-slice scope and milestones are defined in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md).
+

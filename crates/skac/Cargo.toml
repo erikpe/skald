@@ -1,0 +1,11 @@
+[package]
+name = "skac"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+skald-compiler = { path = "../skald-compiler" }
+
+[lints]
+workspace = true
+
