@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0–O5 complete; O6 planned.
+Status: complete (O0–O6).
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into

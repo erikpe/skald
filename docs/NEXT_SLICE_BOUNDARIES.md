@@ -36,7 +36,13 @@ For each new construct or type:
 
 ## Likely next-slice pressure points
 
-Adding `bool` and `if` is the smallest useful control-flow test. It should introduce a semantic boolean type and operations in HIR, multiple MIR blocks with explicit conditional and unconditional terminators, control-flow-aware MIR verification, and branch selection in the backend. It must not encode branches as special calls or let the backend rediscover high-level syntax.
+The selected next slice is `bool` and Niflheim-style
+`if` / `elif` / `else`, planned in
+[`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It introduces a
+semantic boolean type in HIR and MIR, multiple MIR blocks with explicit
+conditional and unconditional terminators, control-flow-aware MIR verification,
+and branch selection in the backend. It must not encode branches as special
+calls or let the backend rediscover high-level syntax.
 
 Adding the first inline object instead stresses layout, construction state, assignment, cleanup order, receiver access, and return conventions. That slice needs a written ABI/layout contract before code generation and should not be combined casually with shared ownership or exceptions.
 
