@@ -9,3 +9,7 @@ skald-compiler = { path = "../skald-compiler" }
 [lints]
 workspace = true
 
+[[test]]
+name = "golden"
+path = "../../tests/golden/runner.rs"
+harness = false

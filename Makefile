@@ -1,4 +1,4 @@
-.PHONY: help fmt fmt-check build-check lint compiler-test runtime runtime-test check
+.PHONY: help fmt fmt-check build-check lint compiler-test golden-test runtime runtime-test check
 
 help:
 	@echo "Skald repository commands:"
@@ -7,6 +7,7 @@ help:
 	@echo "  make build-check   Type-check every Rust target"
 	@echo "  make lint          Run Clippy for the workspace"
 	@echo "  make compiler-test Run Rust compiler tests"
+	@echo "  make golden-test   Run native source-to-executable golden tests"
 	@echo "  make runtime       Build the C runtime archive"
 	@echo "  make runtime-test  Build and run C runtime tests"
 	@echo "  make check         Run the complete repository validation suite"
@@ -25,6 +26,9 @@ lint:
 
 compiler-test:
 	cargo test --workspace
+
+golden-test: runtime
+	cargo test -p skac --test golden
 
 runtime:
 	$(MAKE) -C runtime

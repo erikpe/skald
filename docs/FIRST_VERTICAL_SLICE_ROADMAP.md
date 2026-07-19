@@ -130,7 +130,7 @@ Progress summary:
 - [x] M4 — Type checking and typed HIR
 - [x] M5 — MIR lowering and verification
 - [x] M6 — x86-64 System V backend
-- [ ] M7 — Runtime, link driver, and native execution
+- [x] M7 — Runtime, link driver, and native execution
 - [ ] M8 — Vertical-slice hardening
 
 ### M0 — Repository and quality baseline
@@ -212,12 +212,12 @@ The simplest correct register strategy is acceptable initially, including stack-
 ### M7 — Runtime, link driver, and native execution
 
 - [x] Versioned minimal runtime ABI and static archive established by M0.
-- [ ] Generated or linked entry-point boundary for `fn main() -> i64`.
-- [ ] Driver support for assembly-only and executable output.
-- [ ] Robust host tool invocation and failure reporting.
-- [ ] Native golden runner recording process exit status.
+- [x] Generated or linked entry-point boundary for `fn main() -> i64`.
+- [x] Driver support for assembly-only and executable output.
+- [x] Robust host tool invocation and failure reporting.
+- [x] Native golden runner recording process exit status.
 
-- [ ] **Exit criterion:** the demonstration program and several function/call/arithmetic variants produce their expected exit statuses.
+- [x] **Exit criterion:** the demonstration program and several function/call/arithmetic variants produce their expected exit statuses.
 
 ### M8 — Vertical-slice hardening
 
@@ -234,13 +234,13 @@ The simplest correct register strategy is acceptable initially, including stack-
 
 Minimum successful golden cases:
 
-- [ ] Constant exit value.
-- [ ] Unary negative value routed through in-range arithmetic to a nonnegative exit status.
-- [ ] Local initialization and return.
-- [ ] One direct function call.
-- [ ] Multiple parameters within register-passed SysV arguments.
-- [ ] A call result used by another arithmetic expression.
-- [ ] Nested calls that validate evaluation and temporary handling.
+- [x] Constant exit value.
+- [x] Unary negative value routed through in-range arithmetic to a nonnegative exit status.
+- [x] Local initialization and return.
+- [x] One direct function call.
+- [x] Multiple parameters within register-passed SysV arguments.
+- [x] A call result used by another arithmetic expression.
+- [x] Nested calls that validate evaluation and temporary handling.
 
 Minimum compile-failure cases:
 
@@ -255,11 +255,11 @@ Minimum compile-failure cases:
 
 Minimum backend/runtime checks:
 
-- [ ] Assembly accepted by the system toolchain.
+- [x] Assembly accepted by the system toolchain.
 - [x] Runtime archive builds with warnings treated as errors.
-- [ ] Stack alignment across a nested call.
-- [ ] Exit status propagation for representative values.
-- [ ] Toolchain failure produces a driver error rather than a compiler panic.
+- [x] Stack alignment across a nested call.
+- [x] Exit status propagation for representative values.
+- [x] Toolchain failure produces a driver error rather than a compiler panic.
 
 ## 7. Quality Gates
 
@@ -269,7 +269,7 @@ The vertical slice is not complete merely because one program runs. Completion r
 - [x] `cargo clippy --workspace --all-targets` runs with warnings denied and currently passes.
 - [x] `cargo test --workspace` is available and currently passes.
 - [x] Runtime C build and runtime ABI smoke test are available and currently pass.
-- [ ] Golden suite passes on Linux x86-64.
+- [x] Golden suite passes on Linux x86-64.
 - [x] `git diff --check` currently passes.
 - [ ] Documented phase dumps are usable for debugging.
 - [ ] No known phase-boundary shortcut remains that later work must immediately undo.

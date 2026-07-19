@@ -44,7 +44,6 @@ fn emits_a_deterministic_minimal_function() {
     let expected = concat!(
         ".text\n",
         ".p2align 4\n",
-        ".globl ska_fn_0\n",
         ".type ska_fn_0, @function\n",
         "ska_fn_0:\n",
         "    pushq %rbp\n",
@@ -56,6 +55,17 @@ fn emits_a_deterministic_minimal_function() {
         "    leave\n",
         "    ret\n",
         ".size ska_fn_0, .-ska_fn_0\n",
+        "\n",
+        ".p2align 4\n",
+        ".globl main\n",
+        ".type main, @function\n",
+        "main:\n",
+        "    pushq %rbp\n",
+        "    movq %rsp, %rbp\n",
+        "    call ska_fn_0\n",
+        "    leave\n",
+        "    ret\n",
+        ".size main, .-main\n",
         "\n",
         ".section .note.GNU-stack,\"\",@progbits\n",
     );
@@ -113,6 +123,15 @@ fn uses_no_unpreserved_callee_saved_scratch_registers() {
     }
     assert!(output.contains("pushq %rbp"));
     assert!(output.contains("leave"));
+}
+
+#[test]
+fn emits_a_c_compatible_entry_boundary() {
+    let output = assembly("fn helper() -> i64 { return 1; } fn main() -> i64 { return 2; }");
+
+    assert!(output.contains(".globl main\n.type main, @function\nmain:"));
+    assert!(output.contains("main:\n    pushq %rbp\n    movq %rsp, %rbp\n    call ska_fn_1"));
+    assert!(!output.contains(".globl ska_fn_"));
 }
 
 #[test]

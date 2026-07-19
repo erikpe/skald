@@ -133,6 +133,7 @@ The root `Makefile` provides discoverable wrappers around the native Rust and C 
 | `make build-check` | type-check every Rust workspace target |
 | `make lint` | run Clippy across the workspace with warnings denied |
 | `make compiler-test` | run Rust workspace tests |
+| `make golden-test` | run native source-to-executable golden cases |
 | `make runtime` | build the C runtime archive |
 | `make runtime-test` | build and run direct C runtime tests |
 | `make check` | run the complete repository validation suite |
@@ -260,7 +261,7 @@ The target-specific assembly model remains owned by the backend and does not lea
 
 ## 6. Assembly, Runtime, and Link Boundary
 
-`skac` emits textual assembly rather than machine code or object files. The assembly is an inspectable compiler artifact and a stable debugging boundary.
+`skac` emits textual assembly rather than machine code or object files. The assembly is an inspectable compiler artifact and a stable debugging boundary. The M7 compilation API owns forward phase orchestration from source text through backend emission, while source-file I/O, output publication, and subprocess execution remain at the driver edge.
 
 The build flow is:
 
@@ -269,7 +270,9 @@ The build flow is:
 3. the generated object is linked with the Skald runtime archive and required system libraries;
 4. the result is a Linux executable.
 
-The CLI should eventually support both an assembly-only mode and a convenience mode that drives assembly and linking. Tool invocation belongs in the driver/toolchain layer, not in the backend emitter.
+The CLI supports both `--emit asm` and executable output. In executable mode, the driver streams assembly to the C compiler over standard input, links the runtime archive, and publishes a successfully linked temporary file to the requested output path. It never evaluates a shell command. Missing runtime archives, process-start failures, write/wait failures, nonzero tool exits, and publication failures are reported as driver errors rather than panics. `CC` selects the compiler driver, while `SKALD_RUNTIME_ARCHIVE` overrides the source-tree runtime archive path.
+
+The x86-64 backend emits a C-compatible `main` wrapper around the ID-selected Skald entry function. The wrapper preserves System V stack alignment and returns the Skald `i64` result through `%rax`; C observes its low 32 bits as `int`, and Linux exposes the low eight bits as process status. Skald functions keep stable internal symbols and do not acquire C linkage merely because one is the language entry function.
 
 Compiler-generated calls into C use a versioned, documented ABI with a consistent symbol prefix such as `ska_rt_`. Runtime headers are the C authority; matching compiler-side declarations and layout constants should be centralized and tested for parity.
 
@@ -295,6 +298,8 @@ Small C harnesses compile directly against runtime sources or the archive. This 
 ### Golden tests
 
 Golden cases exercise the complete public behavior. A case may specify expected diagnostics, assembly fragments, process exit status, or a combination. Test metadata should use repository-relative paths and avoid unstable absolute filenames or incidental temporary labels.
+
+M7 provides a deliberately small Rust native runner. It discovers `.ska` files under `tests/golden/run/`, reads the expected process status from a matching `.exit` sidecar, builds the runtime archive, invokes the public `skac` binary, executes the result, and reports every case before returning failure. It covers constants, unary arithmetic, local storage, direct and nested calls, register arguments, and the first stack-passed argument. `make golden-test` runs this suite directly; it is also part of the workspace test suite.
 
 Every implemented language feature should normally receive:
 

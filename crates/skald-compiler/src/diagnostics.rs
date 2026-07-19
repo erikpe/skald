@@ -125,6 +125,10 @@ impl Diagnostics {
     pub fn into_vec(self) -> Vec<Diagnostic> {
         self.items
     }
+
+    pub fn append(&mut self, other: Self) {
+        self.items.extend(other.items);
+    }
 }
 
 impl FromIterator<Diagnostic> for Diagnostics {

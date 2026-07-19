@@ -30,7 +30,7 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 ## Status
 
-Skald is currently an exploratory language design. The repository baseline (M0), source/diagnostic/lexer phase (M1), source AST/parser phase (M2), declaration/resolution phase (M3), type-checking/typed-HIR phase (M4), MIR lowering/verifier phase (M5), and initial x86-64 System V backend (M6) are implemented. The command-line link and native-execution path and all later compiler phases remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
+Skald is currently an exploratory language design. Milestones M0 through M7 are implemented: the stage-0 compiler now accepts the first-slice language subset, emits x86-64 System V assembly, links it with the minimal runtime, and produces native executables. Vertical-slice hardening and later language features remain future work. The language specification remains a draft, and syntax, semantics, and implementation interfaces may change as vertical slices are implemented and tested.
 
 ## Development
 
@@ -43,12 +43,23 @@ make fmt            # format Rust source
 make check          # formatting, type checks, Clippy, Rust tests, and C runtime tests
 make build-check    # type-check every Rust workspace target
 make compiler-test  # Rust workspace tests only
+make golden-test    # native source-to-executable golden cases
 make runtime        # build build/runtime/libskald_runtime.a
 make runtime-test   # build and run direct C runtime tests
 cargo run -p skac -- --help
 ```
 
 Build artifacts are written below `target/` and `build/`.
+
+Compile an executable or stop after deterministic textual assembly emission:
+
+```text
+make runtime
+cargo run -p skac -- samples/vertical/exit_42.ska -o build/exit_42
+cargo run -p skac -- samples/vertical/exit_42.ska --emit asm -o build/exit_42.s
+```
+
+Executable output uses `cc` by default and links `build/runtime/libskald_runtime.a`. Set `CC` to select another compatible C compiler driver or `SKALD_RUNTIME_ARCHIVE` to use another runtime archive. Without `-o`, executable output uses the input path without `.ska`; assembly output uses `.s`.
 
 ## History
 

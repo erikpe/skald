@@ -16,18 +16,16 @@ use super::{
 };
 
 pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendError> {
-    let functions = program
+    let mut functions = program
         .functions
         .iter()
-        .map(|function| lower_function(function, function.id == program.entry_function))
+        .map(lower_function)
         .collect::<Result<Vec<_>, _>>()?;
+    functions.push(entry_wrapper(program.entry_function));
     Ok(AssemblyProgram { functions })
 }
 
-fn lower_function(
-    function: &MirFunction,
-    exported: bool,
-) -> Result<AssemblyFunction, BackendError> {
+fn lower_function(function: &MirFunction) -> Result<AssemblyFunction, BackendError> {
     let frame = FrameLayout::plan(function)?;
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
@@ -53,9 +51,29 @@ fn lower_function(
 
     Ok(AssemblyFunction {
         symbol: symbol_for(function.id),
-        exported,
+        exported: false,
         instructions,
     })
+}
+
+/// C-compatible process entry boundary. Returning the Skald `i64` in `%rax`
+/// exposes its low 32 bits as C `main`'s `int`; Linux subsequently observes
+/// the low eight bits as the process exit status.
+fn entry_wrapper(entry_function: FunctionId) -> AssemblyFunction {
+    AssemblyFunction {
+        symbol: "main".to_owned(),
+        exported: true,
+        instructions: vec![
+            Instruction::Push(Register::Rbp),
+            Instruction::Move {
+                source: Register::Rsp.into(),
+                destination: Register::Rbp.into(),
+            },
+            Instruction::Call(symbol_for(entry_function)),
+            Instruction::Leave,
+            Instruction::Return,
+        ],
+    }
 }
 
 fn spill_parameters(
