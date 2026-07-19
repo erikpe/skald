@@ -126,7 +126,7 @@ Progress summary:
 - [x] M0 — Repository and quality baseline
 - [x] M1 — Source ownership, diagnostics, and lexing
 - [x] M2 — Parser and AST
-- [ ] M3 — Declaration collection and resolution
+- [x] M3 — Declaration collection and resolution
 - [ ] M4 — Type checking and typed HIR
 - [ ] M5 — MIR lowering and verification
 - [ ] M6 — x86-64 System V backend
@@ -166,13 +166,14 @@ Progress summary:
 
 ### M3 — Declaration collection and resolution
 
-- [ ] Stable function, parameter, and local IDs.
-- [ ] Single-file function table.
-- [ ] Lexical local scopes.
-- [ ] Duplicate declaration, unknown name, and invalid call-target diagnostics.
-- [ ] Direct calls resolved to function IDs.
+- [x] Stable function, parameter, and local IDs.
+- [x] Single-file function table.
+- [x] Lexical local scopes.
+- [x] Duplicate declaration, unknown name, and invalid call-target diagnostics.
+- [x] Direct calls resolved to function IDs.
+- [x] Deterministic resolved-program dump.
 
-- [ ] **Exit criterion:** later phases never resolve source strings to choose declarations.
+- [x] **Exit criterion:** later phases never resolve source strings to choose declarations.
 
 ### M4 — Type checking and typed HIR
 

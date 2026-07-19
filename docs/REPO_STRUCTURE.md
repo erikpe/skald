@@ -193,6 +193,10 @@ M2 implements the first-slice AST as separate node, parser, and dump modules beh
 
 Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.
 
+M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. Source names remain only as declaration metadata for diagnostics, deterministic dumps, and eventual symbol emission. The `main` name is resolved once into an optional entry candidate; M4 consumes that ID to validate the entry signature.
+
+Each function resolver owns an explicit lexical scope stack. Parameters share the outer function-body scope, nested blocks push scopes, and local initializers are resolved before their binding is introduced. Duplicate and lookup failures produce structured diagnostics with source labels. The precise first-slice rules are recorded in [`grammar/README.md`](../grammar/README.md).
+
 ### MIR
 
 MIR is target-independent and executable in shape. It should eventually use explicit basic blocks and terminators even if the earliest vertical slice can be lowered trivially. It owns facts such as:

@@ -68,3 +68,21 @@ Operator precedence, from highest to lowest, is:
 Unary `-` associates right-to-left. The binary operators and repeated postfix calls associate left-to-right. Parentheses override precedence.
 
 Parser recovery may synthesize missing punctuation to retain a useful source AST. Structurally incomplete declarations and statements are omitted from that AST, diagnostics are accumulated, and later semantic phases must not run when parsing reports errors.
+
+## First vertical slice name resolution
+
+M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.
+
+Function, parameter, and local identities are dense, deterministic IDs assigned in source order. Parameter and local IDs include their owning function ID. Resolved binding uses contain a parameter or local ID, and resolved direct calls contain a function ID; later phases must not compare source names to choose declarations. Resolution also selects the unique function named `main` as the entry candidate, if present, while M4 owns entry-signature validation and the missing-entry diagnostic.
+
+Name visibility follows these rules:
+
+- parameters and the function body's outermost block share one lexical scope;
+- a duplicate parameter, or a top-level local with the same name as a parameter, is an error;
+- a local becomes visible only after its initializer, so its initializer cannot refer to the binding being declared;
+- a nested block creates a scope and may shadow a binding in an enclosing scope;
+- leaving a nested block restores the enclosing binding;
+- duplicate names in the same lexical scope are errors, and the first binding remains selected for recovery;
+- a local binding shadows a function name, including at a call site.
+
+The first slice has no function values. A bare function name is therefore invalid as a value. A direct-call target must be an unparenthesized identifier that resolves to a function; calling a local, calling an unknown name, or calling another expression form is diagnosed. Resolution returns a partial resolved program with accumulated diagnostics, but later semantic phases must not run when resolution reports errors.
