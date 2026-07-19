@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0–O3 complete; O4–O6 planned.
+Status: O0–O4 complete; O5–O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -89,7 +89,7 @@ interface and ownership model identified as open in the draft specification.
 - [x] O1 — Add exact stdout expectations to the golden runner
 - [x] O2 — Separate callable declarations from local function bodies
 - [x] O3 — Implement `unit`, unit returns, and call statements end-to-end
-- [ ] O4 — Add and directly test the runtime `i64` output ABI
+- [x] O4 — Add and directly test the runtime `i64` output ABI
 - [ ] O5 — Implement restricted external declarations and calls end-to-end
 - [ ] O6 — Add observable golden coverage and harden the completed slice
 
@@ -232,19 +232,19 @@ mixing is diagnosed before MIR; existing `i64` behavior is unchanged.
 **Purpose:** Establish the runtime service independently of compiler code
 generation.
 
-- [ ] Add `ska_rt_println_i64(int64_t value)` to the public runtime header.
-- [ ] Implement locale-independent signed decimal output followed by exactly
+- [x] Add `ska_rt_println_i64(int64_t value)` to the public runtime header.
+- [x] Implement locale-independent signed decimal output followed by exactly
       one LF byte.
-- [ ] Implement the O0 write-failure policy without exposing C implementation
+- [x] Implement the O0 write-failure policy without exposing C implementation
       details as Skald language semantics.
-- [ ] Bump `SKALD_RUNTIME_ABI_VERSION` because the public ABI contract changes.
-- [ ] Keep formatting/output logic cohesive and avoid exposing `FILE *` or
+- [x] Bump `SKALD_RUNTIME_ABI_VERSION` because the public ABI contract changes.
+- [x] Keep formatting/output logic cohesive and avoid exposing `FILE *` or
       other libc types in the public ABI.
-- [ ] Extend direct C runtime tests to capture and compare output for zero,
+- [x] Extend direct C runtime tests to capture and compare output for zero,
       positive, negative, `INT64_MIN`, `INT64_MAX`, and consecutive calls.
-- [ ] Keep runtime tests silent on success and warnings clean under the
+- [x] Keep runtime tests silent on success and warnings clean under the
       repository's C11 `-Wall -Wextra -Werror` policy.
-- [ ] Document the new runtime symbol and ABI behavior in
+- [x] Document the new runtime symbol and ABI behavior in
       `docs/REPO_STRUCTURE.md` and `tests/runtime/README.md`.
 
 **Tests:** `make runtime-test`, including exact byte comparisons and ABI-version

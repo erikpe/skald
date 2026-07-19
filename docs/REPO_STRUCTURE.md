@@ -103,9 +103,9 @@ few tightly local tests inline.
 
 ### `runtime/`
 
-The minimal C runtime and its public ABI header. It builds as a static archive and is linked with generated assembly by the system C toolchain.
+The minimal C runtime and its public ABI header. It builds as a static archive and is linked with generated assembly by the system C toolchain. ABI version 2 adds `ska_rt_println_i64(int64_t)`, a bootstrap output service that writes the shortest locale-independent ASCII decimal representation and one LF byte to stdout. It flushes the completed record before returning; a detected write or flush failure terminates the process unsuccessfully.
 
-The first vertical slice does not need runtime services beyond a buildable ABI placeholder. Later likely responsibilities include allocation, reference-count operations, panic reporting, runtime type metadata helpers, and other narrowly defined primitives. Garbage collection, root stacks, tracing, safepoints, and write barriers do not belong here.
+The runtime keeps C library implementation types such as `FILE *` private. Its public surface uses fixed-width ABI types, and direct C consumers verify both header/archive version agreement and externally observable behavior. Later likely responsibilities include allocation, reference-count operations, panic reporting, runtime type metadata helpers, and other narrowly defined primitives. Garbage collection, root stacks, tracing, safepoints, and write barriers do not belong here.
 
 ### `grammar/`
 
@@ -300,7 +300,7 @@ Fast Rust unit tests should usually live beside the module under test. Larger co
 
 ### Runtime tests
 
-Small C harnesses compile directly against runtime sources or the archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early.
+Small C harnesses compile directly against the runtime archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early. The output harness redirects stdout to a temporary file and compares exact bytes across zero, signed values, both `i64` extrema, and consecutive calls. A child-process check closes stdout and verifies that the bootstrap output operation cannot return successfully after a detected write failure.
 
 ### Golden tests
 
