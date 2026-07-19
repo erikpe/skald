@@ -7,4 +7,8 @@ mod dump;
 mod ir;
 
 pub use dump::dump_hir;
-pub use ir::*;
+pub use ir::{
+    HirBinaryOperation, HirBlock, HirExpression, HirExpressionKind, HirFunction, HirFunctionTable,
+    HirLocal, HirLocalDecl, HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation,
+    Type,
+};

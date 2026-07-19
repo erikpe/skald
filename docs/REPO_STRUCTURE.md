@@ -80,9 +80,9 @@ The Rust library containing the compiler pipeline. It begins as one library crat
 ```text
 src/
 ├── lib.rs
-├── driver.rs
+├── driver/
 ├── source.rs
-├── diagnostics.rs
+├── diagnostics/
 ├── lexer/
 ├── syntax/
 ├── resolve/
@@ -93,6 +93,13 @@ src/
 └── backend/
     └── x86_64_sysv/
 ```
+
+Modules with multiple implementation responsibilities use the recursive
+directory layout. Their `mod.rs` files act as concise facades: they document
+the boundary, declare private implementation modules, and explicitly re-export
+the intended public API. Substantial module-level unit tests live in an
+adjacent `tests.rs`; small cohesive modules may remain single files and keep a
+few tightly local tests inline.
 
 ### `runtime/`
 

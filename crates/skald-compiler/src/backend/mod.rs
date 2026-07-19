@@ -7,7 +7,7 @@ use std::fmt;
 
 use crate::{mir::MirProgram, resolve::FunctionId};
 
-pub mod x86_64_sysv;
+mod x86_64_sysv;
 
 pub const DEFAULT_TARGET_NAME: &str = "x86_64-sysv";
 pub const SUPPORTED_TARGET_NAMES: &[&str] = &[DEFAULT_TARGET_NAME];

@@ -1,10 +1,4 @@
-//! Pipeline orchestration and the implementation-independent CLI contract.
-//!
-//! This module composes phases, artifact publication, and the host toolchain.
-//! Individual compiler phases do not depend on it.
-
-mod pipeline;
-mod toolchain;
+//! Command-line parsing, source and artifact I/O, and process-level behavior.
 
 use std::{
     ffi::{OsStr, OsString},
@@ -18,12 +12,9 @@ use crate::{
     diagnostics::render_diagnostics,
 };
 
-pub use pipeline::{
-    compile_source_to_assembly, AssemblyArtifact, CompilationError, CompilationReport,
-};
-pub use toolchain::{Toolchain, ToolchainError, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV};
+use super::{compile_source_to_assembly, CompilationError, Toolchain, ToolchainError};
 
-const HELP: &str = concat!(
+pub(super) const HELP: &str = concat!(
     "skac - the Skald compiler\n\n",
     "Usage: skac <input.ska> [-o <output>] [--emit asm] [--target x86_64-sysv]\n\n",
     "Options:\n",
@@ -33,8 +24,8 @@ const HELP: &str = concat!(
     "  -h, --help         Show this help\n",
     "  --version          Show the compiler version",
 );
-const EXIT_COMPILE_ERROR: i32 = 1;
-const EXIT_USAGE: i32 = 2;
+pub(super) const EXIT_COMPILE_ERROR: i32 = 1;
+pub(super) const EXIT_USAGE: i32 = 2;
 const EXIT_IO_ERROR: i32 = 74;
 
 /// Runs the command-line compiler and returns a process exit code.
@@ -61,7 +52,7 @@ where
     }
 }
 
-fn run_cli_with_context<I, Stdout, Stderr>(
+pub(super) fn run_cli_with_context<I, Stdout, Stderr>(
     args: I,
     stdout: &mut Stdout,
     stderr: &mut Stderr,
@@ -292,162 +283,5 @@ impl std::fmt::Display for DriverError {
             Self::Write(error) => write!(formatter, "could not write output: {error}"),
             Self::Toolchain(error) => error.fmt(formatter),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    use super::*;
-
-    static NEXT_TEST_ID: AtomicU64 = AtomicU64::new(0);
-
-    fn run(args: &[&str]) -> (i32, String, String) {
-        run_with_toolchain(args, &Toolchain::new("false", "missing-runtime.a"))
-    }
-
-    fn run_with_toolchain(args: &[&str], toolchain: &Toolchain) -> (i32, String, String) {
-        let args = args.iter().map(OsString::from);
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let exit_code = run_cli_with_context(args, &mut stdout, &mut stderr, toolchain).unwrap();
-
-        (
-            exit_code,
-            String::from_utf8(stdout).unwrap(),
-            String::from_utf8(stderr).unwrap(),
-        )
-    }
-
-    fn test_directory(name: &str) -> PathBuf {
-        let id = NEXT_TEST_ID.fetch_add(1, Ordering::Relaxed);
-        let path = std::env::temp_dir().join(format!(
-            "skald-driver-test-{}-{id}-{name}",
-            std::process::id()
-        ));
-        fs::create_dir(&path).unwrap();
-        path
-    }
-
-    #[test]
-    fn help_and_version_are_available_without_compilation() {
-        let (exit_code, stdout, stderr) = run(&["skac", "--help"]);
-        assert_eq!(exit_code, 0);
-        assert_eq!(stdout, format!("{HELP}\n"));
-        assert!(stderr.is_empty());
-
-        let (exit_code, stdout, stderr) = run(&["skac", "--version"]);
-        assert_eq!(exit_code, 0);
-        assert_eq!(stdout, format!("skac {}\n", env!("CARGO_PKG_VERSION")));
-        assert!(stderr.is_empty());
-    }
-
-    #[test]
-    fn invalid_arguments_are_usage_errors() {
-        let (exit_code, stdout, stderr) = run(&["skac"]);
-        assert_eq!(exit_code, EXIT_USAGE);
-        assert!(stdout.is_empty());
-        assert!(stderr.starts_with("skac: no input file was provided\n"));
-
-        let (exit_code, _, stderr) = run(&["skac", "test.ska", "--emit", "object"]);
-        assert_eq!(exit_code, EXIT_USAGE);
-        assert!(stderr.contains("unsupported emission kind `object`; expected `asm`"));
-    }
-
-    #[test]
-    fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
-        let directory = test_directory("assembly");
-        let input = directory.join("answer.ska");
-        let output = directory.join("answer.s");
-        fs::write(&input, "fn main() -> i64 { return 42; }").unwrap();
-
-        let owned = [
-            OsString::from("skac"),
-            input.clone().into_os_string(),
-            OsString::from("--emit"),
-            OsString::from("asm"),
-            OsString::from("-o"),
-            output.clone().into_os_string(),
-        ];
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let status = run_cli_with_context(
-            owned,
-            &mut stdout,
-            &mut stderr,
-            &Toolchain::new("false", "missing-runtime.a"),
-        )
-        .unwrap();
-
-        assert_eq!(status, 0, "{}", String::from_utf8_lossy(&stderr));
-        assert!(stdout.is_empty());
-        assert!(stderr.is_empty());
-        let text = fs::read_to_string(output).unwrap();
-        assert!(text.contains(".globl main"));
-        assert!(text.contains("movabsq $42, %rax"));
-        fs::remove_dir_all(directory).unwrap();
-    }
-
-    #[test]
-    fn source_diagnostics_are_rendered_and_return_compilation_failure() {
-        let directory = test_directory("diagnostic");
-        let input = directory.join("broken.ska");
-        fs::write(&input, "fn main() -> i64 { return nope; }").unwrap();
-        let args = [
-            OsString::from("skac"),
-            input.clone().into_os_string(),
-            OsString::from("--emit"),
-            OsString::from("asm"),
-        ];
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let status = run_cli_with_context(
-            args,
-            &mut stdout,
-            &mut stderr,
-            &Toolchain::new("false", "missing-runtime.a"),
-        )
-        .unwrap();
-
-        assert_eq!(status, EXIT_COMPILE_ERROR);
-        assert!(stdout.is_empty());
-        assert!(String::from_utf8(stderr)
-            .unwrap()
-            .contains("error[RES003]: unknown name `nope`"));
-        fs::remove_dir_all(directory).unwrap();
-    }
-
-    #[test]
-    fn linker_failure_is_a_driver_error_not_a_panic() {
-        let directory = test_directory("toolchain-failure");
-        let input = directory.join("valid.ska");
-        let output = directory.join("valid");
-        fs::write(&input, "fn main() -> i64 { return 0; }").unwrap();
-        let runtime_placeholder = directory.join("runtime.a");
-        fs::write(&runtime_placeholder, "placeholder").unwrap();
-        let args = [
-            OsString::from("skac"),
-            input.into_os_string(),
-            OsString::from("-o"),
-            output.into_os_string(),
-        ];
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-        let status = run_cli_with_context(
-            args,
-            &mut stdout,
-            &mut stderr,
-            &Toolchain::new("false", runtime_placeholder),
-        )
-        .unwrap();
-
-        assert_eq!(status, EXIT_COMPILE_ERROR);
-        assert!(stdout.is_empty());
-        assert_eq!(
-            String::from_utf8(stderr).unwrap(),
-            "skac: toolchain `false` failed with exit status 1\n"
-        );
-        fs::remove_dir_all(directory).unwrap();
     }
 }

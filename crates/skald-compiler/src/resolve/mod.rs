@@ -8,8 +8,17 @@ mod ir;
 mod resolver;
 
 pub use dump::dump_resolved;
-pub use ir::*;
+pub use ir::{
+    BindingId, FunctionId, FunctionTable, LocalId, ParameterId, ResolvedBinaryExpr,
+    ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBlock, ResolvedDirectCallExpr,
+    ResolvedExpression, ResolvedFunction, ResolvedGroupedExpr, ResolvedIntegerExpr, ResolvedLocal,
+    ResolvedLocalDecl, ResolvedParameter, ResolvedProgram, ResolvedReturn, ResolvedStatement,
+    ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
+};
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_FUNCTION, FUNCTION_USED_AS_VALUE,
     INVALID_CALL_TARGET, UNKNOWN_NAME,
 };
+
+#[cfg(test)]
+mod tests;
