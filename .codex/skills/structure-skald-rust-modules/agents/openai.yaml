@@ -1,0 +1,4 @@
+interface:
+  display_name: "Structure Skald Rust Modules"
+  short_description: "Keep Skald Rust modules clean and navigable"
+  default_prompt: "Use $structure-skald-rust-modules when implementing or refactoring Rust code in Skald."
