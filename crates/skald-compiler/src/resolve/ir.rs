@@ -252,6 +252,7 @@ pub struct ResolvedLocal {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedTypeKind {
     I64,
+    Bool,
     Unit,
 }
 
@@ -309,6 +310,7 @@ pub struct ResolvedExpressionStatement {
 pub enum ResolvedExpression {
     Binding(ResolvedBindingExpr),
     Integer(ResolvedIntegerExpr),
+    Boolean(ResolvedBooleanExpr),
     Unary(ResolvedUnaryExpr),
     Binary(ResolvedBinaryExpr),
     DirectCall(ResolvedDirectCallExpr),
@@ -320,6 +322,7 @@ impl ResolvedExpression {
         match self {
             Self::Binding(expression) => expression.span,
             Self::Integer(expression) => expression.span,
+            Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
@@ -337,6 +340,12 @@ pub struct ResolvedBindingExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedIntegerExpr {
     pub spelling: String,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedBooleanExpr {
+    pub value: bool,
     pub span: Span,
 }
 

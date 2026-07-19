@@ -76,6 +76,25 @@ fn recognizes_extern_as_a_keyword() {
 }
 
 #[test]
+fn recognizes_boolean_type_and_literal_keywords() {
+    let (_, _, output) = lex_text("bool true false boolean truthful");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        vec![
+            TokenKind::Bool,
+            TokenKind::True,
+            TokenKind::False,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn skips_ascii_whitespace_and_line_comments() {
     let (_, _, output) = lex_text("// before\r\n\tvar value: i64 = 7; // after");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

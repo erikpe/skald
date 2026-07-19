@@ -60,6 +60,32 @@ fn collects_functions_before_resolving_forward_calls() {
 }
 
 #[test]
+fn preserves_boolean_types_literals_and_bindings() {
+    let output = resolve_text(concat!(
+        "fn identity(value: bool) -> bool { return value; }\n",
+        "fn main() -> i64 { var flag: bool = true; identity(flag); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let identity = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert_eq!(
+        identity.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::Bool
+    );
+    assert_eq!(identity.return_type.kind, ResolvedTypeKind::Bool);
+    let main = output.program.definitions.get(FunctionId::new(1)).unwrap();
+    assert_eq!(main.locals[0].type_syntax.kind, ResolvedTypeKind::Bool);
+    assert!(matches!(
+        local_initializer(&main.body.statements[0]),
+        ResolvedExpression::Boolean(ResolvedBooleanExpr { value: true, .. })
+    ));
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Type Bool"));
+    assert!(dump.contains("Boolean true"));
+}
+
+#[test]
 fn resolves_call_statements_through_the_same_stable_function_identity() {
     let output = resolve_text(concat!(
         "fn notify(value: i64) -> unit {}\n",

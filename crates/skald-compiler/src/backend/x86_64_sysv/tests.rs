@@ -165,6 +165,20 @@ fn external_calls_use_the_declared_symbol_without_emitting_a_body() {
 }
 
 #[test]
+fn lowers_boolean_values_through_internal_and_external_abi_boundaries() {
+    let output = assembly(concat!(
+        "extern fn external_flag(value: bool) -> bool;\n",
+        "fn identity(value: bool) -> bool { return value; }\n",
+        "fn main() -> i64 { var flag: bool = identity(true); var external: bool = external_flag(flag); return 0; }\n",
+    ));
+
+    assert!(output.contains("movabsq $1, %rax"));
+    assert!(output.contains("call .Lska_fn_1"));
+    assert!(output.contains("call external_flag\n    movzbq %al, %rax"));
+    assert!(output.contains("movq %rdi, -8(%rbp)"));
+}
+
+#[test]
 fn rejects_verified_mir_outside_the_initial_target_shape() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
     let function = mir

@@ -103,6 +103,9 @@ impl<'source> Lexer<'source> {
             "var" => TokenKind::Var,
             "return" => TokenKind::Return,
             "i64" => TokenKind::I64,
+            "bool" => TokenKind::Bool,
+            "true" => TokenKind::True,
+            "false" => TokenKind::False,
             "unit" => TokenKind::Unit,
             _ => TokenKind::Identifier,
         };

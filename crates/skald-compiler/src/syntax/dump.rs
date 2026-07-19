@@ -64,6 +64,7 @@ impl AstDumper {
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {
         let kind = match type_syntax.kind {
             TypeKind::I64 => "I64",
+            TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
         };
         self.line(&format!("Type {kind}"), type_syntax.span);
@@ -110,6 +111,16 @@ impl AstDumper {
             }
             Expression::Integer(integer) => {
                 self.named("Integer", &integer.spelling, integer.span);
+            }
+            Expression::Boolean(boolean) => {
+                self.line(
+                    if boolean.value {
+                        "Boolean true"
+                    } else {
+                        "Boolean false"
+                    },
+                    boolean.span,
+                );
             }
             Expression::Unary(unary) => {
                 let operator = match unary.operator {

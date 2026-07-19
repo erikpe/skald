@@ -134,9 +134,11 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
         let has_valid_parameters = declaration
             .parameters
             .iter()
-            .all(|parameter| lower_type(&parameter.type_syntax) == Type::I64);
-        let has_valid_return =
-            matches!(lower_type(&declaration.return_type), Type::I64 | Type::Unit);
+            .all(|parameter| matches!(lower_type(&parameter.type_syntax), Type::I64 | Type::Bool));
+        let has_valid_return = matches!(
+            lower_type(&declaration.return_type),
+            Type::I64 | Type::Bool | Type::Unit
+        );
         if !has_valid_parameters || !has_valid_return || symbol != &declaration.name {
             diagnostics.push(
                 Diagnostic::error(
@@ -148,7 +150,7 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
                 )
                 .with_primary_label(
                     declaration.span,
-                    "expected by-value `i64` parameters and an `i64` or `unit` result",
+                    "expected by-value `i64` or `bool` parameters and an `i64`, `bool`, or `unit` result",
                 )
                 .with_note("the source function name must also be its exact linker symbol"),
             );
@@ -212,7 +214,7 @@ fn check_definition(
         diagnostics,
     );
 
-    if return_type == Type::I64 && !block_guarantees_return(&definition.body) {
+    if return_type != Type::Unit && !block_guarantees_return(&definition.body) {
         diagnostics.push(
             Diagnostic::error(
                 MISSING_RETURN,
@@ -305,10 +307,16 @@ fn check_statement(
         }
         ResolvedStatement::Return(statement) => {
             match (return_type, &statement.value) {
-                (Type::I64, Some(value)) => {
+                (Type::I64 | Type::Bool, Some(value)) => {
                     let value =
                         check_expression(program, declaration, definition, value, diagnostics)?;
-                    if !require_type(value.ty, Type::I64, value.span, "return value", diagnostics) {
+                    if !require_type(
+                        value.ty,
+                        return_type,
+                        value.span,
+                        "return value",
+                        diagnostics,
+                    ) {
                         return None;
                     }
                     Some(HirStatement::Return(HirReturn {
@@ -316,10 +324,17 @@ fn check_statement(
                         span: statement.span,
                     }))
                 }
-                (Type::I64, None) => {
+                (Type::I64 | Type::Bool, None) => {
                     diagnostics.push(
-                        Diagnostic::error(INVALID_RETURN, "an `i64` function must return a value")
-                            .with_primary_label(statement.span, "expected `return expression;`"),
+                        Diagnostic::error(
+                            INVALID_RETURN,
+                            format!(
+                                "{} `{}` function must return a value",
+                                return_type.indefinite_article(),
+                                return_type.name()
+                            ),
+                        )
+                        .with_primary_label(statement.span, "expected `return expression;`"),
                     );
                     None
                 }
@@ -366,7 +381,10 @@ fn check_statement(
                         INVALID_CALL_STATEMENT,
                         "a call statement must call a function returning `unit`",
                     )
-                    .with_primary_label(statement.span, "this call returns `i64`")
+                    .with_primary_label(
+                        statement.span,
+                        format!("this call returns `{}`", expression.ty.name()),
+                    )
                     .with_note("use the returned value instead of discarding it"),
                 );
                 return None;
@@ -406,6 +424,11 @@ fn check_expression(
         ResolvedExpression::Integer(integer) => {
             check_positive_integer(&integer.spelling, integer.span, diagnostics)
         }
+        ResolvedExpression::Boolean(boolean) => Some(HirExpression {
+            kind: HirExpressionKind::Boolean(boolean.value),
+            ty: Type::Bool,
+            span: boolean.span,
+        }),
         ResolvedExpression::Unary(unary) => {
             if unary.operator == ResolvedUnaryOperator::Negate {
                 if let Some(integer) = integer_through_groups(&unary.operand) {
@@ -696,6 +719,7 @@ fn require_type(
 fn lower_type(type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
+        ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
     }
 }

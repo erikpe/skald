@@ -43,6 +43,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::MoveImmediate64 { value, destination } => {
             write!(output, "movabsq ${value}, {}", destination.name()).unwrap()
         }
+        Instruction::ZeroExtendByte {
+            source,
+            destination,
+        } => write!(output, "movzbq {}, {}", source.name(), destination.name()).unwrap(),
         Instruction::Add {
             source,
             destination,

@@ -195,6 +195,11 @@ impl<'hir> FunctionLowerer<'hir> {
                 lower_type(expression.ty),
                 expression.span,
             )),
+            HirExpressionKind::Boolean(value) => Some(self.assign(
+                MirRvalueKind::ConstantBool(*value),
+                lower_type(expression.ty),
+                expression.span,
+            )),
             HirExpressionKind::Unary { operation, operand } => {
                 let operand = self
                     .lower_expression(operand)
@@ -287,6 +292,7 @@ impl<'hir> FunctionLowerer<'hir> {
 const fn lower_type(ty: Type) -> MirType {
     match ty {
         Type::I64 => MirType::I64,
+        Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
     }
 }

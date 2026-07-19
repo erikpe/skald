@@ -69,6 +69,59 @@ fn lowers_storage_values_arithmetic_and_return_explicitly() {
 }
 
 #[test]
+fn lowers_boolean_constants_storage_calls_and_returns_as_boolean_mir() {
+    let mir = lower_text(concat!(
+        "extern fn external_flag(value: bool) -> bool;\n",
+        "fn identity(value: bool) -> bool { var result: bool = value; return result; }\n",
+        "fn main() -> i64 { var flag: bool = identity(true); var external: bool = external_flag(flag); return 0; }\n",
+    ));
+
+    assert!(verify_mir(&mir).is_ok());
+    let identity_declaration = mir.declarations.get(FunctionId::new(1)).unwrap();
+    assert_eq!(identity_declaration.parameter_types, [MirType::Bool]);
+    assert_eq!(identity_declaration.return_type, MirType::Bool);
+    let identity = mir.definitions.get(FunctionId::new(1)).unwrap();
+    assert_eq!(identity.storage[0].ty, MirType::Bool);
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    assert!(main.values.iter().any(|value| value.ty == MirType::Bool));
+    assert!(main.body.blocks[0].instructions.iter().any(|instruction| {
+        matches!(
+            instruction,
+            MirInstruction::Assign(MirAssignment {
+                rvalue: MirRvalue {
+                    kind: MirRvalueKind::ConstantBool(true),
+                    ty: MirType::Bool,
+                    ..
+                },
+                ..
+            })
+        )
+    }));
+
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("const.bool true : bool"));
+    assert!(dump.contains("Signature (bool) -> bool"));
+}
+
+#[test]
+fn verifier_rejects_a_boolean_constant_with_a_non_boolean_result() {
+    let mut mir = lower_text("fn flag() -> bool { return true; } fn main() -> i64 { return 0; }");
+    let flag = mir
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut flag.body.blocks[0].instructions[0] else {
+        panic!("expected constant assignment");
+    };
+    assignment.rvalue.ty = MirType::I64;
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("boolean constant is not `bool`")));
+}
+
+#[test]
 fn nested_call_arguments_lower_in_deterministic_left_to_right_order() {
     let mir = lower_text(concat!(
         "fn left() -> i64 { return 1; }\n",

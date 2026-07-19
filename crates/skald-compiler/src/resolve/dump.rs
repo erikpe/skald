@@ -98,6 +98,7 @@ impl ResolvedDumper {
     fn type_syntax(&mut self, type_syntax: &ResolvedType) {
         let name = match type_syntax.kind {
             ResolvedTypeKind::I64 => "I64",
+            ResolvedTypeKind::Bool => "Bool",
             ResolvedTypeKind::Unit => "Unit",
         };
         self.line(&format!("Type {name}"), type_syntax.span);
@@ -143,6 +144,16 @@ impl ResolvedDumper {
                 write_quoted(&mut self.output, &integer.spelling);
                 write_span(&mut self.output, integer.span);
                 self.output.push('\n');
+            }
+            ResolvedExpression::Boolean(boolean) => {
+                self.line(
+                    if boolean.value {
+                        "Boolean true"
+                    } else {
+                        "Boolean false"
+                    },
+                    boolean.span,
+                );
             }
             ResolvedExpression::Unary(unary) => {
                 let operator = match unary.operator {

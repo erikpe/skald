@@ -56,6 +56,36 @@ fn parses_the_vertical_slice_demonstration_program() {
 }
 
 #[test]
+fn parses_boolean_types_and_literals_in_all_supported_positions() {
+    let (_, output) = parse_text(concat!(
+        "extern fn emit(value: bool) -> bool;\n",
+        "fn identity(value: bool) -> bool { var result: bool = value; return result; }\n",
+        "fn main() -> i64 { var value: bool = true; emit(false); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let TopLevelDeclaration::ExternalFunction(external) = &output.ast.declarations[0] else {
+        panic!("expected external declaration");
+    };
+    assert_eq!(external.parameters[0].type_syntax.kind, TypeKind::Bool);
+    assert_eq!(external.return_type.kind, TypeKind::Bool);
+    let main = function(&output.ast, 2);
+    let Statement::Local(local) = &main.body.statements[0] else {
+        panic!("expected boolean local");
+    };
+    assert_eq!(local.type_syntax.kind, TypeKind::Bool);
+    assert!(matches!(
+        local.initializer,
+        Expression::Boolean(BooleanExpr { value: true, .. })
+    ));
+
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Type Bool"));
+    assert!(dump.contains("Boolean true"));
+    assert!(dump.contains("Boolean false"));
+}
+
+#[test]
 fn precedence_and_associativity_are_explicit() {
     let (_, output) = parse_text("fn main() -> i64 { return -a * b + c - d; }");
     assert!(!output.has_errors());

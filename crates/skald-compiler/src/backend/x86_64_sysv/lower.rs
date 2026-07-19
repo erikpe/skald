@@ -4,7 +4,7 @@ use crate::{
     backend::{BackendError, Target},
     mir::{
         MirBinaryOperation, MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition,
-        MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind, MirTerminator,
+        MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind, MirTerminator, MirType,
         MirUnaryOperation, StorageId, ValueId,
     },
 };
@@ -12,7 +12,7 @@ use crate::{
 use super::{
     abi::{self, IncomingArgument},
     frame::FrameLayout,
-    machine::{AssemblyFunction, AssemblyProgram, Instruction, Operand, Register},
+    machine::{AssemblyFunction, AssemblyProgram, ByteRegister, Instruction, Operand, Register},
 };
 
 pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendError> {
@@ -142,6 +142,13 @@ fn select_instruction(
                     });
                     store_rax(destination, output);
                 }
+                MirRvalueKind::ConstantBool(value) => {
+                    output.push(Instruction::MoveImmediate64 {
+                        value: i64::from(*value),
+                        destination: Register::Rax,
+                    });
+                    store_rax(destination, output);
+                }
                 MirRvalueKind::Load(storage) => {
                     load_rax(frame_storage(frame, *storage), output);
                     store_rax(destination, output);
@@ -236,6 +243,14 @@ fn select_call(
     output.push(Instruction::Call(symbol_for(target)));
     if stack_size != 0 {
         output.push(Instruction::ReleaseStack(stack_size));
+    }
+    if target.return_type == MirType::Bool
+        && matches!(target.linkage, MirFunctionLinkage::External { .. })
+    {
+        output.push(Instruction::ZeroExtendByte {
+            source: ByteRegister::Al,
+            destination: Register::Rax,
+        });
     }
     if let Some(result) = call.result {
         store_rax(frame_value(frame, result), output);

@@ -1,6 +1,6 @@
 # Grammar
 
-This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice and `i64` output extension contracts below describe implemented behavior.
+This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice, `i64` output, and straight-line `bool` contracts below describe implemented behavior.
 
 ## First vertical slice lexical contract
 
@@ -162,22 +162,22 @@ System V call-lowering path used for Skald definitions. An unavailable symbol
 therefore remains valid through compilation and fails only when the driver
 invokes the linker.
 
-## Planned `bool` and conditional extension contract
+## `bool` and conditional extension contract
 
-C0 fixes the source and semantic contract for the next C-series slice. This
-section is normative for that implementation work but does not claim that the
-current compiler accepts the new syntax. C2 enables straight-line boolean
-source only after it works through the x86-64 target; C5 later enables
-conditionals after multi-block MIR and backend branch support are complete.
+C0 fixed the source and semantic contract for the C-series slice. C2 implements
+the straight-line boolean grammar below through the x86-64 target. The
+conditional grammar remains planned for C5, after multi-block MIR and backend
+branch support are complete.
 
-The extension adds these keywords:
+The implemented straight-line subset adds these keywords:
 
 ```text
-bool true false if elif else
+bool true false
 ```
 
-They use only punctuation already present in the implemented lexer. `true` and
-`false` are boolean literals, not identifiers.
+The planned conditional subset later adds `if`, `elif`, and `else`. All use
+only punctuation already present in the lexer. `true` and `false` are boolean
+literals, not identifiers.
 
 ### Straight-line boolean grammar
 
@@ -211,7 +211,7 @@ declared types. The literals `false` and `true` are the only literal boolean
 values. This slice adds no casts, equality, ordering, logical negation,
 `&&`, or `||`.
 
-The restricted exact-symbol external profile expands only enough to accept
+The restricted exact-symbol external profile accepts
 by-value `bool` parameters and `bool` results alongside its existing `i64` and
 `unit` forms. On Linux x86-64 System V, Skald `bool` maps to C `bool`
 (`_Bool`). Outgoing values are canonical false or true. An external boolean

@@ -56,7 +56,9 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
                 assert_expression_is_fully_typed(argument);
             }
         }
-        HirExpressionKind::Binding(_) | HirExpressionKind::Integer(_) => {}
+        HirExpressionKind::Binding(_)
+        | HirExpressionKind::Integer(_)
+        | HirExpressionKind::Boolean(_) => {}
     }
 }
 
@@ -162,6 +164,66 @@ fn checks_unit_functions_returns_and_call_statements() {
     assert!(dump.contains("ReturnType unit"));
     assert!(dump.contains("CallStatement"));
     assert!(dump.contains("DirectCall f0 : unit"));
+}
+
+#[test]
+fn checks_boolean_values_without_conflating_them_with_i64() {
+    let output = check_text(concat!(
+        "extern fn external_flag(value: bool) -> bool;\n",
+        "fn identity(value: bool) -> bool { var result: bool = value; return result; }\n",
+        "fn main() -> i64 { var flag: bool = external_flag(true); var echoed: bool = identity(flag); return 0; }\n",
+    ));
+
+    assert!(!output.has_errors());
+    let hir = output.hir.unwrap();
+    let external = hir
+        .declarations
+        .get(crate::resolve::FunctionId::new(0))
+        .unwrap();
+    assert_eq!(external.parameters[0].ty, Type::Bool);
+    assert_eq!(external.return_type, Type::Bool);
+    let identity = hir
+        .declarations
+        .get(crate::resolve::FunctionId::new(1))
+        .unwrap();
+    assert_eq!(identity.parameters[0].ty, Type::Bool);
+    assert_eq!(identity.return_type, Type::Bool);
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    assert!(main.locals.iter().all(|local| local.ty == Type::Bool));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Boolean true : bool"));
+    assert!(dump.contains("DirectCall f0 : bool"));
+}
+
+#[test]
+fn rejects_boolean_i64_mismatches_and_boolean_arithmetic() {
+    for source in [
+        "fn flag() -> bool { return 1; } fn main() -> i64 { return 0; }",
+        "fn flag(value: bool) -> bool { return value; } fn main() -> i64 { flag(1); return 0; }",
+        "fn main() -> i64 { var flag: bool = true; return flag + 1; }",
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none());
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+    }
+}
+
+#[test]
+fn boolean_functions_require_a_boolean_return_value() {
+    let output = check_text("fn flag() -> bool {} fn main() -> i64 { return 0; }");
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == MISSING_RETURN
+            && diagnostic
+                .notes
+                .iter()
+                .any(|note| note.contains("return type `bool`"))
+    }));
 }
 
 #[test]
@@ -279,12 +341,18 @@ fn rejects_discarded_i64_calls_and_non_call_expression_statements() {
 
 #[test]
 fn main_must_remain_i64_returning() {
-    let output = check_text("fn main() -> unit {}");
+    for source in [
+        "fn main() -> unit {}",
+        "fn main() -> bool { return false; }",
+    ] {
+        let output = check_text(source);
 
-    assert!(output.hir.is_none());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_ENTRY_POINT && diagnostic.message.contains("fn main() -> i64")
-    }));
+        assert!(output.hir.is_none());
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == INVALID_ENTRY_POINT
+                && diagnostic.message.contains("fn main() -> i64")
+        }));
+    }
 }
 
 #[test]

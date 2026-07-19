@@ -316,6 +316,12 @@ impl<'program> FunctionResolver<'program> {
                     span: integer.span,
                 }))
             }
+            syntax::Expression::Boolean(boolean) => {
+                Some(ResolvedExpression::Boolean(ResolvedBooleanExpr {
+                    value: boolean.value,
+                    span: boolean.span,
+                }))
+            }
             syntax::Expression::Unary(unary) => {
                 let operand = self.resolve_expression(&unary.operand)?;
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
@@ -491,6 +497,7 @@ fn resolve_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
     ResolvedType {
         kind: match type_syntax.kind {
             syntax::TypeKind::I64 => ResolvedTypeKind::I64,
+            syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
         },
         span: type_syntax.span,

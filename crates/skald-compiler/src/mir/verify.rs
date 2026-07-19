@@ -550,6 +550,15 @@ impl Verifier<'_> {
                     self.block_error(function.function, block.id, "integer constant is not `i64`");
                 }
             }
+            MirRvalueKind::ConstantBool(_) => {
+                if rvalue.ty != MirType::Bool {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "boolean constant is not `bool`",
+                    );
+                }
+            }
             MirRvalueKind::Load(storage) => match function.storage(*storage) {
                 Some(storage) if storage.ty != rvalue.ty => {
                     self.block_error(function.function, block.id, "load result type mismatch")

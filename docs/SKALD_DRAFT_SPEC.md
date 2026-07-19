@@ -136,11 +136,11 @@ extern fn external_value(value: i64) -> i64;
 ```
 
 It is a top-level declaration terminated by a semicolon and has no Skald body.
-Parameter names are mandatory. The currently implemented O-series profile
-permits only by-value `i64` parameters and an `i64` or `unit` result.
+Parameter names are mandatory. The implemented C2 profile permits by-value
+`i64` and `bool` parameters and an `i64`, `bool`, or `unit` result.
 
-The specified C-series boolean extension adds by-value `bool` parameters and
-`bool` results to that same restricted profile:
+The C-series boolean extension adds by-value `bool` parameters and `bool`
+results to that same restricted profile:
 
 ```ska
 extern fn external_predicate(value: i64) -> bool;
@@ -1586,9 +1586,9 @@ runtime facilities with ordinary functions and richer error handling.
 
 ### 13.2 Bootstrap `bool` Output
 
-**Implementation status:** the runtime symbol is implemented by C1 in ABI
-version 3. The Skald source-to-runtime path remains C2 work; the current
-compiler does not yet accept the declaration below.
+**Implementation status:** implemented end-to-end by C2. The runtime symbol was
+introduced by C1 in ABI version 3; the compiler accepts the declaration below
+as an ordinary restricted external function.
 
 Runtime ABI version 3 exposes:
 
@@ -1685,8 +1685,8 @@ The following are also substantial gaps. They need not all be part of the first 
 - **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
-- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`; source/compiler support for its `bool` portion remains C2 work even though the runtime sink exists after C1. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
-- **Required library and runtime surface:** Sections 13.1 and 13.2 define only bootstrap `i64` and `bool` line-output operations; boolean output exists in runtime ABI version 3 but is not source-accessible until C2. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the implemented single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
+- **Required library and runtime surface:** Sections 13.1 and 13.2 define only the implemented bootstrap `i64` and `bool` line-output operations. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
 
@@ -1716,7 +1716,7 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` and `bool` parameters and `i64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions; source/compiler support for the `bool` extension remains C2 work;
+- the implemented bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` and `bool` parameters and `i64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions;
 - on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
 - compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
 - external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;

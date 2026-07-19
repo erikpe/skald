@@ -156,6 +156,9 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         MirRvalueKind::ConstantI64(value) => {
             let _ = write!(output, "const.i64 {value}");
         }
+        MirRvalueKind::ConstantBool(value) => {
+            let _ = write!(output, "const.bool {value}");
+        }
         MirRvalueKind::Load(storage) => {
             let _ = write!(output, "load {storage}");
         }

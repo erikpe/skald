@@ -131,6 +131,9 @@ impl HirDumper {
             HirExpressionKind::Integer(value) => {
                 self.typed_line(&format!("Integer {value}"), expression);
             }
+            HirExpressionKind::Boolean(value) => {
+                self.typed_line(&format!("Boolean {value}"), expression);
+            }
             HirExpressionKind::Unary { operation, operand } => {
                 let operation = match operation {
                     HirUnaryOperation::NegateI64 => "NegateI64",

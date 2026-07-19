@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0–C1 complete; C2 is the next implementation task.
+Status: C0–C2 complete; C3 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -159,7 +159,7 @@ C1 adds the public symbol in runtime ABI version 3.
 
 - [x] C0 — Specify boolean and conditional behavior
 - [x] C1 — Add and directly test the runtime boolean output ABI
-- [ ] C2 — Implement straight-line `bool` values end-to-end
+- [x] C2 — Implement straight-line `bool` values end-to-end
 - [ ] C3 — Add multi-block MIR and control-flow verification
 - [ ] C4 — Lower multi-block control flow on x86-64 System V
 - [ ] C5 — Implement `if` / `elif` / `else` end-to-end
@@ -232,25 +232,25 @@ support is needed to test the ABI.
 introducing control flow, forcing type and ABI assumptions to become explicit
 without mixing them with CFG work.
 
-- [ ] Lex `bool`, `true`, and `false` as distinct keywords.
-- [ ] Parse `bool` in supported parameter, result, local, and external
+- [x] Lex `bool`, `true`, and `false` as distinct keywords.
+- [x] Parse `bool` in supported parameter, result, local, and external
       declaration type positions, plus boolean literal expressions.
-- [ ] Preserve boolean types and literals in deterministic AST and resolved
+- [x] Preserve boolean types and literals in deterministic AST and resolved
       dumps.
-- [ ] Add `bool` to resolved types and typed HIR, with distinct literal nodes
+- [x] Add `bool` to resolved types and typed HIR, with distinct literal nodes
       and exact type checking for locals, calls, and returns.
-- [ ] Keep `main` exactly `fn main() -> i64`.
-- [ ] Extend the restricted external profile to by-value `bool` parameters and
+- [x] Keep `main` exactly `fn main() -> i64`.
+- [x] Extend the restricted external profile to by-value `bool` parameters and
       `bool` results as specified by C0.
-- [ ] Add `bool`, canonical boolean constants, loads, stores, call arguments,
+- [x] Add `bool`, canonical boolean constants, loads, stores, call arguments,
       and returns to MIR without encoding them as `i64` operations.
-- [ ] Extend MIR verification for boolean storage, values, signatures, calls,
+- [x] Extend MIR verification for boolean storage, values, signatures, calls,
       and returns.
-- [ ] Extend x86-64 ABI and frame lowering for internal and external boolean
+- [x] Extend x86-64 ABI and frame lowering for internal and external boolean
       parameters/results, including normalization of external results.
-- [ ] Add the source-to-runtime declaration and call path for
+- [x] Add the source-to-runtime declaration and call path for
       `ska_rt_println_bool` without a name-based intrinsic.
-- [ ] Replace the existing `bool` unsupported-type golden with focused valid
+- [x] Replace the existing `bool` unsupported-type golden with focused valid
       and invalid boolean cases.
 
 **Tests:** Lexer/parser and recovery tests; resolution, HIR, MIR, verifier, and

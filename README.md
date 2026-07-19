@@ -43,9 +43,10 @@ slices are implemented and tested.
 
 C0 specifies the next slice's `bool` type, restricted external ABI extension,
 bootstrap boolean output, and `if` / `elif` / `else` semantics. C1 implements
-and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. The
-compiler does not yet accept the new boolean source surface; that remains C2
-work.
+and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. C2
+implements straight-line `bool` values throughout the compiler, including
+ordinary source-to-runtime boolean output and the restricted external ABI.
+Multi-block MIR and conditional source syntax remain C3–C5 work.
 
 ## Development
 

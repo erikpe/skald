@@ -1,0 +1,6 @@
+error[TYP002]: entry function must have signature `fn main() -> i64`
+ --> tests/golden/compile_fail/invalid_bool_main.ska:1:4
+   |
+1 | fn main() -> bool {
+   |    ^^^^ invalid entry signature
+  = note: found 0 parameters and return type `bool`

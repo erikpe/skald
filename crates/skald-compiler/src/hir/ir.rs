@@ -8,6 +8,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     I64,
+    Bool,
     Unit,
 }
 
@@ -15,7 +16,17 @@ impl Type {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
+            Self::Bool => "bool",
             Self::Unit => "unit",
+        }
+    }
+
+    /// Returns the English indefinite article used before this type's name in
+    /// diagnostics.
+    pub const fn indefinite_article(self) -> &'static str {
+        match self {
+            Self::I64 => "an",
+            Self::Bool | Self::Unit => "a",
         }
     }
 }
@@ -217,6 +228,7 @@ pub struct HirExpression {
 pub enum HirExpressionKind {
     Binding(BindingId),
     Integer(i64),
+    Boolean(bool),
     Unary {
         operation: HirUnaryOperation,
         operand: Box<HirExpression>,

@@ -13,6 +13,19 @@ pub(super) enum Register {
     Rsp,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ByteRegister {
+    Al,
+}
+
+impl ByteRegister {
+    pub(super) const fn name(self) -> &'static str {
+        match self {
+            Self::Al => "%al",
+        }
+    }
+}
+
 impl Register {
     pub(super) const fn name(self) -> &'static str {
         match self {
@@ -50,6 +63,10 @@ pub(super) enum Instruction {
     },
     MoveImmediate64 {
         value: i64,
+        destination: Register,
+    },
+    ZeroExtendByte {
+        source: ByteRegister,
         destination: Register,
     },
     Add {

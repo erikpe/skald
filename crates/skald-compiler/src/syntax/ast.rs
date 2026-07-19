@@ -63,6 +63,7 @@ pub struct Name {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TypeKind {
     I64,
+    Bool,
     Unit,
 }
 
@@ -121,6 +122,7 @@ pub struct ExpressionStatement {
 pub enum Expression {
     Identifier(IdentifierExpr),
     Integer(IntegerExpr),
+    Boolean(BooleanExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Call(CallExpr),
@@ -132,6 +134,7 @@ impl Expression {
         match self {
             Self::Identifier(expression) => expression.span,
             Self::Integer(expression) => expression.span,
+            Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::Call(expression) => expression.span,
@@ -150,6 +153,12 @@ pub struct IdentifierExpr {
 pub struct IntegerExpr {
     /// Original decimal spelling. M4 owns conversion and `i64` range checking.
     pub spelling: String,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BooleanExpr {
+    pub value: bool,
     pub span: Span,
 }
 
