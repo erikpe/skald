@@ -1432,7 +1432,7 @@ Their existing sections preserve design direction and reserve likely syntax, but
 
 The following are also substantial gaps. They need not all be part of the first vertical slice, but each must be settled before the corresponding language area is considered complete:
 
-- **Lexical and grammatical definition:** a complete grammar, token and comment rules, literal spelling, operator precedence and associativity, and rules for resolving syntactic ambiguities.
+- **Lexical and grammatical definition:** the implemented first vertical slice has an explicit lexical and grammatical contract in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, literal spelling, operator precedence and associativity, and rules for resolving syntactic ambiguities.
 - **Name, type, and call resolution:** forward references, declaration cycles, overload availability or prohibition, candidate selection, implicit-conversion ranking, and generic diagnostics for ambiguous or invalid calls.
 - **Primitive edge-case semantics:** integer overflow and underflow, division or remainder by zero, the signed minimum divided by negative one, floating-point conformance and exceptional values, and whether constant evaluation diagnoses or reproduces runtime failures.
 - **Evaluation and cleanup ordering:** operand, receiver, and argument evaluation order; full-expression boundaries; temporary destruction order; and cleanup sequencing for every control-flow exit. This becomes a prerequisite before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.

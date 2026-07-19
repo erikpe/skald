@@ -1,6 +1,6 @@
 # First Vertical Slice Roadmap
 
-Status: proposed implementation roadmap.
+Status: active implementation roadmap.
 
 The first vertical slice proves that the complete Skald toolchain can translate one source file into an observable native Linux program. Its purpose is to validate architecture and interfaces, not to approximate the full language prematurely.
 
@@ -125,7 +125,7 @@ Progress summary:
 
 - [x] M0 — Repository and quality baseline
 - [x] M1 — Source ownership, diagnostics, and lexing
-- [ ] M2 — Parser and AST
+- [x] M2 — Parser and AST
 - [ ] M3 — Declaration collection and resolution
 - [ ] M4 — Type checking and typed HIR
 - [ ] M5 — MIR lowering and verification
@@ -157,12 +157,12 @@ Progress summary:
 
 ### M2 — Parser and AST
 
-- [ ] Source AST for functions, parameters, blocks, local declarations, returns, calls, and included expressions.
-- [ ] Explicit precedence and associativity for unary negation and `+`, `-`, `*`.
-- [ ] Recovery sufficient to report more than one independent syntax error when practical.
-- [ ] Deterministic AST dump.
+- [x] Source AST for functions, parameters, blocks, local declarations, returns, calls, and included expressions.
+- [x] Explicit precedence and associativity for unary negation and `+`, `-`, `*`.
+- [x] Recovery sufficient to report more than one independent syntax error when practical.
+- [x] Deterministic AST dump.
 
-- [ ] **Exit criterion:** parser tests cover the demonstration program, precedence, malformed declarations, missing punctuation, and recovery without semantic lookup.
+- [x] **Exit criterion:** parser tests cover the demonstration program, precedence, malformed declarations, missing punctuation, and recovery without semantic lookup.
 
 ### M3 — Declaration collection and resolution
 

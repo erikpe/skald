@@ -135,7 +135,7 @@ The root `Makefile` provides discoverable wrappers around the native Rust and C 
 | `make compiler-test` | run Rust workspace tests |
 | `make runtime` | build the C runtime archive |
 | `make runtime-test` | build and run direct C runtime tests |
-| `make check` | run the complete M0 validation suite |
+| `make check` | run the complete repository validation suite |
 
 These commands are convenience entry points, not replacements for Cargo or the runtime Makefile. Build output belongs under ignored `target/` and `build/` directories.
 
@@ -186,6 +186,8 @@ The implemented M1 lexer returns a token stream and accumulated diagnostics toge
 ### Syntax AST
 
 The AST mirrors source constructs and preserves spans. It must not become the long-lived semantic representation. In particular, later phases should not repeatedly resolve strings or attach growing sets of optional semantic fields to parser nodes.
+
+M2 implements the first-slice AST as separate node, parser, and dump modules behind the public `syntax` boundary. The recursive-descent parser performs no name or type lookup. It uses explicit precedence levels and recovers at parameter, statement, block, and top-level declaration boundaries, returning a partial AST together with accumulated structured diagnostics. The exact implemented grammar is recorded in [`grammar/README.md`](../grammar/README.md).
 
 ### Resolution and typed HIR
 

@@ -9,7 +9,7 @@ help:
 	@echo "  make compiler-test Run Rust compiler tests"
 	@echo "  make runtime       Build the C runtime archive"
 	@echo "  make runtime-test  Build and run C runtime tests"
-	@echo "  make check         Run the complete M0 validation suite"
+	@echo "  make check         Run the complete repository validation suite"
 
 fmt:
 	cargo fmt --all
