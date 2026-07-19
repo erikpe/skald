@@ -74,6 +74,7 @@ In the current development checkout, the Niflheim repository is available as the
 - [Skald draft language specification](docs/SKALD_DRAFT_SPEC.md) — the canonical description of the language design.
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md) — design principles, phase boundaries, backend layout, runtime boundary, and testing structure.
 - [First vertical slice roadmap](docs/FIRST_VERTICAL_SLICE_ROADMAP.md) — the minimal end-to-end implementation plan and completion criteria.
+- [`i64` output and golden-test observability roadmap](docs/I64_OUTPUT_ROADMAP.md) — PR-sized slices for `unit`, restricted external calls, runtime integer output, and exact stdout goldens.
 - [Compiler debugging artifacts](docs/DEBUGGING.md) — deterministic phase dumps, assembly inspection, and verifier boundaries.
 - [Next-slice boundaries](docs/NEXT_SLICE_BOUNDARIES.md) — responsibilities and extension rules that future language work should preserve.
 - [Niflheim language specification](../niflheim/docs/LANGUAGE_MVP_SPEC_V0.1.md) — historical background for the language from which the first Skald draft was derived.
