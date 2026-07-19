@@ -3,16 +3,18 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirBinaryOperation, MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition,
-        MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind, MirTerminator, MirType,
-        MirUnaryOperation, StorageId, ValueId,
+        BlockId, MirBinaryOperation, MirCall, MirCallTarget, MirFunctionDeclaration,
+        MirFunctionDefinition, MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind,
+        MirTerminator, MirType, MirUnaryOperation, StorageId, ValueId,
     },
 };
 
 use super::{
     abi::{self, IncomingArgument},
     frame::FrameLayout,
-    machine::{AssemblyFunction, AssemblyProgram, ByteRegister, Instruction, Operand, Register},
+    machine::{
+        AssemblyFunction, AssemblyProgram, ByteRegister, Instruction, Label, Operand, Register,
+    },
 };
 
 pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendError> {
@@ -53,15 +55,28 @@ fn lower_function(
     }
 
     spill_parameters(function, &frame, &mut instructions)?;
-    let block = &function.body.blocks[0];
-    for instruction in &block.instructions {
-        select_instruction(program, function, instruction, &frame, &mut instructions)?;
+    if function.body.blocks[0].id != function.body.entry {
+        instructions.push(Instruction::Jump(block_label(function.body.entry)));
     }
-    select_terminator(
-        block.terminator.as_ref().expect("target legality checked"),
-        &frame,
-        &mut instructions,
-    );
+    let epilogue = epilogue_label(function.function);
+    for block in &function.body.blocks {
+        instructions.push(Instruction::Label(block_label(block.id)));
+        for instruction in &block.instructions {
+            select_instruction(program, function, instruction, &frame, &mut instructions)?;
+        }
+        select_terminator(
+            block
+                .terminator
+                .as_ref()
+                .expect("verified block is terminated"),
+            &frame,
+            &epilogue,
+            &mut instructions,
+        );
+    }
+    instructions.push(Instruction::Label(epilogue));
+    instructions.push(Instruction::Leave);
+    instructions.push(Instruction::Return);
 
     Ok(AssemblyFunction {
         symbol: symbol_for(declaration),
@@ -261,6 +276,7 @@ fn select_call(
 fn select_terminator(
     terminator: &MirTerminator,
     frame: &FrameLayout,
+    epilogue: &Label,
     output: &mut Vec<Instruction>,
 ) {
     match terminator {
@@ -268,11 +284,21 @@ fn select_terminator(
             if let Some(value) = value {
                 load_rax(frame_value(frame, *value), output);
             }
-            output.push(Instruction::Leave);
-            output.push(Instruction::Return);
+            output.push(Instruction::Jump(epilogue.clone()));
         }
-        MirTerminator::Goto { .. } | MirTerminator::Branch { .. } => {
-            unreachable!("target legality rejects control-flow terminators until C4")
+        MirTerminator::Goto { target, .. } => {
+            output.push(Instruction::Jump(block_label(*target)));
+        }
+        MirTerminator::Branch {
+            condition,
+            true_target,
+            false_target,
+            ..
+        } => {
+            load_rax(frame_value(frame, *condition), output);
+            output.push(Instruction::Test(Register::Rax));
+            output.push(Instruction::JumpIfNotZero(block_label(*true_target)));
+            output.push(Instruction::Jump(block_label(*false_target)));
         }
     }
 }
@@ -308,4 +334,16 @@ fn symbol_for(function: &MirFunctionDeclaration) -> String {
         MirFunctionLinkage::Internal => format!(".Lska_fn_{}", function.id.index()),
         MirFunctionLinkage::External { symbol } => symbol.clone(),
     }
+}
+
+fn block_label(block: BlockId) -> Label {
+    Label::new(format!(
+        ".Lska_fn_{}_block_{}",
+        block.function().index(),
+        block.index()
+    ))
+}
+
+fn epilogue_label(function: crate::resolve::FunctionId) -> Label {
+    Label::new(format!(".Lska_fn_{}_epilogue", function.index()))
 }

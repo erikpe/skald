@@ -1,14 +1,21 @@
 use std::{
+    fs,
     io::Write,
+    path::PathBuf,
     process::{Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use crate::{
     backend::{emit_assembly, Target},
     hir::HirProgram,
     lexer::lex,
-    mir::{lower_hir, verify_mir, BlockId, MirBasicBlock, MirProgram},
-    resolve::resolve,
+    mir::{
+        lower_hir, verify_mir, BlockId, MirAssignment, MirBasicBlock, MirCall, MirCallTarget,
+        MirInstruction, MirProgram, MirRvalue, MirRvalueKind, MirStore, MirTerminator, MirType,
+        MirValue, ValueId,
+    },
+    resolve::{resolve, FunctionId},
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
@@ -38,6 +45,268 @@ fn assembly(text: &str) -> String {
     emit_assembly(Target::X86_64SysV, &lower_text(text)).unwrap()
 }
 
+fn conditional_return_mir(condition_value: bool) -> MirProgram {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let span = function.span;
+    let condition = ValueId::new(function.function, 0);
+    let true_value = ValueId::new(function.function, 1);
+    let false_value = ValueId::new(function.function, 2);
+    function.values = vec![
+        MirValue {
+            id: condition,
+            ty: MirType::Bool,
+            span,
+        },
+        MirValue {
+            id: true_value,
+            ty: MirType::I64,
+            span,
+        },
+        MirValue {
+            id: false_value,
+            ty: MirType::I64,
+            span,
+        },
+    ];
+    let entry = BlockId::new(function.function, 0);
+    let true_block = BlockId::new(function.function, 1);
+    let false_block = BlockId::new(function.function, 2);
+    function.body.entry = entry;
+    function.body.blocks = vec![
+        MirBasicBlock {
+            id: entry,
+            instructions: vec![constant_bool(condition, condition_value, span)],
+            terminator: Some(MirTerminator::Branch {
+                condition,
+                true_target: true_block,
+                false_target: false_block,
+                span,
+            }),
+            span,
+        },
+        MirBasicBlock {
+            id: true_block,
+            instructions: vec![constant_i64(true_value, 37, span)],
+            terminator: Some(MirTerminator::Return {
+                value: Some(true_value),
+                span,
+            }),
+            span,
+        },
+        MirBasicBlock {
+            id: false_block,
+            instructions: vec![constant_i64(false_value, 12, span)],
+            terminator: Some(MirTerminator::Return {
+                value: Some(false_value),
+                span,
+            }),
+            span,
+        },
+    ];
+    assert!(verify_mir(&mir).is_ok());
+    mir
+}
+
+fn branch_call_diamond_mir() -> MirProgram {
+    let mut mir = lower_text(concat!(
+        "fn left() -> i64 { return 11; }\n",
+        "fn right() -> i64 { return 22; }\n",
+        "fn main() -> i64 { var result: i64 = 0; return result; }\n",
+    ));
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let span = function.span;
+    let storage = function.storage[0].id;
+    let condition = ValueId::new(function.function, 0);
+    let left_result = ValueId::new(function.function, 1);
+    let right_result = ValueId::new(function.function, 2);
+    let joined_result = ValueId::new(function.function, 3);
+    function.values = [
+        (condition, MirType::Bool),
+        (left_result, MirType::I64),
+        (right_result, MirType::I64),
+        (joined_result, MirType::I64),
+    ]
+    .into_iter()
+    .map(|(id, ty)| MirValue { id, ty, span })
+    .collect();
+    let entry = BlockId::new(function.function, 0);
+    let true_block = BlockId::new(function.function, 1);
+    let false_block = BlockId::new(function.function, 2);
+    let join = BlockId::new(function.function, 3);
+    function.body.entry = entry;
+    function.body.blocks = vec![
+        MirBasicBlock {
+            id: entry,
+            instructions: vec![constant_bool(condition, true, span)],
+            terminator: Some(MirTerminator::Branch {
+                condition,
+                true_target: true_block,
+                false_target: false_block,
+                span,
+            }),
+            span,
+        },
+        call_and_store_block(
+            true_block,
+            FunctionId::new(0),
+            left_result,
+            storage,
+            join,
+            span,
+        ),
+        call_and_store_block(
+            false_block,
+            FunctionId::new(1),
+            right_result,
+            storage,
+            join,
+            span,
+        ),
+        MirBasicBlock {
+            id: join,
+            instructions: vec![MirInstruction::Assign(MirAssignment {
+                result: joined_result,
+                rvalue: MirRvalue {
+                    kind: MirRvalueKind::Load(storage),
+                    ty: MirType::I64,
+                },
+                span,
+            })],
+            terminator: Some(MirTerminator::Return {
+                value: Some(joined_result),
+                span,
+            }),
+            span,
+        },
+    ];
+    assert!(verify_mir(&mir).is_ok());
+    mir
+}
+
+fn call_and_store_block(
+    id: BlockId,
+    target: FunctionId,
+    result: ValueId,
+    storage: crate::mir::StorageId,
+    join: BlockId,
+    span: crate::source::Span,
+) -> MirBasicBlock {
+    MirBasicBlock {
+        id,
+        instructions: vec![
+            MirInstruction::Call(MirCall {
+                target: MirCallTarget::Direct(target),
+                arguments: Vec::new(),
+                result: Some(result),
+                span,
+            }),
+            MirInstruction::Store(MirStore {
+                storage,
+                value: result,
+                span,
+            }),
+        ],
+        terminator: Some(MirTerminator::Goto { target: join, span }),
+        span,
+    }
+}
+
+fn constant_bool(result: ValueId, value: bool, span: crate::source::Span) -> MirInstruction {
+    MirInstruction::Assign(MirAssignment {
+        result,
+        rvalue: MirRvalue {
+            kind: MirRvalueKind::ConstantBool(value),
+            ty: MirType::Bool,
+        },
+        span,
+    })
+}
+
+fn constant_i64(result: ValueId, value: i64, span: crate::source::Span) -> MirInstruction {
+    MirInstruction::Assign(MirAssignment {
+        result,
+        rvalue: MirRvalue {
+            kind: MirRvalueKind::ConstantI64(value),
+            ty: MirType::I64,
+        },
+        span,
+    })
+}
+
+fn assert_system_assembler_accepts(output: &str) {
+    let mut child = Command::new("cc")
+        .args(["-x", "assembler", "-c", "-o", "/dev/null", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the M0 Linux toolchain prerequisite requires `cc`");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(output.as_bytes())
+        .unwrap();
+    let result = child.wait_with_output().unwrap();
+
+    assert!(
+        result.status.success(),
+        "assembler rejected generated output:\n{}\nassembly:\n{output}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+static NEXT_EXECUTABLE_ID: AtomicU64 = AtomicU64::new(0);
+
+struct TemporaryExecutable(PathBuf);
+
+impl TemporaryExecutable {
+    fn new() -> Self {
+        let id = NEXT_EXECUTABLE_ID.fetch_add(1, Ordering::Relaxed);
+        Self(std::env::temp_dir().join(format!("skald-c4-{}-{id}", std::process::id())))
+    }
+}
+
+impl Drop for TemporaryExecutable {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.0);
+    }
+}
+
+fn run_native_assembly(output: &str) -> std::process::ExitStatus {
+    let executable = TemporaryExecutable::new();
+    let mut child = Command::new("cc")
+        .args(["-x", "assembler", "-o"])
+        .arg(&executable.0)
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the M0 Linux toolchain prerequisite requires `cc`");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(output.as_bytes())
+        .unwrap();
+    let linked = child.wait_with_output().unwrap();
+    assert!(
+        linked.status.success(),
+        "linker rejected generated output:\n{}\nassembly:\n{output}",
+        String::from_utf8_lossy(&linked.stderr)
+    );
+
+    Command::new(&executable.0).status().unwrap()
+}
+
 #[test]
 fn emits_a_deterministic_minimal_function() {
     let source = "fn main() -> i64 { return 42; }";
@@ -49,9 +318,12 @@ fn emits_a_deterministic_minimal_function() {
         "    pushq %rbp\n",
         "    movq %rsp, %rbp\n",
         "    subq $16, %rsp\n",
+        ".Lska_fn_0_block_0:\n",
         "    movabsq $42, %rax\n",
         "    movq %rax, -8(%rbp)\n",
         "    movq -8(%rbp), %rax\n",
+        "    jmp .Lska_fn_0_epilogue\n",
+        ".Lska_fn_0_epilogue:\n",
         "    leave\n",
         "    ret\n",
         ".size .Lska_fn_0, .-.Lska_fn_0\n",
@@ -100,7 +372,7 @@ fn unit_calls_and_returns_do_not_move_a_fictitious_result() {
     assert!(output.contains("call .Lska_fn_0\n    movabsq $7, %rax"));
     assert!(!output.contains("call .Lska_fn_0\n    movq %rax,"));
     assert!(output.contains(
-        ".Lska_fn_0:\n    pushq %rbp\n    movq %rsp, %rbp\n    subq $16, %rsp\n    movq %rdi, -8(%rbp)\n    leave\n    ret"
+        ".Lska_fn_0:\n    pushq %rbp\n    movq %rsp, %rbp\n    subq $16, %rsp\n    movq %rdi, -8(%rbp)\n.Lska_fn_0_block_0:\n    jmp .Lska_fn_0_epilogue\n.Lska_fn_0_epilogue:\n    leave\n    ret"
     ));
 }
 
@@ -179,79 +451,127 @@ fn lowers_boolean_values_through_internal_and_external_abi_boundaries() {
 }
 
 #[test]
-fn rejects_verified_mir_outside_the_initial_target_shape() {
+fn lowers_forward_and_backward_jumps_in_stable_block_order() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
     let function = mir
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    let span = function.body.blocks[0].span;
+    let span = function.span;
+    function.values.clear();
+    function.body.blocks[0].instructions.clear();
     let second = BlockId::new(function.function, 1);
+    function.body.blocks[0].terminator = Some(MirTerminator::Goto {
+        target: second,
+        span,
+    });
     function.body.blocks.push(MirBasicBlock {
         id: second,
         instructions: Vec::new(),
-        terminator: Some(crate::mir::MirTerminator::Goto {
-            target: second,
+        terminator: Some(MirTerminator::Goto {
+            target: function.body.entry,
             span,
         }),
         span,
     });
     assert!(verify_mir(&mir).is_ok());
 
-    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
-    assert_eq!(error.function(), Some(mir.entry_function));
-    assert_eq!(
-        error.message(),
-        "the initial backend supports exactly one basic block, found 2"
-    );
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let first_position = output.find(".Lska_fn_0_block_0:").unwrap();
+    let second_position = output.find(".Lska_fn_0_block_1:").unwrap();
+    assert!(first_position < second_position);
+    assert!(output.contains(".Lska_fn_0_block_0:\n    jmp .Lska_fn_0_block_1"));
+    assert!(output.contains(".Lska_fn_0_block_1:\n    jmp .Lska_fn_0_block_0"));
 }
 
 #[test]
-fn rejects_control_flow_terminators_until_branch_lowering_exists() {
-    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+fn lowers_boolean_branches_and_returns_in_both_arms() {
+    let output = emit_assembly(Target::X86_64SysV, &conditional_return_mir(true)).unwrap();
+
+    assert!(output.contains(
+        "movq -8(%rbp), %rax\n    testq %rax, %rax\n    jne .Lska_fn_0_block_1\n    jmp .Lska_fn_0_block_2"
+    ));
+    assert!(output.contains(".Lska_fn_0_block_1:\n    movabsq $37, %rax"));
+    assert!(output.contains(".Lska_fn_0_block_2:\n    movabsq $12, %rax"));
+    assert_eq!(output.matches("jmp .Lska_fn_0_epilogue").count(), 2);
+    assert_eq!(output.matches(".Lska_fn_0_epilogue:").count(), 1);
+}
+
+#[test]
+fn lowers_a_diamond_with_branch_local_calls_and_a_storage_join() {
+    let output = emit_assembly(Target::X86_64SysV, &branch_call_diamond_mir()).unwrap();
+
+    for index in 0..=3 {
+        assert_eq!(
+            output
+                .matches(&format!(".Lska_fn_2_block_{index}:"))
+                .count(),
+            1
+        );
+    }
+    assert!(output.contains(".Lska_fn_2_block_1:\n    call .Lska_fn_0"));
+    assert!(output.contains(".Lska_fn_2_block_2:\n    call .Lska_fn_1"));
+    assert_eq!(output.matches("jmp .Lska_fn_2_block_3").count(), 2);
+    assert!(output.contains(".Lska_fn_2_block_3:\n    movq -8(%rbp), %rax"));
+}
+
+#[test]
+fn jumps_to_a_non_first_entry_before_emitting_blocks_in_id_order() {
+    let mut mir = conditional_return_mir(true);
     let function = mir
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    let target = function.body.entry;
-    function.body.blocks[0].terminator = Some(crate::mir::MirTerminator::Goto {
-        target,
-        span: function.span,
-    });
+    function.body.entry = function.body.blocks[1].id;
     assert!(verify_mir(&mir).is_ok());
 
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let entry_jump = output.find("jmp .Lska_fn_0_block_1").unwrap();
+    let first_block = output.find(".Lska_fn_0_block_0:").unwrap();
+    let selected_block = output.find(".Lska_fn_0_block_1:").unwrap();
+    assert!(entry_jump < first_block);
+    assert!(first_block < selected_block);
+}
+
+#[test]
+fn malformed_control_flow_is_a_structured_backend_error() {
+    let mut mir = conditional_return_mir(true);
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let Some(MirTerminator::Branch { true_target, .. }) = &mut function.body.blocks[0].terminator
+    else {
+        panic!("expected branch terminator");
+    };
+    *true_target = BlockId::new(function.function, 99);
+
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
-    assert_eq!(error.function(), Some(mir.entry_function));
-    assert_eq!(
-        error.message(),
-        "the initial backend supports only return terminators"
-    );
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error
+        .message()
+        .contains("control-flow target f0:b99 is not declared"));
+}
+
+#[test]
+fn hand_built_conditional_executes_both_branch_directions() {
+    for (condition, expected_status) in [(true, 37), (false, 12)] {
+        let mir = conditional_return_mir(condition);
+        let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+        let status = run_native_assembly(&output);
+
+        assert_eq!(status.code(), Some(expected_status));
+    }
 }
 
 #[test]
 fn generated_text_is_accepted_by_the_system_assembler() {
-    let output = assembly(concat!(
+    let straight_line = assembly(concat!(
         "fn calculate(a: i64, b: i64) -> i64 { return -a * b + 3; }\n",
         "fn main() -> i64 { return calculate(6, 7); }",
     ));
-    let mut child = Command::new("cc")
-        .args(["-x", "assembler", "-c", "-o", "/dev/null", "-"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the M0 Linux toolchain prerequisite requires `cc`");
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(output.as_bytes())
-        .unwrap();
-    let result = child.wait_with_output().unwrap();
+    let multi_block = emit_assembly(Target::X86_64SysV, &branch_call_diamond_mir()).unwrap();
 
-    assert!(
-        result.status.success(),
-        "assembler rejected generated output:\n{}\nassembly:\n{output}",
-        String::from_utf8_lossy(&result.stderr)
-    );
+    assert_system_assembler_accepts(&straight_line);
+    assert_system_assembler_accepts(&multi_block);
 }

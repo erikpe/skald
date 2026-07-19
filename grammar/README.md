@@ -166,8 +166,8 @@ invokes the linker.
 
 C0 fixed the source and semantic contract for the C-series slice. C2 implements
 the straight-line boolean grammar below through the x86-64 target. The
-conditional grammar remains planned for C5, after multi-block MIR and backend
-branch support are complete.
+conditional grammar remains planned for C5; C3 multi-block MIR and C4 backend
+branch support are now complete.
 
 The implemented straight-line subset adds these keywords:
 

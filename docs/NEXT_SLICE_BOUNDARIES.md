@@ -37,12 +37,12 @@ For each new construct or type:
 ## Likely next-slice pressure points
 
 The selected next slice is `bool` and Niflheim-style
-`if` / `elif` / `else`. Its C0 contract, C1–C2 boolean support, and C3 verified
-multi-block MIR are complete; its remaining implementation is planned in
+`if` / `elif` / `else`. Its C0 contract, C1–C2 boolean support, C3 verified
+multi-block MIR, and C4 x86-64 branch lowering are complete; its remaining implementation is planned in
 [`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It introduces a
 semantic boolean type in HIR and MIR, multiple MIR blocks with explicit
 conditional and unconditional terminators, control-flow-aware MIR verification,
-and, next in C4, branch selection in the backend. It must not encode branches as special
+and branch selection in the backend. C5 must not encode branches as special
 calls or let the backend rediscover high-level syntax.
 
 Adding the first inline object instead stresses layout, construction state, assignment, cleanup order, receiver access, and return conventions. That slice needs a written ABI/layout contract before code generation and should not be combined casually with shared ownership or exceptions.

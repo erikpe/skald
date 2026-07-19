@@ -47,8 +47,8 @@ and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. C2
 implements straight-line `bool` values throughout the compiler, including
 ordinary source-to-runtime boolean output and the restricted external ABI.
 C3 adds verified target-independent multi-block MIR with explicit jumps and
-boolean branches. Backend branch lowering and conditional source syntax remain
-C4–C5 work.
+boolean branches. C4 lowers that control flow to deterministic x86-64 System V
+labels and branches. Conditional source syntax remains C5 work.
 
 ## Development
 

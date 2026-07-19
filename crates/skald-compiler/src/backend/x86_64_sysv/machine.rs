@@ -55,7 +55,21 @@ impl From<Register> for Operand {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct Label(String);
+
+impl Label {
+    pub(super) fn new(name: String) -> Self {
+        Self(name)
+    }
+
+    pub(super) fn name(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Instruction {
+    Label(Label),
     Push(Register),
     Move {
         source: Operand,
@@ -82,9 +96,12 @@ pub(super) enum Instruction {
         destination: Register,
     },
     Negate(Register),
+    Test(Register),
     ReserveStack(u32),
     ReleaseStack(u32),
     Call(String),
+    Jump(Label),
+    JumpIfNotZero(Label),
     Leave,
     Return,
 }

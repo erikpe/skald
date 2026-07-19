@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0–C3 complete; C4 is the next implementation task.
+Status: C0–C4 complete; C5 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -161,7 +161,7 @@ C1 adds the public symbol in runtime ABI version 3.
 - [x] C1 — Add and directly test the runtime boolean output ABI
 - [x] C2 — Implement straight-line `bool` values end-to-end
 - [x] C3 — Add multi-block MIR and control-flow verification
-- [ ] C4 — Lower multi-block control flow on x86-64 System V
+- [x] C4 — Lower multi-block control flow on x86-64 System V
 - [ ] C5 — Implement `if` / `elif` / `else` end-to-end
 - [ ] C6 — Add comprehensive golden coverage and harden the slice
 
@@ -302,20 +302,20 @@ it cannot yet lower.
 **Purpose:** Make verified conditional MIR executable before enabling source
 syntax that produces it.
 
-- [ ] Extend the target assembly model with deterministic local labels,
+- [x] Extend the target assembly model with deterministic local labels,
       unconditional jumps, and conditional branches.
-- [ ] Give every MIR block a collision-proof function-local assembly label.
-- [ ] Emit blocks in stable `BlockId` order rather than traversal-dependent
+- [x] Give every MIR block a collision-proof function-local assembly label.
+- [x] Emit blocks in stable `BlockId` order rather than traversal-dependent
       order.
-- [ ] Lower a canonical boolean branch without leaking target comparison or
+- [x] Lower a canonical boolean branch without leaking target comparison or
       register details into MIR.
-- [ ] Preserve existing call alignment, frame planning, and return behavior in
+- [x] Preserve existing call alignment, frame planning, and return behavior in
       every block.
-- [ ] Remove the initial single-block target-legality restriction only after
+- [x] Remove the initial single-block target-legality restriction only after
       every new terminator is supported.
-- [ ] Keep malformed or unsupported MIR as a structured backend error rather
+- [x] Keep malformed or unsupported MIR as a structured backend error rather
       than a panic.
-- [ ] Ensure emitted multi-block assembly is accepted by the system assembler.
+- [x] Ensure emitted multi-block assembly is accepted by the system assembler.
 
 **Tests:** Target-legality tests; exact assembly-shape tests for forward and
 backward jumps, a diamond with a join, branch-local calls, and returns in both

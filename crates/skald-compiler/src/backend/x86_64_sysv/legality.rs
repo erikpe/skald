@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    mir::{verify_mir, MirInstruction, MirProgram, MirTerminator},
+    mir::{verify_mir, MirInstruction, MirProgram},
 };
 
 use super::{abi, frame::FrameLayout};
@@ -17,34 +17,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
     })?;
 
     for function in program.definitions.iter() {
-        if function.body.blocks.len() != 1 {
-            return Err(BackendError::new(
-                Target::X86_64SysV,
-                Some(function.function),
-                format!(
-                    "the initial backend supports exactly one basic block, found {}",
-                    function.body.blocks.len()
-                ),
-            ));
-        }
-        if function.body.blocks[0].id != function.body.entry {
-            return Err(BackendError::new(
-                Target::X86_64SysV,
-                Some(function.function),
-                "the sole basic block is not the function entry block",
-            ));
-        }
-        if !matches!(
-            function.body.blocks[0].terminator,
-            Some(MirTerminator::Return { .. })
-        ) {
-            return Err(BackendError::new(
-                Target::X86_64SysV,
-                Some(function.function),
-                "the initial backend supports only return terminators",
-            ));
-        }
-
         FrameLayout::plan(function)?;
         for parameter_index in 0..function.parameters.len() {
             if abi::incoming_argument(parameter_index).is_none() {

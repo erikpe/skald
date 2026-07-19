@@ -39,6 +39,11 @@ true target, and false target. Blocks remain in dense `BlockId` order rather
 than traversal order, so loops, joins, and unreachable blocks have stable,
 inspectable output before backend lowering exists.
 
+C4 assembly uses matching deterministic function-and-block labels of the form
+`.Lska_fn_N_block_M`, plus one `.Lska_fn_N_epilogue` label. Blocks are emitted
+in `BlockId` order, not traversal order. This makes forward jumps, back edges,
+diamonds, joins, and all return paths directly comparable with the MIR dump.
+
 Assembly is directly available through the public compiler command:
 
 ```text

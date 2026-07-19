@@ -17,7 +17,9 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         writeln!(output, ".type {}, @function", function.symbol).unwrap();
         writeln!(output, "{}:", function.symbol).unwrap();
         for instruction in &function.instructions {
-            output.push_str("    ");
+            if !matches!(instruction, Instruction::Label(_)) {
+                output.push_str("    ");
+            }
             emit_instruction(&mut output, instruction);
             output.push('\n');
         }
@@ -29,6 +31,7 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
 
 fn emit_instruction(output: &mut String, instruction: &Instruction) {
     match instruction {
+        Instruction::Label(label) => write!(output, "{}:", label.name()).unwrap(),
         Instruction::Push(register) => write!(output, "pushq {}", register.name()).unwrap(),
         Instruction::Move {
             source,
@@ -60,9 +63,14 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             destination,
         } => write!(output, "imulq {}, {}", source.name(), destination.name()).unwrap(),
         Instruction::Negate(register) => write!(output, "negq {}", register.name()).unwrap(),
+        Instruction::Test(register) => {
+            write!(output, "testq {}, {}", register.name(), register.name()).unwrap()
+        }
         Instruction::ReserveStack(bytes) => write!(output, "subq ${bytes}, %rsp").unwrap(),
         Instruction::ReleaseStack(bytes) => write!(output, "addq ${bytes}, %rsp").unwrap(),
         Instruction::Call(symbol) => write!(output, "call {symbol}").unwrap(),
+        Instruction::Jump(label) => write!(output, "jmp {}", label.name()).unwrap(),
+        Instruction::JumpIfNotZero(label) => write!(output, "jne {}", label.name()).unwrap(),
         Instruction::Leave => output.push_str("leave"),
         Instruction::Return => output.push_str("ret"),
     }
