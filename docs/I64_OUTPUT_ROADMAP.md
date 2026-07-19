@@ -91,7 +91,7 @@ interface and ownership model identified as open in the draft specification.
 - [x] O3 — Implement `unit`, unit returns, and call statements end-to-end
 - [x] O4 — Add and directly test the runtime `i64` output ABI
 - [x] O5 — Implement restricted external declarations and calls end-to-end
-- [ ] O6 — Add observable golden coverage and harden the completed slice
+- [x] O6 — Add observable golden coverage and harden the completed slice
 
 Milestone checkboxes below should be marked as each PR is completed. A
 milestone is not complete until its acceptance criteria and relevant repository
@@ -294,23 +294,23 @@ check for `ska_rt_println_i64` outside tests and example source.
 **Purpose:** Prove the complete source-to-stdout path and reconcile all public
 documentation with the implementation.
 
-- [ ] Add a native golden that declares and calls
+- [x] Add a native golden that declares and calls
       `ska_rt_println_i64(i64) -> unit` and uses a `.stdout` sidecar.
-- [ ] Cover zero, positive, negative, computed, and function-returned values.
-- [ ] Cover consecutive calls to prove source-order side effects.
-- [ ] Cover `i64::MIN` and `i64::MAX` formatting.
-- [ ] Keep the golden program's process exit status independently observable
+- [x] Cover zero, positive, negative, computed, and function-returned values.
+- [x] Cover consecutive calls to prove source-order side effects.
+- [x] Cover `i64::MIN` and `i64::MAX` formatting.
+- [x] Keep the golden program's process exit status independently observable
       through its `.exit` sidecar.
-- [ ] Add exact compile-failure goldens for the new syntax and semantic error
+- [x] Add exact compile-failure goldens for the new syntax and semantic error
       categories not already covered by phase tests.
-- [ ] Confirm repeated compiler runs still produce identical assembly and
+- [x] Confirm repeated compiler runs still produce identical assembly and
       diagnostics for programs containing external calls.
-- [ ] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
+- [x] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
       `docs/DEBUGGING.md`, `docs/NEXT_SLICE_BOUNDARIES.md`, and the draft
       specification where their implemented-status descriptions changed.
-- [ ] Record any deliberately deferred FFI, unit, or I/O questions rather than
+- [x] Record any deliberately deferred FFI, unit, or I/O questions rather than
       leaving behavior implicit.
-- [ ] Run the complete repository quality gates from a clean build state.
+- [x] Run the complete repository quality gates from a clean build state.
 
 **Tests:** All compiler tests, runtime tests, successful and compile-failure
 goldens, formatting, Clippy with warnings denied, and `git diff --check`.
@@ -325,14 +325,14 @@ all documentation describes the implemented boundary consistently.
 Each implementation PR must run the relevant focused tests and, before being
 marked complete, the full applicable repository checks:
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test` when the runtime or ABI is touched
-- [ ] `make golden-test` when source, semantics, MIR, backend, runtime linking,
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test` when the runtime or ABI is touched
+- [x] `make golden-test` when source, semantics, MIR, backend, runtime linking,
       or golden expectations are touched
-- [ ] `git diff --check`
+- [x] `git diff --check`
 
 A slice must not be marked complete if it leaves accepted source to fail in a
 later phase merely because that phase has not been implemented. New syntax is

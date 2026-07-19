@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-M8 extension contract.
+Status: post-O6 extension contract.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -43,6 +43,15 @@ Adding the first inline object instead stresses layout, construction state, assi
 Broader integer operations primarily stress specified edge-case semantics and instruction selection. AArch64 stresses the target interface and should leave semantic phases unchanged.
 
 Arrays, optionals, loops/iterators, checked exceptions, shared ownership, and general local reference aliases remain deferred. Each crosses several of the boundaries above and should receive its own scoped roadmap rather than entering as an incidental parser feature.
+
+The completed output slice intentionally does not generalize foreign linkage or
+I/O. External declarations remain exact-symbol C-ABI declarations over
+by-value `i64` parameters and `i64` or `unit` results. Alternate link names,
+variadic calls, additional ABI types, ownership-bearing arguments,
+cross-module declaration coalescing, recoverable output errors, and the final
+standard-library I/O interface remain deferred and require explicit contracts
+before implementation. `unit` remains a payload-free result type and is not
+yet permitted as a parameter, local, or first-class value.
 
 ## Deliberately replaceable implementation choices
 

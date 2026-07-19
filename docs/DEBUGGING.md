@@ -40,7 +40,7 @@ Assembly is directly available through the public compiler command:
 cargo run -p skac -- input.ska --emit asm -o build/input.s
 ```
 
-The golden runner compiles every successful program to assembly twice in separate `skac` processes and compares the bytes. It likewise compiles every failure twice and compares exact stderr snapshots. This catches nondeterminism in IDs, ordering, paths, labels, formatting, and diagnostics at the externally visible boundary.
+The golden runner compiles every successful program to assembly twice in separate `skac` processes and compares the bytes. It likewise compiles every failure twice and compares exact stderr snapshots. This catches nondeterminism in IDs, ordering, paths, labels, formatting, and diagnostics at the externally visible boundary. Native cases then compare stdout bytes and process status independently. In particular, `tests/golden/run/println_i64.ska` exercises exact-symbol external call lowering and the runtime output ABI while its `.stdout` and nonzero `.exit` sidecars keep the two observations separate.
 
 MIR verification runs:
 

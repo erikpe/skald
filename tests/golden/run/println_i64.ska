@@ -1,0 +1,16 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn function_value() -> i64 {
+    return 314;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(0);
+    ska_rt_println_i64(17);
+    ska_rt_println_i64(-23);
+    ska_rt_println_i64(6 * 7);
+    ska_rt_println_i64(function_value());
+    ska_rt_println_i64(-9223372036854775808);
+    ska_rt_println_i64(9223372036854775807);
+    return 73;
+}

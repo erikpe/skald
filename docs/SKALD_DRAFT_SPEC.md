@@ -127,7 +127,7 @@ Unqualified names resolve local-first. If multiple imports provide the same unqu
 
 ### 3.1 Restricted Bootstrap External Functions
 
-The first post-vertical-slice output extension defines this deliberately narrow
+The implemented first post-vertical-slice output extension defines this deliberately narrow
 external declaration form:
 
 ```ska
@@ -1456,6 +1456,9 @@ Borrow anchors do not require a runtime ownership search or a separate runtime o
 Thread-safe reference counting is out of scope unless concurrency is added later.
 
 ### 13.1 Bootstrap `i64` Output
+
+**Implementation status:** implemented by the stage-0 x86-64 compiler and ABI
+version 2 runtime, with exact source-to-stdout golden coverage.
 
 Until strings and the standard I/O library exist, the runtime exposes one
 low-level output operation:

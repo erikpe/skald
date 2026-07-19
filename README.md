@@ -31,16 +31,15 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 ## Status
 
 Skald is currently an exploratory language design. Milestones M0 through M8
-complete the first vertical slice, and output-roadmap milestones O0 through O5
+complete the first vertical slice, and output-roadmap milestones O0 through O6
 add exact stdout expectations, local `unit` functions, payload-free unit
-returns, effect-only call statements, and a directly tested runtime `i64`
-output ABI plus restricted exact-symbol external function declarations. The
-stage-0 compiler emits deterministic x86-64 System V assembly, links it with
-the minimal runtime, and
-has source-to-process and exact compile-failure golden coverage. The final
-source-to-stdout golden coverage and hardening remain O6 work. The language
-specification remains a draft, and syntax, semantics, and implementation
-interfaces may change as further slices are implemented and tested.
+returns, effect-only call statements, a directly tested runtime `i64` output
+ABI, and restricted exact-symbol external function declarations. The stage-0
+compiler emits deterministic x86-64 System V assembly, links it with the
+minimal runtime, and has exact source-to-stdout, process-status, and
+compile-failure golden coverage. The language specification remains a draft,
+and syntax, semantics, and implementation interfaces may change as further
+slices are implemented and tested.
 
 ## Development
 

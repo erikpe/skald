@@ -1,6 +1,6 @@
 # Grammar
 
-This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice contracts below describe implemented behavior. The `i64` output extension contract is normative for the O-series roadmap, but its syntax is not accepted until the corresponding implementation milestone is complete.
+This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice and `i64` output extension contracts below describe implemented behavior.
 
 ## First vertical slice lexical contract
 
@@ -73,7 +73,7 @@ Parser recovery may synthesize missing punctuation to retain a useful source AST
 
 O0 fixed the following grammar and semantic contract for the post-M8 `i64`
 output extension. O3 implemented `unit`, unit returns, and restricted call
-statements; O5 implements the remaining `extern` declaration syntax. The
+statements; O5 implemented the remaining `extern` declaration syntax. The
 accepted extension grammar is:
 
 ```text

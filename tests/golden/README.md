@@ -15,10 +15,12 @@ The runner builds the runtime, invokes the public `skac` executable, and reports
 
 The failure corpus covers every diagnostic family reachable from implemented
 source. O3 adds exact cases for invalid unit/value returns, using a unit call as
-an `i64` value, and discarding an `i64` call statement. O5 adds external-entry,
-restricted-signature, and external/defined duplicate-name cases. Successful
-source-to-stdout coverage for the runtime output declaration is introduced by
-O6.
+an `i64` value, and discarding an `i64` call statement. O5 and O6 add
+external-entry, restricted-signature, duplicate-name, and malformed external
+declaration cases. The O6 `println_i64` run case covers the full supported
+source-to-runtime output path, ordered consecutive writes, representative
+computed values, both `i64` extrema, and a process status independent of its
+exact stdout expectation.
 
 Run it from the repository root with:
 
