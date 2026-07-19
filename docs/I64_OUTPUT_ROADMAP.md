@@ -1,6 +1,6 @@
 # `i64` Output and Golden-Test Observability Roadmap
 
-Status: O0 complete; O1–O6 planned.
+Status: O0–O1 complete; O2–O6 planned.
 
 This roadmap adds exact stdout observation to native golden tests and the
 smallest clean language/runtime path for printing an `i64`. It is split into
@@ -86,7 +86,7 @@ interface and ownership model identified as open in the draft specification.
 ## 2. Progress Summary
 
 - [x] O0 — Specify the implemented output and external-call contract
-- [ ] O1 — Add exact stdout expectations to the golden runner
+- [x] O1 — Add exact stdout expectations to the golden runner
 - [ ] O2 — Separate callable declarations from local function bodies
 - [ ] O3 — Implement `unit`, unit returns, and call statements end-to-end
 - [ ] O4 — Add and directly test the runtime `i64` output ABI
@@ -136,20 +136,20 @@ and standard-library questions remain explicitly open.
 **Purpose:** Make stdout a first-class golden expectation independently of how
 Skald programs eventually produce it.
 
-- [ ] Teach `tests/golden/runner.rs` to load an optional same-named `.stdout`
+- [x] Teach `tests/golden/runner.rs` to load an optional same-named `.stdout`
       sidecar for each `run/**/*.ska` case.
-- [ ] Treat a missing `.stdout` sidecar as an exact expectation of zero stdout
+- [x] Treat a missing `.stdout` sidecar as an exact expectation of zero stdout
       bytes, preserving all existing tests.
-- [ ] Compare expected and actual stdout as bytes without trimming or newline
+- [x] Compare expected and actual stdout as bytes without trimming or newline
       conversion.
-- [ ] Report useful escaped or otherwise unambiguous expected/actual output on
+- [x] Report useful escaped or otherwise unambiguous expected/actual output on
       mismatch, including trailing-newline differences.
-- [ ] Continue requiring empty runtime stderr and the expected `.exit` status.
-- [ ] Separate sidecar loading and execution-result comparison into focused
+- [x] Continue requiring empty runtime stderr and the expected `.exit` status.
+- [x] Separate sidecar loading and execution-result comparison into focused
       helpers instead of growing `run_native_case` further.
-- [ ] Add focused runner tests or fixtures for empty output, exact output,
+- [x] Add focused runner tests or fixtures for empty output, exact output,
       missing/extra trailing LF, and non-UTF-8 mismatch reporting.
-- [ ] Update `tests/golden/README.md` with the `.stdout` convention.
+- [x] Update `tests/golden/README.md` with the `.stdout` convention.
 
 **Tests:** Golden-runner helper tests plus the complete existing golden suite.
 All current native cases must pass without adding `.stdout` files.

@@ -1,10 +1,14 @@
 //! Deterministic compile-failure and native-execution golden runner.
 
+mod native_expectations;
+
 use std::{
     fs, io,
     path::{Path, PathBuf},
     process::{self, Command, Output},
 };
+
+use native_expectations::{load_native_expectations, verify_native_execution};
 
 const COMPILE_FAILURE_EXIT_CODE: i32 = 1;
 
@@ -121,18 +125,7 @@ fn run_native_case(
     build_root: &Path,
     runtime_archive: &Path,
 ) -> Result<(), String> {
-    let expected_path = source.with_extension("exit");
-    let expected_text = fs::read_to_string(&expected_path)
-        .map_err(|error| format!("could not read {}: {error}", expected_path.display()))?;
-    let expected: i32 = expected_text
-        .trim()
-        .parse()
-        .map_err(|error| format!("invalid expected exit status: {error}"))?;
-    if !(0..=255).contains(&expected) {
-        return Err(format!(
-            "expected exit status {expected} is outside 0..=255"
-        ));
-    }
+    let expected = load_native_expectations(source)?;
 
     assert_deterministic_assembly(repository, source, relative, build_root)?;
 
@@ -147,23 +140,12 @@ fn run_native_case(
     let execution = Command::new(&executable)
         .output()
         .map_err(|error| format!("could not run generated executable: {error}"))?;
-    let actual = execution
-        .status
-        .code()
-        .ok_or_else(|| "generated executable terminated by signal".to_owned())?;
-    if actual != expected {
-        return Err(format!(
-            "exit status mismatch: expected {expected}, found {actual}\n{}",
-            captured_output(&execution)
-        ));
-    }
-    if !execution.stdout.is_empty() || !execution.stderr.is_empty() {
-        return Err(format!(
-            "first-slice executable produced unexpected output: {}",
-            captured_output(&execution)
-        ));
-    }
-    Ok(())
+    verify_native_execution(
+        &expected,
+        execution.status.code(),
+        &execution.stdout,
+        &execution.stderr,
+    )
 }
 
 fn assert_deterministic_assembly(

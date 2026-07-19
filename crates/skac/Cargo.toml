@@ -13,3 +13,7 @@ workspace = true
 name = "golden"
 path = "../../tests/golden/runner.rs"
 harness = false
+
+[[test]]
+name = "golden-expectations"
+path = "../../tests/golden/native_expectations_tests.rs"
