@@ -47,6 +47,8 @@ Niflheim is neither a source dependency nor a normative dependency. Skald's spec
 ```text
 skald/
 ├── Cargo.toml
+├── Cargo.lock
+├── Makefile
 ├── README.md
 ├── crates/
 │   ├── skac/
@@ -119,6 +121,23 @@ Small demonstration and bring-up programs. Samples are not substitutes for regre
 ### `scripts/`
 
 Thin wrappers for repeated repository workflows. Compiler behavior must remain available through `skac` or library APIs rather than existing only inside shell scripts.
+
+### Root development commands
+
+The root `Makefile` provides discoverable wrappers around the native Rust and C build tools:
+
+| Command | Purpose |
+|---|---|
+| `make fmt` | format Rust source |
+| `make fmt-check` | check Rust formatting without modifying files |
+| `make build-check` | type-check every Rust workspace target |
+| `make lint` | run Clippy across the workspace with warnings denied |
+| `make compiler-test` | run Rust workspace tests |
+| `make runtime` | build the C runtime archive |
+| `make runtime-test` | build and run direct C runtime tests |
+| `make check` | run the complete M0 validation suite |
+
+These commands are convenience entry points, not replacements for Cargo or the runtime Makefile. Build output belongs under ignored `target/` and `build/` directories.
 
 ## 4. Compiler Pipeline
 
@@ -286,4 +305,3 @@ This diagram describes allowed knowledge, not necessarily Rust crate dependencie
 The first vertical slice should not introduce infrastructure merely because a mature compiler might eventually need it. In particular, it does not need parallel compilation, incremental queries, a general optimization manager, SSA, object-file writing, a package manager, or a large runtime.
 
 It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The concrete first-slice scope and milestones are defined in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md).
-

@@ -121,144 +121,157 @@ Initial constraints:
 
 Each milestone ends with tests and a deterministic dump or artifact. Later milestones consume the public output of earlier ones.
 
+Progress summary:
+
+- [x] M0 — Repository and quality baseline
+- [ ] M1 — Source ownership, diagnostics, and lexing
+- [ ] M2 — Parser and AST
+- [ ] M3 — Declaration collection and resolution
+- [ ] M4 — Type checking and typed HIR
+- [ ] M5 — MIR lowering and verification
+- [ ] M6 — x86-64 System V backend
+- [ ] M7 — Runtime, link driver, and native execution
+- [ ] M8 — Vertical-slice hardening
+
 ### M0 — Repository and quality baseline
 
-- Cargo workspace with thin `skac` binary and `skald-compiler` library;
-- explicit phase modules matching the architecture document;
-- minimal buildable C runtime archive;
-- compiler, runtime, and golden test categories;
-- formatting, lint, and test commands documented;
-- no third-party Rust dependencies until a concrete need appears.
+- [x] Cargo workspace with thin `skac` binary and `skald-compiler` library.
+- [x] Explicit phase modules matching the architecture document.
+- [x] Minimal buildable C runtime archive and direct ABI smoke test.
+- [x] Compiler, runtime, and golden test categories.
+- [x] Formatting, lint, and test commands documented and available through the root `Makefile`.
+- [x] No third-party Rust dependencies introduced by M0.
+- [x] Basic tests for the pre-pipeline `--help`, `--version`, and usage-error behavior of `skac`.
 
-Exit criterion: the Rust workspace checks, the C runtime builds, and repository structure matches its documentation.
+- [x] **Exit criterion:** the Rust workspace checks, the C runtime builds and passes its ABI smoke test, and repository structure matches its documentation.
 
 ### M1 — Source ownership, diagnostics, and lexing
 
-- source IDs, byte ranges, line maps, and spans;
-- structured diagnostics with stable plain-text rendering;
-- tokens for the included subset;
-- decimal `i64` literal scanning with malformed-literal diagnostics;
-- deterministic token dump.
+- [ ] Source IDs, byte ranges, line maps, and spans.
+- [ ] Structured diagnostics with stable plain-text rendering.
+- [ ] Tokens for the included subset.
+- [ ] Decimal `i64` literal scanning with malformed-literal diagnostics.
+- [ ] Deterministic token dump.
 
-Exit criterion: lexer unit tests cover valid tokens, whitespace/comments selected by the grammar, invalid characters, malformed literals, and accurate spans.
+- [ ] **Exit criterion:** lexer unit tests cover valid tokens, whitespace/comments selected by the grammar, invalid characters, malformed literals, and accurate spans.
 
 ### M2 — Parser and AST
 
-- source AST for functions, parameters, blocks, local declarations, returns, calls, and included expressions;
-- explicit precedence and associativity for unary negation and `+`, `-`, `*`;
-- recovery sufficient to report more than one independent syntax error when practical;
-- deterministic AST dump.
+- [ ] Source AST for functions, parameters, blocks, local declarations, returns, calls, and included expressions.
+- [ ] Explicit precedence and associativity for unary negation and `+`, `-`, `*`.
+- [ ] Recovery sufficient to report more than one independent syntax error when practical.
+- [ ] Deterministic AST dump.
 
-Exit criterion: parser tests cover the demonstration program, precedence, malformed declarations, missing punctuation, and recovery without semantic lookup.
+- [ ] **Exit criterion:** parser tests cover the demonstration program, precedence, malformed declarations, missing punctuation, and recovery without semantic lookup.
 
 ### M3 — Declaration collection and resolution
 
-- stable function, parameter, and local IDs;
-- single-file function table;
-- lexical local scopes;
-- duplicate declaration, unknown name, and invalid call-target diagnostics;
-- direct calls resolved to function IDs.
+- [ ] Stable function, parameter, and local IDs.
+- [ ] Single-file function table.
+- [ ] Lexical local scopes.
+- [ ] Duplicate declaration, unknown name, and invalid call-target diagnostics.
+- [ ] Direct calls resolved to function IDs.
 
-Exit criterion: later phases never resolve source strings to choose declarations.
+- [ ] **Exit criterion:** later phases never resolve source strings to choose declarations.
 
 ### M4 — Type checking and typed HIR
 
-- the sole semantic type `i64`;
-- function signature and entry-point validation;
-- type checking for literals, locals, calls, return values, and arithmetic;
-- explicit typed operation and direct-call nodes in HIR;
-- deterministic HIR dump.
+- [ ] The sole semantic type `i64`.
+- [ ] Function signature and entry-point validation.
+- [ ] Type checking for literals, locals, calls, return values, and arithmetic.
+- [ ] Explicit typed operation and direct-call nodes in HIR.
+- [ ] Deterministic HIR dump.
 
-Exit criterion: every executable HIR expression has a type and every call has an exact target and checked arity.
+- [ ] **Exit criterion:** every executable HIR expression has a type and every call has an exact target and checked arity.
 
 ### M5 — MIR lowering and verification
 
-- explicit function bodies, local storage/value IDs, calls, arithmetic, and returns;
-- deterministic left-to-right evaluation;
-- basic blocks and terminators, even though the slice has no conditional branch;
-- MIR verifier for ownership of IDs, operand types, call signatures, and terminated blocks;
-- deterministic MIR dump.
+- [ ] Explicit function bodies, local storage/value IDs, calls, arithmetic, and returns.
+- [ ] Deterministic left-to-right evaluation.
+- [ ] Basic blocks and terminators, even though the slice has no conditional branch.
+- [ ] MIR verifier for ownership of IDs, operand types, call signatures, and terminated blocks.
+- [ ] Deterministic MIR dump.
 
-Exit criterion: no source-name lookup or AST traversal is required below MIR lowering.
+- [ ] **Exit criterion:** no source-name lookup or AST traversal is required below MIR lowering.
 
 ### M6 — x86-64 System V backend
 
-- target registry with `x86_64-sysv` as the only accepted target;
-- integer argument and return lowering for the required arities;
-- stack-frame layout for parameters, locals, calls, and temporaries;
-- instruction selection for literals, copies, calls, negation, addition, subtraction, and multiplication;
-- correct stack alignment and callee-saved register behavior;
-- deterministic GNU-compatible textual assembly;
-- target legality checks that reject unsupported MIR rather than miscompile it.
+- [ ] Target registry with `x86_64-sysv` as the only accepted target.
+- [ ] Integer argument and return lowering for the required arities.
+- [ ] Stack-frame layout for parameters, locals, calls, and temporaries.
+- [ ] Instruction selection for literals, copies, calls, negation, addition, subtraction, and multiplication.
+- [ ] Correct stack alignment and callee-saved register behavior.
+- [ ] Deterministic GNU-compatible textual assembly.
+- [ ] Target legality checks that reject unsupported MIR rather than miscompile it.
 
 The simplest correct register strategy is acceptable initially, including stack-heavy code. Register allocation is an isolated backend concern and can improve later without changing MIR.
 
-Exit criterion: assembly-shape tests cover ABI edges and generated assembly can be assembled successfully.
+- [ ] **Exit criterion:** assembly-shape tests cover ABI edges and generated assembly can be assembled successfully.
 
 ### M7 — Runtime, link driver, and native execution
 
-- versioned minimal runtime ABI and static archive;
-- generated or linked entry-point boundary for `fn main() -> i64`;
-- driver support for assembly-only and executable output;
-- robust host tool invocation and failure reporting;
-- native golden runner recording process exit status.
+- [x] Versioned minimal runtime ABI and static archive established by M0.
+- [ ] Generated or linked entry-point boundary for `fn main() -> i64`.
+- [ ] Driver support for assembly-only and executable output.
+- [ ] Robust host tool invocation and failure reporting.
+- [ ] Native golden runner recording process exit status.
 
-Exit criterion: the demonstration program and several function/call/arithmetic variants produce their expected exit statuses.
+- [ ] **Exit criterion:** the demonstration program and several function/call/arithmetic variants produce their expected exit statuses.
 
 ### M8 — Vertical-slice hardening
 
-- compile-failure golden cases for every supported syntactic and semantic category;
-- deterministic output checked across repeated runs;
-- no Rust panic for malformed source in the supported grammar surface;
-- MIR verifier run in tests and appropriate debug/development paths;
-- architecture documentation reconciled with implementation;
-- a clean boundary list for the next language slice.
+- [ ] Compile-failure golden cases for every supported syntactic and semantic category.
+- [ ] Deterministic output checked across repeated runs.
+- [ ] No Rust panic for malformed source in the supported grammar surface.
+- [ ] MIR verifier run in tests and appropriate debug/development paths.
+- [ ] Architecture documentation reconciled with implementation.
+- [ ] A clean boundary list for the next language slice.
 
-Exit criterion: all compiler, runtime, and golden suites pass from a clean checkout using documented commands.
+- [ ] **Exit criterion:** all compiler, runtime, and golden suites pass from a clean checkout using documented commands.
 
 ## 6. Test Matrix for the Slice
 
 Minimum successful golden cases:
 
-- constant exit value;
-- unary negative value routed through in-range arithmetic to a nonnegative exit status;
-- local initialization and return;
-- one direct function call;
-- multiple parameters within register-passed SysV arguments;
-- a call result used by another arithmetic expression;
-- nested calls that validate evaluation and temporary handling.
+- [ ] Constant exit value.
+- [ ] Unary negative value routed through in-range arithmetic to a nonnegative exit status.
+- [ ] Local initialization and return.
+- [ ] One direct function call.
+- [ ] Multiple parameters within register-passed SysV arguments.
+- [ ] A call result used by another arithmetic expression.
+- [ ] Nested calls that validate evaluation and temporary handling.
 
 Minimum compile-failure cases:
 
-- invalid token and malformed integer literal;
-- missing semicolon, delimiter, or return expression;
-- duplicate function, parameter, or local name where prohibited;
-- unknown local or function;
-- wrong call arity;
-- unsupported type;
-- missing or invalid `main`;
-- unsupported language construct with a clear diagnostic.
+- [ ] Invalid token and malformed integer literal.
+- [ ] Missing semicolon, delimiter, or return expression.
+- [ ] Duplicate function, parameter, or local name where prohibited.
+- [ ] Unknown local or function.
+- [ ] Wrong call arity.
+- [ ] Unsupported type.
+- [ ] Missing or invalid `main`.
+- [ ] Unsupported language construct with a clear diagnostic.
 
 Minimum backend/runtime checks:
 
-- assembly accepted by the system toolchain;
-- runtime archive builds with warnings treated as errors;
-- stack alignment across a nested call;
-- exit status propagation for representative values;
-- toolchain failure produces a driver error rather than a compiler panic.
+- [ ] Assembly accepted by the system toolchain.
+- [x] Runtime archive builds with warnings treated as errors.
+- [ ] Stack alignment across a nested call.
+- [ ] Exit status propagation for representative values.
+- [ ] Toolchain failure produces a driver error rather than a compiler panic.
 
 ## 7. Quality Gates
 
 The vertical slice is not complete merely because one program runs. Completion requires:
 
-- `cargo fmt --check`;
-- `cargo clippy --workspace --all-targets` with no warnings selected as denied by repository policy;
-- `cargo test --workspace`;
-- runtime C build and runtime tests;
-- golden suite on Linux x86-64;
-- `git diff --check`;
-- documented phase dumps usable for debugging;
-- no known phase-boundary shortcut that later work must immediately undo.
+- [x] `cargo fmt --check` is available and currently passes.
+- [x] `cargo clippy --workspace --all-targets` runs with warnings denied and currently passes.
+- [x] `cargo test --workspace` is available and currently passes.
+- [x] Runtime C build and runtime ABI smoke test are available and currently pass.
+- [ ] Golden suite passes on Linux x86-64.
+- [x] `git diff --check` currently passes.
+- [ ] Documented phase dumps are usable for debugging.
+- [ ] No known phase-boundary shortcut remains that later work must immediately undo.
 
 Compile-time performance should be measured once a meaningful corpus exists. The first slice should avoid obviously expensive architecture—especially repeated whole-program scans and repeated string-based lookup—but should not build caching or incremental compilation before measurements justify it.
 
@@ -267,4 +280,3 @@ Compile-time performance should be measured once a meaningful corpus exists. The
 The next feature slice should be selected from demonstrated architectural needs rather than from a desire to maximize syntax quickly. Plausible next steps include `bool` and `if`, broader primitive arithmetic, additional statements, or the first deterministic inline object. Arrays, optionals, loops/iterators, and checked exceptions remain explicitly deferred in the language specification.
 
 AArch64 should follow after the target interface and MIR have survived enough x86-64 work to expose their real boundaries. Its implementation is an architectural test: semantic phases should remain unchanged, while ABI lowering, instruction selection, frame/register planning, and assembly emission are supplied by the new backend.
-

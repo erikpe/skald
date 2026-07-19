@@ -32,6 +32,24 @@ Niflheim remains a frequent source of design and testing experience, while Skald
 
 Skald is currently an exploratory language design with an initial compiler repository scaffold. The language specification remains a draft. Syntax, semantics, and implementation interfaces may change as the first vertical compiler slices are implemented and tested.
 
+## Development
+
+Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The repository has no third-party Rust dependencies at M0.
+
+Common commands:
+
+```text
+make fmt            # format Rust source
+make check          # formatting, type checks, Clippy, Rust tests, and C runtime tests
+make build-check    # type-check every Rust workspace target
+make compiler-test  # Rust workspace tests only
+make runtime        # build build/runtime/libskald_runtime.a
+make runtime-test   # build and run direct C runtime tests
+cargo run -p skac -- --help
+```
+
+Build artifacts are written below `target/` and `build/`.
+
 ## History
 
 Skald began as a draft called **Niflheim2**, using the earlier Niflheim language and compiler as a starting point. Niflheim used garbage-collected reference objects. The experimental successor introduced inline object values, deterministic destruction, reference-counted shared ownership, and call-scoped borrowing.
