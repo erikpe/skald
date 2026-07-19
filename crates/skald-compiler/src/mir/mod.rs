@@ -4,11 +4,13 @@
 //! termination explicit. It is not SSA, but value and block identities leave a
 //! clean path to SSA conversion later.
 
+mod build;
 mod dump;
 mod lower;
 mod model;
 mod verify;
 
+pub use build::{MirBodyBuilder, MirBuildError};
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{

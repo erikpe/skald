@@ -146,6 +146,22 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             }
             write_span(output, *span);
         }
+        Some(MirTerminator::Goto { target, span }) => {
+            let _ = write!(output, "goto {target}");
+            write_span(output, *span);
+        }
+        Some(MirTerminator::Branch {
+            condition,
+            true_target,
+            false_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "branch {condition}, true {true_target}, false {false_target}"
+            );
+            write_span(output, *span);
+        }
         None => output.push_str("<unterminated>"),
     }
     output.push('\n');

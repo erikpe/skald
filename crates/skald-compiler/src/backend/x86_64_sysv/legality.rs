@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    mir::{verify_mir, MirInstruction, MirProgram},
+    mir::{verify_mir, MirInstruction, MirProgram, MirTerminator},
 };
 
 use super::{abi, frame::FrameLayout};
@@ -32,6 +32,16 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
                 Target::X86_64SysV,
                 Some(function.function),
                 "the sole basic block is not the function entry block",
+            ));
+        }
+        if !matches!(
+            function.body.blocks[0].terminator,
+            Some(MirTerminator::Return { .. })
+        ) {
+            return Err(BackendError::new(
+                Target::X86_64SysV,
+                Some(function.function),
+                "the initial backend supports only return terminators",
             ));
         }
 

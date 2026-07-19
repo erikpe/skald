@@ -45,6 +45,29 @@ mod tests {
     }
 
     #[test]
+    fn pipeline_preserves_valid_multi_block_mir() {
+        let mut mir = lowered_program();
+        let function = mir
+            .definitions
+            .get_mut_for_test(mir.entry_function)
+            .unwrap();
+        let span = function.span;
+        let second = crate::mir::BlockId::new(function.function, 1);
+        function.body.blocks.push(crate::mir::MirBasicBlock {
+            id: second,
+            instructions: Vec::new(),
+            terminator: Some(crate::mir::MirTerminator::Goto {
+                target: second,
+                span,
+            }),
+            span,
+        });
+        let expected = mir.clone();
+
+        assert_eq!(run_mir_pipeline(mir).unwrap(), expected);
+    }
+
+    #[test]
     fn pipeline_rejects_invalid_mir_before_a_backend_sees_it() {
         let mut mir = lowered_program();
         mir.definitions

@@ -271,6 +271,9 @@ fn select_terminator(
             output.push(Instruction::Leave);
             output.push(Instruction::Return);
         }
+        MirTerminator::Goto { .. } | MirTerminator::Branch { .. } => {
+            unreachable!("target legality rejects control-flow terminators until C4")
+        }
     }
 }
 

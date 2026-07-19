@@ -46,7 +46,9 @@ bootstrap boolean output, and `if` / `elif` / `else` semantics. C1 implements
 and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. C2
 implements straight-line `bool` values throughout the compiler, including
 ordinary source-to-runtime boolean output and the restricted external ABI.
-Multi-block MIR and conditional source syntax remain C3–C5 work.
+C3 adds verified target-independent multi-block MIR with explicit jumps and
+boolean branches. Backend branch lowering and conditional source syntax remain
+C4–C5 work.
 
 ## Development
 

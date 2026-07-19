@@ -9,7 +9,7 @@ use crate::{
     resolve::BindingId,
 };
 
-use super::model::*;
+use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
@@ -63,8 +63,7 @@ struct FunctionLowerer<'hir> {
     local_storage: Vec<StorageId>,
     storage: Vec<MirStorage>,
     values: Vec<MirValue>,
-    instructions: Vec<MirInstruction>,
-    terminator: Option<MirTerminator>,
+    body: MirBodyBuilder,
 }
 
 impl<'hir> FunctionLowerer<'hir> {
@@ -79,37 +78,27 @@ impl<'hir> FunctionLowerer<'hir> {
             local_storage: Vec::with_capacity(definition.locals.len()),
             storage: Vec::with_capacity(declaration.parameters.len() + definition.locals.len()),
             values: Vec::new(),
-            instructions: Vec::new(),
-            terminator: None,
+            body: MirBodyBuilder::new(declaration.id, definition.body.span),
         };
         lowerer.allocate_storage();
         lowerer.lower_block(&definition.body);
-        if lowerer.terminator.is_none() && declaration.return_type == Type::Unit {
-            lowerer.terminator = Some(MirTerminator::Return {
+        if !lowerer.body.is_current_terminated() && declaration.return_type == Type::Unit {
+            lowerer.terminate(MirTerminator::Return {
                 value: None,
                 span: definition.body.span,
             });
         }
         assert!(
-            lowerer.terminator.is_some(),
+            lowerer.body.is_current_terminated(),
             "type-checked function must lower to a terminated entry block"
         );
 
-        let entry = BlockId::new(declaration.id, 0);
         MirFunctionDefinition {
             function: declaration.id,
             parameters: lowerer.parameter_storage,
             storage: lowerer.storage,
             values: lowerer.values,
-            body: MirBody {
-                entry,
-                blocks: vec![MirBasicBlock {
-                    id: entry,
-                    instructions: lowerer.instructions,
-                    terminator: lowerer.terminator,
-                    span: definition.body.span,
-                }],
-            },
+            body: lowerer.body.finish(),
             span: definition.span,
         }
     }
@@ -143,7 +132,7 @@ impl<'hir> FunctionLowerer<'hir> {
 
     fn lower_block(&mut self, block: &HirBlock) {
         for statement in &block.statements {
-            if self.terminator.is_some() {
+            if self.body.is_current_terminated() {
                 break;
             }
             match statement {
@@ -152,7 +141,7 @@ impl<'hir> FunctionLowerer<'hir> {
                         .lower_expression(&local.initializer)
                         .expect("typed local initializer must produce a value");
                     let storage = self.local_storage[local.local.index()];
-                    self.instructions.push(MirInstruction::Store(MirStore {
+                    self.emit(MirInstruction::Store(MirStore {
                         storage,
                         value,
                         span: local.span,
@@ -163,7 +152,7 @@ impl<'hir> FunctionLowerer<'hir> {
                         self.lower_expression(value)
                             .expect("typed return expression must produce a value")
                     });
-                    self.terminator = Some(MirTerminator::Return {
+                    self.terminate(MirTerminator::Return {
                         value,
                         span: statement.span,
                     });
@@ -255,7 +244,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     .collect();
                 let result = (expression.ty != Type::Unit)
                     .then(|| self.new_value(lower_type(expression.ty), expression.span));
-                self.instructions.push(MirInstruction::Call(MirCall {
+                self.emit(MirInstruction::Call(MirCall {
                     target: MirCallTarget::Direct(*function),
                     arguments,
                     result,
@@ -269,13 +258,24 @@ impl<'hir> FunctionLowerer<'hir> {
 
     fn assign(&mut self, kind: MirRvalueKind, ty: MirType, span: crate::source::Span) -> ValueId {
         let result = self.new_value(ty, span);
-        self.instructions
-            .push(MirInstruction::Assign(MirAssignment {
-                result,
-                rvalue: MirRvalue { kind, ty },
-                span,
-            }));
+        self.emit(MirInstruction::Assign(MirAssignment {
+            result,
+            rvalue: MirRvalue { kind, ty },
+            span,
+        }));
         result
+    }
+
+    fn emit(&mut self, instruction: MirInstruction) {
+        self.body
+            .push_instruction(instruction)
+            .expect("HIR lowering must not emit after a terminator");
+    }
+
+    fn terminate(&mut self, terminator: MirTerminator) {
+        self.body
+            .terminate(terminator)
+            .expect("HIR lowering must terminate each block exactly once");
     }
 
     fn new_value(&mut self, ty: MirType, span: crate::source::Span) -> ValueId {

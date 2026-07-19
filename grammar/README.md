@@ -324,9 +324,23 @@ MIR separates addressable storage from transient computed values:
 - return is a basic-block terminator with an optional operand selected by the
   declared result type.
 
-The first slice has no branches, so each lowered function has one entry basic block. Unconditionally unreachable statements after a return are not lowered. Blocks still have explicit IDs and terminators, allowing conditional control-flow edges and additional blocks to be introduced without redesigning instruction or function representation.
+The implemented source language still has no branches, so HIR lowering
+currently produces one entry block per function and omits unconditionally
+unreachable statements after a return. C3 extends the target-independent MIR
+itself with explicit `Goto` and boolean `Branch` terminators. Blocks and branch
+targets have stable owner-qualified IDs, and terminators expose successors in
+semantic order. This infrastructure is intentionally available before source
+conditionals begin producing it.
 
-Successful lowering runs the MIR verifier in debug builds. The verifier checks function ownership and density of storage, value, and block IDs; parameter storage order; single definitions and use-before-definition; operand and storage types; direct-call targets, argument counts, and signature types; return types; entry blocks; and block termination. Backends consume verified MIR and do not inspect HIR, resolved source names, or the AST.
+Successful lowering runs the MIR verifier in debug builds. The verifier checks
+function ownership and density of storage, value, and block IDs; parameter
+storage order; single definitions; block-local definition-before-use; operand
+and storage types; direct-call targets, argument counts, and signature types;
+return types; entry blocks; branch condition types; target ownership and
+existence; and block termination. Every represented block is checked even when
+unreachable. Storage, rather than transient values, carries state across block
+edges until a later SSA design explicitly changes that rule. Backends consume
+verified MIR and do not inspect HIR, resolved source names, or the AST.
 
 O2 changed the compiler representation without changing first-slice language
 behavior. Resolved IR, typed HIR, and MIR store dense callable

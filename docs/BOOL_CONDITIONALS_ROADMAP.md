@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: C0–C2 complete; C3 is the next implementation task.
+Status: C0–C3 complete; C4 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -160,7 +160,7 @@ C1 adds the public symbol in runtime ABI version 3.
 - [x] C0 — Specify boolean and conditional behavior
 - [x] C1 — Add and directly test the runtime boolean output ABI
 - [x] C2 — Implement straight-line `bool` values end-to-end
-- [ ] C3 — Add multi-block MIR and control-flow verification
+- [x] C3 — Add multi-block MIR and control-flow verification
 - [ ] C4 — Lower multi-block control flow on x86-64 System V
 - [ ] C5 — Implement `if` / `elif` / `else` end-to-end
 - [ ] C6 — Add comprehensive golden coverage and harden the slice
@@ -269,22 +269,22 @@ external linkage.
 **Purpose:** Establish a small, explicit target-independent CFG before source
 conditionals depend on it.
 
-- [ ] Add unconditional `Goto` and boolean `Branch` MIR terminators with stable
+- [x] Add unconditional `Goto` and boolean `Branch` MIR terminators with stable
       target `BlockId`s and source spans.
-- [ ] Keep `Return` as a terminator and require exactly one terminator on every
+- [x] Keep `Return` as a terminator and require exactly one terminator on every
       emitted block.
-- [ ] Add deterministic MIR construction helpers for allocating blocks,
+- [x] Add deterministic MIR construction helpers for allocating blocks,
       selecting the current block, and terminating it exactly once.
-- [ ] Extend MIR dumps with stable block targets and branch conditions.
-- [ ] Verify entry-block validity, dense block IDs, target ownership and
+- [x] Extend MIR dumps with stable block targets and branch conditions.
+- [x] Verify entry-block validity, dense block IDs, target ownership and
       existence, terminator presence, and boolean branch conditions.
-- [ ] Enforce that transient value uses are defined earlier in the same block;
+- [x] Enforce that transient value uses are defined earlier in the same block;
       storage remains the explicit mechanism for values crossing block edges.
-- [ ] Validate every represented block even when it is unreachable; do not make
+- [x] Validate every represented block even when it is unreachable; do not make
       dead-block removal a prerequisite for valid MIR.
-- [ ] Expose deterministic successor information suitable for later analyses
+- [x] Expose deterministic successor information suitable for later analyses
       without introducing a general graph framework prematurely.
-- [ ] Keep target legality rejection for multi-block MIR until C4.
+- [x] Keep target legality rejection for multi-block MIR until C4.
 
 **Tests:** Hand-built MIR fixtures for jumps, diamonds, joins, and multiple
 returns; exact dump tests; verifier mutation tests for missing or foreign

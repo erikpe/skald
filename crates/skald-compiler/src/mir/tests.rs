@@ -1,3 +1,4 @@
+use super::build::{MirBodyBuilder, MirBuildError};
 use super::*;
 use crate::{
     hir::HirProgram,
@@ -25,6 +26,97 @@ fn hir_text(text: &str) -> HirProgram {
 
 fn lower_text(text: &str) -> MirProgram {
     lower_hir(&hir_text(text))
+}
+
+fn goto_join_mir() -> MirProgram {
+    let mut mir = lower_text("fn main() -> i64 { var result: i64 = 0; return result; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let entry = &mut function.body.blocks[0];
+    let join_id = BlockId::new(function.function, 1);
+    let join_instructions = entry.instructions.split_off(2);
+    let join_terminator = entry.terminator.take();
+    entry.terminator = Some(MirTerminator::Goto {
+        target: join_id,
+        span: entry.span,
+    });
+    function.body.blocks.push(MirBasicBlock {
+        id: join_id,
+        instructions: join_instructions,
+        terminator: join_terminator,
+        span: function.span,
+    });
+    mir
+}
+
+fn diamond_mir() -> MirProgram {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let span = function.span;
+    let original = function.body.blocks.pop().unwrap();
+    let condition = ValueId::new(function.function, function.values.len());
+    function.values.push(MirValue {
+        id: condition,
+        ty: MirType::Bool,
+        span,
+    });
+    let false_value = ValueId::new(function.function, function.values.len());
+    function.values.push(MirValue {
+        id: false_value,
+        ty: MirType::I64,
+        span,
+    });
+    let entry = BlockId::new(function.function, 0);
+    let true_block = BlockId::new(function.function, 1);
+    let false_block = BlockId::new(function.function, 2);
+    function.body.blocks = vec![
+        MirBasicBlock {
+            id: entry,
+            instructions: vec![MirInstruction::Assign(MirAssignment {
+                result: condition,
+                rvalue: MirRvalue {
+                    kind: MirRvalueKind::ConstantBool(true),
+                    ty: MirType::Bool,
+                },
+                span,
+            })],
+            terminator: Some(MirTerminator::Branch {
+                condition,
+                true_target: true_block,
+                false_target: false_block,
+                span,
+            }),
+            span,
+        },
+        MirBasicBlock {
+            id: true_block,
+            instructions: original.instructions,
+            terminator: original.terminator,
+            span,
+        },
+        MirBasicBlock {
+            id: false_block,
+            instructions: vec![MirInstruction::Assign(MirAssignment {
+                result: false_value,
+                rvalue: MirRvalue {
+                    kind: MirRvalueKind::ConstantI64(1),
+                    ty: MirType::I64,
+                },
+                span,
+            })],
+            terminator: Some(MirTerminator::Return {
+                value: Some(false_value),
+                span,
+            }),
+            span,
+        },
+    ];
+    mir
 }
 
 #[test]
@@ -226,6 +318,296 @@ fn mir_dump_is_deterministic() {
             "          return f0:v0 @19..29\n",
         )
     );
+}
+
+#[test]
+fn body_builder_allocates_and_selects_blocks_in_stable_order() {
+    let mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir.definitions.get(mir.entry_function).unwrap();
+    let mut builder = MirBodyBuilder::new(function.function, function.span);
+    let entry = builder.entry();
+    let second = builder.allocate_block(function.span);
+    let third = builder.allocate_block(function.span);
+
+    assert_eq!(builder.current(), entry);
+    assert_eq!(second.index(), 1);
+    assert_eq!(third.index(), 2);
+    builder.select_block(third).unwrap();
+    assert_eq!(builder.current(), third);
+    let body = builder.finish();
+    assert_eq!(body.entry, entry);
+    assert_eq!(
+        body.blocks.iter().map(|block| block.id).collect::<Vec<_>>(),
+        [entry, second, third]
+    );
+}
+
+#[test]
+fn body_builder_rejects_emission_and_duplicate_termination_after_a_terminator() {
+    let mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir.definitions.get(mir.entry_function).unwrap();
+    let mut builder = MirBodyBuilder::new(function.function, function.span);
+    let entry = builder.entry();
+    builder
+        .terminate(MirTerminator::Return {
+            value: None,
+            span: function.span,
+        })
+        .unwrap();
+
+    assert_eq!(
+        builder
+            .terminate(MirTerminator::Return {
+                value: None,
+                span: function.span,
+            })
+            .unwrap_err(),
+        MirBuildError::BlockAlreadyTerminated(entry)
+    );
+    assert_eq!(
+        builder
+            .push_instruction(MirInstruction::Store(MirStore {
+                storage: StorageId::new(function.function, 0),
+                value: ValueId::new(function.function, 0),
+                span: function.span,
+            }))
+            .unwrap_err(),
+        MirBuildError::BlockAlreadyTerminated(entry)
+    );
+}
+
+#[test]
+fn body_builder_rejects_unknown_and_foreign_block_selection() {
+    let mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir.definitions.get(mir.entry_function).unwrap();
+    let mut builder = MirBodyBuilder::new(function.function, function.span);
+
+    for unknown in [
+        BlockId::new(function.function, 1),
+        BlockId::new(FunctionId::new(99), 0),
+    ] {
+        assert_eq!(
+            builder.select_block(unknown).unwrap_err(),
+            MirBuildError::UnknownBlock(unknown)
+        );
+    }
+}
+
+#[test]
+fn verifies_jumps_joins_diamonds_and_multiple_returns() {
+    let join = goto_join_mir();
+    let diamond = diamond_mir();
+
+    assert!(verify_mir(&join).is_ok());
+    assert!(verify_mir(&diamond).is_ok());
+    assert!(dump_mir(&join).contains("goto f0:b1"));
+    let join_function = join.definitions.get(join.entry_function).unwrap();
+    assert_eq!(
+        join_function.body.blocks[0]
+            .terminator
+            .as_ref()
+            .unwrap()
+            .successors()
+            .collect::<Vec<_>>(),
+        [join_function.body.blocks[1].id]
+    );
+    let function = diamond.definitions.get(diamond.entry_function).unwrap();
+    let successors: Vec<_> = function.body.blocks[0]
+        .terminator
+        .as_ref()
+        .unwrap()
+        .successors()
+        .collect();
+    assert_eq!(
+        successors,
+        [function.body.blocks[1].id, function.body.blocks[2].id]
+    );
+    assert_eq!(
+        function.body.blocks[1]
+            .terminator
+            .as_ref()
+            .unwrap()
+            .successors()
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn control_flow_dump_is_exact_and_deterministic() {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    function.values[0].ty = MirType::Bool;
+    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected constant assignment");
+    };
+    assignment.rvalue = MirRvalue {
+        kind: MirRvalueKind::ConstantBool(true),
+        ty: MirType::Bool,
+    };
+    let condition = assignment.result;
+    let block = function.body.blocks[0].id;
+    function.body.blocks[0].terminator = Some(MirTerminator::Branch {
+        condition,
+        true_target: block,
+        false_target: block,
+        span: function.span,
+    });
+
+    assert!(verify_mir(&mir).is_ok());
+    let expected = concat!(
+        "MirProgram @0..30\n",
+        "  Entry f0\n",
+        "  Declarations\n",
+        "    Declaration f0 \"main\" internal @0..30\n",
+        "      Signature () -> i64\n",
+        "  Definitions\n",
+        "    Definition f0 @0..30\n",
+        "      Parameters\n",
+        "      Storage\n",
+        "      Values\n",
+        "        f0:v0 : bool @26..27\n",
+        "      EntryBlock f0:b0\n",
+        "      Blocks\n",
+        "        f0:b0 @17..30\n",
+        "          f0:v0 = const.bool true : bool @26..27\n",
+        "          branch f0:v0, true f0:b0, false f0:b0 @0..30\n",
+    );
+    assert_eq!(dump_mir(&mir), expected);
+    assert_eq!(dump_mir(&mir), dump_mir(&mir));
+}
+
+#[test]
+fn verifier_rejects_missing_and_foreign_control_flow_targets() {
+    let mut missing = goto_join_mir();
+    let function = missing
+        .definitions
+        .get_mut_for_test(missing.entry_function)
+        .unwrap();
+    function.body.blocks[0].terminator = Some(MirTerminator::Goto {
+        target: BlockId::new(function.function, 99),
+        span: function.span,
+    });
+    let errors = verify_mir(&missing).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("target f0:b99 is not declared")));
+
+    let mut foreign = goto_join_mir();
+    let function = foreign
+        .definitions
+        .get_mut_for_test(foreign.entry_function)
+        .unwrap();
+    function.body.blocks[0].terminator = Some(MirTerminator::Goto {
+        target: BlockId::new(FunctionId::new(99), 0),
+        span: function.span,
+    });
+    let errors = verify_mir(&foreign).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("target f99:b0 is owned by another function")));
+}
+
+#[test]
+fn verifier_rejects_invalid_entry_and_non_dense_block_ids() {
+    let mut missing_entry = goto_join_mir();
+    let function = missing_entry
+        .definitions
+        .get_mut_for_test(missing_entry.entry_function)
+        .unwrap();
+    function.body.entry = BlockId::new(function.function, 99);
+    let errors = verify_mir(&missing_entry).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("entry block f0:b99 is not declared")));
+
+    let mut foreign_entry = goto_join_mir();
+    let function = foreign_entry
+        .definitions
+        .get_mut_for_test(foreign_entry.entry_function)
+        .unwrap();
+    function.body.entry = BlockId::new(FunctionId::new(99), 0);
+    let errors = verify_mir(&foreign_entry).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("entry block f99:b0 is owned by another function")));
+
+    let mut sparse = goto_join_mir();
+    let function = sparse
+        .definitions
+        .get_mut_for_test(sparse.entry_function)
+        .unwrap();
+    function.body.blocks[1].id = BlockId::new(function.function, 2);
+    let errors = verify_mir(&sparse).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("block table index 1 contains f0:b2")));
+}
+
+#[test]
+fn verifier_requires_a_boolean_branch_condition() {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let condition = function.values[0].id;
+    let target = function.body.entry;
+    function.body.blocks[0].terminator = Some(MirTerminator::Branch {
+        condition,
+        true_target: target,
+        false_target: target,
+        span: function.span,
+    });
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("branch condition is not `bool`")));
+}
+
+#[test]
+fn verifier_rejects_transient_values_used_across_block_boundaries() {
+    let mut mir = goto_join_mir();
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let entry_value = function.values[0].id;
+    let join = &mut function.body.blocks[1];
+    join.terminator = Some(MirTerminator::Return {
+        value: Some(entry_value),
+        span: join.span,
+    });
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors.iter().any(|error| error
+        .message
+        .contains("used before it is defined in this block")));
+}
+
+#[test]
+fn verifier_checks_unreachable_blocks() {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let function_id = function.function;
+    function.body.blocks.push(MirBasicBlock {
+        id: BlockId::new(function_id, 1),
+        instructions: Vec::new(),
+        terminator: None,
+        span: function.span,
+    });
+
+    let errors = verify_mir(&mir).unwrap_err();
+    assert!(errors.iter().any(|error| {
+        error.block == Some(BlockId::new(function_id, 1)) && error.message.contains("no terminator")
+    }));
 }
 
 #[test]

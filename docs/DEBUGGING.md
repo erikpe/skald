@@ -34,6 +34,11 @@ defines a value and an `i64` return names one; a `unit` call and return omit the
 value entirely. This makes accidental fictitious unit values visible at the
 phase boundary and enforceable by the verifier.
 
+C3 MIR dumps render `goto` targets and boolean branches with their condition,
+true target, and false target. Blocks remain in dense `BlockId` order rather
+than traversal order, so loops, joins, and unreachable blocks have stable,
+inspectable output before backend lowering exists.
+
 Assembly is directly available through the public compiler command:
 
 ```text

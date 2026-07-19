@@ -185,12 +185,16 @@ fn rejects_verified_mir_outside_the_initial_target_shape() {
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    let original = &function.body.blocks[0];
+    let span = function.body.blocks[0].span;
+    let second = BlockId::new(function.function, 1);
     function.body.blocks.push(MirBasicBlock {
-        id: BlockId::new(function.function, 1),
+        id: second,
         instructions: Vec::new(),
-        terminator: original.terminator.clone(),
-        span: original.span,
+        terminator: Some(crate::mir::MirTerminator::Goto {
+            target: second,
+            span,
+        }),
+        span,
     });
     assert!(verify_mir(&mir).is_ok());
 
@@ -199,6 +203,28 @@ fn rejects_verified_mir_outside_the_initial_target_shape() {
     assert_eq!(
         error.message(),
         "the initial backend supports exactly one basic block, found 2"
+    );
+}
+
+#[test]
+fn rejects_control_flow_terminators_until_branch_lowering_exists() {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let target = function.body.entry;
+    function.body.blocks[0].terminator = Some(crate::mir::MirTerminator::Goto {
+        target,
+        span: function.span,
+    });
+    assert!(verify_mir(&mir).is_ok());
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.function(), Some(mir.entry_function));
+    assert_eq!(
+        error.message(),
+        "the initial backend supports only return terminators"
     );
 }
 

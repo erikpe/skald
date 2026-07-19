@@ -198,14 +198,22 @@ impl Verifier<'_> {
         self.verify_values(function);
         self.verify_parameters(declaration, function);
 
-        if function.block(function.body.entry).is_none() {
+        if function.body.entry.function() != function.function {
+            self.function_error(
+                function.function,
+                format!(
+                    "entry block {} is owned by another function",
+                    function.body.entry
+                ),
+            );
+        } else if function.block(function.body.entry).is_none() {
             self.function_error(
                 function.function,
                 format!("entry block {} is not declared", function.body.entry),
             );
         }
 
-        let mut defined = HashSet::new();
+        let mut defined_values = HashSet::new();
         let mut seen_blocks = HashSet::new();
         for (index, block) in function.body.blocks.iter().enumerate() {
             if block.id.function() != function.function {
@@ -225,11 +233,11 @@ impl Verifier<'_> {
             if !seen_blocks.insert(block.id) {
                 self.block_error(function.function, block.id, "duplicate block ID");
             }
-            self.verify_block(declaration, function, block, &mut defined);
+            self.verify_block(declaration, function, block, &mut defined_values);
         }
 
         for value in &function.values {
-            if !defined.contains(&value.id) {
+            if !defined_values.contains(&value.id) {
                 self.function_error(
                     function.function,
                     format!("value {} has no definition", value.id),
@@ -368,8 +376,12 @@ impl Verifier<'_> {
         declaration: &MirFunctionDeclaration,
         function: &MirFunctionDefinition,
         block: &MirBasicBlock,
-        defined: &mut HashSet<ValueId>,
+        defined_values: &mut HashSet<ValueId>,
     ) {
+        // MIR transient values are deliberately block-local before SSA. A
+        // separate set per block prevents vector order from accidentally
+        // permitting values to cross control-flow edges.
+        let mut defined_in_block = HashSet::new();
         for instruction in &block.instructions {
             match instruction {
                 MirInstruction::Assign(assignment) => {
@@ -381,7 +393,7 @@ impl Verifier<'_> {
                         );
                         continue;
                     };
-                    if defined.contains(&assignment.result) {
+                    if defined_values.contains(&assignment.result) {
                         self.block_error(
                             function.function,
                             block.id,
@@ -395,11 +407,12 @@ impl Verifier<'_> {
                             format!("assignment type does not match value {}", assignment.result),
                         );
                     }
-                    self.verify_rvalue(function, block, &assignment.rvalue, defined);
-                    defined.insert(assignment.result);
+                    self.verify_rvalue(function, block, &assignment.rvalue, &defined_in_block);
+                    defined_values.insert(assignment.result);
+                    defined_in_block.insert(assignment.result);
                 }
                 MirInstruction::Call(call) => {
-                    self.verify_call(function, block, call, defined);
+                    self.verify_call(function, block, call, defined_values, &mut defined_in_block);
                 }
                 MirInstruction::Store(store) => {
                     let storage_ty = function.storage(store.storage).map(|storage| storage.ty);
@@ -410,7 +423,8 @@ impl Verifier<'_> {
                             format!("store target {} is not declared", store.storage),
                         );
                     }
-                    let value_ty = self.verify_value_use(function, block, store.value, defined);
+                    let value_ty =
+                        self.verify_value_use(function, block, store.value, &defined_in_block);
                     if storage_ty.is_some() && value_ty.is_some() && storage_ty != value_ty {
                         self.block_error(
                             function.function,
@@ -425,7 +439,9 @@ impl Verifier<'_> {
         match &block.terminator {
             Some(MirTerminator::Return { value, .. }) => {
                 if let Some(value) = value {
-                    if let Some(ty) = self.verify_value_use(function, block, *value, defined) {
+                    if let Some(ty) =
+                        self.verify_value_use(function, block, *value, &defined_in_block)
+                    {
                         if declaration.return_type == MirType::Unit {
                             self.block_error(
                                 function.function,
@@ -448,7 +464,51 @@ impl Verifier<'_> {
                     );
                 }
             }
+            Some(MirTerminator::Goto { target, .. }) => {
+                self.verify_block_target(function, block, *target);
+            }
+            Some(MirTerminator::Branch {
+                condition,
+                true_target,
+                false_target,
+                ..
+            }) => {
+                if let Some(ty) =
+                    self.verify_value_use(function, block, *condition, &defined_in_block)
+                {
+                    if ty != MirType::Bool {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            "branch condition is not `bool`",
+                        );
+                    }
+                }
+                self.verify_block_target(function, block, *true_target);
+                self.verify_block_target(function, block, *false_target);
+            }
             None => self.block_error(function.function, block.id, "block has no terminator"),
+        }
+    }
+
+    fn verify_block_target(
+        &mut self,
+        function: &MirFunctionDefinition,
+        block: &MirBasicBlock,
+        target: BlockId,
+    ) {
+        if target.function() != function.function {
+            self.block_error(
+                function.function,
+                block.id,
+                format!("control-flow target {target} is owned by another function"),
+            );
+        } else if function.block(target).is_none() {
+            self.block_error(
+                function.function,
+                block.id,
+                format!("control-flow target {target} is not declared"),
+            );
         }
     }
 
@@ -457,10 +517,11 @@ impl Verifier<'_> {
         function: &MirFunctionDefinition,
         block: &MirBasicBlock,
         call: &MirCall,
-        defined: &mut HashSet<ValueId>,
+        defined_values: &mut HashSet<ValueId>,
+        defined_in_block: &mut HashSet<ValueId>,
     ) {
         for argument in &call.arguments {
-            self.verify_value_use(function, block, *argument, defined);
+            self.verify_value_use(function, block, *argument, defined_in_block);
         }
 
         let result_ty = match call.result {
@@ -473,13 +534,14 @@ impl Verifier<'_> {
                         format!("call result {result} is not declared"),
                     );
                 }
-                if !defined.insert(result) {
+                if !defined_values.insert(result) {
                     self.block_error(
                         function.function,
                         block.id,
                         format!("value {result} is defined more than once"),
                     );
                 }
+                defined_in_block.insert(result);
                 metadata.map(|metadata| metadata.ty)
             }
             None => None,
@@ -617,7 +679,7 @@ impl Verifier<'_> {
             self.block_error(
                 function.function,
                 block.id,
-                format!("value {value} is used before it is defined"),
+                format!("value {value} is used before it is defined in this block"),
             );
         }
         Some(metadata.ty)

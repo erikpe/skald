@@ -226,9 +226,17 @@ The initial MIR need not use static single assignment form. IDs and control-flow
 
 That choice should be made when real optimization requirements exist. The current architecture must make it possible without prematurely building an SSA framework.
 
-M5 implements a three-address MIR with separate owner-qualified storage, transient value, and basic-block IDs. MIR has a dense callable declaration table containing canonical signatures and linkage, plus a sparse definition table containing executable bodies. Source parameters and locals map to explicit storage slots, while instruction results are immutable value IDs; this hybrid keeps mutation visible without committing the entire IR to SSA. Calls are effectful instructions with explicit stable targets, argument lists, and optional result IDs. Expression lowering emits instructions recursively in deterministic left-to-right order. The branch-free first slice produces one entry block per defined function with an explicit return terminator and omits unreachable statements after that return.
+M5 implements a three-address MIR with separate owner-qualified storage, transient value, and basic-block IDs. MIR has a dense callable declaration table containing canonical signatures and linkage, plus a sparse definition table containing executable bodies. Source parameters and locals map to explicit storage slots, while instruction results are immutable value IDs; this hybrid keeps mutation visible without committing the entire IR to SSA. Calls are effectful instructions with explicit stable targets, argument lists, and optional result IDs. Expression lowering emits instructions recursively in deterministic left-to-right order. The branch-free source subset still produces one entry block per defined function and omits unreachable statements after a return.
 
-The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, use ordering, storage/value types, direct-call targets and result presence, return types, entry blocks, and terminators. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes declarations separately from definitions and shows the exact instruction and evaluation order consumed by backends.
+C3 adds target-independent `Goto` and boolean `Branch` terminators alongside
+`Return`. The public MIR body builder allocates dense blocks in stable order,
+switches the current insertion block explicitly, rejects instructions after a
+terminator, and rejects duplicate termination. Terminators expose deterministic
+successors, with a branch's true edge before its false edge. Transient values
+are block-local in this non-SSA MIR; state crossing an edge must use explicit
+storage.
+
+The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, block-local use ordering, storage/value types, direct-call targets and result presence, return types, dense block IDs, entry blocks, boolean branch conditions, control-flow target ownership and existence, and terminators. It validates unreachable blocks as well as reachable ones. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes declarations separately from definitions and shows instructions, terminators, and stable control-flow targets in block-ID order.
 
 ### Passes and verification
 
@@ -258,7 +266,7 @@ An AArch64 Linux backend is expected after the x86-64 pipeline is established. A
 - assembly-shape tests runnable without executing the target;
 - native execution tests gated by the host architecture or an explicit emulator.
 
-M6 implements the first backend behind a small target registry that currently accepts only `x86_64-sysv`. Target legality is checked before lowering: target-independent MIR verification runs first, and the initial backend then rejects valid MIR shapes it cannot yet represent, such as multi-block functions. Backend failures are structured errors rather than panics or silently altered code.
+M6 implements the first backend behind a small target registry that currently accepts only `x86_64-sysv`. Target legality is checked before lowering: target-independent MIR verification runs first, and through C3 the backend explicitly rejects multi-block functions and control-flow terminators it cannot yet represent. C4 owns branch lowering. Backend failures are structured errors rather than panics or silently altered code.
 
 The x86-64 implementation separates ABI classification, frame planning, instruction selection, a typed target assembly model, and GNU textual emission. Every MIR storage slot and transient value initially receives an eight-byte stack home in a 16-byte-aligned fixed frame. This intentionally stack-heavy strategy uses `%rax` and `%rcx` as caller-saved scratch registers and preserves only the frame pointer; future register allocation can therefore replace a contained location-planning decision without changing MIR.
 
