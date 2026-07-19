@@ -41,6 +41,11 @@ compile-failure golden coverage. The language specification remains a draft,
 and syntax, semantics, and implementation interfaces may change as further
 slices are implemented and tested.
 
+C0 specifies the next slice's `bool` type, restricted external ABI extension,
+bootstrap boolean output, and `if` / `elif` / `else` semantics. This is a
+forward contract for C1–C6; the current compiler does not yet accept that new
+source surface.
+
 ## Development
 
 Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The repository has no third-party Rust dependencies at M0.

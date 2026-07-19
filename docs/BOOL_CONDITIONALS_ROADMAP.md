@@ -1,6 +1,6 @@
 # `bool` and Conditional Control Flow Roadmap
 
-Status: planned; C0 is the first implementation task.
+Status: C0 complete; C1 is the next implementation task.
 
 This roadmap adds the `bool` primitive type, bootstrap boolean output, and
 Niflheim-style `if` / `elif` / `else` statements. It is split into reviewable,
@@ -157,7 +157,7 @@ Adding the public symbol requires a runtime ABI version increment.
 
 ## 2. Progress Summary
 
-- [ ] C0 — Specify boolean and conditional behavior
+- [x] C0 — Specify boolean and conditional behavior
 - [ ] C1 — Add and directly test the runtime boolean output ABI
 - [ ] C2 — Implement straight-line `bool` values end-to-end
 - [ ] C3 — Add multi-block MIR and control-flow verification
@@ -176,20 +176,20 @@ pass.
 **Purpose:** Make syntax, evaluation, typing, scoping, return analysis, runtime
 output, and ABI behavior explicit before encoding them across compiler phases.
 
-- [ ] Update `docs/SKALD_DRAFT_SPEC.md` to specify `if` / `elif` / `else`,
+- [x] Update `docs/SKALD_DRAFT_SPEC.md` to specify `if` / `elif` / `else`,
       including required parentheses and blocks.
-- [ ] Replace the draft's `if` / `else` statement entry with
+- [x] Replace the draft's `if` / `else` statement entry with
       `if` / `elif` / `else` and state that `elif` is the only chained-arm
       spelling.
-- [ ] Specify exact-`bool` conditions, source-order evaluation, skipped later
+- [x] Specify exact-`bool` conditions, source-order evaluation, skipped later
       conditions, and selected-arm-only execution.
-- [ ] Specify branch scopes and branch-aware definite-return behavior.
-- [ ] Extend the implemented grammar contract with boolean types, literals,
+- [x] Specify branch scopes and branch-aware definite-return behavior.
+- [x] Extend the implemented grammar contract with boolean types, literals,
       and conditional statements.
-- [ ] Specify the restricted external `bool` ABI mapping and result
+- [x] Specify the restricted external `bool` ABI mapping and result
       normalization boundary.
-- [ ] Specify exact `ska_rt_println_bool` bytes and failure behavior.
-- [ ] Record all deliberately excluded boolean operators, conversions,
+- [x] Specify exact `ska_rt_println_bool` bytes and failure behavior.
+- [x] Record all deliberately excluded boolean operators, conversions,
       conditional expressions, optimizations, and control-flow forms.
 
 **Tests:** Manual consistency review among the draft specification, grammar

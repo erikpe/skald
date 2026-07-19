@@ -127,8 +127,8 @@ Unqualified names resolve local-first. If multiple imports provide the same unqu
 
 ### 3.1 Restricted Bootstrap External Functions
 
-The implemented first post-vertical-slice output extension defines this deliberately narrow
-external declaration form:
+The implemented first post-vertical-slice output extension defines this
+deliberately narrow external declaration form:
 
 ```ska
 extern fn external_name(value: i64) -> unit;
@@ -136,10 +136,21 @@ extern fn external_value(value: i64) -> i64;
 ```
 
 It is a top-level declaration terminated by a semicolon and has no Skald body.
-Parameter names are mandatory. This bootstrap profile permits only by-value
-`i64` parameters and an `i64` or `unit` result. It does not permit alias
-parameters, `shared`, objects, arrays, optionals, function values, variadic
-arguments, alternate link names, or user-selected calling conventions.
+Parameter names are mandatory. The currently implemented O-series profile
+permits only by-value `i64` parameters and an `i64` or `unit` result.
+
+The specified C-series boolean extension adds by-value `bool` parameters and
+`bool` results to that same restricted profile:
+
+```ska
+extern fn external_predicate(value: i64) -> bool;
+extern fn external_bool_sink(value: bool) -> unit;
+```
+
+It does not permit alias parameters, `shared`, objects, arrays, optionals,
+function values, variadic arguments, alternate link names, or user-selected
+calling conventions. Supporting `bool` does not otherwise generalize the
+foreign-function interface.
 
 Defined and external functions share one non-overloaded top-level function
 namespace. Any repeated name is a compile-time error, including two identical
@@ -158,9 +169,14 @@ exact external symbols collision-free without reserving an ordinary Skald
 identifier prefix for compiler use.
 
 Calls use the selected target's C ABI. For the initial Linux x86-64 System V
-target, Skald `i64` corresponds to C `int64_t`, and a Skald `unit` result
-corresponds to C `void`. `unit` has no runtime payload. Argument evaluation is
-left to right, as for a call to a Skald-defined function.
+target, Skald `i64` corresponds to C `int64_t`, Skald `bool` corresponds to C
+`bool` (`_Bool`), and a Skald `unit` result corresponds to C `void`. `unit` has
+no runtime payload. Boolean arguments use the System V integer class and leave
+Skald as canonical C false or true values. An external boolean result is read
+from the ABI result byte and normalized to a canonical Skald `false` or `true`
+before it becomes observable to Skald code; unspecified upper result-register
+bits are not part of the value. Argument evaluation is left to right, as for a
+call to a Skald-defined function.
 
 An external declaration is a trusted assertion about the definition supplied
 at link time. `skac` checks Skald uses against the declared signature, and the
@@ -168,10 +184,11 @@ linker diagnoses a missing symbol, but the compiler cannot verify that a
 supplied foreign definition has a compatible ABI type. An incompatible linked
 definition is outside the language's safety and behavior guarantees.
 
-This profile is sufficient to declare the bootstrap output function in Section
-13.1. It does not settle imports, export and visibility behavior, cross-module
-coalescing of ABI declarations, separate compilation, ownership transfer, or
-the complete foreign-function interface. Those remain specification gaps.
+This profile is sufficient to declare the bootstrap output functions in
+Sections 13.1 and 13.2. It does not settle imports, export and visibility
+behavior, cross-module coalescing of ABI declarations, separate compilation,
+ownership transfer, or the complete foreign-function interface. Those remain
+specification gaps.
 
 ---
 
@@ -189,6 +206,14 @@ Skald provides the following primitive value types:
 - `unit`
 
 Primitive types are always value types.
+
+`bool` is distinct from every integer type. Its only values are the literals
+`false` and `true`; it does not acquire numeric truthiness merely because a
+target may encode those values as zero and one. The initial C-series compiler
+profile supports `bool` in parameters, results, initialized locals,
+expressions, and calls. Physical storage width is target-defined. In
+particular, the initial stack-heavy backend may use an eight-byte home without
+making `bool` an eight-byte language type or an alias for `i64`.
 
 Default values:
 
@@ -1201,7 +1226,7 @@ Statements:
 - local variable declaration;
 - assignment;
 - expression statement;
-- `if` / `else`;
+- `if` / `elif` / `else`;
 - `while`;
 - `for ... in`;
 - `return`;
@@ -1225,12 +1250,71 @@ Expressions:
 - indexing and slicing;
 - array construction.
 
-### 10.1 Returns and Call Statements
+### 10.1 Conditional Statements
+
+The initial conditional form follows Niflheim's chained-arm spelling:
+
+```ska
+if (first_condition) {
+    first_action();
+}
+elif (second_condition) {
+    second_action();
+}
+else {
+    fallback_action();
+}
+```
+
+Its grammar is:
+
+```text
+if-statement = "if" "(" expression ")" block
+               ("elif" "(" expression ")" block)*
+               ["else" block]
+```
+
+There may be zero or more `elif` arms and at most one final `else` arm.
+Parentheses around every condition and a block for every arm are mandatory.
+`elif` is a distinct keyword and the only chained-arm spelling; `else if` is
+not accepted as an alternative. The construct is a statement and does not
+produce a value.
+
+Every condition must have type exactly `bool`. There is no implicit numeric,
+object, shared-handle, or optional truthiness. Conditions are evaluated from
+left to right. Evaluation stops at the first condition producing `true`, only
+that arm's block executes, and no later condition or arm is evaluated. If all
+conditions produce `false`, the `else` block executes when present; otherwise
+execution continues after the statement.
+
+Each condition is resolved in the lexical scope containing the complete
+conditional statement. Each arm block creates an independent child scope. A
+name declared in one arm is not visible in another arm, in a later `elif`
+condition, or after the conditional. Ordinary nested-block shadowing rules
+apply inside each arm.
+
+For definite-return analysis, a conditional definitely returns only if it has
+an `else` arm and every `if`, `elif`, and `else` block definitely returns. The
+rule composes through nested blocks and conditionals. A conditional without
+`else`, or with any arm that can reach its closing brace, can continue with the
+following statement. This analysis, rather than the parser or backend,
+enforces the requirement that every reachable path through a non-`unit`
+function returns a value.
+
+The initial C-series conditional profile does not include `if` expressions,
+`else if`, implicit truthiness, casts to or from `bool`, equality or ordering,
+logical negation, `&&`, `||`, pattern matching, optional presence tests,
+flow-sensitive type narrowing, loops, branch optimization, SSA, or phi nodes.
+The broader language may specify some of these separately. In particular,
+short-circuit logical operators require expression-level control flow and must
+not be introduced as eager binary operations.
+
+### 10.2 Returns and Call Statements
 
 Function return syntax follows the declared result type:
 
-- an `i64` function returns with `return expression;`, where the expression
-  must have type `i64`;
+- an `i64` or `bool` function returns with `return expression;`, where the
+  expression must have exactly the function's declared result type;
 - a `unit` function returns with `return;` and cannot attach an expression;
 - reaching the closing brace of a `unit` function is an implicit `return;`;
 - every reachable path through a non-`unit` function must return a value, so
@@ -1250,7 +1334,7 @@ restricted call-statement rule avoids accidental discarded values and is
 narrower than the complete statement list above; broader expression statements
 may be specified later.
 
-### 10.2 Operators
+### 10.3 Operators
 
 Primitive operator rules:
 
@@ -1266,7 +1350,7 @@ Primitive operator rules:
 
 Signed integer division rounds toward negative infinity, and signed remainder has the divisor's sign.
 
-### 10.3 Indexing, Slicing, and For-In
+### 10.4 Indexing, Slicing, and For-In
 
 This subsection is a provisional sketch. Indexing and slicing depend on the deferred array design, and the structural iteration protocol is not yet normative.
 
@@ -1326,6 +1410,10 @@ Primitive casts are explicit. Casts involving `unit` are invalid. Other primitiv
 - integer-to-`double` casts use the source signedness and may lose precision;
 - `double`-to-integer casts truncate toward zero and then range-check the result; NaN, infinity, and out-of-range values panic and abort.
 
+These cast rules describe the intended broader primitive-type system. The
+initial C-series boolean and conditional profile does not implement casts to
+or from `bool`; its conditions require an expression already typed as `bool`.
+
 Object casts:
 
 - derived-to-base inline assignment slices;
@@ -1346,6 +1434,10 @@ Equality:
 - `shared T` equality compares object identity by default;
 - object identity comparison through aliases may be provided explicitly later, but is not needed for the initial core;
 - optional equality is defined only when the contained type has equality.
+
+Primitive equality is likewise outside the initial C-series profile. Boolean
+values in that profile are formed by literals, bindings, parameters, and call
+results rather than comparison expressions.
 
 ---
 
@@ -1491,6 +1583,45 @@ This function exists to bootstrap observable tests. It is not the final
 user-facing I/O API; a future Skald standard library may wrap lower-level
 runtime facilities with ordinary functions and richer error handling.
 
+### 13.2 Bootstrap `bool` Output
+
+**Specification status:** fixed by C0 for the next implementation slice. The
+runtime symbol is added by C1 and the Skald source-to-runtime path by C2; it is
+not part of runtime ABI version 2.
+
+The next runtime ABI exposes:
+
+```c
+#include <stdbool.h>
+
+void ska_rt_println_bool(bool value);
+```
+
+Skald source accesses it through the same ordinary restricted external
+declaration mechanism as integer output:
+
+```ska
+extern fn ska_rt_println_bool(value: bool) -> unit;
+```
+
+One successful call with `true` writes the four ASCII bytes `true` followed by
+one line-feed byte (`0x0a`). One successful call with `false` writes the five
+ASCII bytes `false` followed by one line-feed byte. It writes no sign,
+capitalization, padding, carriage return, locale-dependent text, or other
+whitespace. Consecutive calls produce consecutive complete records in call
+order.
+
+The function completes and checks the entire record before returning. A
+detected write or flush failure is an unrecoverable runtime error and
+terminates the process unsuccessfully under the same policy as
+`ska_rt_println_i64`. The exact diagnostic, status, or terminating signal is
+not guaranteed. Adding this public symbol changes the runtime ABI and requires
+an increment of `SKALD_RUNTIME_ABI_VERSION`.
+
+This operation exists only for bootstrap observability. It does not introduce
+formatting, recoverable I/O, or a final standard-library printing API, and no
+compiler phase recognizes its name specially.
+
 ---
 
 ## 14. Relationship to Niflheim
@@ -1553,8 +1684,8 @@ The following are also substantial gaps. They need not all be part of the first 
 - **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
-- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64` and `unit`. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
-- **Required library and runtime surface:** Section 13.1 defines only a bootstrap `i64` line-output operation. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`; the `bool` portion is specified for the C-series slice but is not implemented at C0. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
+- **Required library and runtime surface:** Sections 13.1 and 13.2 define only bootstrap `i64` and `bool` line-output operations; boolean output is specified but not implemented at C0. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
 
@@ -1584,12 +1715,17 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` parameters and `i64` or `unit` results, and treats declarations as trusted ABI assertions;
+- the bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64` and `bool` parameters and `i64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions; the `bool` extension is specified by C0 and implemented in a later task;
+- on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
 - compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
 - external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;
 - `unit` functions use `return;` or implicit fallthrough, while non-`unit` functions must return a value on every reachable path;
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
+- `ska_rt_println_bool` writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
+- conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
+- conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
+- a conditional definitely returns only when it has `else` and every arm definitely returns;
 - copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;

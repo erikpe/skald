@@ -162,6 +162,108 @@ System V call-lowering path used for Skald definitions. An unavailable symbol
 therefore remains valid through compilation and fails only when the driver
 invokes the linker.
 
+## Planned `bool` and conditional extension contract
+
+C0 fixes the source and semantic contract for the next C-series slice. This
+section is normative for that implementation work but does not claim that the
+current compiler accepts the new syntax. C2 enables straight-line boolean
+source only after it works through the x86-64 target; C5 later enables
+conditionals after multi-block MIR and backend branch support are complete.
+
+The extension adds these keywords:
+
+```text
+bool true false if elif else
+```
+
+They use only punctuation already present in the implemented lexer. `true` and
+`false` are boolean literals, not identifiers.
+
+### Straight-line boolean grammar
+
+C2 extends the implemented O-series grammar as follows:
+
+```text
+function-declaration          = "fn" identifier parameter-list "->" result-type block
+external-function-declaration = "extern" "fn" identifier parameter-list "->" result-type ";"
+parameter-list                = "(" [ parameter ("," parameter)* ] ")"
+parameter                     = identifier ":" value-type
+result-type                   = value-type | "unit"
+value-type                    = "i64" | "bool"
+
+local-declaration = "var" identifier ":" value-type "=" expression ";"
+primary           = identifier
+                  | decimal-integer
+                  | "true"
+                  | "false"
+                  | "(" expression ")"
+```
+
+All other expression productions and precedence levels remain unchanged.
+`bool` may appear in parameters, function results, initialized locals, and the
+existing call expression path. `unit` remains payload-free and is not a
+parameter or local type. The entry point remains exactly
+`fn main() -> i64`.
+
+`bool` is distinct from `i64`; neither implicitly converts to the other.
+Local initializers, arguments, and return expressions must exactly match their
+declared types. The literals `false` and `true` are the only literal boolean
+values. This slice adds no casts, equality, ordering, logical negation,
+`&&`, or `||`.
+
+The restricted exact-symbol external profile expands only enough to accept
+by-value `bool` parameters and `bool` results alongside its existing `i64` and
+`unit` forms. On Linux x86-64 System V, Skald `bool` maps to C `bool`
+(`_Bool`). Outgoing values are canonical false or true. An external boolean
+result is normalized from the ABI result byte before it becomes a Skald value.
+Alias parameters, ownership-bearing values, alternate symbol names, variadic
+calls, and user-selected calling conventions remain unsupported.
+
+### Conditional grammar and semantics
+
+C5 adds one statement production:
+
+```text
+statement    = local-declaration
+             | return-statement
+             | call-statement
+             | if-statement
+             | block
+if-statement = "if" "(" expression ")" block
+               ("elif" "(" expression ")" block)*
+               ["else" block]
+```
+
+Conditions and blocks are mandatory. There may be any number of `elif` arms
+and at most one final `else`. `elif` is the only chained-arm spelling;
+`else if` is invalid because `else` must be followed immediately by a block.
+The construct is a statement and produces no value.
+
+Every condition must have type exactly `bool`. Conditions are evaluated from
+left to right until the first `true` result. Only that arm executes, and later
+conditions and blocks are skipped. When every condition is `false`, the
+`else` block executes if present; otherwise execution continues after the
+statement. Integers and other values are not conditions without a separately
+specified explicit conversion.
+
+Every condition resolves in the scope containing the whole `if` statement.
+Every arm block creates an independent child scope. A binding declared in an
+arm is unavailable in other arms, later `elif` conditions, and after the
+statement. Existing nested-block shadowing rules apply within an arm.
+
+An `if` statement definitely returns only when it has an `else` block and
+every `if`, `elif`, and `else` block definitely returns. The rule composes
+through nested blocks and conditionals. Consequently, a non-`unit` function
+may rely on an exhaustive, all-returning conditional to satisfy its mandatory
+return, while a conditional without `else` can never do so by itself. Unit
+functions retain implicit fallthrough return.
+
+The initial conditional profile does not include `if` expressions, implicit
+truthiness, boolean operators or casts, pattern matching, optional presence
+tests, flow-sensitive narrowing, loops, or branch optimization. Constant
+conditions retain ordinary source semantics; optimization is not required for
+correctness.
+
 ## First vertical slice name resolution
 
 M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.

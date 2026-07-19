@@ -37,7 +37,8 @@ For each new construct or type:
 ## Likely next-slice pressure points
 
 The selected next slice is `bool` and Niflheim-style
-`if` / `elif` / `else`, planned in
+`if` / `elif` / `else`. Its C0 contract is complete and its implementation is
+planned in
 [`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It introduces a
 semantic boolean type in HIR and MIR, multiple MIR blocks with explicit
 conditional and unconditional terminators, control-flow-aware MIR verification,
