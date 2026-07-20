@@ -67,7 +67,7 @@ gate before its checkbox is marked complete.
 - [x] R5 — Split the parser by grammar responsibility
 - [x] R6 — Bound recursive syntax nesting
 - [x] R7 — Decompose x86-64 instruction and call lowering
-- [ ] R8 — Introduce shared compiler test support
+- [x] R8 — Introduce shared compiler test support
 - [ ] R9 — Split oversized Rust test modules by behavior
 - [ ] R10 — Split the runtime ABI harness by responsibility
 - [ ] R11 — Correct diagnostics, comments, and small formatting duplication
@@ -245,14 +245,14 @@ identical, and each MIR operation has one obvious instruction-selection home.
 **Purpose:** Remove repeated phase-pipeline and temporary-resource helpers while
 keeping tests explicit about the boundary they exercise.
 
-- [ ] Add test-only helpers for lexing, parsing, resolution, type checking, MIR
+- [x] Add test-only helpers for lexing, parsing, resolution, type checking, MIR
       lowering, and assembly generation.
-- [ ] Make each helper assert success only for phases preceding the requested
+- [x] Make each helper assert success only for phases preceding the requested
       test boundary.
-- [ ] Add RAII temporary directory and file helpers shared where crate
+- [x] Add RAII temporary directory and file helpers shared where crate
       boundaries allow it.
-- [ ] Remove counter-based helpers that leak resources after failed assertions.
-- [ ] Keep production builds free of test-support code.
+- [x] Remove counter-based helpers that leak resources after failed assertions.
+- [x] Keep production builds free of test-support code.
 
 **Tests:** Cleanup-on-drop and unique-path tests, followed by the complete
 existing suite.

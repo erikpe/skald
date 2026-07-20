@@ -83,20 +83,11 @@ fn temporary_path(destination: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn test_directory(name: &str) -> PathBuf {
-        let id = NEXT_TEMPORARY_ID.fetch_add(1, Ordering::Relaxed);
-        let path = std::env::temp_dir().join(format!(
-            "skald-artifact-test-{}-{id}-{name}",
-            std::process::id()
-        ));
-        fs::create_dir(&path).unwrap();
-        path
-    }
+    use crate::test_support::TemporaryDirectory;
 
     #[test]
     fn destination_changes_only_when_a_complete_artifact_is_published() {
-        let directory = test_directory("publish");
+        let directory = TemporaryDirectory::new("artifact-publish").unwrap();
         let destination = directory.join("program.s");
         fs::write(&destination, "previous artifact").unwrap();
 
@@ -116,12 +107,11 @@ mod tests {
             "complete artifact"
         );
         assert!(!temporary.exists());
-        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
     fn dropping_an_unpublished_artifact_removes_its_temporary_file() {
-        let directory = test_directory("drop");
+        let directory = TemporaryDirectory::new("artifact-drop").unwrap();
         let destination = directory.join("program.s");
         fs::write(&destination, "previous artifact").unwrap();
 
@@ -135,12 +125,11 @@ mod tests {
             "previous artifact"
         );
         assert!(!temporary.exists());
-        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
     fn publication_failure_preserves_the_destination_and_cleans_up() {
-        let directory = test_directory("failed-publish");
+        let directory = TemporaryDirectory::new("artifact-failed-publish").unwrap();
         let destination = directory.join("existing-directory");
         fs::create_dir(&destination).unwrap();
 
@@ -151,6 +140,5 @@ mod tests {
         assert!(pending.publish().is_err());
         assert!(destination.is_dir());
         assert!(!temporary.exists());
-        fs::remove_dir_all(directory).unwrap();
     }
 }

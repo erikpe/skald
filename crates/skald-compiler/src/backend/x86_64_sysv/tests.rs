@@ -1,51 +1,28 @@
 use std::{
-    fs,
     io::Write,
-    path::PathBuf,
     process::{Command, Stdio},
-    sync::atomic::{AtomicU64, Ordering},
 };
 
 use crate::{
     backend::{emit_assembly, Target},
-    hir::HirProgram,
     identity::{BindingId, FunctionId, LocalId, ParameterId},
-    lexer::lex,
     mir::{
-        lower_hir, verify_mir, BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody,
-        MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDeclarationTable,
-        MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInstruction,
-        MirProgram, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator,
-        MirType, MirUnaryOperation, MirValue, StorageId, ValueId,
+        verify_mir, BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody, MirCall,
+        MirCallTarget, MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,
+        MirFunctionDefinitionTable, MirFunctionLinkage, MirInstruction, MirProgram, MirRvalue,
+        MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
+        MirUnaryOperation, MirValue, StorageId, ValueId,
     },
-    resolve::resolve,
     source::SourceDatabase,
-    syntax::parse,
-    typeck::type_check,
+    test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
 };
 
 fn lower_text(text: &str) -> MirProgram {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("backend-test.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty(), "{:?}", lexed.diagnostics);
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
-    let resolved = resolve(&parsed.ast);
-    assert!(
-        resolved.diagnostics.is_empty(),
-        "{:?}",
-        resolved.diagnostics
-    );
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
-    let hir: HirProgram = checked.hir.unwrap();
-    lower_hir(&hir)
+    lower_source_to_mir(text)
 }
 
 fn assembly(text: &str) -> String {
-    emit_assembly(Target::X86_64SysV, &lower_text(text)).unwrap()
+    lower_source_to_assembly(text, Target::X86_64SysV).unwrap()
 }
 
 fn test_span() -> crate::source::Span {
@@ -603,28 +580,11 @@ fn assert_system_assembler_accepts(output: &str) {
     );
 }
 
-static NEXT_EXECUTABLE_ID: AtomicU64 = AtomicU64::new(0);
-
-struct TemporaryExecutable(PathBuf);
-
-impl TemporaryExecutable {
-    fn new() -> Self {
-        let id = NEXT_EXECUTABLE_ID.fetch_add(1, Ordering::Relaxed);
-        Self(std::env::temp_dir().join(format!("skald-c4-{}-{id}", std::process::id())))
-    }
-}
-
-impl Drop for TemporaryExecutable {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.0);
-    }
-}
-
 fn run_native_assembly(output: &str) -> std::process::ExitStatus {
-    let executable = TemporaryExecutable::new();
+    let executable = TemporaryFile::new("native-executable").unwrap();
     let mut child = Command::new("cc")
         .args(["-x", "assembler", "-o"])
-        .arg(&executable.0)
+        .arg(executable.path())
         .arg("-")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -644,7 +604,7 @@ fn run_native_assembly(output: &str) -> std::process::ExitStatus {
         String::from_utf8_lossy(&linked.stderr)
     );
 
-    Command::new(&executable.0).status().unwrap()
+    Command::new(executable.path()).status().unwrap()
 }
 
 #[test]

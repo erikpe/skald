@@ -5,29 +5,15 @@ use crate::{
         HirFunctionDefinition, HirStatement, Type,
     },
     identity::FunctionId,
-    lexer::lex,
-    resolve::resolve,
-    source::SourceDatabase,
-    syntax::parse,
+    test_support::{resolve_source, type_check_source},
 };
 
 fn check_text(text: &str) -> TypeCheckOutput {
-    let resolved = resolve_text(text);
-    type_check(&resolved)
+    type_check_source(text)
 }
 
 fn resolve_text(text: &str) -> crate::resolve::ResolvedProgram {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("test.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty(), "test source must lex cleanly");
-    let parsed = parse(source, &lexed.tokens);
-    assert!(
-        parsed.diagnostics.is_empty(),
-        "test source must parse cleanly"
-    );
-    let resolved = resolve(&parsed.ast);
+    let resolved = resolve_source(text);
     assert!(
         resolved.diagnostics.is_empty(),
         "test source must resolve cleanly"

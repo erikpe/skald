@@ -1,27 +1,9 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::*;
-use crate::{
-    hir::HirProgram, identity::FunctionId, lexer::lex, resolve::resolve, source::SourceDatabase,
-    syntax::parse, typeck::type_check,
-};
-
-fn hir_text(text: &str) -> HirProgram {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("test.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    checked.hir.unwrap()
-}
+use crate::{identity::FunctionId, test_support::lower_source_to_mir};
 
 fn lower_text(text: &str) -> MirProgram {
-    lower_hir(&hir_text(text))
+    lower_source_to_mir(text)
 }
 
 fn goto_join_mir() -> MirProgram {

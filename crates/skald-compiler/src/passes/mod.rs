@@ -18,22 +18,12 @@ pub fn run_mir_pipeline(program: MirProgram) -> Result<MirProgram, MirVerificati
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        lexer::lex, mir::lower_hir, resolve::resolve, source::SourceDatabase, syntax::parse,
-        typeck::type_check,
-    };
+    use crate::test_support::lower_source_to_mir;
 
     use super::*;
 
     fn lowered_program() -> MirProgram {
-        let mut sources = SourceDatabase::new();
-        let id = sources.add("passes.ska", "fn main() -> i64 { return 0; }");
-        let source = sources.get(id).unwrap();
-        let lexed = lex(source);
-        let parsed = parse(source, &lexed.tokens);
-        let resolved = resolve(&parsed.ast);
-        let checked = type_check(&resolved.program);
-        lower_hir(&checked.hir.unwrap())
+        lower_source_to_mir("fn main() -> i64 { return 0; }")
     }
 
     #[test]

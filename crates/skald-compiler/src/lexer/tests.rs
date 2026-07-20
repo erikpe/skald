@@ -3,6 +3,7 @@ use crate::{
     diagnostics::render_diagnostics,
     literal::NumericLiteralKind,
     source::{LineColumn, SourceDatabase},
+    test_support::lex_source,
 };
 
 const I64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::I64);
@@ -11,10 +12,7 @@ const U8_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U8);
 const F64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::F64);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("test.ska", text);
-    let output = lex(sources.get(source_id).unwrap());
-    (sources, source_id, output)
+    lex_source(text)
 }
 
 #[test]

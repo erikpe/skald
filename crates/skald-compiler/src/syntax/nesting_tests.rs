@@ -1,13 +1,8 @@
 use super::*;
-use crate::{lexer::lex, source::SourceDatabase};
+use crate::test_support::parse_source;
 
 fn parse_text(text: String) -> ParseOutput {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("nesting.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty(), "test source must lex cleanly");
-    parse(source, &lexed.tokens)
+    parse_source(text).1
 }
 
 fn grouped_expression(groups: usize) -> String {

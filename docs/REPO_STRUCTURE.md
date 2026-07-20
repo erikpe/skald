@@ -83,6 +83,7 @@ The Rust library containing the compiler pipeline. It begins as one library crat
 ```text
 src/
 ├── lib.rs
+├── test_support.rs       # `cfg(test)` only
 ├── driver/
 ├── function_table.rs
 ├── identity.rs
@@ -428,6 +429,17 @@ Testing follows the useful high-level split from Niflheim while adapting it to R
 - driver tests check CLI behavior, phase selection, and toolchain command construction.
 
 Fast Rust unit tests should usually live beside the module under test. Larger compiler fixtures and cross-module tests belong under `tests/compiler/`.
+
+R8 centralizes repeated unit-test setup in the compiler's `cfg(test)`-only
+`test_support` module. Its source helpers expose lexing, parsing, resolution,
+type checking, MIR lowering, and assembly generation as explicit boundaries.
+Each helper requires only earlier phases to succeed, leaving diagnostics or
+errors from the named phase for its caller to assert. The same module provides
+unique RAII temporary directories and files for compiler tests; CLI integration
+tests use an equivalent private helper because compiler-internal test code is
+not exported to dependent crates. Drop-based cleanup also runs during assertion
+unwinding. None of these helpers or their dependencies enter production library
+builds.
 
 ### Runtime tests
 

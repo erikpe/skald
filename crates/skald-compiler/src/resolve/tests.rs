@@ -5,22 +5,13 @@ use crate::{
     literal::NumericLiteralKind,
     source::SourceDatabase,
     syntax::{self, parse, Statement},
+    test_support::resolve_source,
 };
 
 use crate::resolve::dump_resolved;
 
 fn resolve_text(text: &str) -> ResolveOutput {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("test.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty(), "test source must lex cleanly");
-    let parsed = parse(source, &lexed.tokens);
-    assert!(
-        parsed.diagnostics.is_empty(),
-        "test source must parse cleanly"
-    );
-    resolve(&parsed.ast)
+    resolve_source(text)
 }
 
 fn local_initializer(statement: &ResolvedStatement) -> &ResolvedExpression {

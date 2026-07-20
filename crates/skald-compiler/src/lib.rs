@@ -17,3 +17,6 @@ pub mod resolve;
 pub mod source;
 pub mod syntax;
 pub mod typeck;
+
+#[cfg(test)]
+pub(crate) mod test_support;

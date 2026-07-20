@@ -1,19 +1,8 @@
-use std::{
-    fs,
-    path::PathBuf,
-    process::Command,
-    sync::atomic::{AtomicU64, Ordering},
-};
+mod support;
 
-static NEXT_TEST_ID: AtomicU64 = AtomicU64::new(0);
+use std::{fs, process::Command};
 
-fn test_directory(name: &str) -> PathBuf {
-    let id = NEXT_TEST_ID.fetch_add(1, Ordering::Relaxed);
-    let path =
-        std::env::temp_dir().join(format!("skac-cli-test-{}-{id}-{name}", std::process::id()));
-    fs::create_dir(&path).unwrap();
-    path
-}
+use support::TemporaryDirectory;
 
 #[test]
 fn help_succeeds_through_the_binary_entry_point() {
@@ -31,7 +20,7 @@ fn help_succeeds_through_the_binary_entry_point() {
 
 #[test]
 fn assembly_output_runs_the_real_pipeline_through_the_binary() {
-    let directory = test_directory("assembly");
+    let directory = TemporaryDirectory::new("assembly").unwrap();
     let source = directory.join("answer.ska");
     let assembly = directory.join("answer.s");
     fs::write(&source, "fn main() -> i64 { return 6 * 7; }\n").unwrap();
@@ -53,7 +42,6 @@ fn assembly_output_runs_the_real_pipeline_through_the_binary() {
     let assembly_text = fs::read_to_string(&assembly).unwrap();
     assert!(assembly_text.contains("imulq %rcx, %rax"));
     assert!(assembly_text.contains(".globl main"));
-    fs::remove_dir_all(directory).unwrap();
 }
 
 #[test]

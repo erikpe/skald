@@ -1,14 +1,11 @@
 use super::*;
-use crate::{lexer::lex, literal::NumericLiteralKind, source::SourceDatabase, syntax::dump_ast};
+use crate::{
+    lexer::lex, literal::NumericLiteralKind, source::SourceDatabase, syntax::dump_ast,
+    test_support::parse_source,
+};
 
 fn parse_text(text: &str) -> (SourceDatabase, ParseOutput) {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("test.ska", text);
-    let source = sources.get(source_id).unwrap();
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty(), "test source must lex cleanly");
-    let parsed = parse(source, &lexed.tokens);
-    (sources, parsed)
+    parse_source(text)
 }
 
 fn function(ast: &CompilationUnit, index: usize) -> &FunctionDecl {

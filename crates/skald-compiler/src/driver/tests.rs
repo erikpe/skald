@@ -2,18 +2,16 @@ use std::{
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
 };
 
 use crate::{
     backend::Target,
     diagnostics::render_diagnostics,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
+    test_support::TemporaryDirectory,
 };
 
 use super::*;
-
-static NEXT_TEST_ID: AtomicU64 = AtomicU64::new(0);
 
 fn run(args: &[&str]) -> (i32, String, String) {
     run_with_toolchain(args, &Toolchain::new("false", "missing-runtime.a"))
@@ -30,16 +28,6 @@ fn run_with_toolchain(args: &[&str], toolchain: &Toolchain) -> (i32, String, Str
         String::from_utf8(stdout).unwrap(),
         String::from_utf8(stderr).unwrap(),
     )
-}
-
-fn test_directory(name: &str) -> PathBuf {
-    let id = NEXT_TEST_ID.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!(
-        "skald-driver-test-{}-{id}-{name}",
-        std::process::id()
-    ));
-    fs::create_dir(&path).unwrap();
-    path
 }
 
 fn temporary_artifacts(directory: &Path) -> Vec<PathBuf> {
@@ -81,7 +69,7 @@ fn invalid_arguments_are_usage_errors() {
 
 #[test]
 fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
-    let directory = test_directory("assembly");
+    let directory = TemporaryDirectory::new("driver-assembly").unwrap();
     let input = directory.join("answer.ska");
     let output = directory.join("answer.s");
     fs::write(&input, "fn main() -> i64 { return 42; }").unwrap();
@@ -111,13 +99,12 @@ fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
     let text = fs::read_to_string(output).unwrap();
     assert!(text.contains(".globl main"));
     assert!(text.contains("movabsq $42, %rax"));
-    assert!(temporary_artifacts(&directory).is_empty());
-    fs::remove_dir_all(directory).unwrap();
+    assert!(temporary_artifacts(directory.path()).is_empty());
 }
 
 #[test]
 fn explicit_output_must_not_alias_the_input_source() {
-    let directory = test_directory("input-alias");
+    let directory = TemporaryDirectory::new("driver-input-alias").unwrap();
     let input = directory.join("source.ska");
     let source = "fn main() -> i64 { return 42; }";
     fs::write(&input, source).unwrap();
@@ -154,13 +141,12 @@ fn explicit_output_must_not_alias_the_input_source() {
         assert_eq!(fs::read_to_string(&input).unwrap(), source);
     }
 
-    assert!(temporary_artifacts(&directory).is_empty());
-    fs::remove_dir_all(directory).unwrap();
+    assert!(temporary_artifacts(directory.path()).is_empty());
 }
 
 #[test]
 fn compilation_failure_preserves_existing_assembly_output() {
-    let directory = test_directory("compile-failure-output");
+    let directory = TemporaryDirectory::new("driver-compile-failure").unwrap();
     let input = directory.join("broken.ska");
     let output = directory.join("broken.s");
     fs::write(&input, "fn main() -> i64 { return unknown; }").unwrap();
@@ -190,13 +176,12 @@ fn compilation_failure_preserves_existing_assembly_output() {
         .unwrap()
         .contains("unknown name `unknown`"));
     assert_eq!(fs::read_to_string(output).unwrap(), "previous artifact");
-    assert!(temporary_artifacts(&directory).is_empty());
-    fs::remove_dir_all(directory).unwrap();
+    assert!(temporary_artifacts(directory.path()).is_empty());
 }
 
 #[test]
 fn source_diagnostics_are_rendered_and_return_compilation_failure() {
-    let directory = test_directory("diagnostic");
+    let directory = TemporaryDirectory::new("driver-diagnostic").unwrap();
     let input = directory.join("broken.ska");
     fs::write(&input, "fn main() -> i64 { return nope; }").unwrap();
     let args = [
@@ -220,12 +205,11 @@ fn source_diagnostics_are_rendered_and_return_compilation_failure() {
     assert!(String::from_utf8(stderr)
         .unwrap()
         .contains("error[RES003]: unknown name `nope`"));
-    fs::remove_dir_all(directory).unwrap();
 }
 
 #[test]
 fn linker_failure_is_a_driver_error_not_a_panic() {
-    let directory = test_directory("toolchain-failure");
+    let directory = TemporaryDirectory::new("driver-toolchain-failure").unwrap();
     let input = directory.join("valid.ska");
     let output = directory.join("valid");
     fs::write(&input, "fn main() -> i64 { return 0; }").unwrap();
@@ -255,13 +239,12 @@ fn linker_failure_is_a_driver_error_not_a_panic() {
         "skac: toolchain `false` failed with exit status 1\n"
     );
     assert_eq!(fs::read_to_string(output).unwrap(), "previous executable");
-    assert!(temporary_artifacts(&directory).is_empty());
-    fs::remove_dir_all(directory).unwrap();
+    assert!(temporary_artifacts(directory.path()).is_empty());
 }
 
 #[test]
 fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
-    let directory = test_directory("unresolved-external");
+    let directory = TemporaryDirectory::new("driver-unresolved-external").unwrap();
     let input = directory.join("unresolved.ska");
     let output = directory.join("unresolved");
     fs::write(
@@ -297,7 +280,6 @@ fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
         .unwrap()
         .contains("skac: toolchain `cc` failed with exit status"));
     assert!(!output.exists());
-    fs::remove_dir_all(directory).unwrap();
 }
 
 #[test]
