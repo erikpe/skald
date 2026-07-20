@@ -311,13 +311,13 @@ M3 implements resolution as declaration collection followed by body resolution. 
 
 Each function resolver owns an explicit lexical scope stack. Parameters share the outer function-body scope, nested blocks push scopes, and local initializers are resolved before their binding is introduced. Duplicate and lookup failures produce structured diagnostics with source labels. The precise first-slice rules are recorded in [`grammar/README.md`](../grammar/README.md).
 
-M4 lowers successful resolved input into a distinct typed HIR. HIR preserves the declaration/definition split, so call checking consults canonical typed signatures without requiring a local body. Implemented semantic types are `i64`, `u64`, `u8`, `f64`, `bool`, and payload-free `unit`; every HIR expression stores its type, primitive operators are explicit typed operations, and calls retain exact checked function IDs. O5 validates the deliberately restricted external ABI profile during this phase, C2 extends it with by-value boolean parameters and results, T3 adds by-value `u64`, T4 adds by-value `u8`, and T6 adds by-value `f64`. Decimal spelling is converted exactly once here: integer families receive independent range checking, while finite `f64` spellings are rounded to nearest binary64 with ties to even and stored below HIR as raw bits. Boolean, signed, unsigned, and floating literals remain distinct typed nodes. Entry-signature, call-arity, expression, initializer, return-value, and mandatory-return checks accumulate diagnostics across the program. HIR is deliberately all-or-nothing: failed type checking returns diagnostics but no executable `HirProgram`, preventing M5 from consuming partial typed state.
+M4 lowers successful resolved input into a distinct typed HIR. HIR preserves the declaration/definition split, so call checking consults canonical typed signatures without requiring a local body. Semantic types include `i64`, `u64`, `u8`, `f64`, `bool`, payload-free `unit`, and nominal `ClassId` types. Every primitive HIR expression stores its type, primitive operators are explicit typed operations, and calls retain exact checked callable IDs. OBJ7 adds phase-owned class/member signatures and definitions, typed object and field places, receiver access, and a dedicated local-construction initializer so class objects do not become general HIR rvalues. O5 validates the deliberately restricted external ABI profile during this phase, C2 extends it with by-value boolean parameters and results, T3 adds by-value `u64`, T4 adds by-value `u8`, and T6 adds by-value `f64`. Decimal spelling is converted exactly once here: integer families receive independent range checking, while finite `f64` spellings are rounded to nearest binary64 with ties to even and stored below HIR as raw bits. Boolean, signed, unsigned, and floating literals remain distinct typed nodes. Entry-signature, call-arity, expression, initializer, return-value, and mandatory-return checks accumulate diagnostics across the program. HIR is deliberately all-or-nothing: failed type checking returns diagnostics but no executable `HirProgram`, preventing lowering from consuming partial typed state.
 
-The type checker separates program and function responsibilities. Its
+The type checker separates program and callable-body responsibilities. Its
 `program` module orchestrates checking, validates entry and external
-declarations, and constructs the final all-or-nothing HIR. Each function body
-is checked through a `FunctionChecker` that owns references to the current
-program, declaration, definition, return type, and shared diagnostic sink.
+declarations and class/member signatures, and constructs the final all-or-nothing HIR. Function, initializer, and method bodies
+are checked through a shared `CallableChecker` with an explicit member context
+for receiver class, access mode, and initialization state.
 Recursive block and expression calls therefore pass only the syntax node that
 changes. Focused `function`, `expression`, and `literal` modules own statement
 and conditional flow, expressions/calls/bindings/operators, and numeric
@@ -386,10 +386,12 @@ receiver calls, plus their verifier boundary. OBJ3 implements the target layout,
 object frame-allocation, and projected-address boundary. OBJ4 implements
 executable member definitions and the hidden receiver ABI. OBJ5 implements the
 source AST and parser surface. OBJ6 implements phase-owned resolved class/member
-tables and identity-based semantic selection. OBJ7–OBJ9 implement typing,
-lowering, and integration. The parser and resolver accept the restricted
-syntax, but the public compiler stops it at an explicit pre-OBJ7 type-checking
-boundary until the complete path exists.
+tables and identity-based semantic selection. OBJ7 implements phase-owned
+nominal class/member HIR, destination-oriented construction, typed places,
+definite initialization, receiver access, and member-body flow. OBJ8–OBJ9
+implement lowering and integration. The frontend accepts and types the
+restricted syntax, but the public compiler stops it at an explicit pre-OBJ8
+MIR-lowering boundary until the complete path exists.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and

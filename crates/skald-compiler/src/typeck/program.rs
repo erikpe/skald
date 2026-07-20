@@ -3,18 +3,20 @@
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
-        HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinitionTable,
-        HirFunctionLinkage, HirParameter, HirProgram, Type,
+        HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
+        HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
+        HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration,
+        HirMethodDeclaration, HirParameter, HirProgram, HirReceiverAccess, Type,
     },
     identity::FunctionId,
     resolve::{
-        ResolvedFunctionDeclaration, ResolvedFunctionLinkage, ResolvedProgram, ResolvedType,
-        ResolvedTypeKind,
+        ResolvedClassDeclaration, ResolvedFunctionDeclaration, ResolvedFunctionLinkage,
+        ResolvedParameter, ResolvedProgram, ResolvedReceiverAccess, ResolvedType, ResolvedTypeKind,
     },
     source::Span,
 };
 
-use super::function::FunctionChecker;
+use super::function::{CallableChecker, MemberCheckContext, ReceiverContext};
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -31,7 +33,12 @@ pub const INVALID_EXTERNAL_DECLARATION: &str = "TYP009";
 pub const U64_LITERAL_OUT_OF_RANGE: &str = "TYP010";
 pub const U8_LITERAL_OUT_OF_RANGE: &str = "TYP011";
 pub const F64_LITERAL_OUT_OF_RANGE: &str = "TYP012";
-pub const OBJECT_TYPE_CHECKING_UNAVAILABLE: &str = "TYP013";
+pub const INVALID_OBJECT_DECLARATION: &str = "TYP013";
+pub const INVALID_OBJECT_CONTEXT: &str = "TYP014";
+pub const INVALID_CONSTRUCTION: &str = "TYP015";
+pub const INVALID_INITIALIZER_BODY: &str = "TYP016";
+pub const FIELD_INITIALIZATION: &str = "TYP017";
+pub const READ_ONLY_RECEIVER: &str = "TYP018";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -48,39 +55,27 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if let Some(class) = program.classes.iter().next() {
-        diagnostics.push(
-            Diagnostic::error(
-                OBJECT_TYPE_CHECKING_UNAVAILABLE,
-                "inline-object type checking is not implemented yet",
-            )
-            .with_primary_label(
-                class.span,
-                "class names and members are resolved; semantic validation arrives in OBJ7",
-            ),
-        );
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
+    let classes = lower_class_declarations(program, &mut diagnostics);
     let declarations = program.declarations.iter().map(lower_declaration).collect();
     let definitions = program
         .declarations
         .iter()
         .map(|declaration| {
             program.definitions.get(declaration.id).map(|definition| {
-                FunctionChecker::new(program, declaration, definition, &mut diagnostics).check()
+                CallableChecker::new(program, declaration, definition, &mut diagnostics).check()
             })
         })
         .collect();
+    let class_definitions = check_class_definitions(program, &mut diagnostics);
 
     let hir = if diagnostics.has_errors() {
         None
     } else {
         Some(HirProgram {
+            classes: HirClassDeclarationTable::new(classes),
+            class_definitions: HirClassDefinitionTable::new(class_definitions),
             declarations: HirFunctionDeclarationTable::new(declarations),
             definitions: HirFunctionDefinitionTable::new(definitions),
             entry_function: entry_function.expect("valid program must have an entry function"),
@@ -89,6 +84,222 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
+}
+
+fn lower_class_declarations(
+    program: &ResolvedProgram,
+    diagnostics: &mut Diagnostics,
+) -> Vec<HirClassDeclaration> {
+    program
+        .classes
+        .iter()
+        .filter_map(|class| lower_class_declaration(class, diagnostics))
+        .collect()
+}
+
+fn lower_class_declaration(
+    class: &ResolvedClassDeclaration,
+    diagnostics: &mut Diagnostics,
+) -> Option<HirClassDeclaration> {
+    let mut valid = true;
+    let fields = class
+        .fields
+        .iter()
+        .map(|field| {
+            let ty = lower_type(&field.type_syntax);
+            if !is_payload_primitive(ty) {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_DECLARATION,
+                        format!("field `{}` must have a primitive type", field.name),
+                    )
+                    .with_primary_label(
+                        field.type_syntax.span,
+                        "object and `unit` fields are unavailable",
+                    ),
+                );
+                valid = false;
+            }
+            HirFieldDeclaration {
+                id: field.id,
+                name: field.name.clone(),
+                name_span: field.name_span,
+                ty,
+                span: field.span,
+            }
+        })
+        .collect();
+    let Some(initializer) = &class.initializer else {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_OBJECT_DECLARATION,
+                format!("class `{}` requires an explicit initializer", class.name),
+            )
+            .with_primary_label(
+                class.name_span,
+                "add `init() {}` even when the class is empty",
+            ),
+        );
+        return None;
+    };
+    valid &= validate_primitive_parameters(&initializer.parameters, diagnostics, "initializer");
+    let initializer = HirInitializerDeclaration {
+        id: initializer.id,
+        parameters: initializer.parameters.iter().map(lower_parameter).collect(),
+        span: initializer.span,
+    };
+    let methods = class
+        .methods
+        .iter()
+        .map(|method| {
+            valid &= validate_primitive_parameters(&method.parameters, diagnostics, "method");
+            let return_type = lower_type(&method.return_type);
+            if !is_payload_primitive(return_type) && return_type != Type::Unit {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_DECLARATION,
+                        format!("method `{}` has an unavailable result type", method.name),
+                    )
+                    .with_primary_label(
+                        method.return_type.span,
+                        "expected a primitive type or `unit`",
+                    ),
+                );
+                valid = false;
+            }
+            HirMethodDeclaration {
+                id: method.id,
+                name: method.name.clone(),
+                name_span: method.name_span,
+                receiver_access: lower_receiver_access(method.receiver_access),
+                parameters: method.parameters.iter().map(lower_parameter).collect(),
+                return_type,
+                span: method.span,
+            }
+        })
+        .collect();
+    valid.then_some(HirClassDeclaration {
+        id: class.id,
+        name: class.name.clone(),
+        name_span: class.name_span,
+        fields,
+        initializer,
+        methods,
+        span: class.span,
+    })
+}
+
+fn check_class_definitions(
+    program: &ResolvedProgram,
+    diagnostics: &mut Diagnostics,
+) -> Vec<HirClassDefinition> {
+    program
+        .classes
+        .iter()
+        .filter_map(|class| {
+            let initializer = class.initializer.as_ref()?;
+            let definition = program.class_definitions.get(class.id)?;
+            let initializer_definition = definition.initializer.as_ref()?;
+            let initializer_body = CallableChecker::new_member(
+                program,
+                MemberCheckContext {
+                    callable: initializer.id.into(),
+                    parameters: &initializer.parameters,
+                    definition: initializer_definition,
+                    return_type: Type::Unit,
+                    receiver: ReceiverContext {
+                        class: class.id,
+                        access: HirReceiverAccess::Mutable,
+                        initializer: true,
+                    },
+                    callable_name: format!("initializer for class `{}`", class.name),
+                },
+                diagnostics,
+            )
+            .check_member();
+            let methods = class
+                .methods
+                .iter()
+                .zip(&definition.methods)
+                .map(|(method, body)| {
+                    CallableChecker::new_member(
+                        program,
+                        MemberCheckContext {
+                            callable: method.id.into(),
+                            parameters: &method.parameters,
+                            definition: body,
+                            return_type: lower_type(&method.return_type),
+                            receiver: ReceiverContext {
+                                class: class.id,
+                                access: lower_receiver_access(method.receiver_access),
+                                initializer: false,
+                            },
+                            callable_name: format!("method `{}`", method.name),
+                        },
+                        diagnostics,
+                    )
+                    .check_member()
+                })
+                .collect();
+            Some(HirClassDefinition {
+                class: class.id,
+                initializer: initializer_body,
+                methods,
+                span: definition.span,
+            })
+        })
+        .collect()
+}
+
+fn validate_primitive_parameters(
+    parameters: &[ResolvedParameter],
+    diagnostics: &mut Diagnostics,
+    owner: &'static str,
+) -> bool {
+    let mut valid = true;
+    for parameter in parameters {
+        if !is_payload_primitive(lower_type(&parameter.type_syntax)) {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_OBJECT_DECLARATION,
+                    format!(
+                        "{owner} parameter `{}` must have a primitive type",
+                        parameter.name
+                    ),
+                )
+                .with_primary_label(
+                    parameter.type_syntax.span,
+                    "object and `unit` parameters are unavailable",
+                ),
+            );
+            valid = false;
+        }
+    }
+    valid
+}
+
+fn lower_parameter(parameter: &ResolvedParameter) -> HirParameter {
+    HirParameter {
+        id: parameter.id,
+        name: parameter.name.clone(),
+        name_span: parameter.name_span,
+        ty: lower_type(&parameter.type_syntax),
+        span: parameter.span,
+    }
+}
+
+const fn is_payload_primitive(ty: Type) -> bool {
+    matches!(
+        ty,
+        Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+    )
+}
+
+const fn lower_receiver_access(access: ResolvedReceiverAccess) -> HirReceiverAccess {
+    match access {
+        ResolvedReceiverAccess::ReadOnly => HirReceiverAccess::ReadOnly,
+        ResolvedReceiverAccess::Mutable => HirReceiverAccess::Mutable,
+    }
 }
 
 fn check_entry_point(
@@ -224,8 +435,6 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::F64 => Type::F64,
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
-        ResolvedTypeKind::Class(_) => {
-            unreachable!("object programs stop at the pre-OBJ7 type-check boundary")
-        }
+        ResolvedTypeKind::Class(class) => Type::Class(class),
     }
 }

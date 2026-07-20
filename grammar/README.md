@@ -495,10 +495,12 @@ linkage; call instructions never contain linker-symbol strings.
 OBJ0 freezes the parser-facing contract for the first inline-object slice, and
 OBJ5 implements this source grammar and its source-shaped AST. Parsing performs
 no class or member lookup. OBJ6 performs that lookup in a separate two-pass
-resolver and records stable identities in resolved IR. Public semantic
-acceptance remains disabled until OBJ8 connects the complete frontend and
-backend path and OBJ9 enables and hardens it; resolved object forms currently
-stop at an explicit pre-OBJ7 type-checking diagnostic.
+resolver and records stable identities in resolved IR. OBJ7 type-checks those
+forms into nominal, identity-based HIR and enforces the restricted construction,
+initialization, and receiver rules. Public native acceptance remains disabled
+until OBJ8 connects the complete frontend and backend path and OBJ9 enables and
+hardens it; typed object forms currently stop at an explicit pre-OBJ8
+MIR-lowering diagnostic.
 
 The extension adds the globally reserved keywords:
 

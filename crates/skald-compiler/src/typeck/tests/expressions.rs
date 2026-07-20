@@ -26,7 +26,12 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
         }
         for statement in &definition.body.statements {
             match statement {
-                HirStatement::Local(local) => assert_expression_is_fully_typed(&local.initializer),
+                HirStatement::Local(local) => {
+                    let HirLocalInitializer::Value(initializer) = &local.initializer else {
+                        panic!("expected scalar local initializer");
+                    };
+                    assert_expression_is_fully_typed(initializer);
+                }
                 HirStatement::Return(statement) => {
                     if let Some(value) = &statement.value {
                         assert_expression_is_fully_typed(value);
@@ -35,6 +40,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::Call(statement) => assert_expression_is_fully_typed(&statement.call),
                 HirStatement::Conditional(_) => {}
                 HirStatement::Block(_) => {}
+                HirStatement::FieldAssignment(_) => {}
             }
         }
     }
@@ -43,10 +49,13 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
     let HirStatement::Local(local) = &main.body.statements[0] else {
         panic!("expected local declaration");
     };
+    let HirLocalInitializer::Value(initializer) = &local.initializer else {
+        panic!("expected scalar local initializer");
+    };
     let HirExpressionKind::DirectCall {
         function,
         arguments,
-    } = &local.initializer.kind
+    } = &initializer.kind
     else {
         panic!("expected typed direct call");
     };

@@ -2,22 +2,31 @@
 
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
-    hir::{HirBinaryOperation, HirExpression, HirExpressionKind, HirUnaryOperation, Type},
-    identity::BindingId,
-    resolve::{ResolvedBinaryOperator, ResolvedExpression, ResolvedUnaryOperator},
+    hir::{
+        HirBinaryOperation, HirExpression, HirExpressionKind, HirFieldPlace, HirObjectPlace,
+        HirReceiverAccess, HirUnaryOperation, Type,
+    },
+    identity::{BindingId, FieldId},
+    resolve::{
+        ResolvedBinaryOperator, ResolvedExpression, ResolvedObjectPlace, ResolvedParameter,
+        ResolvedUnaryOperator,
+    },
     source::Span,
 };
 
 use super::{
-    function::FunctionChecker,
+    function::CallableChecker,
     literal::{classify_i64_magnitude, i64_literal_through_groups, Magnitude},
-    program::{lower_type, TYPE_MISMATCH, WRONG_ARGUMENT_COUNT},
+    program::{
+        lower_type, FIELD_INITIALIZATION, INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY,
+        INVALID_OBJECT_CONTEXT, READ_ONLY_RECEIVER, TYPE_MISMATCH, WRONG_ARGUMENT_COUNT,
+    },
 };
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
-impl FunctionChecker<'_, '_> {
+impl CallableChecker<'_, '_> {
     pub(super) fn check_expression(
         &mut self,
         expression: &ResolvedExpression,
@@ -25,6 +34,19 @@ impl FunctionChecker<'_, '_> {
         match expression {
             ResolvedExpression::Binding(binding) => {
                 let ty = self.binding_type(binding.binding);
+                if matches!(ty, Type::Class(_)) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "an inline object cannot be used as an ordinary value",
+                        )
+                        .with_primary_label(
+                            binding.span,
+                            "use the object as a field or method receiver",
+                        ),
+                    );
+                    return None;
+                }
                 Some(HirExpression {
                     kind: HirExpressionKind::Binding(binding.binding),
                     ty,
@@ -213,35 +235,213 @@ impl FunctionChecker<'_, '_> {
                     span: grouped.span,
                 })
             }
-            ResolvedExpression::FieldAccess(_)
-            | ResolvedExpression::MethodCall(_)
-            | ResolvedExpression::Construct(_) => {
-                unreachable!("object programs stop at the pre-OBJ7 type-check boundary")
+            ResolvedExpression::FieldAccess(access) => {
+                let place = self.check_field_place(access.receiver, access.field, access.span)?;
+                if self.receiver.is_some_and(|receiver| receiver.initializer)
+                    && place.receiver.binding == BindingId::Receiver(self.callable)
+                    && !self.initialized_fields.contains(&place.field)
+                {
+                    let field = self
+                        .program
+                        .field(place.field)
+                        .expect("selected field must exist");
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            FIELD_INITIALIZATION,
+                            format!("field `{}` is read before initialization", field.name),
+                        )
+                        .with_primary_label(access.member_span, "field is not initialized yet"),
+                    );
+                    return None;
+                }
+                let field = self
+                    .program
+                    .field(place.field)
+                    .expect("selected field must exist");
+                Some(HirExpression {
+                    kind: HirExpressionKind::FieldRead(place),
+                    ty: lower_type(&field.type_syntax),
+                    span: access.span,
+                })
+            }
+            ResolvedExpression::MethodCall(call) => self.check_method_call(call),
+            ResolvedExpression::Construct(construction) => {
+                for argument in &construction.arguments {
+                    let _ = self.check_expression(argument);
+                }
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CONSTRUCTION,
+                        "construction is allowed only as an object local initializer",
+                    )
+                    .with_primary_label(construction.span, "use `var name: Class = Class(...);`"),
+                );
+                None
             }
         }
+    }
+
+    fn check_method_call(
+        &mut self,
+        call: &crate::resolve::ResolvedMethodCallExpr,
+    ) -> Option<HirExpression> {
+        let receiver = self.check_object_place(call.receiver)?;
+        let method = self
+            .program
+            .method(call.method)
+            .expect("resolved method call must reference a method");
+        let mut valid = true;
+        if self.receiver.is_some_and(|context| context.initializer) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INITIALIZER_BODY,
+                    "an initializer cannot call instance methods",
+                )
+                .with_primary_label(call.member_span, "the complete receiver is not live yet"),
+            );
+            valid = false;
+        }
+        if method.receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
+            && receiver.access == HirReceiverAccess::ReadOnly
+        {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    READ_ONLY_RECEIVER,
+                    format!(
+                        "mutable method `{}` requires mutable receiver access",
+                        method.name
+                    ),
+                )
+                .with_primary_label(call.member_span, "called through a read-only receiver")
+                .with_secondary_label(method.name_span, "mutable method declared here"),
+            );
+            valid = false;
+        }
+        let arguments = self.check_arguments(
+            &call.arguments,
+            &method.parameters,
+            call.member_span,
+            "method",
+        )?;
+        valid.then_some(HirExpression {
+            kind: HirExpressionKind::MethodCall {
+                receiver,
+                method: call.method,
+                arguments,
+            },
+            ty: lower_type(&method.return_type),
+            span: call.span,
+        })
+    }
+
+    pub(super) fn check_arguments(
+        &mut self,
+        source: &[ResolvedExpression],
+        parameters: &[ResolvedParameter],
+        target_span: Span,
+        target_kind: &'static str,
+    ) -> Option<Vec<HirExpression>> {
+        let mut arguments = Vec::with_capacity(source.len());
+        let mut valid = true;
+        for argument in source {
+            match self.check_expression(argument) {
+                Some(argument) => arguments.push(argument),
+                None => valid = false,
+            }
+        }
+        if source.len() != parameters.len() {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    WRONG_ARGUMENT_COUNT,
+                    format!(
+                        "{target_kind} expects {} argument{} but received {}",
+                        parameters.len(),
+                        if parameters.len() == 1 { "" } else { "s" },
+                        source.len()
+                    ),
+                )
+                .with_primary_label(target_span, "called with the wrong number of arguments"),
+            );
+            valid = false;
+        } else if arguments.len() == source.len() {
+            for (argument, parameter) in arguments.iter().zip(parameters) {
+                valid &= require_type(
+                    argument.ty,
+                    lower_type(&parameter.type_syntax),
+                    argument.span,
+                    "call argument",
+                    self.diagnostics,
+                );
+            }
+        }
+        valid.then_some(arguments)
+    }
+
+    pub(super) fn check_field_place(
+        &mut self,
+        place: ResolvedObjectPlace,
+        field: FieldId,
+        span: Span,
+    ) -> Option<HirFieldPlace> {
+        Some(HirFieldPlace {
+            receiver: self.check_object_place(place)?,
+            field,
+            span,
+        })
+    }
+
+    fn check_object_place(&mut self, place: ResolvedObjectPlace) -> Option<HirObjectPlace> {
+        let access = match place.binding {
+            BindingId::Receiver(_) => {
+                self.receiver
+                    .expect("resolved receiver place must occur in a member")
+                    .access
+            }
+            BindingId::Local(_) => HirReceiverAccess::Mutable,
+            BindingId::Parameter(_) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "object parameters are unavailable in the stage-0 profile",
+                    )
+                    .with_primary_label(place.span, "expected an inline object local or `self`"),
+                );
+                return None;
+            }
+        };
+        Some(HirObjectPlace {
+            binding: place.binding,
+            class: place.class,
+            access,
+            span: place.span,
+        })
     }
 
     fn binding_type(&self, binding: BindingId) -> Type {
         assert_eq!(
             binding.callable(),
-            self.declaration.id.into(),
-            "resolved binding must belong to the current function"
+            self.callable,
+            "resolved binding must belong to the current callable"
         );
         match binding {
-            BindingId::Receiver(_) => {
-                unreachable!("function-only resolved IR cannot contain an implicit receiver")
-            }
+            BindingId::Receiver(_) => Type::Class(
+                self.receiver
+                    .expect("receiver binding must be checked in a member body")
+                    .class,
+            ),
             BindingId::Parameter(id) => lower_type(
                 &self
-                    .declaration
-                    .parameter(id)
+                    .parameters
+                    .get(id.index())
+                    .filter(|parameter| parameter.id == id)
                     .expect("resolved parameter ID must exist")
                     .type_syntax,
             ),
             BindingId::Local(id) => lower_type(
                 &self
-                    .definition
-                    .local(id)
+                    .locals
+                    .get(id.index())
+                    .filter(|local| local.id == id)
                     .expect("resolved local ID must exist")
                     .type_syntax,
             ),
@@ -266,7 +466,7 @@ fn select_binary_operation(
         (ResolvedBinaryOperator::Add, Type::F64) => Some(HirBinaryOperation::AddF64),
         (ResolvedBinaryOperator::Subtract, Type::F64) => Some(HirBinaryOperation::SubtractF64),
         (ResolvedBinaryOperator::Multiply, Type::F64) => Some(HirBinaryOperation::MultiplyF64),
-        (_, Type::Bool | Type::Unit) => None,
+        (_, Type::Bool | Type::Unit | Type::Class(_)) => None,
     }
 }
 
@@ -294,10 +494,10 @@ pub(super) fn require_type(
     false
 }
 
-pub(super) fn is_direct_call_through_groups(expression: &ResolvedExpression) -> bool {
+pub(super) fn is_call_through_groups(expression: &ResolvedExpression) -> bool {
     match expression {
-        ResolvedExpression::DirectCall(_) => true,
-        ResolvedExpression::Grouped(grouped) => is_direct_call_through_groups(&grouped.expression),
+        ResolvedExpression::DirectCall(_) | ResolvedExpression::MethodCall(_) => true,
+        ResolvedExpression::Grouped(grouped) => is_call_through_groups(&grouped.expression),
         _ => false,
     }
 }

@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     hir::{
         dump_hir, BlockFlow, HirBinaryOperation, HirExpression, HirExpressionKind,
-        HirFunctionDefinition, HirStatement, Type,
+        HirFunctionDefinition, HirLocalInitializer, HirStatement, Type,
     },
     identity::FunctionId,
     test_support::{resolve_source, type_check_source},
@@ -43,6 +43,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
                 assert_expression_is_fully_typed(argument);
             }
         }
+        HirExpressionKind::FieldRead(_) | HirExpressionKind::MethodCall { .. } => {}
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
@@ -58,3 +59,4 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod literals;
+mod objects;

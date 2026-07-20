@@ -1,8 +1,13 @@
 //! Fully typed HIR consumed by MIR lowering.
 
+use std::borrow::Cow;
+
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
-    identity::{BindingId, FunctionId, LocalId, ParameterId},
+    identity::{
+        BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId,
+        ParameterId,
+    },
     source::Span,
 };
 
@@ -14,17 +19,19 @@ pub enum Type {
     F64,
     Bool,
     Unit,
+    Class(ClassId),
 }
 
 impl Type {
-    pub const fn name(self) -> &'static str {
+    pub fn name(self) -> Cow<'static, str> {
         match self {
-            Self::I64 => "i64",
-            Self::U64 => "u64",
-            Self::U8 => "u8",
-            Self::F64 => "f64",
-            Self::Bool => "bool",
-            Self::Unit => "unit",
+            Self::I64 => Cow::Borrowed("i64"),
+            Self::U64 => Cow::Borrowed("u64"),
+            Self::U8 => Cow::Borrowed("u8"),
+            Self::F64 => Cow::Borrowed("f64"),
+            Self::Bool => Cow::Borrowed("bool"),
+            Self::Unit => Cow::Borrowed("unit"),
+            Self::Class(class) => Cow::Owned(format!("class {class}")),
         }
     }
 
@@ -33,17 +40,252 @@ impl Type {
     pub const fn indefinite_article(self) -> &'static str {
         match self {
             Self::I64 => "an",
-            Self::U64 | Self::U8 | Self::F64 | Self::Bool | Self::Unit => "a",
+            Self::U64 | Self::U8 | Self::F64 | Self::Bool | Self::Unit | Self::Class(_) => "a",
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
+    pub classes: HirClassDeclarationTable,
+    pub class_definitions: HirClassDefinitionTable,
     pub declarations: HirFunctionDeclarationTable,
     pub definitions: HirFunctionDefinitionTable,
     pub entry_function: FunctionId,
     pub span: Span,
+}
+
+impl HirProgram {
+    pub fn class(&self, id: ClassId) -> Option<&HirClassDeclaration> {
+        self.classes.get(id)
+    }
+
+    pub fn field(&self, id: FieldId) -> Option<&HirFieldDeclaration> {
+        self.class(id.class())?.field(id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
+        self.class(id.class())?.initializer(id)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&HirMethodDeclaration> {
+        self.class(id.class())?.method(id)
+    }
+
+    pub fn member_definition(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
+        self.class_definitions
+            .get(callable.class()?)?
+            .member(callable)
+    }
+
+    pub fn callable_signature(&self, callable: CallableId) -> Option<HirCallableSignature<'_>> {
+        match callable {
+            CallableId::Function(function) => {
+                self.declarations
+                    .get(function)
+                    .map(|declaration| HirCallableSignature {
+                        parameters: &declaration.parameters,
+                        return_type: declaration.return_type,
+                    })
+            }
+            CallableId::Initializer(initializer) => {
+                self.initializer(initializer)
+                    .map(|declaration| HirCallableSignature {
+                        parameters: &declaration.parameters,
+                        return_type: Type::Unit,
+                    })
+            }
+            CallableId::Method(method) => {
+                self.method(method).map(|declaration| HirCallableSignature {
+                    parameters: &declaration.parameters,
+                    return_type: declaration.return_type,
+                })
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct HirCallableSignature<'hir> {
+    pub parameters: &'hir [HirParameter],
+    pub return_type: Type,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HirClassDeclarationTable {
+    entries: Vec<HirClassDeclaration>,
+}
+
+impl HirClassDeclarationTable {
+    pub(crate) fn new(entries: Vec<HirClassDeclaration>) -> Self {
+        assert!(
+            entries
+                .iter()
+                .enumerate()
+                .all(|(index, class)| class.id.index() == index),
+            "class declarations must be ordered by dense class ID"
+        );
+        Self { entries }
+    }
+
+    pub fn get(&self, id: ClassId) -> Option<&HirClassDeclaration> {
+        self.entries.get(id.index()).filter(|class| class.id == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirClassDeclaration> {
+        self.entries.iter()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirClassDeclaration {
+    pub id: ClassId,
+    pub name: String,
+    pub name_span: Span,
+    pub fields: Vec<HirFieldDeclaration>,
+    pub initializer: HirInitializerDeclaration,
+    pub methods: Vec<HirMethodDeclaration>,
+    pub span: Span,
+}
+
+impl HirClassDeclaration {
+    pub fn field(&self, id: FieldId) -> Option<&HirFieldDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.fields.get(id.index()).filter(|field| field.id == id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
+        (id.class() == self.id && self.initializer.id == id).then_some(&self.initializer)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&HirMethodDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.methods
+            .get(id.index())
+            .filter(|method| method.id == id)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFieldDeclaration {
+    pub id: FieldId,
+    pub name: String,
+    pub name_span: Span,
+    pub ty: Type,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirInitializerDeclaration {
+    pub id: InitializerId,
+    pub parameters: Vec<HirParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirReceiverAccess {
+    ReadOnly,
+    Mutable,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirMethodDeclaration {
+    pub id: MethodId,
+    pub name: String,
+    pub name_span: Span,
+    pub receiver_access: HirReceiverAccess,
+    pub parameters: Vec<HirParameter>,
+    pub return_type: Type,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HirClassDefinitionTable {
+    entries: Vec<HirClassDefinition>,
+}
+
+impl HirClassDefinitionTable {
+    pub(crate) fn new(entries: Vec<HirClassDefinition>) -> Self {
+        assert!(
+            entries
+                .iter()
+                .enumerate()
+                .all(|(index, class)| class.class.index() == index),
+            "class definitions must be ordered by dense class ID"
+        );
+        Self { entries }
+    }
+
+    pub fn get(&self, id: ClassId) -> Option<&HirClassDefinition> {
+        self.entries
+            .get(id.index())
+            .filter(|definition| definition.class == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirClassDefinition> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirClassDefinition {
+    pub class: ClassId,
+    pub initializer: HirMemberDefinition,
+    pub methods: Vec<HirMemberDefinition>,
+    pub span: Span,
+}
+
+impl HirClassDefinition {
+    pub fn member(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
+        match callable {
+            CallableId::Function(_) => None,
+            CallableId::Initializer(id) if id.class() == self.class => {
+                (self.initializer.callable == callable).then_some(&self.initializer)
+            }
+            CallableId::Method(id) if id.class() == self.class => self
+                .methods
+                .get(id.index())
+                .filter(|definition| definition.callable == callable),
+            CallableId::Initializer(_) | CallableId::Method(_) => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirMemberDefinition {
+    pub callable: CallableId,
+    pub locals: Vec<HirLocal>,
+    pub body: HirBlock,
+    pub span: Span,
+}
+
+impl HirMemberDefinition {
+    pub fn local(&self, id: LocalId) -> Option<&HirLocal> {
+        if id.callable() != self.callable {
+            return None;
+        }
+        self.locals.get(id.index()).filter(|local| local.id == id)
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -199,6 +441,7 @@ pub enum HirStatement {
     Call(HirCallStatement),
     Conditional(HirConditional),
     Block(HirBlock),
+    FieldAssignment(HirFieldAssignment),
 }
 
 impl HirStatement {
@@ -209,6 +452,7 @@ impl HirStatement {
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
+            Self::FieldAssignment(statement) => statement.span,
         }
     }
 }
@@ -216,7 +460,21 @@ impl HirStatement {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirLocalDecl {
     pub local: LocalId,
-    pub initializer: HirExpression,
+    pub initializer: HirLocalInitializer,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirLocalInitializer {
+    Value(HirExpression),
+    Construct(HirConstruction),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirConstruction {
+    pub class: ClassId,
+    pub initializer: InitializerId,
+    pub arguments: Vec<HirExpression>,
     pub span: Span,
 }
 
@@ -229,6 +487,13 @@ pub struct HirReturn {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCallStatement {
     pub call: HirExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFieldAssignment {
+    pub place: HirFieldPlace,
+    pub value: HirExpression,
     pub span: Span,
 }
 
@@ -276,7 +541,28 @@ pub enum HirExpressionKind {
         function: FunctionId,
         arguments: Vec<HirExpression>,
     },
+    FieldRead(HirFieldPlace),
+    MethodCall {
+        receiver: HirObjectPlace,
+        method: MethodId,
+        arguments: Vec<HirExpression>,
+    },
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirObjectPlace {
+    pub binding: BindingId,
+    pub class: ClassId,
+    pub access: HirReceiverAccess,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirFieldPlace {
+    pub receiver: HirObjectPlace,
+    pub field: FieldId,
+    pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

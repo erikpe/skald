@@ -95,9 +95,12 @@ types, member access, direct-construction call syntax, and field assignment,
 with class-local recovery and exact spans. OBJ6 adds two-pass top-level and
 member collection, phase-owned resolved class tables, callable-owned member
 bodies, and stable identity selection for named types, construction, `self`,
-fields, and methods. OBJ7 is next: it type-checks those resolved forms and
-enforces construction and receiver-access rules. Copying, destruction,
-polymorphism, and shared ownership remain deferred.
+fields, and methods. OBJ7 adds nominal class/member HIR, direct-local
+construction, typed field places, definite field initialization, receiver
+access enforcement, reusable method return-flow analysis, and deterministic
+object HIR dumps. OBJ8 is next: it lowers this typed object model into the
+already verified construction/place MIR. Copying, destruction, polymorphism,
+and shared ownership remain deferred.
 
 ## Development
 

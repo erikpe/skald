@@ -12,6 +12,10 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+    assert!(
+        hir.classes.is_empty(),
+        "object HIR lowering is unavailable until OBJ8"
+    );
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
         .declarations
@@ -139,9 +143,14 @@ impl<'hir> FunctionLowerer<'hir> {
             }
             match statement {
                 HirStatement::Local(local) => {
-                    let value = self
-                        .lower_expression(&local.initializer)
-                        .expect("typed local initializer must produce a value");
+                    let value = match &local.initializer {
+                        crate::hir::HirLocalInitializer::Value(initializer) => self
+                            .lower_expression(initializer)
+                            .expect("typed local initializer must produce a value"),
+                        crate::hir::HirLocalInitializer::Construct(_) => {
+                            unreachable!("object HIR lowering arrives in OBJ8")
+                        }
+                    };
                     let storage = self.local_storage[local.local.index()];
                     self.emit(MirInstruction::Store(MirStore {
                         destination: storage.into(),
@@ -167,6 +176,9 @@ impl<'hir> FunctionLowerer<'hir> {
                     self.lower_conditional(conditional);
                 }
                 HirStatement::Block(block) => self.lower_block(block),
+                HirStatement::FieldAssignment(_) => {
+                    unreachable!("object HIR lowering arrives in OBJ8")
+                }
             }
         }
     }
@@ -363,6 +375,9 @@ impl<'hir> FunctionLowerer<'hir> {
                 result
             }
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
+            HirExpressionKind::FieldRead(_) | HirExpressionKind::MethodCall { .. } => {
+                unreachable!("object HIR lowering arrives in OBJ8")
+            }
         }
     }
 
@@ -407,5 +422,6 @@ const fn lower_type(ty: Type) -> MirType {
         Type::F64 => MirType::F64,
         Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
+        Type::Class(class) => MirType::Class(class),
     }
 }

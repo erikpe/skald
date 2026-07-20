@@ -9,14 +9,14 @@ use crate::{
 };
 
 use super::{
-    function::FunctionChecker,
+    function::CallableChecker,
     program::{
         F64_LITERAL_OUT_OF_RANGE, INTEGER_LITERAL_OUT_OF_RANGE, U64_LITERAL_OUT_OF_RANGE,
         U8_LITERAL_OUT_OF_RANGE,
     },
 };
 
-impl FunctionChecker<'_, '_> {
+impl CallableChecker<'_, '_> {
     pub(super) fn check_numeric_literal(
         &mut self,
         literal: &ResolvedNumericLiteralExpr,

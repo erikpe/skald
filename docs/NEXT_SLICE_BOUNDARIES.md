@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-T7/R12; inline-object OBJ0–OBJ6 complete.
+Status: post-T7/R12; inline-object OBJ0–OBJ7 complete.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -80,7 +80,10 @@ coherent member/call postfix parsing, field assignments, precise syntax spans,
 and class-body recovery. OBJ6 adds deterministic program-wide class/member
 collection, phase-owned resolved class declarations and definitions, and
 identity-selected named types, construction, receivers, fields, and methods.
-OBJ7 is next.
+OBJ7 adds phase-owned nominal class/member HIR, destination-oriented local
+construction, typed object and field places, straight-line definite field
+initialization, receiver-access checking, method flow analysis, exclusions,
+and deterministic dumps. OBJ8 is next.
 
 The first inline object stresses layout, construction state, receiver access,
 and the boundary of future cleanup and return conventions. It requires a

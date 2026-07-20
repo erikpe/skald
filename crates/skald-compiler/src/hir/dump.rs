@@ -15,6 +15,20 @@ pub fn dump_hir(program: &HirProgram) -> String {
     dumper.indented(|dumper| {
         dumper.write_indentation();
         let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
+        if !program.classes.is_empty() {
+            dumper.heading("Classes");
+            dumper.indented(|dumper| {
+                for class in program.classes.iter() {
+                    dumper.class_declaration(class);
+                }
+            });
+            dumper.heading("ClassDefinitions");
+            dumper.indented(|dumper| {
+                for class in program.class_definitions.iter() {
+                    dumper.class_definition(class);
+                }
+            });
+        }
         dumper.heading("Declarations");
         dumper.indented(|dumper| {
             for declaration in program.declarations.iter() {
@@ -38,6 +52,77 @@ struct HirDumper {
 }
 
 impl HirDumper {
+    fn class_declaration(&mut self, class: &HirClassDeclaration) {
+        self.write_indentation();
+        let _ = write!(self.output, "Class {} ", class.id);
+        write_quoted(&mut self.output, &class.name);
+        write_span(&mut self.output, class.span);
+        self.output.push('\n');
+        self.indented(|dumper| {
+            dumper.heading("Fields");
+            dumper.indented(|dumper| {
+                for field in &class.fields {
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "Field {} ", field.id);
+                    write_quoted(&mut dumper.output, &field.name);
+                    let _ = write!(dumper.output, " : {}", field.ty.name());
+                    write_span(&mut dumper.output, field.span);
+                    dumper.output.push('\n');
+                }
+            });
+            dumper.line(
+                &format!("Initializer {}", class.initializer.id),
+                class.initializer.span,
+            );
+            dumper.indented(|dumper| {
+                for parameter in &class.initializer.parameters {
+                    dumper.parameter(parameter);
+                }
+            });
+            dumper.heading("Methods");
+            dumper.indented(|dumper| {
+                for method in &class.methods {
+                    let access = match method.receiver_access {
+                        HirReceiverAccess::ReadOnly => "readonly",
+                        HirReceiverAccess::Mutable => "mutable",
+                    };
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "Method {} ", method.id);
+                    write_quoted(&mut dumper.output, &method.name);
+                    let _ = write!(dumper.output, " {access} -> {}", method.return_type.name());
+                    write_span(&mut dumper.output, method.span);
+                    dumper.output.push('\n');
+                    dumper.indented(|dumper| {
+                        for parameter in &method.parameters {
+                            dumper.parameter(parameter);
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    fn class_definition(&mut self, class: &HirClassDefinition) {
+        self.line(&format!("ClassDefinition {}", class.class), class.span);
+        self.indented(|dumper| {
+            dumper.member_definition(&class.initializer);
+            for method in &class.methods {
+                dumper.member_definition(method);
+            }
+        });
+    }
+
+    fn member_definition(&mut self, definition: &HirMemberDefinition) {
+        self.line(
+            &format!("MemberDefinition {}", definition.callable),
+            definition.span,
+        );
+        self.indented(|dumper| {
+            dumper.locals(&definition.locals);
+            dumper.block(&definition.body);
+        });
+    }
+
     fn declaration(&mut self, declaration: &HirFunctionDeclaration) {
         self.write_indentation();
         let _ = write!(self.output, "Declaration {} ", declaration.id);
@@ -56,12 +141,7 @@ impl HirDumper {
             dumper.heading("Parameters");
             dumper.indented(|dumper| {
                 for parameter in &declaration.parameters {
-                    dumper.write_indentation();
-                    let _ = write!(dumper.output, "Parameter {} ", parameter.id);
-                    write_quoted(&mut dumper.output, &parameter.name);
-                    let _ = write!(dumper.output, " : {}", parameter.ty.name());
-                    write_span(&mut dumper.output, parameter.span);
-                    dumper.output.push('\n');
+                    dumper.parameter(parameter);
                 }
             });
 
@@ -81,19 +161,31 @@ impl HirDumper {
         );
 
         self.indented(|dumper| {
-            dumper.heading("Locals");
-            dumper.indented(|dumper| {
-                for local in &definition.locals {
-                    dumper.write_indentation();
-                    let _ = write!(dumper.output, "Local {} ", local.id);
-                    write_quoted(&mut dumper.output, &local.name);
-                    let _ = write!(dumper.output, " : {}", local.ty.name());
-                    write_span(&mut dumper.output, local.span);
-                    dumper.output.push('\n');
-                }
-            });
-
+            dumper.locals(&definition.locals);
             dumper.block(&definition.body);
+        });
+    }
+
+    fn parameter(&mut self, parameter: &HirParameter) {
+        self.write_indentation();
+        let _ = write!(self.output, "Parameter {} ", parameter.id);
+        write_quoted(&mut self.output, &parameter.name);
+        let _ = write!(self.output, " : {}", parameter.ty.name());
+        write_span(&mut self.output, parameter.span);
+        self.output.push('\n');
+    }
+
+    fn locals(&mut self, locals: &[HirLocal]) {
+        self.heading("Locals");
+        self.indented(|dumper| {
+            for local in locals {
+                dumper.write_indentation();
+                let _ = write!(dumper.output, "Local {} ", local.id);
+                write_quoted(&mut dumper.output, &local.name);
+                let _ = write!(dumper.output, " : {}", local.ty.name());
+                write_span(&mut dumper.output, local.span);
+                dumper.output.push('\n');
+            }
         });
     }
 
@@ -110,7 +202,12 @@ impl HirDumper {
         match statement {
             HirStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
-                self.indented(|dumper| dumper.expression(&local.initializer));
+                self.indented(|dumper| match &local.initializer {
+                    HirLocalInitializer::Value(expression) => dumper.expression(expression),
+                    HirLocalInitializer::Construct(construction) => {
+                        dumper.construction(construction)
+                    }
+                });
             }
             HirStatement::Return(statement) => {
                 self.line("Return", statement.span);
@@ -124,6 +221,13 @@ impl HirDumper {
             }
             HirStatement::Conditional(statement) => self.conditional(statement),
             HirStatement::Block(block) => self.block(block),
+            HirStatement::FieldAssignment(statement) => {
+                self.line("FieldAssignment", statement.span);
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.expression(&statement.value);
+                });
+            }
         }
     }
 
@@ -213,7 +317,58 @@ impl HirDumper {
                 self.typed_line("Grouped", expression);
                 self.indented(|dumper| dumper.expression(inner));
             }
+            HirExpressionKind::FieldRead(place) => {
+                self.typed_line(&format!("FieldRead {}", place.field), expression);
+                self.indented(|dumper| dumper.object_place(&place.receiver));
+            }
+            HirExpressionKind::MethodCall {
+                receiver,
+                method,
+                arguments,
+            } => {
+                self.typed_line(&format!("MethodCall {method}"), expression);
+                self.indented(|dumper| {
+                    dumper.object_place(receiver);
+                    for argument in arguments {
+                        dumper.expression(argument);
+                    }
+                });
+            }
         }
+    }
+
+    fn construction(&mut self, construction: &HirConstruction) {
+        self.line(
+            &format!(
+                "Construct {} via {}",
+                construction.class, construction.initializer
+            ),
+            construction.span,
+        );
+        self.indented(|dumper| {
+            for argument in &construction.arguments {
+                dumper.expression(argument);
+            }
+        });
+    }
+
+    fn field_place(&mut self, place: &HirFieldPlace) {
+        self.line(&format!("FieldPlace {}", place.field), place.span);
+        self.indented(|dumper| dumper.object_place(&place.receiver));
+    }
+
+    fn object_place(&mut self, place: &HirObjectPlace) {
+        let access = match place.access {
+            HirReceiverAccess::ReadOnly => "readonly",
+            HirReceiverAccess::Mutable => "mutable",
+        };
+        self.line(
+            &format!(
+                "ObjectPlace {} : class {} {access}",
+                place.binding, place.class
+            ),
+            place.span,
+        );
     }
 
     fn typed_line(&mut self, name: &str, expression: &HirExpression) {

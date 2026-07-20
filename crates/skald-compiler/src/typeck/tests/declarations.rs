@@ -110,7 +110,7 @@ fn direct_call_arity_is_checked_against_the_resolved_target() {
 }
 
 #[test]
-fn resolved_objects_stop_at_the_explicit_pre_obj7_boundary() {
+fn resolved_objects_cross_the_obj7_type_check_boundary() {
     let resolved = resolve_text(concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } }\n",
         "fn main() -> i64 { var value: Box = Box(1); return value.value; }\n",
@@ -118,10 +118,8 @@ fn resolved_objects_stop_at_the_explicit_pre_obj7_boundary() {
 
     let output = type_check(&resolved);
 
-    assert!(output.hir.is_none());
-    assert_eq!(output.diagnostics.len(), 1);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        OBJECT_TYPE_CHECKING_UNAVAILABLE
-    );
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    assert_eq!(hir.classes.iter().count(), 1);
+    assert_eq!(hir.class_definitions.iter().count(), 1);
 }

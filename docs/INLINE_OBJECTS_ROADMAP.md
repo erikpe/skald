@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ6 complete; OBJ7 is next.
+Status: OBJ0–OBJ7 complete; OBJ8 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -205,7 +205,7 @@ reconstructing source evaluation.
 - [x] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
 - [x] OBJ5 — Add class, member, and construction syntax
 - [x] OBJ6 — Resolve nominal classes, fields, initializers, and methods
-- [ ] OBJ7 — Type-check inline objects, construction, and receiver access
+- [x] OBJ7 — Type-check inline objects, construction, and receiver access
 - [ ] OBJ8 — Lower the frontend object model into verified MIR
 - [ ] OBJ9 — Enable and harden the complete native slice
 
@@ -382,20 +382,20 @@ reference and every selection carries its stable identity.
 
 **Purpose:** Enforce object semantics once and produce explicit typed HIR.
 
-- [ ] Add nominal class types and phase-owned class/member signatures to HIR.
-- [ ] Enforce primitive fields, one initializer, primitive parameters, and
+- [x] Add nominal class types and phase-owned class/member signatures to HIR.
+- [x] Enforce primitive fields, one initializer, primitive parameters, and
       primitive-or-`unit` method results.
-- [ ] Validate constructor type, arity, arguments, and direct-local context.
-- [ ] Implement straight-line definite field initialization: exactly once, no
+- [x] Validate constructor type, arity, arguments, and direct-local context.
+- [x] Implement straight-line definite field initialization: exactly once, no
       early read/exit, and all fields live at normal completion.
-- [ ] Type field accesses as selected place operations and retain receiver
+- [x] Type field accesses as selected place operations and retain receiver
       mutability.
-- [ ] Enforce `fn`, `mut fn`, and implicit mutable `init` receiver rules,
+- [x] Enforce `fn`, `mut fn`, and implicit mutable `init` receiver rules,
       including calls on `self`.
-- [ ] Reject every excluded object-valued context with focused diagnostics.
-- [ ] Reuse structured return-flow analysis for methods; give initialization a
+- [x] Reject every excluded object-valued context with focused diagnostics.
+- [x] Reuse structured return-flow analysis for methods; give initialization a
       separate completion rule.
-- [ ] Add deterministic HIR dumps.
+- [x] Add deterministic HIR dumps.
 
 **Tests:** Nominal mismatches, field/type errors, initializer errors,
 pre-initialization reads, invalid control flow, read-only mutation, mutable
