@@ -71,9 +71,16 @@ completes exact native and failure coverage, including every literal-overflow
 family, malformed numeric forms, mixed integer/SSE calls, and independent-run
 assembly and diagnostic determinism.
 
+The compiler implementation cleanup roadmap is complete through R12. Stable
+program identities now live outside resolution, structured return flow is
+computed once in typed HIR, compiler phases and their tests are split by
+responsibility, repeated test setup is test-only, and compiler artifacts are
+published atomically. The final audit found no migration compatibility layer;
+future slices can extend the existing phase interfaces directly.
+
 ## Development
 
-Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The repository has no third-party Rust dependencies at M0.
+Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The Rust workspace currently has no third-party crate dependencies.
 
 Common commands:
 

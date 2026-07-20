@@ -14,30 +14,23 @@ If a run case has no `.stdout` sidecar, its expected stdout is empty. Stdout com
 The runner builds the runtime, invokes the public `skac` executable, and reports all cases. Every successful source is compiled to assembly twice and compared byte-for-byte before native execution. Every failing source is compiled twice and must produce the same exact stderr snapshot, no stdout, and compiler exit status 1.
 
 The failure corpus covers every diagnostic family reachable from implemented
-source. O3 adds exact cases for invalid unit/value returns, using a unit call as
-an `i64` value, and discarding an `i64` call statement. O5 and O6 add
-external-entry, restricted-signature, duplicate-name, and malformed external
-declaration cases. C2 adds focused boolean type/entry failures and replaces the
-old unsupported-`bool` case with a genuinely unsupported type. The O6 `println_i64` run case covers the full supported
-source-to-runtime output path, ordered consecutive writes, representative
-computed values, both `i64` extrema, and a process status independent of its
-exact stdout expectation. The C2 `println_bool` case likewise covers boolean
-literals, locals, parameters, function returns, and ordinary runtime linkage.
-C5 adds exact conditional parser, scope, condition-type, and definite-return
-failures. Its native conditional case uses observable condition functions to
-prove left-to-right evaluation, skipped later arms, `else` selection, and
-fallthrough when no arm is selected.
-C6 adds omitted-condition and omitted-closing-parenthesis snapshots plus a
-nested native case whose value-returning function relies entirely on exhaustive
-conditional arms. Together with the non-exhaustive failure case, this covers
-both sides of branch-aware return analysis.
+source: invalid unit/value returns, value-context and discarded calls,
+external-entry and restricted-signature rules, duplicate declarations,
+malformed syntax, condition types and scopes, and definite-return behavior.
+The `println_i64` and `println_bool` run cases cover ordered runtime output,
+representative values, primitive extrema, locals, parameters, function
+results, and process status independently of exact stdout.
 
-T7 completes the primitive corpus. The unsigned run cases observe zero, one,
-maxima, wrapping arithmetic, locals, parameters, internal results, and
-external output calls. The floating case observes positive and negative zero,
-exact fractions, subnormal and maximum finite values, underflow, arithmetic,
-call/return flow, conditional arms, and both register-only and independently
-exhausted mixed integer/SSE signatures. Its calls interleave `u64`, `u8`, and
+Conditional cases use observable condition functions to prove left-to-right
+evaluation, skipped later arms, `else` selection, fallthrough, nested control
+flow, and both exhaustive and non-exhaustive return analysis.
+
+The primitive corpus covers all implemented scalar types. Unsigned run cases
+observe zero, one, maxima, wrapping arithmetic, locals, parameters, internal
+results, and external output calls. The floating case observes positive and
+negative zero, exact fractions, subnormal and maximum finite values, underflow,
+arithmetic, call/return flow, conditional arms, and both register-only and
+independently exhausted mixed integer/SSE signatures. Its calls interleave `u64`, `u8`, and
 raw-bit `f64` output. Compile-failure cases snapshot every numeric overflow
 family, malformed suffix and float forms, implicit conversions, mixed
 arithmetic, invalid unsigned negation, and the restricted external profile.

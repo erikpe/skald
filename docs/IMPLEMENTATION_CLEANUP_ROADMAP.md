@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R11 are complete and R12 is the next implementation task.
+Status: complete; R0–R12 are complete.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -71,7 +71,7 @@ gate before its checkbox is marked complete.
 - [x] R9 — Split oversized Rust test modules by behavior
 - [x] R10 — Split the runtime ABI harness by responsibility
 - [x] R11 — Correct diagnostics, comments, and small formatting duplication
-- [ ] R12 — Complete the cleanup audit and final quality gate
+- [x] R12 — Complete the cleanup audit and final quality gate
 
 Milestone checkboxes below should be marked as implementation progresses. A
 task is complete only when its acceptance criteria and relevant tests pass.
@@ -327,15 +327,15 @@ improves clarity.
 **Purpose:** Verify that cleanup achieved its goals without changing the
 language or leaving transitional scaffolding.
 
-- [ ] Re-run file-size and dependency-direction audits.
-- [ ] Confirm HIR, MIR, and backend no longer import identities from resolve.
-- [ ] Confirm return-flow logic has one implementation.
-- [ ] Confirm production and test modules follow documented ownership.
-- [ ] Confirm temporary-resource and artifact-publication failure coverage.
-- [ ] Remove compatibility helpers introduced only during migration.
-- [ ] Update README.md, docs/REPO_STRUCTURE.md, docs/DEBUGGING.md, and test
+- [x] Re-run file-size and dependency-direction audits.
+- [x] Confirm HIR, MIR, and backend no longer import identities from resolve.
+- [x] Confirm return-flow logic has one implementation.
+- [x] Confirm production and test modules follow documented ownership.
+- [x] Confirm temporary-resource and artifact-publication failure coverage.
+- [x] Remove compatibility helpers introduced only during migration.
+- [x] Update README.md, docs/REPO_STRUCTURE.md, docs/DEBUGGING.md, and test
       documentation with the final organization.
-- [ ] Run complete local quality gates from a clean build state.
+- [x] Run complete local quality gates from a clean build state.
 
 **Tests:** Clean make check, explicit make golden-test, explicit make
 runtime-test, and git diff --check.
@@ -349,14 +349,14 @@ resolved, and the repository is ready for the next language slice.
 Run these for every task that touches the corresponding area. R12 runs and
 records all of them from a clean build state.
 
-- [ ] cargo fmt --all -- --check
-- [ ] cargo check --workspace --all-targets
-- [ ] cargo clippy --workspace --all-targets -- -D warnings
-- [ ] cargo test --workspace
-- [ ] make runtime-test when runtime code, headers, or harnesses change
-- [ ] make golden-test when source behavior, diagnostics, MIR, backend, runtime
+- [x] cargo fmt --all -- --check
+- [x] cargo check --workspace --all-targets
+- [x] cargo clippy --workspace --all-targets -- -D warnings
+- [x] cargo test --workspace
+- [x] make runtime-test when runtime code, headers, or harnesses change
+- [x] make golden-test when source behavior, diagnostics, MIR, backend, runtime
       linking, or golden expectations change
-- [ ] git diff --check
+- [x] git diff --check
 
 The global checkboxes are marked only by R12. Earlier tasks run their relevant
 commands without marking the final roadmap gate prematurely.

@@ -105,8 +105,9 @@ Modules with multiple implementation responsibilities use the recursive
 directory layout. Their `mod.rs` files act as concise facades: they document
 the boundary, declare private implementation modules, and explicitly re-export
 the intended public API. Substantial module-level unit tests live in an
-adjacent `tests.rs`; small cohesive modules may remain single files and keep a
-few tightly local tests inline.
+adjacent behavior-oriented `tests/` directory; smaller suites may use
+`tests.rs`, and small cohesive modules may keep a few tightly local tests
+inline.
 
 Cross-phase formatting stays deliberately narrow. The private `dump_format`
 module owns only the byte-identical indentation, quoted-string escaping, and
@@ -114,6 +115,14 @@ source-span suffix used by compiler dumps; each phase still owns the structure
 and vocabulary of its representation. Diagnostic type sets likewise remain
 owned by the phase enforcing them, while one diagnostics helper renders those
 sets consistently as source type names.
+
+The completed R0–R12 cleanup audit establishes the current maintenance
+baseline. Stable IDs are owned by `identity`, not resolution; typed dense and
+sparse tables have one implementation; `BlockFlow` is the sole structured
+return-flow result consumed by both type checking and MIR lowering; and all
+test-only mutation and fixture APIs are excluded from production builds. The
+largest production module is the cohesive MIR verifier rather than a catch-all
+pipeline phase. No migration compatibility layer remains.
 
 ### `runtime/`
 
@@ -131,7 +140,7 @@ Future Skald standard-library source. It is separate from the C runtime: functio
 
 ### `tests/`
 
-- `compiler/` contains phase-level compiler tests, cross-phase integration tests, and shared fixtures. Small Rust unit tests may also live beside their implementation, following Rust convention.
+- `compiler/` is reserved for larger cross-phase fixtures and compiler integration tests. Current phase-level Rust tests live beside their implementation.
 - `runtime/` contains direct C tests of the runtime ABI and implementation.
 - `golden/` contains complete source-to-diagnostic, source-to-assembly, and source-to-executable cases.
 
@@ -163,7 +172,7 @@ These commands are convenience entry points, not replacements for Cargo or the r
 
 ## 4. Compiler Pipeline
 
-The implemented first-slice pipeline is:
+The implemented compiler pipeline is:
 
 ```text
 compilation request
@@ -436,7 +445,7 @@ Testing follows the useful high-level split from Niflheim while adapting it to R
 - backend tests assert ABI decisions and emitted assembly without requiring native execution;
 - driver tests check CLI behavior, phase selection, and toolchain command construction.
 
-Fast Rust unit tests should usually live beside the module under test. Larger compiler fixtures and cross-module tests belong under `tests/compiler/`.
+Fast Rust unit tests live beside the module under test. Larger compiler fixtures and cross-module tests belong under `tests/compiler/` when they are needed.
 
 R8 centralizes repeated unit-test setup in the compiler's `cfg(test)`-only
 `test_support` module. Its source helpers expose lexing, parsing, resolution,
