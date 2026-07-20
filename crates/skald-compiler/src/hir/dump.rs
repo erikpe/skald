@@ -156,12 +156,16 @@ impl HirDumper {
             HirExpressionKind::U8(value) => {
                 self.typed_line(&format!("U8 {value}"), expression);
             }
+            HirExpressionKind::F64Bits(bits) => {
+                self.typed_line(&format!("F64 0x{bits:016x}"), expression);
+            }
             HirExpressionKind::Boolean(value) => {
                 self.typed_line(&format!("Boolean {value}"), expression);
             }
             HirExpressionKind::Unary { operation, operand } => {
                 let operation = match operation {
                     HirUnaryOperation::NegateI64 => "NegateI64",
+                    HirUnaryOperation::NegateF64 => "NegateF64",
                 };
                 self.typed_line(&format!("Unary {operation}"), expression);
                 self.indented(|dumper| dumper.expression(operand));
@@ -181,6 +185,9 @@ impl HirDumper {
                     HirBinaryOperation::AddU8 => "AddU8",
                     HirBinaryOperation::SubtractU8 => "SubtractU8",
                     HirBinaryOperation::MultiplyU8 => "MultiplyU8",
+                    HirBinaryOperation::AddF64 => "AddF64",
+                    HirBinaryOperation::SubtractF64 => "SubtractF64",
+                    HirBinaryOperation::MultiplyF64 => "MultiplyF64",
                 };
                 self.typed_line(&format!("Binary {operation}"), expression);
                 self.indented(|dumper| {

@@ -2,4 +2,4 @@ error[PAR002]: expected a return type after `->`
  --> tests/golden/compile_fail/unsupported_type.ska:1:14
    |
 1 | fn main() -> string {
-   |              ^^^^^^ expected `i64`, `u64`, `u8`, `bool`, or `unit`
+   |              ^^^^^^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`

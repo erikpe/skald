@@ -118,6 +118,46 @@ fn resolution_preserves_u8_types_and_literal_magnitude() {
 }
 
 #[test]
+fn resolution_preserves_f64_types_and_literal_spelling() {
+    let output = resolve_text(
+        "fn identity(value: f64) -> f64 { return 6.25e-1; } fn main() -> i64 { return 0; }",
+    );
+    let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert_eq!(
+        declaration.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::F64
+    );
+    assert_eq!(declaration.return_type.kind, ResolvedTypeKind::F64);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::NumericLiteral(literal) = return_value(&definition.body.statements[0])
+    else {
+        panic!("expected a resolved f64 literal");
+    };
+    assert_eq!(literal.kind, NumericLiteralKind::F64);
+    assert_eq!(literal.spelling, "6.25e-1");
+    assert!(dump_resolved(&output.program).contains("F64 \"6.25e-1\""));
+}
+
+#[test]
+fn nan_and_infinity_spellings_are_rejected_as_single_unknown_names() {
+    for spelling in ["NaN", "inf"] {
+        let output = resolve_text(&format!(
+            "fn value() -> f64 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}"
+        ));
+
+        assert_eq!(output.diagnostics.len(), 1, "{spelling}");
+        assert!(output
+            .diagnostics
+            .iter()
+            .next()
+            .unwrap()
+            .message
+            .contains(spelling));
+    }
+}
+
+#[test]
 fn preserves_boolean_types_literals_and_bindings() {
     let output = resolve_text(concat!(
         "fn identity(value: bool) -> bool { return value; }\n",

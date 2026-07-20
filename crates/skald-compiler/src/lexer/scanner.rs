@@ -7,7 +7,9 @@ use crate::{
 use super::{numeric::scan_numeric_literal, Token, TokenKind};
 
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";
-pub const MALFORMED_INTEGER_LITERAL: &str = "LEX002";
+pub const MALFORMED_NUMERIC_LITERAL: &str = "LEX002";
+/// Compatibility name retained for clients of the earlier integer-only lexer.
+pub const MALFORMED_INTEGER_LITERAL: &str = MALFORMED_NUMERIC_LITERAL;
 
 #[derive(Debug)]
 pub struct LexOutput {
@@ -56,6 +58,14 @@ impl<'source> Lexer<'source> {
                 self.lex_identifier(start);
             } else if character.is_ascii_digit() {
                 self.lex_numeric_literal(start);
+            } else if character == '.'
+                && self
+                    .remaining()
+                    .get(1..)
+                    .and_then(|tail| tail.chars().next())
+                    .is_some_and(|next| next.is_ascii_digit())
+            {
+                self.lex_leading_dot_numeric(start);
             } else {
                 self.lex_punctuation_or_invalid(start, character);
             }
@@ -106,6 +116,7 @@ impl<'source> Lexer<'source> {
             "i64" => TokenKind::I64,
             "u64" => TokenKind::U64,
             "u8" => TokenKind::U8,
+            "f64" => TokenKind::F64,
             "bool" => TokenKind::Bool,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
@@ -123,31 +134,49 @@ impl<'source> Lexer<'source> {
         self.offset += scan.byte_len;
 
         // Source syntax is enabled only when the kind has a complete path
-        // through the supported target. T3/T4 add u64/u8; T6 owns f64.
+        // through the supported target. T3/T4/T6 add u64/u8/f64.
         if !matches!(
             scan.kind,
-            Some(NumericLiteralKind::I64 | NumericLiteralKind::U64 | NumericLiteralKind::U8)
+            Some(
+                NumericLiteralKind::I64
+                    | NumericLiteralKind::U64
+                    | NumericLiteralKind::U8
+                    | NumericLiteralKind::F64
+            )
         ) {
-            let span = self.span(start, self.offset);
-            let spelling = &self.source.text()[start..self.offset];
-            self.tokens.push(Token {
-                kind: TokenKind::Invalid,
-                span,
-            });
-            self.diagnostics.push(
-                Diagnostic::error(
-                    MALFORMED_INTEGER_LITERAL,
-                    format!("malformed decimal integer literal `{spelling}`"),
-                )
-                .with_primary_label(span, "expected decimal digits only")
-                .with_note("integer range checking occurs during type checking"),
-            );
+            self.report_malformed_numeric(start);
             return;
         }
 
         self.push_token(
             TokenKind::NumericLiteral(scan.kind.expect("enabled numeric kind")),
             start,
+        );
+    }
+
+    fn lex_leading_dot_numeric(&mut self, start: usize) {
+        while self.peek().is_some_and(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '_' | '.')
+        }) {
+            self.advance();
+        }
+        self.report_malformed_numeric(start);
+    }
+
+    fn report_malformed_numeric(&mut self, start: usize) {
+        let span = self.span(start, self.offset);
+        let spelling = &self.source.text()[start..self.offset];
+        self.tokens.push(Token {
+            kind: TokenKind::Invalid,
+            span,
+        });
+        self.diagnostics.push(
+            Diagnostic::error(
+                MALFORMED_NUMERIC_LITERAL,
+                format!("malformed numeric literal `{spelling}`"),
+            )
+            .with_primary_label(span, "expected a supported decimal numeric spelling")
+            .with_note("numeric range checking occurs during type checking"),
         );
     }
 

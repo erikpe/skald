@@ -281,6 +281,11 @@ impl<'hir> FunctionLowerer<'hir> {
                 lower_type(expression.ty),
                 expression.span,
             )),
+            HirExpressionKind::F64Bits(bits) => Some(self.assign(
+                MirRvalueKind::ConstantF64Bits(*bits),
+                lower_type(expression.ty),
+                expression.span,
+            )),
             HirExpressionKind::Boolean(value) => Some(self.assign(
                 MirRvalueKind::ConstantBool(*value),
                 lower_type(expression.ty),
@@ -294,6 +299,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     MirRvalueKind::Unary {
                         operation: match operation {
                             HirUnaryOperation::NegateI64 => MirUnaryOperation::NegateI64,
+                            HirUnaryOperation::NegateF64 => MirUnaryOperation::NegateF64,
                         },
                         operand,
                     },
@@ -325,6 +331,9 @@ impl<'hir> FunctionLowerer<'hir> {
                             HirBinaryOperation::AddU8 => MirBinaryOperation::AddU8,
                             HirBinaryOperation::SubtractU8 => MirBinaryOperation::SubtractU8,
                             HirBinaryOperation::MultiplyU8 => MirBinaryOperation::MultiplyU8,
+                            HirBinaryOperation::AddF64 => MirBinaryOperation::AddF64,
+                            HirBinaryOperation::SubtractF64 => MirBinaryOperation::SubtractF64,
+                            HirBinaryOperation::MultiplyF64 => MirBinaryOperation::MultiplyF64,
                         },
                         left,
                         right,
@@ -397,6 +406,7 @@ const fn lower_type(ty: Type) -> MirType {
         Type::I64 => MirType::I64,
         Type::U64 => MirType::U64,
         Type::U8 => MirType::U8,
+        Type::F64 => MirType::F64,
         Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
     }

@@ -10,6 +10,7 @@ pub enum Type {
     I64,
     U64,
     U8,
+    F64,
     Bool,
     Unit,
 }
@@ -20,6 +21,7 @@ impl Type {
             Self::I64 => "i64",
             Self::U64 => "u64",
             Self::U8 => "u8",
+            Self::F64 => "f64",
             Self::Bool => "bool",
             Self::Unit => "unit",
         }
@@ -30,7 +32,7 @@ impl Type {
     pub const fn indefinite_article(self) -> &'static str {
         match self {
             Self::I64 => "an",
-            Self::U64 | Self::U8 | Self::Bool | Self::Unit => "a",
+            Self::U64 | Self::U8 | Self::F64 | Self::Bool | Self::Unit => "a",
         }
     }
 }
@@ -250,6 +252,8 @@ pub enum HirExpressionKind {
     I64(i64),
     U64(u64),
     U8(u8),
+    /// IEEE-754 binary64 payload, kept as raw bits for deterministic HIR.
+    F64Bits(u64),
     Boolean(bool),
     Unary {
         operation: HirUnaryOperation,
@@ -270,6 +274,7 @@ pub enum HirExpressionKind {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirUnaryOperation {
     NegateI64,
+    NegateF64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -283,4 +288,7 @@ pub enum HirBinaryOperation {
     AddU8,
     SubtractU8,
     MultiplyU8,
+    AddF64,
+    SubtractF64,
+    MultiplyF64,
 }

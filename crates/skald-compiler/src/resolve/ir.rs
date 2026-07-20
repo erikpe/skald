@@ -254,6 +254,7 @@ pub enum ResolvedTypeKind {
     I64,
     U64,
     U8,
+    F64,
     Bool,
     Unit,
 }

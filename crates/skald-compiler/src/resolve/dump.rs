@@ -100,6 +100,7 @@ impl ResolvedDumper {
             ResolvedTypeKind::I64 => "I64",
             ResolvedTypeKind::U64 => "U64",
             ResolvedTypeKind::U8 => "U8",
+            ResolvedTypeKind::F64 => "F64",
             ResolvedTypeKind::Bool => "Bool",
             ResolvedTypeKind::Unit => "Unit",
         };
@@ -165,9 +166,7 @@ impl ResolvedDumper {
                     crate::literal::NumericLiteralKind::I64 => "Integer ",
                     crate::literal::NumericLiteralKind::U64 => "U64 ",
                     crate::literal::NumericLiteralKind::U8 => "U8 ",
-                    crate::literal::NumericLiteralKind::F64 => {
-                        unreachable!("disabled numeric kind reached resolved IR")
-                    }
+                    crate::literal::NumericLiteralKind::F64 => "F64 ",
                 });
                 write_quoted(&mut self.output, &literal.spelling);
                 write_span(&mut self.output, literal.span);

@@ -313,6 +313,24 @@ fn represents_f64_as_raw_bits_and_explicit_typed_operations() {
 }
 
 #[test]
+fn lowers_source_f64_constants_storage_arithmetic_calls_and_returns() {
+    let mir = lower_text(concat!(
+        "extern fn observe(value: f64) -> unit;\n",
+        "fn calculate(value: f64) -> f64 { var result: f64 = -(value * 2.0 + 0.5); return result; }\n",
+        "fn main() -> i64 { observe(calculate(1.5)); return 0; }\n",
+    ));
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+
+    assert!(dump.contains("Signature (f64) -> f64"));
+    assert!(dump.contains("const.f64 0x4000000000000000 : f64"));
+    assert!(dump.contains("mul.f64"));
+    assert!(dump.contains("add.f64"));
+    assert!(dump.contains("neg.f64"));
+    assert!(dump.contains("local f1:l0 \"result\" : f64"));
+}
+
+#[test]
 fn verifier_rejects_f64_constant_unary_and_binary_corruption() {
     let mut constant = f64_arithmetic_mir();
     let function = constant

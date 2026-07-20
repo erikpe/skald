@@ -852,6 +852,23 @@ fn external_f64_results_are_read_from_xmm0() {
 }
 
 #[test]
+fn source_f64_uses_independent_integer_and_sse_argument_registers() {
+    let output = assembly(concat!(
+        "extern fn observe(value: f64) -> unit;\n",
+        "fn choose(integer: i64, floating: f64, other: i64, another: f64) -> f64 { return floating + another; }\n",
+        "fn main() -> i64 { observe(choose(1, 1.5, 2, 2.25)); return 0; }",
+    ));
+
+    assert!(output.contains("movq %rdi, -8(%rbp)"));
+    assert!(output.contains("movsd %xmm0, -16(%rbp)"));
+    assert!(output.contains("movq %rsi, -24(%rbp)"));
+    assert!(output.contains("movsd %xmm1, -32(%rbp)"));
+    assert!(output.contains("addsd %xmm15, %xmm14"));
+    assert!(output.contains("call .Lska_fn_1\n    movsd %xmm0,"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
 fn mixed_scalar_layout_independently_exhausts_register_classes() {
     let program = mixed_exhausted_abi_program();
     verify_mir(&program).unwrap();

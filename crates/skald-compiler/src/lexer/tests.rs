@@ -8,6 +8,7 @@ use crate::{
 const I64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::I64);
 const U64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U64);
 const U8_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U8);
+const F64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::F64);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {
     let mut sources = SourceDatabase::new();
@@ -137,6 +138,26 @@ fn recognizes_u8_type_and_literal_without_reserving_identifier_prefixes() {
 }
 
 #[test]
+fn recognizes_f64_type_and_decimal_literal_forms() {
+    let (_, _, output) = lex_text("f64 0.0 1.5 2e3 6.25e-1 f64_value");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        [
+            TokenKind::F64,
+            F64_LITERAL,
+            F64_LITERAL,
+            F64_LITERAL,
+            F64_LITERAL,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_conditional_keywords_without_reserving_prefixes() {
     let (_, _, output) = lex_text("if elif else iffy elseif");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
@@ -195,7 +216,7 @@ fn identifiers_are_ascii_and_allow_underscores_and_later_digits() {
 
 #[test]
 fn malformed_decimal_spellings_are_single_invalid_tokens() {
-    let (sources, source_id, output) = lex_text("12abc 1_000 12.5 0xff");
+    let (sources, source_id, output) = lex_text("12abc 1_000 12. 0xff");
     let source = sources.get(source_id).unwrap();
     let invalid_lexemes: Vec<_> = output
         .tokens
@@ -204,7 +225,7 @@ fn malformed_decimal_spellings_are_single_invalid_tokens() {
         .map(|token| source.slice(token.span.range()).unwrap())
         .collect();
 
-    assert_eq!(invalid_lexemes, vec!["12abc", "1_000", "12.5", "0xff"]);
+    assert_eq!(invalid_lexemes, vec!["12abc", "1_000", "12.", "0xff"]);
     assert_eq!(output.diagnostics.len(), 4);
     assert!(output
         .diagnostics
@@ -213,8 +234,8 @@ fn malformed_decimal_spellings_are_single_invalid_tokens() {
 }
 
 #[test]
-fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
-    let (sources, source_id, output) = lex_text("1.5 2e3 6.25e-1 return");
+fn malformed_f64_spellings_recover_as_complete_tokens() {
+    let (sources, source_id, output) = lex_text(".5 1. 1.2.3 1.0f64 return");
     let source = sources.get(source_id).unwrap();
     let spellings: Vec<_> = output
         .tokens
@@ -223,22 +244,13 @@ fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
         .map(|token| source.slice(token.span.range()).unwrap())
         .collect();
 
-    assert_eq!(spellings, ["1.5", "2e3", "6.25e-1"]);
+    assert_eq!(spellings, [".5", "1.", "1.2.3", "1.0f64"]);
     assert_eq!(output.diagnostics.len(), spellings.len());
     assert!(output
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
-    assert_eq!(output.tokens[3].kind, TokenKind::Return);
-}
-
-#[test]
-fn f64_source_surface_remains_gated_until_t6() {
-    let (_, _, output) = lex_text("f64 1.5");
-
-    assert_eq!(output.tokens[0].kind, TokenKind::Identifier);
-    assert_eq!(output.tokens[1].kind, TokenKind::Invalid);
-    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(output.tokens[4].kind, TokenKind::Return);
 }
 
 #[test]

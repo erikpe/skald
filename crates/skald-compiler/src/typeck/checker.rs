@@ -28,6 +28,7 @@ pub const INVALID_CALL_STATEMENT: &str = "TYP008";
 pub const INVALID_EXTERNAL_DECLARATION: &str = "TYP009";
 pub const U64_LITERAL_OUT_OF_RANGE: &str = "TYP010";
 pub const U8_LITERAL_OUT_OF_RANGE: &str = "TYP011";
+pub const F64_LITERAL_OUT_OF_RANGE: &str = "TYP012";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -137,12 +138,12 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
         let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
             matches!(
                 lower_type(&parameter.type_syntax),
-                Type::I64 | Type::U64 | Type::U8 | Type::Bool
+                Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
             )
         });
         let has_valid_return = matches!(
             lower_type(&declaration.return_type),
-            Type::I64 | Type::U64 | Type::U8 | Type::Bool | Type::Unit
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit
         );
         if !has_valid_parameters || !has_valid_return || symbol != &declaration.name {
             diagnostics.push(
@@ -155,7 +156,7 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
                 )
                 .with_primary_label(
                     declaration.span,
-                    "expected by-value `i64`, `u64`, `u8`, or `bool` parameters and an `i64`, `u64`, `u8`, `bool`, or `unit` result",
+                    "expected by-value `i64`, `u64`, `u8`, `f64`, or `bool` parameters and an `i64`, `u64`, `u8`, `f64`, `bool`, or `unit` result",
                 )
                 .with_note("the source function name must also be its exact linker symbol"),
             );
@@ -312,7 +313,7 @@ fn check_statement(
         }
         ResolvedStatement::Return(statement) => {
             match (return_type, &statement.value) {
-                (Type::I64 | Type::U64 | Type::U8 | Type::Bool, Some(value)) => {
+                (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, Some(value)) => {
                     let value =
                         check_expression(program, declaration, definition, value, diagnostics)?;
                     if !require_type(
@@ -329,7 +330,7 @@ fn check_statement(
                         span: statement.span,
                     }))
                 }
-                (Type::I64 | Type::U64 | Type::U8 | Type::Bool, None) => {
+                (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, None) => {
                     diagnostics.push(
                         Diagnostic::error(
                             INVALID_RETURN,
@@ -518,23 +519,27 @@ fn check_expression(
                 &unary.operand,
                 diagnostics,
             )?;
-            if !require_type(
-                operand.ty,
-                Type::I64,
-                operand.span,
-                "unary negation operand",
-                diagnostics,
-            ) {
-                return None;
-            }
+            let operation = match operand.ty {
+                Type::I64 => HirUnaryOperation::NegateI64,
+                Type::F64 => HirUnaryOperation::NegateF64,
+                _ => {
+                    require_type(
+                        operand.ty,
+                        Type::I64,
+                        operand.span,
+                        "unary negation operand",
+                        diagnostics,
+                    );
+                    return None;
+                }
+            };
+            let ty = operand.ty;
             Some(HirExpression {
                 kind: HirExpressionKind::Unary {
-                    operation: match unary.operator {
-                        ResolvedUnaryOperator::Negate => HirUnaryOperation::NegateI64,
-                    },
+                    operation,
                     operand: Box::new(operand),
                 },
-                ty: Type::I64,
+                ty,
                 span: unary.span,
             })
         }
@@ -553,7 +558,7 @@ fn check_expression(
                 None
             };
             let Some(operation) = operation else {
-                let expected = if matches!(left.ty, Type::I64 | Type::U64 | Type::U8) {
+                let expected = if matches!(left.ty, Type::I64 | Type::U64 | Type::U8 | Type::F64) {
                     left.ty
                 } else {
                     Type::I64
@@ -682,6 +687,9 @@ fn select_binary_operation(
         (ResolvedBinaryOperator::Add, Type::U8) => Some(HirBinaryOperation::AddU8),
         (ResolvedBinaryOperator::Subtract, Type::U8) => Some(HirBinaryOperation::SubtractU8),
         (ResolvedBinaryOperator::Multiply, Type::U8) => Some(HirBinaryOperation::MultiplyU8),
+        (ResolvedBinaryOperator::Add, Type::F64) => Some(HirBinaryOperation::AddF64),
+        (ResolvedBinaryOperator::Subtract, Type::F64) => Some(HirBinaryOperation::SubtractF64),
+        (ResolvedBinaryOperator::Multiply, Type::F64) => Some(HirBinaryOperation::MultiplyF64),
         (_, Type::Bool | Type::Unit) => None,
     }
 }
@@ -720,9 +728,7 @@ fn check_numeric_literal(
         NumericLiteralKind::I64 => check_positive_i64_literal(literal, diagnostics),
         NumericLiteralKind::U64 => check_u64_literal(literal, diagnostics),
         NumericLiteralKind::U8 => check_u8_literal(literal, diagnostics),
-        NumericLiteralKind::F64 => {
-            unreachable!("unsupported numeric literal kind reached type checking")
-        }
+        NumericLiteralKind::F64 => check_f64_literal(literal, diagnostics),
     }
 }
 
@@ -808,6 +814,36 @@ fn check_u8_literal(
     }
 }
 
+fn check_f64_literal(
+    literal: &crate::resolve::ResolvedNumericLiteralExpr,
+    diagnostics: &mut Diagnostics,
+) -> Option<HirExpression> {
+    let value = literal
+        .spelling
+        .parse::<f64>()
+        .expect("validated decimal f64 literal must parse");
+    if value.is_finite() {
+        Some(HirExpression {
+            kind: HirExpressionKind::F64Bits(value.to_bits()),
+            ty: Type::F64,
+            span: literal.span,
+        })
+    } else {
+        diagnostics.push(
+            Diagnostic::error(
+                F64_LITERAL_OUT_OF_RANGE,
+                format!(
+                    "floating literal `{}` is out of range for `f64`",
+                    literal.spelling
+                ),
+            )
+            .with_primary_label(literal.span, "value rounds to infinity")
+            .with_note("finite `f64` literals must round to a finite IEEE-754 binary64 value"),
+        );
+        None
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Magnitude {
     PositiveI64,
@@ -885,6 +921,7 @@ fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::I64 => Type::I64,
         ResolvedTypeKind::U64 => Type::U64,
         ResolvedTypeKind::U8 => Type::U8,
+        ResolvedTypeKind::F64 => Type::F64,
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
     }

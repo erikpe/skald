@@ -60,6 +60,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
         | HirExpressionKind::U8(_)
+        | HirExpressionKind::F64Bits(_)
         | HirExpressionKind::Boolean(_) => {}
     }
 }
@@ -428,6 +429,7 @@ fn main_must_remain_i64_returning() {
         "fn main() -> unit {}",
         "fn main() -> bool { return false; }",
         "fn main() -> u64 { return 0u; }",
+        "fn main() -> f64 { return 0.0; }",
     ] {
         let output = check_text(source);
 
@@ -682,6 +684,109 @@ fn rejects_implicit_u8_conversions_and_unsigned_negation() {
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.message == expected));
+    }
+}
+
+#[test]
+fn checks_f64_raw_bits_signatures_and_typed_arithmetic() {
+    let output = check_text(concat!(
+        "extern fn observe(value: f64) -> unit;\n",
+        "fn calculate(left: f64, right: f64) -> f64 { return -(left + right * 2.0 - 1.0); }\n",
+        "fn main() -> i64 { var value: f64 = calculate(1.5, 2e0); observe(value); return 0; }\n",
+    ));
+    let hir = output.hir.expect("valid f64 program must produce HIR");
+    let calculate = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(1))
+        .unwrap();
+    let expression = returned_expression(calculate);
+
+    assert_eq!(expression.ty, Type::F64);
+    assert!(matches!(
+        expression.kind,
+        HirExpressionKind::Unary {
+            operation: crate::hir::HirUnaryOperation::NegateF64,
+            ..
+        }
+    ));
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("F64 0x3ff8000000000000 : f64"));
+    assert!(dump.contains("MultiplyF64"));
+    assert!(dump.contains("SubtractF64"));
+}
+
+#[test]
+fn converts_f64_boundaries_once_to_exact_raw_bits() {
+    for (spelling, expected_bits) in [
+        ("0.0", 0_u64),
+        (
+            "1.00000000000000011102230246251565404236316680908203125",
+            1.0_f64.to_bits(),
+        ),
+        ("4.9406564584124654e-324", 1_u64),
+        ("1e-400", 0_u64),
+        ("1.7976931348623157e308", f64::MAX.to_bits()),
+    ] {
+        let output = check_text(&format!(
+            "fn value() -> f64 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}"
+        ));
+        let hir = output.hir.expect("finite f64 literal must type-check");
+        let value = hir
+            .definitions
+            .get(crate::resolve::FunctionId::new(0))
+            .unwrap();
+        assert!(matches!(
+            returned_expression(value).kind,
+            HirExpressionKind::F64Bits(bits) if bits == expected_bits
+        ));
+    }
+}
+
+#[test]
+fn diagnoses_f64_literal_overflow() {
+    let output = check_text(
+        "fn value() -> f64 { return 1.7976931348623159e308; } fn main() -> i64 { return 0; }",
+    );
+
+    assert!(output.hir.is_none());
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, F64_LITERAL_OUT_OF_RANGE);
+    assert!(diagnostic.message.contains("out of range for `f64`"));
+}
+
+#[test]
+fn rejects_implicit_f64_conversions_and_truthiness() {
+    for (source, expected) in [
+        (
+            "fn value() -> f64 { return 1; } fn main() -> i64 { return 0; }",
+            "return value has type `i64` but `f64` is required",
+        ),
+        (
+            "fn value() -> i64 { return 1.0; } fn main() -> i64 { return 0; }",
+            "return value has type `f64` but `i64` is required",
+        ),
+        (
+            "fn value() -> f64 { return 1.0 + 2; } fn main() -> i64 { return 0; }",
+            "right arithmetic operand has type `i64` but `f64` is required",
+        ),
+        (
+            "fn take(value: f64) -> unit {} fn main() -> i64 { take(1); return 0; }",
+            "call argument has type `i64` but `f64` is required",
+        ),
+        (
+            "fn main() -> i64 { if (1.0) { return 1; } return 0; }",
+            "conditional condition has type `f64` but `bool` is required",
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none(), "{source}");
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.message == expected),
+            "{source}"
+        );
     }
 }
 

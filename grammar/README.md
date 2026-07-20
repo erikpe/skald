@@ -19,7 +19,13 @@ identifier-start    = A..Z | a..z | _
 identifier-continue = identifier-start | 0..9
 ```
 
-Decimal integer literals contain one or more ASCII digits. A decimal digit sequence immediately followed by ASCII letters, `_`, or `.` is consumed as one malformed literal so that forms such as `12abc`, `1_000`, `12.5`, and `0xff` produce one focused diagnostic. The lexer validates spelling but deliberately leaves `i64` range checking to type checking.
+Decimal integer literals contain one or more ASCII digits. A decimal digit
+sequence immediately followed by unsupported ASCII letters or `_` is consumed
+as one malformed literal so that forms such as `12abc`, `1_000`, and `0xff`
+produce one focused diagnostic. T6 extends the numeric scanner with the
+decimal-point and exponent forms specified below. The lexer validates spelling
+but deliberately leaves numeric range checking and binary64 conversion to type
+checking.
 
 Punctuation and operators:
 
@@ -272,20 +278,19 @@ grammar or introduce any of the excluded forms above.
 ## Remaining primitive extension contract
 
 T0 fixes the syntax and semantic contract for the `u64`, `u8`, and `f64`
-extension. T3 and T4 have enabled the integer forms end-to-end. The `f64` form
-is not implemented merely because it appears in this section; T6 enables it
-only after it has a complete path through the supported backend.
+extension. T3 and T4 enable the integer forms end-to-end, and T6 enables the
+`f64` form through the complete supported pipeline.
 
 T2 implements the shared numeric scanner and carries an explicit literal kind,
 original spelling, and complete span through the source and resolved IR. T3
-enables `u64` and the concise `u` suffix end-to-end, and T4 enables `u8` and
-the `u8` suffix. Contracted `f64` spellings remain recognized at the lexical
-boundary but deliberately invalid until T6. This feature gate prevents a
-parser or later phase from guessing a type by inspecting suffix text.
+enables `u64` and the concise `u` suffix end-to-end, T4 enables `u8` and the
+`u8` suffix, and T6 enables the contracted `f64` spellings. Literal kind is
+carried explicitly, so no later phase guesses a type by inspecting suffix
+text.
 
 T5 adds raw-bit `f64` MIR and x86-64 SSE2 support beneath this grammar
-boundary. It intentionally does not reserve `f64` as a source keyword or
-accept floating literals; those frontend changes belong together in T6.
+boundary. T6 adds the `f64` source keyword and floating literals together with
+their resolved and typed representations.
 
 The extension adds these case-sensitive type keywords:
 

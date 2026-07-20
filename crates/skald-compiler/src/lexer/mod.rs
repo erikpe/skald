@@ -10,7 +10,9 @@ mod scanner;
 mod token;
 
 pub use dump::dump_tokens;
-pub use scanner::{lex, LexOutput, MALFORMED_INTEGER_LITERAL, UNEXPECTED_CHARACTER};
+pub use scanner::{
+    lex, LexOutput, MALFORMED_INTEGER_LITERAL, MALFORMED_NUMERIC_LITERAL, UNEXPECTED_CHARACTER,
+};
 pub use token::{Token, TokenKind};
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T5 complete; T6 is the next implementation task.
+Status: T0–T6 complete; T7 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -179,7 +179,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 - [x] T3 — Implement `u64` end-to-end
 - [x] T4 — Implement `u8` end-to-end with explicit canonicalization
 - [x] T5 — Add target-independent and backend `f64` infrastructure
-- [ ] T6 — Enable `f64` source syntax and semantics end-to-end
+- [x] T6 — Enable `f64` source syntax and semantics end-to-end
 - [ ] T7 — Complete golden coverage and harden the primitive slice
 
 Milestone checkboxes below should be marked as implementation progresses. A
@@ -365,21 +365,21 @@ partially enabled.
 **Purpose:** Connect the already-supported MIR/backend path to a precise source
 literal and semantic model.
 
-- [ ] Enable the `f64` keyword and specified decimal-point/exponent literal
+- [x] Enable the `f64` keyword and specified decimal-point/exponent literal
       grammar with focused malformed-literal recovery.
-- [ ] Convert valid finite literals once at the semantic boundary and preserve
+- [x] Convert valid finite literals once at the semantic boundary and preserve
       raw binary64 bits below it.
-- [ ] Diagnose literal overflow and reject non-language spellings such as
+- [x] Diagnose literal overflow and reject non-language spellings such as
       `NaN`, `inf`, `.5`, `1.`, and `1.0f64` without cascades.
-- [ ] Add `f64` to resolved IR and typed HIR, including explicit add, subtract,
+- [x] Add `f64` to resolved IR and typed HIR, including explicit add, subtract,
       multiply, and negate operations.
-- [ ] Enforce exact types for locals, calls, returns, and arithmetic; do not
+- [x] Enforce exact types for locals, calls, returns, and arithmetic; do not
       infer `f64` from an expected type or promote integers.
-- [ ] Extend the restricted external profile to C `double` and add the ordinary
+- [x] Extend the restricted external profile to C `double` and add the ordinary
       declaration/call path for `ska_rt_println_f64_bits`.
-- [ ] Render floating constants deterministically as raw bits in HIR and MIR
+- [x] Render floating constants deterministically as raw bits in HIR and MIR
       dumps.
-- [ ] Exercise `f64` inside conditional arms without adding floating
+- [x] Exercise `f64` inside conditional arms without adding floating
       comparisons or truthiness.
 
 **Tests:** Lexer/parser boundaries and recovery; rounding-sensitive literals;
