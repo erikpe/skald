@@ -3,12 +3,12 @@
 use crate::{
     backend::{BackendError, Target},
     identity::FunctionId,
-    mir::{verify_mir, MirInstruction, MirProgram},
+    mir::{verify_mir, MirCallTarget, MirInstruction, MirProgram},
 };
 
-use super::{abi, frame::FrameLayout};
+use super::{abi, layout::DataLayout};
 
-pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
+pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
     verify_mir(program).map_err(|errors| {
         BackendError::new(
             Target::X86_64SysV,
@@ -17,16 +17,9 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         )
     })?;
 
-    if !program.classes.is_empty() {
-        return Err(BackendError::new(
-            Target::X86_64SysV,
-            None,
-            "inline-object MIR is valid but requires the OBJ3/OBJ4 x86-64 lowering",
-        ));
-    }
+    let data_layout = DataLayout::compute(program)?;
 
     for function in program.definitions.iter() {
-        FrameLayout::plan(function)?;
         let declaration = program
             .declarations
             .get(function.function)
@@ -36,23 +29,38 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         }
         for block in &function.body.blocks {
             for instruction in &block.instructions {
-                let MirInstruction::Call(call) = instruction else {
-                    continue;
-                };
-                let crate::mir::MirCallTarget::Direct(target) = call.target else {
-                    unreachable!("verified method calls require class metadata")
-                };
-                let target = program
-                    .declarations
-                    .get(target)
-                    .expect("verified call target must be declared");
-                if abi::CallLayout::classify(&target.parameter_types).is_none() {
-                    return Err(abi_limit(function.function, "outgoing argument area"));
+                match instruction {
+                    MirInstruction::Initialize(_) => {
+                        return Err(object_calling_not_supported(function.function));
+                    }
+                    MirInstruction::Call(call) => match call.target {
+                        MirCallTarget::Method(_) => {
+                            return Err(object_calling_not_supported(function.function));
+                        }
+                        MirCallTarget::Direct(target) => {
+                            let target = program
+                                .declarations
+                                .get(target)
+                                .expect("verified call target must be declared");
+                            if abi::CallLayout::classify(&target.parameter_types).is_none() {
+                                return Err(abi_limit(function.function, "outgoing argument area"));
+                            }
+                        }
+                    },
+                    MirInstruction::Assign(_) | MirInstruction::Store(_) => {}
                 }
             }
         }
     }
-    Ok(())
+    Ok(data_layout)
+}
+
+fn object_calling_not_supported(function: FunctionId) -> BackendError {
+    BackendError::new(
+        Target::X86_64SysV,
+        Some(function),
+        "inline-object initialization and receiver calls require OBJ4 lowering",
+    )
 }
 
 fn abi_limit(function: FunctionId, area: &str) -> BackendError {

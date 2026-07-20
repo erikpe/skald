@@ -43,6 +43,16 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             display_operand(*destination)
         )
         .unwrap(),
+        Instruction::MoveByte {
+            source,
+            destination,
+        } => write!(
+            output,
+            "movb {}, {}",
+            source.name(),
+            display_operand(*destination)
+        )
+        .unwrap(),
         Instruction::MoveImmediate64 { bits, destination } => {
             if *bits <= i64::MAX as u64 {
                 write!(output, "movabsq ${bits}, {}", destination.name()).unwrap()
@@ -68,6 +78,16 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "movzbq {}, {}", source.name(), destination.name()).unwrap(),
+        Instruction::LoadZeroExtendByte {
+            source,
+            destination,
+        } => write!(
+            output,
+            "movzbq {}, {}",
+            display_operand(*source),
+            destination.name()
+        )
+        .unwrap(),
         Instruction::Add {
             source,
             destination,

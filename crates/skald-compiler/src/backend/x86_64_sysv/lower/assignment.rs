@@ -1,8 +1,7 @@
 //! Assignment and rvalue instruction selection.
 
 use crate::mir::{
-    MirAssignment, MirBinaryOperation, MirRvalueKind, MirType, MirUnaryOperation, StorageId,
-    ValueId,
+    MirAssignment, MirBinaryOperation, MirPlace, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
 };
 
 use super::{
@@ -46,8 +45,7 @@ impl InstructionSelector<'_, '_> {
                 self.select_integer_constant(u64::from(*value), ty, destination)
             }
             MirRvalueKind::Load(place) => {
-                debug_assert!(place.projections.is_empty());
-                self.select_load(place.base, ty, destination);
+                self.select_load(place, ty, destination);
             }
             MirRvalueKind::Unary { operation, operand } => {
                 self.select_unary(*operation, *operand, ty, destination)
@@ -84,8 +82,9 @@ impl InstructionSelector<'_, '_> {
         );
     }
 
-    fn select_load(&mut self, storage: StorageId, ty: MirType, destination: Operand) {
-        let source = value::frame_storage(self.frame, storage);
+    fn select_load(&mut self, place: &MirPlace, ty: MirType, destination: Operand) {
+        let (source_layout, source) = self.frame_place(place);
+        debug_assert_eq!(source_layout.ty(), ty);
         if ty == MirType::F64 {
             value::load_float(
                 value::float_operand(source),
@@ -98,7 +97,11 @@ impl InstructionSelector<'_, '_> {
                 self.output,
             );
         } else {
-            value::load_rax(source, self.output);
+            if source_layout.uses_byte_access() {
+                value::load_byte_rax(source, self.output);
+            } else {
+                value::load_rax(source, self.output);
+            }
             value::store_canonical_rax(ty, destination, self.output);
         }
     }

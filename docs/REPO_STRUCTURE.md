@@ -360,8 +360,9 @@ The MIR verifier is a separate public boundary and checks declaration and defini
 OBJ0 specifies the architecture for the first inline-object profile. OBJ1
 implements its neutral identity and executable-body ownership foundation. OBJ2
 implements target-independent class/member metadata, places, construction and
-receiver calls, plus their verifier boundary. OBJ3–OBJ9 implement the remaining
-backend, frontend, and integration work.
+receiver calls, plus their verifier boundary. OBJ3 implements the target layout,
+object frame-allocation, and projected-address boundary. OBJ4–OBJ9 implement
+the remaining backend, frontend, and integration work.
 Public syntax remains disabled until the complete path exists.
 The extension must preserve these boundaries:
 
@@ -386,11 +387,17 @@ The extension must preserve these boundaries:
 - MIR retains class/field identities but no byte offsets, target alignment,
   registers, or linker spellings.
 
-The initial x86-64 backend owns one checked target data-layout service. It lays
+The initial x86-64 backend owns one checked, immutable target data-layout
+service. It computes class layouts once in dependency order, rejects recursive
+inline containment and checked-arithmetic failures, and lays
 out fields in declaration order, gives empty classes size/alignment one, uses
 8/8 for `i64`, `u64`, and `f64`, and 1/1 for `u8` and `bool`. Each object local
-receives one contiguous aligned frame allocation. Field address calculation
-consults the layout service; semantic lowering never duplicates its offsets.
+receives one contiguous aligned frame allocation. The frame-layout boundary
+resolves both zero-projection scalar places and nested field projections to a
+single frame-relative address. Narrow projected `u8` and `bool` accesses use
+byte loads/stores while transient scalar homes retain their existing canonical
+representation. Instruction selection and semantic lowering never duplicate
+layout arithmetic or contain byte offsets.
 
 Initializers and methods receive an address to complete object storage as a
 hidden first integer-class System V argument. The receiver consumes an integer

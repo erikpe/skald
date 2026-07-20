@@ -8,6 +8,7 @@
 mod abi;
 mod emit;
 mod frame;
+mod layout;
 mod legality;
 mod lower;
 mod machine;
@@ -17,8 +18,8 @@ use crate::mir::MirProgram;
 use super::BackendError;
 
 pub fn emit_assembly(program: &MirProgram) -> Result<String, BackendError> {
-    legality::check(program)?;
-    let assembly = lower::lower(program)?;
+    let data_layout = legality::check(program)?;
+    let assembly = lower::lower(program, &data_layout)?;
     Ok(emit::emit(&assembly))
 }
 

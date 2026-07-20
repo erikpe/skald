@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ2 complete; OBJ3 is next.
+Status: OBJ0–OBJ3 complete; OBJ4 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -201,7 +201,7 @@ reconstructing source evaluation.
 - [x] OBJ0 — Freeze the restricted inline-object contract
 - [x] OBJ1 — Establish object identities and executable-body ownership
 - [x] OBJ2 — Add target-independent object places and construction-aware MIR
-- [ ] OBJ3 — Implement x86-64 inline layout and projected-place addressing
+- [x] OBJ3 — Implement x86-64 inline layout and projected-place addressing
 - [ ] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
 - [ ] OBJ5 — Add class, member, and construction syntax
 - [ ] OBJ6 — Resolve nominal classes, fields, initializers, and methods
@@ -289,16 +289,16 @@ access, and receiver calls without byte offsets or object scalar temporaries.
 **Purpose:** Centralize physical layout and address calculation while preserving
 the clarity of existing scalar homes.
 
-- [ ] Add a checked target data-layout service for primitive and class
+- [x] Add a checked target data-layout service for primitive and class
       size/alignment plus field offsets.
-- [ ] Compute immutable layouts once in dependency order behind a narrow API.
-- [ ] Diagnose incomplete metadata, recursive layouts, and arithmetic overflow
+- [x] Compute immutable layouts once in dependency order behind a narrow API.
+- [x] Diagnose incomplete metadata, recursive layouts, and arithmetic overflow
       even though source-level fields are primitive-only for now.
-- [ ] Give each object local one aligned contiguous frame allocation.
-- [ ] Lower zero-projection and field-projected scalar accesses through one
+- [x] Give each object local one aligned contiguous frame allocation.
+- [x] Lower zero-projection and field-projected scalar accesses through one
       address path.
-- [ ] Preserve width-correct `bool`/`u8` access and canonicalization.
-- [ ] Keep layout arithmetic outside general instruction selection.
+- [x] Preserve width-correct `bool`/`u8` access and canonicalization.
+- [x] Keep layout arithmetic outside general instruction selection.
 
 **Tests:** Empty, mixed-width, padded, and reordered layouts; overflow/failure
 cases; multiple frame objects; projected assembly shape; assembler acceptance;

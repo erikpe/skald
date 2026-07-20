@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
-    identity::ClassId,
-    mir::{MirClassDeclaration, MirClassDeclarationTable},
+    identity::InitializerId,
+    mir::{MirInitialize, MirInitializerDeclaration},
 };
 
 #[test]
@@ -53,7 +53,7 @@ fn malformed_control_flow_is_a_structured_backend_error() {
 }
 
 #[test]
-fn valid_object_mir_is_rejected_at_the_target_capability_boundary() {
+fn unused_object_metadata_is_accepted_after_obj3() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: ClassId::new(0),
@@ -65,9 +65,85 @@ fn valid_object_mir_is_rejected_at_the_target_capability_boundary() {
     }]);
 
     assert!(verify_mir(&mir).is_ok());
+    assert!(emit_assembly(Target::X86_64SysV, &mir).is_ok());
+}
+
+#[test]
+fn initialization_remains_a_structured_obj4_capability_error() {
+    let (mut mir, ids) = projected_object_program();
+    let initializer = InitializerId::new(ids.container, 0);
+    mir.classes.entries_mut_for_test()[ids.container.index()]
+        .initializers
+        .push(MirInitializerDeclaration {
+            id: initializer,
+            parameter_types: vec![],
+            span: mir.span,
+        });
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    function.body.blocks[0]
+        .instructions
+        .push(MirInstruction::Initialize(MirInitialize {
+            destination: ids.first.into(),
+            target: initializer,
+            arguments: vec![],
+            span: mir.span,
+        }));
+
+    assert!(verify_mir(&mir).is_ok());
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error
         .message()
-        .contains("requires the OBJ3/OBJ4 x86-64 lowering"));
+        .contains("initialization and receiver calls require OBJ4 lowering"));
+}
+
+#[test]
+fn recursive_inline_layout_is_a_structured_target_error() {
+    let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    let class = ClassId::new(0);
+    mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
+        id: class,
+        name: "Recursive".to_owned(),
+        fields: vec![MirFieldDeclaration {
+            id: FieldId::new(class, 0),
+            name: "self".to_owned(),
+            ty: MirType::Class(class),
+            span: mir.span,
+        }],
+        initializers: vec![],
+        methods: vec![],
+        span: mir.span,
+    }]);
+
+    assert!(verify_mir(&mir).is_ok());
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert!(error
+        .message()
+        .contains("recursive inline layout involving class c0"));
+}
+
+#[test]
+fn incomplete_class_metadata_is_rejected_before_layout() {
+    let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    let class = ClassId::new(0);
+    mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
+        id: class,
+        name: "Incomplete".to_owned(),
+        fields: vec![MirFieldDeclaration {
+            id: FieldId::new(class, 0),
+            name: "missing".to_owned(),
+            ty: MirType::Class(ClassId::new(1)),
+            span: mir.span,
+        }],
+        initializers: vec![],
+        methods: vec![],
+        span: mir.span,
+    }]);
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains("undeclared class type c1"));
 }

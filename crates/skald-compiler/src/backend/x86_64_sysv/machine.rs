@@ -119,6 +119,10 @@ pub(super) enum Instruction {
         source: Operand,
         destination: Operand,
     },
+    MoveByte {
+        source: ByteRegister,
+        destination: Operand,
+    },
     MoveImmediate64 {
         bits: u64,
         destination: Register,
@@ -133,6 +137,10 @@ pub(super) enum Instruction {
     },
     ZeroExtendByte {
         source: ByteRegister,
+        destination: Register,
+    },
+    LoadZeroExtendByte {
+        source: Operand,
         destination: Register,
     },
     Add {

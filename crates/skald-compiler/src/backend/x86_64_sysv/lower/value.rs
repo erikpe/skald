@@ -1,30 +1,41 @@
 //! Stack-home movement and canonical representation selection.
 
-use crate::mir::{MirStore, MirType, StorageId, ValueId};
+use crate::mir::{MirPlace, MirStore, MirType, StorageId, ValueId};
 
 use super::{
+    super::frame::FramePlace,
     super::machine::{ByteRegister, FloatOperand, Instruction, Operand, Register, XmmRegister},
     FrameLayout, InstructionSelector,
 };
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_store(&mut self, store: &MirStore) {
-        let ty = self
-            .function
-            .storage(store.destination.base)
-            .expect("verified store target must exist")
-            .ty;
-        debug_assert!(store.destination.projections.is_empty());
+        let (destination_layout, destination) = self.frame_place(&store.destination);
+        let ty = destination_layout.ty();
         let source = frame_value(self.frame, store.value);
-        let destination = frame_storage(self.frame, store.destination.base);
 
         if ty == MirType::F64 {
             load_float(float_operand(source), XmmRegister::Xmm14, self.output);
             store_float(XmmRegister::Xmm14, float_operand(destination), self.output);
         } else {
             load_rax(source, self.output);
-            store_canonical_rax(ty, destination, self.output);
+            if destination_layout.uses_byte_access() {
+                self.output.push(Instruction::MoveByte {
+                    source: ByteRegister::Al,
+                    destination,
+                });
+            } else {
+                store_canonical_rax(ty, destination, self.output);
+            }
         }
+    }
+
+    pub(super) fn frame_place(&self, place: &MirPlace) -> (FramePlace, Operand) {
+        let layout = self
+            .frame
+            .place(self.program, self.function, self.data_layout, place);
+        let operand = memory(Register::Rbp, layout.displacement());
+        (layout, operand)
     }
 }
 
@@ -32,6 +43,13 @@ pub(super) fn load_rax(source: Operand, output: &mut Vec<Instruction>) {
     output.push(Instruction::Move {
         source,
         destination: Register::Rax.into(),
+    });
+}
+
+pub(super) fn load_byte_rax(source: Operand, output: &mut Vec<Instruction>) {
+    output.push(Instruction::LoadZeroExtendByte {
+        source,
+        destination: Register::Rax,
     });
 }
 

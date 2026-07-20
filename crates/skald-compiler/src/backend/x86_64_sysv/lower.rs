@@ -11,6 +11,7 @@ use crate::{
 
 use super::{
     frame::FrameLayout,
+    layout::DataLayout,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
 };
 
@@ -19,7 +20,10 @@ mod call;
 mod terminator;
 mod value;
 
-pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendError> {
+pub(super) fn lower(
+    program: &MirProgram,
+    data_layout: &DataLayout,
+) -> Result<AssemblyProgram, BackendError> {
     let mut functions = program
         .definitions
         .iter()
@@ -28,7 +32,7 @@ pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendErro
                 .declarations
                 .get(function.function)
                 .expect("verified definition must have a declaration");
-            lower_function(program, declaration, function)
+            lower_function(program, data_layout, declaration, function)
         })
         .collect::<Result<Vec<_>, _>>()?;
     let entry = program
@@ -41,10 +45,11 @@ pub(super) fn lower(program: &MirProgram) -> Result<AssemblyProgram, BackendErro
 
 fn lower_function(
     program: &MirProgram,
+    data_layout: &DataLayout,
     declaration: &MirFunctionDeclaration,
     function: &MirFunctionDefinition,
 ) -> Result<AssemblyFunction, BackendError> {
-    let frame = FrameLayout::plan(function)?;
+    let frame = FrameLayout::plan(function, data_layout)?;
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
         Instruction::Move {
@@ -64,7 +69,7 @@ fn lower_function(
     for block in &function.body.blocks {
         instructions.push(Instruction::Label(block_label(block.id)));
         for instruction in &block.instructions {
-            InstructionSelector::new(program, function, &frame, &mut instructions)
+            InstructionSelector::new(program, data_layout, function, &frame, &mut instructions)
                 .select(instruction)?;
         }
         terminator::select(
@@ -111,6 +116,7 @@ fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
 
 struct InstructionSelector<'program, 'output> {
     program: &'program MirProgram,
+    data_layout: &'program DataLayout,
     function: &'program MirFunctionDefinition,
     frame: &'program FrameLayout,
     output: &'output mut Vec<Instruction>,
@@ -119,12 +125,14 @@ struct InstructionSelector<'program, 'output> {
 impl<'program, 'output> InstructionSelector<'program, 'output> {
     fn new(
         program: &'program MirProgram,
+        data_layout: &'program DataLayout,
         function: &'program MirFunctionDefinition,
         frame: &'program FrameLayout,
         output: &'output mut Vec<Instruction>,
     ) -> Self {
         Self {
             program,
+            data_layout,
             function,
             frame,
             output,

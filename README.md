@@ -85,8 +85,10 @@ and exclusion contracts. OBJ1 adds stable nominal class/member identities and
 one tagged callable identity shared by function, initializer, and method body
 ownership. OBJ2 adds canonical class/member MIR metadata, typed projected
 places, destination initialization, receiver-bearing direct calls, and the
-verifier rules that keep objects out of transient scalar values. OBJ3 is next:
-it establishes x86-64 layout and projected-place addressing before source
+verifier rules that keep objects out of transient scalar values. OBJ3 adds the
+checked x86-64 data-layout authority, aligned inline frame allocations, and
+width-correct lowering of nested field places. OBJ4 is next: it establishes
+initializer and method execution through the hidden receiver ABI before source
 syntax is enabled. Copying, destruction, polymorphism, and shared ownership
 remain deferred.
 
