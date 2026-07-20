@@ -44,8 +44,12 @@ branch selection in the backend, and exact native and failure coverage. The
 implementation preserves the phase boundary: branches are
 ordinary MIR control flow and the backend never rediscovers high-level syntax.
 
-The next language slice has not been selected. The candidates below describe
-distinct architectural pressures and should receive their own scoped roadmap.
+The selected next slice adds the remaining primitive types `u64`, `u8`, and
+`f64`, following [`PRIMITIVE_TYPES_ROADMAP.md`](PRIMITIVE_TYPES_ROADMAP.md).
+It deliberately separates full-width unsigned arithmetic, narrow-value
+canonicalization, and floating-point/SSE ABI work into distinct milestones.
+The other candidates below describe separate architectural pressures and
+should receive their own scoped roadmap.
 
 Adding the first inline object instead stresses layout, construction state, assignment, cleanup order, receiver access, and return conventions. That slice needs a written ABI/layout contract before code generation and should not be combined casually with shared ownership or exceptions.
 
@@ -54,9 +58,9 @@ Broader integer operations primarily stress specified edge-case semantics and in
 Arrays, optionals, loops/iterators, checked exceptions, shared ownership, and general local reference aliases remain deferred. Each crosses several of the boundaries above and should receive its own scoped roadmap rather than entering as an incidental parser feature.
 
 The completed output and boolean/conditional slices intentionally do not
-generalize foreign linkage or I/O. External declarations remain exact-symbol
-C-ABI declarations over by-value `i64` or `bool` parameters and `i64`, `bool`,
-or `unit` results. Alternate link names, variadic calls, additional ABI types, ownership-bearing arguments,
+generalize foreign linkage or I/O. T0 extends their exact-symbol C-ABI contract
+only with by-value `u64`, `u8`, and `f64` as their implementation milestones
+land. Alternate link names, variadic calls, non-primitive ABI types, ownership-bearing arguments,
 cross-module declaration coalescing, recoverable output errors, and the final
 standard-library I/O interface remain deferred and require explicit contracts
 before implementation. `unit` remains a payload-free result type and is not

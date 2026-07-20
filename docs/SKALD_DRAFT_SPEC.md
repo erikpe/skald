@@ -152,6 +152,12 @@ function values, variadic arguments, alternate link names, or user-selected
 calling conventions. Supporting `bool` does not otherwise generalize the
 foreign-function interface.
 
+The T-series primitive extension adds by-value `u64`, `u8`, and `f64`
+parameters and results to this same restricted profile as each type becomes
+implemented. On Linux x86-64 System V they correspond to C `uint64_t`,
+`uint8_t`, and `double`. A supported target must represent C `double` as
+IEEE-754 binary64 before it can implement Skald `f64`.
+
 Defined and external functions share one non-overloaded top-level function
 namespace. Any repeated name is a compile-time error, including two identical
 external declarations or an external declaration and a Skald definition. An
@@ -170,13 +176,25 @@ identifier prefix for compiler use.
 
 Calls use the selected target's C ABI. For the initial Linux x86-64 System V
 target, Skald `i64` corresponds to C `int64_t`, Skald `bool` corresponds to C
-`bool` (`_Bool`), and a Skald `unit` result corresponds to C `void`. `unit` has
-no runtime payload. Boolean arguments use the System V integer class and leave
-Skald as canonical C false or true values. An external boolean result is read
-from the ABI result byte and normalized to a canonical Skald `false` or `true`
-before it becomes observable to Skald code; unspecified upper result-register
-bits are not part of the value. Argument evaluation is left to right, as for a
-call to a Skald-defined function.
+`bool` (`_Bool`), Skald `u64` and `u8` correspond to C `uint64_t` and `uint8_t`,
+Skald `f64` corresponds to compatible C `double`, and a Skald `unit` result
+corresponds to C `void`. `unit` has no runtime payload.
+
+`i64`, `u64`, `u8`, and `bool` use the System V integer class. `f64` uses the
+SSE class. Scalar argument layout allocates the six integer registers and eight
+SSE registers with independent counters; a mixed signature does not select an
+XMM register from the argument's overall source position. An argument whose
+class has exhausted its registers is passed in an eight-byte stack slot while
+later arguments of the other class may still use registers. Stack placement
+and call-site padding follow System V and preserve 16-byte call alignment.
+
+`i64` and `u64` results use `%rax`, `u8` and `bool` results use their ABI result
+byte, and `f64` results use `%xmm0`. Boolean arguments leave Skald as canonical
+C false or true values. Incoming `u8` and boolean values are zero-extended or
+normalized before general Skald use; unspecified upper result-register bits
+are never part of a Skald value. Argument evaluation remains left to right and
+is independent of ABI placement. The stage-0 compiler uses the same scalar
+placement for Skald-defined and restricted external calls.
 
 An external declaration is a trusted assertion about the definition supplied
 at link time. `skac` checks Skald uses against the declared signature, and the
@@ -185,10 +203,10 @@ supplied foreign definition has a compatible ABI type. An incompatible linked
 definition is outside the language's safety and behavior guarantees.
 
 This profile is sufficient to declare the bootstrap output functions in
-Sections 13.1 and 13.2. It does not settle imports, export and visibility
-behavior, cross-module coalescing of ABI declarations, separate compilation,
-ownership transfer, or the complete foreign-function interface. Those remain
-specification gaps.
+Sections 13.1 through 13.3 as their value types become implemented. It does not
+settle imports, export and visibility behavior, cross-module coalescing of ABI
+declarations, separate compilation, ownership transfer, or the complete
+foreign-function interface. Those remain specification gaps.
 
 ---
 
@@ -202,10 +220,14 @@ Skald provides the following primitive value types:
 - `u64`
 - `u8`
 - `bool`
-- `double`
+- `f64`
 - `unit`
 
 Primitive types are always value types.
+
+The floating-point type is named `f64` to state its width directly. It is an
+IEEE-754 binary64 value and maps to C `double` only at compatible restricted
+foreign-ABI boundaries; `double` is not a Skald type keyword.
 
 `bool` is distinct from every integer type. Its only values are the literals
 `false` and `true`; it does not acquire numeric truthiness merely because a
@@ -217,9 +239,54 @@ making `bool` an eight-byte language type or an alias for `i64`.
 
 Default values:
 
-- numeric types default to zero;
+- `i64`, `u64`, and `u8` default to integer zero;
+- `f64` defaults to positive zero (`0x0000000000000000`);
 - `bool` defaults to `false`;
 - `unit` has a single value.
+
+These defaults apply only where a storage construct permits default
+initialization. The currently implemented local-declaration grammar still
+requires an initializer.
+
+#### 4.1.1 Numeric Literals
+
+The remaining-primitive slice uses this decimal literal grammar:
+
+```text
+decimal-digits = ASCII-digit+
+exponent       = ("e" | "E") ["+" | "-"] decimal-digits
+
+i64-literal = decimal-digits
+u64-literal = decimal-digits "u"
+u8-literal  = decimal-digits "u8"
+f64-literal = decimal-digits "." decimal-digits [exponent]
+            | decimal-digits exponent
+```
+
+An unsuffixed integer literal has type `i64`; expected type never changes it.
+The suffixes are case-sensitive. `u` denotes `u64`, `u8` denotes `u8`, and
+`u64` is not a valid suffix. A decimal point requires digits on both sides, so
+`.5` and `1.` are invalid in this profile. Hexadecimal, octal, binary,
+digit-separated, explicitly suffixed `f64`, infinity, and NaN literals are not
+included. A leading `-` is always the unary operator rather than literal text.
+
+Integer magnitudes are checked during type checking. `u64` accepts `0u`
+through `18446744073709551615u`; `u8` accepts `0u8` through `255u8`. The
+existing unsuffixed `i64` range and special unary-minus handling for `i64::MIN`
+remain unchanged.
+
+A decimal `f64` literal is converted to the nearest IEEE-754 binary64 value,
+with ties resolved to the even significand. A literal that rounds to infinity
+is a compile-time range error. Subnormal results and underflow to positive zero
+are valid; unary negation may then produce negative zero. Semantic and
+executable IR preserve the resulting raw 64-bit representation, and
+deterministic dumps render exactly 16 lowercase hexadecimal digits rather than
+host-formatted decimal text.
+
+Numeric-looking malformed text is consumed as one invalid token where
+possible. Bad suffixes, incomplete exponents, repeated decimal points, and
+identifier tails should therefore produce one focused lexical diagnostic
+rather than a misleading sequence of valid tokens.
 
 ### 4.2 Object Types
 
@@ -1340,19 +1407,35 @@ may be specified later.
 
 ### 10.3 Operators
 
-Primitive operator rules:
+The T-series primitive profile extends the currently implemented operator
+surface without adding new operator tokens:
 
-- arithmetic operators (`+`, `-`, `*`, `/`, `%`) require matching numeric operand types;
-- signed/unsigned mixing requires explicit casts;
-- unary minus is valid for `i64` and `double`;
-- exponentiation (`**`) is integer-only initially: the left operand is `i64`, `u64`, or `u8`, the right operand is `u64`, and the result has the left operand's type;
-- bitwise operators are valid for `i64`, `u64`, and `u8` and require matching operand types;
-- shift operators accept an `i64`, `u64`, or `u8` left operand and a `u64` right operand, and the result has the left operand's type;
-- right shift is arithmetic for `i64` and logical for `u64` and `u8`;
-- shift counts greater than or equal to the left operand's bit width panic and abort;
-- primitive casts are explicit.
+- binary `+`, `-`, and `*` require two operands of exactly the same numeric
+  type and produce that type;
+- no integer is implicitly widened, narrowed, or converted between signed and
+  unsigned representation;
+- `u64` addition, subtraction, and multiplication wrap modulo `2^64`;
+- `u8` addition, subtraction, and multiplication wrap modulo `2^8`, and every
+  result is canonicalized to `0..=255` before another operation, store, call,
+  or return can observe it;
+- `f64` addition, subtraction, multiplication, and unary negation follow
+  IEEE-754 binary64 under the default round-to-nearest, ties-to-even
+  environment, including signed zeroes, subnormals, infinities, and NaNs;
+- unary minus remains valid for `i64`, becomes valid for `f64`, and is invalid
+  for `u64` and `u8`.
 
-Signed integer division rounds toward negative infinity, and signed remainder has the divisor's sign.
+The restricted external-function profile assumes foreign callees preserve the
+default floating-point environment. NaN payload propagation from arithmetic is
+not guaranteed, but an unchanged `f64` value retains its raw representation.
+This profile does not alter the still-open `i64` overflow behavior.
+
+The broader language design reserves division, remainder, exponentiation,
+bitwise operations, and shifts for later slices. Their intended direction is
+matching numeric operands, explicit signed/unsigned casts, integer-only
+bitwise operations, and arithmetic versus logical right shift according to
+signedness. Exact division, remainder, shift-failure, and overflow behavior
+must be settled before those operators are implemented; they are not part of
+the T-series contract.
 
 ### 10.4 Indexing, Slicing, and For-In
 
@@ -1407,16 +1490,19 @@ The collection expression is evaluated once, and the iteration length is snapsho
 
 Primitive casts are explicit. Casts involving `unit` are invalid. Other primitive casts use the following rules:
 
-- `bool` converts to integer zero or one and to `double` zero or one;
+- `bool` converts to integer zero or one and to `f64` zero or one;
 - integers convert to `bool` as false for zero and true for nonzero;
-- `double` converts to `bool` as false for positive or negative zero and true for every other value;
+- `f64` converts to `bool` as false for positive or negative zero and true for every other value;
 - integer-to-integer casts truncate to the target width and then interpret the resulting bits using the target signedness; these casts do not panic;
-- integer-to-`double` casts use the source signedness and may lose precision;
-- `double`-to-integer casts truncate toward zero and then range-check the result; NaN, infinity, and out-of-range values panic and abort.
+- integer-to-`f64` casts use the source signedness and may lose precision;
+- `f64`-to-integer casts truncate toward zero and then range-check the result; NaN, infinity, and out-of-range values panic and abort.
 
 These cast rules describe the intended broader primitive-type system. The
-initial C-series boolean and conditional profile does not implement casts to
-or from `bool`; its conditions require an expression already typed as `bool`.
+T-series remaining-primitive profile implements no primitive casts at all and
+performs no contextual literal conversion or numeric promotion. Initializers,
+arguments, returns, and operator operands must already have the exact required
+type. Conditions likewise still require an expression already typed as
+`bool`. Cast syntax, lowering, and failure behavior require a later roadmap.
 
 Object casts:
 
@@ -1451,7 +1537,7 @@ The initial language keeps unrecoverable runtime failures:
 
 - failed checked casts;
 - out-of-bounds array access;
-- invalid primitive casts such as out-of-range `double -> i64`;
+- invalid primitive casts such as out-of-range `f64 -> i64`;
 - explicit panic;
 - out-of-memory;
 - failure to complete a bootstrap runtime stdout write.
@@ -1627,6 +1713,47 @@ This operation exists only for bootstrap observability. It does not introduce
 formatting, recoverable I/O, or a final standard-library printing API, and no
 compiler phase recognizes its name specially.
 
+### 13.3 Bootstrap Remaining-Primitive Output
+
+**Implementation status:** specified by T0 and planned for T1. T1 changes the
+runtime ABI version from 3 to 4 once, adding all three symbols below.
+
+```c
+#include <stdint.h>
+
+void ska_rt_println_u64(uint64_t value);
+void ska_rt_println_u8(uint8_t value);
+void ska_rt_println_f64_bits(double value);
+```
+
+The corresponding ordinary restricted external declarations are:
+
+```ska
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+```
+
+`ska_rt_println_u64` writes the shortest unsigned ASCII decimal representation
+of the complete `u64` range followed by one LF. `ska_rt_println_u8` does the
+same for the canonical value in `0..=255`. Neither writes a sign, leading
+zeroes except for the single value `0`, padding, grouping, locale-dependent
+characters, carriage return, or other whitespace.
+
+`ska_rt_println_f64_bits` observes representation rather than formatting a
+decimal number. It writes lowercase ASCII `0x`, exactly 16 lowercase
+hexadecimal digits containing the received IEEE-754 binary64 bit pattern from
+most-significant nibble to least-significant nibble, and one LF. Examples are
+`0x0000000000000000` for positive zero, `0x8000000000000000` for negative
+zero, and `0x3ff8000000000000` for `1.5`. The operation preserves and exposes
+the received representation of infinities and NaNs; it does not canonicalize
+them or promise how prior arithmetic chose a NaN payload.
+
+Each call produces one complete record and uses the existing unrecoverable
+detected-output-failure policy. The functions are locale-independent bootstrap
+test facilities, are not final user-facing formatting APIs, and receive no
+special recognition from the compiler.
+
 ---
 
 ## 14. Relationship to Niflheim
@@ -1636,7 +1763,7 @@ Skald originated in an exploratory draft called Niflheim2, which used the earlie
 Skald intentionally retains several ideas explored in Niflheim:
 
 - statically typed compiled language;
-- the primitive types `i64`, `u64`, `u8`, `bool`, `double`, and `unit`;
+- the primitive types `i64`, `u64`, `u8`, `bool`, `f64`, and `unit`;
 - fixed-size arrays;
 - modules/imports/exports;
 - classes;
@@ -1682,15 +1809,15 @@ Their existing sections preserve design direction and reserve likely syntax, but
 
 The following are also substantial gaps. They need not all be part of the first vertical slice, but each must be settled before the corresponding language area is considered complete:
 
-- **Lexical and grammatical definition:** the implemented first vertical slice has an explicit lexical and grammatical contract in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, literal spelling, operator precedence and associativity, and rules for resolving syntactic ambiguities.
+- **Lexical and grammatical definition:** the implemented slices and the planned T-series primitive extension have explicit lexical and grammatical contracts in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, additional literal families, later operator precedence and associativity, and rules for resolving syntactic ambiguities.
 - **Name, type, and call resolution:** the implemented first vertical slice defines single-file function and lexical-local resolution in [`grammar/README.md`](../grammar/README.md), without overloading or implicit conversions. The complete language still needs cross-module forward references, declaration cycles, overload availability or prohibition, candidate selection, implicit-conversion ranking, and generic diagnostics for ambiguous or invalid calls.
-- **Primitive edge-case semantics:** the first vertical slice defines decimal `i64` literal range checking, including the unary-minus spelling of `i64::MIN`, in [`grammar/README.md`](../grammar/README.md). Runtime arithmetic overflow and underflow, division or remainder by zero, the signed minimum divided by negative one, floating-point conformance and exceptional values, and whether constant evaluation diagnoses or reproduces runtime failures remain open.
+- **Primitive edge-case semantics:** the first vertical slice defines decimal `i64` literal range checking, including the unary-minus spelling of `i64::MIN`, and T0 defines `u64`/`u8` modular `+`, `-`, and `*` plus binary64 `f64` behavior for the same operator surface. Signed `i64` overflow, division or remainder by zero, the signed minimum divided by negative one, shifts, casts, comparisons, NaN payload propagation through arithmetic, decimal floating formatting, and whether future constant evaluation diagnoses or reproduces runtime failures remain open.
 - **Evaluation and cleanup ordering:** the first vertical slice now defines left-to-right operand and argument evaluation in [`grammar/README.md`](../grammar/README.md). The complete language still needs receiver ordering, full-expression boundaries, temporary destruction order, and cleanup sequencing for every control-flow exit. These are prerequisites before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.
 - **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
-- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines only the implemented single-file bootstrap profile of exact-symbol C-ABI declarations over `i64`, `bool`, and `unit`. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, additional ABI types, and ownership rules for foreign calls remain open.
-- **Required library and runtime surface:** Sections 13.1 and 13.2 define only the implemented bootstrap `i64` and `bool` line-output operations. The minimum facilities for general I/O, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
+- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
+- **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
 
@@ -1728,6 +1855,12 @@ Resolved decisions in this draft:
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - runtime ABI version 3 implements `ska_rt_println_bool`, which writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
+- the remaining primitive types are `u64`, `u8`, and IEEE-754 binary64 `f64`; `double` is not a Skald type keyword;
+- decimal `u64` literals use suffix `u`, decimal `u8` literals use suffix `u8`, decimal-point or exponent literals are `f64`, and expected type never reinterprets a numeric literal;
+- the T-series profile has no implicit numeric conversions, promotions, or primitive casts, and keeps `main` exactly `fn main() -> i64`;
+- `u64` and `u8` `+`, `-`, and `*` wrap modulo their widths, while `f64` arithmetic follows binary64 under the default round-to-nearest, ties-to-even environment;
+- System V integer and SSE argument registers are allocated independently for mixed scalar signatures, and every Skald-visible `u8` is canonical in `0..=255`;
+- runtime ABI version 4 is reserved for T1's `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;
 - conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
 - conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
 - a conditional definitely returns only when it has `else` and every arm definitely returns;

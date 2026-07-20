@@ -103,7 +103,7 @@ few tightly local tests inline.
 
 ### `runtime/`
 
-The minimal C runtime and its public ABI header. It builds as a static archive and is linked with generated assembly by the system C toolchain. ABI version 2 adds `ska_rt_println_i64(int64_t)`, a bootstrap output service that writes the shortest locale-independent ASCII decimal representation and one LF byte to stdout. ABI version 3 adds `ska_rt_println_bool(bool)`, which writes lowercase ASCII `true` or `false` and one LF. Both operations use one internal checked record-writing boundary, flush the completed record before returning, and terminate the process unsuccessfully after a detected write or flush failure.
+The minimal C runtime and its public ABI header. It builds as a static archive and is linked with generated assembly by the system C toolchain. ABI version 2 adds `ska_rt_println_i64(int64_t)`, a bootstrap output service that writes the shortest locale-independent ASCII decimal representation and one LF byte to stdout. ABI version 3 adds `ska_rt_println_bool(bool)`, which writes lowercase ASCII `true` or `false` and one LF. T0 reserves ABI version 4 for one T1 change adding unsigned decimal observation for `u64` and `u8` plus exact raw-bit observation for binary64 `f64`. All operations share one internal checked record-writing boundary, flush the completed record before returning, and terminate the process unsuccessfully after a detected write or flush failure.
 
 The runtime keeps C library implementation types such as `FILE *` private. Its public surface uses fixed-width integer types and standard C `bool`, and direct C consumers verify both header/archive version agreement and externally observable behavior. Later likely responsibilities include allocation, reference-count operations, panic reporting, runtime type metadata helpers, and other narrowly defined primitives. Garbage collection, root stacks, tracing, safepoints, and write barriers do not belong here.
 
@@ -277,6 +277,14 @@ M6 implements the first backend behind a small target registry that currently ac
 
 The x86-64 implementation separates ABI classification, frame planning, instruction selection, a typed target assembly model, and GNU textual emission. Every MIR storage slot and transient value initially receives an eight-byte stack home in a 16-byte-aligned fixed frame. This intentionally stack-heavy strategy uses `%rax` and `%rcx` as caller-saved scratch registers and preserves only the frame pointer; future register allocation can therefore replace a contained location-planning decision without changing MIR. C4 gives every MIR block a collision-proof `.Lska_fn_N_block_M` label and emits blocks in stable ID order. `Goto` becomes an unconditional jump; `Branch` loads and tests its canonical boolean condition, jumps to the true target when nonzero, and otherwise jumps explicitly to the false target. A function-local epilogue label centralizes frame teardown for returns from any block.
 
+T0 requires the remaining-primitive work to replace positional integer-only
+argument helpers with a complete scalar call-layout abstraction. Linux x86-64
+System V allocates integer-class and SSE-class registers independently, spills
+only an exhausted class to eight-byte stack slots, and preserves call-site
+alignment. The layout belongs to the backend; MIR retains only semantic types.
+T5 establishes this backend path with hand-built `f64` MIR before T6 enables
+source syntax.
+
 System V integer-class parameters, including `bool`, arrive in `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and `%r9`, followed by stack arguments. Parameters are spilled into their frame homes on entry, and scalar results are returned in `%rax`; an external C boolean result is normalized from `%al` before storage. `unit` has no result payload and neither reads nor writes a fictitious return register. Calls reserve an independently 16-byte-aligned outgoing stack area when more than six arguments are present. The backend selects call symbols centrally from declaration linkage: internal definitions use deterministic GNU-local `.Lska_fn_N` symbols that cannot collide with valid exact external identifiers, while external declarations retain their declared symbol. Assembly-shape tests cover the register/stack ABI boundary, frame and scratch-register policy, call linkage, boolean normalization, all initial instructions, legality rejection, and acceptance by the system assembler.
 
 The target-specific assembly model remains owned by the backend and does not leak target registers or ABI details into MIR.
@@ -315,7 +323,7 @@ Fast Rust unit tests should usually live beside the module under test. Larger co
 
 ### Runtime tests
 
-Small C harnesses compile directly against the runtime archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early. The output harness redirects stdout to a temporary file and compares exact bytes across zero, signed values, both `i64` extrema, boolean false and true, and consecutive calls. Child-process checks close stdout and verify that neither bootstrap output operation can return successfully after a detected write failure. C6 leaves this ABI and harness unchanged because its direct boolean-output contract was already completely covered by C1.
+Small C harnesses compile directly against the runtime archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early. The output harness redirects stdout to a temporary file and compares exact bytes across zero, signed values, both `i64` extrema, boolean false and true, and consecutive calls. Child-process checks close stdout and verify that neither bootstrap output operation can return successfully after a detected write failure. T1 extends the same harness for the complete `u64` and `u8` ranges represented by boundary cases, raw binary64 bit patterns including both zero signs, and failure paths for every new ABI operation.
 
 ### Golden tests
 

@@ -269,6 +269,93 @@ conditionals, non-exhaustive return rejection, exact parser and semantic
 diagnostics, and repeated-process determinism checks. It does not expand the
 grammar or introduce any of the excluded forms above.
 
+## Remaining primitive extension contract
+
+T0 fixes the syntax and semantic contract for the planned `u64`, `u8`, and
+`f64` extension. These forms are not implemented merely because they appear in
+this section; T3, T4, and T6 enable them only after each has a complete path
+through the supported backend.
+
+The extension adds these case-sensitive type keywords:
+
+```text
+u64 u8 f64
+```
+
+`double` is not a type keyword and remains an ordinary identifier. The numeric
+literal grammar is:
+
+```text
+ascii-digit     = "0" | "1" | "2" | "3" | "4"
+                | "5" | "6" | "7" | "8" | "9"
+decimal-digits  = ascii-digit+
+exponent        = ("e" | "E") ["+" | "-"] decimal-digits
+
+i64-literal     = decimal-digits
+u64-literal     = decimal-digits "u"
+u8-literal      = decimal-digits "u8"
+f64-literal     = decimal-digits "." decimal-digits [exponent]
+                | decimal-digits exponent
+numeric-literal = i64-literal | u64-literal | u8-literal | f64-literal
+```
+
+The alternatives are classified by their complete spelling: the suffix is
+part of one numeric token, not an identifier token following an integer.
+Numeric-looking malformed text is consumed together where possible. This
+includes unknown or uppercase suffixes, `u64`, incomplete exponents, repeated
+decimal points, digit separators, and identifier tails. A decimal point must
+have digits on both sides, so `.5` and `1.` are rejected in this profile.
+
+An unsuffixed integer always has type `i64`; expected type does not reinterpret
+it. The suffix `u` selects `u64`, and `u8` selects `u8`. Decimal-point and
+exponent forms select `f64`; there is no `f64` suffix. Leading `-` remains the
+existing unary operator and is never part of a literal token.
+
+Integer bounds are checked during type checking:
+
+- `u64`: `0u` through `18446744073709551615u`;
+- `u8`: `0u8` through `255u8`;
+- `i64`: the existing range and unary-minus `i64::MIN` rule remain unchanged.
+
+A decimal `f64` spelling is converted to nearest IEEE-754 binary64 with ties
+to even. Results may be subnormal or underflow to positive zero. A literal
+that rounds to infinity is rejected as out of range. Source spelling and span
+remain available for diagnostics, while typed IR stores the resulting raw bits
+and deterministic dumps use 16 lowercase hexadecimal digits.
+
+The extended type productions are:
+
+```text
+value-type  = "i64" | "u64" | "u8" | "bool" | "f64"
+result-type = value-type | "unit"
+primary     = identifier
+            | numeric-literal
+            | "true"
+            | "false"
+            | "(" expression ")"
+```
+
+Every initializer, argument, non-`unit` return, and binary arithmetic operand
+must match exactly. There is no expected-type literal inference, implicit
+promotion, signed/unsigned mixing, or primitive cast in this slice. Conditions
+still require exactly `bool`, and `main` remains exactly
+`fn main() -> i64`.
+
+The existing `+`, `-`, and `*` tokens apply to equal numeric operand types.
+Unsigned results wrap modulo their width, with `u8` canonicalized to `0..=255`
+at every observable boundary. `f64` uses IEEE-754 binary64 operations under the
+default round-to-nearest, ties-to-even environment. Unary `-` accepts `i64` and
+`f64`, but not `u64` or `u8`. Division, remainder, exponentiation, bitwise and
+shift operators, casts, comparisons, and implicit conversions remain outside
+this extension.
+
+The restricted external profile maps `u64`, `u8`, and `f64` to C `uint64_t`,
+`uint8_t`, and compatible binary64 `double`. On Linux x86-64 System V, integer
+and SSE arguments use independent register sequences, `u8` is normalized at
+Skald boundaries, and `f64` returns in `%xmm0`. The exact ABI and bootstrap
+output records are normative in Sections 3.1 and 13.3 of the draft
+specification.
+
 ## First vertical slice name resolution
 
 M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.
