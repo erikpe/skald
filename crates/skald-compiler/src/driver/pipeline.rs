@@ -14,7 +14,7 @@ use crate::{
     typeck::type_check,
 };
 
-const OBJECT_LOWERING_UNAVAILABLE: &str = "DRV001";
+const OBJECT_NATIVE_COMPILATION_UNAVAILABLE: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -75,20 +75,21 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    if let Some(class) = hir.classes.iter().next() {
+    let first_class = hir.classes.iter().next().map(|class| class.span);
+    let mir = run_mir_pipeline(lower_hir(&hir)).map_err(CompilationError::MirVerification)?;
+    if let Some(class_span) = first_class {
         diagnostics.push(
             Diagnostic::error(
-                OBJECT_LOWERING_UNAVAILABLE,
-                "inline-object MIR lowering is not implemented yet",
+                OBJECT_NATIVE_COMPILATION_UNAVAILABLE,
+                "inline-object native compilation is not enabled yet",
             )
             .with_primary_label(
-                class.span,
-                "this program is valid through typed HIR; native lowering arrives in OBJ8",
+                class_span,
+                "this program lowered to verified MIR; public native integration arrives in OBJ9",
             ),
         );
         return Err(diagnostic_failure(sources, diagnostics));
     }
-    let mir = run_mir_pipeline(lower_hir(&hir)).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 
     Ok(AssemblyArtifact {

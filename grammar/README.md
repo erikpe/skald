@@ -497,10 +497,10 @@ OBJ5 implements this source grammar and its source-shaped AST. Parsing performs
 no class or member lookup. OBJ6 performs that lookup in a separate two-pass
 resolver and records stable identities in resolved IR. OBJ7 type-checks those
 forms into nominal, identity-based HIR and enforces the restricted construction,
-initialization, and receiver rules. Public native acceptance remains disabled
-until OBJ8 connects the complete frontend and backend path and OBJ9 enables and
-hardens it; typed object forms currently stop at an explicit pre-OBJ8
-MIR-lowering diagnostic.
+initialization, and receiver rules. OBJ8 lowers successful object HIR to
+verified, place-based MIR accepted by the existing backend. OBJ9 enables and
+hardens the complete public path; object forms currently stop after MIR
+verification at an explicit pre-OBJ9 native-integration diagnostic.
 
 The extension adds the globally reserved keywords:
 

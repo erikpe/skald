@@ -891,10 +891,11 @@ The initial language has no separate `const T` type syntax. The compiler tracks 
 implements its source grammar and source-shaped AST, OBJ6 resolves nominal
 class types and member selections to stable identities, and OBJ7 produces
 typed class/member HIR while enforcing construction, initialization, excluded
-object-value contexts, and receiver access. The public compiler currently stops
-a successfully typed object program at an explicit pre-OBJ8 MIR-lowering
-boundary until the remaining OBJ milestones implement and enable the complete
-path.
+object-value contexts, and receiver access. OBJ8 lowers that model to verified
+class/member MIR with place-based construction and identity-selected field and
+method operations. The public compiler currently stops a successful object
+program after MIR verification at an explicit pre-OBJ9 native-integration
+boundary.
 This subsection narrows the broader class model above for the first
 implementation; it does not remove features from the eventual language.
 

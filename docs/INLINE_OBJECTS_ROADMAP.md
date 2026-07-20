@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ7 complete; OBJ8 is next.
+Status: OBJ0–OBJ8 complete; OBJ9 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -206,7 +206,7 @@ reconstructing source evaluation.
 - [x] OBJ5 — Add class, member, and construction syntax
 - [x] OBJ6 — Resolve nominal classes, fields, initializers, and methods
 - [x] OBJ7 — Type-check inline objects, construction, and receiver access
-- [ ] OBJ8 — Lower the frontend object model into verified MIR
+- [x] OBJ8 — Lower the frontend object model into verified MIR
 - [ ] OBJ9 — Enable and harden the complete native slice
 
 A task is complete only when its checkboxes, acceptance criteria, and relevant
@@ -409,18 +409,18 @@ member selection, and access; invalid forms fail before MIR.
 **Purpose:** Connect HIR to the tested object MIR without adding implicit
 lifecycle behavior.
 
-- [ ] Lower metadata and executable declarations in stable identity order.
-- [ ] Allocate one class-typed storage place per object local.
-- [ ] Evaluate constructor arguments left to right and initialize directly into
+- [x] Lower metadata and executable declarations in stable identity order.
+- [x] Allocate one class-typed storage place per object local.
+- [x] Evaluate constructor arguments left to right and initialize directly into
       that place.
-- [ ] Lower field access and calls through projected/receiver places and stable
+- [x] Lower field access and calls through projected/receiver places and stable
       member identities.
-- [ ] Evaluate receivers before explicit arguments and preserve source order in
+- [x] Evaluate receivers before explicit arguments and preserve source order in
       MIR instructions/control flow.
-- [ ] Keep object locals out of `MirValue`; create no aggregate copies,
+- [x] Keep object locals out of `MirValue`; create no aggregate copies,
       returns, or temporaries.
-- [ ] Verify all produced MIR and report invariant failures structurally.
-- [ ] Extend lowering/dump fixtures without production test helpers.
+- [x] Verify all produced MIR and report invariant failures structurally.
+- [x] Extend lowering/dump fixtures without production test helpers.
 
 **Tests:** Construction, both receiver modes, `self` calls, mixed fields,
 multiple locals, nested blocks/conditionals, evaluation order, exact dumps, and

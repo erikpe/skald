@@ -298,20 +298,20 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn typed_objects_stop_at_the_explicit_pre_obj8_lowering_boundary() {
+fn verified_object_mir_stops_at_the_explicit_pre_obj9_native_boundary() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "object.ska",
         "class Empty { init() {} } fn main() -> i64 { var value: Empty = Empty(); return 0; }",
         Target::X86_64SysV,
     )
     .unwrap_err() else {
-        panic!("expected the pre-OBJ8 capability diagnostic");
+        panic!("expected the pre-OBJ9 capability diagnostic");
     };
 
     assert_eq!(report.diagnostics.len(), 1);
     let diagnostic = report.diagnostics.iter().next().unwrap();
     assert_eq!(diagnostic.code, "DRV001");
-    assert!(diagnostic.message.contains("MIR lowering"));
+    assert!(diagnostic.message.contains("native compilation"));
 }
 
 #[test]

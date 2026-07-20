@@ -389,9 +389,10 @@ source AST and parser surface. OBJ6 implements phase-owned resolved class/member
 tables and identity-based semantic selection. OBJ7 implements phase-owned
 nominal class/member HIR, destination-oriented construction, typed places,
 definite initialization, receiver access, and member-body flow. OBJ8–OBJ9
-implement lowering and integration. The frontend accepts and types the
-restricted syntax, but the public compiler stops it at an explicit pre-OBJ8
-MIR-lowering boundary until the complete path exists.
+implement lowering and integration. OBJ8 now lowers the restricted syntax to
+verified, identity-based object MIR already accepted by the backend. The public
+compiler stops after that verification at an explicit pre-OBJ9 native-
+integration boundary until the complete path is enabled and hardened.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and

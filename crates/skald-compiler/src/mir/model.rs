@@ -153,9 +153,6 @@ pub struct MirClassDeclarationTable {
 }
 
 impl MirClassDeclarationTable {
-    // Production construction begins in OBJ8. OBJ2 uses this constructor in
-    // focused MIR tests while the ordinary frontend still emits no classes.
-    #[allow(dead_code)]
     pub(crate) fn new(entries: Vec<MirClassDeclaration>) -> Self {
         assert!(
             entries
@@ -378,9 +375,6 @@ pub struct MirMemberDefinitionTable {
 }
 
 impl MirMemberDefinitionTable {
-    // Production construction begins when frontend object lowering lands.
-    // OBJ4 uses this constructor for backend-first member-body fixtures.
-    #[allow(dead_code)]
     pub(crate) fn new(entries: Vec<MirMemberDefinition>) -> Self {
         let mut table = BTreeMap::new();
         for definition in entries {

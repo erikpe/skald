@@ -98,9 +98,12 @@ bodies, and stable identity selection for named types, construction, `self`,
 fields, and methods. OBJ7 adds nominal class/member HIR, direct-local
 construction, typed field places, definite field initialization, receiver
 access enforcement, reusable method return-flow analysis, and deterministic
-object HIR dumps. OBJ8 is next: it lowers this typed object model into the
-already verified construction/place MIR. Copying, destruction, polymorphism,
-and shared ownership remain deferred.
+object HIR dumps. OBJ8 lowers that model into verified MIR: class/member
+metadata and executable bodies retain stable identities, objects occupy places
+rather than transient values, construction writes directly into local storage,
+and field/method operations preserve source evaluation order. OBJ9 is next: it
+enables and hardens the complete native source path. Copying, destruction,
+polymorphism, and shared ownership remain deferred.
 
 ## Development
 

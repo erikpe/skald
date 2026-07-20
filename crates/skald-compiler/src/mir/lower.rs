@@ -2,20 +2,18 @@
 
 use crate::{
     hir::{
-        BlockFlow, HirBinaryOperation, HirBlock, HirConditional, HirExpression, HirExpressionKind,
-        HirFunctionDeclaration, HirFunctionDefinition, HirFunctionLinkage, HirProgram,
-        HirStatement, HirUnaryOperation, Type,
+        BlockFlow, HirBinaryOperation, HirBlock, HirClassDeclaration, HirConditional,
+        HirExpression, HirExpressionKind, HirFunctionDeclaration, HirFunctionDefinition,
+        HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter, HirProgram,
+        HirReceiverAccess, HirStatement, HirUnaryOperation, Type,
     },
-    identity::BindingId,
+    identity::{BindingId, CallableId, ClassId},
 };
 
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    assert!(
-        hir.classes.is_empty(),
-        "object HIR lowering is unavailable until OBJ8"
-    );
+    let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
         .declarations
@@ -23,14 +21,20 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         .map(|declaration| {
             hir.definitions
                 .get(declaration.id)
-                .map(|definition| FunctionLowerer::lower(declaration, definition))
+                .map(|definition| lower_function_definition(declaration, definition))
         })
         .collect();
+    let member_definitions = hir
+        .class_definitions
+        .iter()
+        .flat_map(|class| std::iter::once(&class.initializer).chain(class.methods.iter()))
+        .map(|definition| lower_member_definition(hir, definition))
+        .collect();
     let mir = MirProgram {
-        classes: MirClassDeclarationTable::default(),
+        classes: MirClassDeclarationTable::new(classes),
         declarations: MirFunctionDeclarationTable::new(declarations),
         definitions: MirFunctionDefinitionTable::new(definitions),
-        member_definitions: MirMemberDefinitionTable::default(),
+        member_definitions: MirMemberDefinitionTable::new(member_definitions),
         entry_function: hir.entry_function,
         span: hir.span,
     };
@@ -40,6 +44,53 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
     mir
+}
+
+fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
+    MirClassDeclaration {
+        id: class.id,
+        name: class.name.clone(),
+        fields: class
+            .fields
+            .iter()
+            .map(|field| MirFieldDeclaration {
+                id: field.id,
+                name: field.name.clone(),
+                ty: lower_type(field.ty),
+                span: field.span,
+            })
+            .collect(),
+        initializers: vec![MirInitializerDeclaration {
+            id: class.initializer.id,
+            parameter_types: class
+                .initializer
+                .parameters
+                .iter()
+                .map(|parameter| lower_type(parameter.ty))
+                .collect(),
+            span: class.initializer.span,
+        }],
+        methods: class
+            .methods
+            .iter()
+            .map(|method| MirMethodDeclaration {
+                id: method.id,
+                name: method.name.clone(),
+                receiver_access: match method.receiver_access {
+                    HirReceiverAccess::ReadOnly => MirReceiverAccess::ReadOnly,
+                    HirReceiverAccess::Mutable => MirReceiverAccess::Mutable,
+                },
+                parameter_types: method
+                    .parameters
+                    .iter()
+                    .map(|parameter| lower_type(parameter.ty))
+                    .collect(),
+                return_type: lower_type(method.return_type),
+                span: method.span,
+            })
+            .collect(),
+        span: class.span,
+    }
 }
 
 fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclaration {
@@ -62,9 +113,74 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
     }
 }
 
-struct FunctionLowerer<'hir> {
-    declaration: &'hir HirFunctionDeclaration,
-    definition: &'hir HirFunctionDefinition,
+fn lower_function_definition(
+    declaration: &HirFunctionDeclaration,
+    definition: &HirFunctionDefinition,
+) -> MirFunctionDefinition {
+    let lowered = BodyLowerer::lower(BodyLoweringInput {
+        callable: declaration.id.into(),
+        parameters: &declaration.parameters,
+        locals: &definition.locals,
+        source_body: &definition.body,
+        return_type: declaration.return_type,
+        receiver_class: None,
+    });
+    MirFunctionDefinition {
+        function: declaration.id,
+        parameters: lowered.parameters,
+        storage: lowered.storage,
+        values: lowered.values,
+        body: lowered.body,
+        span: definition.span,
+    }
+}
+
+fn lower_member_definition(
+    hir: &HirProgram,
+    definition: &HirMemberDefinition,
+) -> MirMemberDefinition {
+    let signature = hir
+        .callable_signature(definition.callable)
+        .expect("typed member definition must have a signature");
+    let lowered = BodyLowerer::lower(BodyLoweringInput {
+        callable: definition.callable,
+        parameters: signature.parameters,
+        locals: &definition.locals,
+        source_body: &definition.body,
+        return_type: signature.return_type,
+        receiver_class: definition.callable.class(),
+    });
+    MirMemberDefinition {
+        callable: definition.callable,
+        receiver: lowered.receiver.expect("member body must lower a receiver"),
+        parameters: lowered.parameters,
+        storage: lowered.storage,
+        values: lowered.values,
+        body: lowered.body,
+        span: definition.span,
+    }
+}
+
+struct BodyLoweringInput<'hir> {
+    callable: CallableId,
+    parameters: &'hir [HirParameter],
+    locals: &'hir [HirLocal],
+    source_body: &'hir HirBlock,
+    return_type: Type,
+    receiver_class: Option<ClassId>,
+}
+
+struct LoweredBody {
+    receiver: Option<StorageId>,
+    parameters: Vec<StorageId>,
+    storage: Vec<MirStorage>,
+    values: Vec<MirValue>,
+    body: MirBody,
+}
+
+struct BodyLowerer<'hir> {
+    input: BodyLoweringInput<'hir>,
+    receiver_storage: Option<StorageId>,
     parameter_storage: Vec<StorageId>,
     local_storage: Vec<StorageId>,
     storage: Vec<MirStorage>,
@@ -72,46 +188,57 @@ struct FunctionLowerer<'hir> {
     body: MirBodyBuilder,
 }
 
-impl<'hir> FunctionLowerer<'hir> {
-    fn lower(
-        declaration: &'hir HirFunctionDeclaration,
-        definition: &'hir HirFunctionDefinition,
-    ) -> MirFunctionDefinition {
+impl<'hir> BodyLowerer<'hir> {
+    fn lower(input: BodyLoweringInput<'hir>) -> LoweredBody {
         let mut lowerer = Self {
-            declaration,
-            definition,
-            parameter_storage: Vec::with_capacity(declaration.parameters.len()),
-            local_storage: Vec::with_capacity(definition.locals.len()),
-            storage: Vec::with_capacity(declaration.parameters.len() + definition.locals.len()),
+            parameter_storage: Vec::with_capacity(input.parameters.len()),
+            local_storage: Vec::with_capacity(input.locals.len()),
+            storage: Vec::with_capacity(
+                input.parameters.len()
+                    + input.locals.len()
+                    + usize::from(input.receiver_class.is_some()),
+            ),
             values: Vec::new(),
-            body: MirBodyBuilder::new(declaration.id, definition.body.span),
+            body: MirBodyBuilder::new(input.callable, input.source_body.span),
+            receiver_storage: None,
+            input,
         };
         lowerer.allocate_storage();
-        lowerer.lower_block(&definition.body);
-        if !lowerer.body.is_current_terminated() && declaration.return_type == Type::Unit {
+        lowerer.lower_block(lowerer.input.source_body);
+        if !lowerer.body.is_current_terminated() && lowerer.input.return_type == Type::Unit {
             lowerer.terminate(MirTerminator::Return {
                 value: None,
-                span: definition.body.span,
+                span: lowerer.input.source_body.span,
             });
         }
         assert!(
             lowerer.body.is_current_terminated(),
-            "type-checked function must lower to a terminated entry block"
+            "type-checked callable must lower to a terminated entry block"
         );
-
-        MirFunctionDefinition {
-            function: declaration.id,
+        LoweredBody {
+            receiver: lowerer.receiver_storage,
             parameters: lowerer.parameter_storage,
             storage: lowerer.storage,
             values: lowerer.values,
             body: lowerer.body.finish(),
-            span: definition.span,
         }
     }
 
     fn allocate_storage(&mut self) {
-        for parameter in &self.declaration.parameters {
-            let id = StorageId::new(self.declaration.id, self.storage.len());
+        if let Some(class) = self.input.receiver_class {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.receiver_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: BindingId::Receiver(self.input.callable),
+                name: "self".to_owned(),
+                kind: MirStorageKind::Receiver,
+                ty: MirType::Class(class),
+                span: self.input.source_body.span,
+            });
+        }
+        for parameter in self.input.parameters {
+            let id = StorageId::new(self.input.callable, self.storage.len());
             self.parameter_storage.push(id);
             self.storage.push(MirStorage {
                 id,
@@ -122,8 +249,8 @@ impl<'hir> FunctionLowerer<'hir> {
                 span: parameter.span,
             });
         }
-        for local in &self.definition.locals {
-            let id = StorageId::new(self.declaration.id, self.storage.len());
+        for local in self.input.locals {
+            let id = StorageId::new(self.input.callable, self.storage.len());
             self.local_storage.push(id);
             self.storage.push(MirStorage {
                 id,
@@ -143,20 +270,36 @@ impl<'hir> FunctionLowerer<'hir> {
             }
             match statement {
                 HirStatement::Local(local) => {
-                    let value = match &local.initializer {
-                        crate::hir::HirLocalInitializer::Value(initializer) => self
-                            .lower_expression(initializer)
-                            .expect("typed local initializer must produce a value"),
-                        crate::hir::HirLocalInitializer::Construct(_) => {
-                            unreachable!("object HIR lowering arrives in OBJ8")
-                        }
-                    };
                     let storage = self.local_storage[local.local.index()];
-                    self.emit(MirInstruction::Store(MirStore {
-                        destination: storage.into(),
-                        value,
-                        span: local.span,
-                    }));
+                    match &local.initializer {
+                        crate::hir::HirLocalInitializer::Value(initializer) => {
+                            let value = self
+                                .lower_expression(initializer)
+                                .expect("typed scalar local initializer must produce a value");
+                            self.emit(MirInstruction::Store(MirStore {
+                                destination: storage.into(),
+                                value,
+                                span: local.span,
+                            }));
+                        }
+                        crate::hir::HirLocalInitializer::Construct(construction) => {
+                            let arguments = construction
+                                .arguments
+                                .iter()
+                                .map(|argument| {
+                                    self.lower_expression(argument).expect(
+                                        "typed constructor argument must produce a scalar value",
+                                    )
+                                })
+                                .collect();
+                            self.emit(MirInstruction::Initialize(MirInitialize {
+                                destination: storage.into(),
+                                target: construction.initializer,
+                                arguments,
+                                span: construction.span,
+                            }));
+                        }
+                    }
                 }
                 HirStatement::Return(statement) => {
                     let value = statement.value.as_ref().map(|value| {
@@ -176,8 +319,18 @@ impl<'hir> FunctionLowerer<'hir> {
                     self.lower_conditional(conditional);
                 }
                 HirStatement::Block(block) => self.lower_block(block),
-                HirStatement::FieldAssignment(_) => {
-                    unreachable!("object HIR lowering arrives in OBJ8")
+                HirStatement::FieldAssignment(assignment) => {
+                    // The receiver place is selected before the value. Stage-0
+                    // receivers are stable bindings and emit no instructions.
+                    let destination = self.lower_field_place(&assignment.place);
+                    let value = self
+                        .lower_expression(&assignment.value)
+                        .expect("typed field assignment must produce a scalar value");
+                    self.emit(MirInstruction::Store(MirStore {
+                        destination,
+                        value,
+                        span: assignment.span,
+                    }));
                 }
             }
         }
@@ -262,13 +415,7 @@ impl<'hir> FunctionLowerer<'hir> {
     fn lower_expression(&mut self, expression: &HirExpression) -> Option<ValueId> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => {
-                let storage = match binding {
-                    BindingId::Receiver(_) => {
-                        unreachable!("function-only HIR cannot contain an implicit receiver")
-                    }
-                    BindingId::Parameter(id) => self.parameter_storage[id.index()],
-                    BindingId::Local(id) => self.local_storage[id.index()],
-                };
+                let storage = self.storage_for_binding(*binding);
                 Some(self.assign(
                     MirRvalueKind::Load(storage.into()),
                     lower_type(expression.ty),
@@ -375,9 +522,60 @@ impl<'hir> FunctionLowerer<'hir> {
                 result
             }
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
-            HirExpressionKind::FieldRead(_) | HirExpressionKind::MethodCall { .. } => {
-                unreachable!("object HIR lowering arrives in OBJ8")
+            HirExpressionKind::FieldRead(place) => Some(self.assign(
+                MirRvalueKind::Load(self.lower_field_place(place)),
+                lower_type(expression.ty),
+                expression.span,
+            )),
+            HirExpressionKind::MethodCall {
+                receiver,
+                method,
+                arguments,
+            } => {
+                // Receiver selection precedes all explicit argument effects.
+                let receiver = self.lower_object_place(receiver);
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| {
+                        self.lower_expression(argument)
+                            .expect("typed method argument must produce a scalar value")
+                    })
+                    .collect();
+                let result = (expression.ty != Type::Unit)
+                    .then(|| self.new_value(lower_type(expression.ty), expression.span));
+                self.emit(MirInstruction::Call(MirCall {
+                    target: MirCallTarget::Method(*method),
+                    receiver: Some(receiver),
+                    arguments,
+                    result,
+                    span: expression.span,
+                }));
+                result
             }
+        }
+    }
+
+    fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
+        self.lower_object_place(&place.receiver)
+            .project_field(place.field)
+    }
+
+    fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
+        self.storage_for_binding(place.binding).into()
+    }
+
+    fn storage_for_binding(&self, binding: BindingId) -> StorageId {
+        assert_eq!(
+            binding.callable(),
+            self.input.callable,
+            "typed binding must belong to the current callable"
+        );
+        match binding {
+            BindingId::Receiver(_) => self
+                .receiver_storage
+                .expect("receiver binding requires member receiver storage"),
+            BindingId::Parameter(id) => self.parameter_storage[id.index()],
+            BindingId::Local(id) => self.local_storage[id.index()],
         }
     }
 
@@ -404,7 +602,11 @@ impl<'hir> FunctionLowerer<'hir> {
     }
 
     fn new_value(&mut self, ty: MirType, span: crate::source::Span) -> ValueId {
-        let result = ValueId::new(self.declaration.id, self.values.len());
+        assert!(
+            ty.is_scalar_value(),
+            "typed HIR lowering must not materialize a non-scalar MIR value"
+        );
+        let result = ValueId::new(self.input.callable, self.values.len());
         self.values.push(MirValue {
             id: result,
             ty,
