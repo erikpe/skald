@@ -1,0 +1,102 @@
+use super::*;
+
+#[test]
+fn lowers_source_conditionals_to_deterministic_block_branches() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  if (false) { return 1; }\n",
+        "  elif (true) { return 2; }\n",
+        "  else { return 3; }\n",
+        "}\n",
+    );
+
+    let output = assembly(source);
+    assert_eq!(output, assembly(source));
+    assert!(output.contains(".Lska_fn_0_block_0:"));
+    assert!(output.contains("jne .Lska_fn_0_block_1"));
+    assert!(output.contains("jmp .Lska_fn_0_block_2"));
+    assert!(output.contains(".Lska_fn_0_block_4:"));
+}
+
+#[test]
+fn lowers_forward_and_backward_jumps_in_stable_block_order() {
+    let mut mir = lower_text("fn main() -> i64 { return 0; }");
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let span = function.span;
+    function.values.clear();
+    function.body.blocks[0].instructions.clear();
+    let second = BlockId::new(function.function, 1);
+    function.body.blocks[0].terminator = Some(MirTerminator::Goto {
+        target: second,
+        span,
+    });
+    function.body.blocks.push(MirBasicBlock {
+        id: second,
+        instructions: Vec::new(),
+        terminator: Some(MirTerminator::Goto {
+            target: function.body.entry,
+            span,
+        }),
+        span,
+    });
+    assert!(verify_mir(&mir).is_ok());
+
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let first_position = output.find(".Lska_fn_0_block_0:").unwrap();
+    let second_position = output.find(".Lska_fn_0_block_1:").unwrap();
+    assert!(first_position < second_position);
+    assert!(output.contains(".Lska_fn_0_block_0:\n    jmp .Lska_fn_0_block_1"));
+    assert!(output.contains(".Lska_fn_0_block_1:\n    jmp .Lska_fn_0_block_0"));
+}
+
+#[test]
+fn lowers_boolean_branches_and_returns_in_both_arms() {
+    let output = emit_assembly(Target::X86_64SysV, &conditional_return_mir(true)).unwrap();
+
+    assert!(output.contains(
+        "movq -8(%rbp), %rax\n    testq %rax, %rax\n    jne .Lska_fn_0_block_1\n    jmp .Lska_fn_0_block_2"
+    ));
+    assert!(output.contains(".Lska_fn_0_block_1:\n    movabsq $37, %rax"));
+    assert!(output.contains(".Lska_fn_0_block_2:\n    movabsq $12, %rax"));
+    assert_eq!(output.matches("jmp .Lska_fn_0_epilogue").count(), 2);
+    assert_eq!(output.matches(".Lska_fn_0_epilogue:").count(), 1);
+}
+
+#[test]
+fn lowers_a_diamond_with_branch_local_calls_and_a_storage_join() {
+    let output = emit_assembly(Target::X86_64SysV, &branch_call_diamond_mir()).unwrap();
+
+    for index in 0..=3 {
+        assert_eq!(
+            output
+                .matches(&format!(".Lska_fn_2_block_{index}:"))
+                .count(),
+            1
+        );
+    }
+    assert!(output.contains(".Lska_fn_2_block_1:\n    call .Lska_fn_0"));
+    assert!(output.contains(".Lska_fn_2_block_2:\n    call .Lska_fn_1"));
+    assert_eq!(output.matches("jmp .Lska_fn_2_block_3").count(), 2);
+    assert!(output.contains(".Lska_fn_2_block_3:\n    movq -8(%rbp), %rax"));
+}
+
+#[test]
+fn jumps_to_a_non_first_entry_before_emitting_blocks_in_id_order() {
+    let mut mir = conditional_return_mir(true);
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    function.body.entry = function.body.blocks[1].id;
+    assert!(verify_mir(&mir).is_ok());
+
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    let entry_jump = output.find("jmp .Lska_fn_0_block_1").unwrap();
+    let first_block = output.find(".Lska_fn_0_block_0:").unwrap();
+    let selected_block = output.find(".Lska_fn_0_block_1:").unwrap();
+    assert!(entry_jump < first_block);
+    assert!(first_block < selected_block);
+}

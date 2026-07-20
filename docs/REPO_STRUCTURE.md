@@ -441,6 +441,17 @@ not exported to dependent crates. Drop-based cleanup also runs during assertion
 unwinding. None of these helpers or their dependencies enter production library
 builds.
 
+R9 keeps larger phase-level suites beside their implementation while splitting
+them into behavior-oriented modules. MIR tests are grouped by builder,
+lowering, control flow, verification, and dumps. Type-checker tests are grouped
+by declarations, expressions, literals, control flow, diagnostics, and dumps;
+syntax and resolution follow the same principle where their suites benefit.
+The x86-64 suite separates instruction selection, calls, control flow,
+legality, assembler acceptance, and native execution, while ABI classification
+tests remain beside the ABI implementation. Shared fixtures stay in private
+parent or support modules, preserving access to implementation details without
+exporting test APIs or moving phase-level coverage into golden tests.
+
 ### Runtime tests
 
 Small C harnesses compile directly against the runtime archive. This isolates runtime behavior from compiler correctness and catches ABI mismatches early. The output harness redirects stdout to a temporary file and compares exact bytes across zero, signed values, both `i64` extrema, boolean false and true, and consecutive calls. T1 adds `u64` and `u8` boundaries, raw binary64 patterns for both zero signs, finite extrema, infinity, and a retained NaN payload, plus mixed consecutive records. Child-process checks close stdout and verify that every bootstrap output operation terminates unsuccessfully after a detected write failure. C11 static assertions in both runtime and harness reject targets without eight-bit bytes and compatible binary64 C `double`.

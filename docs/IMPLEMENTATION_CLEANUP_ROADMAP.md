@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R5 are complete and R6 is the next implementation task.
+Status: in progress; R0–R9 are complete and R10 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -68,7 +68,7 @@ gate before its checkbox is marked complete.
 - [x] R6 — Bound recursive syntax nesting
 - [x] R7 — Decompose x86-64 instruction and call lowering
 - [x] R8 — Introduce shared compiler test support
-- [ ] R9 — Split oversized Rust test modules by behavior
+- [x] R9 — Split oversized Rust test modules by behavior
 - [ ] R10 — Split the runtime ABI harness by responsibility
 - [ ] R11 — Correct diagnostics, comments, and small formatting duplication
 - [ ] R12 — Complete the cleanup audit and final quality gate
@@ -266,14 +266,14 @@ remain readable without hidden semantic setup.
 **Purpose:** Keep growing coverage navigable and give new features an obvious
 test location.
 
-- [ ] Split MIR tests into builder, lowering, control-flow, verification, and
+- [x] Split MIR tests into builder, lowering, control-flow, verification, and
       dump modules.
-- [ ] Split x86-64 tests into ABI, instruction selection, calls, control flow,
+- [x] Split x86-64 tests into ABI, instruction selection, calls, control flow,
       legality, assembler, and native-execution modules.
-- [ ] Split type-checker tests into declarations, expressions, literals,
+- [x] Split type-checker tests into declarations, expressions, literals,
       control flow, diagnostics, and dumps.
-- [ ] Split syntax and resolution tests where their size benefits similarly.
-- [ ] Preserve private-module access and avoid moving phase-unit tests into
+- [x] Split syntax and resolution tests where their size benefits similarly.
+- [x] Preserve private-module access and avoid moving phase-unit tests into
       end-to-end goldens.
 
 **Tests:** This task is mechanical; test names, assertions, and total test count

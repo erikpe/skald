@@ -1,0 +1,36 @@
+use super::*;
+use crate::{
+    identity::{BindingId, FunctionId},
+    lexer::lex,
+    literal::NumericLiteralKind,
+    source::SourceDatabase,
+    syntax::{self, parse, Statement},
+    test_support::resolve_source,
+};
+
+use crate::resolve::dump_resolved;
+
+fn resolve_text(text: &str) -> ResolveOutput {
+    resolve_source(text)
+}
+
+fn local_initializer(statement: &ResolvedStatement) -> &ResolvedExpression {
+    let ResolvedStatement::Local(local) = statement else {
+        panic!("expected local declaration");
+    };
+    &local.initializer
+}
+
+fn return_value(statement: &ResolvedStatement) -> &ResolvedExpression {
+    let ResolvedStatement::Return(statement) = statement else {
+        panic!("expected return statement");
+    };
+    statement.value.as_ref().expect("expected a return value")
+}
+
+mod bindings;
+mod control_flow;
+mod declarations;
+mod diagnostics;
+mod dumps;
+mod expressions;
