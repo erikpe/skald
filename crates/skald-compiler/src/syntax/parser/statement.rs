@@ -16,6 +16,16 @@ impl Parser<'_> {
         stop_at_conditional_continuation: bool,
     ) -> Option<Block> {
         let left_brace = self.expect(TokenKind::LeftBrace, "`{` to start a block")?;
+        self.with_syntax_nesting(left_brace.span, move |parser| {
+            parser.parse_block_contents(left_brace, stop_at_conditional_continuation)
+        })
+    }
+
+    fn parse_block_contents(
+        &mut self,
+        left_brace: Token,
+        stop_at_conditional_continuation: bool,
+    ) -> Option<Block> {
         let mut statements = Vec::new();
 
         while !self.at_any(&[TokenKind::RightBrace, TokenKind::Eof]) {

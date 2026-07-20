@@ -65,7 +65,7 @@ gate before its checkbox is marked complete.
 - [x] R3 — Compute structured return flow once
 - [x] R4 — Restructure the type checker around per-function context
 - [x] R5 — Split the parser by grammar responsibility
-- [ ] R6 — Bound recursive syntax nesting
+- [x] R6 — Bound recursive syntax nesting
 - [ ] R7 — Decompose x86-64 instruction and call lowering
 - [ ] R8 — Introduce shared compiler test support
 - [ ] R9 — Split oversized Rust test modules by behavior
@@ -207,12 +207,12 @@ near-thousand-line file.
 **Purpose:** Turn pathological nesting into a structured source diagnostic
 instead of process stack exhaustion.
 
-- [ ] Define and document a generous implementation nesting limit.
-- [ ] Track recursive entry for grouped and unary expressions, postfix calls,
+- [x] Define and document a generous implementation nesting limit.
+- [x] Track recursive entry for grouped and unary expressions, postfix calls,
       and nested blocks through one guard mechanism.
-- [ ] Emit one focused diagnostic and recover without cascades.
-- [ ] Ensure rejected depth never reaches recursive downstream traversals.
-- [ ] Keep ordinary source programs allocation- and branch-light.
+- [x] Emit one focused diagnostic and recover without cascades.
+- [x] Ensure rejected depth never reaches recursive downstream traversals.
+- [x] Keep ordinary source programs allocation- and branch-light.
 
 **Tests:** Inputs immediately below, at, and above the limit for expressions and
 blocks; recovery to later declarations; and an end-to-end no-panic test.

@@ -53,7 +53,7 @@ impl Parser<'_> {
     fn parse_unary(&mut self) -> Option<Expression> {
         if self.at(TokenKind::Minus) {
             let operator = self.advance();
-            let operand = self.parse_unary()?;
+            let operand = self.with_syntax_nesting(operator.span, |parser| parser.parse_unary())?;
             let span = self.cover(operator.span, operand.span());
             return Some(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
@@ -70,7 +70,10 @@ impl Parser<'_> {
         let mut expression = self.parse_primary()?;
 
         while self.at(TokenKind::LeftParen) {
-            expression = self.finish_call(expression)?;
+            let left_paren_span = self.peek().span;
+            expression = self.with_syntax_nesting(left_paren_span, move |parser| {
+                parser.finish_call(expression)
+            })?;
         }
 
         Some(expression)
@@ -201,9 +204,9 @@ impl Parser<'_> {
         }
 
         if let Some(left_paren) = self.consume(TokenKind::LeftParen) {
-            let expression = self.parse_expression();
+            let expression =
+                self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression())?;
             let right_paren = self.expect(TokenKind::RightParen, "`)` after the expression");
-            let expression = expression?;
             let end_span = right_paren
                 .map(|token| token.span)
                 .unwrap_or_else(|| expression.span());

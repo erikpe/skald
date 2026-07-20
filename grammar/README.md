@@ -89,6 +89,16 @@ or `unit`, while parameter and local storage require `value-type`. This is an
 implementation organization rule for the grammar shown in this document; it
 does not add implicit conversions or change the accepted source language.
 
+The compiler accepts at most 128 simultaneously active recursive syntax
+constructs. A function body consumes one level; grouped and unary expressions,
+postfix calls while parsing their arguments, and nested blocks each consume one
+additional level. This deliberately generous implementation limit bounds both
+parser recursion and recursive trees passed to later phases. Exceeding it emits
+the single `PAR005` diagnostic, discards the affected top-level declaration,
+and resumes at the next `fn` or `extern fn` declaration. The budget is a shared
+counter on parser state, so ordinary parsing performs no allocation for depth
+tracking.
+
 ## `i64` output extension contract
 
 O0 fixed the following grammar and semantic contract for the post-M8 `i64`

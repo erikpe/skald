@@ -17,6 +17,13 @@ pub const EXPECTED_DECLARATION: &str = "PAR001";
 pub const EXPECTED_TOKEN: &str = "PAR002";
 pub const EXPECTED_STATEMENT: &str = "PAR003";
 pub const EXPECTED_EXPRESSION: &str = "PAR004";
+pub const EXCESSIVE_NESTING: &str = "PAR005";
+
+/// Maximum number of simultaneously active recursive syntax constructs.
+///
+/// A function body consumes one level. Grouped and unary expressions, calls,
+/// and nested blocks consume another level while their contents are parsed.
+pub const MAX_SYNTAX_NESTING: usize = 128;
 
 #[derive(Debug)]
 pub struct ParseOutput {
@@ -59,6 +66,8 @@ struct Parser<'source> {
     tokens: &'source [Token],
     current: usize,
     diagnostics: Diagnostics,
+    nesting_depth: usize,
+    recovering_from_excessive_nesting: bool,
 }
 
 impl<'source> Parser<'source> {
@@ -68,6 +77,8 @@ impl<'source> Parser<'source> {
             tokens,
             current: 0,
             diagnostics: Diagnostics::new(),
+            nesting_depth: 0,
+            recovering_from_excessive_nesting: false,
         }
     }
 
@@ -94,6 +105,13 @@ impl<'source> Parser<'source> {
                     "expected `fn` or `extern fn` at file scope",
                 );
                 None
+            };
+            // An over-deep construct invalidates its entire declaration. This
+            // keeps a partial recursive tree out of all downstream phases.
+            let declaration = if self.recovering_from_excessive_nesting {
+                None
+            } else {
+                declaration
             };
             match declaration {
                 Some(declaration) => declarations.push(declaration),
@@ -144,8 +162,48 @@ impl<'source> Parser<'source> {
         span: Span,
         label: impl Into<String>,
     ) {
+        if self.recovering_from_excessive_nesting {
+            return;
+        }
         self.diagnostics
             .push(Diagnostic::error(code, message).with_primary_label(span, label));
+    }
+
+    /// Runs one recursively nested grammar operation within the shared parser
+    /// budget. This is deliberately a counter rather than a heap-allocated
+    /// recursion context, keeping the ordinary path to one comparison and two
+    /// counter updates.
+    fn with_syntax_nesting<T>(
+        &mut self,
+        span: Span,
+        parse_nested: impl FnOnce(&mut Self) -> Option<T>,
+    ) -> Option<T> {
+        if self.nesting_depth >= MAX_SYNTAX_NESTING {
+            self.report_excessive_nesting(span);
+            self.recover_from_excessive_nesting();
+            return None;
+        }
+
+        self.nesting_depth += 1;
+        let result = parse_nested(self);
+        self.nesting_depth -= 1;
+        result
+    }
+
+    fn report_excessive_nesting(&mut self, span: Span) {
+        if self.recovering_from_excessive_nesting {
+            return;
+        }
+
+        self.diagnostics.push(
+            Diagnostic::error(
+                EXCESSIVE_NESTING,
+                format!("syntax nesting exceeds the implementation limit of {MAX_SYNTAX_NESTING}"),
+            )
+            .with_primary_label(span, "this construct exceeds the nesting limit")
+            .with_note("split deeply nested expressions or blocks into smaller statements"),
+        );
+        self.recovering_from_excessive_nesting = true;
     }
 
     fn consume(&mut self, kind: TokenKind) -> Option<Token> {

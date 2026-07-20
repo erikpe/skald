@@ -220,6 +220,14 @@ diagnostic emission remain centralized on the parser state. Source type tokens
 map to `TypeKind` in one place, while each caller explicitly selects a result
 or stored-value context to determine whether `unit` is accepted.
 
+R6 bounds recursively nested syntax with one shared parser counter. Function
+bodies, nested blocks, grouped and unary expressions, and active postfix calls
+may occupy at most 128 levels. Crossing the limit produces `PAR005`, skips the
+rest of the affected declaration iteratively, and prevents its partial AST from
+entering resolution. The common guard adds no allocation to ordinary parsing;
+the canonical limit and recovery contract are documented in
+[`grammar/README.md`](../grammar/README.md).
+
 ### Resolution and typed HIR
 
 Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.

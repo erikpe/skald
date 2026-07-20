@@ -15,9 +15,11 @@ pub use ast::{
 };
 pub use dump::dump_ast;
 pub use parser::{
-    parse, ParseOutput, EXPECTED_DECLARATION, EXPECTED_EXPRESSION, EXPECTED_STATEMENT,
-    EXPECTED_TOKEN,
+    parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
+    EXPECTED_STATEMENT, EXPECTED_TOKEN, MAX_SYNTAX_NESTING,
 };
 
+#[cfg(test)]
+mod nesting_tests;
 #[cfg(test)]
 mod tests;

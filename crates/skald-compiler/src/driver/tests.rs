@@ -5,7 +5,11 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use crate::{backend::Target, diagnostics::render_diagnostics};
+use crate::{
+    backend::Target,
+    diagnostics::render_diagnostics,
+    syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
+};
 
 use super::*;
 
@@ -364,6 +368,32 @@ fn malformed_first_slice_sources_never_panic() {
             "malformed input did not produce source diagnostics: {source:?}"
         );
     }
+}
+
+#[test]
+fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
+    let expression = format!(
+        "{}1{}",
+        "(".repeat(MAX_SYNTAX_NESTING),
+        ")".repeat(MAX_SYNTAX_NESTING)
+    );
+    let source = format!("fn main() -> i64 {{ return {expression}; }}");
+
+    let result = std::panic::catch_unwind(|| {
+        compile_source_to_assembly("too-deep.ska", source, Target::X86_64SysV)
+    });
+    let CompilationError::Diagnostics(report) = result
+        .expect("excessive syntax nesting must not panic")
+        .expect_err("excessive syntax nesting must fail compilation")
+    else {
+        panic!("expected source diagnostics");
+    };
+
+    assert_eq!(report.diagnostics.len(), 1);
+    assert_eq!(
+        report.diagnostics.iter().next().unwrap().code,
+        EXCESSIVE_NESTING
+    );
 }
 
 #[test]

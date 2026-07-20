@@ -9,6 +9,16 @@ impl Parser<'_> {
         while !self.at_any(&[TokenKind::Fn, TokenKind::Extern, TokenKind::Eof]) {
             self.advance();
         }
+        self.recovering_from_excessive_nesting = false;
+    }
+
+    /// Discards the rest of the over-deep declaration without recursively
+    /// inspecting its delimiters. `fn` and `extern` cannot begin valid nested
+    /// syntax in the implemented grammar, so they are reliable restart points.
+    pub(super) fn recover_from_excessive_nesting(&mut self) {
+        while !self.at_any(&[TokenKind::Fn, TokenKind::Extern, TokenKind::Eof]) {
+            self.advance();
+        }
     }
 
     pub(super) fn synchronize_parameter(&mut self) {
