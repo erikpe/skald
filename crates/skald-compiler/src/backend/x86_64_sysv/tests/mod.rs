@@ -5,14 +5,18 @@ use std::{
 
 use crate::{
     backend::{emit_assembly, Target},
-    identity::{BindingId, ClassId, FieldId, FunctionId, LocalId, ParameterId},
+    identity::{
+        BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId, ParameterId,
+    },
     mir::{
         verify_mir, BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody, MirCall,
         MirCallTarget, MirClassDeclaration, MirClassDeclarationTable, MirFieldDeclaration,
         MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,
-        MirFunctionDefinitionTable, MirFunctionLinkage, MirInstruction, MirPlace, MirProgram,
-        MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
-        MirUnaryOperation, MirValue, StorageId, ValueId,
+        MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize, MirInitializerDeclaration,
+        MirInstruction, MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration,
+        MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind, MirStorage,
+        MirStorageKind, MirStore, MirTerminator, MirType, MirUnaryOperation, MirValue, StorageId,
+        ValueId,
     },
     source::SourceDatabase,
     test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
@@ -36,3 +40,4 @@ mod instruction_selection;
 mod legality;
 mod native_execution;
 mod objects;
+use objects::println_i64_stub;

@@ -1,6 +1,6 @@
 //! Data model for target-independent MIR.
 
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
@@ -81,6 +81,7 @@ pub struct MirProgram {
     pub classes: MirClassDeclarationTable,
     pub declarations: MirFunctionDeclarationTable,
     pub definitions: MirFunctionDefinitionTable,
+    pub member_definitions: MirMemberDefinitionTable,
     pub entry_function: FunctionId,
     pub span: Span,
 }
@@ -101,6 +102,49 @@ impl MirProgram {
     pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
         self.class(id.class())?.method(id)
     }
+
+    pub fn member_definition(&self, callable: CallableId) -> Option<&MirMemberDefinition> {
+        self.member_definitions.get(callable)
+    }
+
+    pub fn executable_definitions(&self) -> impl Iterator<Item = MirDefinitionRef<'_>> {
+        self.definitions
+            .iter()
+            .map(MirDefinitionRef::Function)
+            .chain(self.member_definitions.iter().map(MirDefinitionRef::Member))
+    }
+
+    pub fn callable_signature(&self, callable: CallableId) -> Option<MirCallableSignature<'_>> {
+        match callable {
+            CallableId::Function(function) => {
+                self.declarations
+                    .get(function)
+                    .map(|declaration| MirCallableSignature {
+                        parameter_types: &declaration.parameter_types,
+                        return_type: declaration.return_type,
+                    })
+            }
+            CallableId::Initializer(initializer) => {
+                self.initializer(initializer)
+                    .map(|declaration| MirCallableSignature {
+                        parameter_types: &declaration.parameter_types,
+                        return_type: MirType::Unit,
+                    })
+            }
+            CallableId::Method(method) => {
+                self.method(method).map(|declaration| MirCallableSignature {
+                    parameter_types: &declaration.parameter_types,
+                    return_type: declaration.return_type,
+                })
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MirCallableSignature<'mir> {
+    pub parameter_types: &'mir [MirType],
+    pub return_type: MirType,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -328,6 +372,184 @@ pub struct MirFunctionDefinition {
     pub span: Span,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirMemberDefinitionTable {
+    entries: BTreeMap<CallableId, MirMemberDefinition>,
+}
+
+impl MirMemberDefinitionTable {
+    // Production construction begins when frontend object lowering lands.
+    // OBJ4 uses this constructor for backend-first member-body fixtures.
+    #[allow(dead_code)]
+    pub(crate) fn new(entries: Vec<MirMemberDefinition>) -> Self {
+        let mut table = BTreeMap::new();
+        for definition in entries {
+            assert!(
+                !matches!(definition.callable, CallableId::Function(_)),
+                "member definitions cannot use function identities"
+            );
+            let callable = definition.callable;
+            assert!(
+                table.insert(callable, definition).is_none(),
+                "duplicate member definition {callable}"
+            );
+        }
+        Self { entries: table }
+    }
+
+    pub fn get(&self, callable: CallableId) -> Option<&MirMemberDefinition> {
+        self.entries.get(&callable)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirMemberDefinition> {
+        self.entries.values()
+    }
+
+    pub(crate) fn indexed_entries(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (CallableId, &MirMemberDefinition)> {
+        self.entries
+            .iter()
+            .map(|(callable, definition)| (*callable, definition))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_mut_for_test(
+        &mut self,
+        callable: CallableId,
+    ) -> Option<&mut MirMemberDefinition> {
+        self.entries.get_mut(&callable)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirMemberDefinition {
+    pub callable: CallableId,
+    pub receiver: StorageId,
+    pub parameters: Vec<StorageId>,
+    pub storage: Vec<MirStorage>,
+    pub values: Vec<MirValue>,
+    pub body: MirBody,
+    pub span: Span,
+}
+
+impl MirMemberDefinition {
+    pub fn storage(&self, id: StorageId) -> Option<&MirStorage> {
+        (id.callable() == self.callable)
+            .then(|| self.storage.get(id.index()))
+            .flatten()
+            .filter(|storage| storage.id == id)
+    }
+
+    pub fn value(&self, id: ValueId) -> Option<&MirValue> {
+        (id.callable() == self.callable)
+            .then(|| self.values.get(id.index()))
+            .flatten()
+            .filter(|value| value.id == id)
+    }
+
+    pub fn block(&self, id: BlockId) -> Option<&MirBasicBlock> {
+        (id.callable() == self.callable)
+            .then(|| self.body.blocks.get(id.index()))
+            .flatten()
+            .filter(|block| block.id == id)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum MirDefinitionRef<'mir> {
+    Function(&'mir MirFunctionDefinition),
+    Member(&'mir MirMemberDefinition),
+}
+
+impl<'mir> MirDefinitionRef<'mir> {
+    pub const fn callable(self) -> CallableId {
+        match self {
+            Self::Function(definition) => definition.callable(),
+            Self::Member(definition) => definition.callable,
+        }
+    }
+
+    pub const fn receiver(self) -> Option<StorageId> {
+        match self {
+            Self::Function(_) => None,
+            Self::Member(definition) => Some(definition.receiver),
+        }
+    }
+
+    pub fn parameters(self) -> &'mir [StorageId] {
+        match self {
+            Self::Function(definition) => &definition.parameters,
+            Self::Member(definition) => &definition.parameters,
+        }
+    }
+
+    pub fn storage_entries(self) -> &'mir [MirStorage] {
+        match self {
+            Self::Function(definition) => &definition.storage,
+            Self::Member(definition) => &definition.storage,
+        }
+    }
+
+    pub fn values(self) -> &'mir [MirValue] {
+        match self {
+            Self::Function(definition) => &definition.values,
+            Self::Member(definition) => &definition.values,
+        }
+    }
+
+    pub const fn body(self) -> &'mir MirBody {
+        match self {
+            Self::Function(definition) => &definition.body,
+            Self::Member(definition) => &definition.body,
+        }
+    }
+
+    pub const fn span(self) -> Span {
+        match self {
+            Self::Function(definition) => definition.span,
+            Self::Member(definition) => definition.span,
+        }
+    }
+
+    pub fn storage(self, id: StorageId) -> Option<&'mir MirStorage> {
+        match self {
+            Self::Function(definition) => definition.storage(id),
+            Self::Member(definition) => definition.storage(id),
+        }
+    }
+
+    pub fn value(self, id: ValueId) -> Option<&'mir MirValue> {
+        match self {
+            Self::Function(definition) => definition.value(id),
+            Self::Member(definition) => definition.value(id),
+        }
+    }
+
+    pub fn block(self, id: BlockId) -> Option<&'mir MirBasicBlock> {
+        match self {
+            Self::Function(definition) => definition.block(id),
+            Self::Member(definition) => definition.block(id),
+        }
+    }
+}
+
+impl<'mir> From<&'mir MirFunctionDefinition> for MirDefinitionRef<'mir> {
+    fn from(definition: &'mir MirFunctionDefinition) -> Self {
+        Self::Function(definition)
+    }
+}
+
+impl<'mir> From<&'mir MirMemberDefinition> for MirDefinitionRef<'mir> {
+    fn from(definition: &'mir MirMemberDefinition) -> Self {
+        Self::Member(definition)
+    }
+}
+
 impl MirFunctionDefinition {
     pub const fn callable(&self) -> CallableId {
         CallableId::Function(self.function)
@@ -357,6 +579,7 @@ impl MirFunctionDefinition {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirStorageKind {
+    Receiver,
     Parameter,
     Local,
 }

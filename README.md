@@ -87,10 +87,12 @@ ownership. OBJ2 adds canonical class/member MIR metadata, typed projected
 places, destination initialization, receiver-bearing direct calls, and the
 verifier rules that keep objects out of transient scalar values. OBJ3 adds the
 checked x86-64 data-layout authority, aligned inline frame allocations, and
-width-correct lowering of nested field places. OBJ4 is next: it establishes
-initializer and method execution through the hidden receiver ABI before source
-syntax is enabled. Copying, destruction, polymorphism, and shared ownership
-remain deferred.
+width-correct lowering of nested field places. OBJ4 adds executable MIR member
+bodies, identity-derived symbols, hidden receiver-address passing, receiver
+forwarding, and mixed integer/SSE/stack ABI lowering. OBJ5 is next: it exposes
+the restricted class, member, and construction syntax while keeping semantic
+selection in later phases. Copying, destruction, polymorphism, and shared
+ownership remain deferred.
 
 ## Development
 

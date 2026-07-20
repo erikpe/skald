@@ -2,9 +2,10 @@
 
 use crate::{
     backend::{BackendError, Target},
+    identity::CallableId,
     mir::{
-        MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage,
-        MirType, ValueId,
+        MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef, MirFunctionLinkage,
+        MirInitialize, MirPlace, MirType, ValueId,
     },
 };
 
@@ -13,23 +14,48 @@ use super::{
         abi::{ArgumentLocation, CallLayout},
         machine::{ByteRegister, Instruction, Register, XmmRegister},
     },
-    symbol_for, value, FrameLayout, InstructionSelector,
+    value, FrameLayout, InstructionSelector,
 };
 
 pub(super) fn spill_parameters(
-    declaration: &MirFunctionDeclaration,
-    function: &MirFunctionDefinition,
+    signature: MirCallableSignature<'_>,
+    function: MirDefinitionRef<'_>,
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
-    let layout = CallLayout::classify(&declaration.parameter_types).ok_or_else(|| {
-        argument_area_error(
-            function,
-            "incoming argument area exceeds the x86-64 ABI encoding limits",
-        )
-    })?;
+    let layout = classify_call(signature.parameter_types, function.receiver().is_some())
+        .ok_or_else(|| {
+            argument_area_error(
+                function,
+                "incoming argument area exceeds the x86-64 ABI encoding limits",
+            )
+        })?;
 
-    for (storage, location) in function.parameters.iter().zip(layout.locations()) {
+    if let Some(receiver) = function.receiver() {
+        let incoming = layout
+            .receiver()
+            .expect("receiver-aware layout has a receiver location")
+            .incoming()
+            .ok_or_else(|| {
+                argument_area_error(function, "incoming receiver area exceeds x86-64 limits")
+            })?;
+        let destination = value::frame_storage(frame, receiver);
+        match incoming {
+            ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
+                source: register.into(),
+                destination,
+            }),
+            ArgumentLocation::Stack(displacement) => {
+                value::load_rax(value::memory(Register::Rbp, displacement), output);
+                value::store_rax(destination, output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("receiver is always integer-class")
+            }
+        }
+    }
+
+    for (storage, location) in function.parameters().iter().zip(layout.locations()) {
         let incoming = location.incoming().ok_or_else(|| {
             argument_area_error(
                 function,
@@ -76,43 +102,84 @@ pub(super) fn spill_parameters(
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_call(&mut self, call: &MirCall) -> Result<(), BackendError> {
-        let MirCallTarget::Direct(target_id) = call.target else {
-            unreachable!("target legality rejects method calls before selection")
+        let (target, receiver) = match call.target {
+            MirCallTarget::Direct(function) => (CallableId::Function(function), None),
+            MirCallTarget::Method(method) => (
+                CallableId::Method(method),
+                Some(
+                    call.receiver
+                        .as_ref()
+                        .expect("verified method call has a receiver"),
+                ),
+            ),
         };
-        debug_assert!(call.receiver.is_none());
-        let target = self
+        self.select_callable(target, receiver, &call.arguments, call.result)
+    }
+
+    pub(super) fn select_initialize(
+        &mut self,
+        initialize: &MirInitialize,
+    ) -> Result<(), BackendError> {
+        self.select_callable(
+            CallableId::Initializer(initialize.target),
+            Some(&initialize.destination),
+            &initialize.arguments,
+            None,
+        )
+    }
+
+    fn select_callable(
+        &mut self,
+        target: CallableId,
+        receiver: Option<&MirPlace>,
+        arguments: &[ValueId],
+        result: Option<ValueId>,
+    ) -> Result<(), BackendError> {
+        let signature = self
             .program
-            .declarations
-            .get(target_id)
+            .callable_signature(target)
             .expect("verified call target must be declared");
-        let layout = CallLayout::classify(&target.parameter_types).ok_or_else(|| {
-            argument_area_error(
-                self.function,
-                "outgoing argument area exceeds the x86-64 ABI encoding limits",
-            )
-        })?;
+        let layout =
+            classify_call(signature.parameter_types, receiver.is_some()).ok_or_else(|| {
+                argument_area_error(
+                    self.function,
+                    "outgoing argument area exceeds the x86-64 ABI encoding limits",
+                )
+            })?;
 
         if layout.stack_size() != 0 {
             self.output
                 .push(Instruction::ReserveStack(layout.stack_size()));
         }
-        for ((argument, ty), location) in call
-            .arguments
+        if let Some(receiver) = receiver {
+            let location = layout
+                .receiver()
+                .expect("receiver-aware layout has a receiver location");
+            let ArgumentLocation::IntegerRegister(register) = location else {
+                unreachable!("receiver is always the first integer-class argument")
+            };
+            self.materialize_place_address(receiver, register);
+        }
+        for ((argument, ty), location) in arguments
             .iter()
-            .zip(&target.parameter_types)
+            .zip(signature.parameter_types)
             .zip(layout.locations())
         {
             self.select_argument(*argument, *ty, *location);
         }
 
-        self.output.push(Instruction::Call(symbol_for(target)));
+        self.output
+            .push(Instruction::Call(super::super::symbol::callable(
+                self.program,
+                target,
+            )));
         if layout.stack_size() != 0 {
             self.output
                 .push(Instruction::ReleaseStack(layout.stack_size()));
         }
-        self.normalize_external_bool_result(target);
-        if let Some(result) = call.result {
-            self.store_call_result(target.return_type, result);
+        self.normalize_external_bool_result(target, signature.return_type);
+        if let Some(result) = result {
+            self.store_call_result(signature.return_type, result);
         }
         Ok(())
     }
@@ -146,10 +213,16 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    fn normalize_external_bool_result(&mut self, target: &MirFunctionDeclaration) {
-        if target.return_type == MirType::Bool
-            && matches!(target.linkage, MirFunctionLinkage::External { .. })
-        {
+    fn normalize_external_bool_result(&mut self, target: CallableId, return_type: MirType) {
+        let external = target.as_function().is_some_and(|function| {
+            self.program
+                .declarations
+                .get(function)
+                .is_some_and(|declaration| {
+                    matches!(declaration.linkage, MirFunctionLinkage::External { .. })
+                })
+        });
+        if return_type == MirType::Bool && external {
             self.output.push(Instruction::ZeroExtendByte {
                 source: ByteRegister::Al,
                 destination: Register::Rax,
@@ -171,6 +244,14 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn argument_area_error(function: &MirFunctionDefinition, message: &'static str) -> BackendError {
-    BackendError::new(Target::X86_64SysV, Some(function.function), message)
+fn classify_call(parameter_types: &[MirType], has_receiver: bool) -> Option<CallLayout> {
+    if has_receiver {
+        CallLayout::classify_with_receiver(parameter_types)
+    } else {
+        CallLayout::classify(parameter_types)
+    }
+}
+
+fn argument_area_error(function: MirDefinitionRef<'_>, message: &'static str) -> BackendError {
+    BackendError::new(Target::X86_64SysV, Some(function.callable()), message)
 }

@@ -24,6 +24,12 @@ pub fn dump_mir(program: &MirProgram) -> String {
     for definition in program.definitions.iter() {
         dump_definition(&mut output, definition);
     }
+    if !program.member_definitions.is_empty() {
+        output.push_str("  MemberDefinitions\n");
+        for definition in program.member_definitions.iter() {
+            dump_member_definition(&mut output, definition);
+        }
+    }
     output
 }
 
@@ -90,16 +96,29 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
 
 fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
     let _ = write!(output, "    Definition {}", function.function);
-    write_span(output, function.span);
+    dump_executable_body(output, function.into());
+}
+
+fn dump_member_definition(output: &mut String, function: &MirMemberDefinition) {
+    let _ = write!(output, "    MemberDefinition {}", function.callable);
+    dump_executable_body(output, function.into());
+}
+
+fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
+    write_span(output, function.span());
     output.push('\n');
+    if let Some(receiver) = function.receiver() {
+        let _ = writeln!(output, "      Receiver {receiver}");
+    }
     output.push_str("      Parameters");
-    for parameter in &function.parameters {
+    for parameter in function.parameters() {
         let _ = write!(output, " {parameter}");
     }
     output.push('\n');
     output.push_str("      Storage\n");
-    for storage in &function.storage {
+    for storage in function.storage_entries() {
         let kind = match storage.kind {
+            MirStorageKind::Receiver => "receiver",
             MirStorageKind::Parameter => "parameter",
             MirStorageKind::Local => "local",
         };
@@ -110,14 +129,14 @@ fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
         output.push('\n');
     }
     output.push_str("      Values\n");
-    for value in &function.values {
+    for value in function.values() {
         let _ = write!(output, "        {} : {}", value.id, value.ty);
         write_span(output, value.span);
         output.push('\n');
     }
-    let _ = writeln!(output, "      EntryBlock {}", function.body.entry);
+    let _ = writeln!(output, "      EntryBlock {}", function.body().entry);
     output.push_str("      Blocks\n");
-    for block in &function.body.blocks {
+    for block in &function.body().blocks {
         dump_block(output, block);
     }
 }

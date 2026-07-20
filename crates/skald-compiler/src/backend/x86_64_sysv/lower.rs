@@ -2,17 +2,15 @@
 
 use crate::{
     backend::BackendError,
-    identity::FunctionId,
-    mir::{
-        BlockId, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage, MirInstruction,
-        MirProgram,
-    },
+    identity::CallableId,
+    mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
 };
 
 use super::{
     frame::FrameLayout,
     layout::DataLayout,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
+    symbol,
 };
 
 mod assignment;
@@ -25,29 +23,27 @@ pub(super) fn lower(
     data_layout: &DataLayout,
 ) -> Result<AssemblyProgram, BackendError> {
     let mut functions = program
-        .definitions
-        .iter()
-        .map(|function| {
-            let declaration = program
-                .declarations
-                .get(function.function)
+        .executable_definitions()
+        .map(|definition| {
+            let signature = program
+                .callable_signature(definition.callable())
                 .expect("verified definition must have a declaration");
-            lower_function(program, data_layout, declaration, function)
+            lower_definition(program, data_layout, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
     let entry = program
         .declarations
         .get(program.entry_function)
         .expect("verified entry declaration must exist");
-    functions.push(entry_wrapper(entry));
+    functions.push(entry_wrapper(program, entry.id.into()));
     Ok(AssemblyProgram { functions })
 }
 
-fn lower_function(
+fn lower_definition(
     program: &MirProgram,
     data_layout: &DataLayout,
-    declaration: &MirFunctionDeclaration,
-    function: &MirFunctionDefinition,
+    signature: MirCallableSignature<'_>,
+    function: MirDefinitionRef<'_>,
 ) -> Result<AssemblyFunction, BackendError> {
     let frame = FrameLayout::plan(function, data_layout)?;
     let mut instructions = vec![
@@ -61,12 +57,12 @@ fn lower_function(
         instructions.push(Instruction::ReserveStack(frame.size()));
     }
 
-    call::spill_parameters(declaration, function, &frame, &mut instructions)?;
-    if function.body.blocks[0].id != function.body.entry {
-        instructions.push(Instruction::Jump(block_label(function.body.entry)));
+    call::spill_parameters(signature, function, &frame, &mut instructions)?;
+    if function.body().blocks[0].id != function.body().entry {
+        instructions.push(Instruction::Jump(block_label(function.body().entry)));
     }
-    let epilogue = epilogue_label(function.function);
-    for block in &function.body.blocks {
+    let epilogue = epilogue_label(function.callable());
+    for block in &function.body().blocks {
         instructions.push(Instruction::Label(block_label(block.id)));
         for instruction in &block.instructions {
             InstructionSelector::new(program, data_layout, function, &frame, &mut instructions)
@@ -78,7 +74,7 @@ fn lower_function(
                 .as_ref()
                 .expect("verified block is terminated"),
             &frame,
-            declaration.return_type,
+            signature.return_type,
             &epilogue,
             &mut instructions,
         );
@@ -88,7 +84,7 @@ fn lower_function(
     instructions.push(Instruction::Return);
 
     Ok(AssemblyFunction {
-        symbol: symbol_for(declaration),
+        symbol: symbol::callable(program, function.callable()),
         exported: false,
         instructions,
     })
@@ -97,7 +93,7 @@ fn lower_function(
 /// C-compatible process entry boundary. Returning the Skald `i64` in `%rax`
 /// exposes its low 32 bits as C `main`'s `int`; Linux subsequently observes
 /// the low eight bits as the process exit status.
-fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
+fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
     AssemblyFunction {
         symbol: "main".to_owned(),
         exported: true,
@@ -107,7 +103,7 @@ fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
                 source: Register::Rsp.into(),
                 destination: Register::Rbp.into(),
             },
-            Instruction::Call(symbol_for(entry)),
+            Instruction::Call(symbol::callable(program, entry)),
             Instruction::Leave,
             Instruction::Return,
         ],
@@ -117,7 +113,7 @@ fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
 struct InstructionSelector<'program, 'output> {
     program: &'program MirProgram,
     data_layout: &'program DataLayout,
-    function: &'program MirFunctionDefinition,
+    function: MirDefinitionRef<'program>,
     frame: &'program FrameLayout,
     output: &'output mut Vec<Instruction>,
 }
@@ -126,7 +122,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     fn new(
         program: &'program MirProgram,
         data_layout: &'program DataLayout,
-        function: &'program MirFunctionDefinition,
+        function: MirDefinitionRef<'program>,
         frame: &'program FrameLayout,
         output: &'output mut Vec<Instruction>,
     ) -> Self {
@@ -145,34 +141,24 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         match instruction {
             MirInstruction::Assign(assignment) => self.select_assignment(assignment),
             MirInstruction::Call(call) => self.select_call(call)?,
-            MirInstruction::Initialize(_) => {
-                unreachable!("target legality rejects object initialization before selection")
-            }
+            MirInstruction::Initialize(initialize) => self.select_initialize(initialize)?,
             MirInstruction::Store(store) => self.select_store(store),
         }
         Ok(())
     }
 }
 
-fn symbol_for(function: &MirFunctionDeclaration) -> String {
-    match &function.linkage {
-        MirFunctionLinkage::Internal => format!(".Lska_fn_{}", function.id.index()),
-        MirFunctionLinkage::External { symbol } => symbol.clone(),
-    }
-}
-
 fn block_label(block: BlockId) -> Label {
-    let function = block
-        .callable()
-        .as_function()
-        .expect("x86-64 backend currently lowers only top-level function bodies");
     Label::new(format!(
-        ".Lska_fn_{}_block_{}",
-        function.index(),
+        ".Lska_{}_block_{}",
+        symbol::local_label_stem(block.callable()),
         block.index()
     ))
 }
 
-fn epilogue_label(function: FunctionId) -> Label {
-    Label::new(format!(".Lska_fn_{}_epilogue", function.index()))
+fn epilogue_label(callable: CallableId) -> Label {
+    Label::new(format!(
+        ".Lska_{}_epilogue",
+        symbol::local_label_stem(callable)
+    ))
 }

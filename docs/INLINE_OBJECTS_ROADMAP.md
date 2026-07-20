@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ3 complete; OBJ4 is next.
+Status: OBJ0–OBJ4 complete; OBJ5 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -202,7 +202,7 @@ reconstructing source evaluation.
 - [x] OBJ1 — Establish object identities and executable-body ownership
 - [x] OBJ2 — Add target-independent object places and construction-aware MIR
 - [x] OBJ3 — Implement x86-64 inline layout and projected-place addressing
-- [ ] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
+- [x] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
 - [ ] OBJ5 — Add class, member, and construction syntax
 - [ ] OBJ6 — Resolve nominal classes, fields, initializers, and methods
 - [ ] OBJ7 — Type-check inline objects, construction, and receiver access
@@ -312,15 +312,15 @@ inline storage; semantic phases contain no byte offsets.
 **Purpose:** Prove initializer/method execution at the backend boundary before
 public syntax commits to it.
 
-- [ ] Extend internal call layout with an optional hidden integer-class
+- [x] Extend internal call layout with an optional hidden integer-class
       receiver while retaining independent integer/SSE counters.
-- [ ] Materialize a receiver-place address at call sites without a pointer MIR
+- [x] Materialize a receiver-place address at call sites without a pointer MIR
       value and bind it as addressable storage in the callee.
-- [ ] Lower direct initialization, read-only/mutable methods, and primitive or
+- [x] Lower direct initialization, read-only/mutable methods, and primitive or
       `unit` results.
-- [ ] Centralize collision-proof symbols based on stable identities.
-- [ ] Reject object-bearing external declarations through target legality.
-- [ ] Preserve stack alignment and calling conventions for mixed receiver,
+- [x] Centralize collision-proof symbols based on stable identities.
+- [x] Reject object-bearing external declarations through target legality.
+- [x] Preserve stack alignment and calling conventions for mixed receiver,
       integer, SSE, and stack signatures.
 
 **Tests:** Hand-built native MIR that constructs/mutates/prints; exhausted

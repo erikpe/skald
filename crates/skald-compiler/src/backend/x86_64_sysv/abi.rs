@@ -65,13 +65,25 @@ impl ArgumentLocation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CallLayout {
+    receiver: Option<ArgumentLocation>,
     locations: Vec<ArgumentLocation>,
     stack_size: u32,
 }
 
 impl CallLayout {
     pub(super) fn classify(types: &[MirType]) -> Option<Self> {
-        let mut integer_index = 0;
+        Self::classify_internal(types, false)
+    }
+
+    pub(super) fn classify_with_receiver(types: &[MirType]) -> Option<Self> {
+        Self::classify_internal(types, true)
+    }
+
+    fn classify_internal(types: &[MirType], has_receiver: bool) -> Option<Self> {
+        let receiver = has_receiver.then_some(ArgumentLocation::IntegerRegister(
+            INTEGER_ARGUMENT_REGISTERS[0],
+        ));
+        let mut integer_index = usize::from(has_receiver);
         let mut sse_index = 0;
         let mut stack_count = 0usize;
         let mut locations = Vec::with_capacity(types.len());
@@ -101,9 +113,14 @@ impl CallLayout {
         let aligned = align_up(bytes, STACK_ALIGNMENT)?;
         let stack_size = u32::try_from(aligned).ok()?;
         (aligned <= i32::MAX as usize).then_some(Self {
+            receiver,
             locations,
             stack_size,
         })
+    }
+
+    pub(super) const fn receiver(&self) -> Option<ArgumentLocation> {
+        self.receiver
     }
 
     pub(super) fn locations(&self) -> &[ArgumentLocation] {
@@ -198,5 +215,42 @@ mod tests {
         assert!(CallLayout::classify(&[MirType::Unit]).is_none());
         assert_eq!(align_up(8, STACK_ALIGNMENT), Some(16));
         assert_eq!(align_up(16, STACK_ALIGNMENT), Some(16));
+    }
+
+    #[test]
+    fn hidden_receiver_consumes_only_the_first_integer_location() {
+        let layout = CallLayout::classify_with_receiver(&[
+            MirType::I64,
+            MirType::F64,
+            MirType::I64,
+            MirType::F64,
+        ])
+        .unwrap();
+
+        assert_eq!(
+            layout.receiver(),
+            Some(ArgumentLocation::IntegerRegister(Register::Rdi))
+        );
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm0),
+                ArgumentLocation::IntegerRegister(Register::Rdx),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm1),
+            ]
+        );
+    }
+
+    #[test]
+    fn receiver_layout_preserves_independent_exhaustion_and_stack_order() {
+        let mut types = vec![MirType::I64; 5];
+        types.extend([MirType::F64; 8]);
+        types.extend([MirType::I64, MirType::F64]);
+        let layout = CallLayout::classify_with_receiver(&types).unwrap();
+
+        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(0));
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(8));
+        assert_eq!(layout.stack_size(), 16);
     }
 }

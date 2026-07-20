@@ -285,6 +285,14 @@ narrow dense class table alongside its canonical class/member records. OBJ6
 will add the resolver's phase-owned form; a container should be shared only
 when two real tables have the same owner and density rules.
 
+OBJ4 adds MIR's deterministic member-definition table, keyed directly by
+`CallableId`, while retaining the existing dense/sparse top-level function
+tables. `MirDefinitionRef` presents their common executable-body interface to
+verification, frame planning, dumps, and code generation without erasing the
+different declaration ownership models. A member body identifies one explicit
+receiver storage slot owned by the initializer or method callable; that slot is
+an addressable class place in MIR but a saved pointer home in the backend.
+
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 
 Each function resolver owns an explicit lexical scope stack. Parameters share the outer function-body scope, nested blocks push scopes, and local initializers are resolved before their binding is introduced. Duplicate and lookup failures produce structured diagnostics with source labels. The precise first-slice rules are recorded in [`grammar/README.md`](../grammar/README.md).
@@ -361,8 +369,9 @@ OBJ0 specifies the architecture for the first inline-object profile. OBJ1
 implements its neutral identity and executable-body ownership foundation. OBJ2
 implements target-independent class/member metadata, places, construction and
 receiver calls, plus their verifier boundary. OBJ3 implements the target layout,
-object frame-allocation, and projected-address boundary. OBJ4–OBJ9 implement
-the remaining backend, frontend, and integration work.
+object frame-allocation, and projected-address boundary. OBJ4 implements
+executable member definitions and the hidden receiver ABI. OBJ5–OBJ9 implement
+the remaining frontend and integration work.
 Public syntax remains disabled until the complete path exists.
 The extension must preserve these boundaries:
 
@@ -400,11 +409,16 @@ representation. Instruction selection and semantic lowering never duplicate
 layout arithmetic or contain byte offsets.
 
 Initializers and methods receive an address to complete object storage as a
-hidden first integer-class System V argument. The receiver consumes an integer
-argument location but no SSE location, so existing independent argument-class
-counters continue to classify explicit primitive parameters. Internal member
-symbols come from the central collision-proof identity-based symbol service.
-Object types remain prohibited in the exact-symbol C ABI.
+hidden first integer-class System V argument. OBJ4 materializes that address
+from a MIR receiver place, saves it in the callee's receiver pointer home, and
+resolves receiver field places through the saved address. Forwarding `self` to
+another method reloads the same address without introducing a pointer MIR
+value. The receiver consumes an integer argument location but no SSE location,
+so independent integer/SSE counters continue to classify explicit parameters
+and source-ordered overflow arguments use the aligned stack area. Internal
+function, initializer, method, block, and epilogue symbols come from one
+collision-proof identity-based service. Object types remain prohibited in the
+exact-symbol C ABI.
 
 These structures deliberately prepare for field-projection chains, recursive
 layouts, cleanup state, receiver aliases, base projections, virtual calls, and

@@ -26,6 +26,7 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         classes: MirClassDeclarationTable::default(),
         declarations: MirFunctionDeclarationTable::new(declarations),
         definitions: MirFunctionDefinitionTable::new(definitions),
+        member_definitions: MirMemberDefinitionTable::default(),
         entry_function: hir.entry_function,
         span: hir.span,
     };
@@ -250,6 +251,9 @@ impl<'hir> FunctionLowerer<'hir> {
         match &expression.kind {
             HirExpressionKind::Binding(binding) => {
                 let storage = match binding {
+                    BindingId::Receiver(_) => {
+                        unreachable!("function-only HIR cannot contain an implicit receiver")
+                    }
                     BindingId::Parameter(id) => self.parameter_storage[id.index()],
                     BindingId::Local(id) => self.local_storage[id.index()],
                 };

@@ -3,7 +3,7 @@
 use crate::mir::{MirPlace, MirStore, MirType, StorageId, ValueId};
 
 use super::{
-    super::frame::FramePlace,
+    super::frame::{FramePlace, FramePlaceBase},
     super::machine::{ByteRegister, FloatOperand, Instruction, Operand, Register, XmmRegister},
     FrameLayout, InstructionSelector,
 };
@@ -30,12 +30,47 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    pub(super) fn frame_place(&self, place: &MirPlace) -> (FramePlace, Operand) {
+    pub(super) fn frame_place(&mut self, place: &MirPlace) -> (FramePlace, Operand) {
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place);
-        let operand = memory(Register::Rbp, layout.displacement());
+        let base = match layout.base() {
+            FramePlaceBase::FramePointer => Register::Rbp,
+            FramePlaceBase::ReceiverPointer { home } => {
+                load_rax(memory(Register::Rbp, home), self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::R11.into(),
+                });
+                Register::R11
+            }
+        };
+        let operand = memory(base, layout.displacement());
         (layout, operand)
+    }
+
+    pub(super) fn materialize_place_address(&mut self, place: &MirPlace, destination: Register) {
+        let layout = self
+            .frame
+            .place(self.program, self.function, self.data_layout, place);
+        match layout.base() {
+            FramePlaceBase::FramePointer => self.output.push(Instruction::LoadEffectiveAddress {
+                source: memory(Register::Rbp, layout.displacement()),
+                destination,
+            }),
+            FramePlaceBase::ReceiverPointer { home } => {
+                self.output.push(Instruction::Move {
+                    source: memory(Register::Rbp, home),
+                    destination: destination.into(),
+                });
+                if layout.displacement() != 0 {
+                    self.output.push(Instruction::LoadEffectiveAddress {
+                        source: memory(destination, layout.displacement()),
+                        destination,
+                    });
+                }
+            }
+        }
     }
 }
 

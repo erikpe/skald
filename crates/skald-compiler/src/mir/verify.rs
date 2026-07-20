@@ -181,7 +181,11 @@ impl Verifier<'_> {
                     "external function must not have a Skald definition",
                 );
             }
-            self.verify_function(declaration, definition);
+            self.verify_definition(
+                &declaration.parameter_types,
+                declaration.return_type,
+                definition.into(),
+            );
         }
 
         for declaration in declarations {
@@ -197,6 +201,32 @@ impl Verifier<'_> {
                 }
                 _ => {}
             }
+        }
+
+        for (table_key, definition) in self.program.member_definitions.indexed_entries() {
+            let callable = definition.callable;
+            if table_key != callable {
+                self.function_error(
+                    callable,
+                    format!("member definition table key {table_key} contains {callable}"),
+                );
+            }
+            let signature = match callable {
+                CallableId::Initializer(initializer) => self
+                    .program
+                    .initializer(initializer)
+                    .map(|declaration| (&declaration.parameter_types[..], MirType::Unit)),
+                CallableId::Method(method) => self
+                    .program
+                    .method(method)
+                    .map(|declaration| (&declaration.parameter_types[..], declaration.return_type)),
+                CallableId::Function(_) => None,
+            };
+            let Some((parameter_types, return_type)) = signature else {
+                self.function_error(callable, "member definition has no matching declaration");
+                continue;
+            };
+            self.verify_definition(parameter_types, return_type, definition.into());
         }
     }
 
@@ -268,81 +298,83 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_function(
+    fn verify_definition(
         &mut self,
-        declaration: &MirFunctionDeclaration,
-        function: &MirFunctionDefinition,
+        parameter_types: &[MirType],
+        return_type: MirType,
+        function: MirDefinitionRef<'_>,
     ) {
         self.verify_storage(function);
         self.verify_values(function);
-        self.verify_parameters(declaration, function);
+        self.verify_receiver(function);
+        self.verify_parameters(parameter_types, function);
 
-        if function.body.entry.callable() != function.callable() {
+        if function.body().entry.callable() != function.callable() {
             self.function_error(
-                function.function,
+                function.callable(),
                 format!(
                     "entry block {} is owned by another callable body",
-                    function.body.entry
+                    function.body().entry
                 ),
             );
-        } else if function.block(function.body.entry).is_none() {
+        } else if function.block(function.body().entry).is_none() {
             self.function_error(
-                function.function,
-                format!("entry block {} is not declared", function.body.entry),
+                function.callable(),
+                format!("entry block {} is not declared", function.body().entry),
             );
         }
 
         let mut defined_values = HashSet::new();
         let mut seen_blocks = HashSet::new();
-        for (index, block) in function.body.blocks.iter().enumerate() {
+        for (index, block) in function.body().blocks.iter().enumerate() {
             if block.id.callable() != function.callable() {
                 self.block_error(
-                    function.function,
+                    function.callable(),
                     block.id,
                     "block is owned by another callable body",
                 );
             }
             if block.id.index() != index {
                 self.block_error(
-                    function.function,
+                    function.callable(),
                     block.id,
                     format!("block table index {index} contains {}", block.id),
                 );
             }
             if !seen_blocks.insert(block.id) {
-                self.block_error(function.function, block.id, "duplicate block ID");
+                self.block_error(function.callable(), block.id, "duplicate block ID");
             }
-            self.verify_block(declaration, function, block, &mut defined_values);
+            self.verify_block(return_type, function, block, &mut defined_values);
         }
 
-        for value in &function.values {
+        for value in function.values() {
             if !defined_values.contains(&value.id) {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("value {} has no definition", value.id),
                 );
             }
         }
     }
 
-    fn verify_storage(&mut self, function: &MirFunctionDefinition) {
+    fn verify_storage(&mut self, function: MirDefinitionRef<'_>) {
         let mut sources = HashSet::new();
-        for (index, storage) in function.storage.iter().enumerate() {
+        for (index, storage) in function.storage_entries().iter().enumerate() {
             if storage.id.callable() != function.callable() {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("storage {} is owned by another callable body", storage.id),
                 );
             }
             if storage.id.index() != index {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("storage table index {index} contains {}", storage.id),
                 );
             }
             if storage.source.callable() != function.callable() {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!(
                         "storage {} has a source binding from another callable body",
                         storage.id
@@ -351,16 +383,31 @@ impl Verifier<'_> {
             }
             if !sources.insert(storage.source) {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!(
                         "source binding {} has multiple storage slots",
                         storage.source
                     ),
                 );
             }
+            let source_matches_kind = matches!(
+                (storage.kind, storage.source),
+                (MirStorageKind::Receiver, BindingId::Receiver(_))
+                    | (MirStorageKind::Parameter, BindingId::Parameter(_))
+                    | (MirStorageKind::Local, BindingId::Local(_))
+            );
+            if !source_matches_kind {
+                self.function_error(
+                    function.callable(),
+                    format!(
+                        "storage {} kind does not match its source binding",
+                        storage.id
+                    ),
+                );
+            }
             if storage.ty == MirType::Unit {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!(
                         "storage {} cannot have payload-free type `unit`",
                         storage.id
@@ -370,7 +417,7 @@ impl Verifier<'_> {
             if let MirType::Class(class) = storage.ty {
                 if self.program.class(class).is_none() {
                     self.function_error(
-                        function.function,
+                        function.callable(),
                         format!("storage {} has undeclared class type {class}", storage.id),
                     );
                 }
@@ -378,56 +425,52 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_values(&mut self, function: &MirFunctionDefinition) {
-        for (index, value) in function.values.iter().enumerate() {
+    fn verify_values(&mut self, function: MirDefinitionRef<'_>) {
+        for (index, value) in function.values().iter().enumerate() {
             if value.id.callable() != function.callable() {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("value {} is owned by another callable body", value.id),
                 );
             }
             if value.id.index() != index {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("value table index {index} contains {}", value.id),
                 );
             }
             if !value.ty.is_scalar_value() {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("value {} must have a scalar value type", value.id),
                 );
             }
         }
     }
 
-    fn verify_parameters(
-        &mut self,
-        declaration: &MirFunctionDeclaration,
-        function: &MirFunctionDefinition,
-    ) {
-        if function.parameters.len() != declaration.parameter_types.len() {
+    fn verify_parameters(&mut self, parameter_types: &[MirType], function: MirDefinitionRef<'_>) {
+        if function.parameters().len() != parameter_types.len() {
             self.function_error(
-                function.function,
+                function.callable(),
                 format!(
                     "definition has {} parameters but declaration requires {}",
-                    function.parameters.len(),
-                    declaration.parameter_types.len()
+                    function.parameters().len(),
+                    parameter_types.len()
                 ),
             );
         }
         let mut seen = HashSet::new();
-        for (index, parameter) in function.parameters.iter().enumerate() {
+        for (index, parameter) in function.parameters().iter().enumerate() {
             let Some(storage) = function.storage(*parameter) else {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("parameter storage {parameter} is not declared"),
                 );
                 continue;
             };
             if !seen.insert(*parameter) {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("duplicate parameter storage {parameter}"),
                 );
             }
@@ -435,33 +478,76 @@ impl Verifier<'_> {
                 || !matches!(storage.source, BindingId::Parameter(_))
             {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("parameter {parameter} does not identify parameter storage"),
                 );
             }
             if !matches!(storage.source, BindingId::Parameter(id) if id.index() == index) {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("parameter position {index} has mismatched source binding"),
                 );
             }
-            if declaration
-                .parameter_types
+            if parameter_types
                 .get(index)
                 .is_some_and(|ty| *ty != storage.ty)
             {
                 self.function_error(
-                    function.function,
+                    function.callable(),
                     format!("parameter position {index} type differs from declaration"),
                 );
             }
         }
     }
 
+    fn verify_receiver(&mut self, function: MirDefinitionRef<'_>) {
+        let receiver_slots: Vec<_> = function
+            .storage_entries()
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::Receiver)
+            .collect();
+        let Some(receiver) = function.receiver() else {
+            if !receiver_slots.is_empty() {
+                self.function_error(
+                    function.callable(),
+                    "top-level function cannot declare receiver storage",
+                );
+            }
+            return;
+        };
+        let Some(storage) = function.storage(receiver) else {
+            self.function_error(
+                function.callable(),
+                format!("receiver storage {receiver} is not declared"),
+            );
+            return;
+        };
+        if receiver_slots.len() != 1
+            || storage.kind != MirStorageKind::Receiver
+            || storage.source != BindingId::Receiver(function.callable())
+        {
+            self.function_error(
+                function.callable(),
+                "member definition must identify exactly one receiver storage slot",
+            );
+        }
+        let expected = function
+            .callable()
+            .class()
+            .map(MirType::Class)
+            .expect("member callable has a class owner");
+        if storage.ty != expected {
+            self.function_error(
+                function.callable(),
+                "receiver storage has the wrong class type",
+            );
+        }
+    }
+
     fn verify_block(
         &mut self,
-        declaration: &MirFunctionDeclaration,
-        function: &MirFunctionDefinition,
+        return_type: MirType,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         defined_values: &mut HashSet<ValueId>,
     ) {
@@ -474,7 +560,7 @@ impl Verifier<'_> {
                 MirInstruction::Assign(assignment) => {
                     let Some(result) = function.value(assignment.result) else {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("assignment result {} is not declared", assignment.result),
                         );
@@ -482,14 +568,14 @@ impl Verifier<'_> {
                     };
                     if defined_values.contains(&assignment.result) {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("value {} is defined more than once", assignment.result),
                         );
                     }
                     if result.ty != assignment.rvalue.ty {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("assignment type does not match value {}", assignment.result),
                         );
@@ -509,7 +595,7 @@ impl Verifier<'_> {
                         self.verify_place(function, block, &initialize.destination);
                     let Some(target) = self.program.initializer(initialize.target) else {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("initializer target {} is not declared", initialize.target),
                         );
@@ -517,7 +603,7 @@ impl Verifier<'_> {
                     };
                     if destination_ty != Some(MirType::Class(initialize.target.class())) {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             "initializer destination has the wrong class type",
                         );
@@ -536,14 +622,14 @@ impl Verifier<'_> {
                         self.verify_value_use(function, block, store.value, &defined_in_block);
                     if storage_ty.is_some_and(|ty| !ty.is_scalar_value()) {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             "store destination must have scalar value type",
                         );
                     }
                     if storage_ty.is_some() && value_ty.is_some() && storage_ty != value_ty {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             "store operand type mismatch",
                         );
@@ -558,23 +644,23 @@ impl Verifier<'_> {
                     if let Some(ty) =
                         self.verify_value_use(function, block, *value, &defined_in_block)
                     {
-                        if declaration.return_type == MirType::Unit {
+                        if return_type == MirType::Unit {
                             self.block_error(
-                                function.function,
+                                function.callable(),
                                 block.id,
                                 "unit function return must not have an operand",
                             );
-                        } else if ty != declaration.return_type {
+                        } else if ty != return_type {
                             self.block_error(
-                                function.function,
+                                function.callable(),
                                 block.id,
                                 "return operand type mismatch",
                             );
                         }
                     }
-                } else if declaration.return_type != MirType::Unit {
+                } else if return_type != MirType::Unit {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "value-returning function return has no operand",
                     );
@@ -594,7 +680,7 @@ impl Verifier<'_> {
                 {
                     if ty != MirType::Bool {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             "branch condition is not `bool`",
                         );
@@ -603,25 +689,25 @@ impl Verifier<'_> {
                 self.verify_block_target(function, block, *true_target);
                 self.verify_block_target(function, block, *false_target);
             }
-            None => self.block_error(function.function, block.id, "block has no terminator"),
+            None => self.block_error(function.callable(), block.id, "block has no terminator"),
         }
     }
 
     fn verify_block_target(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         target: BlockId,
     ) {
         if target.callable() != function.callable() {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!("control-flow target {target} is owned by another callable body"),
             );
         } else if function.block(target).is_none() {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!("control-flow target {target} is not declared"),
             );
@@ -630,7 +716,7 @@ impl Verifier<'_> {
 
     fn verify_call(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         call: &MirCall,
         defined_values: &mut HashSet<ValueId>,
@@ -645,14 +731,14 @@ impl Verifier<'_> {
                 let metadata = function.value(result);
                 if metadata.is_none() {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         format!("call result {result} is not declared"),
                     );
                 }
                 if !defined_values.insert(result) {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         format!("value {result} is defined more than once"),
                     );
@@ -667,14 +753,14 @@ impl Verifier<'_> {
             MirCallTarget::Direct(target_id) => {
                 if call.receiver.is_some() {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "ordinary function call must not have a receiver",
                     );
                 }
                 let Some(target) = self.program.declarations.get(target_id) else {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         format!("call target {target_id} is not declared"),
                     );
@@ -685,7 +771,7 @@ impl Verifier<'_> {
             MirCallTarget::Method(target_id) => {
                 let Some(target) = self.program.method(target_id) else {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         format!("method target {target_id} is not declared"),
                     );
@@ -697,14 +783,14 @@ impl Verifier<'_> {
                             != Some(MirType::Class(target_id.class()))
                         {
                             self.block_error(
-                                function.function,
+                                function.callable(),
                                 block.id,
                                 "method receiver has the wrong class type",
                             );
                         }
                     }
                     None => self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "method call requires a receiver",
                     ),
@@ -716,16 +802,16 @@ impl Verifier<'_> {
 
         match (return_type, result_ty) {
             (MirType::Unit, Some(_)) => self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 "unit-returning call must not have a result",
             ),
             (MirType::Unit, None) => {}
             (_, Some(result_ty)) if result_ty != return_type => {
-                self.block_error(function.function, block.id, "call result type mismatch")
+                self.block_error(function.callable(), block.id, "call result type mismatch")
             }
             (_, None) => self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 "value-returning call has no result",
             ),
@@ -735,7 +821,7 @@ impl Verifier<'_> {
 
     fn verify_rvalue(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         rvalue: &MirRvalue,
         defined: &HashSet<ValueId>,
@@ -743,28 +829,32 @@ impl Verifier<'_> {
         match &rvalue.kind {
             MirRvalueKind::ConstantI64(_) => {
                 if rvalue.ty != MirType::I64 {
-                    self.block_error(function.function, block.id, "integer constant is not `i64`");
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "integer constant is not `i64`",
+                    );
                 }
             }
             MirRvalueKind::ConstantU64(_) => {
                 if rvalue.ty != MirType::U64 {
-                    self.block_error(function.function, block.id, "u64 constant is not `u64`");
+                    self.block_error(function.callable(), block.id, "u64 constant is not `u64`");
                 }
             }
             MirRvalueKind::ConstantU8(_) => {
                 if rvalue.ty != MirType::U8 {
-                    self.block_error(function.function, block.id, "u8 constant is not `u8`");
+                    self.block_error(function.callable(), block.id, "u8 constant is not `u8`");
                 }
             }
             MirRvalueKind::ConstantF64Bits(_) => {
                 if rvalue.ty != MirType::F64 {
-                    self.block_error(function.function, block.id, "f64 constant is not `f64`");
+                    self.block_error(function.callable(), block.id, "f64 constant is not `f64`");
                 }
             }
             MirRvalueKind::ConstantBool(_) => {
                 if rvalue.ty != MirType::Bool {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "boolean constant is not `bool`",
                     );
@@ -774,20 +864,20 @@ impl Verifier<'_> {
                 let place_ty = self.verify_place(function, block, place);
                 if place_ty.is_some_and(|ty| !ty.is_scalar_value()) {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "load source must have scalar value type",
                     );
                 }
                 if place_ty.is_some() && place_ty != Some(rvalue.ty) {
-                    self.block_error(function.function, block.id, "load result type mismatch");
+                    self.block_error(function.callable(), block.id, "load result type mismatch");
                 }
             }
             MirRvalueKind::Unary { operation, operand } => {
                 let expected = operation.operand_type();
                 if rvalue.ty != expected {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "unary operation result type mismatch",
                     );
@@ -802,7 +892,7 @@ impl Verifier<'_> {
                 let expected = operation.operand_type();
                 if rvalue.ty != expected {
                     self.block_error(
-                        function.function,
+                        function.callable(),
                         block.id,
                         "binary operation result type mismatch",
                     );
@@ -815,7 +905,7 @@ impl Verifier<'_> {
 
     fn verify_arithmetic_operand(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         value: ValueId,
         expected: MirType,
@@ -824,7 +914,7 @@ impl Verifier<'_> {
         if let Some(ty) = self.verify_value_use(function, block, value, defined) {
             if ty != expected {
                 self.block_error(
-                    function.function,
+                    function.callable(),
                     block.id,
                     format!("arithmetic operand is not `{expected}`"),
                 );
@@ -834,7 +924,7 @@ impl Verifier<'_> {
 
     fn verify_arguments(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         kind: &str,
         arguments: &[ValueId],
@@ -842,7 +932,7 @@ impl Verifier<'_> {
     ) {
         if arguments.len() != parameter_types.len() {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!(
                     "{kind} has {} arguments but requires {}",
@@ -856,7 +946,7 @@ impl Verifier<'_> {
             let parameter_ty = parameter_types.get(index).copied();
             if argument_ty.is_some() && parameter_ty.is_some() && argument_ty != parameter_ty {
                 self.block_error(
-                    function.function,
+                    function.callable(),
                     block.id,
                     format!("{kind} argument {index} type mismatch"),
                 );
@@ -866,13 +956,13 @@ impl Verifier<'_> {
 
     fn verify_place(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         place: &MirPlace,
     ) -> Option<MirType> {
         let Some(storage) = function.storage(place.base) else {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!("place base {} is not declared in this function", place.base),
             );
@@ -884,7 +974,7 @@ impl Verifier<'_> {
                 MirPlaceProjection::Field(field_id) => {
                     let MirType::Class(owner) = ty else {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("field projection {field_id} has a non-class base"),
                         );
@@ -892,7 +982,7 @@ impl Verifier<'_> {
                     };
                     if field_id.class() != owner {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("field projection {field_id} belongs to the wrong class"),
                         );
@@ -900,7 +990,7 @@ impl Verifier<'_> {
                     }
                     let Some(field) = self.program.field(field_id) else {
                         self.block_error(
-                            function.function,
+                            function.callable(),
                             block.id,
                             format!("field projection {field_id} is not declared"),
                         );
@@ -915,14 +1005,14 @@ impl Verifier<'_> {
 
     fn verify_value_use(
         &mut self,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         value: ValueId,
         defined: &HashSet<ValueId>,
     ) -> Option<MirType> {
         let Some(metadata) = function.value(value) else {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!("value {value} is not declared in this function"),
             );
@@ -930,7 +1020,7 @@ impl Verifier<'_> {
         };
         if !defined.contains(&value) {
             self.block_error(
-                function.function,
+                function.callable(),
                 block.id,
                 format!("value {value} is used before it is defined in this block"),
             );

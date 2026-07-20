@@ -223,6 +223,9 @@ impl FunctionChecker<'_, '_> {
             "resolved binding must belong to the current function"
         );
         match binding {
+            BindingId::Receiver(_) => {
+                unreachable!("function-only resolved IR cannot contain an implicit receiver")
+            }
             BindingId::Parameter(id) => lower_type(
                 &self
                     .declaration

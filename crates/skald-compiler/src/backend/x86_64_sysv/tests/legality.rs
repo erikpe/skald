@@ -69,7 +69,7 @@ fn unused_object_metadata_is_accepted_after_obj3() {
 }
 
 #[test]
-fn initialization_remains_a_structured_obj4_capability_error() {
+fn member_call_without_a_definition_is_a_structured_backend_error() {
     let (mut mir, ids) = projected_object_program();
     let initializer = InitializerId::new(ids.container, 0);
     mir.classes.entries_mut_for_test()[ids.container.index()]
@@ -97,7 +97,20 @@ fn initialization_remains_a_structured_obj4_capability_error() {
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error
         .message()
-        .contains("initialization and receiver calls require OBJ4 lowering"));
+        .contains("member call target c1:init0 has no MIR definition"));
+}
+
+#[test]
+fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
+    let mut mir = counter_member_program();
+    let declaration = &mut mir.declarations.entries_mut_for_test()[0];
+    declaration.parameter_types = vec![MirType::Class(ClassId::new(0))];
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("function parameters must have scalar value types"));
 }
 
 #[test]

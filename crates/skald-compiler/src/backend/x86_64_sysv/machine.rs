@@ -9,6 +9,7 @@ pub(super) enum Register {
     Rdi,
     R8,
     R9,
+    R11,
     Rbp,
     Rsp,
 }
@@ -68,6 +69,7 @@ impl Register {
             Self::Rdi => "%rdi",
             Self::R8 => "%r8",
             Self::R9 => "%r9",
+            Self::R11 => "%r11",
             Self::Rbp => "%rbp",
             Self::Rsp => "%rsp",
         }
@@ -122,6 +124,10 @@ pub(super) enum Instruction {
     MoveByte {
         source: ByteRegister,
         destination: Operand,
+    },
+    LoadEffectiveAddress {
+        source: Operand,
+        destination: Register,
     },
     MoveImmediate64 {
         bits: u64,

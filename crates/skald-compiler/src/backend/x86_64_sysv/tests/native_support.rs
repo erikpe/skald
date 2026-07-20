@@ -24,6 +24,16 @@ pub(super) fn assert_system_assembler_accepts(output: &str) {
 }
 
 pub(super) fn run_native_assembly(output: &str) -> std::process::ExitStatus {
+    let (_executable, mut command) = build_native_assembly(output);
+    command.status().unwrap()
+}
+
+pub(super) fn run_native_assembly_output(output: &str) -> std::process::Output {
+    let (_executable, mut command) = build_native_assembly(output);
+    command.output().unwrap()
+}
+
+fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
     let executable = TemporaryFile::new("native-executable").unwrap();
     let mut child = Command::new("cc")
         .args(["-x", "assembler", "-o"])
@@ -47,5 +57,6 @@ pub(super) fn run_native_assembly(output: &str) -> std::process::ExitStatus {
         String::from_utf8_lossy(&linked.stderr)
     );
 
-    Command::new(executable.path()).status().unwrap()
+    let command = Command::new(executable.path());
+    (executable, command)
 }

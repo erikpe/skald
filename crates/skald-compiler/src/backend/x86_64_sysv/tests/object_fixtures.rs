@@ -171,6 +171,465 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
     )
 }
 
+pub(super) fn counter_member_program() -> MirProgram {
+    let mut program = lower_source_to_mir(concat!(
+        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "fn sum(a: i64, b: i64) -> i64 { return a + b; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let span = program.span;
+    let class = ClassId::new(0);
+    let value_field = FieldId::new(class, 0);
+    let initializer = InitializerId::new(class, 0);
+    let add = MethodId::new(class, 0);
+    let get = MethodId::new(class, 1);
+    let get_via_receiver = MethodId::new(class, 2);
+    program.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
+        id: class,
+        name: "Counter".to_owned(),
+        fields: vec![field(value_field, "value", MirType::I64, span)],
+        initializers: vec![MirInitializerDeclaration {
+            id: initializer,
+            parameter_types: vec![MirType::I64],
+            span,
+        }],
+        methods: vec![
+            MirMethodDeclaration {
+                id: add,
+                name: "add".to_owned(),
+                receiver_access: MirReceiverAccess::Mutable,
+                parameter_types: vec![MirType::I64],
+                return_type: MirType::Unit,
+                span,
+            },
+            MirMethodDeclaration {
+                id: get,
+                name: "get".to_owned(),
+                receiver_access: MirReceiverAccess::ReadOnly,
+                parameter_types: vec![],
+                return_type: MirType::I64,
+                span,
+            },
+            MirMethodDeclaration {
+                id: get_via_receiver,
+                name: "get_via_receiver".to_owned(),
+                receiver_access: MirReceiverAccess::ReadOnly,
+                parameter_types: vec![],
+                return_type: MirType::I64,
+                span,
+            },
+        ],
+        span,
+    }]);
+    program.member_definitions = MirMemberDefinitionTable::new(vec![
+        initializer_definition(initializer, value_field, span),
+        add_definition(add, value_field, FunctionId::new(1), span),
+        get_definition(get, value_field, span),
+        forwarding_get_definition(get_via_receiver, get, span),
+    ]);
+
+    let main_id = program.entry_function;
+    let main = program.definitions.get_mut_for_test(main_id).unwrap();
+    let object = StorageId::new(main_id, 0);
+    main.storage.push(MirStorage {
+        id: object,
+        source: BindingId::Local(LocalId::new(main_id, 0)),
+        name: "counter".to_owned(),
+        kind: MirStorageKind::Local,
+        ty: MirType::Class(class),
+        span,
+    });
+    main.values.extend([
+        MirValue {
+            id: ValueId::new(main_id, 1),
+            ty: MirType::I64,
+            span,
+        },
+        MirValue {
+            id: ValueId::new(main_id, 2),
+            ty: MirType::I64,
+            span,
+        },
+        MirValue {
+            id: ValueId::new(main_id, 3),
+            ty: MirType::I64,
+            span,
+        },
+    ]);
+    main.body.blocks[0].instructions.extend([
+        assignment(
+            main_id,
+            1,
+            MirRvalueKind::ConstantI64(40),
+            MirType::I64,
+            span,
+        ),
+        MirInstruction::Initialize(MirInitialize {
+            destination: object.into(),
+            target: initializer,
+            arguments: vec![ValueId::new(main_id, 1)],
+            span,
+        }),
+        assignment(
+            main_id,
+            2,
+            MirRvalueKind::ConstantI64(2),
+            MirType::I64,
+            span,
+        ),
+        MirInstruction::Call(MirCall {
+            target: MirCallTarget::Method(add),
+            receiver: Some(object.into()),
+            arguments: vec![ValueId::new(main_id, 2)],
+            result: None,
+            span,
+        }),
+        MirInstruction::Call(MirCall {
+            target: MirCallTarget::Method(get_via_receiver),
+            receiver: Some(object.into()),
+            arguments: vec![],
+            result: Some(ValueId::new(main_id, 3)),
+            span,
+        }),
+        MirInstruction::Call(MirCall {
+            target: MirCallTarget::Direct(FunctionId::new(0)),
+            receiver: None,
+            arguments: vec![ValueId::new(main_id, 3)],
+            result: None,
+            span,
+        }),
+    ]);
+    program
+}
+
+pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
+    let (mut program, ids) = projected_object_program();
+    let method = MethodId::new(ids.container, 0);
+    let mut parameter_types = vec![MirType::I64; 5];
+    parameter_types.extend([MirType::F64; 8]);
+    parameter_types.extend([MirType::I64, MirType::F64]);
+    program.classes.entries_mut_for_test()[ids.container.index()]
+        .methods
+        .push(MirMethodDeclaration {
+            id: method,
+            name: "exhaust".to_owned(),
+            receiver_access: MirReceiverAccess::ReadOnly,
+            parameter_types: parameter_types.clone(),
+            return_type: MirType::Unit,
+            span: program.span,
+        });
+
+    let callable = method.into();
+    let receiver = StorageId::new(callable, 0);
+    let parameters: Vec<_> = parameter_types
+        .iter()
+        .enumerate()
+        .map(|(index, ty)| {
+            parameter_storage(
+                callable,
+                StorageId::new(callable, index + 1),
+                index,
+                *ty,
+                program.span,
+            )
+        })
+        .collect();
+    program.member_definitions = MirMemberDefinitionTable::new(vec![MirMemberDefinition {
+        callable,
+        receiver,
+        parameters: parameters.iter().map(|parameter| parameter.id).collect(),
+        storage: std::iter::once(receiver_storage(
+            callable,
+            receiver,
+            ids.container,
+            program.span,
+        ))
+        .chain(parameters)
+        .collect(),
+        values: vec![],
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![],
+                terminator: Some(MirTerminator::Return {
+                    value: None,
+                    span: program.span,
+                }),
+                span: program.span,
+            }],
+        },
+        span: program.span,
+    }]);
+
+    let function = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let first_value = function.values.len();
+    let mut arguments = Vec::with_capacity(parameter_types.len());
+    for (index, ty) in parameter_types.into_iter().enumerate() {
+        let value = ValueId::new(function.function, first_value + index);
+        function.values.push(MirValue {
+            id: value,
+            ty,
+            span: program.span,
+        });
+        let kind = if ty == MirType::F64 {
+            MirRvalueKind::ConstantF64Bits((index as f64).to_bits())
+        } else {
+            MirRvalueKind::ConstantI64(index as i64)
+        };
+        function.body.blocks[0]
+            .instructions
+            .push(MirInstruction::Assign(MirAssignment {
+                result: value,
+                rvalue: MirRvalue { kind, ty },
+                span: program.span,
+            }));
+        arguments.push(value);
+    }
+    function.body.blocks[0]
+        .instructions
+        .push(MirInstruction::Call(MirCall {
+            target: MirCallTarget::Method(method),
+            receiver: Some(ids.second.into()),
+            arguments,
+            result: None,
+            span: program.span,
+        }));
+    program
+}
+
+fn initializer_definition(
+    id: InitializerId,
+    value_field: FieldId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = id.into();
+    let receiver = StorageId::new(callable, 0);
+    let parameter = StorageId::new(callable, 1);
+    let value = ValueId::new(callable, 0);
+    MirMemberDefinition {
+        callable,
+        receiver,
+        parameters: vec![parameter],
+        storage: vec![
+            receiver_storage(callable, receiver, id.class(), span),
+            parameter_storage(callable, parameter, 0, MirType::I64, span),
+        ],
+        values: vec![MirValue {
+            id: value,
+            ty: MirType::I64,
+            span,
+        }],
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![
+                    MirInstruction::Assign(MirAssignment {
+                        result: value,
+                        rvalue: MirRvalue {
+                            kind: MirRvalueKind::Load(parameter.into()),
+                            ty: MirType::I64,
+                        },
+                        span,
+                    }),
+                    store(
+                        MirPlace::base(receiver).project_field(value_field),
+                        value,
+                        span,
+                    ),
+                ],
+                terminator: Some(MirTerminator::Return { value: None, span }),
+                span,
+            }],
+        },
+        span,
+    }
+}
+
+fn add_definition(
+    id: MethodId,
+    value_field: FieldId,
+    sum: FunctionId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = id.into();
+    let receiver = StorageId::new(callable, 0);
+    let parameter = StorageId::new(callable, 1);
+    let values: Vec<_> = (0..3)
+        .map(|index| MirValue {
+            id: ValueId::new(callable, index),
+            ty: MirType::I64,
+            span,
+        })
+        .collect();
+    let receiver_value = MirPlace::base(receiver).project_field(value_field);
+    MirMemberDefinition {
+        callable,
+        receiver,
+        parameters: vec![parameter],
+        storage: vec![
+            receiver_storage(callable, receiver, id.class(), span),
+            parameter_storage(callable, parameter, 0, MirType::I64, span),
+        ],
+        values,
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![
+                    MirInstruction::Assign(MirAssignment {
+                        result: ValueId::new(callable, 0),
+                        rvalue: MirRvalue {
+                            kind: MirRvalueKind::Load(receiver_value.clone()),
+                            ty: MirType::I64,
+                        },
+                        span,
+                    }),
+                    MirInstruction::Assign(MirAssignment {
+                        result: ValueId::new(callable, 1),
+                        rvalue: MirRvalue {
+                            kind: MirRvalueKind::Load(parameter.into()),
+                            ty: MirType::I64,
+                        },
+                        span,
+                    }),
+                    MirInstruction::Call(MirCall {
+                        target: MirCallTarget::Direct(sum),
+                        receiver: None,
+                        arguments: vec![ValueId::new(callable, 0), ValueId::new(callable, 1)],
+                        result: Some(ValueId::new(callable, 2)),
+                        span,
+                    }),
+                    store(receiver_value, ValueId::new(callable, 2), span),
+                ],
+                terminator: Some(MirTerminator::Return { value: None, span }),
+                span,
+            }],
+        },
+        span,
+    }
+}
+
+fn get_definition(
+    id: MethodId,
+    value_field: FieldId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = id.into();
+    let receiver = StorageId::new(callable, 0);
+    let result = ValueId::new(callable, 0);
+    MirMemberDefinition {
+        callable,
+        receiver,
+        parameters: vec![],
+        storage: vec![receiver_storage(callable, receiver, id.class(), span)],
+        values: vec![MirValue {
+            id: result,
+            ty: MirType::I64,
+            span,
+        }],
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![MirInstruction::Assign(MirAssignment {
+                    result,
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::Load(
+                            MirPlace::base(receiver).project_field(value_field),
+                        ),
+                        ty: MirType::I64,
+                    },
+                    span,
+                })],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(result),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    }
+}
+
+fn forwarding_get_definition(
+    id: MethodId,
+    target: MethodId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = id.into();
+    let receiver = StorageId::new(callable, 0);
+    let result = ValueId::new(callable, 0);
+    MirMemberDefinition {
+        callable,
+        receiver,
+        parameters: vec![],
+        storage: vec![receiver_storage(callable, receiver, id.class(), span)],
+        values: vec![MirValue {
+            id: result,
+            ty: MirType::I64,
+            span,
+        }],
+        body: MirBody {
+            entry: BlockId::new(callable, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(callable, 0),
+                instructions: vec![MirInstruction::Call(MirCall {
+                    target: MirCallTarget::Method(target),
+                    receiver: Some(receiver.into()),
+                    arguments: vec![],
+                    result: Some(result),
+                    span,
+                })],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(result),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    }
+}
+
+fn receiver_storage(
+    callable: crate::identity::CallableId,
+    id: StorageId,
+    class: ClassId,
+    span: crate::source::Span,
+) -> MirStorage {
+    MirStorage {
+        id,
+        source: BindingId::Receiver(callable),
+        name: "self".to_owned(),
+        kind: MirStorageKind::Receiver,
+        ty: MirType::Class(class),
+        span,
+    }
+}
+
+fn parameter_storage(
+    callable: crate::identity::CallableId,
+    id: StorageId,
+    index: usize,
+    ty: MirType,
+    span: crate::source::Span,
+) -> MirStorage {
+    MirStorage {
+        id,
+        source: BindingId::Parameter(ParameterId::new(callable, index)),
+        name: format!("p{index}"),
+        kind: MirStorageKind::Parameter,
+        ty,
+        span,
+    }
+}
+
 fn field(id: FieldId, name: &str, ty: MirType, span: crate::source::Span) -> MirFieldDeclaration {
     MirFieldDeclaration {
         id,

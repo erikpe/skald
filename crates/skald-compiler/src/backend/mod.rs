@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use crate::{identity::FunctionId, mir::MirProgram};
+use crate::{identity::CallableId, mir::MirProgram};
 
 mod x86_64_sysv;
 
@@ -62,7 +62,7 @@ pub fn target_by_name(name: &str) -> Result<Target, UnsupportedTargetError> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BackendError {
     target: Target,
-    function: Option<FunctionId>,
+    callable: Option<CallableId>,
     message: String,
 }
 
@@ -71,8 +71,8 @@ impl BackendError {
         self.target
     }
 
-    pub fn function(&self) -> Option<FunctionId> {
-        self.function
+    pub fn callable(&self) -> Option<CallableId> {
+        self.callable
     }
 
     pub fn message(&self) -> &str {
@@ -81,12 +81,12 @@ impl BackendError {
 
     pub(crate) fn new(
         target: Target,
-        function: Option<FunctionId>,
+        callable: Option<CallableId>,
         message: impl Into<String>,
     ) -> Self {
         Self {
             target,
-            function,
+            callable,
             message: message.into(),
         }
     }
@@ -94,10 +94,10 @@ impl BackendError {
 
 impl fmt::Display for BackendError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.function {
-            Some(function) => write!(
+        match self.callable {
+            Some(callable) => write!(
                 formatter,
-                "{} backend error in {function}: {}",
+                "{} backend error in {callable}: {}",
                 self.target.name(),
                 self.message
             ),

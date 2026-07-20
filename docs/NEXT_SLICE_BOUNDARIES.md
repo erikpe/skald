@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-T7/R12; inline-object OBJ0–OBJ3 complete.
+Status: post-T7/R12; inline-object OBJ0–OBJ4 complete.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -72,7 +72,10 @@ identities and callable-owned body-local identities. OBJ2 adds canonical MIR
 class/member metadata, typed field-projected places, explicit destination
 initialization, receiver-bearing calls, and structural/type verification;
 OBJ3 adds checked dependency-ordered x86-64 class layout, aligned object frame
-storage, and width-correct projected-place addressing. OBJ4 is next.
+storage, and width-correct projected-place addressing. OBJ4 adds verified
+executable member bodies and the x86-64 hidden receiver ABI,
+including receiver forwarding, identity-derived symbols, and mixed-class stack
+arguments. OBJ5 is next.
 
 The first inline object stresses layout, construction state, receiver access,
 and the boundary of future cleanup and return conventions. It requires a

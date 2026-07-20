@@ -12,6 +12,7 @@ mod layout;
 mod legality;
 mod lower;
 mod machine;
+mod symbol;
 
 use crate::mir::MirProgram;
 

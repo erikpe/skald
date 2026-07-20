@@ -53,6 +53,16 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             display_operand(*destination)
         )
         .unwrap(),
+        Instruction::LoadEffectiveAddress {
+            source,
+            destination,
+        } => write!(
+            output,
+            "leaq {}, {}",
+            display_operand(*source),
+            destination.name()
+        )
+        .unwrap(),
         Instruction::MoveImmediate64 { bits, destination } => {
             if *bits <= i64::MAX as u64 {
                 write!(output, "movabsq ${bits}, {}", destination.name()).unwrap()

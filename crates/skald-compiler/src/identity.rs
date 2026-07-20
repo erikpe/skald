@@ -191,6 +191,7 @@ impl fmt::Display for LocalId {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BindingId {
+    Receiver(CallableId),
     Parameter(ParameterId),
     Local(LocalId),
 }
@@ -198,6 +199,7 @@ pub enum BindingId {
 impl BindingId {
     pub const fn callable(self) -> CallableId {
         match self {
+            Self::Receiver(callable) => callable,
             Self::Parameter(id) => id.callable(),
             Self::Local(id) => id.callable(),
         }
@@ -207,6 +209,7 @@ impl BindingId {
 impl fmt::Display for BindingId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Receiver(callable) => write!(formatter, "{callable}:self"),
             Self::Parameter(id) => id.fmt(formatter),
             Self::Local(id) => id.fmt(formatter),
         }

@@ -156,6 +156,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
 
     MirProgram {
         classes: MirClassDeclarationTable::default(),
+        member_definitions: MirMemberDefinitionTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![
             MirFunctionDeclaration {
                 id: compute_id,
@@ -313,6 +314,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
 
     MirProgram {
         classes: MirClassDeclarationTable::default(),
+        member_definitions: MirMemberDefinitionTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![
             MirFunctionDeclaration {
                 id: mixed_id,

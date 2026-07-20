@@ -3,8 +3,8 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirFunctionDefinition, MirPlace, MirPlaceProjection, MirProgram, MirType, StorageId,
-        ValueId,
+        MirDefinitionRef, MirPlace, MirPlaceProjection, MirProgram, MirStorageKind, MirType,
+        StorageId, ValueId,
     },
 };
 
@@ -15,14 +15,25 @@ const SCALAR_HOME_ALIGNMENT: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct FramePlace {
+    base: FramePlaceBase,
     displacement: i32,
     ty: MirType,
     byte_access: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum FramePlaceBase {
+    FramePointer,
+    ReceiverPointer { home: i32 },
+}
+
 impl FramePlace {
     pub(super) const fn displacement(self) -> i32 {
         self.displacement
+    }
+
+    pub(super) const fn base(self) -> FramePlaceBase {
+        self.base
     }
 
     pub(super) const fn ty(self) -> MirType {
@@ -43,23 +54,24 @@ pub(super) struct FrameLayout {
 
 impl FrameLayout {
     pub(super) fn plan(
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         data_layout: &DataLayout,
     ) -> Result<Self, BackendError> {
         let mut allocator = FrameAllocator::new(function);
-        let mut storage_offsets = Vec::with_capacity(function.storage.len());
-        for storage in &function.storage {
-            let (size, alignment) = match storage.ty {
-                MirType::Class(_) | MirType::Unit => {
+        let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
+        for storage in function.storage_entries() {
+            let (size, alignment) = match (storage.kind, storage.ty) {
+                (MirStorageKind::Receiver, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
+                (_, MirType::Class(_) | MirType::Unit) => {
                     let ty = data_layout.ty(storage.ty)?;
                     (ty.size(), ty.alignment())
                 }
-                _ => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
+                (_, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
             };
             storage_offsets.push(allocator.allocate(size, alignment)?);
         }
-        let mut value_offsets = Vec::with_capacity(function.values.len());
-        for _ in &function.values {
+        let mut value_offsets = Vec::with_capacity(function.values().len());
+        for _ in function.values() {
             value_offsets.push(allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?);
         }
         let size = allocator.finish()?;
@@ -88,14 +100,23 @@ impl FrameLayout {
     pub(super) fn place(
         &self,
         program: &MirProgram,
-        function: &MirFunctionDefinition,
+        function: MirDefinitionRef<'_>,
         data_layout: &DataLayout,
         place: &MirPlace,
     ) -> FramePlace {
         let storage = function
             .storage(place.base)
             .expect("verified place base must identify storage");
-        let mut displacement = self.storage(place.base);
+        let (base, mut displacement) = if storage.kind == MirStorageKind::Receiver {
+            (
+                FramePlaceBase::ReceiverPointer {
+                    home: self.storage(place.base),
+                },
+                0,
+            )
+        } else {
+            (FramePlaceBase::FramePointer, self.storage(place.base))
+        };
         let mut ty = storage.ty;
         for projection in &place.projections {
             match *projection {
@@ -116,6 +137,7 @@ impl FrameLayout {
             }
         }
         FramePlace {
+            base,
             displacement,
             ty,
             byte_access: !place.projections.is_empty() && matches!(ty, MirType::U8 | MirType::Bool),
@@ -123,14 +145,17 @@ impl FrameLayout {
     }
 }
 
-struct FrameAllocator<'function> {
-    function: &'function MirFunctionDefinition,
+struct FrameAllocator {
+    callable: crate::identity::CallableId,
     used: usize,
 }
 
-impl<'function> FrameAllocator<'function> {
-    const fn new(function: &'function MirFunctionDefinition) -> Self {
-        Self { function, used: 0 }
+impl FrameAllocator {
+    const fn new(function: MirDefinitionRef<'_>) -> Self {
+        Self {
+            callable: function.callable(),
+            used: 0,
+        }
     }
 
     fn allocate(&mut self, size: usize, alignment: usize) -> Result<i32, BackendError> {
@@ -153,14 +178,14 @@ impl<'function> FrameAllocator<'function> {
     }
 
     fn error(&self) -> BackendError {
-        frame_too_large(self.function)
+        frame_too_large(self.callable)
     }
 }
 
-fn frame_too_large(function: &MirFunctionDefinition) -> BackendError {
+fn frame_too_large(callable: crate::identity::CallableId) -> BackendError {
     BackendError::new(
         Target::X86_64SysV,
-        Some(function.function),
+        Some(callable),
         "stack frame is too large for x86-64 frame-relative addressing",
     )
 }
