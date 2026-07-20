@@ -5,7 +5,8 @@ use super::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TypeContext {
     Result,
-    StoredValue,
+    PrimitiveValue,
+    LocalValue,
 }
 
 impl TypeContext {
@@ -13,11 +14,21 @@ impl TypeContext {
         matches!(self, Self::Result)
     }
 
+    const fn accepts_named(self) -> bool {
+        matches!(self, Self::LocalValue)
+    }
+
     fn expected_label(self) -> String {
         match self {
             Self::Result => format!("expected {}", format_type_list(RESULT_TYPE_NAMES)),
-            Self::StoredValue => format!(
-                "parameters and locals must have type {}",
+            Self::PrimitiveValue => {
+                format!(
+                    "parameters and fields must have type {}",
+                    format_type_list(STORED_TYPE_NAMES)
+                )
+            }
+            Self::LocalValue => format!(
+                "locals must have type {} or a named class type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         }
@@ -77,7 +88,7 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_parameter_list(&mut self) -> Option<Vec<Parameter>> {
+    pub(super) fn parse_parameter_list(&mut self) -> Option<Vec<Parameter>> {
         self.expect(TokenKind::LeftParen, "`(` after the function name");
         let mut parameters = Vec::new();
         let mut valid = true;
@@ -141,7 +152,7 @@ impl Parser<'_> {
         let name = self.parse_name("expected a parameter name");
         self.expect(TokenKind::Colon, "`:` after the parameter name");
         let type_syntax = self.parse_type(
-            TypeContext::StoredValue,
+            TypeContext::PrimitiveValue,
             format!(
                 "expected the parameter type {}",
                 format_type_list(STORED_TYPE_NAMES)
@@ -175,6 +186,17 @@ impl Parser<'_> {
                     span: token.span,
                 });
             }
+        }
+
+        if context.accepts_named() && token.kind == TokenKind::Identifier {
+            self.advance();
+            return Some(TypeSyntax {
+                kind: TypeKind::Named(Name {
+                    text: self.lexeme(token).to_owned(),
+                    span: token.span,
+                }),
+                span: token.span,
+            });
         }
 
         self.report(

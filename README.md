@@ -89,10 +89,12 @@ verifier rules that keep objects out of transient scalar values. OBJ3 adds the
 checked x86-64 data-layout authority, aligned inline frame allocations, and
 width-correct lowering of nested field places. OBJ4 adds executable MIR member
 bodies, identity-derived symbols, hidden receiver-address passing, receiver
-forwarding, and mixed integer/SSE/stack ABI lowering. OBJ5 is next: it exposes
-the restricted class, member, and construction syntax while keeping semantic
-selection in later phases. Copying, destruction, polymorphism, and shared
-ownership remain deferred.
+forwarding, and mixed integer/SSE/stack ABI lowering. OBJ5 adds source-shaped
+AST support for classes, fields, initializers, receiver methods, named local
+types, member access, direct-construction call syntax, and field assignment,
+with class-local recovery and exact spans. OBJ6 is next: it resolves these
+nominal declarations and selections to stable identities. Copying, destruction,
+polymorphism, and shared ownership remain deferred.
 
 ## Development
 

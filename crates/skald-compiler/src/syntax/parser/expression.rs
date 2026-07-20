@@ -69,14 +69,30 @@ impl Parser<'_> {
     fn parse_postfix(&mut self) -> Option<Expression> {
         let mut expression = self.parse_primary()?;
 
-        while self.at(TokenKind::LeftParen) {
-            let left_paren_span = self.peek().span;
-            expression = self.with_syntax_nesting(left_paren_span, move |parser| {
-                parser.finish_call(expression)
-            })?;
+        while self.at_any(&[TokenKind::LeftParen, TokenKind::Dot]) {
+            if self.at(TokenKind::LeftParen) {
+                let left_paren_span = self.peek().span;
+                expression = self.with_syntax_nesting(left_paren_span, move |parser| {
+                    parser.finish_call(expression)
+                })?;
+            } else {
+                expression = self.finish_member_access(expression)?;
+            }
         }
 
         Some(expression)
+    }
+
+    fn finish_member_access(&mut self, receiver: Expression) -> Option<Expression> {
+        let dot = self.advance();
+        let member = self.parse_name("expected a member name after `.`")?;
+        let span = self.cover(receiver.span(), member.span);
+        Some(Expression::MemberAccess(MemberAccessExpr {
+            receiver: Box::new(receiver),
+            dot_span: dot.span,
+            member,
+            span,
+        }))
     }
 
     fn finish_call(&mut self, callee: Expression) -> Option<Expression> {
@@ -203,6 +219,10 @@ impl Parser<'_> {
             }));
         }
 
+        if let Some(token) = self.consume(TokenKind::SelfValue) {
+            return Some(Expression::SelfValue(SelfExpr { span: token.span }));
+        }
+
         if let Some(left_paren) = self.consume(TokenKind::LeftParen) {
             let expression =
                 self.with_syntax_nesting(left_paren.span, |parser| parser.parse_expression())?;
@@ -225,7 +245,7 @@ impl Parser<'_> {
             EXPECTED_EXPRESSION,
             "expected an expression",
             self.peek().span,
-            "expected an identifier, literal, unary `-`, or `(`",
+            "expected an identifier, literal, `self`, unary `-`, or `(`",
         );
         None
     }

@@ -87,3 +87,35 @@ fn function_name_without_a_call_is_not_a_value() {
         FUNCTION_USED_AS_VALUE
     );
 }
+
+#[test]
+fn object_syntax_stops_cleanly_at_the_pre_obj6_resolution_boundary() {
+    let output = resolve_text(concat!(
+        "class Counter { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        OBJECT_SYNTAX_NOT_RESOLVED
+    );
+    assert_eq!(output.program.declarations.len(), 1);
+}
+
+#[test]
+fn object_forms_in_function_bodies_are_rejected_without_panicking() {
+    let output = resolve_text(concat!(
+        "fn main() -> i64 {\n",
+        "    var counter: Counter = Counter(0);\n",
+        "    counter.value = 1;\n",
+        "    return self.value;\n",
+        "}\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 3);
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == OBJECT_SYNTAX_NOT_RESOLVED));
+}

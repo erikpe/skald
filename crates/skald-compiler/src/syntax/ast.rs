@@ -12,6 +12,7 @@ pub struct CompilationUnit {
 pub enum TopLevelDeclaration {
     Function(FunctionDecl),
     ExternalFunction(ExternalFunctionDecl),
+    Class(ClassDecl),
 }
 
 impl TopLevelDeclaration {
@@ -19,6 +20,7 @@ impl TopLevelDeclaration {
         match self {
             Self::Function(function) => &function.name,
             Self::ExternalFunction(function) => &function.name,
+            Self::Class(class) => &class.name,
         }
     }
 
@@ -26,8 +28,58 @@ impl TopLevelDeclaration {
         match self {
             Self::Function(function) => function.span,
             Self::ExternalFunction(function) => function.span,
+            Self::Class(class) => class.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ClassDecl {
+    pub name: Name,
+    pub members: Vec<ClassMember>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ClassMember {
+    Field(FieldDecl),
+    Initializer(InitializerDecl),
+    Method(MethodDecl),
+}
+
+impl ClassMember {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Field(field) => field.span,
+            Self::Initializer(initializer) => initializer.span,
+            Self::Method(method) => method.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FieldDecl {
+    pub name: Name,
+    pub type_syntax: TypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InitializerDecl {
+    pub introducer_span: Span,
+    pub parameters: Vec<Parameter>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MethodDecl {
+    pub mut_span: Option<Span>,
+    pub name: Name,
+    pub parameters: Vec<Parameter>,
+    pub return_type: TypeSyntax,
+    pub body: Block,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -60,7 +112,7 @@ pub struct Name {
     pub span: Span,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TypeKind {
     I64,
     U64,
@@ -68,6 +120,7 @@ pub enum TypeKind {
     F64,
     Bool,
     Unit,
+    Named(Name),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -89,6 +142,7 @@ pub enum Statement {
     Expression(ExpressionStatement),
     Conditional(ConditionalStatement),
     Block(Block),
+    FieldAssignment(FieldAssignmentStatement),
 }
 
 impl Statement {
@@ -99,8 +153,17 @@ impl Statement {
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
+            Self::FieldAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FieldAssignmentStatement {
+    pub place: MemberAccessExpr,
+    pub equal_span: Span,
+    pub value: Expression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -147,6 +210,8 @@ pub enum Expression {
     Binary(BinaryExpr),
     Call(CallExpr),
     Grouped(GroupedExpr),
+    SelfValue(SelfExpr),
+    MemberAccess(MemberAccessExpr),
 }
 
 impl Expression {
@@ -159,8 +224,23 @@ impl Expression {
             Self::Binary(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
+            Self::SelfValue(expression) => expression.span,
+            Self::MemberAccess(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SelfExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberAccessExpr {
+    pub receiver: Box<Expression>,
+    pub dot_span: Span,
+    pub member: Name,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

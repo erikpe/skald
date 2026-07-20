@@ -115,3 +115,20 @@ fn missing_block_close_recovers_at_the_next_function() {
     assert_eq!(output.ast.declarations.len(), 2);
     assert_eq!(function(&output.ast, 1).name.text, "second");
 }
+
+#[test]
+fn malformed_class_does_not_hide_later_top_level_declarations() {
+    let (_, output) = parse_text(concat!(
+        "class { value: i64; }\n",
+        "class Good { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.has_errors());
+    assert_eq!(output.ast.declarations.len(), 2);
+    let TopLevelDeclaration::Class(class) = &output.ast.declarations[0] else {
+        panic!("expected recovered class");
+    };
+    assert_eq!(class.name.text, "Good");
+    assert_eq!(function(&output.ast, 1).name.text, "main");
+}

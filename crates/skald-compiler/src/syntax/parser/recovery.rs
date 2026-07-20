@@ -6,17 +6,39 @@ use super::*;
 
 impl Parser<'_> {
     pub(super) fn synchronize_declaration(&mut self) {
-        while !self.at_any(&[TokenKind::Fn, TokenKind::Extern, TokenKind::Eof]) {
+        while !self.at_any(&[
+            TokenKind::Fn,
+            TokenKind::Extern,
+            TokenKind::Class,
+            TokenKind::Eof,
+        ]) {
             self.advance();
         }
         self.recovering_from_excessive_nesting = false;
     }
 
-    /// Discards the rest of the over-deep declaration without recursively
-    /// inspecting its delimiters. `fn` and `extern` cannot begin valid nested
-    /// syntax in the implemented grammar, so they are reliable restart points.
+    /// Discards the rest of an over-deep declaration without recursively
+    /// rebuilding its syntax. Inside a class, brace accounting first skips the
+    /// complete class because `fn` can introduce either a method or the next
+    /// top-level declaration. File-scope keywords are then reliable restart
+    /// points.
     pub(super) fn recover_from_excessive_nesting(&mut self) {
-        while !self.at_any(&[TokenKind::Fn, TokenKind::Extern, TokenKind::Eof]) {
+        if self.class_depth > 0 {
+            let mut braces_to_close = self.brace_depth;
+            while braces_to_close > 0 && !self.at(TokenKind::Eof) {
+                match self.advance().kind {
+                    TokenKind::LeftBrace => braces_to_close += 1,
+                    TokenKind::RightBrace => braces_to_close -= 1,
+                    _ => {}
+                }
+            }
+        }
+        while !self.at_any(&[
+            TokenKind::Fn,
+            TokenKind::Extern,
+            TokenKind::Class,
+            TokenKind::Eof,
+        ]) {
             self.advance();
         }
     }
@@ -30,6 +52,7 @@ impl Parser<'_> {
             TokenKind::Semicolon,
             TokenKind::Fn,
             TokenKind::Extern,
+            TokenKind::Class,
             TokenKind::Eof,
         ]) {
             self.advance();
@@ -48,6 +71,7 @@ impl Parser<'_> {
                 TokenKind::Elif,
                 TokenKind::Else,
                 TokenKind::Identifier,
+                TokenKind::SelfValue,
                 TokenKind::NumericLiteral(NumericLiteralKind::I64),
                 TokenKind::NumericLiteral(NumericLiteralKind::U64),
                 TokenKind::NumericLiteral(NumericLiteralKind::U8),
@@ -60,6 +84,7 @@ impl Parser<'_> {
                 TokenKind::RightBrace,
                 TokenKind::Fn,
                 TokenKind::Extern,
+                TokenKind::Class,
             ]) {
                 return;
             }
@@ -82,6 +107,7 @@ impl Parser<'_> {
     pub(super) fn starts_expression(&self) -> bool {
         self.at_any(&[
             TokenKind::Identifier,
+            TokenKind::SelfValue,
             TokenKind::NumericLiteral(NumericLiteralKind::I64),
             TokenKind::NumericLiteral(NumericLiteralKind::U64),
             TokenKind::NumericLiteral(NumericLiteralKind::U8),
@@ -91,5 +117,32 @@ impl Parser<'_> {
             TokenKind::Minus,
             TokenKind::LeftParen,
         ])
+    }
+
+    pub(super) fn synchronize_class_member(&mut self) {
+        let mut brace_depth = 0usize;
+        while !self.at(TokenKind::Eof) {
+            match self.peek().kind {
+                TokenKind::LeftBrace => {
+                    brace_depth += 1;
+                    self.advance();
+                }
+                TokenKind::RightBrace if brace_depth == 0 => return,
+                TokenKind::RightBrace => {
+                    brace_depth -= 1;
+                    self.advance();
+                    if brace_depth == 0 {
+                        return;
+                    }
+                }
+                TokenKind::Semicolon if brace_depth == 0 => {
+                    self.advance();
+                    return;
+                }
+                _ => {
+                    self.advance();
+                }
+            }
+        }
     }
 }

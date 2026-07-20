@@ -4,6 +4,9 @@ use crate::{literal::NumericLiteralKind, source::Span};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TokenKind {
+    Class,
+    SelfValue,
+    Mut,
     Fn,
     Extern,
     Var,
@@ -33,6 +36,7 @@ pub enum TokenKind {
     Minus,
     Star,
     Equal,
+    Dot,
     Invalid,
     Eof,
 }
@@ -40,6 +44,9 @@ pub enum TokenKind {
 impl TokenKind {
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Class => "CLASS",
+            Self::SelfValue => "SELF",
+            Self::Mut => "MUT",
             Self::Fn => "FN",
             Self::Extern => "EXTERN",
             Self::Var => "VAR",
@@ -72,6 +79,7 @@ impl TokenKind {
             Self::Minus => "MINUS",
             Self::Star => "STAR",
             Self::Equal => "EQUAL",
+            Self::Dot => "DOT",
             Self::Invalid => "INVALID",
             Self::Eof => "EOF",
         }

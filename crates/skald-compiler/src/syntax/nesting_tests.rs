@@ -99,3 +99,25 @@ fn unary_and_postfix_recursion_use_the_same_nesting_budget() {
     );
     assert_single_nesting_error(&parse_text(source_with_return(&calls)));
 }
+
+#[test]
+fn class_and_method_bodies_share_the_syntax_nesting_budget() {
+    let allowed = grouped_expression(MAX_SYNTAX_NESTING - 2);
+    let output = parse_text(format!(
+        "class Deep {{ fn value() -> i64 {{ return {allowed}; }} }}"
+    ));
+    assert!(output.diagnostics.is_empty());
+    assert_eq!(output.ast.declarations.len(), 1);
+
+    let excessive = grouped_expression(MAX_SYNTAX_NESTING - 1);
+    let output = parse_text(format!(
+        "class TooDeep {{ fn value() -> i64 {{ return {excessive}; }} }} \
+         fn recovered() -> i64 {{ return 0; }}"
+    ));
+    assert_single_nesting_error(&output);
+    assert_eq!(output.ast.declarations.len(), 1);
+    let TopLevelDeclaration::Function(function) = &output.ast.declarations[0] else {
+        panic!("expected recovered function");
+    };
+    assert_eq!(function.name.text, "recovered");
+}

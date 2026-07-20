@@ -9,15 +9,17 @@ mod dump;
 mod parser;
 
 pub use ast::{
-    BinaryExpr, BinaryOperator, Block, BooleanExpr, CallExpr, CompilationUnit, ConditionalArm,
-    ConditionalStatement, Expression, ExpressionStatement, ExternalFunctionDecl, FunctionDecl,
-    GroupedExpr, IdentifierExpr, LocalDecl, Name, NumericLiteralExpr, Parameter, ReturnStatement,
-    Statement, TopLevelDeclaration, TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, Block, BooleanExpr, CallExpr, ClassDecl, ClassMember,
+    CompilationUnit, ConditionalArm, ConditionalStatement, Expression, ExpressionStatement,
+    ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
+    IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl, Name,
+    NumericLiteralExpr, Parameter, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration,
+    TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
-    EXPECTED_STATEMENT, EXPECTED_TOKEN, MAX_SYNTAX_NESTING,
+    EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_MEMBER, MAX_SYNTAX_NESTING,
 };
 
 #[cfg(test)]

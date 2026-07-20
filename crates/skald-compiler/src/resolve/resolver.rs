@@ -16,6 +16,8 @@ pub const DUPLICATE_BINDING: &str = "RES002";
 pub const UNKNOWN_NAME: &str = "RES003";
 pub const INVALID_CALL_TARGET: &str = "RES004";
 pub const FUNCTION_USED_AS_VALUE: &str = "RES005";
+/// Temporary phase-boundary diagnostic removed when OBJ6 resolves object syntax.
+pub const OBJECT_SYNTAX_NOT_RESOLVED: &str = "RES006";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -81,6 +83,9 @@ impl<'ast> Resolver<'ast> {
                     function_declarations.push(resolver.resolve_external(function));
                     function_definitions.push(None);
                 }
+                syntax::TopLevelDeclaration::Class(_) => {
+                    unreachable!("class declarations are excluded from the function worklist")
+                }
             }
         }
 
@@ -97,6 +102,16 @@ impl<'ast> Resolver<'ast> {
 
     fn collect_functions(&mut self) {
         for (ast_index, declaration) in self.ast.declarations.iter().enumerate() {
+            if let syntax::TopLevelDeclaration::Class(class) = declaration {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        OBJECT_SYNTAX_NOT_RESOLVED,
+                        "class resolution is not implemented yet",
+                    )
+                    .with_primary_label(class.span, "class syntax is parsed but not yet resolved"),
+                );
+                continue;
+            }
             let name = declaration.name();
             if let Some(previous) = self.functions_by_name.get(&name.text) {
                 self.diagnostics.push(
@@ -274,6 +289,10 @@ impl<'program> FunctionResolver<'program> {
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
             }
+            syntax::Statement::FieldAssignment(assignment) => {
+                self.report_object_boundary(assignment.span, "field assignment");
+                None
+            }
         }
     }
 
@@ -312,6 +331,10 @@ impl<'program> FunctionResolver<'program> {
     }
 
     fn resolve_local(&mut self, local: &syntax::LocalDecl) -> Option<ResolvedLocalDecl> {
+        if matches!(local.type_syntax.kind, syntax::TypeKind::Named(_)) {
+            self.report_object_boundary(local.type_syntax.span, "named local type");
+            return None;
+        }
         // The initializer is resolved before introducing the binding, matching
         // source-order visibility and preventing self-reference.
         let initializer = self.resolve_expression(&local.initializer);
@@ -403,6 +426,14 @@ impl<'program> FunctionResolver<'program> {
                     expression: Box::new(expression),
                     span: grouped.span,
                 }))
+            }
+            syntax::Expression::SelfValue(self_value) => {
+                self.report_object_boundary(self_value.span, "`self`");
+                None
+            }
+            syntax::Expression::MemberAccess(member) => {
+                self.report_object_boundary(member.span, "member access");
+                None
             }
         }
     }
@@ -527,17 +558,30 @@ impl<'program> FunctionResolver<'program> {
                 .with_primary_label(span, "not declared in this scope"),
         );
     }
+
+    fn report_object_boundary(&mut self, span: Span, construct: &'static str) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                OBJECT_SYNTAX_NOT_RESOLVED,
+                format!("{construct} is not implemented beyond parsing yet"),
+            )
+            .with_primary_label(span, "object name resolution arrives in OBJ6"),
+        );
+    }
 }
 
 fn resolve_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
     ResolvedType {
-        kind: match type_syntax.kind {
+        kind: match &type_syntax.kind {
             syntax::TypeKind::I64 => ResolvedTypeKind::I64,
             syntax::TypeKind::U64 => ResolvedTypeKind::U64,
             syntax::TypeKind::U8 => ResolvedTypeKind::U8,
             syntax::TypeKind::F64 => ResolvedTypeKind::F64,
             syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
+            syntax::TypeKind::Named(_) => {
+                unreachable!("named types must be rejected before scalar type resolution")
+            }
         },
         span: type_syntax.span,
     }

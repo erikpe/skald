@@ -16,9 +16,12 @@ impl Parser<'_> {
         stop_at_conditional_continuation: bool,
     ) -> Option<Block> {
         let left_brace = self.expect(TokenKind::LeftBrace, "`{` to start a block")?;
-        self.with_syntax_nesting(left_brace.span, move |parser| {
+        self.brace_depth += 1;
+        let block = self.with_syntax_nesting(left_brace.span, move |parser| {
             parser.parse_block_contents(left_brace, stop_at_conditional_continuation)
-        })
+        });
+        self.brace_depth -= 1;
+        block
     }
 
     fn parse_block_contents(
@@ -85,14 +88,14 @@ impl Parser<'_> {
         }
 
         if self.starts_expression() {
-            return self.parse_expression_statement().map(Statement::Expression);
+            return self.parse_expression_or_assignment();
         }
 
         self.report(
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, `if`, a call expression, or a nested block",
+            "expected `var`, `return`, `if`, an expression, a field assignment, or a nested block",
         );
         None
     }
@@ -216,7 +219,7 @@ impl Parser<'_> {
         let name = self.parse_name("expected a local name after `var`");
         self.expect(TokenKind::Colon, "`:` after the local name");
         let type_syntax = self.parse_type(
-            TypeContext::StoredValue,
+            TypeContext::LocalValue,
             format!(
                 "expected the local type {}",
                 format_type_list(STORED_TYPE_NAMES)
@@ -259,15 +262,64 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_expression_statement(&mut self) -> Option<ExpressionStatement> {
+    fn parse_expression_or_assignment(&mut self) -> Option<Statement> {
         let expression = self.parse_expression()?;
+        if let Some(equal) = self.consume(TokenKind::Equal) {
+            return self.parse_field_assignment(expression, equal);
+        }
+
         let semicolon = self.expect(TokenKind::Semicolon, "`;` after the call expression");
         let end_span = semicolon
             .map(|token| token.span)
             .unwrap_or_else(|| expression.span());
-        Some(ExpressionStatement {
+        Some(Statement::Expression(ExpressionStatement {
             span: self.cover(expression.span(), end_span),
             expression,
-        })
+        }))
+    }
+
+    fn parse_field_assignment(
+        &mut self,
+        expression: Expression,
+        equal: Token,
+    ) -> Option<Statement> {
+        let value = self.parse_expression();
+        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the field assignment");
+        let value = value?;
+        let end_span = semicolon.map_or_else(|| value.span(), |token| token.span);
+
+        let Expression::MemberAccess(place) = expression else {
+            self.report(
+                EXPECTED_STATEMENT,
+                "only a field place may be assigned",
+                equal.span,
+                "general local and expression assignment is not supported",
+            );
+            return None;
+        };
+        if !is_receiver_place(&place.receiver) {
+            self.report(
+                EXPECTED_STATEMENT,
+                "invalid field-assignment receiver",
+                place.receiver.span(),
+                "expected a local name, `self`, or grouping around one",
+            );
+            return None;
+        }
+
+        Some(Statement::FieldAssignment(FieldAssignmentStatement {
+            span: self.cover(place.span, end_span),
+            place,
+            equal_span: equal.span,
+            value,
+        }))
+    }
+}
+
+fn is_receiver_place(expression: &Expression) -> bool {
+    match expression {
+        Expression::Identifier(_) | Expression::SelfValue(_) => true,
+        Expression::Grouped(grouped) => is_receiver_place(&grouped.expression),
+        _ => false,
     }
 }

@@ -109,6 +109,9 @@ impl<'source> Lexer<'source> {
 
         let text = &self.source.text()[start..self.offset];
         let kind = match text {
+            "class" => TokenKind::Class,
+            "self" => TokenKind::SelfValue,
+            "mut" => TokenKind::Mut,
             "fn" => TokenKind::Fn,
             "extern" => TokenKind::Extern,
             "var" => TokenKind::Var,
@@ -200,6 +203,7 @@ impl<'source> Lexer<'source> {
             '-' => TokenKind::Minus,
             '*' => TokenKind::Star,
             '=' => TokenKind::Equal,
+            '.' => TokenKind::Dot,
             _ => {
                 self.advance();
                 let span = self.span(start, self.offset);

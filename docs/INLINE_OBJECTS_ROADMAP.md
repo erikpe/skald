@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ4 complete; OBJ5 is next.
+Status: OBJ0–OBJ5 complete; OBJ6 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -203,7 +203,7 @@ reconstructing source evaluation.
 - [x] OBJ2 — Add target-independent object places and construction-aware MIR
 - [x] OBJ3 — Implement x86-64 inline layout and projected-place addressing
 - [x] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
-- [ ] OBJ5 — Add class, member, and construction syntax
+- [x] OBJ5 — Add class, member, and construction syntax
 - [ ] OBJ6 — Resolve nominal classes, fields, initializers, and methods
 - [ ] OBJ7 — Type-check inline objects, construction, and receiver access
 - [ ] OBJ8 — Lower the frontend object model into verified MIR
@@ -335,17 +335,17 @@ correctly on x86-64 without changing ordinary call behavior.
 **Purpose:** Represent the restricted source faithfully without semantic lookup
 in the parser.
 
-- [ ] Add required tokens/contextual handling without globally reserving
+- [x] Add required tokens/contextual handling without globally reserving
       lifecycle names unnecessarily.
-- [ ] Generalize type syntax to retain named types with complete spans.
-- [ ] Add AST nodes for classes, fields, initializers, receiver methods, `self`,
+- [x] Generalize type syntax to retain named types with complete spans.
+- [x] Add AST nodes for classes, fields, initializers, receiver methods, `self`,
       member access, and field assignment.
-- [ ] Parse construction/calls through a coherent postfix/member grammar while
+- [x] Parse construction/calls through a coherent postfix/member grammar while
       leaving semantic selection to resolution.
-- [ ] Preserve receiver/member/name/operator spans for diagnostics.
-- [ ] Recover within class bodies without discarding later declarations.
-- [ ] Diagnose malformed and explicitly excluded member forms cleanly.
-- [ ] Update AST dumps and grammar notes.
+- [x] Preserve receiver/member/name/operator spans for diagnostics.
+- [x] Recover within class bodies without discarding later declarations.
+- [x] Diagnose malformed and explicitly excluded member forms cleanly.
+- [x] Update AST dumps and grammar notes.
 
 **Tests:** Tokens/contextual names, postfix precedence, malformed members and
 assignments, class/top-level recovery, exact dumps, recursion limits, and parser

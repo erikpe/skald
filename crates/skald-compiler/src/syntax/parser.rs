@@ -8,6 +8,7 @@ use crate::{
 
 use super::ast::*;
 
+mod class;
 mod declaration;
 mod expression;
 mod recovery;
@@ -18,6 +19,7 @@ pub const EXPECTED_TOKEN: &str = "PAR002";
 pub const EXPECTED_STATEMENT: &str = "PAR003";
 pub const EXPECTED_EXPRESSION: &str = "PAR004";
 pub const EXCESSIVE_NESTING: &str = "PAR005";
+pub const INVALID_CLASS_MEMBER: &str = "PAR006";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///
@@ -70,6 +72,8 @@ struct Parser<'source> {
     current: usize,
     diagnostics: Diagnostics,
     nesting_depth: usize,
+    brace_depth: usize,
+    class_depth: usize,
     recovering_from_excessive_nesting: bool,
 }
 
@@ -81,6 +85,8 @@ impl<'source> Parser<'source> {
             current: 0,
             diagnostics: Diagnostics::new(),
             nesting_depth: 0,
+            brace_depth: 0,
+            class_depth: 0,
             recovering_from_excessive_nesting: false,
         }
     }
@@ -100,12 +106,14 @@ impl<'source> Parser<'source> {
             } else if self.at(TokenKind::Extern) {
                 self.parse_external_function()
                     .map(TopLevelDeclaration::ExternalFunction)
+            } else if self.at(TokenKind::Class) {
+                self.parse_class().map(TopLevelDeclaration::Class)
             } else {
                 self.report(
                     EXPECTED_DECLARATION,
-                    "expected a function declaration",
+                    "expected a top-level declaration",
                     self.peek().span,
-                    "expected `fn` or `extern fn` at file scope",
+                    "expected `fn`, `extern fn`, or `class` at file scope",
                 );
                 None
             };
@@ -227,6 +235,10 @@ impl<'source> Parser<'source> {
 
     fn peek(&self) -> Token {
         self.tokens[self.current.min(self.tokens.len() - 1)]
+    }
+
+    fn peek_ahead(&self, distance: usize) -> Token {
+        self.tokens[(self.current + distance).min(self.tokens.len() - 1)]
     }
 
     fn previous(&self) -> Token {

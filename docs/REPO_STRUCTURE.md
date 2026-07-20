@@ -293,6 +293,18 @@ different declaration ownership models. A member body identifies one explicit
 receiver storage slot owned by the initializer or method callable; that slot is
 an addressable class place in MIR but a saved pointer home in the backend.
 
+OBJ5 extends the source AST without performing semantic selection in the
+parser. Classes own source-ordered field, initializer, and method nodes; named
+types retain their complete name spans; and member access records the receiver,
+dot, and selected name independently. Calls and member selections share one
+left-associative postfix parser, so construction remains call-shaped until
+resolution distinguishes a class from a function. Field assignment is a
+dedicated statement node rather than a general assignment expression. A
+class-local recovery boundary preserves later members, and excessive-nesting
+recovery skips the rest of the affected class before resuming at file scope.
+Until OBJ6 replaces the temporary boundary, resolution reports structured
+`RES006` diagnostics for otherwise valid object syntax.
+
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 
 Each function resolver owns an explicit lexical scope stack. Parameters share the outer function-body scope, nested blocks push scopes, and local initializers are resolved before their binding is introduced. Duplicate and lookup failures produce structured diagnostics with source labels. The precise first-slice rules are recorded in [`grammar/README.md`](../grammar/README.md).
@@ -370,9 +382,10 @@ implements its neutral identity and executable-body ownership foundation. OBJ2
 implements target-independent class/member metadata, places, construction and
 receiver calls, plus their verifier boundary. OBJ3 implements the target layout,
 object frame-allocation, and projected-address boundary. OBJ4 implements
-executable member definitions and the hidden receiver ABI. OBJ5–OBJ9 implement
-the remaining frontend and integration work.
-Public syntax remains disabled until the complete path exists.
+executable member definitions and the hidden receiver ABI. OBJ5 implements the
+source AST and parser surface. OBJ6–OBJ9 implement resolution, typing, lowering,
+and integration. The parser accepts the restricted syntax, but the public
+compiler still rejects it at resolution until the complete path exists.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and

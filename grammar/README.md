@@ -492,10 +492,12 @@ linkage; call instructions never contain linker-symbol strings.
 
 ## Restricted inline-object extension contract
 
-OBJ0 freezes the parser-facing contract for the first inline-object slice. This
-section is normative for that slice but does not mean the syntax is implemented
-yet. Public acceptance remains disabled until OBJ8 connects the complete
-frontend and backend path and OBJ9 enables and hardens it.
+OBJ0 freezes the parser-facing contract for the first inline-object slice, and
+OBJ5 implements this source grammar and its source-shaped AST. Parsing performs
+no class or member lookup. Public semantic acceptance remains disabled until
+OBJ8 connects the complete frontend and backend path and OBJ9 enables and
+hardens it; until OBJ6 lands, successfully parsed object forms stop at a
+structured resolution-boundary diagnostic.
 
 The extension adds the globally reserved keywords:
 

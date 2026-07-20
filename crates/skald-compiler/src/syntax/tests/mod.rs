@@ -26,4 +26,5 @@ mod conditionals;
 mod declarations;
 mod dumps;
 mod expressions;
+mod objects;
 mod recovery;

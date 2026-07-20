@@ -887,11 +887,12 @@ The initial language has no separate `const T` type syntax. The compiler tracks 
 
 #### 5.4.2 Restricted Stage-0 Inline-Object Profile
 
-**Implementation status:** OBJ0 specifies this profile completely, but class
-syntax is not accepted by the public compiler until the remaining OBJ
-milestones implement and enable it. This subsection narrows the broader class
-model above for the first implementation; it does not remove features from the
-eventual language.
+**Implementation status:** OBJ0 specifies this profile completely, and OBJ5
+implements its source grammar and source-shaped AST without semantic lookup.
+The public compiler still rejects object programs at the resolution boundary
+until the remaining OBJ milestones implement and enable the complete path.
+This subsection narrows the broader class model above for the first
+implementation; it does not remove features from the eventual language.
 
 The first implemented object profile contains nominal top-level classes,
 primitive fields, one explicit initializer, local inline storage, direct field

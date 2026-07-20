@@ -99,6 +99,28 @@ fn recognizes_boolean_type_and_literal_keywords() {
 }
 
 #[test]
+fn recognizes_object_keywords_dot_and_contextual_initializer_name() {
+    let (_, _, output) = lex_text("class self mut init init_value object.field");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        [
+            TokenKind::Class,
+            TokenKind::SelfValue,
+            TokenKind::Mut,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Dot,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_u64_type_and_literal_without_reserving_identifier_prefixes() {
     let (_, _, output) = lex_text("u64 0u 18446744073709551615u u64_value unsigned");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

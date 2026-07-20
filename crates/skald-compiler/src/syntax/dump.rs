@@ -19,6 +19,7 @@ pub fn dump_ast(ast: &CompilationUnit) -> String {
                 TopLevelDeclaration::ExternalFunction(function) => {
                     dumper.external_function(function)
                 }
+                TopLevelDeclaration::Class(class) => dumper.class(class),
             }
         }
     });
@@ -32,6 +33,57 @@ struct AstDumper {
 }
 
 impl AstDumper {
+    fn class(&mut self, class: &ClassDecl) {
+        self.line("Class", class.span);
+        self.indented(|dumper| {
+            dumper.named("Name", &class.name.text, class.name.span);
+            dumper.heading("Members");
+            dumper.indented(|dumper| {
+                for member in &class.members {
+                    dumper.class_member(member);
+                }
+            });
+        });
+    }
+
+    fn class_member(&mut self, member: &ClassMember) {
+        match member {
+            ClassMember::Field(field) => {
+                self.line("Field", field.span);
+                self.indented(|dumper| {
+                    dumper.named("Name", &field.name.text, field.name.span);
+                    dumper.type_syntax(&field.type_syntax);
+                });
+            }
+            ClassMember::Initializer(initializer) => {
+                self.line("Initializer", initializer.span);
+                self.indented(|dumper| {
+                    dumper.line("Introducer", initializer.introducer_span);
+                    dumper.parameters(&initializer.parameters);
+                    dumper.block(&initializer.body);
+                });
+            }
+            ClassMember::Method(method) => {
+                self.line(
+                    if method.mut_span.is_some() {
+                        "Method Mutable"
+                    } else {
+                        "Method ReadOnly"
+                    },
+                    method.span,
+                );
+                self.indented(|dumper| {
+                    if let Some(span) = method.mut_span {
+                        dumper.line("Mut", span);
+                    }
+                    dumper.named("Name", &method.name.text, method.name.span);
+                    dumper.parameters_and_return(&method.parameters, &method.return_type);
+                    dumper.block(&method.body);
+                });
+            }
+        }
+    }
+
     fn function(&mut self, function: &FunctionDecl) {
         self.line("Function", function.span);
         self.indented(|dumper| {
@@ -50,6 +102,12 @@ impl AstDumper {
     }
 
     fn parameters_and_return(&mut self, parameters: &[Parameter], return_type: &TypeSyntax) {
+        self.parameters(parameters);
+        self.heading("ReturnType");
+        self.indented(|dumper| dumper.type_syntax(return_type));
+    }
+
+    fn parameters(&mut self, parameters: &[Parameter]) {
         self.heading("Parameters");
         self.indented(|dumper| {
             for parameter in parameters {
@@ -60,18 +118,20 @@ impl AstDumper {
                 });
             }
         });
-        self.heading("ReturnType");
-        self.indented(|dumper| dumper.type_syntax(return_type));
     }
 
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {
-        let kind = match type_syntax.kind {
+        let kind = match &type_syntax.kind {
             TypeKind::I64 => "I64",
             TypeKind::U64 => "U64",
             TypeKind::U8 => "U8",
             TypeKind::F64 => "F64",
             TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
+            TypeKind::Named(name) => {
+                self.named("Type Named", &name.text, type_syntax.span);
+                return;
+            }
         };
         self.line(&format!("Type {kind}"), type_syntax.span);
     }
@@ -108,6 +168,16 @@ impl AstDumper {
             }
             Statement::Conditional(statement) => self.conditional(statement),
             Statement::Block(block) => self.block(block),
+            Statement::FieldAssignment(statement) => {
+                self.line("FieldAssignment", statement.span);
+                self.indented(|dumper| {
+                    dumper.heading("Place");
+                    dumper.indented(|dumper| dumper.member_access(&statement.place));
+                    dumper.line("Equal", statement.equal_span);
+                    dumper.heading("Value");
+                    dumper.indented(|dumper| dumper.expression(&statement.value));
+                });
+            }
         }
     }
 
@@ -194,7 +264,19 @@ impl AstDumper {
                 self.line("Grouped", grouped.span);
                 self.indented(|dumper| dumper.expression(&grouped.expression));
             }
+            Expression::SelfValue(self_value) => self.line("Self", self_value.span),
+            Expression::MemberAccess(member) => self.member_access(member),
         }
+    }
+
+    fn member_access(&mut self, member: &MemberAccessExpr) {
+        self.line("MemberAccess", member.span);
+        self.indented(|dumper| {
+            dumper.heading("Receiver");
+            dumper.indented(|dumper| dumper.expression(&member.receiver));
+            dumper.line("Dot", member.dot_span);
+            dumper.named("Member", &member.member.text, member.member.span);
+        });
     }
 
     fn heading(&mut self, name: &str) {
