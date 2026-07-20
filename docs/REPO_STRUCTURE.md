@@ -210,6 +210,16 @@ The AST mirrors source constructs and preserves spans. It must not become the lo
 
 M2 implements the source AST as separate node, parser, and dump modules behind the public `syntax` boundary. O5 generalizes its source-ordered top-level declaration list to distinguish Skald definitions from bodyless `extern fn` declarations without attaching optional bodies to one oversized node. T2 represents numeric literals uniformly as a classified kind, original spelling, and complete span; resolution preserves all three, and only type checking converts the spelling to a semantic value. The recursive-descent parser performs no name or type lookup. It uses explicit precedence levels and recovers at parameter, statement, block, and top-level declaration boundaries, returning a partial AST together with accumulated structured diagnostics. The exact implemented grammar is recorded in [`grammar/README.md`](../grammar/README.md).
 
+One `Parser` object owns source text, tokens, cursor state, and accumulated
+diagnostics. Its implementation is split by grammar responsibility under
+`syntax/parser/`: `declaration` owns top-level forms, parameters, and source
+types; `statement` owns blocks, conditionals, locals, and returns; `expression`
+owns precedence, grouping, and calls; and `recovery` owns synchronization and
+expression-start classification. Token consumption, span construction, and
+diagnostic emission remain centralized on the parser state. Source type tokens
+map to `TypeKind` in one place, while each caller explicitly selects a result
+or stored-value context to determine whether `unit` is accepted.
+
 ### Resolution and typed HIR
 
 Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.

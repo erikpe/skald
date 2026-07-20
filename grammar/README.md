@@ -75,6 +75,20 @@ Unary `-` associates right-to-left. The binary operators and repeated postfix ca
 
 Parser recovery may synthesize missing punctuation to retain a useful source AST. Structurally incomplete declarations and statements are omitted from that AST, diagnostics are accumulated, and later semantic phases must not run when parsing reports errors.
 
+### Parser implementation ownership
+
+The implemented recovering recursive-descent parser retains one cursor and
+diagnostic state. Grammar code is organized into declaration, statement,
+expression, and recovery modules so synchronization and precedence decisions
+remain local and reviewable. Shared token movement, lexeme access, span
+covering, and diagnostic construction live on the common parser state.
+
+All primitive type keywords pass through one token-to-`TypeKind` conversion.
+Callers provide an explicit type context: function results accept `value-type`
+or `unit`, while parameter and local storage require `value-type`. This is an
+implementation organization rule for the grammar shown in this document; it
+does not add implicit conversions or change the accepted source language.
+
 ## `i64` output extension contract
 
 O0 fixed the following grammar and semantic contract for the post-M8 `i64`

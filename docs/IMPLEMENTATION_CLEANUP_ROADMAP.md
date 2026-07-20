@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R4 are complete and R5 is the next implementation task.
+Status: in progress; R0–R5 are complete and R6 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -64,7 +64,7 @@ gate before its checkbox is marked complete.
 - [x] R2 — Consolidate dense and sparse ID-indexed tables
 - [x] R3 — Compute structured return flow once
 - [x] R4 — Restructure the type checker around per-function context
-- [ ] R5 — Split the parser by grammar responsibility
+- [x] R5 — Split the parser by grammar responsibility
 - [ ] R6 — Bound recursive syntax nesting
 - [ ] R7 — Decompose x86-64 instruction and call lowering
 - [ ] R8 — Introduce shared compiler test support
@@ -186,14 +186,14 @@ calls no longer thread the same context parameters manually.
 **Purpose:** Make grammar changes local without replacing the recovering
 recursive-descent design.
 
-- [ ] Retain one parser state object while moving implementation blocks into
+- [x] Retain one parser state object while moving implementation blocks into
       declaration, statement, expression, and recovery modules.
-- [ ] Centralize token-to-TypeKind conversion.
-- [ ] Express unit acceptance as a caller-visible type-context decision rather
+- [x] Centralize token-to-TypeKind conversion.
+- [x] Express unit acceptance as a caller-visible type-context decision rather
       than duplicating every primitive match.
-- [ ] Preserve synchronization points, diagnostics, AST spans, and source
+- [x] Preserve synchronization points, diagnostics, AST spans, and source
       spellings exactly.
-- [ ] Update parser-facing documentation when module ownership changes.
+- [x] Update parser-facing documentation when module ownership changes.
 
 **Tests:** Exact AST dumps; every parser recovery golden; parameter, local, and
 result type parsing; operator precedence; calls; and conditionals.
