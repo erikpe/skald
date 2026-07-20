@@ -64,6 +64,7 @@ impl AstDumper {
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {
         let kind = match type_syntax.kind {
             TypeKind::I64 => "I64",
+            TypeKind::U64 => "U64",
             TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
         };
@@ -134,9 +135,15 @@ impl AstDumper {
                 self.named("Identifier", &identifier.name.text, identifier.span);
             }
             Expression::NumericLiteral(literal) => {
-                // Preserve the established dump spelling while i64 is the
-                // only numeric kind accepted by the parser.
-                self.named("Integer", &literal.spelling, literal.span);
+                let name = match literal.kind {
+                    crate::literal::NumericLiteralKind::I64 => "Integer",
+                    crate::literal::NumericLiteralKind::U64 => "U64",
+                    crate::literal::NumericLiteralKind::U8
+                    | crate::literal::NumericLiteralKind::F64 => {
+                        unreachable!("disabled numeric kind reached the AST")
+                    }
+                };
+                self.named(name, &literal.spelling, literal.span);
             }
             Expression::Boolean(boolean) => {
                 self.line(

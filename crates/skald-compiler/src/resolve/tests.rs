@@ -74,6 +74,28 @@ fn resolution_preserves_numeric_classification_and_source_spelling() {
 }
 
 #[test]
+fn resolution_preserves_u64_types_and_literal_magnitude() {
+    let output = resolve_text(
+        "fn identity(value: u64) -> u64 { return 18446744073709551615u; } fn main() -> i64 { return 0; }",
+    );
+    let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert_eq!(
+        declaration.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::U64
+    );
+    assert_eq!(declaration.return_type.kind, ResolvedTypeKind::U64);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::NumericLiteral(literal) = return_value(&definition.body.statements[0])
+    else {
+        panic!("expected a resolved u64 literal");
+    };
+    assert_eq!(literal.kind, NumericLiteralKind::U64);
+    assert_eq!(literal.spelling, "18446744073709551615u");
+    assert!(dump_resolved(&output.program).contains("U64 \"18446744073709551615u\""));
+}
+
+#[test]
 fn preserves_boolean_types_literals_and_bindings() {
     let output = resolve_text(concat!(
         "fn identity(value: bool) -> bool { return value; }\n",

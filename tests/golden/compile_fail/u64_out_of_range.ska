@@ -1,0 +1,7 @@
+fn value() -> u64 {
+    return 18446744073709551616u;
+}
+
+fn main() -> i64 {
+    return 0;
+}

@@ -26,6 +26,7 @@ pub const MISSING_RETURN: &str = "TYP006";
 pub const INVALID_RETURN: &str = "TYP007";
 pub const INVALID_CALL_STATEMENT: &str = "TYP008";
 pub const INVALID_EXTERNAL_DECLARATION: &str = "TYP009";
+pub const U64_LITERAL_OUT_OF_RANGE: &str = "TYP010";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -132,13 +133,15 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
         let ResolvedFunctionLinkage::External { symbol } = &declaration.linkage else {
             continue;
         };
-        let has_valid_parameters = declaration
-            .parameters
-            .iter()
-            .all(|parameter| matches!(lower_type(&parameter.type_syntax), Type::I64 | Type::Bool));
+        let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
+            matches!(
+                lower_type(&parameter.type_syntax),
+                Type::I64 | Type::U64 | Type::Bool
+            )
+        });
         let has_valid_return = matches!(
             lower_type(&declaration.return_type),
-            Type::I64 | Type::Bool | Type::Unit
+            Type::I64 | Type::U64 | Type::Bool | Type::Unit
         );
         if !has_valid_parameters || !has_valid_return || symbol != &declaration.name {
             diagnostics.push(
@@ -151,7 +154,7 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
                 )
                 .with_primary_label(
                     declaration.span,
-                    "expected by-value `i64` or `bool` parameters and an `i64`, `bool`, or `unit` result",
+                    "expected by-value `i64`, `u64`, or `bool` parameters and an `i64`, `u64`, `bool`, or `unit` result",
                 )
                 .with_note("the source function name must also be its exact linker symbol"),
             );
@@ -308,7 +311,7 @@ fn check_statement(
         }
         ResolvedStatement::Return(statement) => {
             match (return_type, &statement.value) {
-                (Type::I64 | Type::Bool, Some(value)) => {
+                (Type::I64 | Type::U64 | Type::Bool, Some(value)) => {
                     let value =
                         check_expression(program, declaration, definition, value, diagnostics)?;
                     if !require_type(
@@ -325,7 +328,7 @@ fn check_statement(
                         span: statement.span,
                     }))
                 }
-                (Type::I64 | Type::Bool, None) => {
+                (Type::I64 | Type::U64 | Type::Bool, None) => {
                     diagnostics.push(
                         Diagnostic::error(
                             INVALID_RETURN,
@@ -489,7 +492,7 @@ fn check_expression(
                     match classify_i64_magnitude(&literal.spelling) {
                         Magnitude::MinimumBoundary => {
                             return Some(HirExpression {
-                                kind: HirExpressionKind::Integer(i64::MIN),
+                                kind: HirExpressionKind::I64(i64::MIN),
                                 ty: Type::I64,
                                 span: unary.span,
                             });
@@ -543,35 +546,43 @@ fn check_expression(
                 (Some(left), Some(right)) => (left, right),
                 _ => return None,
             };
-            let left_valid = require_type(
-                left.ty,
-                Type::I64,
-                left.span,
-                "left arithmetic operand",
-                diagnostics,
-            );
-            let right_valid = require_type(
-                right.ty,
-                Type::I64,
-                right.span,
-                "right arithmetic operand",
-                diagnostics,
-            );
-            if !left_valid || !right_valid {
+            let operation = if left.ty == right.ty {
+                select_binary_operation(binary.operator, left.ty)
+            } else {
+                None
+            };
+            let Some(operation) = operation else {
+                let expected = if matches!(left.ty, Type::I64 | Type::U64) {
+                    left.ty
+                } else {
+                    Type::I64
+                };
+                let left_valid = require_type(
+                    left.ty,
+                    expected,
+                    left.span,
+                    "left arithmetic operand",
+                    diagnostics,
+                );
+                let right_valid = require_type(
+                    right.ty,
+                    expected,
+                    right.span,
+                    "right arithmetic operand",
+                    diagnostics,
+                );
+                debug_assert!(!left_valid || !right_valid);
                 return None;
-            }
+            };
+            let ty = left.ty;
 
             Some(HirExpression {
                 kind: HirExpressionKind::Binary {
-                    operation: match binary.operator {
-                        ResolvedBinaryOperator::Add => HirBinaryOperation::AddI64,
-                        ResolvedBinaryOperator::Subtract => HirBinaryOperation::SubtractI64,
-                        ResolvedBinaryOperator::Multiply => HirBinaryOperation::MultiplyI64,
-                    },
+                    operation,
                     left: Box::new(left),
                     right: Box::new(right),
                 },
-                ty: Type::I64,
+                ty,
                 span: binary.span,
             })
         }
@@ -656,6 +667,21 @@ fn check_expression(
     }
 }
 
+fn select_binary_operation(
+    operator: ResolvedBinaryOperator,
+    operand_type: Type,
+) -> Option<HirBinaryOperation> {
+    match (operator, operand_type) {
+        (ResolvedBinaryOperator::Add, Type::I64) => Some(HirBinaryOperation::AddI64),
+        (ResolvedBinaryOperator::Subtract, Type::I64) => Some(HirBinaryOperation::SubtractI64),
+        (ResolvedBinaryOperator::Multiply, Type::I64) => Some(HirBinaryOperation::MultiplyI64),
+        (ResolvedBinaryOperator::Add, Type::U64) => Some(HirBinaryOperation::AddU64),
+        (ResolvedBinaryOperator::Subtract, Type::U64) => Some(HirBinaryOperation::SubtractU64),
+        (ResolvedBinaryOperator::Multiply, Type::U64) => Some(HirBinaryOperation::MultiplyU64),
+        (_, Type::Bool | Type::Unit) => None,
+    }
+}
+
 fn binding_type(
     declaration: &ResolvedFunctionDeclaration,
     definition: &ResolvedFunctionDefinition,
@@ -688,7 +714,8 @@ fn check_numeric_literal(
 ) -> Option<HirExpression> {
     match literal.kind {
         NumericLiteralKind::I64 => check_positive_i64_literal(literal, diagnostics),
-        NumericLiteralKind::U64 | NumericLiteralKind::U8 | NumericLiteralKind::F64 => {
+        NumericLiteralKind::U64 => check_u64_literal(literal, diagnostics),
+        NumericLiteralKind::U8 | NumericLiteralKind::F64 => {
             unreachable!("unsupported numeric literal kind reached type checking")
         }
     }
@@ -700,12 +727,46 @@ fn check_positive_i64_literal(
 ) -> Option<HirExpression> {
     match literal.spelling.parse::<i64>() {
         Ok(value) => Some(HirExpression {
-            kind: HirExpressionKind::Integer(value),
+            kind: HirExpressionKind::I64(value),
             ty: Type::I64,
             span: literal.span,
         }),
         Err(_) => {
             report_integer_out_of_range(diagnostics, literal.span, literal.spelling.clone());
+            None
+        }
+    }
+}
+
+fn check_u64_literal(
+    literal: &crate::resolve::ResolvedNumericLiteralExpr,
+    diagnostics: &mut Diagnostics,
+) -> Option<HirExpression> {
+    let digits = literal
+        .spelling
+        .strip_suffix('u')
+        .expect("validated u64 literal must have a `u` suffix");
+    match digits.parse::<u64>() {
+        Ok(value) => Some(HirExpression {
+            kind: HirExpressionKind::U64(value),
+            ty: Type::U64,
+            span: literal.span,
+        }),
+        Err(_) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    U64_LITERAL_OUT_OF_RANGE,
+                    format!(
+                        "integer literal `{}` is out of range for `u64`",
+                        literal.spelling
+                    ),
+                )
+                .with_primary_label(literal.span, "value is not representable as `u64`")
+                .with_note(format!(
+                    "the inclusive `u64` range is 0 through {}",
+                    u64::MAX
+                )),
+            );
             None
         }
     }
@@ -786,6 +847,7 @@ fn require_type(
 fn lower_type(type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
+        ResolvedTypeKind::U64 => Type::U64,
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
     }

@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T2 complete; T3 is the next implementation task.
+Status: T0–T3 complete; T4 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -176,7 +176,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 - [x] T0 — Freeze primitive, literal, arithmetic, and ABI contracts
 - [x] T1 — Add direct runtime observability for the new primitives
 - [x] T2 — Refactor numeric literal infrastructure without changing behavior
-- [ ] T3 — Implement `u64` end-to-end
+- [x] T3 — Implement `u64` end-to-end
 - [ ] T4 — Implement `u8` end-to-end with explicit canonicalization
 - [ ] T5 — Add target-independent and backend `f64` infrastructure
 - [ ] T6 — Enable `f64` source syntax and semantics end-to-end
@@ -276,18 +276,18 @@ valid or invalid source changes behavior accidentally.
 **Purpose:** Add the full-width unsigned type by extending the existing integer
 path before introducing narrow-width or floating-point concerns.
 
-- [ ] Enable the `u64` keyword and `digits u` literal suffix.
-- [ ] Preserve `u64` types and literal magnitude through AST and resolved dumps.
-- [ ] Add `u64` to semantic types and typed HIR with exact initializer,
+- [x] Enable the `u64` keyword and `digits u` literal suffix.
+- [x] Preserve `u64` types and literal magnitude through AST and resolved dumps.
+- [x] Add `u64` to semantic types and typed HIR with exact initializer,
       argument, return, and operator checking.
-- [ ] Diagnose literal overflow and every implicit `i64`/`u64` mismatch.
-- [ ] Add explicit `AddU64`, `SubtractU64`, and `MultiplyU64` operations.
-- [ ] Add `u64` constants, storage, loads, stores, calls, and returns to MIR and
+- [x] Diagnose literal overflow and every implicit `i64`/`u64` mismatch.
+- [x] Add explicit `AddU64`, `SubtractU64`, and `MultiplyU64` operations.
+- [x] Add `u64` constants, storage, loads, stores, calls, and returns to MIR and
       its verifier.
-- [ ] Lower `u64` operations and System V integer-class parameters/results on
+- [x] Lower `u64` operations and System V integer-class parameters/results on
       x86-64 without signed-only assumptions.
-- [ ] Extend the restricted external profile to C `uint64_t`.
-- [ ] Add the ordinary source declaration/call path for
+- [x] Extend the restricted external profile to C `uint64_t`.
+- [x] Add the ordinary source declaration/call path for
       `ska_rt_println_u64`.
 
 **Tests:** Lexer/parser and range diagnostics; resolution/HIR/MIR dumps; exact

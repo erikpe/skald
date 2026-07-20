@@ -44,6 +44,7 @@ owned_id!(BlockId, "b");
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirType {
     I64,
+    U64,
     Bool,
     Unit,
 }
@@ -52,6 +53,7 @@ impl MirType {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
+            Self::U64 => "u64",
             Self::Bool => "bool",
             Self::Unit => "unit",
         }
@@ -306,6 +308,7 @@ pub struct MirRvalue {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirRvalueKind {
     ConstantI64(i64),
+    ConstantU64(u64),
     ConstantBool(bool),
     Load(StorageId),
     Unary {
@@ -329,6 +332,18 @@ pub enum MirBinaryOperation {
     AddI64,
     SubtractI64,
     MultiplyI64,
+    AddU64,
+    SubtractU64,
+    MultiplyU64,
+}
+
+impl MirBinaryOperation {
+    pub const fn operand_type(self) -> MirType {
+        match self {
+            Self::AddI64 | Self::SubtractI64 | Self::MultiplyI64 => MirType::I64,
+            Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => MirType::U64,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

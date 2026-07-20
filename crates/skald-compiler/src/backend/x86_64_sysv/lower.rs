@@ -152,14 +152,21 @@ fn select_instruction(
             match &assignment.rvalue.kind {
                 MirRvalueKind::ConstantI64(value) => {
                     output.push(Instruction::MoveImmediate64 {
-                        value: *value,
+                        bits: *value as u64,
+                        destination: Register::Rax,
+                    });
+                    store_rax(destination, output);
+                }
+                MirRvalueKind::ConstantU64(value) => {
+                    output.push(Instruction::MoveImmediate64 {
+                        bits: *value,
                         destination: Register::Rax,
                     });
                     store_rax(destination, output);
                 }
                 MirRvalueKind::ConstantBool(value) => {
                     output.push(Instruction::MoveImmediate64 {
-                        value: i64::from(*value),
+                        bits: u64::from(*value),
                         destination: Register::Rax,
                     });
                     store_rax(destination, output);
@@ -187,18 +194,24 @@ fn select_instruction(
                         destination: Register::Rcx.into(),
                     });
                     output.push(match operation {
-                        MirBinaryOperation::AddI64 => Instruction::Add {
-                            source: Register::Rcx,
-                            destination: Register::Rax,
-                        },
-                        MirBinaryOperation::SubtractI64 => Instruction::Subtract {
-                            source: Register::Rcx,
-                            destination: Register::Rax,
-                        },
-                        MirBinaryOperation::MultiplyI64 => Instruction::Multiply {
-                            source: Register::Rcx,
-                            destination: Register::Rax,
-                        },
+                        MirBinaryOperation::AddI64 | MirBinaryOperation::AddU64 => {
+                            Instruction::Add {
+                                source: Register::Rcx,
+                                destination: Register::Rax,
+                            }
+                        }
+                        MirBinaryOperation::SubtractI64 | MirBinaryOperation::SubtractU64 => {
+                            Instruction::Subtract {
+                                source: Register::Rcx,
+                                destination: Register::Rax,
+                            }
+                        }
+                        MirBinaryOperation::MultiplyI64 | MirBinaryOperation::MultiplyU64 => {
+                            Instruction::Multiply {
+                                source: Register::Rcx,
+                                destination: Register::Rax,
+                            }
+                        }
                     });
                     store_rax(destination, output);
                 }

@@ -266,8 +266,13 @@ impl<'hir> FunctionLowerer<'hir> {
                     expression.span,
                 ))
             }
-            HirExpressionKind::Integer(value) => Some(self.assign(
+            HirExpressionKind::I64(value) => Some(self.assign(
                 MirRvalueKind::ConstantI64(*value),
+                lower_type(expression.ty),
+                expression.span,
+            )),
+            HirExpressionKind::U64(value) => Some(self.assign(
+                MirRvalueKind::ConstantU64(*value),
                 lower_type(expression.ty),
                 expression.span,
             )),
@@ -309,6 +314,9 @@ impl<'hir> FunctionLowerer<'hir> {
                             HirBinaryOperation::AddI64 => MirBinaryOperation::AddI64,
                             HirBinaryOperation::SubtractI64 => MirBinaryOperation::SubtractI64,
                             HirBinaryOperation::MultiplyI64 => MirBinaryOperation::MultiplyI64,
+                            HirBinaryOperation::AddU64 => MirBinaryOperation::AddU64,
+                            HirBinaryOperation::SubtractU64 => MirBinaryOperation::SubtractU64,
+                            HirBinaryOperation::MultiplyU64 => MirBinaryOperation::MultiplyU64,
                         },
                         left,
                         right,
@@ -379,6 +387,7 @@ impl<'hir> FunctionLowerer<'hir> {
 const fn lower_type(ty: Type) -> MirType {
     match ty {
         Type::I64 => MirType::I64,
+        Type::U64 => MirType::U64,
         Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
     }

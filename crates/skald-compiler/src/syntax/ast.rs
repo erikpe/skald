@@ -63,6 +63,7 @@ pub struct Name {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TypeKind {
     I64,
+    U64,
     Bool,
     Unit,
 }

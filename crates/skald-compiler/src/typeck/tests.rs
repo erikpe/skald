@@ -57,7 +57,8 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             }
         }
         HirExpressionKind::Binding(_)
-        | HirExpressionKind::Integer(_)
+        | HirExpressionKind::I64(_)
+        | HirExpressionKind::U64(_)
         | HirExpressionKind::Boolean(_) => {}
     }
 }
@@ -425,6 +426,7 @@ fn main_must_remain_i64_returning() {
     for source in [
         "fn main() -> unit {}",
         "fn main() -> bool { return false; }",
+        "fn main() -> u64 { return 0u; }",
     ] {
         let output = check_text(source);
 
@@ -501,8 +503,101 @@ fn positive_i64_maximum_is_accepted() {
 
     assert!(matches!(
         returned_expression(hir.definitions.get(hir.entry_function).unwrap()).kind,
-        HirExpressionKind::Integer(i64::MAX)
+        HirExpressionKind::I64(i64::MAX)
     ));
+}
+
+#[test]
+fn checks_u64_literals_signatures_and_typed_arithmetic() {
+    let output = check_text(concat!(
+        "extern fn observe(value: u64) -> unit;\n",
+        "fn calculate(left: u64, right: u64) -> u64 { return left + right * 2u - 1u; }\n",
+        "fn maximum() -> u64 { return 18446744073709551615u; }\n",
+        "fn main() -> i64 { var value: u64 = calculate(maximum(), 1u); observe(value); return 0; }\n",
+    ));
+    let hir = output.hir.expect("valid u64 program must produce HIR");
+    let calculate = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(1))
+        .unwrap();
+    let expression = returned_expression(calculate);
+
+    assert_eq!(expression.ty, Type::U64);
+    assert!(matches!(
+        expression.kind,
+        HirExpressionKind::Binary {
+            operation: HirBinaryOperation::SubtractU64,
+            ..
+        }
+    ));
+    let maximum = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(2))
+        .unwrap();
+    assert!(matches!(
+        returned_expression(maximum).kind,
+        HirExpressionKind::U64(u64::MAX)
+    ));
+}
+
+#[test]
+fn diagnoses_u64_literal_overflow() {
+    let output = check_text(
+        "fn too_large() -> u64 { return 18446744073709551616u; } fn main() -> i64 { return 0; }",
+    );
+
+    assert!(output.hir.is_none());
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, U64_LITERAL_OUT_OF_RANGE);
+    assert_eq!(
+        diagnostic.message,
+        "integer literal `18446744073709551616u` is out of range for `u64`"
+    );
+}
+
+#[test]
+fn rejects_implicit_i64_u64_conversions_and_unsigned_negation() {
+    for (source, expected) in [
+        (
+            "fn value() -> u64 { return 1; } fn main() -> i64 { return 0; }",
+            "return value has type `i64` but `u64` is required",
+        ),
+        (
+            "fn value() -> i64 { return 1u; } fn main() -> i64 { return 0; }",
+            "return value has type `u64` but `i64` is required",
+        ),
+        (
+            "fn value() -> u64 { return 1u + 2; } fn main() -> i64 { return 0; }",
+            "right arithmetic operand has type `i64` but `u64` is required",
+        ),
+        (
+            "fn value() -> i64 { return 1 + 2u; } fn main() -> i64 { return 0; }",
+            "right arithmetic operand has type `u64` but `i64` is required",
+        ),
+        (
+            "fn main() -> i64 { var value: i64 = 1u; return 0; }",
+            "local initializer has type `u64` but `i64` is required",
+        ),
+        (
+            "fn take(value: u64) -> unit {} fn main() -> i64 { take(1); return 0; }",
+            "call argument has type `i64` but `u64` is required",
+        ),
+        (
+            "fn take(value: i64) -> unit {} fn main() -> i64 { take(1u); return 0; }",
+            "call argument has type `u64` but `i64` is required",
+        ),
+        (
+            "fn value() -> u64 { return -1u; } fn main() -> i64 { return 0; }",
+            "unary negation operand has type `u64` but `i64` is required",
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none());
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message == expected));
+    }
 }
 
 #[test]
@@ -512,10 +607,7 @@ fn unary_minus_admits_the_i64_minimum_boundary() {
     let expression = returned_expression(hir.definitions.get(hir.entry_function).unwrap());
 
     assert_eq!(expression.ty, Type::I64);
-    assert!(matches!(
-        expression.kind,
-        HirExpressionKind::Integer(i64::MIN)
-    ));
+    assert!(matches!(expression.kind, HirExpressionKind::I64(i64::MIN)));
 }
 
 #[test]

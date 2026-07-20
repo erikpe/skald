@@ -147,8 +147,11 @@ impl HirDumper {
             HirExpressionKind::Binding(binding) => {
                 self.typed_line(&format!("Binding {binding}"), expression);
             }
-            HirExpressionKind::Integer(value) => {
+            HirExpressionKind::I64(value) => {
                 self.typed_line(&format!("Integer {value}"), expression);
+            }
+            HirExpressionKind::U64(value) => {
+                self.typed_line(&format!("U64 {value}"), expression);
             }
             HirExpressionKind::Boolean(value) => {
                 self.typed_line(&format!("Boolean {value}"), expression);
@@ -169,6 +172,9 @@ impl HirDumper {
                     HirBinaryOperation::AddI64 => "AddI64",
                     HirBinaryOperation::SubtractI64 => "SubtractI64",
                     HirBinaryOperation::MultiplyI64 => "MultiplyI64",
+                    HirBinaryOperation::AddU64 => "AddU64",
+                    HirBinaryOperation::SubtractU64 => "SubtractU64",
+                    HirBinaryOperation::MultiplyU64 => "MultiplyU64",
                 };
                 self.typed_line(&format!("Binary {operation}"), expression);
                 self.indented(|dumper| {

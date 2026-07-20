@@ -381,6 +381,37 @@ fn selects_every_first_slice_arithmetic_operation_and_storage_copy() {
 }
 
 #[test]
+fn lowers_u64_payloads_arithmetic_and_integer_class_calls() {
+    let output = assembly(concat!(
+        "fn seventh(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64) -> u64 {\n",
+        "  return (a + b) * c - g;\n",
+        "}\n",
+        "fn main() -> i64 { var value: u64 = seventh(18446744073709551615u, 2u, 3u, 4u, 5u, 6u, 7u); return 0; }",
+    ));
+
+    assert!(output.contains("movabsq $0xffffffffffffffff, %rax"));
+    assert!(output.contains("addq %rcx, %rax"));
+    assert!(output.contains("imulq %rcx, %rax"));
+    assert!(output.contains("subq %rcx, %rax"));
+    assert!(output.contains("movq %rdi, -8(%rbp)"));
+    assert!(output.contains("movq 16(%rbp), %rax"));
+    assert!(output.contains("call .Lska_fn_0"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn external_u64_calls_use_rax_for_the_full_width_result() {
+    let output = assembly(concat!(
+        "extern fn foreign_u64(value: u64) -> u64;\n",
+        "fn main() -> i64 { var value: u64 = foreign_u64(18446744073709551615u); return 0; }",
+    ));
+
+    assert!(output.contains("movabsq $0xffffffffffffffff, %rax"));
+    assert!(output.contains("movq -16(%rbp), %rdi"));
+    assert!(output.contains("call foreign_u64\n    movq %rax,"));
+}
+
+#[test]
 fn unit_calls_and_returns_do_not_move_a_fictitious_result() {
     let output = assembly(concat!(
         "fn notify(value: i64) -> unit {}\n",

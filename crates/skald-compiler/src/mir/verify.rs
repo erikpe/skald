@@ -612,6 +612,11 @@ impl Verifier<'_> {
                     self.block_error(function.function, block.id, "integer constant is not `i64`");
                 }
             }
+            MirRvalueKind::ConstantU64(_) => {
+                if rvalue.ty != MirType::U64 {
+                    self.block_error(function.function, block.id, "u64 constant is not `u64`");
+                }
+            }
             MirRvalueKind::ConstantBool(_) => {
                 if rvalue.ty != MirType::Bool {
                     self.block_error(
@@ -633,28 +638,48 @@ impl Verifier<'_> {
                 _ => {}
             },
             MirRvalueKind::Unary { operand, .. } => {
-                self.verify_i64_operand(function, block, *operand, defined);
+                if rvalue.ty != MirType::I64 {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "unary operation result type mismatch",
+                    );
+                }
+                self.verify_arithmetic_operand(function, block, *operand, MirType::I64, defined);
             }
-            MirRvalueKind::Binary { left, right, .. } => {
-                self.verify_i64_operand(function, block, *left, defined);
-                self.verify_i64_operand(function, block, *right, defined);
+            MirRvalueKind::Binary {
+                operation,
+                left,
+                right,
+            } => {
+                let expected = operation.operand_type();
+                if rvalue.ty != expected {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "binary operation result type mismatch",
+                    );
+                }
+                self.verify_arithmetic_operand(function, block, *left, expected, defined);
+                self.verify_arithmetic_operand(function, block, *right, expected, defined);
             }
         }
     }
 
-    fn verify_i64_operand(
+    fn verify_arithmetic_operand(
         &mut self,
         function: &MirFunctionDefinition,
         block: &MirBasicBlock,
         value: ValueId,
+        expected: MirType,
         defined: &HashSet<ValueId>,
     ) {
         if let Some(ty) = self.verify_value_use(function, block, value, defined) {
-            if ty != MirType::I64 {
+            if ty != expected {
                 self.block_error(
                     function.function,
                     block.id,
-                    "arithmetic operand is not `i64`",
+                    format!("arithmetic operand is not `{}`", expected.name()),
                 );
             }
         }

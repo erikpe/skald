@@ -104,6 +104,7 @@ impl<'source> Lexer<'source> {
             "var" => TokenKind::Var,
             "return" => TokenKind::Return,
             "i64" => TokenKind::I64,
+            "u64" => TokenKind::U64,
             "bool" => TokenKind::Bool,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
@@ -120,10 +121,12 @@ impl<'source> Lexer<'source> {
         let scan = scan_numeric_literal(self.remaining());
         self.offset += scan.byte_len;
 
-        // T2 recognizes the future spellings centrally, but enables only the
-        // existing unsuffixed decimal i64 path. Preserve the established
-        // diagnostic until each new kind has complete compiler support.
-        if scan.kind != Some(NumericLiteralKind::I64) {
+        // Source syntax is enabled only when the kind has a complete path
+        // through the supported target. T3 adds u64; later tasks own u8/f64.
+        if !matches!(
+            scan.kind,
+            Some(NumericLiteralKind::I64 | NumericLiteralKind::U64)
+        ) {
             let span = self.span(start, self.offset);
             let spelling = &self.source.text()[start..self.offset];
             self.tokens.push(Token {
@@ -141,7 +144,10 @@ impl<'source> Lexer<'source> {
             return;
         }
 
-        self.push_token(TokenKind::NumericLiteral(NumericLiteralKind::I64), start);
+        self.push_token(
+            TokenKind::NumericLiteral(scan.kind.expect("enabled numeric kind")),
+            start,
+        );
     }
 
     fn lex_punctuation_or_invalid(&mut self, start: usize, character: char) {

@@ -76,7 +76,7 @@ pub(super) enum Instruction {
         destination: Operand,
     },
     MoveImmediate64 {
-        value: i64,
+        bits: u64,
         destination: Register,
     },
     ZeroExtendByte {

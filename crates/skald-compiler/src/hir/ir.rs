@@ -8,6 +8,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
     I64,
+    U64,
     Bool,
     Unit,
 }
@@ -16,6 +17,7 @@ impl Type {
     pub const fn name(self) -> &'static str {
         match self {
             Self::I64 => "i64",
+            Self::U64 => "u64",
             Self::Bool => "bool",
             Self::Unit => "unit",
         }
@@ -26,7 +28,7 @@ impl Type {
     pub const fn indefinite_article(self) -> &'static str {
         match self {
             Self::I64 => "an",
-            Self::Bool | Self::Unit => "a",
+            Self::U64 | Self::Bool | Self::Unit => "a",
         }
     }
 }
@@ -243,7 +245,8 @@ pub struct HirExpression {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirExpressionKind {
     Binding(BindingId),
-    Integer(i64),
+    I64(i64),
+    U64(u64),
     Boolean(bool),
     Unary {
         operation: HirUnaryOperation,
@@ -271,4 +274,7 @@ pub enum HirBinaryOperation {
     AddI64,
     SubtractI64,
     MultiplyI64,
+    AddU64,
+    SubtractU64,
+    MultiplyU64,
 }

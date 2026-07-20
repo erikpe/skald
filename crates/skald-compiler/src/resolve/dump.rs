@@ -98,6 +98,7 @@ impl ResolvedDumper {
     fn type_syntax(&mut self, type_syntax: &ResolvedType) {
         let name = match type_syntax.kind {
             ResolvedTypeKind::I64 => "I64",
+            ResolvedTypeKind::U64 => "U64",
             ResolvedTypeKind::Bool => "Bool",
             ResolvedTypeKind::Unit => "Unit",
         };
@@ -159,7 +160,14 @@ impl ResolvedDumper {
             }
             ResolvedExpression::NumericLiteral(literal) => {
                 self.write_indentation();
-                self.output.push_str("Integer ");
+                self.output.push_str(match literal.kind {
+                    crate::literal::NumericLiteralKind::I64 => "Integer ",
+                    crate::literal::NumericLiteralKind::U64 => "U64 ",
+                    crate::literal::NumericLiteralKind::U8
+                    | crate::literal::NumericLiteralKind::F64 => {
+                        unreachable!("disabled numeric kind reached resolved IR")
+                    }
+                });
                 write_quoted(&mut self.output, &literal.spelling);
                 write_span(&mut self.output, literal.span);
                 self.output.push('\n');

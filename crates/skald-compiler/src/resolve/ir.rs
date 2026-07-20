@@ -252,6 +252,7 @@ pub struct ResolvedLocal {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedTypeKind {
     I64,
+    U64,
     Bool,
     Unit,
 }

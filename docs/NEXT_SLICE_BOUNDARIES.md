@@ -48,9 +48,10 @@ The selected next slice adds the remaining primitive types `u64`, `u8`, and
 `f64`, following [`PRIMITIVE_TYPES_ROADMAP.md`](PRIMITIVE_TYPES_ROADMAP.md).
 It deliberately separates full-width unsigned arithmetic, narrow-value
 canonicalization, and floating-point/SSE ABI work into distinct milestones.
-T0 and T1 are complete: the contracts are fixed and runtime ABI version 4 can
-observe all three types directly. T2's behavior-preserving numeric-literal
-refactor is next.
+T0 through T3 are complete: the contracts are fixed, runtime ABI version 4 can
+observe all three types directly, numeric spellings share one classified
+pipeline, and `u64` works end-to-end with modular arithmetic and integer-class
+ABI lowering. T4's narrow `u8` representation and canonicalization are next.
 The other candidates below describe separate architectural pressures and
 should receive their own scoped roadmap.
 

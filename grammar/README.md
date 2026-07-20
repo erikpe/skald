@@ -1,6 +1,6 @@
 # Grammar
 
-This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice, `i64` output, and straight-line `bool` contracts below describe implemented behavior.
+This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice, output, `bool`/conditional, and `u64` contracts below describe implemented behavior.
 
 ## First vertical slice lexical contract
 
@@ -277,12 +277,11 @@ this section; T3, T4, and T6 enable them only after each has a complete path
 through the supported backend.
 
 T2 implements the shared numeric scanner and carries an explicit literal kind,
-original spelling, and complete span through the source and resolved IR. It
-does not enable new source forms: only unsuffixed decimal `i64` literals become
-valid tokens. Contracted `u64`, `u8`, and `f64` spellings are recognized at the
-lexical boundary but deliberately reported as invalid until their end-to-end
-tasks. This feature gate prevents a parser or later phase from guessing a type
-by inspecting suffix text.
+original spelling, and complete span through the source and resolved IR. T3
+enables `u64` and the concise `u` suffix end-to-end. Contracted `u8` and `f64`
+spellings remain recognized at the lexical boundary but deliberately invalid
+until T4 and T6. This feature gate prevents a parser or later phase from
+guessing a type by inspecting suffix text.
 
 The extension adds these case-sensitive type keywords:
 
@@ -397,7 +396,7 @@ Decimal literals are converted during M4:
 
 This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
 
-An `i64` or `bool` function must return a value on every reachable path. A
+An `i64`, `u64`, or `bool` function must return a value on every reachable path. A
 return in an unconditionally executed nested block satisfies this requirement,
 as does an `if` statement with a final `else` when every arm definitely returns. A
 `unit` function may use `return;` or reach its closing brace; attaching any
