@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ8 complete; OBJ9 is next.
+Status: complete; OBJ0–OBJ9 implemented.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -207,7 +207,7 @@ reconstructing source evaluation.
 - [x] OBJ6 — Resolve nominal classes, fields, initializers, and methods
 - [x] OBJ7 — Type-check inline objects, construction, and receiver access
 - [x] OBJ8 — Lower the frontend object model into verified MIR
-- [ ] OBJ9 — Enable and harden the complete native slice
+- [x] OBJ9 — Enable and harden the complete native slice
 
 A task is complete only when its checkboxes, acceptance criteria, and relevant
 quality gates pass.
@@ -434,20 +434,20 @@ MIR already accepted by the OBJ4 backend path.
 **Purpose:** Make the phase-tested path a dependable public feature and close
 integration gaps before broader object semantics begin.
 
-- [ ] Enable the source feature in the normal `skac` pipeline.
-- [ ] Add exact native goldens covering construction, all primitive field types,
+- [x] Enable the source feature in the normal `skac` pipeline.
+- [x] Add exact native goldens covering construction, all primitive field types,
       field access, both method modes, results, conditionals, multiple objects,
       and observable call order.
-- [ ] Add compile-failure goldens for exclusions and each major
+- [x] Add compile-failure goldens for exclusions and each major
       initialization/receiver diagnostic family.
-- [ ] Add repeated-process AST/resolved/HIR/MIR/assembly and diagnostic
+- [x] Add repeated-process AST/resolved/HIR/MIR/assembly and diagnostic
       determinism checks.
-- [ ] Cover padding and mixed integer/SSE receiver ABI boundaries.
-- [ ] Audit new modules for size, dependency direction, duplication, comments,
+- [x] Cover padding and mixed integer/SSE receiver ABI boundaries.
+- [x] Audit new modules for size, dependency direction, duplication, comments,
       and accidental test APIs.
-- [ ] Update README status, architecture, grammar, specification, samples,
+- [x] Update README status, architecture, grammar, specification, samples,
       next-slice boundaries, and roadmap checkboxes.
-- [ ] Record follow-up roadmaps instead of adding copy/destruction/shared or
+- [x] Record follow-up roadmaps instead of adding copy/destruction/shared or
       polymorphism incidentally.
 
 **Tests:** `make check`, full native goldens, dumps, compile failures,
@@ -459,24 +459,25 @@ documentation accurately describes implemented behavior.
 
 ## 4. Required Quality Gates
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test`
-- [ ] `make golden-test`
-- [ ] `make check`
-- [ ] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
-- [ ] No source-name lookup below resolution
-- [ ] No target offsets/registers/ABI locations in HIR or MIR
-- [ ] No class object represented as a scalar MIR value in this slice
-- [ ] Focused diagnostics for every explicitly excluded form
-- [ ] Documentation and milestone checkboxes match behavior
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test`
+- [x] `make golden-test`
+- [x] `make check`
+- [x] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
+- [x] No source-name lookup below resolution
+- [x] No target offsets/registers/ABI locations in HIR or MIR
+- [x] No class object represented as a scalar MIR value in this slice
+- [x] Focused diagnostics for every explicitly excluded form
+- [x] Documentation and milestone checkboxes match behavior
 
-## 5. Intended Follow-on Sequence
+## 5. Follow-up Roadmap Index
 
 This roadmap establishes stable inline storage, not the complete object model.
-A sensible progression afterward is:
+A sensible progression afterward is listed below. Each numbered item requires
+its own scoped roadmap before implementation:
 
 1. `ref` and `mut ref` parameters for inline objects, reusing places and direct
    receiver addresses without copying;

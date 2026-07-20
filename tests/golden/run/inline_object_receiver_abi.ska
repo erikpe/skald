@@ -1,0 +1,46 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+class Padded {
+    tag: u8;
+    value: f64;
+    flag: bool;
+    count: i64;
+
+    init(tag: u8, value: f64, flag: bool, count: i64) {
+        self.tag = tag;
+        self.value = value;
+        self.flag = flag;
+        self.count = count;
+    }
+
+    fn observe() -> unit {
+        ska_rt_println_u8(self.tag);
+        ska_rt_println_f64_bits(self.value);
+        ska_rt_println_bool(self.flag);
+        ska_rt_println_i64(self.count);
+    }
+
+    fn exhausted(
+        a: i64, b: f64, c: u64, d: f64,
+        e: u8, f: f64, g: i64, h: f64,
+        i: i64, j: f64, k: i64, l: f64,
+        m: f64, n: f64, o: u64, p: f64
+    ) -> f64 {
+        return p;
+    }
+}
+
+fn main() -> i64 {
+    var value: Padded = Padded(7u8, 1.5, true, 9);
+    value.observe();
+    ska_rt_println_f64_bits(value.exhausted(
+        1, 2.0, 3u, 4.0,
+        5u8, 6.0, 7, 8.0,
+        9, 10.0, 11, 12.0,
+        13.0, 14.0, 15u, 16.0
+    ));
+    return 0;
+}

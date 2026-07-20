@@ -1,0 +1,15 @@
+class Broken {
+    first: i64;
+    second: i64;
+    missing: i64;
+
+    init() {
+        self.first = self.second;
+        self.second = 1;
+        self.second = 2;
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

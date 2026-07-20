@@ -298,20 +298,21 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn verified_object_mir_stops_at_the_explicit_pre_obj9_native_boundary() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+fn composes_the_complete_object_frontend_and_backend_pipeline() {
+    let artifact = compile_source_to_assembly(
         "object.ska",
-        "class Empty { init() {} } fn main() -> i64 { var value: Empty = Empty(); return 0; }",
+        concat!(
+            "class Box { value: i64; init(value: i64) { self.value = value; } ",
+            "fn get() -> i64 { return self.value; } } ",
+            "fn main() -> i64 { var value: Box = Box(42); return value.get(); }",
+        ),
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("expected the pre-OBJ9 capability diagnostic");
-    };
+    .unwrap();
 
-    assert_eq!(report.diagnostics.len(), 1);
-    let diagnostic = report.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, "DRV001");
-    assert!(diagnostic.message.contains("native compilation"));
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains("call .Lska_class_0_init_0"));
+    assert!(artifact.assembly.contains("call .Lska_class_0_method_0"));
 }
 
 #[test]

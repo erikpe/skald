@@ -16,10 +16,8 @@ macro_rules! global_id {
                 self.0
             }
 
-            // Construction stays crate-private so only resolution and focused
-            // compiler tests can allocate identities. Object categories remain
-            // dormant in production until OBJ6 connects their resolver.
-            #[allow(dead_code)]
+            // Construction stays crate-private so resolution remains the
+            // production authority that allocates semantic identities.
             pub(crate) const fn new(index: usize) -> Self {
                 Self(index)
             }
@@ -50,10 +48,8 @@ macro_rules! class_member_id {
                 self.index
             }
 
-            // Construction stays crate-private so only resolution and focused
-            // compiler tests can allocate identities. Object categories remain
-            // dormant in production until OBJ6 connects their resolver.
-            #[allow(dead_code)]
+            // Construction stays crate-private so resolution remains the
+            // production authority that allocates semantic identities.
             pub(crate) const fn new(class: ClassId, index: usize) -> Self {
                 Self { class, index }
             }

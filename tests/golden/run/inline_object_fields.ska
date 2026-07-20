@@ -1,0 +1,58 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+class Record {
+    signed: i64;
+    unsigned: u64;
+    byte: u8;
+    floating: f64;
+    flag: bool;
+
+    init(signed: i64, unsigned: u64, byte: u8, floating: f64, flag: bool) {
+        self.signed = signed;
+        self.unsigned = unsigned;
+        self.byte = byte;
+        self.floating = floating;
+        self.flag = flag;
+    }
+
+    fn observe() -> unit {
+        ska_rt_println_i64(self.signed);
+        ska_rt_println_u64(self.unsigned);
+        ska_rt_println_u8(self.byte);
+        ska_rt_println_f64_bits(self.floating);
+        ska_rt_println_bool(self.flag);
+    }
+
+    mut fn replace(signed: i64, unsigned: u64, byte: u8, floating: f64, flag: bool) -> unit {
+        self.signed = signed;
+        self.unsigned = unsigned;
+        self.byte = byte;
+        self.floating = floating;
+        self.flag = flag;
+    }
+
+    fn selected() -> i64 {
+        if (self.flag) {
+            return self.signed;
+        } else {
+            return 0;
+        }
+    }
+}
+
+fn main() -> i64 {
+    var first: Record = Record(-1, 2u, 3u8, 1.5, true);
+    first.observe();
+    first.replace(10, 20u, 30u8, -0.0, false);
+    first.observe();
+
+    {
+        var second: Record = Record(40, 50u, 60u8, 2.0, true);
+        ska_rt_println_i64(second.selected());
+    }
+    return 0;
+}

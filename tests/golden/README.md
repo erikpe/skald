@@ -37,6 +37,14 @@ arithmetic, invalid unsigned negation, and the restricted external profile.
 Because the runner compiles every case twice, this coverage also proves
 assembly and diagnostic determinism across independent compiler processes.
 
+The inline-object corpus covers direct construction, all primitive field
+types, field reads and writes, read-only and mutable methods, method results,
+conditionals, multiple object locals, observable argument order, padded class
+layout, and mixed integer/SSE receiver calls through register and stack
+boundaries. Compile-failure cases snapshot construction and value exclusions,
+field initialization state, initializer-body restrictions, declaration
+restrictions, and read-only receiver violations.
+
 Run it from the repository root with:
 
 ```text

@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-T7/R12; inline-object OBJ0–OBJ8 complete.
+Status: post-T7/R12; restricted inline-object OBJ0–OBJ9 complete.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -86,8 +86,9 @@ initialization, receiver-access checking, method flow analysis, exclusions,
 and deterministic dumps. OBJ8 connects that HIR to canonical class/member MIR,
 callable-owned receiver storage, projected places, destination initialization,
 and source-ordered calls. The produced MIR passes the structural verifier and
-the existing object backend. OBJ9 is next and will enable and harden the public
-native path.
+the existing object backend. OBJ9 enables and hardens the public native path
+with successful and failing goldens, mixed receiver-ABI coverage, and
+cross-process determinism. The first inline-object slice is complete.
 
 The first inline object stresses layout, construction state, receiver access,
 and the boundary of future cleanup and return conventions. It requires a

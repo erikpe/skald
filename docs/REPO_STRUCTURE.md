@@ -390,9 +390,10 @@ tables and identity-based semantic selection. OBJ7 implements phase-owned
 nominal class/member HIR, destination-oriented construction, typed places,
 definite initialization, receiver access, and member-body flow. OBJ8–OBJ9
 implement lowering and integration. OBJ8 now lowers the restricted syntax to
-verified, identity-based object MIR already accepted by the backend. The public
-compiler stops after that verification at an explicit pre-OBJ9 native-
-integration boundary until the complete path is enabled and hardened.
+verified, identity-based object MIR already accepted by the backend. OBJ9
+enables that path in the public driver and hardens it with native, diagnostic,
+ABI, and cross-process determinism coverage. The restricted inline-object
+slice is complete end to end.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and
@@ -586,6 +587,14 @@ Small C harnesses compile directly against the runtime archive. This isolates ru
 Golden cases exercise the complete public behavior. A case may specify expected diagnostics, assembly fragments, process exit status, or a combination. Test metadata should use repository-relative paths and avoid unstable absolute filenames or incidental temporary labels.
 
 M7 provides a deliberately small Rust native runner. It discovers `.ska` files under `tests/golden/run/`, reads the expected process status from a matching `.exit` sidecar, builds the runtime archive, invokes the public `skac` binary, executes the result, and reports every case before returning failure. M8 extends the same runner with `tests/golden/compile_fail/` and exact `.stderr` snapshots. O1 adds optional `.stdout` sidecars with exact byte comparison; absence continues to require empty stdout, and runtime stderr remains empty. O6 supplies the end-to-end integer-output case. C2 adds an end-to-end boolean-output case covering literals, locals, parameters, and function returns, plus exact bool/i64 and entry-point failures. C5 and C6 add ordered and nested conditional execution, exhaustive and non-exhaustive return analysis, branch-scope failures, and every conditional parser diagnostic family. Successful assembly and failed diagnostics are each produced twice in independent compiler processes and compared for determinism. `make golden-test` runs this suite directly; it is also part of the workspace test suite.
+
+OBJ9 adds native object cases for direct construction, every primitive field
+type, read-only and mutable methods, conditionals, multiple locals, observable
+call order, padded layout, and exhausted mixed integer/SSE receiver calls. Its
+failure corpus snapshots construction/value exclusions, initialization state,
+initializer shape, declaration restrictions, and receiver access. A dedicated
+integration test compares AST, resolved, HIR, MIR, and assembly products from
+two independent compiler-test processes.
 
 Every implemented language feature should normally receive:
 

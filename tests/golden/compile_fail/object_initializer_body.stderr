@@ -1,0 +1,17 @@
+error[TYP016]: initializer bodies contain only direct field assignments
+ --> tests/golden/compile_fail/object_initializer_body.ska:5:9
+   |
+5 |         if (true) {
+   |         ^^^^^^^^^^^ expected `self.field = primitive_expression;`
+
+error[TYP017]: field `value` is not initialized
+ --> tests/golden/compile_fail/object_initializer_body.ska:2:5
+   |
+2 |     value: i64;
+   |     ^^^^^ this field needs one assignment in `init`
+
+error[TYP016]: an initializer cannot call instance methods
+ --> tests/golden/compile_fail/object_initializer_body.ska:15:27
+    |
+15 |         self.value = self.get();
+    |                           ^^^ the complete receiver is not live yet

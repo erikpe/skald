@@ -1,0 +1,24 @@
+error[TYP015]: constructor type does not match the object local
+ --> tests/golden/compile_fail/object_construction.ska:10:23
+    |
+10 |     var wrong: Left = Right();
+    |                       ^^^^^ constructs `Right`
+  = note: the local requires `Left`
+
+error[TYP014]: an object local must be initialized by direct construction
+ --> tests/golden/compile_fail/object_construction.ska:11:25
+    |
+11 |     var grouped: Left = (Left(1));
+    |                         ^^^^^^^^^ expected an ungrouped `Class(...)` expression
+
+error[TYP004]: initializer expects 1 argument but received 0
+ --> tests/golden/compile_fail/object_construction.ska:12:23
+    |
+12 |     var arity: Left = Left();
+    |                       ^^^^ called with the wrong number of arguments
+
+error[TYP005]: call argument has type `bool` but `i64` is required
+ --> tests/golden/compile_fail/object_construction.ska:13:28
+    |
+13 |     var typed: Left = Left(true);
+    |                            ^^^^ type mismatch

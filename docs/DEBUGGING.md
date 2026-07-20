@@ -68,6 +68,12 @@ decimal float. The primitive golden corpus exercises independent compiler
 processes for `u64`, `u8`, `f64`, mixed integer/SSE signatures, malformed
 spellings, overflow, and exact-type failures.
 
+OBJ9 extends the guarantee through inline objects. The
+`object_determinism` integration test runs the same representative object
+source in two independent test processes and compares its AST, resolved, HIR,
+MIR, and assembly renderings. Native object goldens independently compare
+public `skac` assembly and exact failure diagnostics across processes.
+
 Assembly is directly available through the public compiler command:
 
 ```text

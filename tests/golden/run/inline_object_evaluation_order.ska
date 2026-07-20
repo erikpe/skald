@@ -1,0 +1,33 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn mark(value: i64) -> i64 {
+    ska_rt_println_i64(value);
+    return value;
+}
+
+class Pair {
+    first: i64;
+    second: i64;
+
+    init(first: i64, second: i64) {
+        self.first = first;
+        self.second = second;
+    }
+
+    mut fn set(first: i64, second: i64) -> unit {
+        self.first = first;
+        self.second = second;
+    }
+
+    fn sum() -> i64 {
+        return self.first + self.second;
+    }
+}
+
+fn main() -> i64 {
+    var first: Pair = Pair(mark(1), mark(2));
+    var second: Pair = Pair(mark(3), mark(4));
+    first.set(mark(5), mark(6));
+    ska_rt_println_i64(first.sum());
+    return second.sum() - 7;
+}

@@ -1,0 +1,26 @@
+class Inner {
+    init() {}
+}
+
+class Outer {
+    child: Inner;
+
+    init(value: Inner) {}
+
+    fn copy(value: Inner) -> Inner {
+        return value;
+    }
+}
+
+fn take(value: Inner) -> i64 {
+    return 0;
+}
+
+fn give() -> Inner {
+    var value: Inner = Inner();
+    return value;
+}
+
+fn main() -> i64 {
+    return 0;
+}

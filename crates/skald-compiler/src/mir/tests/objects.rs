@@ -368,7 +368,7 @@ fn source_lowered_objects_are_accepted_by_the_existing_backend() {
     ));
 
     let assembly = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program)
-        .expect("OBJ8 MIR must be accepted by the OBJ4 backend");
+        .expect("source-lowered object MIR must be accepted by the object backend");
     assert!(assembly.contains("call .Lska_class_0_init_0"));
     assert!(assembly.contains("call .Lska_class_0_method_0"));
 }

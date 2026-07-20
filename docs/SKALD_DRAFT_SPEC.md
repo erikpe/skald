@@ -893,9 +893,9 @@ class types and member selections to stable identities, and OBJ7 produces
 typed class/member HIR while enforcing construction, initialization, excluded
 object-value contexts, and receiver access. OBJ8 lowers that model to verified
 class/member MIR with place-based construction and identity-selected field and
-method operations. The public compiler currently stops a successful object
-program after MIR verification at an explicit pre-OBJ9 native-integration
-boundary.
+method operations. OBJ9 enables the complete Linux x86-64 source-to-native path
+and covers successful execution, restricted-profile failures, ABI boundaries,
+and determinism. The restricted stage-0 profile is implemented end to end.
 This subsection narrows the broader class model above for the first
 implementation; it does not remove features from the eventual language.
 

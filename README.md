@@ -101,9 +101,12 @@ access enforcement, reusable method return-flow analysis, and deterministic
 object HIR dumps. OBJ8 lowers that model into verified MIR: class/member
 metadata and executable bodies retain stable identities, objects occupy places
 rather than transient values, construction writes directly into local storage,
-and field/method operations preserve source evaluation order. OBJ9 is next: it
-enables and hardens the complete native source path. Copying, destruction,
-polymorphism, and shared ownership remain deferred.
+and field/method operations preserve source evaluation order. OBJ9 enables and
+hardens the complete native source path with exact execution and failure
+goldens, mixed receiver-ABI coverage, and cross-process determinism checks. The
+restricted inline-object slice is complete. Copying, destruction,
+polymorphism, and shared ownership remain deferred to dedicated follow-up
+roadmaps.
 
 ## Development
 

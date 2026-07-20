@@ -499,8 +499,8 @@ resolver and records stable identities in resolved IR. OBJ7 type-checks those
 forms into nominal, identity-based HIR and enforces the restricted construction,
 initialization, and receiver rules. OBJ8 lowers successful object HIR to
 verified, place-based MIR accepted by the existing backend. OBJ9 enables and
-hardens the complete public path; object forms currently stop after MIR
-verification at an explicit pre-OBJ9 native-integration diagnostic.
+hardens the complete public source-to-native path. The restricted grammar and
+semantic profile described below are implemented end to end.
 
 The extension adds the globally reserved keywords:
 

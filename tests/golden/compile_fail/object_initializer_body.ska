@@ -1,0 +1,25 @@
+class Broken {
+    value: i64;
+
+    init() {
+        if (true) {
+            self.value = 1;
+        }
+    }
+}
+
+class CallsMethod {
+    value: i64;
+
+    init() {
+        self.value = self.get();
+    }
+
+    fn get() -> i64 {
+        return 1;
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

@@ -1,0 +1,17 @@
+error[TYP014]: an object local must be initialized by direct construction
+ --> tests/golden/compile_fail/object_value_contexts.ska:7:23
+   |
+7 |     var copy: Value = first;
+   |                       ^^^^^ expected an ungrouped `Class(...)` expression
+
+error[TYP015]: construction is allowed only as an object local initializer
+ --> tests/golden/compile_fail/object_value_contexts.ska:8:23
+   |
+8 |     var scalar: i64 = Value();
+   |                       ^^^^^^^ use `var name: Class = Class(...);`
+
+error[TYP014]: an inline object cannot be used as an ordinary value
+ --> tests/golden/compile_fail/object_value_contexts.ska:9:12
+   |
+9 |     return first;
+   |            ^^^^^ use the object as a field or method receiver

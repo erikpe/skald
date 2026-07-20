@@ -1,0 +1,15 @@
+class Left {
+    init(value: i64) {}
+}
+
+class Right {
+    init() {}
+}
+
+fn main() -> i64 {
+    var wrong: Left = Right();
+    var grouped: Left = (Left(1));
+    var arity: Left = Left();
+    var typed: Left = Left(true);
+    return 0;
+}

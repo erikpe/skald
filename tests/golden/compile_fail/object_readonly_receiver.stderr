@@ -1,0 +1,14 @@
+error[TYP018]: cannot assign through a read-only receiver
+ --> tests/golden/compile_fail/object_readonly_receiver.ska:13:14
+    |
+13 |         self.field = 1;
+    |              ^^^^^ field assignment requires mutable receiver access
+
+error[TYP018]: mutable method `set` requires mutable receiver access
+ --> tests/golden/compile_fail/object_readonly_receiver.ska:17:14
+    |
+17 |         self.set(2);
+    |              ^^^ called through a read-only receiver
+   |
+8 |     mut fn set(value: i64) -> unit {
+   |            --- mutable method declared here

@@ -1,0 +1,17 @@
+error[TYP017]: field `second` is read before initialization
+ --> tests/golden/compile_fail/object_field_initialization.ska:7:27
+   |
+7 |         self.first = self.second;
+   |                           ^^^^^^ field is not initialized yet
+
+error[TYP017]: field `second` is initialized more than once
+ --> tests/golden/compile_fail/object_field_initialization.ska:9:14
+   |
+9 |         self.second = 2;
+   |              ^^^^^^ duplicate field initialization
+
+error[TYP017]: field `missing` is not initialized
+ --> tests/golden/compile_fail/object_field_initialization.ska:4:5
+   |
+4 |     missing: i64;
+   |     ^^^^^^^ this field needs one assignment in `init`

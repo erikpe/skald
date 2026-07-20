@@ -1,0 +1,28 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Counter {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    mut fn add(amount: i64) -> unit {
+        self.value = self.value + amount;
+    }
+
+    fn get() -> i64 {
+        return self.value;
+    }
+
+    fn forwarded() -> i64 {
+        return self.get();
+    }
+}
+
+fn main() -> i64 {
+    var counter: Counter = Counter(40);
+    counter.add(2);
+    ska_rt_println_i64(counter.forwarded());
+    return 0;
+}
