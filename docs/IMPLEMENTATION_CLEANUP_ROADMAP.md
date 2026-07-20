@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R3 are complete and R4 is the next implementation task.
+Status: in progress; R0–R4 are complete and R5 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -63,7 +63,7 @@ gate before its checkbox is marked complete.
 - [x] R1 — Move stable program identities to a neutral module
 - [x] R2 — Consolidate dense and sparse ID-indexed tables
 - [x] R3 — Compute structured return flow once
-- [ ] R4 — Restructure the type checker around per-function context
+- [x] R4 — Restructure the type checker around per-function context
 - [ ] R5 — Split the parser by grammar responsibility
 - [ ] R6 — Bound recursive syntax nesting
 - [ ] R7 — Decompose x86-64 instruction and call lowering
@@ -165,13 +165,13 @@ there is one authoritative structured-flow computation.
 **Purpose:** Reduce argument plumbing and give declarations, statements,
 expressions, literals, and diagnostics clear implementation homes.
 
-- [ ] Introduce a FunctionChecker holding the current program, declaration,
+- [x] Introduce a FunctionChecker holding the current program, declaration,
       definition, return type, and diagnostic sink.
-- [ ] Move statement, conditional, expression, call, binding, and literal
+- [x] Move statement, conditional, expression, call, binding, and literal
       checking into focused modules or implementation sections.
-- [ ] Keep program-level entry and external-declaration validation separate.
-- [ ] Preserve all-or-nothing HIR construction and diagnostic accumulation.
-- [ ] Avoid changing type rules or diagnostic codes during the structural
+- [x] Keep program-level entry and external-declaration validation separate.
+- [x] Preserve all-or-nothing HIR construction and diagnostic accumulation.
+- [x] Avoid changing type rules or diagnostic codes during the structural
       refactor.
 
 **Tests:** Existing type-checker unit and golden tests, exact HIR dumps, and a

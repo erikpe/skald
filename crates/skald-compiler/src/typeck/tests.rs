@@ -67,6 +67,34 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
 }
 
 #[test]
+fn independent_errors_accumulate_across_function_contexts() {
+    let output = check_text(concat!(
+        "fn first() -> i64 { var value: i64 = true; return false; }\n",
+        "fn second() -> bool { return 1; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 3);
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message.starts_with("local initializer")));
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message.starts_with("return value"))
+            .count(),
+        2
+    );
+}
+
+#[test]
 fn checks_the_demonstration_program_into_fully_typed_hir() {
     let output = check_text(concat!(
         "fn twice(value: i64) -> i64 { return value * 2; }\n",

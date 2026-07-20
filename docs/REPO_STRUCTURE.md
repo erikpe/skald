@@ -238,6 +238,16 @@ Each function resolver owns an explicit lexical scope stack. Parameters share th
 
 M4 lowers successful resolved input into a distinct typed HIR. HIR preserves the declaration/definition split, so call checking consults canonical typed signatures without requiring a local body. Implemented semantic types are `i64`, `u64`, `u8`, `f64`, `bool`, and payload-free `unit`; every HIR expression stores its type, primitive operators are explicit typed operations, and calls retain exact checked function IDs. O5 validates the deliberately restricted external ABI profile during this phase, C2 extends it with by-value boolean parameters and results, T3 adds by-value `u64`, T4 adds by-value `u8`, and T6 adds by-value `f64`. Decimal spelling is converted exactly once here: integer families receive independent range checking, while finite `f64` spellings are rounded to nearest binary64 with ties to even and stored below HIR as raw bits. Boolean, signed, unsigned, and floating literals remain distinct typed nodes. Entry-signature, call-arity, expression, initializer, return-value, and mandatory-return checks accumulate diagnostics across the program. HIR is deliberately all-or-nothing: failed type checking returns diagnostics but no executable `HirProgram`, preventing M5 from consuming partial typed state.
 
+The type checker separates program and function responsibilities. Its
+`program` module orchestrates checking, validates entry and external
+declarations, and constructs the final all-or-nothing HIR. Each function body
+is checked through a `FunctionChecker` that owns references to the current
+program, declaration, definition, return type, and shared diagnostic sink.
+Recursive block and expression calls therefore pass only the syntax node that
+changes. Focused `function`, `expression`, and `literal` modules own statement
+and conditional flow, expressions/calls/bindings/operators, and numeric
+conversion/range diagnostics respectively.
+
 Type checking also computes one authoritative `BlockFlow` summary while it
 checks every block and conditional. `FallsThrough` means at least one path can
 reach the construct's end; `Terminates` currently means every path returns

@@ -1,8 +1,11 @@
 //! Type checking and construction of typed HIR.
 
-mod checker;
+mod expression;
+mod function;
+mod literal;
+mod program;
 
-pub use checker::{
+pub use program::{
     type_check, TypeCheckOutput, F64_LITERAL_OUT_OF_RANGE, INTEGER_LITERAL_OUT_OF_RANGE,
     INVALID_CALL_STATEMENT, INVALID_ENTRY_POINT, INVALID_EXTERNAL_DECLARATION, INVALID_RETURN,
     MISSING_ENTRY_POINT, MISSING_RETURN, TYPE_MISMATCH, U64_LITERAL_OUT_OF_RANGE,
