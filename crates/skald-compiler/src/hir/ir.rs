@@ -1,7 +1,7 @@
 //! Fully typed HIR consumed by MIR lowering.
 
 use crate::{
-    resolve::{BindingId, FunctionId, LocalId, ParameterId},
+    identity::{BindingId, FunctionId, LocalId, ParameterId},
     source::Span,
 };
 

@@ -8,11 +8,12 @@ use crate::{
         HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal,
         HirLocalDecl, HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
     },
+    identity::{BindingId, FunctionId},
     literal::NumericLiteralKind,
     resolve::{
-        BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression,
-        ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedFunctionLinkage,
-        ResolvedProgram, ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryOperator,
+        ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression, ResolvedFunctionDeclaration,
+        ResolvedFunctionDefinition, ResolvedFunctionLinkage, ResolvedProgram, ResolvedStatement,
+        ResolvedType, ResolvedTypeKind, ResolvedUnaryOperator,
     },
     source::Span,
 };
@@ -75,7 +76,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
 fn check_entry_point(
     program: &ResolvedProgram,
     diagnostics: &mut Diagnostics,
-) -> Option<crate::resolve::FunctionId> {
+) -> Option<FunctionId> {
     let Some(entry_id) = program.entry_function else {
         let start = program.span.range().start();
         diagnostics.push(

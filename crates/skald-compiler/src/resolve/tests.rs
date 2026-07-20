@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    identity::{BindingId, FunctionId},
     lexer::lex,
     literal::NumericLiteralKind,
     source::SourceDatabase,

@@ -15,7 +15,10 @@ The following principles guide the implementation:
 3. **Forward-only dependencies.** A later phase may depend on the output model of an earlier phase. Earlier phases must not depend on later phases, and backends must not inspect AST or type-checker internals.
 4. **Data across boundaries.** Phase interfaces should primarily exchange explicit, inspectable data structures rather than callbacks into mutable phase state.
 5. **No hidden global compilation state.** Source files, diagnostics, target selection, options, interning, and caches belong to an explicit compilation session or request.
-6. **Stable identities after resolution.** Later phases refer to declarations, locals, blocks, and values through typed IDs rather than source names or object identity.
+6. **Stable identities after resolution.** Resolution assigns program identities
+   defined by a neutral `identity` module. Later phases preserve typed IDs
+   rather than depending on resolver internals, source names, or object
+   identity.
 7. **Diagnostics survive lowering.** Source spans and useful origin information remain available as syntax becomes progressively less source-shaped.
 8. **Deterministic output.** Diagnostics, IR dumps, symbol ordering, generated labels, and assembly should be stable across runs.
 9. **Verify phase invariants.** Important IR boundaries have inexpensive verifier passes. Invalid compiler state is caught close to the phase that produced it.
@@ -81,6 +84,7 @@ The Rust library containing the compiler pipeline. It begins as one library crat
 src/
 ├── lib.rs
 ├── driver/
+├── identity.rs
 ├── source.rs
 ├── diagnostics/
 ├── lexer/
@@ -208,6 +212,15 @@ M2 implements the source AST as separate node, parser, and dump modules behind t
 ### Resolution and typed HIR
 
 Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.
+
+`FunctionId`, `ParameterId`, `LocalId`, and `BindingId` are defined in the
+neutral `identity` module rather than resolved IR. Resolution remains
+responsible for assigning them when it selects declarations and bindings from
+source. Resolved IR, typed HIR, MIR, and backends then share those identities
+directly; later phases do not import identity types through `resolve` or choose
+program entities by comparing source names. Identity construction remains
+crate-private, while indexing, ownership queries, ordering, and deterministic
+display are stable phase-independent operations.
 
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 

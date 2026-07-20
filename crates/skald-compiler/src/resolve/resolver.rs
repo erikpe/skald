@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
+    identity::{BindingId, FunctionId, LocalId, ParameterId},
     source::Span,
     syntax,
 };

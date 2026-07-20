@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    resolve::{BindingId, FunctionId},
+    identity::{BindingId, FunctionId},
     source::Span,
 };
 

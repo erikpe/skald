@@ -1,12 +1,8 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::*;
 use crate::{
-    hir::HirProgram,
-    lexer::lex,
-    resolve::{resolve, FunctionId},
-    source::SourceDatabase,
-    syntax::parse,
-    typeck::type_check,
+    hir::HirProgram, identity::FunctionId, lexer::lex, resolve::resolve, source::SourceDatabase,
+    syntax::parse, typeck::type_check,
 };
 
 fn hir_text(text: &str) -> HirProgram {

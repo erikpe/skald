@@ -1,103 +1,10 @@
 //! Name-resolved, but not yet type-checked, program representation.
 
-use std::fmt;
-
-use crate::{literal::NumericLiteralKind, source::Span};
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct FunctionId(usize);
-
-impl FunctionId {
-    pub const fn index(self) -> usize {
-        self.0
-    }
-
-    pub(crate) const fn new(index: usize) -> Self {
-        Self(index)
-    }
-}
-
-impl fmt::Display for FunctionId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "f{}", self.index())
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ParameterId {
-    function: FunctionId,
-    index: usize,
-}
-
-impl ParameterId {
-    pub const fn function(self) -> FunctionId {
-        self.function
-    }
-
-    pub const fn index(self) -> usize {
-        self.index
-    }
-
-    pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
-        Self { function, index }
-    }
-}
-
-impl fmt::Display for ParameterId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:p{}", self.function(), self.index())
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct LocalId {
-    function: FunctionId,
-    index: usize,
-}
-
-impl LocalId {
-    pub const fn function(self) -> FunctionId {
-        self.function
-    }
-
-    pub const fn index(self) -> usize {
-        self.index
-    }
-
-    pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
-        Self { function, index }
-    }
-}
-
-impl fmt::Display for LocalId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:l{}", self.function(), self.index())
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum BindingId {
-    Parameter(ParameterId),
-    Local(LocalId),
-}
-
-impl BindingId {
-    pub const fn function(self) -> FunctionId {
-        match self {
-            Self::Parameter(id) => id.function(),
-            Self::Local(id) => id.function(),
-        }
-    }
-}
-
-impl fmt::Display for BindingId {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Parameter(id) => id.fmt(formatter),
-            Self::Local(id) => id.fmt(formatter),
-        }
-    }
-}
+use crate::{
+    identity::{BindingId, FunctionId, LocalId, ParameterId},
+    literal::NumericLiteralKind,
+    source::Span,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {

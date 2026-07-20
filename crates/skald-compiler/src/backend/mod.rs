@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use crate::{mir::MirProgram, resolve::FunctionId};
+use crate::{identity::FunctionId, mir::MirProgram};
 
 mod x86_64_sysv;
 

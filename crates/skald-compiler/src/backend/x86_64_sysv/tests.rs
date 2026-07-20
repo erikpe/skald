@@ -9,6 +9,7 @@ use std::{
 use crate::{
     backend::{emit_assembly, Target},
     hir::HirProgram,
+    identity::{BindingId, FunctionId, LocalId, ParameterId},
     lexer::lex,
     mir::{
         lower_hir, verify_mir, BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody,
@@ -17,7 +18,7 @@ use crate::{
         MirProgram, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator,
         MirType, MirUnaryOperation, MirValue, StorageId, ValueId,
     },
-    resolve::{resolve, BindingId, FunctionId, LocalId, ParameterId},
+    resolve::resolve,
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,

@@ -2,6 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
+    identity::FunctionId,
     mir::{verify_mir, MirInstruction, MirProgram},
 };
 
@@ -44,7 +45,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
     Ok(())
 }
 
-fn abi_limit(function: crate::resolve::FunctionId, area: &str) -> BackendError {
+fn abi_limit(function: FunctionId, area: &str) -> BackendError {
     BackendError::new(
         Target::X86_64SysV,
         Some(function),

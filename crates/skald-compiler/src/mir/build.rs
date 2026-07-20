@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::{resolve::FunctionId, source::Span};
+use crate::{identity::FunctionId, source::Span};
 
 use super::{BlockId, MirBasicBlock, MirBody, MirInstruction, MirTerminator};
 

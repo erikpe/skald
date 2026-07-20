@@ -4,6 +4,7 @@ use crate::{
         dump_hir, HirBinaryOperation, HirExpression, HirExpressionKind, HirFunctionDefinition,
         HirStatement, Type,
     },
+    identity::FunctionId,
     lexer::lex,
     resolve::resolve,
     source::SourceDatabase,
@@ -136,22 +137,19 @@ fn checks_unit_functions_returns_and_call_statements() {
     let hir = output.hir.unwrap();
     assert_eq!(
         hir.declarations
-            .get(crate::resolve::FunctionId::new(0))
+            .get(FunctionId::new(0))
             .unwrap()
             .return_type,
         Type::Unit
     );
     assert_eq!(
         hir.declarations
-            .get(crate::resolve::FunctionId::new(1))
+            .get(FunctionId::new(1))
             .unwrap()
             .return_type,
         Type::Unit
     );
-    let explicit = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(0))
-        .unwrap();
+    let explicit = hir.definitions.get(FunctionId::new(0)).unwrap();
     let HirStatement::Return(statement) = &explicit.body.statements[0] else {
         panic!("expected explicit unit return");
     };
@@ -180,16 +178,10 @@ fn checks_boolean_values_without_conflating_them_with_i64() {
 
     assert!(!output.has_errors());
     let hir = output.hir.unwrap();
-    let external = hir
-        .declarations
-        .get(crate::resolve::FunctionId::new(0))
-        .unwrap();
+    let external = hir.declarations.get(FunctionId::new(0)).unwrap();
     assert_eq!(external.parameters[0].ty, Type::Bool);
     assert_eq!(external.return_type, Type::Bool);
-    let identity = hir
-        .declarations
-        .get(crate::resolve::FunctionId::new(1))
-        .unwrap();
+    let identity = hir.declarations.get(FunctionId::new(1)).unwrap();
     assert_eq!(identity.parameters[0].ty, Type::Bool);
     assert_eq!(identity.return_type, Type::Bool);
     let main = hir.definitions.get(hir.entry_function).unwrap();
@@ -243,10 +235,7 @@ fn checks_typed_conditionals_and_preserves_ordered_arms_in_hir() {
 
     assert!(!output.has_errors());
     let hir = output.hir.unwrap();
-    let choose = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(0))
-        .unwrap();
+    let choose = hir.definitions.get(FunctionId::new(0)).unwrap();
     let HirStatement::Conditional(conditional) = &choose.body.statements[0] else {
         panic!("expected typed conditional");
     };
@@ -320,10 +309,7 @@ fn checks_external_calls_from_bodyless_signatures() {
 
     assert!(!output.has_errors());
     let hir = output.hir.unwrap();
-    for id in [
-        crate::resolve::FunctionId::new(0),
-        crate::resolve::FunctionId::new(1),
-    ] {
+    for id in [FunctionId::new(0), FunctionId::new(1)] {
         assert!(matches!(
             hir.declarations.get(id).unwrap().linkage,
             crate::hir::HirFunctionLinkage::External { .. }
@@ -519,10 +505,7 @@ fn checks_u64_literals_signatures_and_typed_arithmetic() {
         "fn main() -> i64 { var value: u64 = calculate(maximum(), 1u); observe(value); return 0; }\n",
     ));
     let hir = output.hir.expect("valid u64 program must produce HIR");
-    let calculate = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(1))
-        .unwrap();
+    let calculate = hir.definitions.get(FunctionId::new(1)).unwrap();
     let expression = returned_expression(calculate);
 
     assert_eq!(expression.ty, Type::U64);
@@ -533,10 +516,7 @@ fn checks_u64_literals_signatures_and_typed_arithmetic() {
             ..
         }
     ));
-    let maximum = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(2))
-        .unwrap();
+    let maximum = hir.definitions.get(FunctionId::new(2)).unwrap();
     assert!(matches!(
         returned_expression(maximum).kind,
         HirExpressionKind::U64(u64::MAX)
@@ -612,10 +592,7 @@ fn checks_u8_bounds_signatures_and_typed_arithmetic() {
         "fn main() -> i64 { observe(calculate(bounds(), 1u8)); return 0; }\n",
     ));
     let hir = output.hir.expect("valid u8 program must produce HIR");
-    let calculate = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(1))
-        .unwrap();
+    let calculate = hir.definitions.get(FunctionId::new(1)).unwrap();
     let expression = returned_expression(calculate);
 
     assert_eq!(expression.ty, Type::U8);
@@ -626,10 +603,7 @@ fn checks_u8_bounds_signatures_and_typed_arithmetic() {
             ..
         }
     ));
-    let bounds = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(2))
-        .unwrap();
+    let bounds = hir.definitions.get(FunctionId::new(2)).unwrap();
     assert!(matches!(
         returned_expression(bounds).kind,
         HirExpressionKind::U8(u8::MAX)
@@ -695,10 +669,7 @@ fn checks_f64_raw_bits_signatures_and_typed_arithmetic() {
         "fn main() -> i64 { var value: f64 = calculate(1.5, 2e0); observe(value); return 0; }\n",
     ));
     let hir = output.hir.expect("valid f64 program must produce HIR");
-    let calculate = hir
-        .definitions
-        .get(crate::resolve::FunctionId::new(1))
-        .unwrap();
+    let calculate = hir.definitions.get(FunctionId::new(1)).unwrap();
     let expression = returned_expression(calculate);
 
     assert_eq!(expression.ty, Type::F64);
@@ -731,10 +702,7 @@ fn converts_f64_boundaries_once_to_exact_raw_bits() {
             "fn value() -> f64 {{ return {spelling}; }} fn main() -> i64 {{ return 0; }}"
         ));
         let hir = output.hir.expect("finite f64 literal must type-check");
-        let value = hir
-            .definitions
-            .get(crate::resolve::FunctionId::new(0))
-            .unwrap();
+        let value = hir.definitions.get(FunctionId::new(0)).unwrap();
         assert!(matches!(
             returned_expression(value).kind,
             HirExpressionKind::F64Bits(bits) if bits == expected_bits

@@ -1,4 +1,4 @@
-//! Declaration collection, lexical name resolution, and stable symbol identity.
+//! Declaration collection, lexical name resolution, and stable identity assignment.
 //!
 //! M3 produces a separate resolved representation. Later phases consume typed
 //! IDs and never choose declarations by comparing source names.
@@ -9,14 +9,13 @@ mod resolver;
 
 pub use dump::dump_resolved;
 pub use ir::{
-    BindingId, FunctionId, LocalId, ParameterId, ResolvedBinaryExpr, ResolvedBinaryOperator,
-    ResolvedBindingExpr, ResolvedBlock, ResolvedBooleanExpr, ResolvedConditional,
-    ResolvedConditionalArm, ResolvedDirectCallExpr, ResolvedExpression,
-    ResolvedExpressionStatement, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
-    ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage,
-    ResolvedGroupedExpr, ResolvedLocal, ResolvedLocalDecl, ResolvedNumericLiteralExpr,
-    ResolvedParameter, ResolvedProgram, ResolvedReturn, ResolvedStatement, ResolvedType,
-    ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBlock,
+    ResolvedBooleanExpr, ResolvedConditional, ResolvedConditionalArm, ResolvedDirectCallExpr,
+    ResolvedExpression, ResolvedExpressionStatement, ResolvedFunctionDeclaration,
+    ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable,
+    ResolvedFunctionLinkage, ResolvedGroupedExpr, ResolvedLocal, ResolvedLocalDecl,
+    ResolvedNumericLiteralExpr, ResolvedParameter, ResolvedProgram, ResolvedReturn,
+    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_FUNCTION, FUNCTION_USED_AS_VALUE,

@@ -7,6 +7,7 @@ pub mod backend;
 pub mod diagnostics;
 pub mod driver;
 pub mod hir;
+pub mod identity;
 pub mod lexer;
 pub mod literal;
 pub mod mir;

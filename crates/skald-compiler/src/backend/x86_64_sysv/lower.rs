@@ -2,6 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
+    identity::FunctionId,
     mir::{
         BlockId, MirBinaryOperation, MirCall, MirCallTarget, MirFunctionDeclaration,
         MirFunctionDefinition, MirFunctionLinkage, MirInstruction, MirProgram, MirRvalueKind,
@@ -578,6 +579,6 @@ fn block_label(block: BlockId) -> Label {
     ))
 }
 
-fn epilogue_label(function: crate::resolve::FunctionId) -> Label {
+fn epilogue_label(function: FunctionId) -> Label {
     Label::new(format!(".Lska_fn_{}_epilogue", function.index()))
 }

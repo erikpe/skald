@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, fmt};
 
-use crate::resolve::{BindingId, FunctionId};
+use crate::identity::{BindingId, FunctionId};
 
 use super::model::*;
 

@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0 is complete and R1 is the next implementation task.
+Status: in progress; R0–R1 are complete and R2 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -60,7 +60,7 @@ gate before its checkbox is marked complete.
 ## 3. Progress Summary
 
 - [x] R0 — Make artifact publication atomic and protect source inputs
-- [ ] R1 — Move stable program identities to a neutral module
+- [x] R1 — Move stable program identities to a neutral module
 - [ ] R2 — Consolidate dense and sparse ID-indexed tables
 - [ ] R3 — Compute structured return flow once
 - [ ] R4 — Restructure the type checker around per-function context
@@ -104,14 +104,14 @@ CLI invocation can overwrite its source file.
 **Purpose:** Remove the conceptual dependency from HIR, MIR, and backend code
 to the resolver implementation.
 
-- [ ] Create a neutral module for FunctionId, ParameterId, LocalId, and
+- [x] Create a neutral module for FunctionId, ParameterId, LocalId, and
       BindingId.
-- [ ] Move construction, ownership checks, ordering, and display formatting
+- [x] Move construction, ownership checks, ordering, and display formatting
       without changing observable dump spelling.
-- [ ] Update AST-independent phases to import IDs from the neutral module.
-- [ ] Keep resolution responsible for assigning identities, not owning their
+- [x] Update AST-independent phases to import IDs from the neutral module.
+- [x] Keep resolution responsible for assigning identities, not owning their
       type definitions.
-- [ ] Update architecture documentation with the corrected dependency
+- [x] Update architecture documentation with the corrected dependency
       direction.
 
 **Tests:** Existing exact resolved/HIR/MIR dumps, owner-mismatch verifier tests,

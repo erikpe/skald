@@ -6,7 +6,7 @@ use crate::{
         HirFunctionDeclaration, HirFunctionDefinition, HirFunctionLinkage, HirProgram,
         HirStatement, HirUnaryOperation, Type,
     },
-    resolve::BindingId,
+    identity::BindingId,
 };
 
 use super::{build::MirBodyBuilder, model::*};
