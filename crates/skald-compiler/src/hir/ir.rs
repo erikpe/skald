@@ -165,9 +165,30 @@ pub struct HirLocal {
     pub span: Span,
 }
 
+/// Whether execution can reach the end of a checked block or conditional.
+///
+/// `Terminates` currently means every path executes a `return`. The type
+/// checker is the authority for this summary; later phases consume it rather
+/// than reconstructing source-level control flow.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BlockFlow {
+    FallsThrough,
+    Terminates,
+}
+
+impl BlockFlow {
+    pub(crate) const fn then(self, next: Self) -> Self {
+        match self {
+            Self::FallsThrough => next,
+            Self::Terminates => Self::Terminates,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirBlock {
     pub statements: Vec<HirStatement>,
+    pub flow: BlockFlow,
     pub span: Span,
 }
 
@@ -215,6 +236,7 @@ pub struct HirCallStatement {
 pub struct HirConditional {
     pub arms: Vec<HirConditionalArm>,
     pub else_block: Option<HirBlock>,
+    pub flow: BlockFlow,
     pub span: Span,
 }
 

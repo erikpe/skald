@@ -2,7 +2,7 @@
 
 use crate::{
     hir::{
-        HirBinaryOperation, HirBlock, HirConditional, HirExpression, HirExpressionKind,
+        BlockFlow, HirBinaryOperation, HirBlock, HirConditional, HirExpression, HirExpressionKind,
         HirFunctionDeclaration, HirFunctionDefinition, HirFunctionLinkage, HirProgram,
         HirStatement, HirUnaryOperation, Type,
     },
@@ -171,15 +171,7 @@ impl<'hir> FunctionLowerer<'hir> {
 
     fn lower_conditional(&mut self, conditional: &HirConditional) {
         debug_assert!(!conditional.arms.is_empty());
-        let needs_join = conditional.else_block.is_none()
-            || conditional
-                .arms
-                .iter()
-                .any(|arm| !hir_block_guarantees_return(&arm.body))
-            || conditional
-                .else_block
-                .as_ref()
-                .is_some_and(|block| !hir_block_guarantees_return(block));
+        let needs_join = conditional.flow == BlockFlow::FallsThrough;
 
         // Allocate the complete shape before emitting edges. IDs therefore
         // follow source structure rather than a traversal chosen by lowering:
@@ -410,22 +402,4 @@ const fn lower_type(ty: Type) -> MirType {
         Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
     }
-}
-
-fn hir_block_guarantees_return(block: &HirBlock) -> bool {
-    block.statements.iter().any(|statement| match statement {
-        HirStatement::Return(_) => true,
-        HirStatement::Block(block) => hir_block_guarantees_return(block),
-        HirStatement::Conditional(conditional) => {
-            conditional
-                .else_block
-                .as_ref()
-                .is_some_and(hir_block_guarantees_return)
-                && conditional
-                    .arms
-                    .iter()
-                    .all(|arm| hir_block_guarantees_return(&arm.body))
-        }
-        HirStatement::Local(_) | HirStatement::Call(_) => false,
-    })
 }

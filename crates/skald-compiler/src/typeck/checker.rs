@@ -3,10 +3,11 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        HirBinaryOperation, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
-        HirExpression, HirExpressionKind, HirFunctionDeclaration, HirFunctionDeclarationTable,
-        HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal,
-        HirLocalDecl, HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
+        BlockFlow, HirBinaryOperation, HirBlock, HirCallStatement, HirConditional,
+        HirConditionalArm, HirExpression, HirExpressionKind, HirFunctionDeclaration,
+        HirFunctionDeclarationTable, HirFunctionDefinition, HirFunctionDefinitionTable,
+        HirFunctionLinkage, HirLocal, HirLocalDecl, HirParameter, HirProgram, HirReturn,
+        HirStatement, HirUnaryOperation, Type,
     },
     identity::{BindingId, FunctionId},
     literal::NumericLiteralKind,
@@ -221,7 +222,7 @@ fn check_definition(
         diagnostics,
     );
 
-    if return_type != Type::Unit && !block_guarantees_return(&definition.body) {
+    if return_type != Type::Unit && body.flow == BlockFlow::FallsThrough {
         diagnostics.push(
             Diagnostic::error(
                 MISSING_RETURN,
@@ -255,24 +256,48 @@ fn check_block(
     return_type: Type,
     diagnostics: &mut Diagnostics,
 ) -> HirBlock {
-    let statements = block
-        .statements
-        .iter()
-        .filter_map(|statement| {
-            check_statement(
-                program,
-                declaration,
-                definition,
-                statement,
-                return_type,
-                diagnostics,
-            )
-        })
-        .collect();
+    let mut statements = Vec::with_capacity(block.statements.len());
+    let mut flow = BlockFlow::FallsThrough;
+    for statement in &block.statements {
+        let checked = check_statement(
+            program,
+            declaration,
+            definition,
+            statement,
+            return_type,
+            diagnostics,
+        );
+        flow = flow.then(checked.flow);
+        if let Some(statement) = checked.hir {
+            statements.push(statement);
+        }
+    }
 
     HirBlock {
         statements,
+        flow,
         span: block.span,
+    }
+}
+
+struct CheckedStatement {
+    hir: Option<HirStatement>,
+    flow: BlockFlow,
+}
+
+impl CheckedStatement {
+    const fn falls_through(hir: Option<HirStatement>) -> Self {
+        Self {
+            hir,
+            flow: BlockFlow::FallsThrough,
+        }
+    }
+
+    const fn terminates(hir: Option<HirStatement>) -> Self {
+        Self {
+            hir,
+            flow: BlockFlow::Terminates,
+        }
     }
 }
 
@@ -283,50 +308,52 @@ fn check_statement(
     statement: &ResolvedStatement,
     return_type: Type,
     diagnostics: &mut Diagnostics,
-) -> Option<HirStatement> {
+) -> CheckedStatement {
     match statement {
         ResolvedStatement::Local(local) => {
             let metadata = definition
                 .local(local.local)
                 .expect("resolved local declaration must reference local metadata");
             let expected = lower_type(&metadata.type_syntax);
-            let initializer = check_expression(
+            let Some(initializer) = check_expression(
                 program,
                 declaration,
                 definition,
                 &local.initializer,
                 diagnostics,
-            )?;
-            if !require_type(
+            ) else {
+                return CheckedStatement::falls_through(None);
+            };
+            let hir = require_type(
                 initializer.ty,
                 expected,
                 initializer.span,
                 "local initializer",
                 diagnostics,
-            ) {
-                return None;
-            }
-            Some(HirStatement::Local(HirLocalDecl {
+            )
+            .then_some(HirStatement::Local(HirLocalDecl {
                 local: local.local,
                 initializer,
                 span: local.span,
-            }))
+            }));
+            CheckedStatement::falls_through(hir)
         }
         ResolvedStatement::Return(statement) => {
-            match (return_type, &statement.value) {
+            let hir = match (return_type, &statement.value) {
                 (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, Some(value)) => {
-                    let value =
-                        check_expression(program, declaration, definition, value, diagnostics)?;
-                    if !require_type(
+                    let Some(value) =
+                        check_expression(program, declaration, definition, value, diagnostics)
+                    else {
+                        return CheckedStatement::terminates(None);
+                    };
+                    require_type(
                         value.ty,
                         return_type,
                         value.span,
                         "return value",
                         diagnostics,
-                    ) {
-                        return None;
-                    }
-                    Some(HirStatement::Return(HirReturn {
+                    )
+                    .then_some(HirStatement::Return(HirReturn {
                         value: Some(value),
                         span: statement.span,
                     }))
@@ -362,16 +389,19 @@ fn check_statement(
                     value: None,
                     span: statement.span,
                 })),
-            }
+            };
+            CheckedStatement::terminates(hir)
         }
         ResolvedStatement::Expression(statement) => {
-            let expression = check_expression(
+            let Some(expression) = check_expression(
                 program,
                 declaration,
                 definition,
                 &statement.expression,
                 diagnostics,
-            )?;
+            ) else {
+                return CheckedStatement::falls_through(None);
+            };
             if !is_direct_call_through_groups(&statement.expression) {
                 diagnostics.push(
                     Diagnostic::error(
@@ -380,7 +410,7 @@ fn check_statement(
                     )
                     .with_primary_label(statement.span, "this expression is not a call"),
                 );
-                return None;
+                return CheckedStatement::falls_through(None);
             }
             if expression.ty != Type::Unit {
                 diagnostics.push(
@@ -394,16 +424,17 @@ fn check_statement(
                     )
                     .with_note("use the returned value instead of discarding it"),
                 );
-                return None;
+                return CheckedStatement::falls_through(None);
             }
-            Some(HirStatement::Call(HirCallStatement {
+            CheckedStatement::falls_through(Some(HirStatement::Call(HirCallStatement {
                 call: expression,
                 span: statement.span,
-            }))
+            })))
         }
         ResolvedStatement::Conditional(statement) => {
             let mut arms = Vec::with_capacity(statement.arms.len());
             let mut valid = true;
+            let mut all_arms_terminate = true;
             for arm in &statement.arms {
                 let condition = check_expression(
                     program,
@@ -420,6 +451,7 @@ fn check_statement(
                     return_type,
                     diagnostics,
                 );
+                all_arms_terminate &= body.flow == BlockFlow::Terminates;
                 match condition {
                     Some(condition)
                         if require_type(
@@ -449,21 +481,39 @@ fn check_statement(
                     diagnostics,
                 )
             });
+            let flow = if all_arms_terminate
+                && else_block
+                    .as_ref()
+                    .is_some_and(|block| block.flow == BlockFlow::Terminates)
+            {
+                BlockFlow::Terminates
+            } else {
+                BlockFlow::FallsThrough
+            };
 
-            valid.then_some(HirStatement::Conditional(HirConditional {
+            let hir = valid.then_some(HirStatement::Conditional(HirConditional {
                 arms,
                 else_block,
+                flow,
                 span: statement.span,
-            }))
+            }));
+            CheckedStatement { hir, flow }
         }
-        ResolvedStatement::Block(block) => Some(HirStatement::Block(check_block(
-            program,
-            declaration,
-            definition,
-            block,
-            return_type,
-            diagnostics,
-        ))),
+        ResolvedStatement::Block(block) => {
+            let block = check_block(
+                program,
+                declaration,
+                definition,
+                block,
+                return_type,
+                diagnostics,
+            );
+            let flow = block.flow;
+            CheckedStatement {
+                hir: Some(HirStatement::Block(block)),
+                flow,
+            }
+        }
     }
 }
 
@@ -934,22 +984,4 @@ fn is_direct_call_through_groups(expression: &ResolvedExpression) -> bool {
         ResolvedExpression::Grouped(grouped) => is_direct_call_through_groups(&grouped.expression),
         _ => false,
     }
-}
-
-fn block_guarantees_return(block: &ResolvedBlock) -> bool {
-    block.statements.iter().any(|statement| match statement {
-        ResolvedStatement::Return(_) => true,
-        ResolvedStatement::Block(block) => block_guarantees_return(block),
-        ResolvedStatement::Conditional(conditional) => {
-            conditional
-                .else_block
-                .as_ref()
-                .is_some_and(block_guarantees_return)
-                && conditional
-                    .arms
-                    .iter()
-                    .all(|arm| block_guarantees_return(&arm.body))
-        }
-        ResolvedStatement::Local(_) | ResolvedStatement::Expression(_) => false,
-    })
 }

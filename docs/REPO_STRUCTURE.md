@@ -238,6 +238,22 @@ Each function resolver owns an explicit lexical scope stack. Parameters share th
 
 M4 lowers successful resolved input into a distinct typed HIR. HIR preserves the declaration/definition split, so call checking consults canonical typed signatures without requiring a local body. Implemented semantic types are `i64`, `u64`, `u8`, `f64`, `bool`, and payload-free `unit`; every HIR expression stores its type, primitive operators are explicit typed operations, and calls retain exact checked function IDs. O5 validates the deliberately restricted external ABI profile during this phase, C2 extends it with by-value boolean parameters and results, T3 adds by-value `u64`, T4 adds by-value `u8`, and T6 adds by-value `f64`. Decimal spelling is converted exactly once here: integer families receive independent range checking, while finite `f64` spellings are rounded to nearest binary64 with ties to even and stored below HIR as raw bits. Boolean, signed, unsigned, and floating literals remain distinct typed nodes. Entry-signature, call-arity, expression, initializer, return-value, and mandatory-return checks accumulate diagnostics across the program. HIR is deliberately all-or-nothing: failed type checking returns diagnostics but no executable `HirProgram`, preventing M5 from consuming partial typed state.
 
+Type checking also computes one authoritative `BlockFlow` summary while it
+checks every block and conditional. `FallsThrough` means at least one path can
+reach the construct's end; `Terminates` currently means every path returns
+from the function. The summary is stored in typed HIR. Missing-return
+diagnostics inspect the function body's summary, while MIR lowering uses the
+conditional summary to decide whether a join block is required. Neither phase
+recursively re-analyzes an earlier representation.
+
+Future control flow should extend this same computation rather than add a
+parallel analysis. Loops first need to contribute fallthrough versus proven
+non-fallthrough behavior. If later phases must distinguish function return,
+divergence, checked-exception propagation, or other non-local exits,
+`BlockFlow` can become a richer outcome set while retaining one composition
+operation in type checking. MIR cleanup and edge lowering can then consume the
+specific outcomes they need from the recorded summary.
+
 ### MIR
 
 MIR is target-independent and executable in shape. It uses explicit basic blocks and terminators even though the first slice lowers only straight-line functions. It owns facts such as:

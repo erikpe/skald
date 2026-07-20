@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R2 are complete and R3 is the next implementation task.
+Status: in progress; R0–R3 are complete and R4 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -62,7 +62,7 @@ gate before its checkbox is marked complete.
 - [x] R0 — Make artifact publication atomic and protect source inputs
 - [x] R1 — Move stable program identities to a neutral module
 - [x] R2 — Consolidate dense and sparse ID-indexed tables
-- [ ] R3 — Compute structured return flow once
+- [x] R3 — Compute structured return flow once
 - [ ] R4 — Restructure the type checker around per-function context
 - [ ] R5 — Split the parser by grammar responsibility
 - [ ] R6 — Bound recursive syntax nesting
@@ -146,11 +146,11 @@ while dense/sparse indexing and count maintenance have one implementation.
 **Purpose:** Eliminate duplicate definite-return algorithms before more
 control-flow constructs arrive.
 
-- [ ] Define a small structured flow result such as FallsThrough and Terminates.
-- [ ] Compute it while checking typed blocks and conditionals.
-- [ ] Use the same result for missing-return diagnostics and MIR join decisions.
-- [ ] Remove both recursive block-guarantees-return implementations.
-- [ ] Document how loops, divergence, and exceptions can extend the result
+- [x] Define a small structured flow result such as FallsThrough and Terminates.
+- [x] Compute it while checking typed blocks and conditionals.
+- [x] Use the same result for missing-return diagnostics and MIR join decisions.
+- [x] Remove both recursive block-guarantees-return implementations.
+- [x] Document how loops, divergence, and exceptions can extend the result
       without duplicating analysis.
 
 **Tests:** Exhaustive and non-exhaustive conditionals; nested blocks; code after
