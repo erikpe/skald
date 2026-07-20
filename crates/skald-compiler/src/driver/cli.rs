@@ -4,6 +4,7 @@ use std::{
     ffi::{OsStr, OsString},
     fs,
     io::{self, Write},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
@@ -12,7 +13,10 @@ use crate::{
     diagnostics::render_diagnostics,
 };
 
-use super::{compile_source_to_assembly, CompilationError, Toolchain, ToolchainError};
+use super::{
+    artifact::PendingArtifact, compile_source_to_assembly, CompilationError, Toolchain,
+    ToolchainError,
+};
 
 pub(super) const HELP: &str = concat!(
     "skac - the Skald compiler\n\n",
@@ -112,6 +116,23 @@ fn compile<Stderr: Write>(
             return Ok(EXIT_IO_ERROR);
         }
     };
+    if let Some(output) = &options.output {
+        match paths_refer_to_same_file(&options.input, output) {
+            Ok(true) => {
+                writeln!(
+                    stderr,
+                    "skac: output path must not refer to the input source: {}",
+                    output.display()
+                )?;
+                return Ok(EXIT_USAGE);
+            }
+            Ok(false) => {}
+            Err(error) => {
+                writeln!(stderr, "skac: could not resolve the output path: {error}")?;
+                return Ok(EXIT_IO_ERROR);
+            }
+        }
+    }
     let diagnostic_path = stable_diagnostic_path(&options.input);
     let artifact = match compile_source_to_assembly(diagnostic_path, source_text, target) {
         Ok(artifact) => artifact,
@@ -145,7 +166,7 @@ fn compile<Stderr: Write>(
         .output
         .unwrap_or_else(|| default_output_path(&options.input, options.output_kind));
     let result = match options.output_kind {
-        OutputKind::Assembly => fs::write(&output, artifact.assembly).map_err(DriverError::Write),
+        OutputKind::Assembly => publish_assembly(&artifact.assembly, &output),
         OutputKind::Executable => toolchain
             .link_assembly(&artifact.assembly, &output)
             .map_err(DriverError::Toolchain),
@@ -156,6 +177,23 @@ fn compile<Stderr: Write>(
     }
 
     Ok(0)
+}
+
+fn publish_assembly(assembly: &str, output: &Path) -> Result<(), DriverError> {
+    let pending = PendingArtifact::new(output).map_err(DriverError::PrepareOutput)?;
+    pending
+        .write(assembly.as_bytes())
+        .map_err(DriverError::WriteOutput)?;
+    pending.publish().map_err(DriverError::PublishOutput)
+}
+
+fn paths_refer_to_same_file(input: &Path, output: &Path) -> io::Result<bool> {
+    let input = fs::metadata(input)?;
+    match fs::metadata(output) {
+        Ok(output) => Ok(input.dev() == output.dev() && input.ino() == output.ino()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
 }
 
 fn stable_diagnostic_path(input: &Path) -> PathBuf {
@@ -264,14 +302,16 @@ where
 }
 
 enum DriverError {
-    Write(io::Error),
+    PrepareOutput(io::Error),
+    WriteOutput(io::Error),
+    PublishOutput(io::Error),
     Toolchain(ToolchainError),
 }
 
 impl DriverError {
     const fn exit_code(&self) -> i32 {
         match self {
-            Self::Write(_) => EXIT_IO_ERROR,
+            Self::PrepareOutput(_) | Self::WriteOutput(_) | Self::PublishOutput(_) => EXIT_IO_ERROR,
             Self::Toolchain(_) => EXIT_COMPILE_ERROR,
         }
     }
@@ -280,7 +320,15 @@ impl DriverError {
 impl std::fmt::Display for DriverError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Write(error) => write!(formatter, "could not write output: {error}"),
+            Self::PrepareOutput(error) => {
+                write!(formatter, "could not prepare assembly output: {error}")
+            }
+            Self::WriteOutput(error) => {
+                write!(formatter, "could not write assembly output: {error}")
+            }
+            Self::PublishOutput(error) => {
+                write!(formatter, "could not publish assembly output: {error}")
+            }
             Self::Toolchain(error) => error.fmt(formatter),
         }
     }

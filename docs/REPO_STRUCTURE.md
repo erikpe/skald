@@ -183,6 +183,14 @@ Each arrow is an explicit API boundary. The driver composes them through `compil
 | Assembly emission | target model | deterministic textual assembly | valid toolchain input and stable symbol/section conventions |
 | Toolchain/link | assembly and runtime archive | executable | object generation and Linux linkage |
 
+The driver publishes assembly and executable artifacts through one shared
+same-directory temporary-file boundary. A completed artifact becomes visible
+at its destination with one rename; failed compilation, output, or toolchain
+work leaves an existing destination unchanged, and ordinary failure paths
+remove the unpublished temporary file through RAII. An explicit CLI output
+that has the same filesystem identity as its source is rejected before the
+compiler pipeline runs, including aliases through symbolic or hard links.
+
 ### Source and diagnostics
 
 All phases use a common span representation backed by the source database. Diagnostics contain structured severity, message, labels, and notes; terminal rendering happens at the driver edge. Tests should be able to assert diagnostic structure without depending on terminal colors or absolute paths.

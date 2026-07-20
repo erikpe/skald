@@ -3,6 +3,7 @@
 //! This module composes phases, artifact publication, and the host toolchain.
 //! Individual compiler phases do not depend on it.
 
+mod artifact;
 mod cli;
 mod pipeline;
 mod toolchain;

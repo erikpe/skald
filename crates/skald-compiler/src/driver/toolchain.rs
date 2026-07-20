@@ -3,12 +3,13 @@
 use std::{
     env,
     ffi::{OsStr, OsString},
-    fmt, fs,
+    fmt,
     io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    sync::atomic::{AtomicU64, Ordering},
 };
+
+use super::artifact::PendingArtifact;
 
 pub const C_COMPILER_ENV: &str = "CC";
 pub const RUNTIME_ARCHIVE_ENV: &str = "SKALD_RUNTIME_ARCHIVE";
@@ -17,8 +18,6 @@ const DEFAULT_RUNTIME_ARCHIVE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../build/runtime/libskald_runtime.a"
 );
-static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Toolchain {
     c_compiler: OsString,
@@ -47,13 +46,14 @@ impl Toolchain {
             return Err(ToolchainError::RuntimeArchiveMissing);
         }
 
-        let temporary = TemporaryOutput::new(output);
+        let pending = PendingArtifact::new(output)
+            .map_err(|source| ToolchainError::PrepareOutput { source })?;
         let mut child = Command::new(&self.c_compiler)
             .args([OsStr::new("-x"), OsStr::new("assembler"), OsStr::new("-")])
             .args([OsStr::new("-x"), OsStr::new("none")])
             .arg(&self.runtime_archive)
             .arg("-o")
-            .arg(temporary.path())
+            .arg(pending.path())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -88,13 +88,18 @@ impl Toolchain {
             });
         }
 
-        temporary.publish(output)
+        pending
+            .publish()
+            .map_err(|source| ToolchainError::Publish { source })
     }
 }
 
 #[derive(Debug)]
 pub enum ToolchainError {
     RuntimeArchiveMissing,
+    PrepareOutput {
+        source: io::Error,
+    },
     Start {
         tool: OsString,
         source: io::Error,
@@ -124,6 +129,9 @@ impl fmt::Display for ToolchainError {
                 formatter,
                 "Skald runtime archive is unavailable; run `make runtime` or set {RUNTIME_ARCHIVE_ENV}"
             ),
+            Self::PrepareOutput { source } => {
+                write!(formatter, "could not prepare linked executable output: {source}")
+            }
             Self::Start { tool, source } => write!(
                 formatter,
                 "could not start toolchain `{}`: {source}",
@@ -165,7 +173,8 @@ impl fmt::Display for ToolchainError {
 impl std::error::Error for ToolchainError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Start { source, .. }
+            Self::PrepareOutput { source }
+            | Self::Start { source, .. }
             | Self::WriteAssembly { source, .. }
             | Self::Wait { source, .. }
             | Self::Publish { source } => Some(source),
@@ -189,38 +198,5 @@ fn captured_output(stderr: &[u8], stdout: &[u8]) -> String {
         (stderr, "") => stderr.to_owned(),
         ("", stdout) => stdout.to_owned(),
         (stderr, stdout) => format!("stderr: {stderr}; stdout: {stdout}"),
-    }
-}
-
-struct TemporaryOutput {
-    path: PathBuf,
-}
-
-impl TemporaryOutput {
-    fn new(destination: &Path) -> Self {
-        let id = NEXT_TEMPORARY_ID.fetch_add(1, Ordering::Relaxed);
-        let mut path = destination.as_os_str().to_os_string();
-        path.push(format!(".skac-{}-{id}.tmp", std::process::id()));
-        Self {
-            path: PathBuf::from(path),
-        }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn publish(mut self, destination: &Path) -> Result<(), ToolchainError> {
-        fs::rename(&self.path, destination).map_err(|source| ToolchainError::Publish { source })?;
-        self.path.clear();
-        Ok(())
-    }
-}
-
-impl Drop for TemporaryOutput {
-    fn drop(&mut self) {
-        if !self.path.as_os_str().is_empty() {
-            let _ = fs::remove_file(&self.path);
-        }
     }
 }

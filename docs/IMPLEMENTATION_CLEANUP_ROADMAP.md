@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: planned; R0 is the next implementation task.
+Status: in progress; R0 is complete and R1 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -59,7 +59,7 @@ gate before its checkbox is marked complete.
 
 ## 3. Progress Summary
 
-- [ ] R0 — Make artifact publication atomic and protect source inputs
+- [x] R0 — Make artifact publication atomic and protect source inputs
 - [ ] R1 — Move stable program identities to a neutral module
 - [ ] R2 — Consolidate dense and sparse ID-indexed tables
 - [ ] R3 — Compute structured return flow once
@@ -83,13 +83,13 @@ task is complete only when its acceptance criteria and relevant tests pass.
 **Purpose:** Prevent compilation from destroying source input or leaving a
 partially written artifact after interruption or failure.
 
-- [ ] Reject an explicit output path that resolves to the input source file.
-- [ ] Extract one temporary-file-and-rename publication utility owned by the
+- [x] Reject an explicit output path that resolves to the input source file.
+- [x] Extract one temporary-file-and-rename publication utility owned by the
       driver/toolchain boundary.
-- [ ] Use atomic publication for textual assembly as well as executables.
-- [ ] Preserve an existing destination when compilation, linking, writing, or
+- [x] Use atomic publication for textual assembly as well as executables.
+- [x] Preserve an existing destination when compilation, linking, writing, or
       publication fails.
-- [ ] Keep temporary files beside the destination and remove them through RAII.
+- [x] Keep temporary files beside the destination and remove them through RAII.
 
 **Tests:** Input/output alias rejection; successful assembly publication;
 existing-output preservation after simulated failure; temporary cleanup; and
@@ -360,4 +360,3 @@ records all of them from a clean build state.
 
 The global checkboxes are marked only by R12. Earlier tasks run their relevant
 commands without marking the final roadmap gate prematurely.
-

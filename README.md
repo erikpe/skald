@@ -100,6 +100,11 @@ cargo run -p skac -- samples/vertical/exit_42.ska --emit asm -o build/exit_42.s
 
 Executable output uses `cc` by default and links `build/runtime/libskald_runtime.a`. Set `CC` to select another compatible C compiler driver or `SKALD_RUNTIME_ARCHIVE` to use another runtime archive. Without `-o`, executable output uses the input path without `.ska`; assembly output uses `.s`.
 
+`skac` publishes output atomically through a temporary file beside the
+destination. Failed compilation or linking therefore preserves an existing
+output. An explicit output path may not refer to the input source, including
+through a symbolic or hard link.
+
 ## History
 
 Skald began as a draft called **Niflheim2**, using the earlier Niflheim language and compiler as a starting point. Niflheim used garbage-collected reference objects. The experimental successor introduced inline object values, deterministic destruction, reference-counted shared ownership, and call-scoped borrowing.
