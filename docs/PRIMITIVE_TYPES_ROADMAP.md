@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0 complete; T1 is the next implementation task.
+Status: T0–T1 complete; T2 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -174,7 +174,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 ## 2. Progress Summary
 
 - [x] T0 — Freeze primitive, literal, arithmetic, and ABI contracts
-- [ ] T1 — Add direct runtime observability for the new primitives
+- [x] T1 — Add direct runtime observability for the new primitives
 - [ ] T2 — Refactor numeric literal infrastructure without changing behavior
 - [ ] T3 — Implement `u64` end-to-end
 - [ ] T4 — Implement `u8` end-to-end with explicit canonicalization
@@ -217,21 +217,21 @@ contract usable by every later task.
 **Purpose:** Make exact values observable before compiler support can produce
 them, keeping runtime correctness independent of frontend and backend work.
 
-- [ ] Add `ska_rt_println_u64(uint64_t)` with shortest unsigned decimal output.
-- [ ] Add `ska_rt_println_u8(uint8_t)` with unsigned decimal output in
+- [x] Add `ska_rt_println_u64(uint64_t)` with shortest unsigned decimal output.
+- [x] Add `ska_rt_println_u8(uint8_t)` with unsigned decimal output in
       `0..=255`.
-- [ ] Add `ska_rt_println_f64_bits(double)` that writes `0x` followed by exactly
+- [x] Add `ska_rt_println_f64_bits(double)` that writes `0x` followed by exactly
       16 lowercase hexadecimal digits encoding the binary64 representation.
-- [ ] Extract `f64` bits with `memcpy` or another alias-safe method and assert
+- [x] Extract `f64` bits with `memcpy` or another alias-safe method and assert
       the runtime target's required binary64 properties at compile time.
-- [ ] Reuse the checked complete-record output boundary without duplicating
+- [x] Reuse the checked complete-record output boundary without duplicating
       error handling or exposing libc implementation types publicly.
-- [ ] Increment `SKALD_RUNTIME_ABI_VERSION` from 3 to 4 once for the three new
+- [x] Increment `SKALD_RUNTIME_ABI_VERSION` from 3 to 4 once for the three new
       symbols.
-- [ ] Extend the direct C harness for zeroes, extrema, consecutive calls,
+- [x] Extend the direct C harness for zeroes, extrema, consecutive calls,
       positive and negative zero, representative finite bit patterns, and
       detected output failure for every new operation.
-- [ ] Update runtime ABI and test documentation.
+- [x] Update runtime ABI and test documentation.
 
 **Tests:** `make runtime-test` under C11 with warnings denied, exact captured
 bytes, header/archive version agreement, binary64 compile-time assertions, and

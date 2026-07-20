@@ -1640,7 +1640,7 @@ Thread-safe reference counting is out of scope unless concurrency is added later
 ### 13.1 Bootstrap `i64` Output
 
 **Implementation status:** implemented by the stage-0 x86-64 compiler,
-introduced in runtime ABI version 2, and retained in ABI version 3, with exact
+introduced in runtime ABI version 2, and retained in ABI version 4, with exact
 source-to-stdout golden coverage.
 
 Until strings and the standard I/O library exist, the runtime exposes one
@@ -1715,8 +1715,9 @@ compiler phase recognizes its name specially.
 
 ### 13.3 Bootstrap Remaining-Primitive Output
 
-**Implementation status:** specified by T0 and planned for T1. T1 changes the
-runtime ABI version from 3 to 4 once, adding all three symbols below.
+**Implementation status:** implemented directly in the C runtime by T1. T1
+changed the runtime ABI version from 3 to 4 once, adding all three symbols
+below. Compiler source support follows in T3, T4, and T6.
 
 ```c
 #include <stdint.h>
@@ -1860,7 +1861,7 @@ Resolved decisions in this draft:
 - the T-series profile has no implicit numeric conversions, promotions, or primitive casts, and keeps `main` exactly `fn main() -> i64`;
 - `u64` and `u8` `+`, `-`, and `*` wrap modulo their widths, while `f64` arithmetic follows binary64 under the default round-to-nearest, ties-to-even environment;
 - System V integer and SSE argument registers are allocated independently for mixed scalar signatures, and every Skald-visible `u8` is canonical in `0..=255`;
-- runtime ABI version 4 is reserved for T1's `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;
+- runtime ABI version 4 implements `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;
 - conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
 - conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
 - a conditional definitely returns only when it has `else` and every arm definitely returns;
