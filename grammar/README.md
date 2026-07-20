@@ -276,6 +276,14 @@ T0 fixes the syntax and semantic contract for the planned `u64`, `u8`, and
 this section; T3, T4, and T6 enable them only after each has a complete path
 through the supported backend.
 
+T2 implements the shared numeric scanner and carries an explicit literal kind,
+original spelling, and complete span through the source and resolved IR. It
+does not enable new source forms: only unsuffixed decimal `i64` literals become
+valid tokens. Contracted `u64`, `u8`, and `f64` spellings are recognized at the
+lexical boundary but deliberately reported as invalid until their end-to-end
+tasks. This feature gate prevents a parser or later phase from guessing a type
+by inspecting suffix text.
+
 The extension adds these case-sensitive type keywords:
 
 ```text

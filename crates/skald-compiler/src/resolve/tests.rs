@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     lexer::lex,
+    literal::NumericLiteralKind,
     source::SourceDatabase,
     syntax::{self, parse, Statement},
 };
@@ -57,6 +58,19 @@ fn collects_functions_before_resolving_forward_calls() {
     };
     assert_eq!(call.function.index(), 1);
     assert_eq!(call.arguments.len(), 1);
+}
+
+#[test]
+fn resolution_preserves_numeric_classification_and_source_spelling() {
+    let output = resolve_text("fn main() -> i64 { return 007; }");
+    let main = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::NumericLiteral(literal) = return_value(&main.body.statements[0]) else {
+        panic!("expected a resolved numeric literal");
+    };
+
+    assert_eq!(literal.kind, NumericLiteralKind::I64);
+    assert_eq!(literal.spelling, "007");
+    assert_eq!(literal.span.range().len(), 3);
 }
 
 #[test]

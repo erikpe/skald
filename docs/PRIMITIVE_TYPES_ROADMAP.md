@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T1 complete; T2 is the next implementation task.
+Status: T0–T2 complete; T3 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -175,7 +175,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 
 - [x] T0 — Freeze primitive, literal, arithmetic, and ABI contracts
 - [x] T1 — Add direct runtime observability for the new primitives
-- [ ] T2 — Refactor numeric literal infrastructure without changing behavior
+- [x] T2 — Refactor numeric literal infrastructure without changing behavior
 - [ ] T3 — Implement `u64` end-to-end
 - [ ] T4 — Implement `u8` end-to-end with explicit canonicalization
 - [ ] T5 — Add target-independent and backend `f64` infrastructure
@@ -246,19 +246,21 @@ support is needed to validate the ABI.
 **Purpose:** Create one maintainable literal pipeline before adding several
 spellings and types, while keeping the accepted language exactly unchanged.
 
-- [ ] Replace integer-specific lexer/parser plumbing with an explicit numeric
+- [x] Replace integer-specific lexer/parser plumbing with an explicit numeric
       token/literal representation that can distinguish integer suffixes and
       decimal floating forms without downstream string heuristics.
-- [ ] Centralize numeric scanning and malformed-tail recovery.
-- [ ] Keep only the existing unsuffixed decimal `i64` spelling enabled in this
+- [x] Centralize numeric scanning and malformed-tail recovery.
+- [x] Keep only the existing unsuffixed decimal `i64` spelling enabled in this
       task; `u64`, `u8`, and `f64` forms must remain focused unsupported or
       malformed-source diagnostics until their end-to-end tasks.
-- [ ] Preserve original spelling and complete spans for diagnostics while
+- [x] Preserve original spelling and complete spans for diagnostics while
       keeping semantic numeric values out of the lexer.
-- [ ] Preserve the existing `i64::MIN` unary-minus normalization behavior.
-- [ ] Keep AST/resolved/HIR/MIR dumps and all existing diagnostics
-      deterministic unless a deliberately improved diagnostic is documented.
-- [ ] Remove superseded integer-only helpers rather than leaving parallel
+- [x] Preserve the existing `i64::MIN` unary-minus normalization behavior.
+- [x] Keep AST/resolved/HIR/MIR dumps and all existing diagnostics
+      deterministic. Malformed exponent recovery deliberately keeps an
+      exponent sign in the invalid token, so `1e+` and `2E-foo` receive one
+      complete-span lexical diagnostic.
+- [x] Remove superseded integer-only helpers rather than leaving parallel
       literal paths.
 
 **Tests:** Lexer boundaries and malformed forms, parser recovery, `i64` range

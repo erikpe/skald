@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::source::Span;
+use crate::{literal::NumericLiteralKind, source::Span};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct FunctionId(usize);
@@ -325,7 +325,7 @@ pub struct ResolvedConditionalArm {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedExpression {
     Binding(ResolvedBindingExpr),
-    Integer(ResolvedIntegerExpr),
+    NumericLiteral(ResolvedNumericLiteralExpr),
     Boolean(ResolvedBooleanExpr),
     Unary(ResolvedUnaryExpr),
     Binary(ResolvedBinaryExpr),
@@ -337,7 +337,7 @@ impl ResolvedExpression {
     pub const fn span(&self) -> Span {
         match self {
             Self::Binding(expression) => expression.span,
-            Self::Integer(expression) => expression.span,
+            Self::NumericLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
@@ -354,7 +354,8 @@ pub struct ResolvedBindingExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedIntegerExpr {
+pub struct ResolvedNumericLiteralExpr {
+    pub kind: NumericLiteralKind,
     pub spelling: String,
     pub span: Span,
 }

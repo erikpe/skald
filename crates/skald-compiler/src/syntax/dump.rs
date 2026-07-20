@@ -133,8 +133,10 @@ impl AstDumper {
             Expression::Identifier(identifier) => {
                 self.named("Identifier", &identifier.name.text, identifier.span);
             }
-            Expression::Integer(integer) => {
-                self.named("Integer", &integer.spelling, integer.span);
+            Expression::NumericLiteral(literal) => {
+                // Preserve the established dump spelling while i64 is the
+                // only numeric kind accepted by the parser.
+                self.named("Integer", &literal.spelling, literal.span);
             }
             Expression::Boolean(boolean) => {
                 self.line(

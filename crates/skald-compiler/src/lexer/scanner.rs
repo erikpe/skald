@@ -1,9 +1,10 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
+    literal::NumericLiteralKind,
     source::{SourceFile, Span},
 };
 
-use super::{Token, TokenKind};
+use super::{numeric::scan_numeric_literal, Token, TokenKind};
 
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";
 pub const MALFORMED_INTEGER_LITERAL: &str = "LEX002";
@@ -54,7 +55,7 @@ impl<'source> Lexer<'source> {
             if is_identifier_start(character) {
                 self.lex_identifier(start);
             } else if character.is_ascii_digit() {
-                self.lex_integer(start);
+                self.lex_numeric_literal(start);
             } else {
                 self.lex_punctuation_or_invalid(start, character);
             }
@@ -115,19 +116,14 @@ impl<'source> Lexer<'source> {
         self.push_token(kind, start);
     }
 
-    fn lex_integer(&mut self, start: usize) {
-        self.advance();
-        while self
-            .peek()
-            .is_some_and(|character| character.is_ascii_digit())
-        {
-            self.advance();
-        }
+    fn lex_numeric_literal(&mut self, start: usize) {
+        let scan = scan_numeric_literal(self.remaining());
+        self.offset += scan.byte_len;
 
-        if self.peek().is_some_and(is_malformed_number_continue) {
-            while self.peek().is_some_and(is_malformed_number_continue) {
-                self.advance();
-            }
+        // T2 recognizes the future spellings centrally, but enables only the
+        // existing unsuffixed decimal i64 path. Preserve the established
+        // diagnostic until each new kind has complete compiler support.
+        if scan.kind != Some(NumericLiteralKind::I64) {
             let span = self.span(start, self.offset);
             let spelling = &self.source.text()[start..self.offset];
             self.tokens.push(Token {
@@ -145,7 +141,7 @@ impl<'source> Lexer<'source> {
             return;
         }
 
-        self.push_token(TokenKind::IntegerLiteral, start);
+        self.push_token(TokenKind::NumericLiteral(NumericLiteralKind::I64), start);
     }
 
     fn lex_punctuation_or_invalid(&mut self, start: usize, character: char) {
@@ -233,8 +229,4 @@ const fn is_identifier_start(character: char) -> bool {
 
 const fn is_identifier_continue(character: char) -> bool {
     character.is_ascii_alphanumeric() || character == '_'
-}
-
-const fn is_malformed_number_continue(character: char) -> bool {
-    character.is_ascii_alphanumeric() || character == '_' || character == '.'
 }

@@ -1,8 +1,11 @@
 use super::*;
 use crate::{
     diagnostics::render_diagnostics,
+    literal::NumericLiteralKind,
     source::{LineColumn, SourceDatabase},
 };
+
+const I64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::I64);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {
     let mut sources = SourceDatabase::new();
@@ -43,9 +46,9 @@ fn lexes_the_complete_m1_token_surface() {
             TokenKind::Plus,
             TokenKind::Identifier,
             TokenKind::Star,
-            TokenKind::IntegerLiteral,
+            I64_LITERAL,
             TokenKind::Minus,
-            TokenKind::IntegerLiteral,
+            I64_LITERAL,
             TokenKind::Semicolon,
             TokenKind::Return,
             TokenKind::Identifier,
@@ -126,7 +129,7 @@ fn skips_ascii_whitespace_and_line_comments() {
             TokenKind::Colon,
             TokenKind::I64,
             TokenKind::Equal,
-            TokenKind::IntegerLiteral,
+            I64_LITERAL,
             TokenKind::Semicolon,
             TokenKind::Eof,
         ]
@@ -171,10 +174,46 @@ fn malformed_decimal_spellings_are_single_invalid_tokens() {
 }
 
 #[test]
+fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
+    let (sources, source_id, output) = lex_text("42u 255u8 1.5 2e3 6.25e-1 return");
+    let source = sources.get(source_id).unwrap();
+    let spellings: Vec<_> = output
+        .tokens
+        .iter()
+        .filter(|token| token.kind == TokenKind::Invalid)
+        .map(|token| source.slice(token.span.range()).unwrap())
+        .collect();
+
+    assert_eq!(spellings, ["42u", "255u8", "1.5", "2e3", "6.25e-1"]);
+    assert_eq!(output.diagnostics.len(), spellings.len());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
+    assert_eq!(output.tokens[5].kind, TokenKind::Return);
+}
+
+#[test]
+fn malformed_exponents_are_recovered_without_splitting_their_sign() {
+    let (sources, source_id, output) = lex_text("1e+ 2E-foo + 3");
+    let source = sources.get(source_id).unwrap();
+    let invalid: Vec<_> = output
+        .tokens
+        .iter()
+        .filter(|token| token.kind == TokenKind::Invalid)
+        .map(|token| source.slice(token.span.range()).unwrap())
+        .collect();
+
+    assert_eq!(invalid, ["1e+", "2E-foo"]);
+    assert_eq!(output.tokens[2].kind, TokenKind::Plus);
+    assert_eq!(output.tokens[3].kind, I64_LITERAL);
+}
+
+#[test]
 fn integer_range_is_deliberately_not_checked_by_the_lexer() {
     let (_, _, output) = lex_text("9223372036854775808");
 
-    assert_eq!(output.tokens[0].kind, TokenKind::IntegerLiteral);
+    assert_eq!(output.tokens[0].kind, I64_LITERAL);
     assert!(output.diagnostics.is_empty());
 }
 

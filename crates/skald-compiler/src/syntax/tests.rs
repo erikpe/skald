@@ -1,5 +1,5 @@
 use super::*;
-use crate::{lexer::lex, source::SourceDatabase, syntax::dump_ast};
+use crate::{lexer::lex, literal::NumericLiteralKind, source::SourceDatabase, syntax::dump_ast};
 
 fn parse_text(text: &str) -> (SourceDatabase, ParseOutput) {
     let mut sources = SourceDatabase::new();
@@ -53,6 +53,42 @@ fn parses_the_vertical_slice_demonstration_program() {
         panic!("expected call initializer");
     };
     assert_eq!(call.arguments.len(), 1);
+}
+
+#[test]
+fn numeric_literals_preserve_their_lexical_kind_spelling_and_span() {
+    let (sources, output) = parse_text("fn main() -> i64 { return 007; }");
+    let Expression::NumericLiteral(literal) = return_value(function(&output.ast, 0)) else {
+        panic!("expected a numeric literal");
+    };
+
+    assert_eq!(literal.kind, NumericLiteralKind::I64);
+    assert_eq!(literal.spelling, "007");
+    assert_eq!(
+        sources
+            .get(literal.span.source_id())
+            .unwrap()
+            .slice(literal.span.range()),
+        Some("007")
+    );
+}
+
+#[test]
+fn disabled_numeric_literal_recovery_keeps_the_following_statement() {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(
+        "test.ska",
+        "fn main() -> i64 { var value: i64 = 42u; return 0; }",
+    );
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.has_errors());
+
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let main = function(&parsed.ast, 0);
+    assert_eq!(main.body.statements.len(), 1);
+    assert!(matches!(main.body.statements[0], Statement::Return(_)));
 }
 
 #[test]

@@ -157,11 +157,11 @@ impl ResolvedDumper {
             ResolvedExpression::Binding(binding) => {
                 self.line(&format!("Binding {}", binding.binding), binding.span);
             }
-            ResolvedExpression::Integer(integer) => {
+            ResolvedExpression::NumericLiteral(literal) => {
                 self.write_indentation();
                 self.output.push_str("Integer ");
-                write_quoted(&mut self.output, &integer.spelling);
-                write_span(&mut self.output, integer.span);
+                write_quoted(&mut self.output, &literal.spelling);
+                write_span(&mut self.output, literal.span);
                 self.output.push('\n');
             }
             ResolvedExpression::Boolean(boolean) => {

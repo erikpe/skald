@@ -14,9 +14,9 @@ pub use ir::{
     ResolvedConditionalArm, ResolvedDirectCallExpr, ResolvedExpression,
     ResolvedExpressionStatement, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
     ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage,
-    ResolvedGroupedExpr, ResolvedIntegerExpr, ResolvedLocal, ResolvedLocalDecl, ResolvedParameter,
-    ResolvedProgram, ResolvedReturn, ResolvedStatement, ResolvedType, ResolvedTypeKind,
-    ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedGroupedExpr, ResolvedLocal, ResolvedLocalDecl, ResolvedNumericLiteralExpr,
+    ResolvedParameter, ResolvedProgram, ResolvedReturn, ResolvedStatement, ResolvedType,
+    ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_FUNCTION, FUNCTION_USED_AS_VALUE,

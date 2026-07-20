@@ -3,6 +3,7 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     lexer::{Token, TokenKind},
+    literal::NumericLiteralKind,
     source::{SourceFile, Span},
 };
 
@@ -722,8 +723,9 @@ impl<'source> Parser<'source> {
             }));
         }
 
-        if let Some(token) = self.consume(TokenKind::IntegerLiteral) {
-            return Some(Expression::Integer(IntegerExpr {
+        if let Some(token) = self.consume(TokenKind::NumericLiteral(NumericLiteralKind::I64)) {
+            return Some(Expression::NumericLiteral(NumericLiteralExpr {
+                kind: NumericLiteralKind::I64,
                 spelling: self.lexeme(token).to_owned(),
                 span: token.span,
             }));
@@ -811,7 +813,7 @@ impl<'source> Parser<'source> {
                 TokenKind::Elif,
                 TokenKind::Else,
                 TokenKind::Identifier,
-                TokenKind::IntegerLiteral,
+                TokenKind::NumericLiteral(NumericLiteralKind::I64),
                 TokenKind::True,
                 TokenKind::False,
                 TokenKind::Minus,
@@ -842,7 +844,7 @@ impl<'source> Parser<'source> {
     fn starts_expression(&self) -> bool {
         self.at_any(&[
             TokenKind::Identifier,
-            TokenKind::IntegerLiteral,
+            TokenKind::NumericLiteral(NumericLiteralKind::I64),
             TokenKind::True,
             TokenKind::False,
             TokenKind::Minus,

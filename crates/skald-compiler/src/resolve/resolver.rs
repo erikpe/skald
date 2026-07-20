@@ -347,12 +347,13 @@ impl<'program> FunctionResolver<'program> {
     ) -> Option<ResolvedExpression> {
         match expression {
             syntax::Expression::Identifier(identifier) => self.resolve_identifier(identifier),
-            syntax::Expression::Integer(integer) => {
-                Some(ResolvedExpression::Integer(ResolvedIntegerExpr {
-                    spelling: integer.spelling.clone(),
-                    span: integer.span,
-                }))
-            }
+            syntax::Expression::NumericLiteral(literal) => Some(
+                ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {
+                    kind: literal.kind,
+                    spelling: literal.spelling.clone(),
+                    span: literal.span,
+                }),
+            ),
             syntax::Expression::Boolean(boolean) => {
                 Some(ResolvedExpression::Boolean(ResolvedBooleanExpr {
                     value: boolean.value,

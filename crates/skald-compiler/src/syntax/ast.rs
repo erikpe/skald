@@ -1,6 +1,6 @@
 //! Source-shaped AST for the implemented language subset.
 
-use crate::source::Span;
+use crate::{literal::NumericLiteralKind, source::Span};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationUnit {
@@ -138,7 +138,7 @@ pub struct ConditionalArm {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expression {
     Identifier(IdentifierExpr),
-    Integer(IntegerExpr),
+    NumericLiteral(NumericLiteralExpr),
     Boolean(BooleanExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
@@ -150,7 +150,7 @@ impl Expression {
     pub const fn span(&self) -> Span {
         match self {
             Self::Identifier(expression) => expression.span,
-            Self::Integer(expression) => expression.span,
+            Self::NumericLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
@@ -167,8 +167,10 @@ pub struct IdentifierExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct IntegerExpr {
-    /// Original decimal spelling. M4 owns conversion and `i64` range checking.
+pub struct NumericLiteralExpr {
+    /// Lexically determined kind; semantic conversion and ranges belong to type checking.
+    pub kind: NumericLiteralKind,
+    /// The complete original source spelling, retained for diagnostics.
     pub spelling: String,
     pub span: Span,
 }

@@ -5,6 +5,7 @@
 //! decimal spellings, returning tokens and structured diagnostics together.
 
 mod dump;
+mod numeric;
 mod scanner;
 mod token;
 

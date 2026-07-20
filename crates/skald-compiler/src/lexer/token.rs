@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::source::Span;
+use crate::{literal::NumericLiteralKind, source::Span};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TokenKind {
@@ -17,7 +17,7 @@ pub enum TokenKind {
     Else,
     Unit,
     Identifier,
-    IntegerLiteral,
+    NumericLiteral(NumericLiteralKind),
     LeftParen,
     RightParen,
     LeftBrace,
@@ -50,7 +50,10 @@ impl TokenKind {
             Self::Else => "ELSE",
             Self::Unit => "UNIT",
             Self::Identifier => "IDENTIFIER",
-            Self::IntegerLiteral => "INTEGER_LITERAL",
+            Self::NumericLiteral(NumericLiteralKind::I64) => "INTEGER_LITERAL",
+            Self::NumericLiteral(NumericLiteralKind::U64) => "U64_LITERAL",
+            Self::NumericLiteral(NumericLiteralKind::U8) => "U8_LITERAL",
+            Self::NumericLiteral(NumericLiteralKind::F64) => "F64_LITERAL",
             Self::LeftParen => "LEFT_PAREN",
             Self::RightParen => "RIGHT_PAREN",
             Self::LeftBrace => "LEFT_BRACE",

@@ -8,6 +8,7 @@ use crate::{
         HirFunctionDefinition, HirFunctionDefinitionTable, HirFunctionLinkage, HirLocal,
         HirLocalDecl, HirParameter, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
     },
+    literal::NumericLiteralKind,
     resolve::{
         BindingId, ResolvedBinaryOperator, ResolvedBlock, ResolvedExpression,
         ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedFunctionLinkage,
@@ -476,9 +477,7 @@ fn check_expression(
                 span: binding.span,
             })
         }
-        ResolvedExpression::Integer(integer) => {
-            check_positive_integer(&integer.spelling, integer.span, diagnostics)
-        }
+        ResolvedExpression::NumericLiteral(literal) => check_numeric_literal(literal, diagnostics),
         ResolvedExpression::Boolean(boolean) => Some(HirExpression {
             kind: HirExpressionKind::Boolean(boolean.value),
             ty: Type::Bool,
@@ -486,8 +485,8 @@ fn check_expression(
         }),
         ResolvedExpression::Unary(unary) => {
             if unary.operator == ResolvedUnaryOperator::Negate {
-                if let Some(integer) = integer_through_groups(&unary.operand) {
-                    match classify_magnitude(&integer.spelling) {
+                if let Some(literal) = i64_literal_through_groups(&unary.operand) {
+                    match classify_i64_magnitude(&literal.spelling) {
                         Magnitude::MinimumBoundary => {
                             return Some(HirExpression {
                                 kind: HirExpressionKind::Integer(i64::MIN),
@@ -499,7 +498,7 @@ fn check_expression(
                             report_integer_out_of_range(
                                 diagnostics,
                                 unary.span,
-                                format!("-{}", integer.spelling),
+                                format!("-{}", literal.spelling),
                             );
                             return None;
                         }
@@ -683,19 +682,30 @@ fn binding_type(
     }
 }
 
-fn check_positive_integer(
-    spelling: &str,
-    span: Span,
+fn check_numeric_literal(
+    literal: &crate::resolve::ResolvedNumericLiteralExpr,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirExpression> {
-    match spelling.parse::<i64>() {
+    match literal.kind {
+        NumericLiteralKind::I64 => check_positive_i64_literal(literal, diagnostics),
+        NumericLiteralKind::U64 | NumericLiteralKind::U8 | NumericLiteralKind::F64 => {
+            unreachable!("unsupported numeric literal kind reached type checking")
+        }
+    }
+}
+
+fn check_positive_i64_literal(
+    literal: &crate::resolve::ResolvedNumericLiteralExpr,
+    diagnostics: &mut Diagnostics,
+) -> Option<HirExpression> {
+    match literal.spelling.parse::<i64>() {
         Ok(value) => Some(HirExpression {
             kind: HirExpressionKind::Integer(value),
             ty: Type::I64,
-            span,
+            span: literal.span,
         }),
         Err(_) => {
-            report_integer_out_of_range(diagnostics, span, spelling.to_owned());
+            report_integer_out_of_range(diagnostics, literal.span, literal.spelling.clone());
             None
         }
     }
@@ -708,7 +718,7 @@ enum Magnitude {
     TooLarge,
 }
 
-fn classify_magnitude(spelling: &str) -> Magnitude {
+fn classify_i64_magnitude(spelling: &str) -> Magnitude {
     let Ok(magnitude) = spelling.parse::<u128>() else {
         return Magnitude::TooLarge;
     };
@@ -722,12 +732,14 @@ fn classify_magnitude(spelling: &str) -> Magnitude {
     }
 }
 
-fn integer_through_groups(
+fn i64_literal_through_groups(
     expression: &ResolvedExpression,
-) -> Option<&crate::resolve::ResolvedIntegerExpr> {
+) -> Option<&crate::resolve::ResolvedNumericLiteralExpr> {
     match expression {
-        ResolvedExpression::Integer(integer) => Some(integer),
-        ResolvedExpression::Grouped(grouped) => integer_through_groups(&grouped.expression),
+        ResolvedExpression::NumericLiteral(literal) if literal.kind == NumericLiteralKind::I64 => {
+            Some(literal)
+        }
+        ResolvedExpression::Grouped(grouped) => i64_literal_through_groups(&grouped.expression),
         _ => None,
     }
 }
