@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-O6 extension contract.
+Status: post-T7/R12; restricted inline-object roadmap selected.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -58,12 +58,20 @@ source-level `f64` grammar and exact type system to that path, converting
 finite decimal literals once into raw binary64 bits and supporting arithmetic,
 locals, calls, returns, external calls, and conditional-arm values. T7
 completes native boundary, mixed-ABI, failure-family, and repeated-process
-determinism coverage. The primitive slice is complete; selecting the next
-language slice should be a separate design decision.
-The other candidates below describe separate architectural pressures and
-should receive their own scoped roadmap.
+determinism coverage. The primitive slice is complete.
 
-Adding the first inline object instead stresses layout, construction state, assignment, cleanup order, receiver access, and return conventions. That slice needs a written ABI/layout contract before code generation and should not be combined casually with shared ownership or exceptions.
+The selected next language slice is the restricted inline-object core in
+[`INLINE_OBJECTS_ROADMAP.md`](INLINE_OBJECTS_ROADMAP.md). It adds nominal
+classes, primitive fields, direct construction into local storage, and direct
+receiver methods while excluding copies, destruction, general object
+temporaries, polymorphism, and shared ownership. Its backend-first sequence
+establishes identities, projected MIR places, layout, and the hidden receiver
+ABI before enabling source syntax end-to-end.
+
+The first inline object stresses layout, construction state, receiver access,
+and the boundary of future cleanup and return conventions. It requires a
+written ABI/layout contract before code generation and must not be combined
+casually with shared ownership or exceptions.
 
 Broader integer operations primarily stress specified edge-case semantics and instruction selection. AArch64 stresses the target interface and should leave semantic phases unchanged.
 

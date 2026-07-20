@@ -78,6 +78,12 @@ responsibility, repeated test setup is test-only, and compiler artifacts are
 published atomically. The final audit found no migration compatibility layer;
 future slices can extend the existing phase interfaces directly.
 
+The planned next slice is a restricted inline-object core: nominal classes,
+primitive fields, direct construction into local storage, and direct receiver
+methods. The OBJ roadmap deliberately establishes projected places, target
+layout, and the hidden receiver ABI before enabling source syntax, while
+deferring copying, destruction, polymorphism, and shared ownership.
+
 ## Development
 
 Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The Rust workspace currently has no third-party crate dependencies.
@@ -129,6 +135,7 @@ In the current development checkout, the Niflheim repository is available as the
 - [`bool` and conditional control-flow roadmap](docs/BOOL_CONDITIONALS_ROADMAP.md) — PR-sized tasks for boolean values and output, verified multi-block MIR, and Niflheim-style `if` / `elif` / `else`.
 - [Remaining primitive-types roadmap](docs/PRIMITIVE_TYPES_ROADMAP.md) — PR-sized tasks for `u64`, `u8`, and `f64`, including literals, arithmetic, runtime observability, and mixed integer/SSE ABI lowering.
 - [Compiler implementation cleanup roadmap](docs/IMPLEMENTATION_CLEANUP_ROADMAP.md) — ordered refactoring tasks for dependency direction, artifact safety, control-flow analysis, module size, and test maintainability.
+- [First inline objects roadmap](docs/INLINE_OBJECTS_ROADMAP.md) — PR-sized tasks for nominal classes, direct local construction, primitive fields, receiver methods, projected places, and x86-64 layout.
 - [Compiler debugging artifacts](docs/DEBUGGING.md) — deterministic phase dumps, assembly inspection, and verifier boundaries.
 - [Next-slice boundaries](docs/NEXT_SLICE_BOUNDARIES.md) — responsibilities and extension rules that future language work should preserve.
 - [Niflheim language specification](../niflheim/docs/LANGUAGE_MVP_SPEC_V0.1.md) — historical background for the language from which the first Skald draft was derived.
