@@ -104,7 +104,7 @@ fn assigns_dense_owner_qualified_ids_in_source_order() {
     assert_eq!(declaration.parameters[1].id.index(), 1);
     assert_eq!(definition.locals[0].id.index(), 0);
     assert_eq!(definition.locals[1].id.index(), 1);
-    assert_eq!(definition.locals[1].id.function(), declaration.id);
+    assert_eq!(definition.locals[1].id.callable(), declaration.id.into());
     assert_eq!(
         declaration
             .parameter(declaration.parameters[1].id)
@@ -116,6 +116,29 @@ fn assigns_dense_owner_qualified_ids_in_source_order() {
         definition.local(definition.locals[0].id).unwrap().name,
         "first"
     );
+}
+
+#[test]
+fn function_tables_reject_parameter_and_local_ids_from_other_callable_kinds() {
+    let output = resolve_text(concat!(
+        "fn identity(value: i64) -> i64 {\n",
+        "  var copy: i64 = value;\n",
+        "  return copy;\n",
+        "}\n",
+        "fn main() -> i64 { return identity(0); }\n",
+    ));
+    assert!(!output.has_errors());
+
+    let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    let definition = output.program.definitions.get(declaration.id).unwrap();
+    let class = ClassId::new(4);
+
+    assert!(declaration
+        .parameter(ParameterId::new(MethodId::new(class, 2), 0))
+        .is_none());
+    assert!(definition
+        .local(LocalId::new(InitializerId::new(class, 0), 0))
+        .is_none());
 }
 
 #[test]

@@ -72,3 +72,22 @@ fn body_builder_rejects_unknown_and_foreign_block_selection() {
         );
     }
 }
+
+#[test]
+fn body_builder_uses_the_complete_callable_identity_as_block_owner() {
+    let mir = lower_text("fn main() -> i64 { return 0; }");
+    let span = mir.definitions.get(mir.entry_function).unwrap().span;
+    let class = ClassId::new(3);
+    let method = MethodId::new(class, 2);
+    let initializer = InitializerId::new(class, 0);
+    let mut builder = MirBodyBuilder::new(method, span);
+
+    assert_eq!(builder.entry().callable(), method.into());
+    assert_eq!(builder.allocate_block(span).callable(), method.into());
+
+    let foreign = BlockId::new(initializer, 0);
+    assert_eq!(
+        builder.select_block(foreign).unwrap_err(),
+        MirBuildError::UnknownBlock(foreign)
+    );
+}

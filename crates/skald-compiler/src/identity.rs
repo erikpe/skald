@@ -6,74 +6,186 @@
 
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct FunctionId(usize);
+macro_rules! global_id {
+    ($name:ident, $prefix:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub struct $name(usize);
 
-impl FunctionId {
-    pub const fn index(self) -> usize {
-        self.0
+        impl $name {
+            pub const fn index(self) -> usize {
+                self.0
+            }
+
+            // Construction stays crate-private so only resolution and focused
+            // compiler tests can allocate identities. Object categories remain
+            // dormant in production until OBJ6 connects their resolver.
+            #[allow(dead_code)]
+            pub(crate) const fn new(index: usize) -> Self {
+                Self(index)
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "{}{}", $prefix, self.index())
+            }
+        }
+    };
+}
+
+macro_rules! class_member_id {
+    ($name:ident, $prefix:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub struct $name {
+            class: ClassId,
+            index: usize,
+        }
+
+        impl $name {
+            pub const fn class(self) -> ClassId {
+                self.class
+            }
+
+            pub const fn index(self) -> usize {
+                self.index
+            }
+
+            // Construction stays crate-private so only resolution and focused
+            // compiler tests can allocate identities. Object categories remain
+            // dormant in production until OBJ6 connects their resolver.
+            #[allow(dead_code)]
+            pub(crate) const fn new(class: ClassId, index: usize) -> Self {
+                Self { class, index }
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(formatter, "{}:{}{}", self.class(), $prefix, self.index())
+            }
+        }
+    };
+}
+
+global_id!(FunctionId, "f");
+global_id!(ClassId, "c");
+
+class_member_id!(FieldId, "field");
+class_member_id!(InitializerId, "init");
+class_member_id!(MethodId, "method");
+
+/// Stable identity of a declaration with an executable body.
+///
+/// The tagged identity is deliberately also the body's code-generation
+/// identity. Later phases never need a second global body number or a map from
+/// source names to backend entries.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum CallableId {
+    Function(FunctionId),
+    Initializer(InitializerId),
+    Method(MethodId),
+}
+
+impl CallableId {
+    pub const fn as_function(self) -> Option<FunctionId> {
+        match self {
+            Self::Function(function) => Some(function),
+            Self::Initializer(_) | Self::Method(_) => None,
+        }
     }
 
-    pub(crate) const fn new(index: usize) -> Self {
-        Self(index)
+    pub const fn class(self) -> Option<ClassId> {
+        match self {
+            Self::Function(_) => None,
+            Self::Initializer(initializer) => Some(initializer.class()),
+            Self::Method(method) => Some(method.class()),
+        }
     }
 }
 
-impl fmt::Display for FunctionId {
+impl From<FunctionId> for CallableId {
+    fn from(function: FunctionId) -> Self {
+        Self::Function(function)
+    }
+}
+
+impl From<InitializerId> for CallableId {
+    fn from(initializer: InitializerId) -> Self {
+        Self::Initializer(initializer)
+    }
+}
+
+impl From<MethodId> for CallableId {
+    fn from(method: MethodId) -> Self {
+        Self::Method(method)
+    }
+}
+
+impl fmt::Display for CallableId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "f{}", self.index())
+        match self {
+            Self::Function(function) => function.fmt(formatter),
+            Self::Initializer(initializer) => initializer.fmt(formatter),
+            Self::Method(method) => method.fmt(formatter),
+        }
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ParameterId {
-    function: FunctionId,
+    callable: CallableId,
     index: usize,
 }
 
 impl ParameterId {
-    pub const fn function(self) -> FunctionId {
-        self.function
+    pub const fn callable(self) -> CallableId {
+        self.callable
     }
 
     pub const fn index(self) -> usize {
         self.index
     }
 
-    pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
-        Self { function, index }
+    pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
+        Self {
+            callable: callable.into(),
+            index,
+        }
     }
 }
 
 impl fmt::Display for ParameterId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:p{}", self.function(), self.index())
+        write!(formatter, "{}:p{}", self.callable(), self.index())
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LocalId {
-    function: FunctionId,
+    callable: CallableId,
     index: usize,
 }
 
 impl LocalId {
-    pub const fn function(self) -> FunctionId {
-        self.function
+    pub const fn callable(self) -> CallableId {
+        self.callable
     }
 
     pub const fn index(self) -> usize {
         self.index
     }
 
-    pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
-        Self { function, index }
+    pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
+        Self {
+            callable: callable.into(),
+            index,
+        }
     }
 }
 
 impl fmt::Display for LocalId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}:l{}", self.function(), self.index())
+        write!(formatter, "{}:l{}", self.callable(), self.index())
     }
 }
 
@@ -84,10 +196,10 @@ pub enum BindingId {
 }
 
 impl BindingId {
-    pub const fn function(self) -> FunctionId {
+    pub const fn callable(self) -> CallableId {
         match self {
-            Self::Parameter(id) => id.function(),
-            Self::Local(id) => id.function(),
+            Self::Parameter(id) => id.callable(),
+            Self::Local(id) => id.callable(),
         }
     }
 }
@@ -106,7 +218,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn identities_preserve_owner_index_ordering_and_display() {
+    fn top_level_identities_preserve_owner_index_ordering_and_display() {
         let first = FunctionId::new(2);
         let second = FunctionId::new(3);
         let parameter = ParameterId::new(first, 4);
@@ -114,16 +226,67 @@ mod tests {
 
         assert_eq!(first.index(), 2);
         assert!(first < second);
-        assert_eq!(parameter.function(), first);
+        assert_eq!(parameter.callable(), CallableId::Function(first));
         assert_eq!(parameter.index(), 4);
-        assert_eq!(local.function(), first);
+        assert_eq!(local.callable(), CallableId::Function(first));
         assert_eq!(local.index(), 5);
         assert_eq!(first.to_string(), "f2");
         assert_eq!(parameter.to_string(), "f2:p4");
         assert_eq!(local.to_string(), "f2:l5");
-        assert_eq!(BindingId::Parameter(parameter).function(), first);
-        assert_eq!(BindingId::Local(local).function(), first);
+        assert_eq!(
+            BindingId::Parameter(parameter).callable(),
+            CallableId::Function(first)
+        );
+        assert_eq!(
+            BindingId::Local(local).callable(),
+            CallableId::Function(first)
+        );
         assert_eq!(BindingId::Parameter(parameter).to_string(), "f2:p4");
         assert_eq!(BindingId::Local(local).to_string(), "f2:l5");
+    }
+
+    #[test]
+    fn class_member_identities_retain_their_owner_and_category() {
+        let class = ClassId::new(3);
+        let other_class = ClassId::new(4);
+        let field = FieldId::new(class, 2);
+        let initializer = InitializerId::new(class, 0);
+        let method = MethodId::new(class, 5);
+
+        assert_eq!(class.index(), 3);
+        assert!(class < other_class);
+        assert_eq!(field.class(), class);
+        assert_eq!(field.index(), 2);
+        assert_eq!(initializer.class(), class);
+        assert_eq!(initializer.index(), 0);
+        assert_eq!(method.class(), class);
+        assert_eq!(method.index(), 5);
+        assert_eq!(class.to_string(), "c3");
+        assert_eq!(field.to_string(), "c3:field2");
+        assert_eq!(initializer.to_string(), "c3:init0");
+        assert_eq!(method.to_string(), "c3:method5");
+    }
+
+    #[test]
+    fn callable_identity_is_the_body_owner_for_every_declaration_kind() {
+        let function = CallableId::from(FunctionId::new(1));
+        let initializer = CallableId::from(InitializerId::new(ClassId::new(2), 0));
+        let method = CallableId::from(MethodId::new(ClassId::new(2), 3));
+
+        assert_eq!(function.as_function(), Some(FunctionId::new(1)));
+        assert_eq!(function.class(), None);
+        assert_eq!(initializer.as_function(), None);
+        assert_eq!(initializer.class(), Some(ClassId::new(2)));
+        assert_eq!(method.class(), Some(ClassId::new(2)));
+        assert_eq!(function.to_string(), "f1");
+        assert_eq!(initializer.to_string(), "c2:init0");
+        assert_eq!(method.to_string(), "c2:method3");
+
+        let parameter = ParameterId::new(method, 4);
+        let local = LocalId::new(initializer, 5);
+        assert_eq!(parameter.callable(), method);
+        assert_eq!(local.callable(), initializer);
+        assert_eq!(parameter.to_string(), "c2:method3:p4");
+        assert_eq!(local.to_string(), "c2:init0:l5");
     }
 }

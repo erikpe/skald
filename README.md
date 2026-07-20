@@ -81,9 +81,11 @@ future slices can extend the existing phase interfaces directly.
 The next slice is a restricted inline-object core: nominal classes, primitive
 fields, direct construction into local storage, and direct receiver methods.
 OBJ0 has frozen its grammar, initialization, layout, receiver ABI, evaluation,
-and exclusion contracts. The remaining roadmap deliberately establishes
-projected places and backend support before enabling source syntax, while
-deferring copying, destruction, polymorphism, and shared ownership.
+and exclusion contracts. OBJ1 adds stable nominal class/member identities and
+one tagged callable identity shared by function, initializer, and method body
+ownership. The remaining roadmap establishes projected places and backend
+support before enabling source syntax, while deferring copying, destruction,
+polymorphism, and shared ownership.
 
 ## Development
 

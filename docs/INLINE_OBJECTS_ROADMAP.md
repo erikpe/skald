@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0 complete; OBJ1 is next.
+Status: OBJ0–OBJ1 complete; OBJ2 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -199,7 +199,7 @@ reconstructing source evaluation.
 ## 2. Progress Summary
 
 - [x] OBJ0 — Freeze the restricted inline-object contract
-- [ ] OBJ1 — Establish object identities and executable-body ownership
+- [x] OBJ1 — Establish object identities and executable-body ownership
 - [ ] OBJ2 — Add target-independent object places and construction-aware MIR
 - [ ] OBJ3 — Implement x86-64 inline layout and projected-place addressing
 - [ ] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
@@ -243,15 +243,17 @@ construction state, layout, receiver ABI, or unsupported-feature behavior.
 **Purpose:** Give nominal declarations and executable bodies stable,
 name-independent identities before object metadata crosses phases.
 
-- [ ] Add class, field, initializer, and method identities with explicit
+- [x] Add class, field, initializer, and method identities with explicit
       owner/index relationships and deterministic display.
-- [ ] Choose and document one body/callable identity strategy for top-level
+- [x] Choose and document one body/callable identity strategy for top-level
       functions, initializers, and methods.
-- [ ] Generalize parameter/local and MIR storage/value/block ownership only as
+- [x] Generalize parameter/local and MIR storage/value/block ownership only as
       required; do not create identities that later need name-based joining.
-- [ ] Add validated dense/sparse owner tables where they remove repeated logic.
-- [ ] Keep neutral identities separate from phase-specific declaration data.
-- [ ] Preserve current function behavior and deterministic dumps.
+- [x] Retain the validated dense/sparse function tables and defer new
+      class/member table abstractions until phase records exist, avoiding an
+      unused general arena or identity-trait framework.
+- [x] Keep neutral identities separate from phase-specific declaration data.
+- [x] Preserve current function behavior and deterministic dumps.
 
 **Tests:** Owner/index validation, ordering/display, wrong-owner lookup, sparse
 body tables, and full regression coverage.

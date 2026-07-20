@@ -65,7 +65,7 @@ pub struct ResolvedFunctionDeclaration {
 
 impl ResolvedFunctionDeclaration {
     pub fn parameter(&self, id: ParameterId) -> Option<&ResolvedParameter> {
-        (id.function() == self.id)
+        (id.callable() == self.id.into())
             .then(|| self.parameters.get(id.index()))
             .flatten()
             .filter(|parameter| parameter.id == id)
@@ -117,7 +117,7 @@ pub struct ResolvedFunctionDefinition {
 
 impl ResolvedFunctionDefinition {
     pub fn local(&self, id: LocalId) -> Option<&ResolvedLocal> {
-        (id.function() == self.function)
+        (id.callable() == self.function.into())
             .then(|| self.locals.get(id.index()))
             .flatten()
             .filter(|local| local.id == id)

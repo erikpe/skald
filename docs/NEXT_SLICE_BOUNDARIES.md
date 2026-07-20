@@ -1,6 +1,6 @@
 # Boundaries for the Next Language Slice
 
-Status: post-T7/R12; inline-object OBJ0 contract complete.
+Status: post-T7/R12; inline-object OBJ0–OBJ1 complete.
 
 The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
 
@@ -66,8 +66,9 @@ classes, primitive fields, direct construction into local storage, and direct
 receiver methods while excluding copies, destruction, general object
 temporaries, polymorphism, and shared ownership. Its backend-first sequence
 establishes identities, projected MIR places, layout, and the hidden receiver
-ABI before enabling source syntax end-to-end. OBJ0 has completed the written
-language, layout, and ABI contract; implementation begins with OBJ1.
+ABI before enabling source syntax end-to-end. OBJ0 completed the written
+language, layout, and ABI contract. OBJ1 establishes nominal object/member
+identities and callable-owned body-local identities; OBJ2 is next.
 
 The first inline object stresses layout, construction state, receiver access,
 and the boundary of future cleanup and return conventions. It requires a

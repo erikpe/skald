@@ -218,8 +218,8 @@ impl FunctionChecker<'_, '_> {
 
     fn binding_type(&self, binding: BindingId) -> Type {
         assert_eq!(
-            binding.function(),
-            self.declaration.id,
+            binding.callable(),
+            self.declaration.id.into(),
             "resolved binding must belong to the current function"
         );
         match binding {

@@ -88,7 +88,7 @@ pub struct HirFunctionDeclaration {
 
 impl HirFunctionDeclaration {
     pub fn parameter(&self, id: ParameterId) -> Option<&HirParameter> {
-        (id.function() == self.id)
+        (id.callable() == self.id.into())
             .then(|| self.parameters.get(id.index()))
             .flatten()
             .filter(|parameter| parameter.id == id)
@@ -140,7 +140,7 @@ pub struct HirFunctionDefinition {
 
 impl HirFunctionDefinition {
     pub fn local(&self, id: LocalId) -> Option<&HirLocal> {
-        (id.function() == self.function)
+        (id.callable() == self.function.into())
             .then(|| self.locals.get(id.index()))
             .flatten()
             .filter(|local| local.id == id)

@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::{identity::FunctionId, source::Span};
+use crate::{identity::CallableId, source::Span};
 
 use super::{BlockId, MirBasicBlock, MirBody, MirInstruction, MirTerminator};
 
@@ -10,7 +10,7 @@ use super::{BlockId, MirBasicBlock, MirBody, MirInstruction, MirTerminator};
 /// invariants in one place. Blocks are allocated in stable ID order; changing
 /// the selected block never changes that order.
 pub struct MirBodyBuilder {
-    function: FunctionId,
+    callable: CallableId,
     entry: BlockId,
     blocks: Vec<MirBasicBlock>,
     current: BlockId,
@@ -36,10 +36,11 @@ impl fmt::Display for MirBuildError {
 impl std::error::Error for MirBuildError {}
 
 impl MirBodyBuilder {
-    pub fn new(function: FunctionId, entry_span: Span) -> Self {
-        let entry = BlockId::new(function, 0);
+    pub fn new(callable: impl Into<CallableId>, entry_span: Span) -> Self {
+        let callable = callable.into();
+        let entry = BlockId::new(callable, 0);
         Self {
-            function,
+            callable,
             entry,
             blocks: vec![MirBasicBlock {
                 id: entry,
@@ -60,7 +61,7 @@ impl MirBodyBuilder {
     }
 
     pub fn allocate_block(&mut self, span: Span) -> BlockId {
-        let id = BlockId::new(self.function, self.blocks.len());
+        let id = BlockId::new(self.callable, self.blocks.len());
         self.blocks.push(MirBasicBlock {
             id,
             instructions: Vec::new(),
@@ -106,7 +107,7 @@ impl MirBodyBuilder {
     }
 
     fn block(&self, block: BlockId) -> Result<&MirBasicBlock, MirBuildError> {
-        (block.function() == self.function)
+        (block.callable() == self.callable)
             .then(|| self.blocks.get(block.index()))
             .flatten()
             .filter(|candidate| candidate.id == block)

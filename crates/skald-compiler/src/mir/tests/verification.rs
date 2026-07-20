@@ -190,7 +190,7 @@ fn verifier_rejects_missing_and_foreign_control_flow_targets() {
     let errors = verify_mir(&foreign).unwrap_err();
     assert!(errors.iter().any(|error| error
         .message
-        .contains("target f99:b0 is owned by another function")));
+        .contains("target f99:b0 is owned by another callable body")));
 }
 
 #[test]
@@ -215,7 +215,7 @@ fn verifier_rejects_invalid_entry_and_non_dense_block_ids() {
     let errors = verify_mir(&foreign_entry).unwrap_err();
     assert!(errors.iter().any(|error| error
         .message
-        .contains("entry block f99:b0 is owned by another function")));
+        .contains("entry block f99:b0 is owned by another callable body")));
 
     let mut sparse = goto_join_mir();
     let function = sparse
@@ -371,9 +371,9 @@ fn verifier_rejects_call_signature_mismatches() {
 }
 
 #[test]
-fn verifier_rejects_ids_owned_by_another_function() {
+fn verifier_rejects_ids_owned_by_another_callable_body() {
     let mut mir = lower_text("fn main() -> i64 { return 0; }");
-    let foreign = FunctionId::new(99);
+    let foreign = MethodId::new(ClassId::new(7), 2);
     mir.definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap()
@@ -383,7 +383,7 @@ fn verifier_rejects_ids_owned_by_another_function() {
     let errors = super::verify_mir(&mir).unwrap_err();
     assert!(errors
         .iter()
-        .any(|error| error.message.contains("owned by another function")));
+        .any(|error| error.message.contains("owned by another callable body")));
 }
 
 #[test]

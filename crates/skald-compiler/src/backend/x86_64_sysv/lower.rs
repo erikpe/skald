@@ -151,9 +151,13 @@ fn symbol_for(function: &MirFunctionDeclaration) -> String {
 }
 
 fn block_label(block: BlockId) -> Label {
+    let function = block
+        .callable()
+        .as_function()
+        .expect("x86-64 backend currently lowers only top-level function bodies");
     Label::new(format!(
         ".Lska_fn_{}_block_{}",
-        block.function().index(),
+        function.index(),
         block.index()
     ))
 }

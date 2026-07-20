@@ -1,6 +1,9 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::*;
-use crate::{identity::FunctionId, test_support::lower_source_to_mir};
+use crate::{
+    identity::{ClassId, FunctionId, InitializerId, MethodId},
+    test_support::lower_source_to_mir,
+};
 
 fn lower_text(text: &str) -> MirProgram {
     lower_source_to_mir(text)

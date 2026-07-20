@@ -2,22 +2,22 @@
 
 use std::{collections::HashSet, fmt};
 
-use crate::identity::{BindingId, FunctionId};
+use crate::identity::{BindingId, CallableId};
 
 use super::model::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirVerificationError {
-    pub function: Option<FunctionId>,
+    pub callable: Option<CallableId>,
     pub block: Option<BlockId>,
     pub message: String,
 }
 
 impl fmt::Display for MirVerificationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match (self.function, self.block) {
+        match (self.callable, self.block) {
             (_, Some(block)) => write!(formatter, "MIR {block}: {}", self.message),
-            (Some(function), None) => write!(formatter, "MIR {function}: {}", self.message),
+            (Some(callable), None) => write!(formatter, "MIR {callable}: {}", self.message),
             (None, None) => write!(formatter, "MIR program: {}", self.message),
         }
     }
@@ -198,11 +198,11 @@ impl Verifier<'_> {
         self.verify_values(function);
         self.verify_parameters(declaration, function);
 
-        if function.body.entry.function() != function.function {
+        if function.body.entry.callable() != function.callable() {
             self.function_error(
                 function.function,
                 format!(
-                    "entry block {} is owned by another function",
+                    "entry block {} is owned by another callable body",
                     function.body.entry
                 ),
             );
@@ -216,11 +216,11 @@ impl Verifier<'_> {
         let mut defined_values = HashSet::new();
         let mut seen_blocks = HashSet::new();
         for (index, block) in function.body.blocks.iter().enumerate() {
-            if block.id.function() != function.function {
+            if block.id.callable() != function.callable() {
                 self.block_error(
                     function.function,
                     block.id,
-                    "block is owned by another function",
+                    "block is owned by another callable body",
                 );
             }
             if block.id.index() != index {
@@ -249,10 +249,10 @@ impl Verifier<'_> {
     fn verify_storage(&mut self, function: &MirFunctionDefinition) {
         let mut sources = HashSet::new();
         for (index, storage) in function.storage.iter().enumerate() {
-            if storage.id.function() != function.function {
+            if storage.id.callable() != function.callable() {
                 self.function_error(
                     function.function,
-                    format!("storage {} is owned by another function", storage.id),
+                    format!("storage {} is owned by another callable body", storage.id),
                 );
             }
             if storage.id.index() != index {
@@ -261,11 +261,11 @@ impl Verifier<'_> {
                     format!("storage table index {index} contains {}", storage.id),
                 );
             }
-            if storage.source.function() != function.function {
+            if storage.source.callable() != function.callable() {
                 self.function_error(
                     function.function,
                     format!(
-                        "storage {} has a source binding from another function",
+                        "storage {} has a source binding from another callable body",
                         storage.id
                     ),
                 );
@@ -293,10 +293,10 @@ impl Verifier<'_> {
 
     fn verify_values(&mut self, function: &MirFunctionDefinition) {
         for (index, value) in function.values.iter().enumerate() {
-            if value.id.function() != function.function {
+            if value.id.callable() != function.callable() {
                 self.function_error(
                     function.function,
-                    format!("value {} is owned by another function", value.id),
+                    format!("value {} is owned by another callable body", value.id),
                 );
             }
             if value.id.index() != index {
@@ -497,11 +497,11 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         target: BlockId,
     ) {
-        if target.function() != function.function {
+        if target.callable() != function.callable() {
             self.block_error(
                 function.function,
                 block.id,
-                format!("control-flow target {target} is owned by another function"),
+                format!("control-flow target {target} is owned by another callable body"),
             );
         } else if function.block(target).is_none() {
             self.block_error(
@@ -723,23 +723,28 @@ impl Verifier<'_> {
 
     fn program_error(&mut self, message: impl Into<String>) {
         self.errors.push(MirVerificationError {
-            function: None,
+            callable: None,
             block: None,
             message: message.into(),
         });
     }
 
-    fn function_error(&mut self, function: FunctionId, message: impl Into<String>) {
+    fn function_error(&mut self, callable: impl Into<CallableId>, message: impl Into<String>) {
         self.errors.push(MirVerificationError {
-            function: Some(function),
+            callable: Some(callable.into()),
             block: None,
             message: message.into(),
         });
     }
 
-    fn block_error(&mut self, function: FunctionId, block: BlockId, message: impl Into<String>) {
+    fn block_error(
+        &mut self,
+        callable: impl Into<CallableId>,
+        block: BlockId,
+        message: impl Into<String>,
+    ) {
         self.errors.push(MirVerificationError {
-            function: Some(function),
+            callable: Some(callable.into()),
             block: Some(block),
             message: message.into(),
         });

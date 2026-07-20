@@ -250,14 +250,25 @@ the canonical limit and recovery contract are documented in
 
 Resolution assigns stable IDs and establishes scopes before type checking. Typed HIR preserves enough source structure for good diagnostics but makes chosen operations and call targets explicit. A backend must never perform name lookup, overload selection, or language-level type checking.
 
-`FunctionId`, `ParameterId`, `LocalId`, and `BindingId` are defined in the
-neutral `identity` module rather than resolved IR. Resolution remains
-responsible for assigning them when it selects declarations and bindings from
-source. Resolved IR, typed HIR, MIR, and backends then share those identities
-directly; later phases do not import identity types through `resolve` or choose
-program entities by comparing source names. Identity construction remains
-crate-private, while indexing, ownership queries, ordering, and deterministic
-display are stable phase-independent operations.
+`FunctionId`, `ClassId`, `FieldId`, `InitializerId`, `MethodId`, `CallableId`,
+`ParameterId`, `LocalId`, and `BindingId` are defined in the neutral `identity`
+module rather than resolved IR. Resolution remains responsible for assigning
+them when it selects declarations and bindings from source. Resolved IR, typed
+HIR, MIR, and backends then share those identities directly; later phases do
+not import identity types through `resolve` or choose program entities by
+comparing source names. Identity construction remains crate-private, while
+indexing, ownership queries, ordering, and deterministic display are stable
+phase-independent operations.
+
+OBJ1 makes `CallableId` a tagged identity whose alternatives directly contain
+a top-level `FunctionId`, class-owned `InitializerId`, or class-owned
+`MethodId`. It is both the semantic executable-declaration identity and the
+owner of that body's parameters, locals, MIR storage, transient values, and
+blocks; MIR verification errors likewise identify their callable owner. There
+is no second global code-generation body number and therefore no translation
+map to maintain or reconstruct by name. Existing function-owned IDs retain
+their `fN` display, while member bodies use owner-qualified forms such as
+`c2:init0` and `c2:method3`.
 
 The private `function_table` module provides the two established storage
 shapes shared by resolved IR, HIR, and MIR: dense declaration entries ordered
@@ -267,6 +278,13 @@ iteration, occupancy counting, and test-only mutation bookkeeping. Each phase
 retains its own public declaration and definition table wrappers and record
 types; the utility exposes neither raw vectors nor a general arena or ID-trait
 framework.
+
+OBJ1 deliberately leaves these tables function-specific. There are no class
+records in a compiler phase yet, so a generic arena or identity-index trait
+would have no concrete invariant to enforce. OBJ2 and OBJ6 add narrow
+phase-owned class/member tables alongside their actual records; they should
+reuse a shared container only when two real tables have the same owner and
+density rules.
 
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 
@@ -340,8 +358,10 @@ The MIR verifier is a separate public boundary and checks declaration and defini
 
 ### Restricted inline-object extension boundary
 
-OBJ0 specifies the architecture for the first inline-object profile; OBJ1–OBJ9
-implement it. Public syntax remains disabled until the complete path exists.
+OBJ0 specifies the architecture for the first inline-object profile. OBJ1
+implements its neutral identity and executable-body ownership foundation;
+OBJ2–OBJ9 implement the remaining IR, backend, frontend, and integration work.
+Public syntax remains disabled until the complete path exists.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and

@@ -4,7 +4,7 @@ use std::fmt;
 
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
-    identity::{BindingId, FunctionId},
+    identity::{BindingId, CallableId, FunctionId},
     source::Span,
 };
 
@@ -12,27 +12,30 @@ macro_rules! owned_id {
     ($name:ident, $prefix:literal) => {
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub struct $name {
-            function: FunctionId,
+            callable: CallableId,
             index: usize,
         }
 
         impl $name {
-            pub const fn function(self) -> FunctionId {
-                self.function
+            pub const fn callable(self) -> CallableId {
+                self.callable
             }
 
             pub const fn index(self) -> usize {
                 self.index
             }
 
-            pub(crate) const fn new(function: FunctionId, index: usize) -> Self {
-                Self { function, index }
+            pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
+                Self {
+                    callable: callable.into(),
+                    index,
+                }
             }
         }
 
         impl fmt::Display for $name {
             fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(formatter, "{}:{}{}", self.function(), $prefix, self.index())
+                write!(formatter, "{}:{}{}", self.callable(), $prefix, self.index())
             }
         }
     };
@@ -182,22 +185,26 @@ pub struct MirFunctionDefinition {
 }
 
 impl MirFunctionDefinition {
+    pub const fn callable(&self) -> CallableId {
+        CallableId::Function(self.function)
+    }
+
     pub fn storage(&self, id: StorageId) -> Option<&MirStorage> {
-        (id.function() == self.function)
+        (id.callable() == self.callable())
             .then(|| self.storage.get(id.index()))
             .flatten()
             .filter(|storage| storage.id == id)
     }
 
     pub fn value(&self, id: ValueId) -> Option<&MirValue> {
-        (id.function() == self.function)
+        (id.callable() == self.callable())
             .then(|| self.values.get(id.index()))
             .flatten()
             .filter(|value| value.id == id)
     }
 
     pub fn block(&self, id: BlockId) -> Option<&MirBasicBlock> {
-        (id.function() == self.function)
+        (id.callable() == self.callable())
             .then(|| self.body.blocks.get(id.index()))
             .flatten()
             .filter(|block| block.id == id)
