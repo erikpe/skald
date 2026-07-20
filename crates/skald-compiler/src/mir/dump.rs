@@ -12,6 +12,10 @@ pub fn dump_mir(program: &MirProgram) -> String {
     write_span(&mut output, program.span);
     output.push('\n');
     let _ = writeln!(output, "  Entry {}", program.entry_function);
+    output.push_str("  Classes\n");
+    for class in program.classes.iter() {
+        dump_class(&mut output, class);
+    }
     output.push_str("  Declarations\n");
     for declaration in program.declarations.iter() {
         dump_declaration(&mut output, declaration);
@@ -21,6 +25,45 @@ pub fn dump_mir(program: &MirProgram) -> String {
         dump_definition(&mut output, definition);
     }
     output
+}
+
+fn dump_class(output: &mut String, class: &MirClassDeclaration) {
+    let _ = write!(output, "    Class {} ", class.id);
+    write_quoted(output, &class.name);
+    write_span(output, class.span);
+    output.push('\n');
+    for field in &class.fields {
+        let _ = write!(output, "      Field {} ", field.id);
+        write_quoted(output, &field.name);
+        let _ = write!(output, " : {}", field.ty);
+        write_span(output, field.span);
+        output.push('\n');
+    }
+    for initializer in &class.initializers {
+        let _ = write!(output, "      Initializer {}(", initializer.id);
+        dump_types(output, &initializer.parameter_types);
+        output.push(')');
+        write_span(output, initializer.span);
+        output.push('\n');
+    }
+    for method in &class.methods {
+        let _ = write!(output, "      Method {} ", method.id);
+        write_quoted(output, &method.name);
+        let _ = write!(output, " {} (", method.receiver_access);
+        dump_types(output, &method.parameter_types);
+        let _ = write!(output, ") -> {}", method.return_type);
+        write_span(output, method.span);
+        output.push('\n');
+    }
+}
+
+fn dump_types(output: &mut String, types: &[MirType]) {
+    for (index, ty) in types.iter().enumerate() {
+        if index != 0 {
+            output.push_str(", ");
+        }
+        let _ = write!(output, "{ty}");
+    }
 }
 
 fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
@@ -40,9 +83,9 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
         if index != 0 {
             output.push_str(", ");
         }
-        output.push_str(parameter.name());
+        let _ = write!(output, "{parameter}");
     }
-    let _ = writeln!(output, ") -> {}", declaration.return_type.name());
+    let _ = writeln!(output, ") -> {}", declaration.return_type);
 }
 
 fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
@@ -62,13 +105,13 @@ fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
         };
         let _ = write!(output, "        {} {kind} {} ", storage.id, storage.source);
         write_quoted(output, &storage.name);
-        let _ = write!(output, " : {}", storage.ty.name());
+        let _ = write!(output, " : {}", storage.ty);
         write_span(output, storage.span);
         output.push('\n');
     }
     output.push_str("      Values\n");
     for value in &function.values {
-        let _ = write!(output, "        {} : {}", value.id, value.ty.name());
+        let _ = write!(output, "        {} : {}", value.id, value.ty);
         write_span(output, value.span);
         output.push('\n');
     }
@@ -95,8 +138,19 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 if let Some(result) = call.result {
                     let _ = write!(output, "{result} = ");
                 }
-                let MirCallTarget::Direct(target) = call.target;
-                let _ = write!(output, "call {target}(");
+                match call.target {
+                    MirCallTarget::Direct(target) => {
+                        let _ = write!(output, "call {target}");
+                    }
+                    MirCallTarget::Method(target) => {
+                        let _ = write!(output, "call {target}");
+                    }
+                }
+                if let Some(receiver) = &call.receiver {
+                    output.push_str(" on ");
+                    dump_place(output, receiver);
+                }
+                output.push('(');
                 for (index, argument) in call.arguments.iter().enumerate() {
                     if index != 0 {
                         output.push_str(", ");
@@ -106,8 +160,23 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output.push(')');
                 write_span(output, call.span);
             }
+            MirInstruction::Initialize(initialize) => {
+                output.push_str("initialize ");
+                dump_place(output, &initialize.destination);
+                let _ = write!(output, " with {}(", initialize.target);
+                for (index, argument) in initialize.arguments.iter().enumerate() {
+                    if index != 0 {
+                        output.push_str(", ");
+                    }
+                    let _ = write!(output, "{argument}");
+                }
+                output.push(')');
+                write_span(output, initialize.span);
+            }
             MirInstruction::Store(store) => {
-                let _ = write!(output, "store {}, {}", store.storage, store.value);
+                output.push_str("store ");
+                dump_place(output, &store.destination);
+                let _ = write!(output, ", {}", store.value);
                 write_span(output, store.span);
             }
         }
@@ -160,8 +229,9 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         MirRvalueKind::ConstantBool(value) => {
             let _ = write!(output, "const.bool {value}");
         }
-        MirRvalueKind::Load(storage) => {
-            let _ = write!(output, "load {storage}");
+        MirRvalueKind::Load(place) => {
+            output.push_str("load ");
+            dump_place(output, place);
         }
         MirRvalueKind::Unary { operation, operand } => {
             let operation = match operation {
@@ -192,5 +262,16 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             let _ = write!(output, "{operation} {left}, {right}");
         }
     }
-    let _ = write!(output, " : {}", rvalue.ty.name());
+    let _ = write!(output, " : {}", rvalue.ty);
+}
+
+fn dump_place(output: &mut String, place: &MirPlace) {
+    let _ = write!(output, "{}", place.base);
+    for projection in &place.projections {
+        match projection {
+            MirPlaceProjection::Field(field) => {
+                let _ = write!(output, ".field({field})");
+            }
+        }
+    }
 }

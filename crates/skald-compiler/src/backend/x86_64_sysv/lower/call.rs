@@ -76,7 +76,10 @@ pub(super) fn spill_parameters(
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_call(&mut self, call: &MirCall) -> Result<(), BackendError> {
-        let MirCallTarget::Direct(target_id) = call.target;
+        let MirCallTarget::Direct(target_id) = call.target else {
+            unreachable!("target legality rejects method calls before selection")
+        };
+        debug_assert!(call.receiver.is_none());
         let target = self
             .program
             .declarations

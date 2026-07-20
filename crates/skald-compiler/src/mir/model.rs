@@ -4,7 +4,7 @@ use std::fmt;
 
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
-    identity::{BindingId, CallableId, FunctionId},
+    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
     source::Span,
 };
 
@@ -52,27 +52,171 @@ pub enum MirType {
     U8,
     F64,
     Bool,
+    Class(ClassId),
     Unit,
 }
 
 impl MirType {
-    pub const fn name(self) -> &'static str {
+    pub const fn is_scalar_value(self) -> bool {
+        !matches!(self, Self::Class(_) | Self::Unit)
+    }
+}
+
+impl fmt::Display for MirType {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::I64 => "i64",
-            Self::U64 => "u64",
-            Self::U8 => "u8",
-            Self::F64 => "f64",
-            Self::Bool => "bool",
-            Self::Unit => "unit",
+            Self::I64 => formatter.write_str("i64"),
+            Self::U64 => formatter.write_str("u64"),
+            Self::U8 => formatter.write_str("u8"),
+            Self::F64 => formatter.write_str("f64"),
+            Self::Bool => formatter.write_str("bool"),
+            Self::Class(class) => write!(formatter, "class {class}"),
+            Self::Unit => formatter.write_str("unit"),
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
+    pub classes: MirClassDeclarationTable,
     pub declarations: MirFunctionDeclarationTable,
     pub definitions: MirFunctionDefinitionTable,
     pub entry_function: FunctionId,
+    pub span: Span,
+}
+
+impl MirProgram {
+    pub fn class(&self, id: ClassId) -> Option<&MirClassDeclaration> {
+        self.classes.get(id)
+    }
+
+    pub fn field(&self, id: FieldId) -> Option<&MirFieldDeclaration> {
+        self.class(id.class())?.field(id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
+        self.class(id.class())?.initializer(id)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
+        self.class(id.class())?.method(id)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirClassDeclarationTable {
+    entries: Vec<MirClassDeclaration>,
+}
+
+impl MirClassDeclarationTable {
+    // Production construction begins in OBJ8. OBJ2 uses this constructor in
+    // focused MIR tests while the ordinary frontend still emits no classes.
+    #[allow(dead_code)]
+    pub(crate) fn new(entries: Vec<MirClassDeclaration>) -> Self {
+        assert!(
+            entries
+                .iter()
+                .enumerate()
+                .all(|(index, class)| class.id.index() == index),
+            "class declarations must be ordered by dense class ID"
+        );
+        Self { entries }
+    }
+
+    pub fn get(&self, id: ClassId) -> Option<&MirClassDeclaration> {
+        self.entries
+            .get(id.index())
+            .filter(|declaration| declaration.id == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirClassDeclaration> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirClassDeclaration] {
+        &mut self.entries
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirClassDeclaration {
+    pub id: ClassId,
+    pub name: String,
+    pub fields: Vec<MirFieldDeclaration>,
+    pub initializers: Vec<MirInitializerDeclaration>,
+    pub methods: Vec<MirMethodDeclaration>,
+    pub span: Span,
+}
+
+impl MirClassDeclaration {
+    pub fn field(&self, id: FieldId) -> Option<&MirFieldDeclaration> {
+        (id.class() == self.id)
+            .then(|| self.fields.get(id.index()))
+            .flatten()
+            .filter(|field| field.id == id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
+        (id.class() == self.id)
+            .then(|| self.initializers.get(id.index()))
+            .flatten()
+            .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
+        (id.class() == self.id)
+            .then(|| self.methods.get(id.index()))
+            .flatten()
+            .filter(|method| method.id == id)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirFieldDeclaration {
+    pub id: FieldId,
+    pub name: String,
+    pub ty: MirType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirInitializerDeclaration {
+    pub id: InitializerId,
+    pub parameter_types: Vec<MirType>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirReceiverAccess {
+    ReadOnly,
+    Mutable,
+}
+
+impl fmt::Display for MirReceiverAccess {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ReadOnly => formatter.write_str("readonly"),
+            Self::Mutable => formatter.write_str("mutable"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirMethodDeclaration {
+    pub id: MethodId,
+    pub name: String,
+    pub receiver_access: MirReceiverAccess,
+    pub parameter_types: Vec<MirType>,
+    pub return_type: MirType,
     pub span: Span,
 }
 
@@ -234,6 +378,37 @@ pub struct MirValue {
     pub span: Span,
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct MirPlace {
+    pub base: StorageId,
+    pub projections: Vec<MirPlaceProjection>,
+}
+
+impl MirPlace {
+    pub fn base(base: StorageId) -> Self {
+        Self {
+            base,
+            projections: Vec::new(),
+        }
+    }
+
+    pub fn project_field(mut self, field: FieldId) -> Self {
+        self.projections.push(MirPlaceProjection::Field(field));
+        self
+    }
+}
+
+impl From<StorageId> for MirPlace {
+    fn from(storage: StorageId) -> Self {
+        Self::base(storage)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirPlaceProjection {
+    Field(FieldId),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirBody {
     pub entry: BlockId,
@@ -254,6 +429,7 @@ pub struct MirBasicBlock {
 pub enum MirInstruction {
     Assign(MirAssignment),
     Call(MirCall),
+    Initialize(MirInitialize),
     Store(MirStore),
 }
 
@@ -262,6 +438,7 @@ impl MirInstruction {
         match self {
             Self::Assign(instruction) => instruction.span,
             Self::Call(instruction) => instruction.span,
+            Self::Initialize(instruction) => instruction.span,
             Self::Store(instruction) => instruction.span,
         }
     }
@@ -276,14 +453,23 @@ pub struct MirAssignment {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStore {
-    pub storage: StorageId,
+    pub destination: MirPlace,
     pub value: ValueId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirInitialize {
+    pub destination: MirPlace,
+    pub target: InitializerId,
+    pub arguments: Vec<ValueId>,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirCall {
     pub target: MirCallTarget,
+    pub receiver: Option<MirPlace>,
     pub arguments: Vec<ValueId>,
     pub result: Option<ValueId>,
     pub span: Span,
@@ -292,6 +478,7 @@ pub struct MirCall {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirCallTarget {
     Direct(FunctionId),
+    Method(MethodId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -308,7 +495,7 @@ pub enum MirRvalueKind {
     /// IEEE-754 binary64 payload, stored as raw bits for deterministic IR.
     ConstantF64Bits(u64),
     ConstantBool(bool),
-    Load(StorageId),
+    Load(MirPlace),
     Unary {
         operation: MirUnaryOperation,
         operand: ValueId,

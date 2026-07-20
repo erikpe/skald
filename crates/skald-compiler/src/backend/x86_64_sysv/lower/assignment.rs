@@ -45,7 +45,10 @@ impl InstructionSelector<'_, '_> {
             MirRvalueKind::ConstantBool(value) => {
                 self.select_integer_constant(u64::from(*value), ty, destination)
             }
-            MirRvalueKind::Load(storage) => self.select_load(*storage, ty, destination),
+            MirRvalueKind::Load(place) => {
+                debug_assert!(place.projections.is_empty());
+                self.select_load(place.base, ty, destination);
+            }
             MirRvalueKind::Unary { operation, operand } => {
                 self.select_unary(*operation, *operand, ty, destination)
             }

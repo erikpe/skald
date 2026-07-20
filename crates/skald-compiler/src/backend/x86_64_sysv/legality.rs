@@ -17,6 +17,14 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
         )
     })?;
 
+    if !program.classes.is_empty() {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "inline-object MIR is valid but requires the OBJ3/OBJ4 x86-64 lowering",
+        ));
+    }
+
     for function in program.definitions.iter() {
         FrameLayout::plan(function)?;
         let declaration = program
@@ -31,7 +39,9 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
                 let MirInstruction::Call(call) = instruction else {
                     continue;
                 };
-                let crate::mir::MirCallTarget::Direct(target) = call.target;
+                let crate::mir::MirCallTarget::Direct(target) = call.target else {
+                    unreachable!("verified method calls require class metadata")
+                };
                 let target = program
                     .declarations
                     .get(target)

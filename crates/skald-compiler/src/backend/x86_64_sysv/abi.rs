@@ -50,7 +50,7 @@ const fn scalar_class(ty: MirType) -> Option<ScalarClass> {
     match ty {
         MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => Some(ScalarClass::Integer),
         MirType::F64 => Some(ScalarClass::Sse),
-        MirType::Unit => None,
+        MirType::Class(_) | MirType::Unit => None,
     }
 }
 

@@ -11,11 +11,12 @@ impl InstructionSelector<'_, '_> {
     pub(super) fn select_store(&mut self, store: &MirStore) {
         let ty = self
             .function
-            .storage(store.storage)
+            .storage(store.destination.base)
             .expect("verified store target must exist")
             .ty;
+        debug_assert!(store.destination.projections.is_empty());
         let source = frame_value(self.frame, store.value);
-        let destination = frame_storage(self.frame, store.storage);
+        let destination = frame_storage(self.frame, store.destination.base);
 
         if ty == MirType::F64 {
             load_float(float_operand(source), XmmRegister::Xmm14, self.output);

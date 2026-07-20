@@ -137,6 +137,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         match instruction {
             MirInstruction::Assign(assignment) => self.select_assignment(assignment),
             MirInstruction::Call(call) => self.select_call(call)?,
+            MirInstruction::Initialize(_) => {
+                unreachable!("target legality rejects object initialization before selection")
+            }
             MirInstruction::Store(store) => self.select_store(store),
         }
         Ok(())

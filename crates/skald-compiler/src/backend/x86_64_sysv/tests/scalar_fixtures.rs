@@ -1,4 +1,5 @@
 use super::*;
+use crate::mir::MirClassDeclarationTable;
 
 pub(super) fn f64_arithmetic_program() -> MirProgram {
     let span = test_span();
@@ -95,14 +96,14 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                         MirType::F64,
                     ),
                     MirInstruction::Store(MirStore {
-                        storage: StorageId::new(compute_id, 0),
+                        destination: StorageId::new(compute_id, 0).into(),
                         value: ValueId::new(compute_id, 6),
                         span,
                     }),
                     assignment(
                         compute_id,
                         7,
-                        MirRvalueKind::Load(StorageId::new(compute_id, 0)),
+                        MirRvalueKind::Load(StorageId::new(compute_id, 0).into()),
                         MirType::F64,
                     ),
                 ],
@@ -130,12 +131,14 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                 instructions: vec![
                     MirInstruction::Call(MirCall {
                         target: MirCallTarget::Direct(compute_id),
+                        receiver: None,
                         arguments: vec![],
                         result: Some(ValueId::new(main_id, 0)),
                         span,
                     }),
                     MirInstruction::Call(MirCall {
                         target: MirCallTarget::Direct(validate_id),
+                        receiver: None,
                         arguments: vec![ValueId::new(main_id, 0)],
                         result: Some(ValueId::new(main_id, 1)),
                         span,
@@ -152,6 +155,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     };
 
     MirProgram {
+        classes: MirClassDeclarationTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![
             MirFunctionDeclaration {
                 id: compute_id,
@@ -224,7 +228,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
                 instructions: vec![MirInstruction::Assign(MirAssignment {
                     result: ValueId::new(mixed_id, 0),
                     rvalue: MirRvalue {
-                        kind: MirRvalueKind::Load(StorageId::new(mixed_id, 15)),
+                        kind: MirRvalueKind::Load(StorageId::new(mixed_id, 15).into()),
                         ty: MirType::F64,
                     },
                     span,
@@ -266,6 +270,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     });
     instructions.push(MirInstruction::Call(MirCall {
         target: MirCallTarget::Direct(mixed_id),
+        receiver: None,
         arguments: (0..parameter_types.len())
             .map(|index| ValueId::new(main_id, index))
             .collect(),
@@ -307,6 +312,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     };
 
     MirProgram {
+        classes: MirClassDeclarationTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![
             MirFunctionDeclaration {
                 id: mixed_id,

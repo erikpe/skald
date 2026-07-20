@@ -23,6 +23,7 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         })
         .collect();
     let mir = MirProgram {
+        classes: MirClassDeclarationTable::default(),
         declarations: MirFunctionDeclarationTable::new(declarations),
         definitions: MirFunctionDefinitionTable::new(definitions),
         entry_function: hir.entry_function,
@@ -142,7 +143,7 @@ impl<'hir> FunctionLowerer<'hir> {
                         .expect("typed local initializer must produce a value");
                     let storage = self.local_storage[local.local.index()];
                     self.emit(MirInstruction::Store(MirStore {
-                        storage,
+                        destination: storage.into(),
                         value,
                         span: local.span,
                     }));
@@ -253,7 +254,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     BindingId::Local(id) => self.local_storage[id.index()],
                 };
                 Some(self.assign(
-                    MirRvalueKind::Load(storage),
+                    MirRvalueKind::Load(storage.into()),
                     lower_type(expression.ty),
                     expression.span,
                 ))
@@ -350,6 +351,7 @@ impl<'hir> FunctionLowerer<'hir> {
                     .then(|| self.new_value(lower_type(expression.ty), expression.span));
                 self.emit(MirInstruction::Call(MirCall {
                     target: MirCallTarget::Direct(*function),
+                    receiver: None,
                     arguments,
                     result,
                     span: expression.span,

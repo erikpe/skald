@@ -78,6 +78,7 @@ struct Verifier<'mir> {
 
 impl Verifier<'_> {
     fn verify(&mut self) {
+        self.verify_classes();
         let entry_declaration = self.program.declarations.get(self.program.entry_function);
         if entry_declaration.is_none() {
             self.program_error(format!(
@@ -124,10 +125,20 @@ impl Verifier<'_> {
             if !seen.insert(declaration.id) {
                 self.function_error(declaration.id, "duplicate function declaration ID");
             }
-            if declaration.parameter_types.contains(&MirType::Unit) {
+            if declaration
+                .parameter_types
+                .iter()
+                .any(|ty| !ty.is_scalar_value())
+            {
                 self.function_error(
                     declaration.id,
-                    "function parameters cannot have type `unit`",
+                    "function parameters must have scalar value types",
+                );
+            }
+            if matches!(declaration.return_type, MirType::Class(_)) {
+                self.function_error(
+                    declaration.id,
+                    "function results cannot have class type in this MIR profile",
                 );
             }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
@@ -186,6 +197,74 @@ impl Verifier<'_> {
                 }
                 _ => {}
             }
+        }
+    }
+
+    fn verify_classes(&mut self) {
+        for (class_index, class) in self.program.classes.iter().enumerate() {
+            if class.id.index() != class_index {
+                self.program_error(format!(
+                    "class declaration table index {class_index} contains {}",
+                    class.id
+                ));
+            }
+            for (index, field) in class.fields.iter().enumerate() {
+                if field.id.class() != class.id || field.id.index() != index {
+                    self.program_error(format!(
+                        "class {} field table index {index} contains {}",
+                        class.id, field.id
+                    ));
+                }
+                match field.ty {
+                    MirType::Unit => self.program_error(format!(
+                        "field {} cannot have payload-free type `unit`",
+                        field.id
+                    )),
+                    MirType::Class(target) if self.program.class(target).is_none() => {
+                        self.program_error(format!(
+                            "field {} has undeclared class type {target}",
+                            field.id
+                        ));
+                    }
+                    _ => {}
+                }
+            }
+            for (index, initializer) in class.initializers.iter().enumerate() {
+                if initializer.id.class() != class.id || initializer.id.index() != index {
+                    self.program_error(format!(
+                        "class {} initializer table index {index} contains {}",
+                        class.id, initializer.id
+                    ));
+                }
+                self.verify_member_parameters(
+                    &format!("initializer {}", initializer.id),
+                    &initializer.parameter_types,
+                );
+            }
+            for (index, method) in class.methods.iter().enumerate() {
+                if method.id.class() != class.id || method.id.index() != index {
+                    self.program_error(format!(
+                        "class {} method table index {index} contains {}",
+                        class.id, method.id
+                    ));
+                }
+                self.verify_member_parameters(
+                    &format!("method {}", method.id),
+                    &method.parameter_types,
+                );
+                if matches!(method.return_type, MirType::Class(_)) {
+                    self.program_error(format!(
+                        "method {} result cannot have class type in this MIR profile",
+                        method.id
+                    ));
+                }
+            }
+        }
+    }
+
+    fn verify_member_parameters(&mut self, owner: &str, types: &[MirType]) {
+        if types.iter().any(|ty| !ty.is_scalar_value()) {
+            self.program_error(format!("{owner} parameters must have scalar value types"));
         }
     }
 
@@ -288,6 +367,14 @@ impl Verifier<'_> {
                     ),
                 );
             }
+            if let MirType::Class(class) = storage.ty {
+                if self.program.class(class).is_none() {
+                    self.function_error(
+                        function.function,
+                        format!("storage {} has undeclared class type {class}", storage.id),
+                    );
+                }
+            }
         }
     }
 
@@ -305,10 +392,10 @@ impl Verifier<'_> {
                     format!("value table index {index} contains {}", value.id),
                 );
             }
-            if value.ty == MirType::Unit {
+            if !value.ty.is_scalar_value() {
                 self.function_error(
                     function.function,
-                    format!("value {} cannot have payload-free type `unit`", value.id),
+                    format!("value {} must have a scalar value type", value.id),
                 );
             }
         }
@@ -414,17 +501,46 @@ impl Verifier<'_> {
                 MirInstruction::Call(call) => {
                     self.verify_call(function, block, call, defined_values, &mut defined_in_block);
                 }
-                MirInstruction::Store(store) => {
-                    let storage_ty = function.storage(store.storage).map(|storage| storage.ty);
-                    if storage_ty.is_none() {
+                MirInstruction::Initialize(initialize) => {
+                    for argument in &initialize.arguments {
+                        self.verify_value_use(function, block, *argument, &defined_in_block);
+                    }
+                    let destination_ty =
+                        self.verify_place(function, block, &initialize.destination);
+                    let Some(target) = self.program.initializer(initialize.target) else {
                         self.block_error(
                             function.function,
                             block.id,
-                            format!("store target {} is not declared", store.storage),
+                            format!("initializer target {} is not declared", initialize.target),
+                        );
+                        continue;
+                    };
+                    if destination_ty != Some(MirType::Class(initialize.target.class())) {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            "initializer destination has the wrong class type",
                         );
                     }
+                    self.verify_arguments(
+                        function,
+                        block,
+                        "initializer",
+                        &initialize.arguments,
+                        &target.parameter_types,
+                    );
+                }
+                MirInstruction::Store(store) => {
+                    let storage_ty = self.verify_place(function, block, &store.destination);
                     let value_ty =
                         self.verify_value_use(function, block, store.value, &defined_in_block);
+                    if storage_ty.is_some_and(|ty| !ty.is_scalar_value()) {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            "store destination must have scalar value type",
+                        );
+                    }
                     if storage_ty.is_some() && value_ty.is_some() && storage_ty != value_ty {
                         self.block_error(
                             function.function,
@@ -547,47 +663,65 @@ impl Verifier<'_> {
             None => None,
         };
 
-        let MirCallTarget::Direct(target_id) = call.target;
-        let Some(target) = self.program.declarations.get(target_id) else {
-            self.block_error(
-                function.function,
-                block.id,
-                format!("call target {target_id} is not declared"),
-            );
-            return;
-        };
-
-        if call.arguments.len() != target.parameter_types.len() {
-            self.block_error(
-                function.function,
-                block.id,
-                format!(
-                    "call to {target_id} has {} arguments but requires {}",
-                    call.arguments.len(),
-                    target.parameter_types.len()
-                ),
-            );
-        }
-        for (index, argument) in call.arguments.iter().enumerate() {
-            let argument_ty = function.value(*argument).map(|value| value.ty);
-            let parameter_ty = target.parameter_types.get(index).copied();
-            if argument_ty.is_some() && parameter_ty.is_some() && argument_ty != parameter_ty {
-                self.block_error(
-                    function.function,
-                    block.id,
-                    format!("call argument {index} type mismatch"),
-                );
+        let (parameter_types, return_type) = match call.target {
+            MirCallTarget::Direct(target_id) => {
+                if call.receiver.is_some() {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "ordinary function call must not have a receiver",
+                    );
+                }
+                let Some(target) = self.program.declarations.get(target_id) else {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        format!("call target {target_id} is not declared"),
+                    );
+                    return;
+                };
+                (&target.parameter_types, target.return_type)
             }
-        }
+            MirCallTarget::Method(target_id) => {
+                let Some(target) = self.program.method(target_id) else {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        format!("method target {target_id} is not declared"),
+                    );
+                    return;
+                };
+                match &call.receiver {
+                    Some(receiver) => {
+                        if self.verify_place(function, block, receiver)
+                            != Some(MirType::Class(target_id.class()))
+                        {
+                            self.block_error(
+                                function.function,
+                                block.id,
+                                "method receiver has the wrong class type",
+                            );
+                        }
+                    }
+                    None => self.block_error(
+                        function.function,
+                        block.id,
+                        "method call requires a receiver",
+                    ),
+                }
+                (&target.parameter_types, target.return_type)
+            }
+        };
+        self.verify_arguments(function, block, "call", &call.arguments, parameter_types);
 
-        match (target.return_type, result_ty) {
+        match (return_type, result_ty) {
             (MirType::Unit, Some(_)) => self.block_error(
                 function.function,
                 block.id,
                 "unit-returning call must not have a result",
             ),
             (MirType::Unit, None) => {}
-            (_, Some(result_ty)) if result_ty != target.return_type => {
+            (_, Some(result_ty)) if result_ty != return_type => {
                 self.block_error(function.function, block.id, "call result type mismatch")
             }
             (_, None) => self.block_error(
@@ -636,17 +770,19 @@ impl Verifier<'_> {
                     );
                 }
             }
-            MirRvalueKind::Load(storage) => match function.storage(*storage) {
-                Some(storage) if storage.ty != rvalue.ty => {
-                    self.block_error(function.function, block.id, "load result type mismatch")
+            MirRvalueKind::Load(place) => {
+                let place_ty = self.verify_place(function, block, place);
+                if place_ty.is_some_and(|ty| !ty.is_scalar_value()) {
+                    self.block_error(
+                        function.function,
+                        block.id,
+                        "load source must have scalar value type",
+                    );
                 }
-                None => self.block_error(
-                    function.function,
-                    block.id,
-                    format!("load source {storage} is not declared"),
-                ),
-                _ => {}
-            },
+                if place_ty.is_some() && place_ty != Some(rvalue.ty) {
+                    self.block_error(function.function, block.id, "load result type mismatch");
+                }
+            }
             MirRvalueKind::Unary { operation, operand } => {
                 let expected = operation.operand_type();
                 if rvalue.ty != expected {
@@ -690,10 +826,91 @@ impl Verifier<'_> {
                 self.block_error(
                     function.function,
                     block.id,
-                    format!("arithmetic operand is not `{}`", expected.name()),
+                    format!("arithmetic operand is not `{expected}`"),
                 );
             }
         }
+    }
+
+    fn verify_arguments(
+        &mut self,
+        function: &MirFunctionDefinition,
+        block: &MirBasicBlock,
+        kind: &str,
+        arguments: &[ValueId],
+        parameter_types: &[MirType],
+    ) {
+        if arguments.len() != parameter_types.len() {
+            self.block_error(
+                function.function,
+                block.id,
+                format!(
+                    "{kind} has {} arguments but requires {}",
+                    arguments.len(),
+                    parameter_types.len()
+                ),
+            );
+        }
+        for (index, argument) in arguments.iter().enumerate() {
+            let argument_ty = function.value(*argument).map(|value| value.ty);
+            let parameter_ty = parameter_types.get(index).copied();
+            if argument_ty.is_some() && parameter_ty.is_some() && argument_ty != parameter_ty {
+                self.block_error(
+                    function.function,
+                    block.id,
+                    format!("{kind} argument {index} type mismatch"),
+                );
+            }
+        }
+    }
+
+    fn verify_place(
+        &mut self,
+        function: &MirFunctionDefinition,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+    ) -> Option<MirType> {
+        let Some(storage) = function.storage(place.base) else {
+            self.block_error(
+                function.function,
+                block.id,
+                format!("place base {} is not declared in this function", place.base),
+            );
+            return None;
+        };
+        let mut ty = storage.ty;
+        for projection in &place.projections {
+            match *projection {
+                MirPlaceProjection::Field(field_id) => {
+                    let MirType::Class(owner) = ty else {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            format!("field projection {field_id} has a non-class base"),
+                        );
+                        return None;
+                    };
+                    if field_id.class() != owner {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            format!("field projection {field_id} belongs to the wrong class"),
+                        );
+                        return None;
+                    }
+                    let Some(field) = self.program.field(field_id) else {
+                        self.block_error(
+                            function.function,
+                            block.id,
+                            format!("field projection {field_id} is not declared"),
+                        );
+                        return None;
+                    };
+                    ty = field.ty;
+                }
+            }
+        }
+        Some(ty)
     }
 
     fn verify_value_use(

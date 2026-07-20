@@ -1,4 +1,8 @@
 use super::*;
+use crate::{
+    identity::ClassId,
+    mir::{MirClassDeclaration, MirClassDeclarationTable},
+};
 
 #[test]
 fn malformed_f64_mir_is_a_structured_backend_error() {
@@ -46,4 +50,24 @@ fn malformed_control_flow_is_a_structured_backend_error() {
     assert!(error
         .message()
         .contains("control-flow target f0:b99 is not declared"));
+}
+
+#[test]
+fn valid_object_mir_is_rejected_at_the_target_capability_boundary() {
+    let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
+        id: ClassId::new(0),
+        name: "Empty".to_owned(),
+        fields: vec![],
+        initializers: vec![],
+        methods: vec![],
+        span: mir.span,
+    }]);
+
+    assert!(verify_mir(&mir).is_ok());
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error
+        .message()
+        .contains("requires the OBJ3/OBJ4 x86-64 lowering"));
 }

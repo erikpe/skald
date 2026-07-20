@@ -83,9 +83,12 @@ fields, direct construction into local storage, and direct receiver methods.
 OBJ0 has frozen its grammar, initialization, layout, receiver ABI, evaluation,
 and exclusion contracts. OBJ1 adds stable nominal class/member identities and
 one tagged callable identity shared by function, initializer, and method body
-ownership. The remaining roadmap establishes projected places and backend
-support before enabling source syntax, while deferring copying, destruction,
-polymorphism, and shared ownership.
+ownership. OBJ2 adds canonical class/member MIR metadata, typed projected
+places, destination initialization, receiver-bearing direct calls, and the
+verifier rules that keep objects out of transient scalar values. OBJ3 is next:
+it establishes x86-64 layout and projected-place addressing before source
+syntax is enabled. Copying, destruction, polymorphism, and shared ownership
+remain deferred.
 
 ## Development
 

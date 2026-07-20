@@ -1,9 +1,12 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::*;
 use crate::{
-    identity::{ClassId, FunctionId, InitializerId, MethodId},
+    identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId},
     test_support::lower_source_to_mir,
 };
+
+mod object_fixtures;
+mod objects;
 
 fn lower_text(text: &str) -> MirProgram {
     lower_source_to_mir(text)

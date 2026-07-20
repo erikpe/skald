@@ -9,6 +9,7 @@ fn mir_dump_is_deterministic() {
         concat!(
             "MirProgram @0..31\n",
             "  Entry f0\n",
+            "  Classes\n",
             "  Declarations\n",
             "    Declaration f0 \"main\" internal @0..31\n",
             "      Signature () -> i64\n",
@@ -55,6 +56,7 @@ fn control_flow_dump_is_exact_and_deterministic() {
     let expected = concat!(
         "MirProgram @0..30\n",
         "  Entry f0\n",
+        "  Classes\n",
         "  Declarations\n",
         "    Declaration f0 \"main\" internal @0..30\n",
         "      Signature () -> i64\n",

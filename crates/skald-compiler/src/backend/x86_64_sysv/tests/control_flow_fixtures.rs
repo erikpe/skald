@@ -129,7 +129,7 @@ pub(super) fn branch_call_diamond_mir() -> MirProgram {
             instructions: vec![MirInstruction::Assign(MirAssignment {
                 result: joined_result,
                 rvalue: MirRvalue {
-                    kind: MirRvalueKind::Load(storage),
+                    kind: MirRvalueKind::Load(storage.into()),
                     ty: MirType::I64,
                 },
                 span,
@@ -158,12 +158,13 @@ pub(super) fn call_and_store_block(
         instructions: vec![
             MirInstruction::Call(MirCall {
                 target: MirCallTarget::Direct(target),
+                receiver: None,
                 arguments: Vec::new(),
                 result: Some(result),
                 span,
             }),
             MirInstruction::Store(MirStore {
-                storage,
+                destination: storage.into(),
                 value: result,
                 span,
             }),

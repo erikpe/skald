@@ -279,12 +279,11 @@ retains its own public declaration and definition table wrappers and record
 types; the utility exposes neither raw vectors nor a general arena or ID-trait
 framework.
 
-OBJ1 deliberately leaves these tables function-specific. There are no class
-records in a compiler phase yet, so a generic arena or identity-index trait
-would have no concrete invariant to enforce. OBJ2 and OBJ6 add narrow
-phase-owned class/member tables alongside their actual records; they should
-reuse a shared container only when two real tables have the same owner and
-density rules.
+OBJ1 deliberately leaves the shared table utilities function-specific rather
+than introducing a generic arena or identity-index trait. OBJ2 adds MIR's
+narrow dense class table alongside its canonical class/member records. OBJ6
+will add the resolver's phase-owned form; a container should be shared only
+when two real tables have the same owner and density rules.
 
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 
@@ -354,13 +353,15 @@ blocks. Conditions remain in the containing lexical scope, each body has its
 own child scope, transient MIR values do not cross block edges, and lowering
 omits unreachable joins when every exhaustive arm terminates.
 
-The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, block-local use ordering, storage/value types, direct-call targets and result presence, return types, dense block IDs, entry blocks, boolean branch conditions, control-flow target ownership and existence, and terminators. It validates unreachable blocks as well as reachable ones. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes declarations separately from definitions and shows instructions, terminators, and stable control-flow targets in block-ID order.
+The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, block-local use ordering, storage/value types, direct-call targets and result presence, return types, dense block IDs, entry blocks, boolean branch conditions, control-flow target ownership and existence, and terminators. OBJ2 extends that boundary with canonical class/member ownership, nominal class storage, projection-chain typing, exact construction targets, receiver typing, member signatures, and the rule that class objects are places rather than transient values. It validates unreachable blocks as well as reachable ones. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes classes and callable declarations separately from definitions and shows semantic places without target offsets.
 
 ### Restricted inline-object extension boundary
 
 OBJ0 specifies the architecture for the first inline-object profile. OBJ1
-implements its neutral identity and executable-body ownership foundation;
-OBJ2–OBJ9 implement the remaining IR, backend, frontend, and integration work.
+implements its neutral identity and executable-body ownership foundation. OBJ2
+implements target-independent class/member metadata, places, construction and
+receiver calls, plus their verifier boundary. OBJ3–OBJ9 implement the remaining
+backend, frontend, and integration work.
 Public syntax remains disabled until the complete path exists.
 The extension must preserve these boundaries:
 

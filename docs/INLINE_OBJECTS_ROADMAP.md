@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ1 complete; OBJ2 is next.
+Status: OBJ0–OBJ2 complete; OBJ3 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -200,7 +200,7 @@ reconstructing source evaluation.
 
 - [x] OBJ0 — Freeze the restricted inline-object contract
 - [x] OBJ1 — Establish object identities and executable-body ownership
-- [ ] OBJ2 — Add target-independent object places and construction-aware MIR
+- [x] OBJ2 — Add target-independent object places and construction-aware MIR
 - [ ] OBJ3 — Implement x86-64 inline layout and projected-place addressing
 - [ ] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
 - [ ] OBJ5 — Add class, member, and construction syntax
@@ -266,16 +266,16 @@ boundaries by typed stable identity without source-name lookup or ad hoc maps.
 **Purpose:** Model addressable aggregate storage before frontend syntax depends
 on it and independently of x86 layout.
 
-- [ ] Add nominal class types and canonical class/member metadata to MIR.
-- [ ] Generalize loads/stores to a place with a storage base and field
+- [x] Add nominal class types and canonical class/member metadata to MIR.
+- [x] Generalize loads/stores to a place with a storage base and field
       projections; represent scalar locals as zero-projection places.
-- [ ] Represent initialization into a destination place explicitly.
-- [ ] Represent direct calls with an optional receiver place separately from
+- [x] Represent initialization into a destination place explicitly.
+- [x] Represent direct calls with an optional receiver place separately from
       explicit scalar arguments.
-- [ ] Record initializer/method receiver access and canonical signatures.
-- [ ] Verify owner/type-correct projection chains, class storage, construction
+- [x] Record initializer/method receiver access and canonical signatures.
+- [x] Verify owner/type-correct projection chains, class storage, construction
       targets, receivers, arguments, and scalar-only values/results.
-- [ ] Extend deterministic MIR dumps without introducing target data.
+- [x] Extend deterministic MIR dumps without introducing target data.
 
 **Tests:** Hand-built valid MIR; nested-form projection tests; verifier mutations
 for foreign fields, wrong owners/types, object rvalues, bad construction,

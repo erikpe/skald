@@ -47,7 +47,7 @@ fn body_builder_rejects_emission_and_duplicate_termination_after_a_terminator() 
     assert_eq!(
         builder
             .push_instruction(MirInstruction::Store(MirStore {
-                storage: StorageId::new(function.function, 0),
+                destination: StorageId::new(function.function, 0).into(),
                 value: ValueId::new(function.function, 0),
                 span: function.span,
             }))

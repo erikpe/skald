@@ -1,0 +1,136 @@
+use super::*;
+
+pub(super) struct ObjectFixtureIds {
+    pub inner: ClassId,
+    pub outer: ClassId,
+    pub inner_value: FieldId,
+    pub outer_inner: FieldId,
+    pub object_storage: StorageId,
+}
+
+pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
+    let mut program = lower_text("fn main() -> i64 { return 7; }");
+    let function_id = program.entry_function;
+    let function = program.definitions.get_mut_for_test(function_id).unwrap();
+    let span = function.span;
+
+    let inner = ClassId::new(0);
+    let outer = ClassId::new(1);
+    let inner_value = FieldId::new(inner, 0);
+    let outer_inner = FieldId::new(outer, 0);
+    let outer_initializer = InitializerId::new(outer, 0);
+    let outer_method = MethodId::new(outer, 0);
+
+    program.classes = MirClassDeclarationTable::new(vec![
+        MirClassDeclaration {
+            id: inner,
+            name: "Inner".to_owned(),
+            fields: vec![MirFieldDeclaration {
+                id: inner_value,
+                name: "value".to_owned(),
+                ty: MirType::I64,
+                span,
+            }],
+            initializers: vec![],
+            methods: vec![],
+            span,
+        },
+        MirClassDeclaration {
+            id: outer,
+            name: "Outer".to_owned(),
+            fields: vec![MirFieldDeclaration {
+                id: outer_inner,
+                name: "inner".to_owned(),
+                ty: MirType::Class(inner),
+                span,
+            }],
+            initializers: vec![MirInitializerDeclaration {
+                id: outer_initializer,
+                parameter_types: vec![MirType::I64],
+                span,
+            }],
+            methods: vec![MirMethodDeclaration {
+                id: outer_method,
+                name: "get".to_owned(),
+                receiver_access: MirReceiverAccess::ReadOnly,
+                parameter_types: vec![],
+                return_type: MirType::I64,
+                span,
+            }],
+            span,
+        },
+    ]);
+
+    let object_storage = StorageId::new(function_id, 0);
+    function.storage.push(MirStorage {
+        id: object_storage,
+        source: BindingId::Local(LocalId::new(function_id, 0)),
+        name: "object".to_owned(),
+        kind: MirStorageKind::Local,
+        ty: MirType::Class(outer),
+        span,
+    });
+    let loaded = ValueId::new(function_id, 1);
+    let method_result = ValueId::new(function_id, 2);
+    function.values.extend([
+        MirValue {
+            id: loaded,
+            ty: MirType::I64,
+            span,
+        },
+        MirValue {
+            id: method_result,
+            ty: MirType::I64,
+            span,
+        },
+    ]);
+    let block = &mut function.body.blocks[0];
+    block
+        .instructions
+        .push(MirInstruction::Initialize(MirInitialize {
+            destination: object_storage.into(),
+            target: outer_initializer,
+            arguments: vec![ValueId::new(function_id, 0)],
+            span,
+        }));
+    block
+        .instructions
+        .push(MirInstruction::Assign(MirAssignment {
+            result: loaded,
+            rvalue: MirRvalue {
+                kind: MirRvalueKind::Load(
+                    MirPlace::base(object_storage)
+                        .project_field(outer_inner)
+                        .project_field(inner_value),
+                ),
+                ty: MirType::I64,
+            },
+            span,
+        }));
+    block.instructions.push(MirInstruction::Call(MirCall {
+        target: MirCallTarget::Method(outer_method),
+        receiver: Some(object_storage.into()),
+        arguments: vec![],
+        result: Some(method_result),
+        span,
+    }));
+
+    (
+        program,
+        ObjectFixtureIds {
+            inner,
+            outer,
+            inner_value,
+            outer_inner,
+            object_storage,
+        },
+    )
+}
+
+pub(super) fn messages(program: &MirProgram) -> Vec<String> {
+    verify_mir(program)
+        .unwrap_err()
+        .iter()
+        .map(|error| error.message.clone())
+        .collect()
+}
