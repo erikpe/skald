@@ -18,24 +18,24 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
 
     for function in program.definitions.iter() {
         FrameLayout::plan(function)?;
-        for parameter_index in 0..function.parameters.len() {
-            if abi::incoming_argument(parameter_index).is_none() {
-                return Err(abi_limit(function.function, "incoming argument area"));
-            }
+        let declaration = program
+            .declarations
+            .get(function.function)
+            .expect("verified definition must be declared");
+        if abi::CallLayout::classify(&declaration.parameter_types).is_none() {
+            return Err(abi_limit(function.function, "incoming argument area"));
         }
         for block in &function.body.blocks {
             for instruction in &block.instructions {
                 let MirInstruction::Call(call) = instruction else {
                     continue;
                 };
-                if abi::outgoing_stack_size(call.arguments.len()).is_none()
-                    || call
-                        .arguments
-                        .iter()
-                        .enumerate()
-                        .skip(abi::ARGUMENT_REGISTERS.len())
-                        .any(|(index, _)| abi::outgoing_argument_offset(index).is_none())
-                {
+                let crate::mir::MirCallTarget::Direct(target) = call.target;
+                let target = program
+                    .declarations
+                    .get(target)
+                    .expect("verified call target must be declared");
+                if abi::CallLayout::classify(&target.parameter_types).is_none() {
                     return Err(abi_limit(function.function, "outgoing argument area"));
                 }
             }

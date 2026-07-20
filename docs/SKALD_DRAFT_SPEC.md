@@ -1858,7 +1858,9 @@ Resolved decisions in this draft:
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - runtime ABI version 3 implements `ska_rt_println_bool`, which writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
-- T3 implements `u64` and T4 implements `u8`; the remaining primitive type is IEEE-754 binary64 `f64`, and `double` is not a Skald type keyword;
+- T3 implements `u64` and T4 implements `u8`; T5 implements target-independent
+  raw-bit `f64` MIR and x86-64 SSE2 lowering while source-level `f64` remains
+  gated until T6, and `double` is not a Skald type keyword;
 - decimal `u64` literals use suffix `u`, decimal `u8` literals use suffix `u8`, decimal-point or exponent literals are `f64`, and expected type never reinterprets a numeric literal;
 - the T-series profile has no implicit numeric conversions, promotions, or primitive casts, and keeps `main` exactly `fn main() -> i64`;
 - `u64` and `u8` `+`, `-`, and `*` wrap modulo their widths, while `f64` arithmetic follows binary64 under the default round-to-nearest, ties-to-even environment;

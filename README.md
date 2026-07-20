@@ -54,7 +54,7 @@ definite-return analysis, and source-ordered native branch behavior. C6
 completes the slice with exact nested-conditional, return-analysis, diagnostic,
 and cross-process determinism coverage.
 
-The remaining-primitive roadmap is complete through T4. T0 fixes `u` and
+The remaining-primitive roadmap is complete through T5. T0 fixes `u` and
 `u8` integer suffixes, decimal `f64` literals, exact non-promoting arithmetic,
 unsigned modular behavior, binary64 semantics, mixed integer/SSE ABI rules,
 and the runtime observability contract. T1 implements and directly tests
@@ -63,8 +63,9 @@ the shared numeric-literal pipeline. T3 implements `u64` end-to-end, including
 the concise `u` literal suffix, modular arithmetic, internal and restricted
 external calls, x86-64 lowering, and exact native output. T4 adds `u8`
 end-to-end, with modulo-256 arithmetic and explicit canonicalization at value
-and ABI boundaries. T5's target-independent and backend `f64` infrastructure
-is next.
+and ABI boundaries. T5 adds raw-bit `f64` MIR, verification, mixed
+integer/SSE System V call layout, and SSE2 lowering behind the still-gated
+source surface. T6 will enable `f64` syntax and semantics end-to-end.
 
 ## Development
 

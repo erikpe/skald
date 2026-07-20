@@ -11,11 +11,13 @@ use crate::{
     hir::HirProgram,
     lexer::lex,
     mir::{
-        lower_hir, verify_mir, BlockId, MirAssignment, MirBasicBlock, MirCall, MirCallTarget,
-        MirInstruction, MirProgram, MirRvalue, MirRvalueKind, MirStore, MirTerminator, MirType,
-        MirValue, ValueId,
+        lower_hir, verify_mir, BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody,
+        MirCall, MirCallTarget, MirFunctionDeclaration, MirFunctionDeclarationTable,
+        MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInstruction,
+        MirProgram, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator,
+        MirType, MirUnaryOperation, MirValue, StorageId, ValueId,
     },
-    resolve::{resolve, FunctionId},
+    resolve::{resolve, BindingId, FunctionId, LocalId, ParameterId},
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
@@ -43,6 +45,343 @@ fn lower_text(text: &str) -> MirProgram {
 
 fn assembly(text: &str) -> String {
     emit_assembly(Target::X86_64SysV, &lower_text(text)).unwrap()
+}
+
+fn test_span() -> crate::source::Span {
+    let mut sources = SourceDatabase::new();
+    let source = sources.add("backend-mir-test.ska", "");
+    crate::source::Span::empty(source, 0)
+}
+
+fn f64_arithmetic_program() -> MirProgram {
+    let span = test_span();
+    let compute_id = FunctionId::new(0);
+    let validate_id = FunctionId::new(1);
+    let main_id = FunctionId::new(2);
+    let value = |function, index, ty| MirValue {
+        id: ValueId::new(function, index),
+        ty,
+        span,
+    };
+    let assignment = |function, index, kind, ty| {
+        MirInstruction::Assign(MirAssignment {
+            result: ValueId::new(function, index),
+            rvalue: MirRvalue { kind, ty },
+            span,
+        })
+    };
+
+    let compute = MirFunctionDefinition {
+        function: compute_id,
+        parameters: vec![],
+        storage: vec![MirStorage {
+            id: StorageId::new(compute_id, 0),
+            source: BindingId::Local(LocalId::new(compute_id, 0)),
+            name: "result".to_owned(),
+            kind: MirStorageKind::Local,
+            ty: MirType::F64,
+            span,
+        }],
+        values: (0..8)
+            .map(|index| value(compute_id, index, MirType::F64))
+            .collect(),
+        body: MirBody {
+            entry: BlockId::new(compute_id, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(compute_id, 0),
+                instructions: vec![
+                    assignment(
+                        compute_id,
+                        0,
+                        MirRvalueKind::ConstantF64Bits(1.5_f64.to_bits()),
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        1,
+                        MirRvalueKind::ConstantF64Bits(2.0_f64.to_bits()),
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        2,
+                        MirRvalueKind::Binary {
+                            operation: MirBinaryOperation::MultiplyF64,
+                            left: ValueId::new(compute_id, 0),
+                            right: ValueId::new(compute_id, 1),
+                        },
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        3,
+                        MirRvalueKind::Unary {
+                            operation: MirUnaryOperation::NegateF64,
+                            operand: ValueId::new(compute_id, 2),
+                        },
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        4,
+                        MirRvalueKind::ConstantF64Bits(0.5_f64.to_bits()),
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        5,
+                        MirRvalueKind::Binary {
+                            operation: MirBinaryOperation::AddF64,
+                            left: ValueId::new(compute_id, 3),
+                            right: ValueId::new(compute_id, 4),
+                        },
+                        MirType::F64,
+                    ),
+                    assignment(
+                        compute_id,
+                        6,
+                        MirRvalueKind::Binary {
+                            operation: MirBinaryOperation::SubtractF64,
+                            left: ValueId::new(compute_id, 5),
+                            right: ValueId::new(compute_id, 4),
+                        },
+                        MirType::F64,
+                    ),
+                    MirInstruction::Store(MirStore {
+                        storage: StorageId::new(compute_id, 0),
+                        value: ValueId::new(compute_id, 6),
+                        span,
+                    }),
+                    assignment(
+                        compute_id,
+                        7,
+                        MirRvalueKind::Load(StorageId::new(compute_id, 0)),
+                        MirType::F64,
+                    ),
+                ],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(ValueId::new(compute_id, 7)),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    };
+    let main = MirFunctionDefinition {
+        function: main_id,
+        parameters: vec![],
+        storage: vec![],
+        values: vec![
+            value(main_id, 0, MirType::F64),
+            value(main_id, 1, MirType::I64),
+        ],
+        body: MirBody {
+            entry: BlockId::new(main_id, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(main_id, 0),
+                instructions: vec![
+                    MirInstruction::Call(MirCall {
+                        target: MirCallTarget::Direct(compute_id),
+                        arguments: vec![],
+                        result: Some(ValueId::new(main_id, 0)),
+                        span,
+                    }),
+                    MirInstruction::Call(MirCall {
+                        target: MirCallTarget::Direct(validate_id),
+                        arguments: vec![ValueId::new(main_id, 0)],
+                        result: Some(ValueId::new(main_id, 1)),
+                        span,
+                    }),
+                ],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(ValueId::new(main_id, 1)),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    };
+
+    MirProgram {
+        declarations: MirFunctionDeclarationTable::new(vec![
+            MirFunctionDeclaration {
+                id: compute_id,
+                name: "compute".to_owned(),
+                parameter_types: vec![],
+                return_type: MirType::F64,
+                linkage: MirFunctionLinkage::Internal,
+                span,
+            },
+            MirFunctionDeclaration {
+                id: validate_id,
+                name: "validate_f64".to_owned(),
+                parameter_types: vec![MirType::F64],
+                return_type: MirType::I64,
+                linkage: MirFunctionLinkage::External {
+                    symbol: "validate_f64".to_owned(),
+                },
+                span,
+            },
+            MirFunctionDeclaration {
+                id: main_id,
+                name: "main".to_owned(),
+                parameter_types: vec![],
+                return_type: MirType::I64,
+                linkage: MirFunctionLinkage::Internal,
+                span,
+            },
+        ]),
+        definitions: MirFunctionDefinitionTable::new(vec![Some(compute), None, Some(main)]),
+        entry_function: main_id,
+        span,
+    }
+}
+
+fn mixed_exhausted_abi_program() -> MirProgram {
+    let span = test_span();
+    let mixed_id = FunctionId::new(0);
+    let main_id = FunctionId::new(1);
+    let mut parameter_types = Vec::new();
+    for _ in 0..6 {
+        parameter_types.extend([MirType::I64, MirType::F64]);
+    }
+    parameter_types.extend([MirType::F64, MirType::F64, MirType::I64, MirType::F64]);
+
+    let storage: Vec<_> = parameter_types
+        .iter()
+        .enumerate()
+        .map(|(index, ty)| MirStorage {
+            id: StorageId::new(mixed_id, index),
+            source: BindingId::Parameter(ParameterId::new(mixed_id, index)),
+            name: format!("p{index}"),
+            kind: MirStorageKind::Parameter,
+            ty: *ty,
+            span,
+        })
+        .collect();
+    let mixed = MirFunctionDefinition {
+        function: mixed_id,
+        parameters: storage.iter().map(|storage| storage.id).collect(),
+        storage,
+        values: vec![MirValue {
+            id: ValueId::new(mixed_id, 0),
+            ty: MirType::F64,
+            span,
+        }],
+        body: MirBody {
+            entry: BlockId::new(mixed_id, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(mixed_id, 0),
+                instructions: vec![MirInstruction::Assign(MirAssignment {
+                    result: ValueId::new(mixed_id, 0),
+                    rvalue: MirRvalue {
+                        kind: MirRvalueKind::Load(StorageId::new(mixed_id, 15)),
+                        ty: MirType::F64,
+                    },
+                    span,
+                })],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(ValueId::new(mixed_id, 0)),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    };
+
+    let mut values = Vec::new();
+    let mut instructions = Vec::new();
+    for (index, ty) in parameter_types.iter().copied().enumerate() {
+        values.push(MirValue {
+            id: ValueId::new(main_id, index),
+            ty,
+            span,
+        });
+        let kind = if ty == MirType::F64 {
+            MirRvalueKind::ConstantF64Bits((index as f64).to_bits())
+        } else {
+            MirRvalueKind::ConstantI64(index as i64)
+        };
+        instructions.push(MirInstruction::Assign(MirAssignment {
+            result: ValueId::new(main_id, index),
+            rvalue: MirRvalue { kind, ty },
+            span,
+        }));
+    }
+    let call_result = ValueId::new(main_id, values.len());
+    values.push(MirValue {
+        id: call_result,
+        ty: MirType::F64,
+        span,
+    });
+    instructions.push(MirInstruction::Call(MirCall {
+        target: MirCallTarget::Direct(mixed_id),
+        arguments: (0..parameter_types.len())
+            .map(|index| ValueId::new(main_id, index))
+            .collect(),
+        result: Some(call_result),
+        span,
+    }));
+    let return_value = ValueId::new(main_id, values.len());
+    values.push(MirValue {
+        id: return_value,
+        ty: MirType::I64,
+        span,
+    });
+    instructions.push(MirInstruction::Assign(MirAssignment {
+        result: return_value,
+        rvalue: MirRvalue {
+            kind: MirRvalueKind::ConstantI64(0),
+            ty: MirType::I64,
+        },
+        span,
+    }));
+    let main = MirFunctionDefinition {
+        function: main_id,
+        parameters: vec![],
+        storage: vec![],
+        values,
+        body: MirBody {
+            entry: BlockId::new(main_id, 0),
+            blocks: vec![MirBasicBlock {
+                id: BlockId::new(main_id, 0),
+                instructions,
+                terminator: Some(MirTerminator::Return {
+                    value: Some(return_value),
+                    span,
+                }),
+                span,
+            }],
+        },
+        span,
+    };
+
+    MirProgram {
+        declarations: MirFunctionDeclarationTable::new(vec![
+            MirFunctionDeclaration {
+                id: mixed_id,
+                name: "mixed".to_owned(),
+                parameter_types,
+                return_type: MirType::F64,
+                linkage: MirFunctionLinkage::Internal,
+                span,
+            },
+            MirFunctionDeclaration {
+                id: main_id,
+                name: "main".to_owned(),
+                parameter_types: vec![],
+                return_type: MirType::I64,
+                linkage: MirFunctionLinkage::Internal,
+                span,
+            },
+        ]),
+        definitions: MirFunctionDefinitionTable::new(vec![Some(mixed), Some(main)]),
+        entry_function: main_id,
+        span,
+    }
 }
 
 fn conditional_return_mir(condition_value: bool) -> MirProgram {
@@ -438,6 +777,112 @@ fn external_u8_results_are_zero_extended_before_storage() {
 
     assert!(output.contains("call foreign_u8\n    movzbq %al, %rax\n    movq %rax,"));
     assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn lowers_verified_f64_mir_with_sse2_and_xmm_abi_results() {
+    let program = f64_arithmetic_program();
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert!(output.contains("movabsq $4609434218613702656, %rax\n    movq %rax, %xmm14"));
+    assert!(output.contains("mulsd %xmm15, %xmm14"));
+    assert!(output.contains("xorpd %xmm15, %xmm14"));
+    assert!(output.contains("addsd %xmm15, %xmm14"));
+    assert!(output.contains("subsd %xmm15, %xmm14"));
+    assert!(output.contains("movsd %xmm14, -8(%rbp)"));
+    assert!(output.contains("movsd -72(%rbp), %xmm0"));
+    assert!(output.contains("call .Lska_fn_0\n    movsd %xmm0,"));
+    assert!(output.contains("movsd ") && output.contains(", %xmm0\n    call validate_f64"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn verified_f64_mir_executes_through_internal_and_external_abi_boundaries() {
+    let mut output = emit_assembly(Target::X86_64SysV, &f64_arithmetic_program()).unwrap();
+    output.push_str(concat!(
+        "\n.text\n",
+        ".globl validate_f64\n",
+        ".type validate_f64, @function\n",
+        "validate_f64:\n",
+        "    movq %xmm0, %rax\n",
+        "    movabsq $0xc008000000000000, %rcx\n",
+        "    cmpq %rcx, %rax\n",
+        "    setne %al\n",
+        "    movzbq %al, %rax\n",
+        "    ret\n",
+        ".size validate_f64, .-validate_f64\n",
+    ));
+
+    assert!(run_native_assembly(&output).success());
+}
+
+#[test]
+fn external_f64_results_are_read_from_xmm0() {
+    let mut program = f64_arithmetic_program();
+    program.declarations.entries_mut_for_test()[0].linkage = MirFunctionLinkage::External {
+        symbol: "compute".to_owned(),
+    };
+    program.definitions.remove_for_test(FunctionId::new(0));
+    verify_mir(&program).unwrap();
+
+    let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert!(output.contains("call compute\n    movsd %xmm0,"));
+    output.push_str(concat!(
+        "\n.text\n",
+        ".globl compute\n",
+        ".type compute, @function\n",
+        "compute:\n",
+        "    movabsq $0xc008000000000000, %rax\n",
+        "    movq %rax, %xmm0\n",
+        "    ret\n",
+        ".size compute, .-compute\n",
+        ".globl validate_f64\n",
+        ".type validate_f64, @function\n",
+        "validate_f64:\n",
+        "    movq %xmm0, %rax\n",
+        "    movabsq $0xc008000000000000, %rcx\n",
+        "    cmpq %rcx, %rax\n",
+        "    setne %al\n",
+        "    movzbq %al, %rax\n",
+        "    ret\n",
+        ".size validate_f64, .-validate_f64\n",
+    ));
+    assert!(run_native_assembly(&output).success());
+}
+
+#[test]
+fn mixed_scalar_layout_independently_exhausts_register_classes() {
+    let program = mixed_exhausted_abi_program();
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert!(output.contains("movq %rdi, -8(%rbp)"));
+    assert!(output.contains("movsd %xmm0,"));
+    assert!(output.contains("movq 16(%rbp), %rax"));
+    assert!(output.contains("movsd 24(%rbp), %xmm14"));
+    assert!(output.contains("subq $16, %rsp"));
+    assert!(output.contains("movq %rax, (%rsp)"));
+    assert!(output.contains("movsd %xmm14, 8(%rsp)"));
+    assert!(output.contains("addq $16, %rsp"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn malformed_f64_mir_is_a_structured_backend_error() {
+    let mut program = f64_arithmetic_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected f64 constant assignment");
+    };
+    assignment.rvalue.ty = MirType::I64;
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert!(error.message.contains("input MIR failed verification"));
+    assert!(error.message.contains("f64 constant is not `f64`"));
 }
 
 #[test]

@@ -1,8 +1,10 @@
-//! System V AMD64 integer calling-convention rules used by this backend.
+//! System V AMD64 scalar argument classification used by this backend.
 
-use super::machine::Register;
+use crate::mir::MirType;
 
-pub(super) const ARGUMENT_REGISTERS: [Register; 6] = [
+use super::machine::{Register, XmmRegister};
+
+pub(super) const INTEGER_ARGUMENT_REGISTERS: [Register; 6] = [
     Register::Rdi,
     Register::Rsi,
     Register::Rdx,
@@ -11,41 +13,98 @@ pub(super) const ARGUMENT_REGISTERS: [Register; 6] = [
     Register::R9,
 ];
 
+pub(super) const SSE_ARGUMENT_REGISTERS: [XmmRegister; 8] = [
+    XmmRegister::Xmm0,
+    XmmRegister::Xmm1,
+    XmmRegister::Xmm2,
+    XmmRegister::Xmm3,
+    XmmRegister::Xmm4,
+    XmmRegister::Xmm5,
+    XmmRegister::Xmm6,
+    XmmRegister::Xmm7,
+];
+
 pub(super) const STACK_ALIGNMENT: usize = 16;
-const WORD_SIZE: usize = 8;
+const STACK_SLOT_SIZE: usize = 8;
+const INCOMING_STACK_BASE: i32 = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum IncomingArgument {
-    Register(Register),
-    /// Offset from `%rbp` after the standard frame-pointer prologue.
+pub(super) enum ArgumentLocation {
+    IntegerRegister(Register),
+    SseRegister(XmmRegister),
+    /// Byte offset in the caller's outgoing argument area.
     Stack(i32),
 }
 
-pub(super) fn incoming_argument(index: usize) -> Option<IncomingArgument> {
-    if let Some(register) = ARGUMENT_REGISTERS.get(index) {
-        return Some(IncomingArgument::Register(*register));
+impl ArgumentLocation {
+    pub(super) fn incoming(self) -> Option<Self> {
+        match self {
+            Self::Stack(offset) => offset.checked_add(INCOMING_STACK_BASE).map(Self::Stack),
+            register => Some(register),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct CallLayout {
+    locations: Vec<ArgumentLocation>,
+    stack_size: u32,
+}
+
+impl CallLayout {
+    pub(super) fn classify(types: &[MirType]) -> Option<Self> {
+        let mut integer_index = 0;
+        let mut sse_index = 0;
+        let mut stack_count = 0usize;
+        let mut locations = Vec::with_capacity(types.len());
+
+        for ty in types {
+            let location = match ty {
+                MirType::F64 if sse_index < SSE_ARGUMENT_REGISTERS.len() => {
+                    let register = SSE_ARGUMENT_REGISTERS[sse_index];
+                    sse_index += 1;
+                    ArgumentLocation::SseRegister(register)
+                }
+                MirType::F64 => stack_location(stack_count)?,
+                MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool
+                    if integer_index < INTEGER_ARGUMENT_REGISTERS.len() =>
+                {
+                    let register = INTEGER_ARGUMENT_REGISTERS[integer_index];
+                    integer_index += 1;
+                    ArgumentLocation::IntegerRegister(register)
+                }
+                MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => {
+                    stack_location(stack_count)?
+                }
+                MirType::Unit => return None,
+            };
+            if matches!(location, ArgumentLocation::Stack(_)) {
+                stack_count += 1;
+            }
+            locations.push(location);
+        }
+
+        let bytes = stack_count.checked_mul(STACK_SLOT_SIZE)?;
+        let aligned = align_up(bytes, STACK_ALIGNMENT)?;
+        let stack_size = u32::try_from(aligned).ok()?;
+        (aligned <= i32::MAX as usize).then_some(Self {
+            locations,
+            stack_size,
+        })
     }
 
-    let stack_index = index.checked_sub(ARGUMENT_REGISTERS.len())?;
-    let byte_offset = stack_index.checked_mul(WORD_SIZE)?.checked_add(16)?;
-    i32::try_from(byte_offset).ok().map(IncomingArgument::Stack)
+    pub(super) fn locations(&self) -> &[ArgumentLocation] {
+        &self.locations
+    }
+
+    pub(super) const fn stack_size(&self) -> u32 {
+        self.stack_size
+    }
 }
 
-/// Space reserved below `%rsp` by a caller for stack arguments. Rounding this
-/// to 16 bytes preserves call-site alignment after an aligned fixed frame.
-pub(super) fn outgoing_stack_size(argument_count: usize) -> Option<u32> {
-    let stack_arguments = argument_count.saturating_sub(ARGUMENT_REGISTERS.len());
-    let bytes = stack_arguments.checked_mul(WORD_SIZE)?;
-    let aligned = align_up(bytes, STACK_ALIGNMENT)?;
-    (aligned <= i32::MAX as usize)
-        .then(|| u32::try_from(aligned).ok())
-        .flatten()
-}
-
-pub(super) fn outgoing_argument_offset(index: usize) -> Option<i32> {
-    let stack_index = index.checked_sub(ARGUMENT_REGISTERS.len())?;
-    let byte_offset = stack_index.checked_mul(WORD_SIZE)?;
-    i32::try_from(byte_offset).ok()
+fn stack_location(index: usize) -> Option<ArgumentLocation> {
+    let offset = index.checked_mul(STACK_SLOT_SIZE)?;
+    i32::try_from(offset).ok().map(ArgumentLocation::Stack)
 }
 
 pub(super) fn align_up(value: usize, alignment: usize) -> Option<usize> {
@@ -60,25 +119,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn classifies_register_and_stack_arguments() {
+    fn integer_and_sse_register_counters_are_independent() {
+        let layout =
+            CallLayout::classify(&[MirType::I64, MirType::F64, MirType::U8, MirType::F64]).unwrap();
+
         assert_eq!(
-            incoming_argument(0),
-            Some(IncomingArgument::Register(Register::Rdi))
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm0),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm1),
+            ]
         );
-        assert_eq!(
-            incoming_argument(5),
-            Some(IncomingArgument::Register(Register::R9))
-        );
-        assert_eq!(incoming_argument(6), Some(IncomingArgument::Stack(16)));
-        assert_eq!(incoming_argument(7), Some(IncomingArgument::Stack(24)));
+        assert_eq!(layout.stack_size(), 0);
     }
 
     #[test]
-    fn aligns_outgoing_stack_arguments() {
-        assert_eq!(outgoing_stack_size(0), Some(0));
-        assert_eq!(outgoing_stack_size(6), Some(0));
-        assert_eq!(outgoing_stack_size(7), Some(16));
-        assert_eq!(outgoing_stack_size(8), Some(16));
-        assert_eq!(outgoing_stack_size(9), Some(32));
+    fn independently_exhausted_classes_share_source_ordered_stack_slots() {
+        let mut types = vec![MirType::I64; 6];
+        types.extend([MirType::F64; 8]);
+        types.extend([MirType::F64, MirType::I64, MirType::F64]);
+        let layout = CallLayout::classify(&types).unwrap();
+
+        assert_eq!(
+            &layout.locations()[14..],
+            [
+                ArgumentLocation::Stack(0),
+                ArgumentLocation::Stack(8),
+                ArgumentLocation::Stack(16),
+            ]
+        );
+        assert_eq!(layout.stack_size(), 32);
+        assert_eq!(
+            layout.locations()[14].incoming(),
+            Some(ArgumentLocation::Stack(16))
+        );
+    }
+
+    #[test]
+    fn rejects_payload_free_parameters_and_unrepresentable_layouts() {
+        assert!(CallLayout::classify(&[MirType::Unit]).is_none());
+        assert_eq!(align_up(8, STACK_ALIGNMENT), Some(16));
+        assert_eq!(align_up(16, STACK_ALIGNMENT), Some(16));
     }
 }

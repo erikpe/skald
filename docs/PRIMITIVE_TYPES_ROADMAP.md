@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T4 complete; T5 is the next implementation task.
+Status: T0–T5 complete; T6 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -178,7 +178,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 - [x] T2 — Refactor numeric literal infrastructure without changing behavior
 - [x] T3 — Implement `u64` end-to-end
 - [x] T4 — Implement `u8` end-to-end with explicit canonicalization
-- [ ] T5 — Add target-independent and backend `f64` infrastructure
+- [x] T5 — Add target-independent and backend `f64` infrastructure
 - [ ] T6 — Enable `f64` source syntax and semantics end-to-end
 - [ ] T7 — Complete golden coverage and harden the primitive slice
 
@@ -334,20 +334,20 @@ implementation provides a reusable narrow-scalar policy for future work.
 syntax can depend on it, following the control-flow slice's backend-first
 pattern.
 
-- [ ] Add `f64` to MIR types using raw-bit constants and explicit add,
+- [x] Add `f64` to MIR types using raw-bit constants and explicit add,
       subtract, multiply, and negate operations.
-- [ ] Extend MIR verification for floating storage, values, calls, returns, and
+- [x] Extend MIR verification for floating storage, values, calls, returns, and
       operation signatures.
-- [ ] Refactor x86-64 call layout to classify integer and SSE arguments with
+- [x] Refactor x86-64 call layout to classify integer and SSE arguments with
       independent register counters and deterministic stack locations.
-- [ ] Add XMM argument/result and caller-saved scratch representation to the
+- [x] Add XMM argument/result and caller-saved scratch representation to the
       target machine model without leaking registers into MIR.
-- [ ] Lower raw-bit constants, loads, stores, arithmetic, calls, and returns
+- [x] Lower raw-bit constants, loads, stores, arithmetic, calls, and returns
       using scalar SSE2 instructions.
-- [ ] Preserve 16-byte call-site alignment for mixed register/stack signatures.
-- [ ] Extend target legality and structured error handling for every new MIR
+- [x] Preserve 16-byte call-site alignment for mixed register/stack signatures.
+- [x] Extend target legality and structured error handling for every new MIR
       form.
-- [ ] Keep source `f64` syntax disabled until T6 completes the frontend path.
+- [x] Keep source `f64` syntax disabled until T6 completes the frontend path.
 
 **Tests:** Hand-built verified MIR for raw constants and arithmetic; mixed
 integer/SSE signatures that independently exhaust both register banks; stack

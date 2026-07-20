@@ -284,15 +284,20 @@ returned. Arithmetic therefore wraps modulo 256 at every MIR value boundary,
 and register arguments, stack arguments, internal results, and external
 results all enter general Skald use in canonical `0..=255` form.
 
-T0 requires the remaining-primitive work to replace positional integer-only
-argument helpers with a complete scalar call-layout abstraction. Linux x86-64
-System V allocates integer-class and SSE-class registers independently, spills
-only an exhausted class to eight-byte stack slots, and preserves call-site
-alignment. The layout belongs to the backend; MIR retains only semantic types.
-T5 establishes this backend path with hand-built `f64` MIR before T6 enables
-source syntax.
+T5 replaces positional integer-only argument helpers with one complete scalar
+call-layout abstraction. Linux x86-64 System V integer-class and SSE-class
+registers have independent counters; exhausted classes share deterministic,
+source-ordered eight-byte stack slots in a 16-byte-aligned outgoing area. The
+layout belongs entirely to the backend, while MIR retains only semantic types.
 
-System V integer-class parameters, including `bool`, arrive in `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and `%r9`, followed by stack arguments. Parameters are spilled into their frame homes on entry, and scalar results are returned in `%rax`; an external C boolean result is normalized from `%al` before storage. `unit` has no result payload and neither reads nor writes a fictitious return register. Calls reserve an independently 16-byte-aligned outgoing stack area when more than six arguments are present. The backend selects call symbols centrally from declaration linkage: internal definitions use deterministic GNU-local `.Lska_fn_N` symbols that cannot collide with valid exact external identifiers, while external declarations retain their declared symbol. Assembly-shape tests cover the register/stack ABI boundary, frame and scratch-register policy, call linkage, boolean normalization, all initial instructions, legality rejection, and acceptance by the system assembler.
+Target-independent MIR now represents `f64` constants as raw binary64 bits and
+uses explicit typed add, subtract, multiply, and negate operations. The x86-64
+machine model contains XMM operands and caller-saved `%xmm14`/`%xmm15`
+selection scratch registers. Lowering uses scalar SSE2 moves and arithmetic,
+returns `f64` in `%xmm0`, and handles internal and external calls identically.
+Hand-built verified MIR tests cover this path before T6 enables source syntax.
+
+System V integer-class parameters, including `bool`, use `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and `%r9`; `f64` parameters independently use `%xmm0` through `%xmm7`; exhausted parameters use the shared stack area. Parameters are spilled into their frame homes on entry. Integer-class results use `%rax`, `f64` uses `%xmm0`, and an external C boolean result is normalized from `%al` before storage. `unit` has no result payload and neither reads nor writes a fictitious return register. The backend selects call symbols centrally from declaration linkage: internal definitions use deterministic GNU-local `.Lska_fn_N` symbols that cannot collide with valid exact external identifiers, while external declarations retain their declared symbol. Assembly-shape tests cover mixed register/stack ABI boundaries, frame and scratch-register policy, call linkage, boolean normalization, integer and SSE2 instructions, legality rejection, native floating execution, and acceptance by the system assembler.
 
 The target-specific assembly model remains owned by the backend and does not leak target registers or ABI details into MIR.
 

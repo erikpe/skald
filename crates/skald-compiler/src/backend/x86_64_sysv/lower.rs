@@ -10,10 +10,11 @@ use crate::{
 };
 
 use super::{
-    abi::{self, IncomingArgument},
+    abi::{ArgumentLocation, CallLayout},
     frame::FrameLayout,
     machine::{
-        AssemblyFunction, AssemblyProgram, ByteRegister, Instruction, Label, Operand, Register,
+        AssemblyFunction, AssemblyProgram, ByteRegister, FloatOperand, Instruction, Label, Operand,
+        Register, XmmRegister,
     },
 };
 
@@ -54,7 +55,7 @@ fn lower_function(
         instructions.push(Instruction::ReserveStack(frame.size()));
     }
 
-    spill_parameters(function, &frame, &mut instructions)?;
+    spill_parameters(declaration, function, &frame, &mut instructions)?;
     if function.body.blocks[0].id != function.body.entry {
         instructions.push(Instruction::Jump(block_label(function.body.entry)));
     }
@@ -107,12 +108,20 @@ fn entry_wrapper(entry: &MirFunctionDeclaration) -> AssemblyFunction {
 }
 
 fn spill_parameters(
+    declaration: &MirFunctionDeclaration,
     function: &MirFunctionDefinition,
     frame: &FrameLayout,
     instructions: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
-    for (index, storage) in function.parameters.iter().enumerate() {
-        let incoming = abi::incoming_argument(index).ok_or_else(|| {
+    let layout = CallLayout::classify(&declaration.parameter_types).ok_or_else(|| {
+        BackendError::new(
+            Target::X86_64SysV,
+            Some(function.function),
+            "incoming argument area exceeds the x86-64 ABI encoding limits",
+        )
+    })?;
+    for (storage, location) in function.parameters.iter().zip(layout.locations()) {
+        let incoming = location.incoming().ok_or_else(|| {
             BackendError::new(
                 Target::X86_64SysV,
                 Some(function.function),
@@ -124,30 +133,36 @@ fn spill_parameters(
             .expect("verified parameter storage must exist")
             .ty;
         let destination = frame_storage(frame, *storage);
-        if ty == MirType::U8 {
-            match incoming {
-                IncomingArgument::Register(register) => load_rax(register.into(), instructions),
-                IncomingArgument::Stack(displacement) => {
-                    load_rax(memory(Register::Rbp, displacement), instructions)
+        match incoming {
+            ArgumentLocation::IntegerRegister(register) => {
+                if ty == MirType::U8 {
+                    load_rax(register.into(), instructions);
+                    store_canonical_rax(ty, destination, instructions);
+                } else {
+                    instructions.push(Instruction::Move {
+                        source: register.into(),
+                        destination,
+                    });
                 }
             }
-            store_canonical_rax(ty, destination, instructions);
-            continue;
-        }
-        match incoming {
-            IncomingArgument::Register(register) => instructions.push(Instruction::Move {
-                source: register.into(),
-                destination,
-            }),
-            IncomingArgument::Stack(displacement) => {
-                instructions.push(Instruction::Move {
-                    source: memory(Register::Rbp, displacement),
-                    destination: Register::Rax.into(),
-                });
-                instructions.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination,
-                });
+            ArgumentLocation::SseRegister(register) => {
+                instructions.push(Instruction::MoveFloat64 {
+                    source: register.into(),
+                    destination: float_operand(destination),
+                })
+            }
+            ArgumentLocation::Stack(displacement) => {
+                if ty == MirType::F64 {
+                    load_float(
+                        float_memory(Register::Rbp, displacement),
+                        XmmRegister::Xmm14,
+                        instructions,
+                    );
+                    store_float(XmmRegister::Xmm14, float_operand(destination), instructions);
+                } else {
+                    load_rax(memory(Register::Rbp, displacement), instructions);
+                    store_canonical_rax(ty, destination, instructions);
+                }
             }
         }
     }
@@ -186,6 +201,17 @@ fn select_instruction(
                     });
                     store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
+                MirRvalueKind::ConstantF64Bits(bits) => {
+                    output.push(Instruction::MoveImmediate64 {
+                        bits: *bits,
+                        destination: Register::Rax,
+                    });
+                    output.push(Instruction::MoveBitsToFloat {
+                        source: Register::Rax,
+                        destination: XmmRegister::Xmm14,
+                    });
+                    store_float(XmmRegister::Xmm14, float_operand(destination), output);
+                }
                 MirRvalueKind::ConstantBool(value) => {
                     output.push(Instruction::MoveImmediate64 {
                         bits: u64::from(*value),
@@ -194,22 +220,79 @@ fn select_instruction(
                     store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::Load(storage) => {
-                    load_rax(frame_storage(frame, *storage), output);
-                    store_canonical_rax(assignment.rvalue.ty, destination, output);
+                    if assignment.rvalue.ty == MirType::F64 {
+                        load_float(
+                            float_operand(frame_storage(frame, *storage)),
+                            XmmRegister::Xmm14,
+                            output,
+                        );
+                        store_float(XmmRegister::Xmm14, float_operand(destination), output);
+                    } else {
+                        load_rax(frame_storage(frame, *storage), output);
+                        store_canonical_rax(assignment.rvalue.ty, destination, output);
+                    }
                 }
-                MirRvalueKind::Unary {
-                    operation: MirUnaryOperation::NegateI64,
-                    operand,
-                } => {
-                    load_rax(frame_value(frame, *operand), output);
-                    output.push(Instruction::Negate(Register::Rax));
-                    store_canonical_rax(assignment.rvalue.ty, destination, output);
-                }
+                MirRvalueKind::Unary { operation, operand } => match operation {
+                    MirUnaryOperation::NegateI64 => {
+                        load_rax(frame_value(frame, *operand), output);
+                        output.push(Instruction::Negate(Register::Rax));
+                        store_canonical_rax(assignment.rvalue.ty, destination, output);
+                    }
+                    MirUnaryOperation::NegateF64 => {
+                        load_float(
+                            float_operand(frame_value(frame, *operand)),
+                            XmmRegister::Xmm14,
+                            output,
+                        );
+                        output.push(Instruction::MoveImmediate64 {
+                            bits: 1_u64 << 63,
+                            destination: Register::Rax,
+                        });
+                        output.push(Instruction::MoveBitsToFloat {
+                            source: Register::Rax,
+                            destination: XmmRegister::Xmm15,
+                        });
+                        output.push(Instruction::XorFloat128 {
+                            source: XmmRegister::Xmm15,
+                            destination: XmmRegister::Xmm14,
+                        });
+                        store_float(XmmRegister::Xmm14, float_operand(destination), output);
+                    }
+                },
                 MirRvalueKind::Binary {
                     operation,
                     left,
                     right,
                 } => {
+                    if operation.operand_type() == MirType::F64 {
+                        load_float(
+                            float_operand(frame_value(frame, *left)),
+                            XmmRegister::Xmm14,
+                            output,
+                        );
+                        load_float(
+                            float_operand(frame_value(frame, *right)),
+                            XmmRegister::Xmm15,
+                            output,
+                        );
+                        output.push(match operation {
+                            MirBinaryOperation::AddF64 => Instruction::AddFloat64 {
+                                source: XmmRegister::Xmm15,
+                                destination: XmmRegister::Xmm14,
+                            },
+                            MirBinaryOperation::SubtractF64 => Instruction::SubtractFloat64 {
+                                source: XmmRegister::Xmm15,
+                                destination: XmmRegister::Xmm14,
+                            },
+                            MirBinaryOperation::MultiplyF64 => Instruction::MultiplyFloat64 {
+                                source: XmmRegister::Xmm15,
+                                destination: XmmRegister::Xmm14,
+                            },
+                            _ => unreachable!("f64 type implies an f64 operation"),
+                        });
+                        store_float(XmmRegister::Xmm14, float_operand(destination), output);
+                        return Ok(());
+                    }
                     load_rax(frame_value(frame, *left), output);
                     output.push(Instruction::Move {
                         source: frame_value(frame, *right),
@@ -246,6 +329,11 @@ fn select_instruction(
                             source: Register::Rcx,
                             destination: Register::Rax,
                         },
+                        MirBinaryOperation::AddF64
+                        | MirBinaryOperation::SubtractF64
+                        | MirBinaryOperation::MultiplyF64 => {
+                            unreachable!("f64 operations are selected above")
+                        }
                     });
                     store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
@@ -255,12 +343,25 @@ fn select_instruction(
             select_call(program, function, call, frame, output)?;
         }
         MirInstruction::Store(store) => {
-            load_rax(frame_value(frame, store.value), output);
             let ty = function
                 .storage(store.storage)
                 .expect("verified store target must exist")
                 .ty;
-            store_canonical_rax(ty, frame_storage(frame, store.storage), output);
+            if ty == MirType::F64 {
+                load_float(
+                    float_operand(frame_value(frame, store.value)),
+                    XmmRegister::Xmm14,
+                    output,
+                );
+                store_float(
+                    XmmRegister::Xmm14,
+                    float_operand(frame_storage(frame, store.storage)),
+                    output,
+                );
+            } else {
+                load_rax(frame_value(frame, store.value), output);
+                store_canonical_rax(ty, frame_storage(frame, store.storage), output);
+            }
         }
     }
     Ok(())
@@ -279,36 +380,56 @@ fn select_call(
         .get(target_id)
         .expect("verified call target must be declared");
     let arguments = &call.arguments;
-    let stack_size = abi::outgoing_stack_size(arguments.len()).ok_or_else(|| {
+    let layout = CallLayout::classify(&target.parameter_types).ok_or_else(|| {
         BackendError::new(
             Target::X86_64SysV,
             Some(function.function),
             "outgoing argument area exceeds the x86-64 ABI encoding limits",
         )
     })?;
-    if stack_size != 0 {
-        output.push(Instruction::ReserveStack(stack_size));
+    if layout.stack_size() != 0 {
+        output.push(Instruction::ReserveStack(layout.stack_size()));
     }
 
-    for (index, argument) in arguments
+    for ((argument, ty), location) in arguments
         .iter()
-        .enumerate()
-        .skip(abi::ARGUMENT_REGISTERS.len())
+        .zip(&target.parameter_types)
+        .zip(layout.locations())
     {
-        let displacement = abi::outgoing_argument_offset(index).expect("target legality checked");
-        load_rax(frame_value(frame, *argument), output);
-        store_rax(memory(Register::Rsp, displacement), output);
-    }
-    for (register, argument) in abi::ARGUMENT_REGISTERS.iter().zip(arguments) {
-        output.push(Instruction::Move {
-            source: frame_value(frame, *argument),
-            destination: (*register).into(),
-        });
+        match location {
+            ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
+                source: frame_value(frame, *argument),
+                destination: (*register).into(),
+            }),
+            ArgumentLocation::SseRegister(register) => {
+                load_float(
+                    float_operand(frame_value(frame, *argument)),
+                    *register,
+                    output,
+                );
+            }
+            ArgumentLocation::Stack(displacement) if *ty == MirType::F64 => {
+                load_float(
+                    float_operand(frame_value(frame, *argument)),
+                    XmmRegister::Xmm14,
+                    output,
+                );
+                store_float(
+                    XmmRegister::Xmm14,
+                    float_memory(Register::Rsp, *displacement),
+                    output,
+                );
+            }
+            ArgumentLocation::Stack(displacement) => {
+                load_rax(frame_value(frame, *argument), output);
+                store_rax(memory(Register::Rsp, *displacement), output);
+            }
+        }
     }
 
     output.push(Instruction::Call(symbol_for(target)));
-    if stack_size != 0 {
-        output.push(Instruction::ReleaseStack(stack_size));
+    if layout.stack_size() != 0 {
+        output.push(Instruction::ReleaseStack(layout.stack_size()));
     }
     if target.return_type == MirType::Bool
         && matches!(target.linkage, MirFunctionLinkage::External { .. })
@@ -319,7 +440,15 @@ fn select_call(
         });
     }
     if let Some(result) = call.result {
-        store_canonical_rax(target.return_type, frame_value(frame, result), output);
+        if target.return_type == MirType::F64 {
+            store_float(
+                XmmRegister::Xmm0,
+                float_operand(frame_value(frame, result)),
+                output,
+            );
+        } else {
+            store_canonical_rax(target.return_type, frame_value(frame, result), output);
+        }
     }
     Ok(())
 }
@@ -334,8 +463,16 @@ fn select_terminator(
     match terminator {
         MirTerminator::Return { value, .. } => {
             if let Some(value) = value {
-                load_rax(frame_value(frame, *value), output);
-                canonicalize_rax(return_type, output);
+                if return_type == MirType::F64 {
+                    load_float(
+                        float_operand(frame_value(frame, *value)),
+                        XmmRegister::Xmm0,
+                        output,
+                    );
+                } else {
+                    load_rax(frame_value(frame, *value), output);
+                    canonicalize_rax(return_type, output);
+                }
             }
             output.push(Instruction::Jump(epilogue.clone()));
         }
@@ -360,6 +497,20 @@ fn load_rax(source: Operand, output: &mut Vec<Instruction>) {
     output.push(Instruction::Move {
         source,
         destination: Register::Rax.into(),
+    });
+}
+
+fn load_float(source: FloatOperand, destination: XmmRegister, output: &mut Vec<Instruction>) {
+    output.push(Instruction::MoveFloat64 {
+        source,
+        destination: destination.into(),
+    });
+}
+
+fn store_float(source: XmmRegister, destination: FloatOperand, output: &mut Vec<Instruction>) {
+    output.push(Instruction::MoveFloat64 {
+        source: source.into(),
+        destination,
     });
 }
 
@@ -399,6 +550,17 @@ fn frame_value(frame: &FrameLayout, value: ValueId) -> Operand {
 
 fn memory(base: Register, displacement: i32) -> Operand {
     Operand::Memory { base, displacement }
+}
+
+fn float_memory(base: Register, displacement: i32) -> FloatOperand {
+    FloatOperand::Memory { base, displacement }
+}
+
+fn float_operand(operand: Operand) -> FloatOperand {
+    match operand {
+        Operand::Memory { base, displacement } => float_memory(base, displacement),
+        Operand::Register(_) => unreachable!("floating values use XMM registers"),
+    }
 }
 
 fn symbol_for(function: &MirFunctionDeclaration) -> String {

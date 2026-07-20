@@ -2,7 +2,7 @@
 
 use std::fmt::Write;
 
-use super::machine::{AssemblyProgram, Instruction, Operand};
+use super::machine::{AssemblyProgram, FloatOperand, Instruction, Operand};
 
 pub(super) fn emit(program: &AssemblyProgram) -> String {
     let mut output = String::from(".text\n");
@@ -50,6 +50,20 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
                 write!(output, "movabsq $0x{bits:016x}, {}", destination.name()).unwrap()
             }
         }
+        Instruction::MoveBitsToFloat {
+            source,
+            destination,
+        } => write!(output, "movq {}, {}", source.name(), destination.name()).unwrap(),
+        Instruction::MoveFloat64 {
+            source,
+            destination,
+        } => write!(
+            output,
+            "movsd {}, {}",
+            display_float_operand(*source),
+            display_float_operand(*destination)
+        )
+        .unwrap(),
         Instruction::ZeroExtendByte {
             source,
             destination,
@@ -67,6 +81,22 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             destination,
         } => write!(output, "imulq {}, {}", source.name(), destination.name()).unwrap(),
         Instruction::Negate(register) => write!(output, "negq {}", register.name()).unwrap(),
+        Instruction::AddFloat64 {
+            source,
+            destination,
+        } => write!(output, "addsd {}, {}", source.name(), destination.name()).unwrap(),
+        Instruction::SubtractFloat64 {
+            source,
+            destination,
+        } => write!(output, "subsd {}, {}", source.name(), destination.name()).unwrap(),
+        Instruction::MultiplyFloat64 {
+            source,
+            destination,
+        } => write!(output, "mulsd {}, {}", source.name(), destination.name()).unwrap(),
+        Instruction::XorFloat128 {
+            source,
+            destination,
+        } => write!(output, "xorpd {}, {}", source.name(), destination.name()).unwrap(),
         Instruction::Test(register) => {
             write!(output, "testq {}, {}", register.name(), register.name()).unwrap()
         }
@@ -80,15 +110,24 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
     }
 }
 
+fn display_float_operand(operand: FloatOperand) -> String {
+    match operand {
+        FloatOperand::Register(register) => register.name().to_owned(),
+        FloatOperand::Memory { base, displacement } => display_memory(base, displacement),
+    }
+}
+
 fn display_operand(operand: Operand) -> String {
     match operand {
         Operand::Register(register) => register.name().to_owned(),
-        Operand::Memory { base, displacement } => {
-            if displacement == 0 {
-                format!("({})", base.name())
-            } else {
-                format!("{displacement}({})", base.name())
-            }
-        }
+        Operand::Memory { base, displacement } => display_memory(base, displacement),
+    }
+}
+
+fn display_memory(base: super::machine::Register, displacement: i32) -> String {
+    if displacement == 0 {
+        format!("({})", base.name())
+    } else {
+        format!("{displacement}({})", base.name())
     }
 }

@@ -260,6 +260,92 @@ fn verifier_rejects_u8_constant_and_operation_type_corruption() {
     assert!(errors.contains("arithmetic operand is not `u64`"));
 }
 
+fn f64_arithmetic_mir() -> MirProgram {
+    let mut mir = lower_text(
+        "fn calculate() -> i64 { return -(1 + 2 * 3 - 4); } fn main() -> i64 { return 0; }",
+    );
+    mir.declarations.entries_mut_for_test()[0].return_type = MirType::F64;
+    let function = mir
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    for value in &mut function.values {
+        value.ty = MirType::F64;
+    }
+    for instruction in &mut function.body.blocks[0].instructions {
+        let MirInstruction::Assign(assignment) = instruction else {
+            continue;
+        };
+        assignment.rvalue.ty = MirType::F64;
+        match &mut assignment.rvalue.kind {
+            MirRvalueKind::ConstantI64(value) => {
+                assignment.rvalue.kind = MirRvalueKind::ConstantF64Bits((*value as f64).to_bits());
+            }
+            MirRvalueKind::Unary { operation, .. } => {
+                *operation = MirUnaryOperation::NegateF64;
+            }
+            MirRvalueKind::Binary { operation, .. } => {
+                *operation = match operation {
+                    MirBinaryOperation::AddI64 => MirBinaryOperation::AddF64,
+                    MirBinaryOperation::SubtractI64 => MirBinaryOperation::SubtractF64,
+                    MirBinaryOperation::MultiplyI64 => MirBinaryOperation::MultiplyF64,
+                    _ => unreachable!("test source uses only integer arithmetic"),
+                };
+            }
+            _ => unreachable!("test source lowers only arithmetic rvalues"),
+        }
+    }
+    mir
+}
+
+#[test]
+fn represents_f64_as_raw_bits_and_explicit_typed_operations() {
+    let mir = f64_arithmetic_mir();
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+
+    assert!(dump.contains("Signature () -> f64"));
+    assert!(dump.contains("const.f64 0x3ff0000000000000 : f64"));
+    assert!(dump.contains("mul.f64"));
+    assert!(dump.contains("add.f64"));
+    assert!(dump.contains("sub.f64"));
+    assert!(dump.contains("neg.f64"));
+}
+
+#[test]
+fn verifier_rejects_f64_constant_unary_and_binary_corruption() {
+    let mut constant = f64_arithmetic_mir();
+    let function = constant
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected constant assignment");
+    };
+    assignment.rvalue.ty = MirType::I64;
+    assert!(verify_mir(&constant)
+        .unwrap_err()
+        .to_string()
+        .contains("f64 constant is not `f64`"));
+
+    let mut operations = f64_arithmetic_mir();
+    let function = operations
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(binary) = &mut function.body.blocks[0].instructions[3] else {
+        panic!("expected binary assignment");
+    };
+    binary.rvalue.ty = MirType::I64;
+    let MirInstruction::Assign(unary) = &mut function.body.blocks[0].instructions[7] else {
+        panic!("expected unary assignment");
+    };
+    unary.rvalue.ty = MirType::I64;
+    let errors = verify_mir(&operations).unwrap_err().to_string();
+    assert!(errors.contains("binary operation result type mismatch"));
+    assert!(errors.contains("unary operation result type mismatch"));
+}
+
 #[test]
 fn lowers_boolean_constants_storage_calls_and_returns_as_boolean_mir() {
     let mir = lower_text(concat!(

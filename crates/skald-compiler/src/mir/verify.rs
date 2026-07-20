@@ -622,6 +622,11 @@ impl Verifier<'_> {
                     self.block_error(function.function, block.id, "u8 constant is not `u8`");
                 }
             }
+            MirRvalueKind::ConstantF64Bits(_) => {
+                if rvalue.ty != MirType::F64 {
+                    self.block_error(function.function, block.id, "f64 constant is not `f64`");
+                }
+            }
             MirRvalueKind::ConstantBool(_) => {
                 if rvalue.ty != MirType::Bool {
                     self.block_error(
@@ -642,15 +647,16 @@ impl Verifier<'_> {
                 ),
                 _ => {}
             },
-            MirRvalueKind::Unary { operand, .. } => {
-                if rvalue.ty != MirType::I64 {
+            MirRvalueKind::Unary { operation, operand } => {
+                let expected = operation.operand_type();
+                if rvalue.ty != expected {
                     self.block_error(
                         function.function,
                         block.id,
                         "unary operation result type mismatch",
                     );
                 }
-                self.verify_arithmetic_operand(function, block, *operand, MirType::I64, defined);
+                self.verify_arithmetic_operand(function, block, *operand, expected, defined);
             }
             MirRvalueKind::Binary {
                 operation,

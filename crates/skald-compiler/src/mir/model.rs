@@ -46,6 +46,7 @@ pub enum MirType {
     I64,
     U64,
     U8,
+    F64,
     Bool,
     Unit,
 }
@@ -56,6 +57,7 @@ impl MirType {
             Self::I64 => "i64",
             Self::U64 => "u64",
             Self::U8 => "u8",
+            Self::F64 => "f64",
             Self::Bool => "bool",
             Self::Unit => "unit",
         }
@@ -312,6 +314,8 @@ pub enum MirRvalueKind {
     ConstantI64(i64),
     ConstantU64(u64),
     ConstantU8(u8),
+    /// IEEE-754 binary64 payload, stored as raw bits for deterministic IR.
+    ConstantF64Bits(u64),
     ConstantBool(bool),
     Load(StorageId),
     Unary {
@@ -328,6 +332,16 @@ pub enum MirRvalueKind {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirUnaryOperation {
     NegateI64,
+    NegateF64,
+}
+
+impl MirUnaryOperation {
+    pub const fn operand_type(self) -> MirType {
+        match self {
+            Self::NegateI64 => MirType::I64,
+            Self::NegateF64 => MirType::F64,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -341,6 +355,9 @@ pub enum MirBinaryOperation {
     AddU8,
     SubtractU8,
     MultiplyU8,
+    AddF64,
+    SubtractF64,
+    MultiplyF64,
 }
 
 impl MirBinaryOperation {
@@ -349,6 +366,7 @@ impl MirBinaryOperation {
             Self::AddI64 | Self::SubtractI64 | Self::MultiplyI64 => MirType::I64,
             Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => MirType::U64,
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => MirType::U8,
+            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => MirType::F64,
         }
     }
 }

@@ -48,12 +48,13 @@ The selected next slice adds the remaining primitive types `u64`, `u8`, and
 `f64`, following [`PRIMITIVE_TYPES_ROADMAP.md`](PRIMITIVE_TYPES_ROADMAP.md).
 It deliberately separates full-width unsigned arithmetic, narrow-value
 canonicalization, and floating-point/SSE ABI work into distinct milestones.
-T0 through T4 are complete: the contracts are fixed, runtime ABI version 4 can
+T0 through T5 are complete: the contracts are fixed, runtime ABI version 4 can
 observe all three types directly, numeric spellings share one classified
 pipeline, and `u64` works end-to-end with modular arithmetic and integer-class
 ABI lowering, and `u8` works end-to-end with modulo-256 arithmetic and
-centralized canonicalization. T5's floating-point MIR and backend
-infrastructure are next.
+centralized canonicalization. Raw-bit `f64` MIR, verification, mixed-class
+System V layout, and SSE2 lowering are also available for compiler-created
+MIR. T6's source-level `f64` path is next.
 The other candidates below describe separate architectural pressures and
 should receive their own scoped roadmap.
 

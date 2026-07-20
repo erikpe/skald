@@ -233,6 +233,15 @@ fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
 }
 
 #[test]
+fn f64_source_surface_remains_gated_until_t6() {
+    let (_, _, output) = lex_text("f64 1.5");
+
+    assert_eq!(output.tokens[0].kind, TokenKind::Identifier);
+    assert_eq!(output.tokens[1].kind, TokenKind::Invalid);
+    assert_eq!(output.diagnostics.len(), 1);
+}
+
+#[test]
 fn malformed_exponents_are_recovered_without_splitting_their_sign() {
     let (sources, source_id, output) = lex_text("1e+ 2E-foo + 3");
     let source = sources.get(source_id).unwrap();

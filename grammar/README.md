@@ -283,6 +283,10 @@ the `u8` suffix. Contracted `f64` spellings remain recognized at the lexical
 boundary but deliberately invalid until T6. This feature gate prevents a
 parser or later phase from guessing a type by inspecting suffix text.
 
+T5 adds raw-bit `f64` MIR and x86-64 SSE2 support beneath this grammar
+boundary. It intentionally does not reserve `f64` as a source keyword or
+accept floating literals; those frontend changes belong together in T6.
+
 The extension adds these case-sensitive type keywords:
 
 ```text
