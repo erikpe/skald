@@ -3,6 +3,7 @@
 use std::fmt;
 
 use crate::{
+    function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{BindingId, FunctionId},
     source::Span,
 };
@@ -74,22 +75,18 @@ pub struct MirProgram {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MirFunctionDeclarationTable {
-    entries: Vec<MirFunctionDeclaration>,
+    entries: DenseFunctionTable<MirFunctionDeclaration>,
 }
 
 impl MirFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<MirFunctionDeclaration>) -> Self {
-        debug_assert!(entries
-            .iter()
-            .enumerate()
-            .all(|(index, declaration)| declaration.id.index() == index));
-        Self { entries }
+        Self {
+            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+        }
     }
 
     pub fn get(&self, id: FunctionId) -> Option<&MirFunctionDeclaration> {
-        self.entries
-            .get(id.index())
-            .filter(|declaration| declaration.id == id)
+        self.entries.get(id, |declaration| declaration.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirFunctionDeclaration> {
@@ -106,7 +103,7 @@ impl MirFunctionDeclarationTable {
 
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirFunctionDeclaration] {
-        &mut self.entries
+        self.entries.entries_mut_for_test()
     }
 }
 
@@ -128,42 +125,36 @@ pub enum MirFunctionLinkage {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MirFunctionDefinitionTable {
-    entries: Vec<Option<MirFunctionDefinition>>,
-    definition_count: usize,
+    entries: SparseFunctionTable<MirFunctionDefinition>,
 }
 
 impl MirFunctionDefinitionTable {
     pub(crate) fn new(entries: Vec<Option<MirFunctionDefinition>>) -> Self {
-        debug_assert!(entries.iter().enumerate().all(|(index, definition)| {
-            definition
-                .as_ref()
-                .is_none_or(|definition| definition.function.index() == index)
-        }));
-        let definition_count = entries.iter().flatten().count();
         Self {
-            entries,
-            definition_count,
+            entries: SparseFunctionTable::new(entries, |definition| definition.function),
         }
     }
 
     pub fn get(&self, function: FunctionId) -> Option<&MirFunctionDefinition> {
-        self.entries.get(function.index())?.as_ref()
+        self.entries.get(function)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &MirFunctionDefinition> {
-        self.entries.iter().flatten()
+        self.entries.iter()
     }
 
     pub const fn len(&self) -> usize {
-        self.definition_count
+        self.entries.len()
     }
 
     pub const fn is_empty(&self) -> bool {
-        self.definition_count == 0
+        self.entries.is_empty()
     }
 
-    pub(crate) fn slots(&self) -> &[Option<MirFunctionDefinition>] {
-        &self.entries
+    pub(crate) fn indexed_slots(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (usize, Option<&MirFunctionDefinition>)> {
+        self.entries.indexed_slots()
     }
 
     #[cfg(test)]
@@ -171,19 +162,12 @@ impl MirFunctionDefinitionTable {
         &mut self,
         function: FunctionId,
     ) -> Option<&mut MirFunctionDefinition> {
-        self.entries.get_mut(function.index())?.as_mut()
+        self.entries.get_mut_for_test(function)
     }
 
     #[cfg(test)]
     pub(crate) fn remove_for_test(&mut self, function: FunctionId) {
-        if self
-            .entries
-            .get_mut(function.index())
-            .and_then(Option::take)
-            .is_some()
-        {
-            self.definition_count -= 1;
-        }
+        self.entries.remove_for_test(function);
     }
 }
 

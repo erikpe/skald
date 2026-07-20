@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R1 are complete and R2 is the next implementation task.
+Status: in progress; R0–R2 are complete and R3 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -61,7 +61,7 @@ gate before its checkbox is marked complete.
 
 - [x] R0 — Make artifact publication atomic and protect source inputs
 - [x] R1 — Move stable program identities to a neutral module
-- [ ] R2 — Consolidate dense and sparse ID-indexed tables
+- [x] R2 — Consolidate dense and sparse ID-indexed tables
 - [ ] R3 — Compute structured return flow once
 - [ ] R4 — Restructure the type checker around per-function context
 - [ ] R5 — Split the parser by grammar responsibility
@@ -126,13 +126,13 @@ that selects source names.
 **Purpose:** Replace repeated declaration/definition table bookkeeping with a
 small utility that enforces the same invariant consistently in every IR.
 
-- [ ] Introduce narrowly scoped typed dense and sparse ID-indexed containers.
-- [ ] Preserve dense-ID validation, optional definition slots, deterministic
+- [x] Introduce narrowly scoped typed dense and sparse ID-indexed containers.
+- [x] Preserve dense-ID validation, optional definition slots, deterministic
       iteration, and exact-size iteration where currently promised.
-- [ ] Migrate resolved, HIR, and MIR declaration and definition tables without
+- [x] Migrate resolved, HIR, and MIR declaration and definition tables without
       exposing raw vectors.
-- [ ] Keep phase-specific declaration and definition structures separate.
-- [ ] Avoid a general arena, interning framework, or trait hierarchy beyond
+- [x] Keep phase-specific declaration and definition structures separate.
+- [x] Avoid a general arena, interning framework, or trait hierarchy beyond
       what the existing tables require.
 
 **Tests:** Container invariant tests; missing, foreign, and non-dense ID cases;

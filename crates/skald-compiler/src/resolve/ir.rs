@@ -1,6 +1,7 @@
 //! Name-resolved, but not yet type-checked, program representation.
 
 use crate::{
+    function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{BindingId, FunctionId, LocalId, ParameterId},
     literal::NumericLiteralKind,
     source::Span,
@@ -18,25 +19,18 @@ pub struct ResolvedProgram {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ResolvedFunctionDeclarationTable {
-    entries: Vec<ResolvedFunctionDeclaration>,
+    entries: DenseFunctionTable<ResolvedFunctionDeclaration>,
 }
 
 impl ResolvedFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<ResolvedFunctionDeclaration>) -> Self {
-        debug_assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, declaration)| declaration.id.index() == index),
-            "function declaration table must be dense and ordered by ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+        }
     }
 
     pub fn get(&self, id: FunctionId) -> Option<&ResolvedFunctionDeclaration> {
-        self.entries
-            .get(id.index())
-            .filter(|declaration| declaration.id == id)
+        self.entries.get(id, |declaration| declaration.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedFunctionDeclaration> {
@@ -53,7 +47,7 @@ impl ResolvedFunctionDeclarationTable {
 
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [ResolvedFunctionDeclaration] {
-        &mut self.entries
+        self.entries.entries_mut_for_test()
     }
 }
 
@@ -86,38 +80,30 @@ pub enum ResolvedFunctionLinkage {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ResolvedFunctionDefinitionTable {
-    entries: Vec<Option<ResolvedFunctionDefinition>>,
-    definition_count: usize,
+    entries: SparseFunctionTable<ResolvedFunctionDefinition>,
 }
 
 impl ResolvedFunctionDefinitionTable {
     pub(crate) fn new(entries: Vec<Option<ResolvedFunctionDefinition>>) -> Self {
-        debug_assert!(entries.iter().enumerate().all(|(index, definition)| {
-            definition
-                .as_ref()
-                .is_none_or(|definition| definition.function.index() == index)
-        }));
-        let definition_count = entries.iter().flatten().count();
         Self {
-            entries,
-            definition_count,
+            entries: SparseFunctionTable::new(entries, |definition| definition.function),
         }
     }
 
     pub fn get(&self, function: FunctionId) -> Option<&ResolvedFunctionDefinition> {
-        self.entries.get(function.index())?.as_ref()
+        self.entries.get(function)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &ResolvedFunctionDefinition> {
-        self.entries.iter().flatten()
+        self.entries.iter()
     }
 
     pub const fn len(&self) -> usize {
-        self.definition_count
+        self.entries.len()
     }
 
     pub const fn is_empty(&self) -> bool {
-        self.definition_count == 0
+        self.entries.is_empty()
     }
 }
 

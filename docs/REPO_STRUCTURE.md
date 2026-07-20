@@ -84,6 +84,7 @@ The Rust library containing the compiler pipeline. It begins as one library crat
 src/
 ├── lib.rs
 ├── driver/
+├── function_table.rs
 ├── identity.rs
 ├── source.rs
 ├── diagnostics/
@@ -221,6 +222,15 @@ directly; later phases do not import identity types through `resolve` or choose
 program entities by comparing source names. Identity construction remains
 crate-private, while indexing, ownership queries, ordering, and deterministic
 display are stable phase-independent operations.
+
+The private `function_table` module provides the two established storage
+shapes shared by resolved IR, HIR, and MIR: dense declaration entries ordered
+by `FunctionId`, and sparse definition slots whose missing entries represent
+bodyless declarations. It centralizes ID/slot validation, lookup, deterministic
+iteration, occupancy counting, and test-only mutation bookkeeping. Each phase
+retains its own public declaration and definition table wrappers and record
+types; the utility exposes neither raw vectors nor a general arena or ID-trait
+framework.
 
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 

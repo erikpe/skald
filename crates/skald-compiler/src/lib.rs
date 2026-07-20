@@ -6,6 +6,7 @@
 pub mod backend;
 pub mod diagnostics;
 pub mod driver;
+mod function_table;
 pub mod hir;
 pub mod identity;
 pub mod lexer;

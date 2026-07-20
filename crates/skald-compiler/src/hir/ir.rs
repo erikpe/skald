@@ -1,6 +1,7 @@
 //! Fully typed HIR consumed by MIR lowering.
 
 use crate::{
+    function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{BindingId, FunctionId, LocalId, ParameterId},
     source::Span,
 };
@@ -47,25 +48,18 @@ pub struct HirProgram {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirFunctionDeclarationTable {
-    entries: Vec<HirFunctionDeclaration>,
+    entries: DenseFunctionTable<HirFunctionDeclaration>,
 }
 
 impl HirFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<HirFunctionDeclaration>) -> Self {
-        debug_assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, declaration)| declaration.id.index() == index),
-            "HIR function declaration table must be dense and ordered by ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+        }
     }
 
     pub fn get(&self, id: FunctionId) -> Option<&HirFunctionDeclaration> {
-        self.entries
-            .get(id.index())
-            .filter(|declaration| declaration.id == id)
+        self.entries.get(id, |declaration| declaration.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirFunctionDeclaration> {
@@ -109,38 +103,30 @@ pub enum HirFunctionLinkage {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirFunctionDefinitionTable {
-    entries: Vec<Option<HirFunctionDefinition>>,
-    definition_count: usize,
+    entries: SparseFunctionTable<HirFunctionDefinition>,
 }
 
 impl HirFunctionDefinitionTable {
     pub(crate) fn new(entries: Vec<Option<HirFunctionDefinition>>) -> Self {
-        debug_assert!(entries.iter().enumerate().all(|(index, definition)| {
-            definition
-                .as_ref()
-                .is_none_or(|definition| definition.function.index() == index)
-        }));
-        let definition_count = entries.iter().flatten().count();
         Self {
-            entries,
-            definition_count,
+            entries: SparseFunctionTable::new(entries, |definition| definition.function),
         }
     }
 
     pub fn get(&self, function: FunctionId) -> Option<&HirFunctionDefinition> {
-        self.entries.get(function.index())?.as_ref()
+        self.entries.get(function)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &HirFunctionDefinition> {
-        self.entries.iter().flatten()
+        self.entries.iter()
     }
 
     pub const fn len(&self) -> usize {
-        self.definition_count
+        self.entries.len()
     }
 
     pub const fn is_empty(&self) -> bool {
-        self.definition_count == 0
+        self.entries.is_empty()
     }
 }
 

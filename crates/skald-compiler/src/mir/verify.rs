@@ -141,7 +141,7 @@ impl Verifier<'_> {
         }
 
         let mut defined_functions = HashSet::new();
-        for (index, definition) in self.program.definitions.slots().iter().enumerate() {
+        for (index, definition) in self.program.definitions.indexed_slots() {
             let Some(definition) = definition else {
                 continue;
             };
