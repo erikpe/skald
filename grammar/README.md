@@ -489,3 +489,197 @@ have no MIR operand, and implicit fallthrough in a unit function lowers to the
 same payload-free return. The verifier rejects unit-typed storage and transient
 values, making the no-payload rule explicit. The backend derives internal or external symbols from declaration
 linkage; call instructions never contain linker-symbol strings.
+
+## Restricted inline-object extension contract
+
+OBJ0 freezes the parser-facing contract for the first inline-object slice. This
+section is normative for that slice but does not mean the syntax is implemented
+yet. Public acceptance remains disabled until OBJ8 connects the complete
+frontend and backend path and OBJ9 enables and hardens it.
+
+The extension adds the globally reserved keywords:
+
+```text
+class self mut
+```
+
+`init` is contextual rather than globally reserved. It introduces a special
+initializer only when it appears directly in a class body followed by `(`.
+Elsewhere it remains an identifier. A field named `init` and an ordinary method
+declared as `fn init(...)` are therefore syntactically distinct from the
+special member.
+
+The grammar extends the implemented compilation unit as follows:
+
+```text
+top-level-declaration = function-declaration
+                      | external-function-declaration
+                      | class-declaration
+
+class-declaration = "class" identifier "{" class-member* "}"
+class-member      = field-declaration
+                  | initializer-declaration
+                  | method-declaration
+
+field-declaration       = identifier ":" primitive-value-type ";"
+initializer-declaration = "init" primitive-parameter-list block
+method-declaration      = ["mut"] "fn" identifier
+                          primitive-parameter-list "->" method-result-type block
+
+primitive-parameter-list = "(" [ primitive-parameter
+                                ("," primitive-parameter)* ] ")"
+primitive-parameter      = identifier ":" primitive-value-type
+primitive-value-type     = "i64" | "u64" | "u8" | "f64" | "bool"
+method-result-type       = primitive-value-type | "unit"
+```
+
+Object locals use an identifier-shaped named type:
+
+```text
+local-declaration = "var" identifier ":" local-type "=" expression ";"
+local-type        = primitive-value-type | identifier
+```
+
+Named type syntax may be preserved wherever the parser reuses its general type
+parser, but the OBJ profile accepts a class type semantically only on a local
+declaration. Fields, parameters, results, and external declarations remain
+restricted as stated below.
+
+Postfix syntax gains member access, and `self` becomes a primary expression:
+
+```text
+postfix       = primary (member-suffix | call-suffix)*
+member-suffix = "." identifier
+call-suffix   = "(" [arguments] ")"
+primary       = identifier
+              | numeric-literal
+              | boolean-literal
+              | "self"
+              | "(" expression ")"
+```
+
+Member access and calls share the highest precedence and associate from left to
+right. Thus `counter.get()` is a call whose callee is the member access
+`counter.get`. Grouping does not change whether an expression denotes an
+otherwise valid place. Construction uses the same call-shaped syntax as
+`Counter(40)`; resolution decides whether its leading identifier selects a
+class or a function.
+
+This slice adds only member assignment statements:
+
+```text
+statement                  = existing-statement
+                           | field-assignment-statement
+field-assignment-statement = field-place "=" expression ";"
+field-place                = receiver-place "." identifier
+receiver-place             = identifier | "self" | "(" receiver-place ")"
+```
+
+Assignment remains a statement and produces no value. General binding
+assignment, chained assignment, compound assignment, and assignment to an
+arbitrary expression are not introduced. The parser retains source shape and
+spans; resolution and type checking decide whether a receiver is a valid local
+inline object or `self` and whether its selected member is a field.
+
+### Restricted declaration and name rules
+
+- Classes and top-level defined/external functions share one non-overloaded
+  top-level declaration namespace. A repeated name in any combination is an
+  error. All top-level declarations are collected before bodies are resolved.
+- Fields and ordinary methods share one non-overloaded ordinary-member
+  namespace within a class. A field and method cannot have the same name, and
+  methods cannot overload by signature.
+- The one special `init` declaration occupies a separate special-member slot.
+  It may coexist with an ordinary field or method named `init`, subject to the
+  ordinary-member collision rule between that field and method.
+- All fields and methods are accessible wherever the object place is visible in
+  this profile. Access modifiers are not accepted yet.
+- `self` is valid only inside the enclosing class's `init` or instance-method
+  body. It cannot be shadowed or declared as an ordinary name.
+- Class types are nominal. Forward references to a class declared later in the
+  same source file are valid after declaration collection.
+
+### Restricted construction and initialization rules
+
+Every class, including an empty class, declares exactly one explicit `init`.
+There is no synthesized, default, copy, overloaded, or delegating initializer.
+Its parameters are by-value primitives and its result is implicit `unit`.
+
+An initializer body contains only zero or more statements of this form:
+
+```ska
+self.field = primitive_expression;
+```
+
+The right-hand side may contain primitive literals, initializer parameters,
+already-initialized fields of `self`, grouping, implemented primitive
+unary/binary operations, and calls to top-level defined or external functions
+whose arguments and result fit the primitive profile. It cannot contain `self`
+by itself, a method call, object construction, or another object-valued
+expression. The body contains no locals, nested blocks, conditionals, call
+statements, or explicit `return`.
+
+Each field must be assigned exactly once on the one straight-line path. Fields
+may be assigned in any order, but reading a field before its own assignment is
+an error. Assigning an unknown field, assigning a field twice, leaving one
+unassigned, or assigning a different primitive type is an error. An empty
+class therefore has an empty `init()` body.
+
+Construction is legal only as the complete initializer of a new local whose
+declared type is exactly the selected class:
+
+```ska
+var counter: Counter = Counter(40);
+```
+
+It is not a general value expression. It cannot be grouped and used elsewhere,
+passed, returned, assigned to existing storage, used as a receiver, or nested
+in a primitive expression. Constructor arity and argument types match exactly;
+there are no implicit conversions. Object locals may appear in any existing
+lexical block, including a method or conditional arm.
+
+Destination storage is reserved before argument evaluation but does not yet
+contain a live object. Arguments evaluate completely from left to right. The
+initializer is entered only afterward, and its assignments execute in source
+order. Normal completion makes the destination live. Checked exceptions are
+absent, so this profile has no recoverable failed-construction path.
+
+An inline local's lifetime ends with its lexical storage scope. Since its
+fields are primitive and `destroy` is unavailable, ending that lifetime emits
+no observable cleanup in this slice.
+
+### Restricted field and method use
+
+A field may be read as a primitive value or written by member assignment when
+its receiver is `self` or a local inline object, with grouping allowed around
+that receiver place. Object fields do not exist yet, so a valid source field
+place has exactly one field projection.
+
+Methods are statically selected and called directly. Explicit parameters are
+by-value primitives, and results are primitive or `unit`. A receiver evaluates
+before every explicit argument; arguments then evaluate left to right.
+Read-only `fn` methods may read fields and call read-only methods on `self`.
+`mut fn` methods may also write fields and call mutable methods. An `init`
+receiver is implicitly mutable but may not call methods because the complete
+object is not live. A local object may call either receiver mode.
+
+Method bodies otherwise use implemented statements and primitive semantics.
+Object-valued parameters/results/arguments, whole-object assignment, copying,
+destruction, object fields, inheritance, interfaces, virtual calls, `shared`,
+aliases, static/final/private members, and object FFI remain outside the
+profile.
+
+### Evaluation order added by this profile
+
+- Evaluate a method receiver before its explicit arguments.
+- Evaluate explicit arguments from left to right before the call.
+- Evaluate a field receiver place before loading its field.
+- For field assignment, evaluate the receiver place first, then its complete
+  right-hand value, then perform the store.
+- Reserve a construction destination, evaluate arguments from left to right,
+  enter `init`, and make the destination live only after normal completion.
+
+These rules extend the existing left-to-right operand/call contract. Temporary
+destruction, cleanup on non-local control flow, and full-expression lifetime
+boundaries remain deferred because this profile has no general object
+temporary, destructor, shared handle, alias, or exception.

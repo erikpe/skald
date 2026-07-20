@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: planned; no OBJ milestones implemented.
+Status: OBJ0 complete; OBJ1 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -89,7 +89,7 @@ an unresolved primitive call or an accidental backend error.
 
 ### Restricted semantic contract
 
-OBJ0 freezes the exact grammar. The intended class-member surface is:
+OBJ0 freezes the exact grammar. The class-member surface is:
 
 ```text
 class-declaration = "class" identifier "{" class-member* "}"
@@ -123,8 +123,8 @@ reserved name.
    category as defined by OBJ0; this slice performs no overload resolution.
 8. The hidden receiver address is not a source parameter and is not observable
    as a language value.
-9. If OBJ0 accepts empty classes, they have nonzero addressable target storage
-   so later aliasing need not change the object-address model.
+9. Empty classes have nonzero addressable target storage so later aliasing need
+   not change the object-address model.
 10. There is no observable cleanup in this slice, but IR must preserve
     construction state and source order for later destruction and exceptions.
 
@@ -161,8 +161,7 @@ reserved name.
 
 ### Initial layout and receiver ABI direction
 
-OBJ0 makes the target contract normative before code generation. The expected
-direction is:
+OBJ0 makes the following target contract normative before code generation:
 
 - fields are laid out in declaration order at correctly aligned offsets;
 - class alignment is the maximum field alignment, or one when empty;
@@ -199,7 +198,7 @@ reconstructing source evaluation.
 
 ## 2. Progress Summary
 
-- [ ] OBJ0 — Freeze the restricted inline-object contract
+- [x] OBJ0 — Freeze the restricted inline-object contract
 - [ ] OBJ1 — Establish object identities and executable-body ownership
 - [ ] OBJ2 — Add target-independent object places and construction-aware MIR
 - [ ] OBJ3 — Implement x86-64 inline layout and projected-place addressing
@@ -220,18 +219,18 @@ quality gates pass.
 **Purpose:** Remove semantic and ABI ambiguity before decisions are duplicated
 across compiler phases.
 
-- [ ] Add an implementation-profile subsection to the draft specification.
-- [ ] Freeze grammar, contextual names, construction/member precedence, and the
+- [x] Add an implementation-profile subsection to the draft specification.
+- [x] Freeze grammar, contextual names, construction/member precedence, and the
       restricted assignment form.
-- [ ] Define legal object-local and field-access positions.
-- [ ] Define straight-line field initialization, allowed right-hand sides, and
+- [x] Define legal object-local and field-access positions.
+- [x] Define straight-line field initialization, allowed right-hand sides, and
       missing/duplicate/premature-use diagnostics.
-- [ ] Define receiver access, member uniqueness, dispatch, and evaluation order.
-- [ ] Freeze primitive field layout, empty-class behavior, layout failures,
+- [x] Define receiver access, member uniqueness, dispatch, and evaluation order.
+- [x] Freeze primitive field layout, empty-class behavior, layout failures,
       hidden receiver classification, and internal symbols.
-- [ ] Record all exclusions, especially copy, destruction, general temporaries,
+- [x] Record all exclusions, especially copy, destruction, general temporaries,
       polymorphism, `shared`, and aliases.
-- [ ] Reconcile `grammar/README.md`, the draft spec, and architecture notes.
+- [x] Reconcile `grammar/README.md`, the draft spec, and architecture notes.
 
 **Tests:** Cross-document review against current parser/IR boundaries, System V
 call layout, and draft lifetime rules. No behavior changes.

@@ -338,6 +338,52 @@ omits unreachable joins when every exhaustive arm terminates.
 
 The MIR verifier is a separate public boundary and checks declaration and definition associations, linkage/body consistency, external exact-symbol metadata, ID ownership, parameter order, definition/signature agreement, block-local use ordering, storage/value types, direct-call targets and result presence, return types, dense block IDs, entry blocks, boolean branch conditions, control-flow target ownership and existence, and terminators. It validates unreachable blocks as well as reachable ones. Lowering invokes it through a debug assertion, and focused tests deliberately corrupt valid MIR to cover rejection paths. Its stable textual dump exposes declarations separately from definitions and shows instructions, terminators, and stable control-flow targets in block-ID order.
 
+### Restricted inline-object extension boundary
+
+OBJ0 specifies the architecture for the first inline-object profile; OBJ1–OBJ9
+implement it. Public syntax remains disabled until the complete path exists.
+The extension must preserve these boundaries:
+
+- the neutral identity layer owns stable class, field, initializer, method, and
+  executable-body identities, while resolution assigns them;
+- AST, resolved IR, HIR, and MIR each own phase-appropriate class/member tables
+  rather than sharing source nodes or mutable resolver state;
+- HIR records nominal class types, selected member identities, and receiver
+  access modes; no backend repeats member selection;
+- MIR generalizes scalar storage access to an addressable place consisting of a
+  storage base plus semantic projections such as a field identity;
+- zero-projection places remain the one representation for scalar locals, so
+  object work does not leave a parallel scalar-only load/store path;
+- object locals are storage places but not transient MIR values in this slice;
+  object copies, arguments, results, and aggregate rvalues remain invalid;
+- initialization is an explicit operation into a destination place, distinct
+  from assignment or an object-producing rvalue;
+- a direct method call carries a receiver place separately from its explicit
+  primitive values, preserving receiver-before-argument evaluation;
+- the MIR verifier owns projection typing, construction-target, receiver, and
+  scalar-value invariants before any backend sees the program;
+- MIR retains class/field identities but no byte offsets, target alignment,
+  registers, or linker spellings.
+
+The initial x86-64 backend owns one checked target data-layout service. It lays
+out fields in declaration order, gives empty classes size/alignment one, uses
+8/8 for `i64`, `u64`, and `f64`, and 1/1 for `u8` and `bool`. Each object local
+receives one contiguous aligned frame allocation. Field address calculation
+consults the layout service; semantic lowering never duplicates its offsets.
+
+Initializers and methods receive an address to complete object storage as a
+hidden first integer-class System V argument. The receiver consumes an integer
+argument location but no SSE location, so existing independent argument-class
+counters continue to classify explicit primitive parameters. Internal member
+symbols come from the central collision-proof identity-based symbol service.
+Object types remain prohibited in the exact-symbol C ABI.
+
+These structures deliberately prepare for field-projection chains, recursive
+layouts, cleanup state, receiver aliases, base projections, virtual calls, and
+shared metadata without implementing them early. Future slices should extend
+the place and construction models rather than introduce object pointers or
+byte-offset instructions into target-independent IR.
+
 ### Passes and verification
 
 Each implemented IR has a deterministic textual dump suitable for tests. The public renderers and focused debugging workflow are indexed in [`DEBUGGING.md`](DEBUGGING.md). MIR has a verifier that checks IDs, block termination, operand types, call signatures, and target-independent invariants.
@@ -509,4 +555,4 @@ This diagram describes allowed knowledge, not necessarily Rust crate dependencie
 
 The first vertical slice should not introduce infrastructure merely because a mature compiler might eventually need it. In particular, it does not need parallel compilation, incremental queries, a general optimization manager, SSA, object-file writing, a package manager, or a large runtime.
 
-It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The completed first-slice scope and milestones are recorded in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md), and the extension contract for the next slice is listed in [NEXT_SLICE_BOUNDARIES.md](NEXT_SLICE_BOUNDARIES.md).
+It does need boundaries clean enough that those features can be added later without replacing the entire compiler. The completed first-slice scope and milestones are recorded in [FIRST_VERTICAL_SLICE_ROADMAP.md](FIRST_VERTICAL_SLICE_ROADMAP.md), the selected object work is split in [INLINE_OBJECTS_ROADMAP.md](INLINE_OBJECTS_ROADMAP.md), and its preserved extension boundaries are listed in [NEXT_SLICE_BOUNDARIES.md](NEXT_SLICE_BOUNDARIES.md).

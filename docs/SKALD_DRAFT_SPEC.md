@@ -885,6 +885,123 @@ The initial language has no separate `const T` type syntax. The compiler tracks 
 
 `final` is independent of receiver mutability and is shallow. A final field can be initialized during construction but cannot later be reassigned as a whole. A final inline object field may still be changed through its own `mut fn` methods when reached through a mutable containing object, and a final `shared T` field may still be used to mutate its separately allocated pointee. Finality prevents whole-field reassignment; it does not recursively freeze the field's internal state or an object graph.
 
+#### 5.4.2 Restricted Stage-0 Inline-Object Profile
+
+**Implementation status:** OBJ0 specifies this profile completely, but class
+syntax is not accepted by the public compiler until the remaining OBJ
+milestones implement and enable it. This subsection narrows the broader class
+model above for the first implementation; it does not remove features from the
+eventual language.
+
+The first implemented object profile contains nominal top-level classes,
+primitive fields, one explicit initializer, local inline storage, direct field
+access, and statically dispatched instance methods. Its canonical parser-facing
+grammar is in [`grammar/README.md`](../grammar/README.md).
+
+The profile has these declaration and name rules:
+
+- `class`, `self`, and `mut` are keywords; `init` remains a contextual
+  special-member introducer and an ordinary identifier elsewhere;
+- classes and top-level functions share one non-overloaded declaration
+  namespace, and declarations are collected before bodies are resolved;
+- fields and ordinary methods share one non-overloaded ordinary-member
+  namespace within their class;
+- the special initializer occupies a separate slot, so `init() { ... }` may
+  coexist with `fn init(...) -> ...` or a field named `init`; an ordinary field
+  and method still cannot share that name with each other;
+- all fields and methods are accessible in this profile because access control
+  is deferred;
+- `self` exists only in the current initializer or instance-method body, denotes
+  the current object place, and cannot be shadowed;
+- class identity is nominal, and a class declared later in the same source file
+  may be selected after top-level declaration collection.
+
+Every field has one of the implemented primitive types `i64`, `u64`, `u8`,
+`f64`, or `bool`. Object fields, base classes, interfaces, static members,
+`final`, access modifiers, virtual/override declarations, `assign`, and
+`destroy` are rejected in this profile. Empty classes are valid.
+
+Every class declares exactly one explicit, non-overloaded `init`. It has an
+implicit mutable `self`, takes only by-value primitive parameters, and returns
+`unit` implicitly. No initializer is synthesized, including for an empty
+class. Copy and delegating initializers are unavailable.
+
+The initializer body is a straight-line sequence containing only:
+
+```ska
+self.field = primitive_expression;
+```
+
+The expression may use primitive literals, initializer parameters, fields of
+`self` that have already been initialized, grouping, implemented primitive
+operators, and calls to top-level defined or external functions with supported
+primitive signatures. It cannot use `self` as a complete value, call an
+instance method, construct an object, or contain another object-valued
+expression. Initializer bodies have no local declarations, nested blocks,
+conditionals, effect-only call statements, or explicit return.
+
+Every field is assigned exactly once before normal completion. Assignment order
+need not equal declaration order, but a field cannot be read before its own
+assignment. Unknown, duplicate, missing, and type-mismatched field assignments
+are compile-time errors. An empty class therefore uses an explicit empty
+`init() {}`.
+
+Construction is permitted only as the complete initializer of a newly declared
+local of the exact class type:
+
+```ska
+var counter: Counter = Counter(40);
+```
+
+The construction syntax is parsed as the same postfix call shape used by an
+ordinary function call; resolution distinguishes a class from a function in
+their shared namespace. A constructor expression is not a general value in
+this profile: it cannot be passed, returned, grouped for another use, assigned
+to an existing place, used as a receiver, or nested inside another expression.
+Object locals may be declared in any already-supported lexical block.
+
+Destination storage is reserved before arguments are evaluated but is not yet
+a live object. Arguments evaluate completely from left to right. `init` begins
+only afterward, its field assignments execute in source order, and normal
+completion establishes the complete object's lifetime. Checked exceptions are
+not available, so there is no recoverable failed-construction path. When the
+local's lexical storage scope ends, its lifetime ends; primitive fields and the
+absence of `destroy` make that event unobservable in this profile.
+
+Fields may be read as primitive values and assigned through `self` or a local
+inline object. Grouping around that receiver place is transparent. General
+local assignment, compound/chained assignment, object assignment, and an
+arbitrary expression on the left-hand side remain unavailable. Since object
+fields are excluded, every valid source field place has one field projection.
+
+An ordinary instance method has primitive by-value parameters and a primitive
+or `unit` result. Methods are unique by name and dispatch directly. A read-only
+`fn` method may read fields and call read-only methods on `self`; a `mut fn` may
+also assign fields and call mutable methods. A local object provides mutable
+receiver access and may call either kind. `init` cannot call an instance method
+because the complete receiver is not live yet. Method bodies otherwise use the
+already implemented primitive statements, expressions, calls, locals, and
+conditionals.
+
+Object parameters, results, ordinary arguments, and FFI types; general object
+temporaries; copying, assignment, moves, slicing, and elision; inheritance,
+interfaces, polymorphism, casts, and dynamic metadata; `shared`, `new`, alias
+bindings, and borrow anchors are all deferred beyond this profile.
+
+The profile adds these observable evaluation-order rules:
+
+- a method receiver is evaluated before its explicit arguments;
+- explicit arguments are evaluated left to right;
+- a field receiver place is evaluated before its field is loaded;
+- field assignment evaluates its receiver place, then its complete right-hand
+  value, and only then performs the store;
+- construction reserves its destination, evaluates arguments left to right,
+  invokes `init`, and makes the destination live only after normal completion.
+
+These rules do not yet specify general temporary destruction, full-expression
+boundaries, or cleanup on non-local exits. Those remain prerequisites for
+`destroy`, shared ownership, aliases requiring anchors, and checked exceptions.
+
 ### 5.5 Initialization Members
 
 An `init` declaration defines a constructor that initializes object storage.
@@ -1757,6 +1874,60 @@ detected-output-failure policy. The functions are locale-independent bootstrap
 test facilities, are not final user-facing formatting APIs, and receive no
 special recognition from the compiler.
 
+### 13.4 Stage-0 Inline-Object Layout and Receiver ABI
+
+**Implementation status:** specified by OBJ0 for the initial Linux x86-64
+System V backend; implementation follows in OBJ1–OBJ9.
+
+This subsection is a stage-0 compiler ABI contract, not a promise of stable
+cross-module object ABI. Inline layout remains an implementation choice in the
+general language, and object types remain unavailable through the restricted C
+external-function profile.
+
+The initial target lays out fields in declaration order. Each field begins at
+the smallest offset satisfying its target alignment. Class alignment is the
+maximum field alignment, or one for an empty class, and trailing padding rounds
+class size up to that alignment. Empty classes have size one and alignment one
+so every inline object has an addressable storage extent suitable for later
+aliasing.
+
+Primitive field size and alignment on this target are:
+
+| Type | Size | Alignment |
+|---|---:|---:|
+| `i64` | 8 | 8 |
+| `u64` | 8 | 8 |
+| `f64` | 8 | 8 |
+| `u8` | 1 | 1 |
+| `bool` | 1 | 1 |
+
+`bool` and `u8` fields retain their language widths even if the stack-heavy
+backend uses wider homes for unrelated scalar temporaries. Layout computation
+uses checked target-size arithmetic. A class whose size, alignment, field
+metadata, or offset cannot be represented for the selected target is rejected
+with a structured target diagnostic; the compiler must not wrap host integer
+arithmetic or continue with a partial layout.
+
+MIR identifies fields semantically and never contains the byte offsets from
+this table. The x86-64 backend's target layout service is the sole authority
+for converting a verified field projection into an address.
+
+An initializer or instance method is an internal direct-call entry point whose
+hidden first argument is the address of the existing complete object storage.
+On System V this receiver is an integer-class argument placed before explicit
+source arguments. It consumes the next integer argument location—`%rdi` when
+available at the beginning of an ordinary call—but consumes no SSE location.
+Explicit integer and SSE arguments then use the existing independent register
+counters and stack-placement rules. A primitive result uses its existing ABI
+location; `unit` has no result payload. `init` has an implicit `unit` result.
+
+The hidden receiver is not a source parameter, cannot be accessed as a pointer
+value, and does not make object types externally linkable. Internal initializer
+and method symbols are formed deterministically from stable compiler-assigned
+identities through the same collision-proof symbol authority used for Skald
+definitions. Their exact textual spelling is not a language guarantee and is
+never recovered from source names below resolution.
+
 ---
 
 ## 14. Relationship to Niflheim
@@ -1812,17 +1983,21 @@ Their existing sections preserve design direction and reserve likely syntax, but
 
 The following are also substantial gaps. They need not all be part of the first vertical slice, but each must be settled before the corresponding language area is considered complete:
 
-- **Lexical and grammatical definition:** the implemented slices and the planned T-series primitive extension have explicit lexical and grammatical contracts in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, additional literal families, later operator precedence and associativity, and rules for resolving syntactic ambiguities.
+- **Lexical and grammatical definition:** the implemented scalar slices and the restricted OBJ inline-object profile have explicit lexical and grammatical contracts in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, additional literal families, later operator precedence and associativity, and rules for resolving syntactic ambiguities.
 - **Name, type, and call resolution:** the implemented first vertical slice defines single-file function and lexical-local resolution in [`grammar/README.md`](../grammar/README.md), without overloading or implicit conversions. The complete language still needs cross-module forward references, declaration cycles, overload availability or prohibition, candidate selection, implicit-conversion ranking, and generic diagnostics for ambiguous or invalid calls.
 - **Primitive edge-case semantics:** the first vertical slice defines decimal `i64` literal range checking, including the unary-minus spelling of `i64::MIN`, and the completed T0–T7 slice defines `u64`/`u8` modular `+`, `-`, and `*` plus binary64 `f64` behavior for the same operator surface. Signed `i64` overflow, division or remainder by zero, the signed minimum divided by negative one, shifts, implementation of the proposed explicit casts, comparisons (including unordered NaN behavior), NaN payload propagation through arithmetic, decimal floating formatting, and whether future constant evaluation diagnoses or reproduces runtime failures remain open. A non-x86-64 backend must separately define and test its C ABI mapping, binary64 conformance, floating environment assumptions, and mixed-class argument placement before claiming this primitive profile.
-- **Evaluation and cleanup ordering:** the first vertical slice now defines left-to-right operand and argument evaluation in [`grammar/README.md`](../grammar/README.md). The complete language still needs receiver ordering, full-expression boundaries, temporary destruction order, and cleanup sequencing for every control-flow exit. These are prerequisites before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.
-- **Initialization rules:** definite initialization, default initialization in every storage context, field and base initialization order, and exact rules for implicit or unavailable constructors, copy constructors, assignment members, and destructors.
+- **Evaluation and cleanup ordering:** the first vertical slice defines left-to-right operand and argument evaluation, and the restricted OBJ profile additionally defines receiver, field access/assignment, and direct-construction order in [`grammar/README.md`](../grammar/README.md). The complete language still needs full-expression boundaries, temporary destruction order, and cleanup sequencing for every control-flow exit. These are prerequisites before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.
+- **Initialization rules:** the restricted OBJ profile defines straight-line definite initialization for primitive fields during direct local construction. Default initialization in other storage contexts, object/base field ordering, branching or throwing initializers, and exact rules for implicit constructors, copy constructors, assignment members, and destructors remain open.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
-The most urgent of these for the ownership model is evaluation and cleanup ordering. A scalar-only first vertical slice can postpone much of it, but an implementation should settle it before adding user-defined inline objects, deterministic destruction, shared ownership, or anchored borrowing.
+The most urgent remaining gap for the ownership model is complete evaluation
+and cleanup ordering. OBJ0 settles the subset exercised by direct local objects
+without cleanup. The broader contract must be settled before adding
+deterministic destruction, shared ownership, anchored borrowing, or checked
+exception exits.
 
 ### 15.3 Open Design Questions
 
@@ -1869,6 +2044,19 @@ Resolved decisions in this draft:
 - conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
 - conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
 - a conditional definitely returns only when it has `else` and every arm definitely returns;
+- the restricted stage-0 object profile uses nominal top-level classes with
+  primitive fields, exactly one explicit initializer, direct construction only
+  into exact-type locals, and direct non-virtual receiver methods;
+- classes and functions share one top-level namespace, fields and ordinary
+  methods share one non-overloaded per-class namespace, and the contextual
+  special `init` member occupies a separate slot;
+- restricted initializers are straight-line field-assignment sequences that
+  assign every field exactly once and never read an uninitialized field;
+- empty restricted classes are valid and have a one-byte addressable x86-64
+  layout; other fields use declaration-order checked target layout;
+- restricted method receivers evaluate before explicit arguments and lower as
+  hidden first integer-class arguments, while MIR retains semantic places and
+  field identities rather than target offsets;
 - copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;

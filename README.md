@@ -78,10 +78,11 @@ responsibility, repeated test setup is test-only, and compiler artifacts are
 published atomically. The final audit found no migration compatibility layer;
 future slices can extend the existing phase interfaces directly.
 
-The planned next slice is a restricted inline-object core: nominal classes,
-primitive fields, direct construction into local storage, and direct receiver
-methods. The OBJ roadmap deliberately establishes projected places, target
-layout, and the hidden receiver ABI before enabling source syntax, while
+The next slice is a restricted inline-object core: nominal classes, primitive
+fields, direct construction into local storage, and direct receiver methods.
+OBJ0 has frozen its grammar, initialization, layout, receiver ABI, evaluation,
+and exclusion contracts. The remaining roadmap deliberately establishes
+projected places and backend support before enabling source syntax, while
 deferring copying, destruction, polymorphism, and shared ownership.
 
 ## Development
