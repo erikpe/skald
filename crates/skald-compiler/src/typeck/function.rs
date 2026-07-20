@@ -222,6 +222,9 @@ impl<'program, 'diagnostics> FunctionChecker<'program, 'diagnostics> {
                     flow,
                 }
             }
+            ResolvedStatement::FieldAssignment(_) => {
+                unreachable!("object programs stop at the pre-OBJ7 type-check boundary")
+            }
         }
     }
 

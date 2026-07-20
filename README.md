@@ -92,8 +92,11 @@ bodies, identity-derived symbols, hidden receiver-address passing, receiver
 forwarding, and mixed integer/SSE/stack ABI lowering. OBJ5 adds source-shaped
 AST support for classes, fields, initializers, receiver methods, named local
 types, member access, direct-construction call syntax, and field assignment,
-with class-local recovery and exact spans. OBJ6 is next: it resolves these
-nominal declarations and selections to stable identities. Copying, destruction,
+with class-local recovery and exact spans. OBJ6 adds two-pass top-level and
+member collection, phase-owned resolved class tables, callable-owned member
+bodies, and stable identity selection for named types, construction, `self`,
+fields, and methods. OBJ7 is next: it type-checks those resolved forms and
+enforces construction and receiver-access rules. Copying, destruction,
 polymorphism, and shared ownership remain deferred.
 
 ## Development

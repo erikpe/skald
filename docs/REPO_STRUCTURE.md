@@ -282,7 +282,7 @@ framework.
 OBJ1 deliberately leaves the shared table utilities function-specific rather
 than introducing a generic arena or identity-index trait. OBJ2 adds MIR's
 narrow dense class table alongside its canonical class/member records. OBJ6
-will add the resolver's phase-owned form; a container should be shared only
+adds separate dense resolved declaration and definition tables; a container should be shared only
 when two real tables have the same owner and density rules.
 
 OBJ4 adds MIR's deterministic member-definition table, keyed directly by
@@ -302,8 +302,10 @@ resolution distinguishes a class from a function. Field assignment is a
 dedicated statement node rather than a general assignment expression. A
 class-local recovery boundary preserves later members, and excessive-nesting
 recovery skips the rest of the affected class before resuming at file scope.
-Until OBJ6 replaces the temporary boundary, resolution reports structured
-`RES006` diagnostics for otherwise valid object syntax.
+OBJ6 replaces the temporary boundary with two-pass resolution. Classes and
+functions share one collected top-level namespace; class members remain
+owner-scoped; and all successful type, construction, receiver, field, and
+method selections carry stable identities into the resolved IR.
 
 M3 implements resolution as declaration collection followed by body resolution. Its separate resolved representation has a dense source-ordered function declaration table, a separately indexed definition table, owner-qualified parameter and local IDs, ID-based binding uses, and ID-based direct calls. O5 places external declarations in the same non-overloaded namespace and ID sequence, records their source identifier as exact-symbol linkage, and leaves their definition slot absent. Declarations own names, signatures, and linkage; definitions own locals and bodies. Public tables support lookup by ID but intentionally provide no name-based declaration-selection API. The `main` name is resolved once into an optional entry candidate; type checking rejects an external candidate and requires a defined `fn main() -> i64`.
 
@@ -383,9 +385,11 @@ implements target-independent class/member metadata, places, construction and
 receiver calls, plus their verifier boundary. OBJ3 implements the target layout,
 object frame-allocation, and projected-address boundary. OBJ4 implements
 executable member definitions and the hidden receiver ABI. OBJ5 implements the
-source AST and parser surface. OBJ6–OBJ9 implement resolution, typing, lowering,
-and integration. The parser accepts the restricted syntax, but the public
-compiler still rejects it at resolution until the complete path exists.
+source AST and parser surface. OBJ6 implements phase-owned resolved class/member
+tables and identity-based semantic selection. OBJ7–OBJ9 implement typing,
+lowering, and integration. The parser and resolver accept the restricted
+syntax, but the public compiler stops it at an explicit pre-OBJ7 type-checking
+boundary until the complete path exists.
 The extension must preserve these boundaries:
 
 - the neutral identity layer owns stable class, field, initializer, method, and

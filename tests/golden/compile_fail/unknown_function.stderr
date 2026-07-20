@@ -1,4 +1,4 @@
-error[RES003]: unknown function `absent`
+error[RES003]: unknown function or class `absent`
  --> tests/golden/compile_fail/unknown_function.ska:2:12
    |
 2 |     return absent();

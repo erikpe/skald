@@ -887,10 +887,12 @@ The initial language has no separate `const T` type syntax. The compiler tracks 
 
 #### 5.4.2 Restricted Stage-0 Inline-Object Profile
 
-**Implementation status:** OBJ0 specifies this profile completely, and OBJ5
-implements its source grammar and source-shaped AST without semantic lookup.
-The public compiler still rejects object programs at the resolution boundary
-until the remaining OBJ milestones implement and enable the complete path.
+**Implementation status:** OBJ0 specifies this profile completely, OBJ5
+implements its source grammar and source-shaped AST, and OBJ6 resolves nominal
+class types, construction targets, receivers, fields, and methods to stable
+identities. The public compiler currently stops a successfully resolved object
+program at an explicit pre-OBJ7 type-checking boundary until the remaining OBJ
+milestones implement and enable the complete path.
 This subsection narrows the broader class model above for the first
 implementation; it does not remove features from the eventual language.
 

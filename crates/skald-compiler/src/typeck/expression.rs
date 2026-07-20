@@ -213,6 +213,11 @@ impl FunctionChecker<'_, '_> {
                     span: grouped.span,
                 })
             }
+            ResolvedExpression::FieldAccess(_)
+            | ResolvedExpression::MethodCall(_)
+            | ResolvedExpression::Construct(_) => {
+                unreachable!("object programs stop at the pre-OBJ7 type-check boundary")
+            }
         }
     }
 

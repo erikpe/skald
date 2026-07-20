@@ -1,6 +1,6 @@
 # First Inline Objects Roadmap
 
-Status: OBJ0–OBJ5 complete; OBJ6 is next.
+Status: OBJ0–OBJ6 complete; OBJ7 is next.
 
 This roadmap introduces Skald's first non-primitive values through a deliberately
 restricted inline-object slice. Its purpose is to establish durable compiler
@@ -204,7 +204,7 @@ reconstructing source evaluation.
 - [x] OBJ3 — Implement x86-64 inline layout and projected-place addressing
 - [x] OBJ4 — Implement the hidden receiver ABI with hand-built MIR
 - [x] OBJ5 — Add class, member, and construction syntax
-- [ ] OBJ6 — Resolve nominal classes, fields, initializers, and methods
+- [x] OBJ6 — Resolve nominal classes, fields, initializers, and methods
 - [ ] OBJ7 — Type-check inline objects, construction, and receiver access
 - [ ] OBJ8 — Lower the frontend object model into verified MIR
 - [ ] OBJ9 — Enable and harden the complete native slice
@@ -359,17 +359,17 @@ resolving types or members; errors do not corrupt following declarations.
 **Purpose:** Make resolution the sole authority for declarations and member
 selection, including forward top-level class use.
 
-- [ ] Collect top-level names before bodies and diagnose cross-kind duplicates.
-- [ ] Assign all stable identities in deterministic source order.
-- [ ] Build phase-owned class declaration/definition tables while preserving
+- [x] Collect top-level names before bodies and diagnose cross-kind duplicates.
+- [x] Assign all stable identities in deterministic source order.
+- [x] Build phase-owned class declaration/definition tables while preserving
       callable declaration/body separation.
-- [ ] Resolve named local types, construction targets, `self`, fields, and
+- [x] Resolve named local types, construction targets, `self`, fields, and
       methods to explicit identities.
-- [ ] Keep member namespaces owner-scoped and enforce the non-overloaded profile.
-- [ ] Resolve initializer/method parameter and local scopes; reject `self`
+- [x] Keep member namespaces owner-scoped and enforce the non-overloaded profile.
+- [x] Resolve initializer/method parameter and local scopes; reject `self`
       outside instance bodies.
-- [ ] Preserve selected identities in dumps; lower phases never look up names.
-- [ ] Diagnose excluded positions at the earliest informative boundary.
+- [x] Preserve selected identities in dumps; lower phases never look up names.
+- [x] Diagnose excluded positions at the earliest informative boundary.
 
 **Tests:** Forward use, duplicates/collisions, unknown types/members,
 wrong-owner fields, shadowing, `self` scope, deterministic IDs/dumps, recovery,

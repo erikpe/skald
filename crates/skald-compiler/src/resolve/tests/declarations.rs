@@ -67,7 +67,7 @@ fn diagnoses_duplicate_names_across_all_external_and_defined_combinations() {
         assert_eq!(output.diagnostics.len(), 1);
         assert_eq!(
             output.diagnostics.iter().next().unwrap().code,
-            DUPLICATE_FUNCTION
+            DUPLICATE_TOP_LEVEL
         );
         assert_eq!(output.program.declarations.len(), 2);
     }
@@ -163,6 +163,6 @@ fn diagnoses_duplicate_functions_and_keeps_the_first() {
         1
     );
     let diagnostic = output.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, DUPLICATE_FUNCTION);
+    assert_eq!(diagnostic.code, DUPLICATE_TOP_LEVEL);
     assert_eq!(diagnostic.labels.len(), 2);
 }

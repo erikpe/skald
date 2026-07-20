@@ -20,6 +20,14 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
             }
             None => dumper.output.push_str("Entry <none>\n"),
         }
+        if !program.classes.is_empty() {
+            dumper.heading("ClassDeclarations");
+            dumper.indented(|dumper| {
+                for class in program.classes.iter() {
+                    dumper.class_declaration(class);
+                }
+            });
+        }
         dumper.heading("Declarations");
         dumper.indented(|dumper| {
             for declaration in program.declarations.iter() {
@@ -32,6 +40,14 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 dumper.definition(definition);
             }
         });
+        if !program.classes.is_empty() {
+            dumper.heading("ClassDefinitions");
+            dumper.indented(|dumper| {
+                for class in program.class_definitions.iter() {
+                    dumper.class_definition(class);
+                }
+            });
+        }
     });
     dumper.output
 }
@@ -43,6 +59,82 @@ struct ResolvedDumper {
 }
 
 impl ResolvedDumper {
+    fn class_declaration(&mut self, class: &ResolvedClassDeclaration) {
+        self.write_indentation();
+        let _ = write!(self.output, "Class {} ", class.id);
+        write_quoted(&mut self.output, &class.name);
+        write_span(&mut self.output, class.span);
+        self.output.push('\n');
+        self.indented(|dumper| {
+            dumper.heading("Fields");
+            dumper.indented(|dumper| {
+                for field in &class.fields {
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "Field {} ", field.id);
+                    write_quoted(&mut dumper.output, &field.name);
+                    write_span(&mut dumper.output, field.span);
+                    dumper.output.push('\n');
+                    dumper.indented(|dumper| dumper.type_syntax(&field.type_syntax));
+                }
+            });
+            dumper.heading("Initializer");
+            if let Some(initializer) = &class.initializer {
+                dumper.indented(|dumper| {
+                    dumper.line(&format!("Initializer {}", initializer.id), initializer.span);
+                    dumper.indented(|dumper| dumper.parameters(&initializer.parameters));
+                });
+            } else {
+                dumper.indented(|dumper| dumper.raw_line("<none>"));
+            }
+            dumper.heading("Methods");
+            dumper.indented(|dumper| {
+                for method in &class.methods {
+                    dumper.write_indentation();
+                    let _ = write!(
+                        dumper.output,
+                        "Method {} {} ",
+                        method.id,
+                        match method.receiver_access {
+                            ResolvedReceiverAccess::ReadOnly => "readonly",
+                            ResolvedReceiverAccess::Mutable => "mutable",
+                        }
+                    );
+                    write_quoted(&mut dumper.output, &method.name);
+                    write_span(&mut dumper.output, method.span);
+                    dumper.output.push('\n');
+                    dumper.indented(|dumper| {
+                        dumper.parameters(&method.parameters);
+                        dumper.heading("ReturnType");
+                        dumper.indented(|dumper| dumper.type_syntax(&method.return_type));
+                    });
+                }
+            });
+        });
+    }
+
+    fn class_definition(&mut self, class: &ResolvedClassDefinition) {
+        self.line(&format!("ClassDefinition {}", class.class), class.span);
+        self.indented(|dumper| {
+            if let Some(initializer) = &class.initializer {
+                dumper.member_definition(initializer);
+            }
+            for method in &class.methods {
+                dumper.member_definition(method);
+            }
+        });
+    }
+
+    fn member_definition(&mut self, definition: &ResolvedMemberDefinition) {
+        self.line(
+            &format!("MemberDefinition {}", definition.callable),
+            definition.span,
+        );
+        self.indented(|dumper| {
+            dumper.locals(&definition.locals);
+            dumper.block(&definition.body);
+        });
+    }
+
     fn declaration(&mut self, declaration: &ResolvedFunctionDeclaration) {
         self.write_indentation();
         let _ = write!(self.output, "Declaration {} ", declaration.id);
@@ -58,17 +150,7 @@ impl ResolvedDumper {
         self.output.push('\n');
 
         self.indented(|dumper| {
-            dumper.heading("Parameters");
-            dumper.indented(|dumper| {
-                for parameter in &declaration.parameters {
-                    dumper.write_indentation();
-                    let _ = write!(dumper.output, "Parameter {} ", parameter.id);
-                    write_quoted(&mut dumper.output, &parameter.name);
-                    write_span(&mut dumper.output, parameter.span);
-                    dumper.output.push('\n');
-                    dumper.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
-                }
-            });
+            dumper.parameters(&declaration.parameters);
 
             dumper.heading("ReturnType");
             dumper.indented(|dumper| dumper.type_syntax(&declaration.return_type));
@@ -82,19 +164,37 @@ impl ResolvedDumper {
         );
 
         self.indented(|dumper| {
-            dumper.heading("Locals");
-            dumper.indented(|dumper| {
-                for local in &definition.locals {
-                    dumper.write_indentation();
-                    let _ = write!(dumper.output, "Local {} ", local.id);
-                    write_quoted(&mut dumper.output, &local.name);
-                    write_span(&mut dumper.output, local.span);
-                    dumper.output.push('\n');
-                    dumper.indented(|dumper| dumper.type_syntax(&local.type_syntax));
-                }
-            });
+            dumper.locals(&definition.locals);
 
             dumper.block(&definition.body);
+        });
+    }
+
+    fn parameters(&mut self, parameters: &[ResolvedParameter]) {
+        self.heading("Parameters");
+        self.indented(|dumper| {
+            for parameter in parameters {
+                dumper.write_indentation();
+                let _ = write!(dumper.output, "Parameter {} ", parameter.id);
+                write_quoted(&mut dumper.output, &parameter.name);
+                write_span(&mut dumper.output, parameter.span);
+                dumper.output.push('\n');
+                dumper.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
+            }
+        });
+    }
+
+    fn locals(&mut self, locals: &[ResolvedLocal]) {
+        self.heading("Locals");
+        self.indented(|dumper| {
+            for local in locals {
+                dumper.write_indentation();
+                let _ = write!(dumper.output, "Local {} ", local.id);
+                write_quoted(&mut dumper.output, &local.name);
+                write_span(&mut dumper.output, local.span);
+                dumper.output.push('\n');
+                dumper.indented(|dumper| dumper.type_syntax(&local.type_syntax));
+            }
         });
     }
 
@@ -106,6 +206,10 @@ impl ResolvedDumper {
             ResolvedTypeKind::F64 => "F64",
             ResolvedTypeKind::Bool => "Bool",
             ResolvedTypeKind::Unit => "Unit",
+            ResolvedTypeKind::Class(class) => {
+                self.line(&format!("Type Class {class}"), type_syntax.span);
+                return;
+            }
         };
         self.line(&format!("Type {name}"), type_syntax.span);
     }
@@ -137,6 +241,18 @@ impl ResolvedDumper {
             }
             ResolvedStatement::Conditional(statement) => self.conditional(statement),
             ResolvedStatement::Block(block) => self.block(block),
+            ResolvedStatement::FieldAssignment(assignment) => {
+                self.line(
+                    &format!("FieldAssignment {}", assignment.field),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.object_place(&assignment.receiver);
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.heading("Value");
+                    dumper.indented(|dumper| dumper.expression(&assignment.value));
+                });
+            }
         }
     }
 
@@ -216,12 +332,54 @@ impl ResolvedDumper {
                 self.line("Grouped", grouped.span);
                 self.indented(|dumper| dumper.expression(&grouped.expression));
             }
+            ResolvedExpression::FieldAccess(access) => {
+                self.line(&format!("FieldAccess {}", access.field), access.span);
+                self.indented(|dumper| dumper.object_place(&access.receiver));
+            }
+            ResolvedExpression::MethodCall(call) => {
+                self.line(&format!("MethodCall {}", call.method), call.span);
+                self.indented(|dumper| {
+                    dumper.object_place(&call.receiver);
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &call.arguments {
+                            dumper.expression(argument);
+                        }
+                    });
+                });
+            }
+            ResolvedExpression::Construct(construct) => {
+                self.line(
+                    &format!(
+                        "Construct {} with {}",
+                        construct.class, construct.initializer
+                    ),
+                    construct.span,
+                );
+                self.indented(|dumper| {
+                    for argument in &construct.arguments {
+                        dumper.expression(argument);
+                    }
+                });
+            }
         }
+    }
+
+    fn object_place(&mut self, place: &ResolvedObjectPlace) {
+        self.line(
+            &format!("Receiver {} class {}", place.binding, place.class),
+            place.span,
+        );
     }
 
     fn heading(&mut self, name: &str) {
         self.write_indentation();
         let _ = writeln!(self.output, "{name}");
+    }
+
+    fn raw_line(&mut self, text: &str) {
+        self.write_indentation();
+        let _ = writeln!(self.output, "{text}");
     }
 
     fn line(&mut self, name: &str, span: Span) {

@@ -31,6 +31,7 @@ pub const INVALID_EXTERNAL_DECLARATION: &str = "TYP009";
 pub const U64_LITERAL_OUT_OF_RANGE: &str = "TYP010";
 pub const U8_LITERAL_OUT_OF_RANGE: &str = "TYP011";
 pub const F64_LITERAL_OUT_OF_RANGE: &str = "TYP012";
+pub const OBJECT_TYPE_CHECKING_UNAVAILABLE: &str = "TYP013";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -47,6 +48,22 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    if let Some(class) = program.classes.iter().next() {
+        diagnostics.push(
+            Diagnostic::error(
+                OBJECT_TYPE_CHECKING_UNAVAILABLE,
+                "inline-object type checking is not implemented yet",
+            )
+            .with_primary_label(
+                class.span,
+                "class names and members are resolved; semantic validation arrives in OBJ7",
+            ),
+        );
+        return TypeCheckOutput {
+            hir: None,
+            diagnostics,
+        };
+    }
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     let declarations = program.declarations.iter().map(lower_declaration).collect();
@@ -199,7 +216,7 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
     }
 }
 
-pub(super) const fn lower_type(type_syntax: &ResolvedType) -> Type {
+pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
     match type_syntax.kind {
         ResolvedTypeKind::I64 => Type::I64,
         ResolvedTypeKind::U64 => Type::U64,
@@ -207,5 +224,8 @@ pub(super) const fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::F64 => Type::F64,
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
+        ResolvedTypeKind::Class(_) => {
+            unreachable!("object programs stop at the pre-OBJ7 type-check boundary")
+        }
     }
 }

@@ -2,7 +2,10 @@
 
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
-    identity::{BindingId, FunctionId, LocalId, ParameterId},
+    identity::{
+        BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId,
+        ParameterId,
+    },
     literal::NumericLiteralKind,
     source::Span,
 };
@@ -11,10 +14,218 @@ use crate::{
 pub struct ResolvedProgram {
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
+    pub classes: ResolvedClassDeclarationTable,
+    pub class_definitions: ResolvedClassDefinitionTable,
     /// Function named `main`, selected during resolution. Type checking
     /// validates its signature and diagnoses its absence.
     pub entry_function: Option<FunctionId>,
     pub span: Span,
+}
+
+impl ResolvedProgram {
+    pub fn class(&self, id: ClassId) -> Option<&ResolvedClassDeclaration> {
+        self.classes.get(id)
+    }
+
+    pub fn field(&self, id: FieldId) -> Option<&ResolvedFieldDeclaration> {
+        self.class(id.class())?.field(id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
+        self.class(id.class())?.initializer(id)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&ResolvedMethodDeclaration> {
+        self.class(id.class())?.method(id)
+    }
+
+    pub fn member_definition(&self, callable: CallableId) -> Option<&ResolvedMemberDefinition> {
+        let class = callable.class()?;
+        self.class_definitions.get(class)?.member(callable)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResolvedClassDeclarationTable {
+    entries: Vec<ResolvedClassDeclaration>,
+}
+
+impl ResolvedClassDeclarationTable {
+    pub(crate) fn new(entries: Vec<ResolvedClassDeclaration>) -> Self {
+        assert!(
+            entries
+                .iter()
+                .enumerate()
+                .all(|(index, class)| class.id.index() == index),
+            "class declarations must be ordered by dense class ID"
+        );
+        Self { entries }
+    }
+
+    pub fn get(&self, id: ClassId) -> Option<&ResolvedClassDeclaration> {
+        self.entries.get(id.index()).filter(|class| class.id == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassDeclaration> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedClassDeclaration {
+    pub id: ClassId,
+    pub name: String,
+    pub name_span: Span,
+    pub fields: Vec<ResolvedFieldDeclaration>,
+    pub initializer: Option<ResolvedInitializerDeclaration>,
+    pub methods: Vec<ResolvedMethodDeclaration>,
+    pub span: Span,
+}
+
+impl ResolvedClassDeclaration {
+    pub fn field(&self, id: FieldId) -> Option<&ResolvedFieldDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.fields.get(id.index()).filter(|field| field.id == id)
+    }
+
+    pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.initializer
+            .as_ref()
+            .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn method(&self, id: MethodId) -> Option<&ResolvedMethodDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.methods
+            .get(id.index())
+            .filter(|method| method.id == id)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedFieldDeclaration {
+    pub id: FieldId,
+    pub name: String,
+    pub name_span: Span,
+    pub type_syntax: ResolvedType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInitializerDeclaration {
+    pub id: InitializerId,
+    pub parameters: Vec<ResolvedParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedReceiverAccess {
+    ReadOnly,
+    Mutable,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedMethodDeclaration {
+    pub id: MethodId,
+    pub name: String,
+    pub name_span: Span,
+    pub receiver_access: ResolvedReceiverAccess,
+    pub parameters: Vec<ResolvedParameter>,
+    pub return_type: ResolvedType,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResolvedClassDefinitionTable {
+    entries: Vec<ResolvedClassDefinition>,
+}
+
+impl ResolvedClassDefinitionTable {
+    pub(crate) fn new(entries: Vec<ResolvedClassDefinition>) -> Self {
+        assert!(
+            entries
+                .iter()
+                .enumerate()
+                .all(|(index, class)| class.class.index() == index),
+            "class definitions must be ordered by dense class ID"
+        );
+        Self { entries }
+    }
+
+    pub fn get(&self, id: ClassId) -> Option<&ResolvedClassDefinition> {
+        self.entries
+            .get(id.index())
+            .filter(|definition| definition.class == id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassDefinition> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedClassDefinition {
+    pub class: ClassId,
+    pub initializer: Option<ResolvedMemberDefinition>,
+    pub methods: Vec<ResolvedMemberDefinition>,
+    pub span: Span,
+}
+
+impl ResolvedClassDefinition {
+    pub fn member(&self, callable: CallableId) -> Option<&ResolvedMemberDefinition> {
+        match callable {
+            CallableId::Function(_) => None,
+            CallableId::Initializer(initializer) if initializer.class() == self.class => self
+                .initializer
+                .as_ref()
+                .filter(|definition| definition.callable == callable),
+            CallableId::Method(method) if method.class() == self.class => self
+                .methods
+                .get(method.index())
+                .filter(|definition| definition.callable == callable),
+            CallableId::Initializer(_) | CallableId::Method(_) => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedMemberDefinition {
+    pub callable: CallableId,
+    pub locals: Vec<ResolvedLocal>,
+    pub body: ResolvedBlock,
+    pub span: Span,
+}
+
+impl ResolvedMemberDefinition {
+    pub fn local(&self, id: LocalId) -> Option<&ResolvedLocal> {
+        if id.callable() != self.callable {
+            return None;
+        }
+        self.locals.get(id.index()).filter(|local| local.id == id)
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -150,6 +361,7 @@ pub enum ResolvedTypeKind {
     F64,
     Bool,
     Unit,
+    Class(ClassId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -171,6 +383,7 @@ pub enum ResolvedStatement {
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
     Block(ResolvedBlock),
+    FieldAssignment(ResolvedFieldAssignment),
 }
 
 impl ResolvedStatement {
@@ -181,8 +394,19 @@ impl ResolvedStatement {
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
+            Self::FieldAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedFieldAssignment {
+    pub receiver: ResolvedObjectPlace,
+    pub field: FieldId,
+    pub member_span: Span,
+    pub equal_span: Span,
+    pub value: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -227,6 +451,9 @@ pub enum ResolvedExpression {
     Binary(ResolvedBinaryExpr),
     DirectCall(ResolvedDirectCallExpr),
     Grouped(ResolvedGroupedExpr),
+    FieldAccess(ResolvedFieldAccessExpr),
+    MethodCall(ResolvedMethodCallExpr),
+    Construct(ResolvedConstructExpr),
 }
 
 impl ResolvedExpression {
@@ -239,8 +466,44 @@ impl ResolvedExpression {
             Self::Binary(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
+            Self::FieldAccess(expression) => expression.span,
+            Self::MethodCall(expression) => expression.span,
+            Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedObjectPlace {
+    pub binding: BindingId,
+    pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedFieldAccessExpr {
+    pub receiver: ResolvedObjectPlace,
+    pub field: FieldId,
+    pub member_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedMethodCallExpr {
+    pub receiver: ResolvedObjectPlace,
+    pub method: MethodId,
+    pub member_span: Span,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedConstructExpr {
+    pub class: ClassId,
+    pub initializer: InitializerId,
+    pub callee_span: Span,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

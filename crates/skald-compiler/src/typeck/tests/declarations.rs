@@ -108,3 +108,20 @@ fn direct_call_arity_is_checked_against_the_resolved_target() {
         .message
         .contains("expects 1 argument but received 0"));
 }
+
+#[test]
+fn resolved_objects_stop_at_the_explicit_pre_obj7_boundary() {
+    let resolved = resolve_text(concat!(
+        "class Box { value: i64; init(value: i64) { self.value = value; } }\n",
+        "fn main() -> i64 { var value: Box = Box(1); return value.value; }\n",
+    ));
+
+    let output = type_check(&resolved);
+
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        OBJECT_TYPE_CHECKING_UNAVAILABLE
+    );
+}
