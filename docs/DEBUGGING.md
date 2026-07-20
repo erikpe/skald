@@ -54,6 +54,13 @@ relies on the golden runner's two independent compiler processes for every
 successful assembly and every failure diagnostic. Determinism is therefore an
 externally checked compiler property rather than an assumption from unit dumps.
 
+T7 extends that guarantee across every implemented numeric family. Typed HIR
+renders `f64` constants as `F64 0xHHHHHHHHHHHHHHHH`, and MIR renders them as
+`const.f64 0xHHHHHHHHHHHHHHHH`; neither dump asks the host library to format a
+decimal float. The primitive golden corpus exercises independent compiler
+processes for `u64`, `u8`, `f64`, mixed integer/SSE signatures, malformed
+spellings, overflow, and exact-type failures.
+
 Assembly is directly available through the public compiler command:
 
 ```text

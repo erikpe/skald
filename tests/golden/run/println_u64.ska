@@ -4,13 +4,20 @@ fn seventh(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64) -> u64 {
     return g;
 }
 
+fn step(value: u64) -> u64 {
+    return value + 1u;
+}
+
 fn main() -> i64 {
+    var one: u64 = 1u;
     var maximum: u64 = 18446744073709551615u;
     ska_rt_println_u64(0u);
+    ska_rt_println_u64(one);
     ska_rt_println_u64(maximum);
     ska_rt_println_u64(maximum + 1u);
     ska_rt_println_u64(0u - 1u);
     ska_rt_println_u64(9223372036854775808u * 3u);
+    ska_rt_println_u64(step(one));
     ska_rt_println_u64(seventh(1u, 2u, 3u, 4u, 5u, 6u, 7u));
     return 0;
 }

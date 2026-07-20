@@ -372,6 +372,11 @@ Skald boundaries, and `f64` returns in `%xmm0`. The exact ABI and bootstrap
 output records are normative in Sections 3.1 and 13.3 of the draft
 specification.
 
+T7 completes exact native and compile-failure coverage for this contract. It
+does not add syntax: division, remainder, casts, comparisons, decimal floating
+formatting, and source spellings for non-finite floating values remain outside
+the implemented grammar.
+
 ## First vertical slice name resolution
 
 M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.

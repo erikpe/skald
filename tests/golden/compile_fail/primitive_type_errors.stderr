@@ -1,0 +1,35 @@
+error[TYP005]: return value has type `i64` but `f64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:4:12
+   |
+4 |     return 1;
+   |            ^ type mismatch
+
+error[TYP005]: return value has type `f64` but `i64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:8:12
+   |
+8 |     return 1.0;
+   |            ^^^ type mismatch
+
+error[TYP005]: right arithmetic operand has type `i64` but `f64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:12:18
+    |
+12 |     return 1.0 + 1;
+    |                  ^ type mismatch
+
+error[TYP005]: unary negation operand has type `u64` but `i64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:16:13
+    |
+16 |     return -1u;
+    |             ^^ type mismatch
+
+error[TYP005]: unary negation operand has type `u8` but `i64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:20:13
+    |
+20 |     return -1u8;
+    |             ^^^ type mismatch
+
+error[TYP005]: call argument has type `i64` but `u64` is required
+ --> tests/golden/compile_fail/primitive_type_errors.ska:24:14
+    |
+24 |     take_u64(1);
+    |              ^ type mismatch

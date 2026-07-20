@@ -54,7 +54,7 @@ definite-return analysis, and source-ordered native branch behavior. C6
 completes the slice with exact nested-conditional, return-analysis, diagnostic,
 and cross-process determinism coverage.
 
-The remaining-primitive roadmap is complete through T6. T0 fixes `u` and
+The remaining-primitive roadmap is complete through T7. T0 fixes `u` and
 `u8` integer suffixes, decimal `f64` literals, exact non-promoting arithmetic,
 unsigned modular behavior, binary64 semantics, mixed integer/SSE ABI rules,
 and the runtime observability contract. T1 implements and directly tests
@@ -66,7 +66,10 @@ end-to-end, with modulo-256 arithmetic and explicit canonicalization at value
 and ABI boundaries. T5 adds raw-bit `f64` MIR, verification, mixed
 integer/SSE System V call layout, and SSE2 lowering. T6 connects that path to
 source syntax and exact semantics, including finite binary64 literals,
-non-promoting arithmetic, calls, returns, conditionals, and raw-bit output.
+non-promoting arithmetic, calls, returns, conditionals, and raw-bit output. T7
+completes exact native and failure coverage, including every literal-overflow
+family, malformed numeric forms, mixed integer/SSE calls, and independent-run
+assembly and diagnostic determinism.
 
 ## Development
 

@@ -32,6 +32,18 @@ nested native case whose value-returning function relies entirely on exhaustive
 conditional arms. Together with the non-exhaustive failure case, this covers
 both sides of branch-aware return analysis.
 
+T7 completes the primitive corpus. The unsigned run cases observe zero, one,
+maxima, wrapping arithmetic, locals, parameters, internal results, and
+external output calls. The floating case observes positive and negative zero,
+exact fractions, subnormal and maximum finite values, underflow, arithmetic,
+call/return flow, conditional arms, and both register-only and independently
+exhausted mixed integer/SSE signatures. Its calls interleave `u64`, `u8`, and
+raw-bit `f64` output. Compile-failure cases snapshot every numeric overflow
+family, malformed suffix and float forms, implicit conversions, mixed
+arithmetic, invalid unsigned negation, and the restricted external profile.
+Because the runner compiles every case twice, this coverage also proves
+assembly and diagnostic determinism across independent compiler processes.
+
 Run it from the repository root with:
 
 ```text

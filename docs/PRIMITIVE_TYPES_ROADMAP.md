@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T6 complete; T7 is the next implementation task.
+Status: T0–T7 complete; roadmap complete.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -180,7 +180,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 - [x] T4 — Implement `u8` end-to-end with explicit canonicalization
 - [x] T5 — Add target-independent and backend `f64` infrastructure
 - [x] T6 — Enable `f64` source syntax and semantics end-to-end
-- [ ] T7 — Complete golden coverage and harden the primitive slice
+- [x] T7 — Complete golden coverage and harden the primitive slice
 
 Milestone checkboxes below should be marked as implementation progresses. A
 task is complete only when its acceptance criteria and relevant quality gates
@@ -397,26 +397,26 @@ calls obey System V.
 **Purpose:** Prove externally observable boundaries and reconcile all public
 documentation with the completed implementation.
 
-- [ ] Add exact native output for zero, one, maxima, wrapping edges, locals,
+- [x] Add exact native output for zero, one, maxima, wrapping edges, locals,
       parameters, internal results, external calls, and consecutive mixed
       output operations.
-- [ ] Cover binary64 positive/negative zero, representative exact fractions,
+- [x] Cover binary64 positive/negative zero, representative exact fractions,
       arithmetic, call/return flow, and raw-bit observation.
-- [ ] Cover mixed integer/SSE signatures in register-only, independently
+- [x] Cover mixed integer/SSE signatures in register-only, independently
       exhausted, and stack-argument forms.
-- [ ] Add exact compile-failure goldens for malformed suffixes/floats, every
+- [x] Add exact compile-failure goldens for malformed suffixes/floats, every
       literal overflow family, implicit conversions, mixed arithmetic, invalid
       unary minus, and invalid external signatures.
-- [ ] Confirm repeated compiler processes produce identical assembly and
+- [x] Confirm repeated compiler processes produce identical assembly and
       diagnostics for all new types.
-- [ ] Audit type matches, dump renderers, verifier checks, and backend legality
+- [x] Audit type matches, dump renderers, verifier checks, and backend legality
       so adding a future primitive has one obvious set of extension points.
-- [ ] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
+- [x] Update `README.md`, `grammar/README.md`, `docs/REPO_STRUCTURE.md`,
       `docs/DEBUGGING.md`, `docs/NEXT_SLICE_BOUNDARIES.md`, runtime/golden test
       documentation, and the draft specification.
-- [ ] Record remaining division/remainder, casts, comparisons, decimal
+- [x] Record remaining division/remainder, casts, comparisons, decimal
       formatting, floating exceptional behavior, and cross-target questions.
-- [ ] Run the complete repository quality gates from a clean build state.
+- [x] Run the complete repository quality gates from a clean build state.
 
 **Tests:** All compiler and CLI tests, direct runtime tests, successful and
 compile-failure goldens, formatting, Clippy with warnings denied, and
@@ -429,14 +429,14 @@ architecture remains straightforward to extend.
 
 ## 4. Required Quality Gates for Every Task
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test` when the runtime or ABI is touched
-- [ ] `make golden-test` when source behavior, diagnostics, MIR, backend,
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test` when the runtime or ABI is touched
+- [x] `make golden-test` when source behavior, diagnostics, MIR, backend,
       runtime linking, or golden expectations are touched
-- [ ] `git diff --check`
+- [x] `git diff --check`
 
 These global checkboxes represent T7's final clean-build gate. Each earlier
 task must run its relevant checks without marking the complete roadmap early.
@@ -461,3 +461,23 @@ f64 source type and decimal literals
 No semantic phase may infer numeric type from a backend representation, no
 backend may infer signedness or width from source spelling, and no runtime
 output symbol may be compiler-special-cased.
+
+## 6. Deferred Primitive Work
+
+T7 closes this slice without silently expanding its operator or library
+surface. Follow-up roadmaps must settle these concerns before implementing
+them:
+
+- integer and floating division and remainder, including zero divisors and
+  signed-minimum edge cases;
+- explicit casts, their syntax, range failures, and lowering rules;
+- integer and floating comparisons, especially unordered NaN behavior;
+- user-facing decimal `f64` formatting, which is intentionally distinct from
+  the bootstrap raw-bit observer;
+- production and propagation of infinity, NaN signs and payloads, and floating
+  environment assumptions beyond the currently specified operations;
+- per-target binary64 validation, C ABI mapping, mixed-class argument layout,
+  and conformance tests, beginning with the planned AArch64 backend.
+
+The draft specification records the corresponding language-level open
+questions. None is implicitly answered by the stage-0 x86-64 implementation.

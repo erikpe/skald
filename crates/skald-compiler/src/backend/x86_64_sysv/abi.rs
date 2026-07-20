@@ -36,6 +36,24 @@ pub(super) enum ArgumentLocation {
     Stack(i32),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ScalarClass {
+    Integer,
+    Sse,
+}
+
+/// Classifies every MIR type supported by this scalar ABI profile.
+///
+/// Keep this match exhaustive: adding a MIR type must make its target ABI
+/// treatment an explicit backend decision before the compiler builds again.
+const fn scalar_class(ty: MirType) -> Option<ScalarClass> {
+    match ty {
+        MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => Some(ScalarClass::Integer),
+        MirType::F64 => Some(ScalarClass::Sse),
+        MirType::Unit => None,
+    }
+}
+
 impl ArgumentLocation {
     pub(super) fn incoming(self) -> Option<Self> {
         match self {
@@ -58,25 +76,20 @@ impl CallLayout {
         let mut stack_count = 0usize;
         let mut locations = Vec::with_capacity(types.len());
 
-        for ty in types {
-            let location = match ty {
-                MirType::F64 if sse_index < SSE_ARGUMENT_REGISTERS.len() => {
+        for &ty in types {
+            let location = match scalar_class(ty)? {
+                ScalarClass::Sse if sse_index < SSE_ARGUMENT_REGISTERS.len() => {
                     let register = SSE_ARGUMENT_REGISTERS[sse_index];
                     sse_index += 1;
                     ArgumentLocation::SseRegister(register)
                 }
-                MirType::F64 => stack_location(stack_count)?,
-                MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool
-                    if integer_index < INTEGER_ARGUMENT_REGISTERS.len() =>
-                {
+                ScalarClass::Sse => stack_location(stack_count)?,
+                ScalarClass::Integer if integer_index < INTEGER_ARGUMENT_REGISTERS.len() => {
                     let register = INTEGER_ARGUMENT_REGISTERS[integer_index];
                     integer_index += 1;
                     ArgumentLocation::IntegerRegister(register)
                 }
-                MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => {
-                    stack_location(stack_count)?
-                }
-                MirType::Unit => return None,
+                ScalarClass::Integer => stack_location(stack_count)?,
             };
             if matches!(location, ArgumentLocation::Stack(_)) {
                 stack_count += 1;
@@ -133,6 +146,29 @@ mod tests {
             ]
         );
         assert_eq!(layout.stack_size(), 0);
+    }
+
+    #[test]
+    fn classifies_every_payload_primitive_through_one_exhaustive_boundary() {
+        let layout = CallLayout::classify(&[
+            MirType::I64,
+            MirType::U64,
+            MirType::U8,
+            MirType::Bool,
+            MirType::F64,
+        ])
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rdx),
+                ArgumentLocation::IntegerRegister(Register::Rcx),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm0),
+            ]
+        );
     }
 
     #[test]

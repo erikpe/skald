@@ -300,6 +300,16 @@ exercise the same representation through the complete frontend pipeline.
 
 System V integer-class parameters, including `bool`, use `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and `%r9`; `f64` parameters independently use `%xmm0` through `%xmm7`; exhausted parameters use the shared stack area. Parameters are spilled into their frame homes on entry. Integer-class results use `%rax`, `f64` uses `%xmm0`, and an external C boolean result is normalized from `%al` before storage. `unit` has no result payload and neither reads nor writes a fictitious return register. The backend selects call symbols centrally from declaration linkage: internal definitions use deterministic GNU-local `.Lska_fn_N` symbols that cannot collide with valid exact external identifiers, while external declarations retain their declared symbol. Assembly-shape tests cover mixed register/stack ABI boundaries, frame and scratch-register policy, call linkage, boolean normalization, integer and SSE2 instructions, legality rejection, native floating execution, and acceptance by the system assembler.
 
+T7 audits primitive extension points across source kinds, semantic types,
+typed operations, HIR-to-MIR lowering, MIR verification and dumps, target ABI
+classification, and instruction selection. Matches at independent phase
+boundaries intentionally remain exhaustive so a new enum variant creates a
+compile-time list of decisions. Within the x86-64 backend, all payload types
+now pass through one exhaustive scalar ABI-class function rather than repeated
+integer-type lists. A focused test enumerates every current primitive, while
+native goldens cover register-only and independently exhausted integer/SSE
+calls.
+
 The target-specific assembly model remains owned by the backend and does not leak target registers or ABI details into MIR.
 
 ## 6. Assembly, Runtime, and Link Boundary

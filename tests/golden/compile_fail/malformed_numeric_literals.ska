@@ -1,0 +1,23 @@
+fn bad_suffix() -> u64 {
+    return 42u64;
+}
+
+fn missing_fraction() -> f64 {
+    return 1.;
+}
+
+fn missing_integer() -> f64 {
+    return .5;
+}
+
+fn forbidden_suffix() -> f64 {
+    return 1.0f64;
+}
+
+fn incomplete_exponent() -> f64 {
+    return 1e+;
+}
+
+fn main() -> i64 {
+    return 0;
+}

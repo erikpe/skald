@@ -31,6 +31,12 @@ records mixed with the older output operations. C11 compile-time checks require
 IEC 60559 semantics, eight-bit bytes, and the binary radix, significand width,
 exponent range, and storage size needed for IEEE-754 binary64.
 
+T7 does not change runtime ABI version 4. Its native compiler goldens reuse
+these directly tested symbols to cover locals, internal calls, mixed
+integer/SSE register and stack placement, and consecutive cross-type records.
+This keeps representation testing in the runtime harness and code-generation
+testing in the golden suite without duplicating implementation paths.
+
 The harness additionally runs each output function in a child process whose
 stdout descriptor is closed. Every child must terminate unsuccessfully, proving
 that a detected write or flush failure cannot be reported as a successful
