@@ -116,6 +116,7 @@ In the current development checkout, the Niflheim repository is available as the
 - [`i64` output and golden-test observability roadmap](docs/I64_OUTPUT_ROADMAP.md) — PR-sized slices for `unit`, restricted external calls, runtime integer output, and exact stdout goldens.
 - [`bool` and conditional control-flow roadmap](docs/BOOL_CONDITIONALS_ROADMAP.md) — PR-sized tasks for boolean values and output, verified multi-block MIR, and Niflheim-style `if` / `elif` / `else`.
 - [Remaining primitive-types roadmap](docs/PRIMITIVE_TYPES_ROADMAP.md) — PR-sized tasks for `u64`, `u8`, and `f64`, including literals, arithmetic, runtime observability, and mixed integer/SSE ABI lowering.
+- [Compiler implementation cleanup roadmap](docs/IMPLEMENTATION_CLEANUP_ROADMAP.md) — ordered refactoring tasks for dependency direction, artifact safety, control-flow analysis, module size, and test maintainability.
 - [Compiler debugging artifacts](docs/DEBUGGING.md) — deterministic phase dumps, assembly inspection, and verifier boundaries.
 - [Next-slice boundaries](docs/NEXT_SLICE_BOUNDARIES.md) — responsibilities and extension rules that future language work should preserve.
 - [Niflheim language specification](../niflheim/docs/LANGUAGE_MVP_SPEC_V0.1.md) — historical background for the language from which the first Skald draft was derived.
