@@ -6,8 +6,18 @@ CFLAGS += -std=c11 -Wall -Wextra -Werror -Iinclude
 BUILD_DIR ?= ../build/runtime
 OBJECT := $(BUILD_DIR)/skald_runtime.o
 ARCHIVE := $(BUILD_DIR)/libskald_runtime.a
-TEST_SOURCE := ../tests/runtime/test_runtime_abi.c
-TEST_BINARY := $(BUILD_DIR)/test_runtime_abi
+
+TEST_DIR := ../tests/runtime
+TEST_SUPPORT_SOURCE := $(TEST_DIR)/runtime_test_support.c
+TEST_SUPPORT_HEADER := $(TEST_DIR)/runtime_test_support.h
+TEST_SUPPORT_OBJECT := $(BUILD_DIR)/runtime_test_support.o
+CONTRACT_TEST_SOURCE := $(TEST_DIR)/test_runtime_contract.c
+CONTRACT_TEST_BINARY := $(BUILD_DIR)/test_runtime_contract
+OUTPUT_TEST_SOURCE := $(TEST_DIR)/test_runtime_output.c
+OUTPUT_TEST_BINARY := $(BUILD_DIR)/test_runtime_output
+OUTPUT_FAILURE_TEST_SOURCE := $(TEST_DIR)/test_runtime_output_failure.c
+OUTPUT_FAILURE_TEST_BINARY := $(BUILD_DIR)/test_runtime_output_failure
+TEST_BINARIES := $(CONTRACT_TEST_BINARY) $(OUTPUT_TEST_BINARY) $(OUTPUT_FAILURE_TEST_BINARY)
 
 .PHONY: all test clean
 
@@ -22,12 +32,22 @@ $(OBJECT): src/skald_runtime.c include/skald_runtime.h | $(BUILD_DIR)
 $(ARCHIVE): $(OBJECT)
 	$(AR) rcs $(ARCHIVE) $(OBJECT)
 
-$(TEST_BINARY): $(TEST_SOURCE) $(ARCHIVE) include/skald_runtime.h
-	$(CC) $(CFLAGS) $(TEST_SOURCE) $(ARCHIVE) -o $(TEST_BINARY)
+$(TEST_SUPPORT_OBJECT): $(TEST_SUPPORT_SOURCE) $(TEST_SUPPORT_HEADER) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $(TEST_SUPPORT_SOURCE) -o $(TEST_SUPPORT_OBJECT)
 
-test: $(TEST_BINARY)
-	$(TEST_BINARY)
+$(CONTRACT_TEST_BINARY): $(CONTRACT_TEST_SOURCE) $(ARCHIVE) include/skald_runtime.h
+	$(CC) $(CFLAGS) $(CONTRACT_TEST_SOURCE) $(ARCHIVE) -o $(CONTRACT_TEST_BINARY)
+
+$(OUTPUT_TEST_BINARY): $(OUTPUT_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
+	$(CC) $(CFLAGS) $(OUTPUT_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(OUTPUT_TEST_BINARY)
+
+$(OUTPUT_FAILURE_TEST_BINARY): $(OUTPUT_FAILURE_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) include/skald_runtime.h
+	$(CC) $(CFLAGS) $(OUTPUT_FAILURE_TEST_SOURCE) $(TEST_SUPPORT_OBJECT) $(ARCHIVE) -o $(OUTPUT_FAILURE_TEST_BINARY)
+
+test: $(TEST_BINARIES)
+	$(CONTRACT_TEST_BINARY)
+	$(OUTPUT_TEST_BINARY)
+	$(OUTPUT_FAILURE_TEST_BINARY)
 
 clean:
-	rm -f $(OBJECT) $(ARCHIVE) $(TEST_BINARY)
-
+	rm -f $(OBJECT) $(ARCHIVE) $(TEST_SUPPORT_OBJECT) $(TEST_BINARIES)

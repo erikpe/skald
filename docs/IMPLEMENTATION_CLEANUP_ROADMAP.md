@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R9 are complete and R10 is the next implementation task.
+Status: in progress; R0–R10 are complete and R11 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -69,7 +69,7 @@ gate before its checkbox is marked complete.
 - [x] R7 — Decompose x86-64 instruction and call lowering
 - [x] R8 — Introduce shared compiler test support
 - [x] R9 — Split oversized Rust test modules by behavior
-- [ ] R10 — Split the runtime ABI harness by responsibility
+- [x] R10 — Split the runtime ABI harness by responsibility
 - [ ] R11 — Correct diagnostics, comments, and small formatting duplication
 - [ ] R12 — Complete the cleanup audit and final quality gate
 
@@ -287,12 +287,12 @@ thousand lines, and each test has a clear behavior-oriented home.
 **Purpose:** Isolate runtime contract, successful formatting, and fatal-error
 behavior while retaining direct C ABI coverage.
 
-- [ ] Split ABI/version and platform assertions from output-record tests.
-- [ ] Separate successful stdout capture from child-process failure tests.
-- [ ] Share only small C helpers whose invariants are genuinely common.
-- [ ] Update the runtime Makefile to build and run every harness
+- [x] Split ABI/version and platform assertions from output-record tests.
+- [x] Separate successful stdout capture from child-process failure tests.
+- [x] Share only small C helpers whose invariants are genuinely common.
+- [x] Update the runtime Makefile to build and run every harness
       deterministically.
-- [ ] Keep the runtime library unchanged unless extraction exposes a defect.
+- [x] Keep the runtime library unchanged unless extraction exposes a defect.
 
 **Tests:** All runtime harnesses under C11 with -Wall -Wextra -Werror, plus make
 runtime-test and the golden suite.
