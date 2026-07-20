@@ -352,6 +352,16 @@ M6 implements the first backend behind a small target registry that currently ac
 
 The x86-64 implementation separates ABI classification, frame planning, instruction selection, a typed target assembly model, and GNU textual emission. Every MIR storage slot and transient value initially receives an eight-byte stack home in a 16-byte-aligned fixed frame. This intentionally stack-heavy strategy uses `%rax` and `%rcx` as caller-saved scratch registers and preserves only the frame pointer; future register allocation can therefore replace a contained location-planning decision without changing MIR. C4 gives every MIR block a collision-proof `.Lska_fn_N_block_M` label and emits blocks in stable ID order. `Goto` becomes an unconditional jump; `Branch` loads and tests its canonical boolean condition, jumps to the true target when nonzero, and otherwise jumps explicitly to the false target. A function-local epilogue label centralizes frame teardown for returns from any block.
 
+R7 keeps instruction selection behind one exhaustive `MirInstruction`
+dispatcher while splitting operation policy under `x86_64_sysv/lower/`.
+`assignment` owns constants, loads, and exhaustive integer and floating unary
+and binary rvalue selection; `call` owns incoming parameter spills and outgoing
+System V calls; `value` owns stack-home movement and canonicalization; and
+`terminator` owns returns, jumps, and branches. The parent lowering module now
+orchestrates functions and target labels only. ABI classification, frame
+planning, legality checks, the typed machine model, and assembly emission remain
+independent boundaries.
+
 T4 keeps `u8` in those general eight-byte homes while defining only the low
 eight bits as its language value. One typed instruction-selection helper
 zero-extends `%al` into `%rax` before a produced or incoming `u8` is stored or

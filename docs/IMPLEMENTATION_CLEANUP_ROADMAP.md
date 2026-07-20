@@ -66,7 +66,7 @@ gate before its checkbox is marked complete.
 - [x] R4 — Restructure the type checker around per-function context
 - [x] R5 — Split the parser by grammar responsibility
 - [x] R6 — Bound recursive syntax nesting
-- [ ] R7 — Decompose x86-64 instruction and call lowering
+- [x] R7 — Decompose x86-64 instruction and call lowering
 - [ ] R8 — Introduce shared compiler test support
 - [ ] R9 — Split oversized Rust test modules by behavior
 - [ ] R10 — Split the runtime ABI harness by responsibility
@@ -226,12 +226,12 @@ stable diagnostic.
 **Purpose:** Make new MIR operations and ABI types straightforward to add
 without enlarging one instruction-selection function.
 
-- [ ] Separate assignment/rvalue selection from instruction dispatch.
-- [ ] Extract integer and floating unary/binary operation selection.
-- [ ] Isolate loads, stores, canonicalization, calls, and terminators behind
+- [x] Separate assignment/rvalue selection from instruction dispatch.
+- [x] Extract integer and floating unary/binary operation selection.
+- [x] Isolate loads, stores, canonicalization, calls, and terminators behind
       focused helpers.
-- [ ] Preserve the ABI, frame, legality, machine-model, and emission boundaries.
-- [ ] Keep exhaustive MIR operation matches and structured backend errors.
+- [x] Preserve the ABI, frame, legality, machine-model, and emission boundaries.
+- [x] Keep exhaustive MIR operation matches and structured backend errors.
 
 **Tests:** Assembly-shape tests for every primitive operation; mixed
 register/stack calls; u8 canonicalization; boolean results; native floating
