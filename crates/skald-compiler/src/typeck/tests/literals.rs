@@ -141,11 +141,11 @@ fn rejects_implicit_i64_u64_conversions_and_unsigned_negation() {
         ),
         (
             "fn value() -> u64 { return 1u + 2; } fn main() -> i64 { return 0; }",
-            "right arithmetic operand has type `i64` but `u64` is required",
+            "binary arithmetic requires operands of the same numeric type",
         ),
         (
             "fn value() -> i64 { return 1 + 2u; } fn main() -> i64 { return 0; }",
-            "right arithmetic operand has type `u64` but `i64` is required",
+            "binary arithmetic requires operands of the same numeric type",
         ),
         (
             "fn main() -> i64 { var value: i64 = 1u; return 0; }",
@@ -161,7 +161,7 @@ fn rejects_implicit_i64_u64_conversions_and_unsigned_negation() {
         ),
         (
             "fn value() -> u64 { return -1u; } fn main() -> i64 { return 0; }",
-            "unary negation operand has type `u64` but `i64` is required",
+            "unary negation requires an `i64` or `f64` operand",
         ),
     ] {
         let output = check_text(source);
@@ -213,7 +213,7 @@ fn rejects_implicit_u8_conversions_and_unsigned_negation() {
         ),
         (
             "fn value() -> u8 { return 1u8 + 2u; } fn main() -> i64 { return 0; }",
-            "right arithmetic operand has type `u64` but `u8` is required",
+            "binary arithmetic requires operands of the same numeric type",
         ),
         (
             "fn main() -> i64 { var value: i64 = 1u8; return 0; }",
@@ -225,7 +225,7 @@ fn rejects_implicit_u8_conversions_and_unsigned_negation() {
         ),
         (
             "fn value() -> u8 { return -1u8; } fn main() -> i64 { return 0; }",
-            "unary negation operand has type `u8` but `i64` is required",
+            "unary negation requires an `i64` or `f64` operand",
         ),
     ] {
         let output = check_text(source);
@@ -299,7 +299,7 @@ fn rejects_implicit_f64_conversions_and_truthiness() {
         ),
         (
             "fn value() -> f64 { return 1.0 + 2; } fn main() -> i64 { return 0; }",
-            "right arithmetic operand has type `i64` but `f64` is required",
+            "binary arithmetic requires operands of the same numeric type",
         ),
         (
             "fn take(value: f64) -> unit {} fn main() -> i64 { take(1); return 0; }",

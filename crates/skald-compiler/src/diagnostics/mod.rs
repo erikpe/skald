@@ -6,9 +6,11 @@
 
 mod model;
 mod render;
+mod wording;
 
 pub use model::{Diagnostic, Diagnostics, Label, LabelStyle, Severity};
 pub use render::{render_diagnostic, render_diagnostics};
+pub(crate) use wording::format_type_list;
 
 #[cfg(test)]
 mod tests;

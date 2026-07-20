@@ -28,8 +28,8 @@ fn resolved_dump_is_deterministic_and_exposes_only_ids_at_uses() {
 
 #[test]
 fn parsed_source_ast_still_contains_names_before_resolution() {
-    // This compile-time shape check documents the phase boundary: M3 reads
-    // source names, while resolved uses are represented only by BindingId
+    // This compile-time shape check documents the phase boundary: resolution
+    // reads source names, while resolved uses are represented only by BindingId
     // or FunctionId.
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("test.ska", "fn main() -> i64 { return name; }");

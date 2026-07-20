@@ -84,6 +84,7 @@ The Rust library containing the compiler pipeline. It begins as one library crat
 src/
 ├── lib.rs
 ├── test_support.rs       # `cfg(test)` only
+├── dump_format.rs        # private deterministic dump primitives
 ├── driver/
 ├── function_table.rs
 ├── identity.rs
@@ -106,6 +107,13 @@ the boundary, declare private implementation modules, and explicitly re-export
 the intended public API. Substantial module-level unit tests live in an
 adjacent `tests.rs`; small cohesive modules may remain single files and keep a
 few tightly local tests inline.
+
+Cross-phase formatting stays deliberately narrow. The private `dump_format`
+module owns only the byte-identical indentation, quoted-string escaping, and
+source-span suffix used by compiler dumps; each phase still owns the structure
+and vocabulary of its representation. Diagnostic type sets likewise remain
+owned by the phase enforcing them, while one diagnostics helper renders those
+sets consistently as source type names.
 
 ### `runtime/`
 

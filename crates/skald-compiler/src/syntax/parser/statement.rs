@@ -217,7 +217,10 @@ impl Parser<'_> {
         self.expect(TokenKind::Colon, "`:` after the local name");
         let type_syntax = self.parse_type(
             TypeContext::StoredValue,
-            "expected the local type `i64`, `u64`, `u8`, `f64`, or `bool`",
+            format!(
+                "expected the local type {}",
+                format_type_list(STORED_TYPE_NAMES)
+            ),
         );
         self.expect(TokenKind::Equal, "`=` before the local initializer");
         let initializer = self.parse_expression();

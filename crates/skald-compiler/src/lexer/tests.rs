@@ -16,7 +16,7 @@ fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) 
 }
 
 #[test]
-fn lexes_the_complete_m1_token_surface() {
+fn lexes_the_complete_supported_token_surface() {
     let source = "fn add(left: i64, right: i64) -> i64 {\n    var result: i64 = left + right * 2 - 1;\n    return result;\n}";
     let (_, _, output) = lex_text(source);
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

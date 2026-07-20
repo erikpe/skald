@@ -133,8 +133,8 @@ impl<'source> Lexer<'source> {
         let scan = scan_numeric_literal(self.remaining());
         self.offset += scan.byte_len;
 
-        // Source syntax is enabled only when the kind has a complete path
-        // through the supported target. T3/T4/T6 add u64/u8/f64.
+        // Every recognized numeric kind has a complete path through the
+        // implemented compiler pipeline.
         if !matches!(
             scan.kind,
             Some(
@@ -213,7 +213,7 @@ impl<'source> Lexer<'source> {
                         UNEXPECTED_CHARACTER,
                         format!("unexpected character `{escaped}`"),
                     )
-                    .with_primary_label(span, "not valid in the M1 grammar"),
+                    .with_primary_label(span, "not a recognized Skald token"),
                 );
                 return;
             }

@@ -1,6 +1,6 @@
 # Compiler Implementation Cleanup Roadmap
 
-Status: in progress; R0–R10 are complete and R11 is the next implementation task.
+Status: in progress; R0–R11 are complete and R12 is the next implementation task.
 
 This roadmap turns the post-T7 implementation audit into small, reviewable
 refactoring tasks. Its goal is to make future language work easier to add and
@@ -70,7 +70,7 @@ gate before its checkbox is marked complete.
 - [x] R8 — Introduce shared compiler test support
 - [x] R9 — Split oversized Rust test modules by behavior
 - [x] R10 — Split the runtime ABI harness by responsibility
-- [ ] R11 — Correct diagnostics, comments, and small formatting duplication
+- [x] R11 — Correct diagnostics, comments, and small formatting duplication
 - [ ] R12 — Complete the cleanup audit and final quality gate
 
 Milestone checkboxes below should be marked as implementation progresses. A
@@ -306,14 +306,14 @@ harness directly.
 **Purpose:** Remove obsolete milestone terminology and make messages describe
 current language rules accurately.
 
-- [ ] Replace production comments and diagnostics that present M1/M3/C4/T1 or
+- [x] Replace production comments and diagnostics that present M1/M3/C4/T1 or
       the first vertical slice as the current language boundary.
-- [ ] State in unary-negation diagnostics that i64 and f64 are accepted.
-- [ ] Describe binary arithmetic as requiring equal numeric operand types.
-- [ ] Centralize supported-type list rendering where diagnostics repeat it.
-- [ ] Add a tiny shared dump-format helper only for identical quoting, escaping,
+- [x] State in unary-negation diagnostics that i64 and f64 are accepted.
+- [x] Describe binary arithmetic as requiring equal numeric operand types.
+- [x] Centralize supported-type list rendering where diagnostics repeat it.
+- [x] Add a tiny shared dump-format helper only for identical quoting, escaping,
       indentation, or span behavior still duplicated after module splits.
-- [ ] Preserve historical milestone wording in roadmap and history documents.
+- [x] Preserve historical milestone wording in roadmap and history documents.
 
 **Tests:** Exact affected diagnostic goldens; dump snapshots; searches for
 obsolete production terminology; and the complete suite.

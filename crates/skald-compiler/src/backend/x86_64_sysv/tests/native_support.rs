@@ -7,7 +7,7 @@ pub(super) fn assert_system_assembler_accepts(output: &str) {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("the M0 Linux toolchain prerequisite requires `cc`");
+        .expect("native backend tests require the Linux `cc` toolchain");
     child
         .stdin
         .take()
@@ -33,7 +33,7 @@ pub(super) fn run_native_assembly(output: &str) -> std::process::ExitStatus {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("the M0 Linux toolchain prerequisite requires `cc`");
+        .expect("native backend tests require the Linux `cc` toolchain");
     child
         .stdin
         .take()

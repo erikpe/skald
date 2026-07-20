@@ -7,10 +7,10 @@ use crate::mir::{verify_mir, MirProgram, MirVerificationErrors};
 
 /// Runs the target-independent MIR pass pipeline.
 ///
-/// The first vertical slice has no transformations, but this explicit boundary
-/// prevents correctness from depending on a backend-owned implicit pipeline.
-/// Verification runs here after MIR construction and backends verify again at
-/// their trust boundary before target lowering.
+/// No transformations are currently enabled, but this explicit boundary keeps
+/// correctness independent of a backend-owned implicit pipeline. Verification
+/// runs here after MIR construction and backends verify again at their trust
+/// boundary before target lowering.
 pub fn run_mir_pipeline(program: MirProgram) -> Result<MirProgram, MirVerificationErrors> {
     verify_mir(&program)?;
     Ok(program)
@@ -27,7 +27,7 @@ mod tests {
     }
 
     #[test]
-    fn first_slice_pipeline_preserves_valid_mir() {
+    fn empty_pipeline_preserves_valid_mir() {
         let mir = lowered_program();
         let expected = mir.clone();
 

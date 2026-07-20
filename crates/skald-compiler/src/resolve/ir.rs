@@ -11,8 +11,8 @@ use crate::{
 pub struct ResolvedProgram {
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
-    /// Function named `main`, selected during resolution. M4 validates its
-    /// signature and diagnoses its absence.
+    /// Function named `main`, selected during resolution. Type checking
+    /// validates its signature and diagnoses its absence.
     pub entry_function: Option<FunctionId>,
     pub span: Span,
 }

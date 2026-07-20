@@ -1,7 +1,7 @@
 //! Program-level validation and typed-HIR orchestration.
 
 use crate::{
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
         HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinitionTable,
         HirFunctionLinkage, HirParameter, HirProgram, Type,
@@ -15,6 +15,9 @@ use crate::{
 };
 
 use super::function::FunctionChecker;
+
+const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
+const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
 
 pub const MISSING_ENTRY_POINT: &str = "TYP001";
 pub const INVALID_ENTRY_POINT: &str = "TYP002";
@@ -155,7 +158,11 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
                 )
                 .with_primary_label(
                     declaration.span,
-                    "expected by-value `i64`, `u64`, `u8`, `f64`, or `bool` parameters and an `i64`, `u64`, `u8`, `f64`, `bool`, or `unit` result",
+                    format!(
+                        "expected by-value {} parameters and a result of type {}",
+                        format_type_list(EXTERNAL_PARAMETER_TYPE_NAMES),
+                        format_type_list(EXTERNAL_RESULT_TYPE_NAMES)
+                    ),
                 )
                 .with_note("the source function name must also be its exact linker symbol"),
             );

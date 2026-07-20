@@ -314,7 +314,7 @@ fn stops_before_semantic_phases_after_a_source_error() {
 }
 
 #[test]
-fn malformed_first_slice_sources_never_panic() {
+fn malformed_supported_sources_never_panic() {
     let valid = "fn main() -> i64 { var value: i64 = 1; return value + 2; }";
     let mut malformed: Vec<&str> = valid
         .char_indices()

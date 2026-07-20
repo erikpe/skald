@@ -1,7 +1,7 @@
 //! Recovering recursive-descent parser for the implemented source subset.
 
 use crate::{
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::{format_type_list, Diagnostic, Diagnostics},
     lexer::{Token, TokenKind},
     source::{SourceFile, Span},
 };
@@ -24,6 +24,9 @@ pub const EXCESSIVE_NESTING: &str = "PAR005";
 /// A function body consumes one level. Grouped and unary expressions, calls,
 /// and nested blocks consume another level while their contents are parsed.
 pub const MAX_SYNTAX_NESTING: usize = 128;
+
+const STORED_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
+const RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
 
 #[derive(Debug)]
 pub struct ParseOutput {

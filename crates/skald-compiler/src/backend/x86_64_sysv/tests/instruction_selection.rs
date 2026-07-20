@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn selects_every_first_slice_arithmetic_operation_and_storage_copy() {
+fn selects_every_supported_arithmetic_operation_and_storage_copy() {
     let output = assembly(concat!(
         "fn helper(a: i64) -> i64 { return -a; }\n",
         "fn main() -> i64 { ",

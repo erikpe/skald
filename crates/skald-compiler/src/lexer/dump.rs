@@ -1,4 +1,4 @@
-use crate::source::SourceFile;
+use crate::{dump_format::write_quoted, source::SourceFile};
 
 use super::Token;
 
@@ -31,11 +31,7 @@ pub fn dump_tokens(source: &SourceFile, tokens: &[Token]) -> String {
         dump.push(':');
         dump.push_str(&end.column.to_string());
         dump.push(' ');
-        dump.push('"');
-        for character in lexeme.chars() {
-            dump.extend(character.escape_default());
-        }
-        dump.push('"');
+        write_quoted(&mut dump, lexeme);
         dump.push('\n');
     }
 

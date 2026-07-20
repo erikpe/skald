@@ -1,4 +1,4 @@
-error[RES005]: function `helper` cannot be used as a value in the first vertical slice
+error[RES005]: function `helper` cannot be used as a value
  --> tests/golden/compile_fail/function_used_as_value.ska:6:12
    |
 6 |     return helper;

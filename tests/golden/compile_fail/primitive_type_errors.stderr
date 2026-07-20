@@ -10,23 +10,30 @@ error[TYP005]: return value has type `f64` but `i64` is required
 8 |     return 1.0;
    |            ^^^ type mismatch
 
-error[TYP005]: right arithmetic operand has type `i64` but `f64` is required
- --> tests/golden/compile_fail/primitive_type_errors.ska:12:18
+error[TYP005]: binary arithmetic requires operands of the same numeric type
+ --> tests/golden/compile_fail/primitive_type_errors.ska:12:16
     |
 12 |     return 1.0 + 1;
-    |                  ^ type mismatch
+    |                ^ operator cannot be applied to these operand types
+    |
+12 |     return 1.0 + 1;
+    |            --- left operand has type `f64`
+    |
+12 |     return 1.0 + 1;
+    |                  - right operand has type `i64`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`
 
-error[TYP005]: unary negation operand has type `u64` but `i64` is required
+error[TYP005]: unary negation requires an `i64` or `f64` operand
  --> tests/golden/compile_fail/primitive_type_errors.ska:16:13
     |
 16 |     return -1u;
-    |             ^^ type mismatch
+    |             ^^ operand has type `u64`
 
-error[TYP005]: unary negation operand has type `u8` but `i64` is required
+error[TYP005]: unary negation requires an `i64` or `f64` operand
  --> tests/golden/compile_fail/primitive_type_errors.ska:20:13
     |
 20 |     return -1u8;
-    |             ^^^ type mismatch
+    |             ^^^ operand has type `u8`
 
 error[TYP005]: call argument has type `i64` but `u64` is required
  --> tests/golden/compile_fail/primitive_type_errors.ska:24:14

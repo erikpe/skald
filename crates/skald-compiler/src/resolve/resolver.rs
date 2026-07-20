@@ -423,7 +423,7 @@ impl<'program> FunctionResolver<'program> {
                 Diagnostic::error(
                     FUNCTION_USED_AS_VALUE,
                     format!(
-                        "function `{}` cannot be used as a value in the first vertical slice",
+                        "function `{}` cannot be used as a value",
                         identifier.name.text
                     ),
                 )
@@ -462,11 +462,8 @@ impl<'program> FunctionResolver<'program> {
     fn resolve_call_target(&mut self, callee: &syntax::Expression) -> Option<FunctionId> {
         let syntax::Expression::Identifier(identifier) = callee else {
             self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_CALL_TARGET,
-                    "invalid direct-call target in the first vertical slice",
-                )
-                .with_primary_label(callee.span(), "expected a function name here"),
+                Diagnostic::error(INVALID_CALL_TARGET, "call target must be a function name")
+                    .with_primary_label(callee.span(), "expected a function name here"),
             );
             return None;
         };

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn parses_the_vertical_slice_demonstration_program() {
+fn parses_a_representative_program() {
     let source = concat!(
         "fn twice(value: i64) -> i64 {\n",
         "    return value * 2;\n",

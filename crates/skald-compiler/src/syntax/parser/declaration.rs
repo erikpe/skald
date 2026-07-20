@@ -13,12 +13,13 @@ impl TypeContext {
         matches!(self, Self::Result)
     }
 
-    const fn expected_label(self) -> &'static str {
+    fn expected_label(self) -> String {
         match self {
-            Self::Result => "expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`",
-            Self::StoredValue => {
-                "parameters and locals must have type `i64`, `u64`, `u8`, `f64`, or `bool`"
-            }
+            Self::Result => format!("expected {}", format_type_list(RESULT_TYPE_NAMES)),
+            Self::StoredValue => format!(
+                "parameters and locals must have type {}",
+                format_type_list(STORED_TYPE_NAMES)
+            ),
         }
     }
 }
@@ -141,7 +142,10 @@ impl Parser<'_> {
         self.expect(TokenKind::Colon, "`:` after the parameter name");
         let type_syntax = self.parse_type(
             TypeContext::StoredValue,
-            "expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`",
+            format!(
+                "expected the parameter type {}",
+                format_type_list(STORED_TYPE_NAMES)
+            ),
         );
 
         match (name, type_syntax) {
@@ -160,7 +164,7 @@ impl Parser<'_> {
     pub(super) fn parse_type(
         &mut self,
         context: TypeContext,
-        message: &'static str,
+        message: impl Into<String>,
     ) -> Option<TypeSyntax> {
         let token = self.peek();
         if let Some(kind) = token_type_kind(token.kind) {

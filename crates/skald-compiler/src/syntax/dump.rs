@@ -2,7 +2,10 @@
 
 use std::fmt::Write;
 
-use crate::source::Span;
+use crate::{
+    dump_format::{write_indentation, write_quoted, write_span},
+    source::Span,
+};
 
 use super::ast::*;
 
@@ -215,9 +218,7 @@ impl AstDumper {
     }
 
     fn write_indentation(&mut self) {
-        for _ in 0..self.indentation {
-            self.output.push_str("  ");
-        }
+        write_indentation(&mut self.output, self.indentation);
     }
 
     fn indented(&mut self, write_contents: impl FnOnce(&mut Self)) {
@@ -225,16 +226,4 @@ impl AstDumper {
         write_contents(self);
         self.indentation -= 1;
     }
-}
-
-fn write_quoted(output: &mut String, text: &str) {
-    output.push('"');
-    for character in text.chars() {
-        output.extend(character.escape_default());
-    }
-    output.push('"');
-}
-
-fn write_span(output: &mut String, span: Span) {
-    let _ = write!(output, " @{}..{}", span.range().start(), span.range().end());
 }

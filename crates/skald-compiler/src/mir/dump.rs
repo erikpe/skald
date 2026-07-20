@@ -2,18 +2,15 @@
 
 use std::fmt::Write;
 
-use crate::source::Span;
+use crate::dump_format::{write_quoted, write_span};
 
 use super::model::*;
 
 pub fn dump_mir(program: &MirProgram) -> String {
     let mut output = String::new();
-    let _ = writeln!(
-        output,
-        "MirProgram @{}..{}",
-        program.span.range().start(),
-        program.span.range().end()
-    );
+    output.push_str("MirProgram");
+    write_span(&mut output, program.span);
+    output.push('\n');
     let _ = writeln!(output, "  Entry {}", program.entry_function);
     output.push_str("  Declarations\n");
     for declaration in program.declarations.iter() {
@@ -27,20 +24,17 @@ pub fn dump_mir(program: &MirProgram) -> String {
 }
 
 fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
-    let _ = writeln!(
-        output,
-        "    Declaration {} \"{}\" {} @{}..{}",
-        declaration.id,
-        escape(&declaration.name),
-        match &declaration.linkage {
-            MirFunctionLinkage::Internal => "internal".to_owned(),
-            MirFunctionLinkage::External { symbol } => {
-                format!("external \"{}\"", escape(symbol))
-            }
-        },
-        declaration.span.range().start(),
-        declaration.span.range().end()
-    );
+    let _ = write!(output, "    Declaration {} ", declaration.id);
+    write_quoted(output, &declaration.name);
+    match &declaration.linkage {
+        MirFunctionLinkage::Internal => output.push_str(" internal"),
+        MirFunctionLinkage::External { symbol } => {
+            output.push_str(" external ");
+            write_quoted(output, symbol);
+        }
+    }
+    write_span(output, declaration.span);
+    output.push('\n');
     output.push_str("      Signature (");
     for (index, parameter) in declaration.parameter_types.iter().enumerate() {
         if index != 0 {
@@ -52,13 +46,9 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
 }
 
 fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
-    let _ = writeln!(
-        output,
-        "    Definition {} @{}..{}",
-        function.function,
-        function.span.range().start(),
-        function.span.range().end()
-    );
+    let _ = write!(output, "    Definition {}", function.function);
+    write_span(output, function.span);
+    output.push('\n');
     output.push_str("      Parameters");
     for parameter in &function.parameters {
         let _ = write!(output, " {parameter}");
@@ -70,27 +60,17 @@ fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
             MirStorageKind::Parameter => "parameter",
             MirStorageKind::Local => "local",
         };
-        let _ = writeln!(
-            output,
-            "        {} {kind} {} \"{}\" : {} @{}..{}",
-            storage.id,
-            storage.source,
-            escape(&storage.name),
-            storage.ty.name(),
-            storage.span.range().start(),
-            storage.span.range().end()
-        );
+        let _ = write!(output, "        {} {kind} {} ", storage.id, storage.source);
+        write_quoted(output, &storage.name);
+        let _ = write!(output, " : {}", storage.ty.name());
+        write_span(output, storage.span);
+        output.push('\n');
     }
     output.push_str("      Values\n");
     for value in &function.values {
-        let _ = writeln!(
-            output,
-            "        {} : {} @{}..{}",
-            value.id,
-            value.ty.name(),
-            value.span.range().start(),
-            value.span.range().end()
-        );
+        let _ = write!(output, "        {} : {}", value.id, value.ty.name());
+        write_span(output, value.span);
+        output.push('\n');
     }
     let _ = writeln!(output, "      EntryBlock {}", function.body.entry);
     output.push_str("      Blocks\n");
@@ -100,13 +80,9 @@ fn dump_definition(output: &mut String, function: &MirFunctionDefinition) {
 }
 
 fn dump_block(output: &mut String, block: &MirBasicBlock) {
-    let _ = writeln!(
-        output,
-        "        {} @{}..{}",
-        block.id,
-        block.span.range().start(),
-        block.span.range().end()
-    );
+    let _ = write!(output, "        {}", block.id);
+    write_span(output, block.span);
+    output.push('\n');
     for instruction in &block.instructions {
         output.push_str("          ");
         match instruction {
@@ -217,12 +193,4 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         }
     }
     let _ = write!(output, " : {}", rvalue.ty.name());
-}
-
-fn write_span(output: &mut String, span: Span) {
-    let _ = write!(output, " @{}..{}", span.range().start(), span.range().end());
-}
-
-fn escape(text: &str) -> String {
-    text.chars().flat_map(char::escape_default).collect()
 }

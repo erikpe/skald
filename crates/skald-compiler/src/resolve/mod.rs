@@ -1,7 +1,7 @@
 //! Declaration collection, lexical name resolution, and stable identity assignment.
 //!
-//! M3 produces a separate resolved representation. Later phases consume typed
-//! IDs and never choose declarations by comparing source names.
+//! Resolution produces a separate representation with stable typed IDs. Later
+//! phases never choose declarations by comparing source names.
 
 mod dump;
 mod ir;

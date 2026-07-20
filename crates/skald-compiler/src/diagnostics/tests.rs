@@ -28,8 +28,8 @@ fn rendering_is_stable_and_source_aware() {
     let source = sources.get(source_id).unwrap();
     let span = source.span(12, 13).unwrap();
     let diagnostic = Diagnostic::error("LEX001", "unexpected character `@`")
-        .with_primary_label(span, "not valid in the M1 grammar")
-        .with_note("the first slice accepts only its documented token set");
+        .with_primary_label(span, "not a recognized Skald token")
+        .with_note("the lexer accepts only the documented token set");
 
     assert_eq!(
         render_diagnostic(&sources, &diagnostic),
@@ -38,8 +38,8 @@ fn rendering_is_stable_and_source_aware() {
             " --> example.ska:1:13\n",
             "   |\n",
             "1 | fn main() { @ }\n",
-            "   |             ^ not valid in the M1 grammar\n",
-            "  = note: the first slice accepts only its documented token set\n",
+            "   |             ^ not a recognized Skald token\n",
+            "  = note: the lexer accepts only the documented token set\n",
         )
     );
 }

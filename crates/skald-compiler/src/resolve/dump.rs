@@ -2,7 +2,10 @@
 
 use std::fmt::Write;
 
-use crate::source::Span;
+use crate::{
+    dump_format::{write_indentation, write_quoted, write_span},
+    source::Span,
+};
 
 use super::ir::*;
 
@@ -44,13 +47,13 @@ impl ResolvedDumper {
         self.write_indentation();
         let _ = write!(self.output, "Declaration {} ", declaration.id);
         write_quoted(&mut self.output, &declaration.name);
-        let linkage = match &declaration.linkage {
-            ResolvedFunctionLinkage::Internal => "internal".to_owned(),
+        match &declaration.linkage {
+            ResolvedFunctionLinkage::Internal => self.output.push_str(" internal"),
             ResolvedFunctionLinkage::External { symbol } => {
-                format!("external \"{}\"", escaped(symbol))
+                self.output.push_str(" external ");
+                write_quoted(&mut self.output, symbol);
             }
-        };
-        let _ = write!(self.output, " {linkage}");
+        }
         write_span(&mut self.output, declaration.span);
         self.output.push('\n');
 
@@ -229,9 +232,7 @@ impl ResolvedDumper {
     }
 
     fn write_indentation(&mut self) {
-        for _ in 0..self.indentation {
-            self.output.push_str("  ");
-        }
+        write_indentation(&mut self.output, self.indentation);
     }
 
     fn indented(&mut self, write_contents: impl FnOnce(&mut Self)) {
@@ -239,18 +240,4 @@ impl ResolvedDumper {
         write_contents(self);
         self.indentation -= 1;
     }
-}
-
-fn write_quoted(output: &mut String, text: &str) {
-    output.push('"');
-    output.push_str(&escaped(text));
-    output.push('"');
-}
-
-fn escaped(text: &str) -> String {
-    text.chars().flat_map(char::escape_default).collect()
-}
-
-fn write_span(output: &mut String, span: Span) {
-    let _ = write!(output, " @{}..{}", span.range().start(), span.range().end());
 }

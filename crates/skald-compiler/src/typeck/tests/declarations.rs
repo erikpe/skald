@@ -84,7 +84,7 @@ fn missing_entry_point_prevents_hir_construction() {
 }
 
 #[test]
-fn entry_point_must_have_the_exact_first_slice_signature() {
+fn entry_point_must_have_the_supported_signature() {
     let output = check_text("fn main(value: i64) -> i64 { return value; }");
 
     assert!(output.hir.is_none());

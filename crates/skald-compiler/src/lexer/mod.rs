@@ -1,4 +1,4 @@
-//! Source text to token-stream lowering for the first vertical slice.
+//! Source text to token-stream lowering.
 //!
 //! The lexer accepts the deliberately narrow token set documented in
 //! `grammar/README.md`. It recovers after invalid characters and malformed

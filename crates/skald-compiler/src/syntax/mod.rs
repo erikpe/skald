@@ -1,7 +1,8 @@
 //! Parser and source-oriented abstract syntax tree.
 //!
 //! Syntax nodes preserve source spans and source spellings, but do not contain
-//! resolved symbols or inferred semantic types. Name lookup belongs to M3.
+//! resolved symbols or inferred semantic types. Name lookup belongs to the
+//! resolution phase.
 
 mod ast;
 mod dump;
