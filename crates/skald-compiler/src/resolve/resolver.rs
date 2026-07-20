@@ -536,6 +536,7 @@ fn resolve_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
         kind: match type_syntax.kind {
             syntax::TypeKind::I64 => ResolvedTypeKind::I64,
             syntax::TypeKind::U64 => ResolvedTypeKind::U64,
+            syntax::TypeKind::U8 => ResolvedTypeKind::U8,
             syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
             syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
         },

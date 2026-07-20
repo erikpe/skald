@@ -64,6 +64,7 @@ pub struct Name {
 pub enum TypeKind {
     I64,
     U64,
+    U8,
     Bool,
     Unit,
 }

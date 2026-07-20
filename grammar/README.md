@@ -271,17 +271,17 @@ grammar or introduce any of the excluded forms above.
 
 ## Remaining primitive extension contract
 
-T0 fixes the syntax and semantic contract for the planned `u64`, `u8`, and
-`f64` extension. These forms are not implemented merely because they appear in
-this section; T3, T4, and T6 enable them only after each has a complete path
-through the supported backend.
+T0 fixes the syntax and semantic contract for the `u64`, `u8`, and `f64`
+extension. T3 and T4 have enabled the integer forms end-to-end. The `f64` form
+is not implemented merely because it appears in this section; T6 enables it
+only after it has a complete path through the supported backend.
 
 T2 implements the shared numeric scanner and carries an explicit literal kind,
 original spelling, and complete span through the source and resolved IR. T3
-enables `u64` and the concise `u` suffix end-to-end. Contracted `u8` and `f64`
-spellings remain recognized at the lexical boundary but deliberately invalid
-until T4 and T6. This feature gate prevents a parser or later phase from
-guessing a type by inspecting suffix text.
+enables `u64` and the concise `u` suffix end-to-end, and T4 enables `u8` and
+the `u8` suffix. Contracted `f64` spellings remain recognized at the lexical
+boundary but deliberately invalid until T6. This feature gate prevents a
+parser or later phase from guessing a type by inspecting suffix text.
 
 The extension adds these case-sensitive type keywords:
 
@@ -396,8 +396,8 @@ Decimal literals are converted during M4:
 
 This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
 
-An `i64`, `u64`, or `bool` function must return a value on every reachable path. A
-return in an unconditionally executed nested block satisfies this requirement,
+An `i64`, `u64`, `u8`, or `bool` function must return a value on every
+reachable path. A return in an unconditionally executed nested block satisfies this requirement,
 as does an `if` statement with a final `else` when every arm definitely returns. A
 `unit` function may use `return;` or reach its closing brace; attaching any
 expression to its return is invalid. Conversely, `return;` is invalid in an

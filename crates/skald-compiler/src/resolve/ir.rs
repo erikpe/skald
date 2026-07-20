@@ -253,6 +253,7 @@ pub struct ResolvedLocal {
 pub enum ResolvedTypeKind {
     I64,
     U64,
+    U8,
     Bool,
     Unit,
 }

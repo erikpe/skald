@@ -7,6 +7,7 @@ use crate::{
 
 const I64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::I64);
 const U64_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U64);
+const U8_LITERAL: TokenKind = TokenKind::NumericLiteral(NumericLiteralKind::U8);
 
 fn lex_text(text: &str) -> (SourceDatabase, crate::source::SourceId, LexOutput) {
     let mut sources = SourceDatabase::new();
@@ -118,6 +119,24 @@ fn recognizes_u64_type_and_literal_without_reserving_identifier_prefixes() {
 }
 
 #[test]
+fn recognizes_u8_type_and_literal_without_reserving_identifier_prefixes() {
+    let (_, _, output) = lex_text("u8 0u8 255u8 u8_value");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        [
+            TokenKind::U8,
+            U8_LITERAL,
+            U8_LITERAL,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_conditional_keywords_without_reserving_prefixes() {
     let (_, _, output) = lex_text("if elif else iffy elseif");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
@@ -195,7 +214,7 @@ fn malformed_decimal_spellings_are_single_invalid_tokens() {
 
 #[test]
 fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
-    let (sources, source_id, output) = lex_text("255u8 1.5 2e3 6.25e-1 return");
+    let (sources, source_id, output) = lex_text("1.5 2e3 6.25e-1 return");
     let source = sources.get(source_id).unwrap();
     let spellings: Vec<_> = output
         .tokens
@@ -204,13 +223,13 @@ fn planned_numeric_spellings_remain_disabled_and_recover_as_complete_tokens() {
         .map(|token| source.slice(token.span.range()).unwrap())
         .collect();
 
-    assert_eq!(spellings, ["255u8", "1.5", "2e3", "6.25e-1"]);
+    assert_eq!(spellings, ["1.5", "2e3", "6.25e-1"]);
     assert_eq!(output.diagnostics.len(), spellings.len());
     assert!(output
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code == MALFORMED_INTEGER_LITERAL));
-    assert_eq!(output.tokens[4].kind, TokenKind::Return);
+    assert_eq!(output.tokens[3].kind, TokenKind::Return);
 }
 
 #[test]

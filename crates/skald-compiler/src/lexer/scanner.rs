@@ -105,6 +105,7 @@ impl<'source> Lexer<'source> {
             "return" => TokenKind::Return,
             "i64" => TokenKind::I64,
             "u64" => TokenKind::U64,
+            "u8" => TokenKind::U8,
             "bool" => TokenKind::Bool,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
@@ -122,10 +123,10 @@ impl<'source> Lexer<'source> {
         self.offset += scan.byte_len;
 
         // Source syntax is enabled only when the kind has a complete path
-        // through the supported target. T3 adds u64; later tasks own u8/f64.
+        // through the supported target. T3/T4 add u64/u8; T6 owns f64.
         if !matches!(
             scan.kind,
-            Some(NumericLiteralKind::I64 | NumericLiteralKind::U64)
+            Some(NumericLiteralKind::I64 | NumericLiteralKind::U64 | NumericLiteralKind::U8)
         ) {
             let span = self.span(start, self.offset);
             let spelling = &self.source.text()[start..self.offset];

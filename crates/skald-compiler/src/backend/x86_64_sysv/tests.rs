@@ -412,6 +412,35 @@ fn external_u64_calls_use_rax_for_the_full_width_result() {
 }
 
 #[test]
+fn canonicalizes_u8_arithmetic_parameters_calls_and_returns() {
+    let output = assembly(concat!(
+        "fn seventh(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8) -> u8 {\n",
+        "  return (a + b) * c - g;\n",
+        "}\n",
+        "fn main() -> i64 { var value: u8 = seventh(255u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8); return 0; }",
+    ));
+
+    assert!(output.contains("movq %rdi, %rax\n    movzbq %al, %rax"));
+    assert!(output.contains("movq 16(%rbp), %rax\n    movzbq %al, %rax"));
+    assert!(output.matches("movzbq %al, %rax").count() >= 12);
+    assert!(output.contains("addq %rcx, %rax\n    movzbq %al, %rax"));
+    assert!(output.contains("imulq %rcx, %rax\n    movzbq %al, %rax"));
+    assert!(output.contains("subq %rcx, %rax\n    movzbq %al, %rax"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn external_u8_results_are_zero_extended_before_storage() {
+    let output = assembly(concat!(
+        "extern fn foreign_u8(value: u8) -> u8;\n",
+        "fn main() -> i64 { var value: u8 = foreign_u8(255u8); return 0; }",
+    ));
+
+    assert!(output.contains("call foreign_u8\n    movzbq %al, %rax\n    movq %rax,"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
 fn unit_calls_and_returns_do_not_move_a_fictitious_result() {
     let output = assembly(concat!(
         "fn notify(value: i64) -> unit {}\n",

@@ -96,6 +96,28 @@ fn resolution_preserves_u64_types_and_literal_magnitude() {
 }
 
 #[test]
+fn resolution_preserves_u8_types_and_literal_magnitude() {
+    let output = resolve_text(
+        "fn identity(value: u8) -> u8 { return 255u8; } fn main() -> i64 { return 0; }",
+    );
+    let declaration = output.program.declarations.get(FunctionId::new(0)).unwrap();
+    assert_eq!(
+        declaration.parameters[0].type_syntax.kind,
+        ResolvedTypeKind::U8
+    );
+    assert_eq!(declaration.return_type.kind, ResolvedTypeKind::U8);
+
+    let definition = output.program.definitions.get(FunctionId::new(0)).unwrap();
+    let ResolvedExpression::NumericLiteral(literal) = return_value(&definition.body.statements[0])
+    else {
+        panic!("expected a resolved u8 literal");
+    };
+    assert_eq!(literal.kind, NumericLiteralKind::U8);
+    assert_eq!(literal.spelling, "255u8");
+    assert!(dump_resolved(&output.program).contains("U8 \"255u8\""));
+}
+
+#[test]
 fn preserves_boolean_types_literals_and_bindings() {
     let output = resolve_text(concat!(
         "fn identity(value: bool) -> bool { return value; }\n",

@@ -70,6 +70,7 @@ fn lower_function(
                 .as_ref()
                 .expect("verified block is terminated"),
             &frame,
+            declaration.return_type,
             &epilogue,
             &mut instructions,
         );
@@ -118,7 +119,21 @@ fn spill_parameters(
                 "incoming argument area exceeds the x86-64 ABI encoding limits",
             )
         })?;
+        let ty = function
+            .storage(*storage)
+            .expect("verified parameter storage must exist")
+            .ty;
         let destination = frame_storage(frame, *storage);
+        if ty == MirType::U8 {
+            match incoming {
+                IncomingArgument::Register(register) => load_rax(register.into(), instructions),
+                IncomingArgument::Stack(displacement) => {
+                    load_rax(memory(Register::Rbp, displacement), instructions)
+                }
+            }
+            store_canonical_rax(ty, destination, instructions);
+            continue;
+        }
         match incoming {
             IncomingArgument::Register(register) => instructions.push(Instruction::Move {
                 source: register.into(),
@@ -155,25 +170,32 @@ fn select_instruction(
                         bits: *value as u64,
                         destination: Register::Rax,
                     });
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::ConstantU64(value) => {
                     output.push(Instruction::MoveImmediate64 {
                         bits: *value,
                         destination: Register::Rax,
                     });
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
+                }
+                MirRvalueKind::ConstantU8(value) => {
+                    output.push(Instruction::MoveImmediate64 {
+                        bits: u64::from(*value),
+                        destination: Register::Rax,
+                    });
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::ConstantBool(value) => {
                     output.push(Instruction::MoveImmediate64 {
                         bits: u64::from(*value),
                         destination: Register::Rax,
                     });
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::Load(storage) => {
                     load_rax(frame_storage(frame, *storage), output);
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::Unary {
                     operation: MirUnaryOperation::NegateI64,
@@ -181,7 +203,7 @@ fn select_instruction(
                 } => {
                     load_rax(frame_value(frame, *operand), output);
                     output.push(Instruction::Negate(Register::Rax));
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
                 MirRvalueKind::Binary {
                     operation,
@@ -212,8 +234,20 @@ fn select_instruction(
                                 destination: Register::Rax,
                             }
                         }
+                        MirBinaryOperation::AddU8 => Instruction::Add {
+                            source: Register::Rcx,
+                            destination: Register::Rax,
+                        },
+                        MirBinaryOperation::SubtractU8 => Instruction::Subtract {
+                            source: Register::Rcx,
+                            destination: Register::Rax,
+                        },
+                        MirBinaryOperation::MultiplyU8 => Instruction::Multiply {
+                            source: Register::Rcx,
+                            destination: Register::Rax,
+                        },
                     });
-                    store_rax(destination, output);
+                    store_canonical_rax(assignment.rvalue.ty, destination, output);
                 }
             }
         }
@@ -222,7 +256,11 @@ fn select_instruction(
         }
         MirInstruction::Store(store) => {
             load_rax(frame_value(frame, store.value), output);
-            store_rax(frame_storage(frame, store.storage), output);
+            let ty = function
+                .storage(store.storage)
+                .expect("verified store target must exist")
+                .ty;
+            store_canonical_rax(ty, frame_storage(frame, store.storage), output);
         }
     }
     Ok(())
@@ -281,7 +319,7 @@ fn select_call(
         });
     }
     if let Some(result) = call.result {
-        store_rax(frame_value(frame, result), output);
+        store_canonical_rax(target.return_type, frame_value(frame, result), output);
     }
     Ok(())
 }
@@ -289,6 +327,7 @@ fn select_call(
 fn select_terminator(
     terminator: &MirTerminator,
     frame: &FrameLayout,
+    return_type: MirType,
     epilogue: &Label,
     output: &mut Vec<Instruction>,
 ) {
@@ -296,6 +335,7 @@ fn select_terminator(
         MirTerminator::Return { value, .. } => {
             if let Some(value) = value {
                 load_rax(frame_value(frame, *value), output);
+                canonicalize_rax(return_type, output);
             }
             output.push(Instruction::Jump(epilogue.clone()));
         }
@@ -321,6 +361,25 @@ fn load_rax(source: Operand, output: &mut Vec<Instruction>) {
         source,
         destination: Register::Rax.into(),
     });
+}
+
+/// Converts a MIR value in `%rax` to its canonical full-register form.
+///
+/// `u8` values use eight-byte homes in the initial backend, but only their low
+/// eight bits belong to the language value. Every producer and ABI ingress
+/// reaches this helper before the value is stored or returned.
+fn canonicalize_rax(ty: MirType, output: &mut Vec<Instruction>) {
+    if ty == MirType::U8 {
+        output.push(Instruction::ZeroExtendByte {
+            source: ByteRegister::Al,
+            destination: Register::Rax,
+        });
+    }
+}
+
+fn store_canonical_rax(ty: MirType, destination: Operand, output: &mut Vec<Instruction>) {
+    canonicalize_rax(ty, output);
+    store_rax(destination, output);
 }
 
 fn store_rax(destination: Operand, output: &mut Vec<Instruction>) {

@@ -1,6 +1,6 @@
 # Remaining Primitive Types Roadmap
 
-Status: T0–T3 complete; T4 is the next implementation task.
+Status: T0–T4 complete; T5 is the next implementation task.
 
 This roadmap adds Skald's remaining primitive value types: `u64`, `u8`, and
 `f64`. The floating-point type is named `f64`, not `double`; `double` remains
@@ -177,7 +177,7 @@ unsigned modular arithmetic must not silently redefine signed arithmetic.
 - [x] T1 — Add direct runtime observability for the new primitives
 - [x] T2 — Refactor numeric literal infrastructure without changing behavior
 - [x] T3 — Implement `u64` end-to-end
-- [ ] T4 — Implement `u8` end-to-end with explicit canonicalization
+- [x] T4 — Implement `u8` end-to-end with explicit canonicalization
 - [ ] T5 — Add target-independent and backend `f64` infrastructure
 - [ ] T6 — Enable `f64` source syntax and semantics end-to-end
 - [ ] T7 — Complete golden coverage and harden the primitive slice
@@ -305,18 +305,18 @@ deterministic.
 **Purpose:** Add the byte type while making narrow-value invariants explicit
 enough for future arrays, strings, and additional backends.
 
-- [ ] Enable the `u8` keyword and `digits u8` literal suffix.
-- [ ] Add `u8` to semantic IR and exact type checking; diagnose values above
+- [x] Enable the `u8` keyword and `digits u8` literal suffix.
+- [x] Add `u8` to semantic IR and exact type checking; diagnose values above
       255 and all implicit widening or narrowing.
-- [ ] Add explicit `AddU8`, `SubtractU8`, and `MultiplyU8` operations.
-- [ ] Add `u8` constants, storage, calls, returns, and verifier invariants.
-- [ ] Define one centralized MIR/backend policy for truncating arithmetic to
+- [x] Add explicit `AddU8`, `SubtractU8`, and `MultiplyU8` operations.
+- [x] Add `u8` constants, storage, calls, returns, and verifier invariants.
+- [x] Define one centralized MIR/backend policy for truncating arithmetic to
       eight bits and zero-extending it into general value homes.
-- [ ] Canonicalize incoming internal and external parameters/results rather
+- [x] Canonicalize incoming internal and external parameters/results rather
       than trusting unspecified upper register bits.
-- [ ] Extend the restricted external profile to C `uint8_t`.
-- [ ] Add the ordinary source declaration/call path for `ska_rt_println_u8`.
-- [ ] Avoid proliferating byte-specific instruction selection throughout
+- [x] Extend the restricted external profile to C `uint8_t`.
+- [x] Add the ordinary source declaration/call path for `ska_rt_println_u8`.
+- [x] Avoid proliferating byte-specific instruction selection throughout
       unrelated backend code; keep width handling behind typed helpers.
 
 **Tests:** Literal bounds `0`, `255`, and `256`; exact mismatch diagnostics;

@@ -136,9 +136,9 @@ extern fn external_value(value: i64) -> i64;
 ```
 
 It is a top-level declaration terminated by a semicolon and has no Skald body.
-Parameter names are mandatory. The implemented T3 profile permits by-value
-`i64`, `u64`, and `bool` parameters and an `i64`, `u64`, `bool`, or `unit`
-result.
+Parameter names are mandatory. The implemented T4 profile permits by-value
+`i64`, `u64`, `u8`, and `bool` parameters and an `i64`, `u64`, `u8`, `bool`,
+or `unit` result.
 
 The C-series boolean extension adds by-value `bool` parameters and `bool`
 results to that same restricted profile:
@@ -1718,8 +1718,8 @@ compiler phase recognizes its name specially.
 
 **Implementation status:** implemented directly in the C runtime by T1. T1
 changed the runtime ABI version from 3 to 4 once, adding all three symbols
-below. Compiler source support is complete for `u64` in T3; `u8` and `f64`
-follow in T4 and T6.
+below. Compiler source support is complete for `u64` in T3 and `u8` in T4;
+`f64` follows in T6.
 
 ```c
 #include <stdint.h>
@@ -1850,7 +1850,7 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the implemented bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64`, `u64`, and `bool` parameters and `i64`, `u64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions;
+- the implemented bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64`, `u64`, `u8`, and `bool` parameters and `i64`, `u64`, `u8`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions;
 - on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
 - compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
 - external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;
@@ -1858,7 +1858,7 @@ Resolved decisions in this draft:
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - runtime ABI version 3 implements `ska_rt_println_bool`, which writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
-- T3 implements `u64`; the remaining primitive types are `u8` and IEEE-754 binary64 `f64`, and `double` is not a Skald type keyword;
+- T3 implements `u64` and T4 implements `u8`; the remaining primitive type is IEEE-754 binary64 `f64`, and `double` is not a Skald type keyword;
 - decimal `u64` literals use suffix `u`, decimal `u8` literals use suffix `u8`, decimal-point or exponent literals are `f64`, and expected type never reinterprets a numeric literal;
 - the T-series profile has no implicit numeric conversions, promotions, or primitive casts, and keeps `main` exactly `fn main() -> i64`;
 - `u64` and `u8` `+`, `-`, and `*` wrap modulo their widths, while `f64` arithmetic follows binary64 under the default round-to-nearest, ties-to-even environment;

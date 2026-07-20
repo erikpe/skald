@@ -9,6 +9,7 @@ use crate::{
 pub enum Type {
     I64,
     U64,
+    U8,
     Bool,
     Unit,
 }
@@ -18,6 +19,7 @@ impl Type {
         match self {
             Self::I64 => "i64",
             Self::U64 => "u64",
+            Self::U8 => "u8",
             Self::Bool => "bool",
             Self::Unit => "unit",
         }
@@ -28,7 +30,7 @@ impl Type {
     pub const fn indefinite_article(self) -> &'static str {
         match self {
             Self::I64 => "an",
-            Self::U64 | Self::Bool | Self::Unit => "a",
+            Self::U64 | Self::U8 | Self::Bool | Self::Unit => "a",
         }
     }
 }
@@ -247,6 +249,7 @@ pub enum HirExpressionKind {
     Binding(BindingId),
     I64(i64),
     U64(u64),
+    U8(u8),
     Boolean(bool),
     Unary {
         operation: HirUnaryOperation,
@@ -277,4 +280,7 @@ pub enum HirBinaryOperation {
     AddU64,
     SubtractU64,
     MultiplyU64,
+    AddU8,
+    SubtractU8,
+    MultiplyU8,
 }

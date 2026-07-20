@@ -617,6 +617,11 @@ impl Verifier<'_> {
                     self.block_error(function.function, block.id, "u64 constant is not `u64`");
                 }
             }
+            MirRvalueKind::ConstantU8(_) => {
+                if rvalue.ty != MirType::U8 {
+                    self.block_error(function.function, block.id, "u8 constant is not `u8`");
+                }
+            }
             MirRvalueKind::ConstantBool(_) => {
                 if rvalue.ty != MirType::Bool {
                     self.block_error(

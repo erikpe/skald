@@ -175,6 +175,9 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
         MirRvalueKind::ConstantU64(value) => {
             let _ = write!(output, "const.u64 {value}");
         }
+        MirRvalueKind::ConstantU8(value) => {
+            let _ = write!(output, "const.u8 {value}");
+        }
         MirRvalueKind::ConstantBool(value) => {
             let _ = write!(output, "const.bool {value}");
         }
@@ -199,6 +202,9 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 MirBinaryOperation::AddU64 => "add.u64",
                 MirBinaryOperation::SubtractU64 => "sub.u64",
                 MirBinaryOperation::MultiplyU64 => "mul.u64",
+                MirBinaryOperation::AddU8 => "add.u8",
+                MirBinaryOperation::SubtractU8 => "sub.u8",
+                MirBinaryOperation::MultiplyU8 => "mul.u8",
             };
             let _ = write!(output, "{operation} {left}, {right}");
         }

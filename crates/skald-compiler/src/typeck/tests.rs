@@ -59,6 +59,7 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
+        | HirExpressionKind::U8(_)
         | HirExpressionKind::Boolean(_) => {}
     }
 }
@@ -589,6 +590,90 @@ fn rejects_implicit_i64_u64_conversions_and_unsigned_negation() {
         (
             "fn value() -> u64 { return -1u; } fn main() -> i64 { return 0; }",
             "unary negation operand has type `u64` but `i64` is required",
+        ),
+    ] {
+        let output = check_text(source);
+        assert!(output.hir.is_none());
+        assert!(output
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message == expected));
+    }
+}
+
+#[test]
+fn checks_u8_bounds_signatures_and_typed_arithmetic() {
+    let output = check_text(concat!(
+        "extern fn observe(value: u8) -> unit;\n",
+        "fn calculate(left: u8, right: u8) -> u8 { return left + right * 2u8 - 1u8; }\n",
+        "fn bounds() -> u8 { var zero: u8 = 0u8; return 255u8; }\n",
+        "fn main() -> i64 { observe(calculate(bounds(), 1u8)); return 0; }\n",
+    ));
+    let hir = output.hir.expect("valid u8 program must produce HIR");
+    let calculate = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(1))
+        .unwrap();
+    let expression = returned_expression(calculate);
+
+    assert_eq!(expression.ty, Type::U8);
+    assert!(matches!(
+        expression.kind,
+        HirExpressionKind::Binary {
+            operation: HirBinaryOperation::SubtractU8,
+            ..
+        }
+    ));
+    let bounds = hir
+        .definitions
+        .get(crate::resolve::FunctionId::new(2))
+        .unwrap();
+    assert!(matches!(
+        returned_expression(bounds).kind,
+        HirExpressionKind::U8(u8::MAX)
+    ));
+}
+
+#[test]
+fn diagnoses_u8_literal_overflow() {
+    let output =
+        check_text("fn too_large() -> u8 { return 256u8; } fn main() -> i64 { return 0; }");
+
+    assert!(output.hir.is_none());
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, U8_LITERAL_OUT_OF_RANGE);
+    assert_eq!(
+        diagnostic.message,
+        "integer literal `256u8` is out of range for `u8`"
+    );
+}
+
+#[test]
+fn rejects_implicit_u8_conversions_and_unsigned_negation() {
+    for (source, expected) in [
+        (
+            "fn value() -> u8 { return 1; } fn main() -> i64 { return 0; }",
+            "return value has type `i64` but `u8` is required",
+        ),
+        (
+            "fn value() -> u64 { return 1u8; } fn main() -> i64 { return 0; }",
+            "return value has type `u8` but `u64` is required",
+        ),
+        (
+            "fn value() -> u8 { return 1u8 + 2u; } fn main() -> i64 { return 0; }",
+            "right arithmetic operand has type `u64` but `u8` is required",
+        ),
+        (
+            "fn main() -> i64 { var value: i64 = 1u8; return 0; }",
+            "local initializer has type `u8` but `i64` is required",
+        ),
+        (
+            "fn take(value: u8) -> unit {} fn main() -> i64 { take(1u); return 0; }",
+            "call argument has type `u64` but `u8` is required",
+        ),
+        (
+            "fn value() -> u8 { return -1u8; } fn main() -> i64 { return 0; }",
+            "unary negation operand has type `u8` but `i64` is required",
         ),
     ] {
         let output = check_text(source);

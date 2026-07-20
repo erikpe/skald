@@ -227,7 +227,7 @@ impl<'source> Parser<'source> {
         let name = self.parse_name("expected a parameter name");
         self.expect(TokenKind::Colon, "`:` after the parameter name");
         let type_syntax =
-            self.parse_value_type("expected the parameter type `i64`, `u64`, or `bool`");
+            self.parse_value_type("expected the parameter type `i64`, `u64`, `u8`, or `bool`");
 
         match (name, type_syntax) {
             (Some(name), Some(type_syntax)) => {
@@ -255,6 +255,12 @@ impl<'source> Parser<'source> {
                 span: token.span,
             });
         }
+        if let Some(token) = self.consume(TokenKind::U8) {
+            return Some(TypeSyntax {
+                kind: TypeKind::U8,
+                span: token.span,
+            });
+        }
         if let Some(token) = self.consume(TokenKind::Bool) {
             return Some(TypeSyntax {
                 kind: TypeKind::Bool,
@@ -272,7 +278,7 @@ impl<'source> Parser<'source> {
             EXPECTED_TOKEN,
             message,
             self.peek().span,
-            "expected `i64`, `u64`, `bool`, or `unit`",
+            "expected `i64`, `u64`, `u8`, `bool`, or `unit`",
         );
         if self.at(TokenKind::Identifier) {
             self.advance();
@@ -293,6 +299,12 @@ impl<'source> Parser<'source> {
                 span: token.span,
             });
         }
+        if let Some(token) = self.consume(TokenKind::U8) {
+            return Some(TypeSyntax {
+                kind: TypeKind::U8,
+                span: token.span,
+            });
+        }
         if let Some(token) = self.consume(TokenKind::Bool) {
             return Some(TypeSyntax {
                 kind: TypeKind::Bool,
@@ -304,7 +316,7 @@ impl<'source> Parser<'source> {
             EXPECTED_TOKEN,
             message,
             self.peek().span,
-            "parameters and locals must have type `i64`, `u64`, or `bool`",
+            "parameters and locals must have type `i64`, `u64`, `u8`, or `bool`",
         );
         if self.at_any(&[TokenKind::Identifier, TokenKind::Unit]) {
             self.advance();
@@ -514,7 +526,8 @@ impl<'source> Parser<'source> {
         let var_token = self.advance();
         let name = self.parse_name("expected a local name after `var`");
         self.expect(TokenKind::Colon, "`:` after the local name");
-        let type_syntax = self.parse_value_type("expected the local type `i64`, `u64`, or `bool`");
+        let type_syntax =
+            self.parse_value_type("expected the local type `i64`, `u64`, `u8`, or `bool`");
         self.expect(TokenKind::Equal, "`=` before the local initializer");
         let initializer = self.parse_expression();
         let semicolon = self.expect(TokenKind::Semicolon, "`;` after the local declaration");
@@ -831,6 +844,7 @@ impl<'source> Parser<'source> {
                 TokenKind::Identifier,
                 TokenKind::NumericLiteral(NumericLiteralKind::I64),
                 TokenKind::NumericLiteral(NumericLiteralKind::U64),
+                TokenKind::NumericLiteral(NumericLiteralKind::U8),
                 TokenKind::True,
                 TokenKind::False,
                 TokenKind::Minus,
@@ -863,6 +877,7 @@ impl<'source> Parser<'source> {
             TokenKind::Identifier,
             TokenKind::NumericLiteral(NumericLiteralKind::I64),
             TokenKind::NumericLiteral(NumericLiteralKind::U64),
+            TokenKind::NumericLiteral(NumericLiteralKind::U8),
             TokenKind::True,
             TokenKind::False,
             TokenKind::Minus,

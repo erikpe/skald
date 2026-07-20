@@ -91,11 +91,28 @@ fn parses_u64_types_and_preserves_suffixed_literal_spelling() {
 }
 
 #[test]
+fn parses_u8_types_and_preserves_suffixed_literal_spelling() {
+    let (_, output) = parse_text(
+        "fn identity(value: u8) -> u8 { var result: u8 = value; return 255u8; } fn main() -> i64 { return 0; }",
+    );
+    let identity = function(&output.ast, 0);
+
+    assert_eq!(identity.parameters[0].type_syntax.kind, TypeKind::U8);
+    assert_eq!(identity.return_type.kind, TypeKind::U8);
+    let Expression::NumericLiteral(literal) = return_value(identity) else {
+        panic!("expected a u8 literal");
+    };
+    assert_eq!(literal.kind, NumericLiteralKind::U8);
+    assert_eq!(literal.spelling, "255u8");
+    assert!(dump_ast(&output.ast).contains("U8 \"255u8\""));
+}
+
+#[test]
 fn disabled_numeric_literal_recovery_keeps_the_following_statement() {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add(
         "test.ska",
-        "fn main() -> i64 { var value: i64 = 42u8; return 0; }",
+        "fn main() -> i64 { var value: i64 = 1.5; return 0; }",
     );
     let source = sources.get(source_id).unwrap();
     let lexed = lex(source);

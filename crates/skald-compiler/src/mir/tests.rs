@@ -211,6 +211,56 @@ fn verifier_rejects_u64_constant_and_operation_type_corruption() {
 }
 
 #[test]
+fn lowers_u8_constants_storage_arithmetic_calls_and_returns_explicitly() {
+    let mir = lower_text(concat!(
+        "fn add(left: u8, right: u8) -> u8 { return left + right; }\n",
+        "fn main() -> i64 { var value: u8 = add(255u8, 2u8); return 0; }\n",
+    ));
+    verify_mir(&mir).unwrap();
+    let dump = dump_mir(&mir);
+
+    assert!(dump.contains("Signature (u8, u8) -> u8"));
+    assert!(dump.contains("const.u8 255 : u8"));
+    assert!(dump.contains("add.u8"));
+    assert!(dump.contains("local f1:l0 \"value\" : u8"));
+}
+
+#[test]
+fn verifier_rejects_u8_constant_and_operation_type_corruption() {
+    let mut constant_mismatch =
+        lower_text("fn value() -> u8 { return 1u8; } fn main() -> i64 { return 0; }");
+    let function = constant_mismatch
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
+        panic!("expected constant assignment");
+    };
+    assignment.rvalue.ty = MirType::U64;
+    assert!(verify_mir(&constant_mismatch)
+        .unwrap_err()
+        .to_string()
+        .contains("u8 constant is not `u8`"));
+
+    let mut operation_mismatch =
+        lower_text("fn add() -> u8 { return 1u8 + 2u8; } fn main() -> i64 { return 0; }");
+    let function = operation_mismatch
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
+        panic!("expected binary assignment");
+    };
+    let MirRvalueKind::Binary { operation, .. } = &mut assignment.rvalue.kind else {
+        panic!("expected binary rvalue");
+    };
+    *operation = MirBinaryOperation::AddU64;
+    let errors = verify_mir(&operation_mismatch).unwrap_err().to_string();
+    assert!(errors.contains("binary operation result type mismatch"));
+    assert!(errors.contains("arithmetic operand is not `u64`"));
+}
+
+#[test]
 fn lowers_boolean_constants_storage_calls_and_returns_as_boolean_mir() {
     let mir = lower_text(concat!(
         "extern fn external_flag(value: bool) -> bool;\n",

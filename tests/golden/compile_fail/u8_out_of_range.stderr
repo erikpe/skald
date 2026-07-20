@@ -1,0 +1,6 @@
+error[TYP011]: integer literal `256u8` is out of range for `u8`
+ --> tests/golden/compile_fail/u8_out_of_range.ska:2:12
+   |
+2 |     return 256u8;
+   |            ^^^^^ value is not representable as `u8`
+  = note: the inclusive `u8` range is 0 through 255

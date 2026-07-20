@@ -65,6 +65,7 @@ impl AstDumper {
         let kind = match type_syntax.kind {
             TypeKind::I64 => "I64",
             TypeKind::U64 => "U64",
+            TypeKind::U8 => "U8",
             TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
         };
@@ -138,8 +139,8 @@ impl AstDumper {
                 let name = match literal.kind {
                     crate::literal::NumericLiteralKind::I64 => "Integer",
                     crate::literal::NumericLiteralKind::U64 => "U64",
-                    crate::literal::NumericLiteralKind::U8
-                    | crate::literal::NumericLiteralKind::F64 => {
+                    crate::literal::NumericLiteralKind::U8 => "U8",
+                    crate::literal::NumericLiteralKind::F64 => {
                         unreachable!("disabled numeric kind reached the AST")
                     }
                 };
