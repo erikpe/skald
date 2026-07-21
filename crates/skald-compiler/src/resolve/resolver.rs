@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    identity::{ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    identity::{ClassId, DestructorId, FieldId, FunctionId, InitializerId, MethodId},
     source::Span,
     syntax,
 };
@@ -119,4 +119,5 @@ pub(super) struct ClassSymbols {
     pub(super) ordinary: HashMap<String, OrdinaryMemberSymbol>,
     pub(super) initializer: Option<InitializerId>,
     pub(super) initializer_span: Option<Span>,
+    pub(super) destructor_span: Option<Span>,
 }

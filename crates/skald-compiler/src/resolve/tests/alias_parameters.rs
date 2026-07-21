@@ -191,6 +191,8 @@ fn resolved_alias_dump_is_exact_and_identity_based() {
             "      Initializer\n",
             "        Initializer c0:init0 @102..126\n",
             "          Parameters\n",
+            "      Destructor\n",
+            "        <none>\n",
             "      Methods\n",
             "  Declarations\n",
             "    Declaration f0 \"inspect\" internal @0..79\n",

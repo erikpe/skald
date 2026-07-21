@@ -356,6 +356,145 @@ fn self_is_scoped_to_initializers_and_methods() {
 }
 
 #[test]
+fn resolves_destructor_identity_receiver_body_and_forward_references() {
+    let output = resolve_text(concat!(
+        "class Resource {\n",
+        "    value: i64;\n",
+        "    init() { self.value = 0; }\n",
+        "    destroy {\n",
+        "        var saved: i64 = self.value;\n",
+        "        self.reset();\n",
+        "        observe(self);\n",
+        "    }\n",
+        "    mut fn reset() -> unit { self.value = 0; }\n",
+        "    fn destroy() -> unit {}\n",
+        "}\n",
+        "fn observe(ref resource: Resource) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let resource = class(&output, 0);
+    let destructor = resource.destructor.as_ref().unwrap();
+    assert_eq!(destructor.id, DestructorId::new(resource.id, 0));
+    let definition = output
+        .program
+        .member_definition(destructor.id.into())
+        .unwrap();
+    assert_eq!(definition.callable, CallableId::Destructor(destructor.id));
+    assert_eq!(definition.locals[0].id, LocalId::new(destructor.id, 0));
+
+    let ResolvedStatement::Local(saved) = &definition.body.statements[0] else {
+        panic!("expected destructor-local declaration");
+    };
+    let ResolvedExpression::FieldAccess(value) = &saved.initializer else {
+        panic!("expected a field read through destructor `self`");
+    };
+    assert_eq!(
+        value.receiver.root,
+        BindingId::Receiver(CallableId::Destructor(destructor.id))
+    );
+
+    let ResolvedStatement::Expression(reset) = &definition.body.statements[1] else {
+        panic!("expected destructor method call");
+    };
+    let ResolvedExpression::MethodCall(reset) = &reset.expression else {
+        panic!("expected resolved method call");
+    };
+    assert_eq!(reset.method, resource.methods[0].id);
+    assert_eq!(
+        reset.receiver.root,
+        BindingId::Receiver(CallableId::Destructor(destructor.id))
+    );
+    assert_eq!(resource.methods[1].name, "destroy");
+}
+
+#[test]
+fn duplicate_destructors_are_diagnosed_in_source_order() {
+    let output = resolve_text(concat!(
+        "class Duplicate {\n",
+        "    init() {}\n",
+        "    destroy {}\n",
+        "    destroy { return; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, DUPLICATE_MEMBER);
+    assert_eq!(
+        diagnostic.message,
+        "duplicate destructor in class `Duplicate`"
+    );
+    assert_eq!(diagnostic.labels[0].message, "redeclared here");
+    assert_eq!(diagnostic.labels[1].message, "first declared here");
+
+    let duplicate = class(&output, 0);
+    assert_eq!(duplicate.destructor.as_ref().unwrap().id.index(), 0);
+    assert_eq!(
+        output
+            .program
+            .class_definitions
+            .get(duplicate.id)
+            .unwrap()
+            .destructor
+            .as_ref()
+            .unwrap()
+            .body
+            .statements
+            .len(),
+        0
+    );
+}
+
+#[test]
+fn resolved_destructor_dump_is_exact_and_identity_based() {
+    let output = resolve_text(concat!(
+        "class Empty { init() {} destroy { return; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    assert_eq!(
+        dump_resolved(&output.program),
+        concat!(
+            "ResolvedProgram @0..77\n",
+            "  Entry f0\n",
+            "  ClassDeclarations\n",
+            "    Class c0 \"Empty\" @0..45\n",
+            "      Fields\n",
+            "      Initializer\n",
+            "        Initializer c0:init0 @14..23\n",
+            "          Parameters\n",
+            "      Destructor\n",
+            "        Destructor c0:destroy0 @24..43\n",
+            "      Methods\n",
+            "  Declarations\n",
+            "    Declaration f0 \"main\" internal @46..76\n",
+            "      Parameters\n",
+            "      ReturnType\n",
+            "        Type I64 @59..62\n",
+            "  Definitions\n",
+            "    Definition f0 @46..76\n",
+            "      Locals\n",
+            "      Block @63..76\n",
+            "        Return @65..74\n",
+            "          Integer \"0\" @72..73\n",
+            "  ClassDefinitions\n",
+            "    ClassDefinition c0 @0..45\n",
+            "      MemberDefinition c0:init0 @14..23\n",
+            "        Locals\n",
+            "        Block @21..23\n",
+            "      MemberDefinition c0:destroy0 @24..43\n",
+            "        Locals\n",
+            "        Block @32..43\n",
+            "          Return @34..41\n",
+        )
+    );
+}
+
+#[test]
 fn local_bindings_shadow_callable_class_names_but_not_type_names() {
     let output = resolve_text(concat!(
         "class Counter { init() {} }\n",
@@ -437,6 +576,8 @@ fn resolved_object_dump_is_exact_and_identity_based() {
             "            Parameter c0:init0:p0 \"value\" @29..39\n",
             "              Binding Value\n",
             "              Type I64 @36..39\n",
+            "      Destructor\n",
+            "        <none>\n",
             "      Methods\n",
             "        Method c0:method0 readonly \"get\" @65..103\n",
             "          Parameters\n",

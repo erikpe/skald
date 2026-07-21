@@ -127,12 +127,102 @@ fn lifecycle_spellings_remain_ordinary_names_outside_special_member_syntax() {
 }
 
 #[test]
+fn parses_a_dedicated_destructor_with_a_complete_source_span() {
+    let (sources, output) = parse_text(concat!(
+        "class Resource {\n",
+        "    value: i64;\n",
+        "    init() { self.value = 0; }\n",
+        "    destroy { self.value = 1; return; }\n",
+        "    fn destroy() -> unit {}\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty());
+    let resource = class(&output.ast, 0);
+    let ClassMember::Destructor(destructor) = &resource.members[2] else {
+        panic!("expected a destructor declaration");
+    };
+    assert_eq!(source_text(&sources, destructor.introducer_span), "destroy");
+    assert_eq!(
+        source_text(&sources, destructor.span),
+        "destroy { self.value = 1; return; }"
+    );
+    assert_eq!(destructor.body.statements.len(), 2);
+    assert!(matches!(resource.members[3], ClassMember::Method(_)));
+}
+
+#[test]
+fn malformed_destructors_recover_to_later_class_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "    init() {}\n",
+        "    destroy() {}\n",
+        "    after_parameters: i64;\n",
+        "    destroy -> unit {}\n",
+        "    after_result: i64;\n",
+        "    mut destroy {}\n",
+        "    after_modifier: i64;\n",
+        "    destroy;\n",
+        "    after_semicolon: i64;\n",
+        "    destroy\n",
+        "    fn recovered() -> unit {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.has_errors());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_CLASS_MEMBER));
+    let broken = class(&output.ast, 0);
+    for expected in [
+        "after_parameters",
+        "after_result",
+        "after_modifier",
+        "after_semicolon",
+    ] {
+        assert!(broken.members.iter().any(
+            |member| matches!(member, ClassMember::Field(field) if field.name.text == expected)
+        ));
+    }
+    assert!(broken.members.iter().any(
+        |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
+    ));
+    assert_eq!(function(&output.ast, 1).name.text, "main");
+}
+
+#[test]
+fn destructor_ast_dump_is_exact_and_source_shaped() {
+    let (_, output) = parse_text("class Empty { init() {} destroy { return; } }");
+    assert!(output.diagnostics.is_empty());
+
+    assert_eq!(
+        dump_ast(&output.ast),
+        concat!(
+            "CompilationUnit @0..45\n",
+            "  Class @0..45\n",
+            "    Name \"Empty\" @6..11\n",
+            "    Members\n",
+            "      Initializer @14..23\n",
+            "        Introducer @14..18\n",
+            "        Parameters\n",
+            "        Block @21..23\n",
+            "      Destructor @24..43\n",
+            "        Introducer @24..31\n",
+            "        Block @32..43\n",
+            "          Return @34..41\n",
+        )
+    );
+}
+
+#[test]
 fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",
         "    assign(other: i64) {}\n",
         "    first: i64;\n",
-        "    destroy {}\n",
+        "    destroy(value: i64) {}\n",
         "    mut value: i64;\n",
         "    fn good() -> i64 { return self.first; }\n",
         "}\n",
@@ -165,7 +255,7 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.message.contains("`destroy` members")));
+        .any(|diagnostic| diagnostic.message.contains("destruction members")));
 }
 
 #[test]

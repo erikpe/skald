@@ -98,6 +98,7 @@ impl HirProgram {
                         return_type: Type::Unit,
                     })
             }
+            CallableId::Destructor(_) => None,
             CallableId::Method(method) => {
                 self.method(method).map(|declaration| HirCallableSignature {
                     parameters: &declaration.parameters,
@@ -278,7 +279,7 @@ impl HirClassDefinition {
                 .methods
                 .get(id.index())
                 .filter(|definition| definition.callable == callable),
-            CallableId::Initializer(_) | CallableId::Method(_) => None,
+            CallableId::Initializer(_) | CallableId::Destructor(_) | CallableId::Method(_) => None,
         }
     }
 }

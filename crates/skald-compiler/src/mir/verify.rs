@@ -226,6 +226,7 @@ impl Verifier<'_> {
                     .program
                     .initializer(initializer)
                     .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
+                CallableId::Destructor(_) => None,
                 CallableId::Method(method) => self
                     .program
                     .method(method)
@@ -1190,7 +1191,7 @@ impl Verifier<'_> {
                 Some(MirReceiverAccess::Mutable) => MirAliasAccess::Mutable,
                 None => MirAliasAccess::ReadOnly,
             },
-            CallableId::Initializer(_) => MirAliasAccess::Mutable,
+            CallableId::Initializer(_) | CallableId::Destructor(_) => MirAliasAccess::Mutable,
             CallableId::Function(_) => MirAliasAccess::ReadOnly,
         }
     }

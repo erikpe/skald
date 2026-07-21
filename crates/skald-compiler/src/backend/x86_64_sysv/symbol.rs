@@ -22,6 +22,11 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
             initializer.class().index(),
             initializer.index()
         ),
+        CallableId::Destructor(destructor) => format!(
+            ".Lska_class_{}_destroy_{}",
+            destructor.class().index(),
+            destructor.index()
+        ),
         CallableId::Method(method) => format!(
             ".Lska_class_{}_method_{}",
             method.class().index(),
@@ -37,6 +42,11 @@ pub(super) fn local_label_stem(callable: CallableId) -> String {
             "class_{}_init_{}",
             initializer.class().index(),
             initializer.index()
+        ),
+        CallableId::Destructor(destructor) => format!(
+            "class_{}_destroy_{}",
+            destructor.class().index(),
+            destructor.index()
         ),
         CallableId::Method(method) => {
             format!("class_{}_method_{}", method.class().index(), method.index())

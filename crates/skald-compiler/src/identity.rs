@@ -68,6 +68,7 @@ global_id!(ClassId, "c");
 
 class_member_id!(FieldId, "field");
 class_member_id!(InitializerId, "init");
+class_member_id!(DestructorId, "destroy");
 class_member_id!(MethodId, "method");
 
 /// Stable identity of a declaration with an executable body.
@@ -79,6 +80,7 @@ class_member_id!(MethodId, "method");
 pub enum CallableId {
     Function(FunctionId),
     Initializer(InitializerId),
+    Destructor(DestructorId),
     Method(MethodId),
 }
 
@@ -86,7 +88,7 @@ impl CallableId {
     pub const fn as_function(self) -> Option<FunctionId> {
         match self {
             Self::Function(function) => Some(function),
-            Self::Initializer(_) | Self::Method(_) => None,
+            Self::Initializer(_) | Self::Destructor(_) | Self::Method(_) => None,
         }
     }
 
@@ -94,6 +96,7 @@ impl CallableId {
         match self {
             Self::Function(_) => None,
             Self::Initializer(initializer) => Some(initializer.class()),
+            Self::Destructor(destructor) => Some(destructor.class()),
             Self::Method(method) => Some(method.class()),
         }
     }
@@ -111,6 +114,12 @@ impl From<InitializerId> for CallableId {
     }
 }
 
+impl From<DestructorId> for CallableId {
+    fn from(destructor: DestructorId) -> Self {
+        Self::Destructor(destructor)
+    }
+}
+
 impl From<MethodId> for CallableId {
     fn from(method: MethodId) -> Self {
         Self::Method(method)
@@ -122,6 +131,7 @@ impl fmt::Display for CallableId {
         match self {
             Self::Function(function) => function.fmt(formatter),
             Self::Initializer(initializer) => initializer.fmt(formatter),
+            Self::Destructor(destructor) => destructor.fmt(formatter),
             Self::Method(method) => method.fmt(formatter),
         }
     }
@@ -250,6 +260,7 @@ mod tests {
         let other_class = ClassId::new(4);
         let field = FieldId::new(class, 2);
         let initializer = InitializerId::new(class, 0);
+        let destructor = DestructorId::new(class, 0);
         let method = MethodId::new(class, 5);
 
         assert_eq!(class.index(), 3);
@@ -258,11 +269,14 @@ mod tests {
         assert_eq!(field.index(), 2);
         assert_eq!(initializer.class(), class);
         assert_eq!(initializer.index(), 0);
+        assert_eq!(destructor.class(), class);
+        assert_eq!(destructor.index(), 0);
         assert_eq!(method.class(), class);
         assert_eq!(method.index(), 5);
         assert_eq!(class.to_string(), "c3");
         assert_eq!(field.to_string(), "c3:field2");
         assert_eq!(initializer.to_string(), "c3:init0");
+        assert_eq!(destructor.to_string(), "c3:destroy0");
         assert_eq!(method.to_string(), "c3:method5");
     }
 
@@ -270,22 +284,29 @@ mod tests {
     fn callable_identity_is_the_body_owner_for_every_declaration_kind() {
         let function = CallableId::from(FunctionId::new(1));
         let initializer = CallableId::from(InitializerId::new(ClassId::new(2), 0));
+        let destructor = CallableId::from(DestructorId::new(ClassId::new(2), 0));
         let method = CallableId::from(MethodId::new(ClassId::new(2), 3));
 
         assert_eq!(function.as_function(), Some(FunctionId::new(1)));
         assert_eq!(function.class(), None);
         assert_eq!(initializer.as_function(), None);
         assert_eq!(initializer.class(), Some(ClassId::new(2)));
+        assert_eq!(destructor.as_function(), None);
+        assert_eq!(destructor.class(), Some(ClassId::new(2)));
         assert_eq!(method.class(), Some(ClassId::new(2)));
         assert_eq!(function.to_string(), "f1");
         assert_eq!(initializer.to_string(), "c2:init0");
+        assert_eq!(destructor.to_string(), "c2:destroy0");
         assert_eq!(method.to_string(), "c2:method3");
 
         let parameter = ParameterId::new(method, 4);
         let local = LocalId::new(initializer, 5);
+        let destructor_local = LocalId::new(destructor, 6);
         assert_eq!(parameter.callable(), method);
         assert_eq!(local.callable(), initializer);
+        assert_eq!(destructor_local.callable(), destructor);
         assert_eq!(parameter.to_string(), "c2:method3:p4");
         assert_eq!(local.to_string(), "c2:init0:l5");
+        assert_eq!(destructor_local.to_string(), "c2:destroy0:l6");
     }
 }

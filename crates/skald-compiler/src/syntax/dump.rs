@@ -63,6 +63,13 @@ impl AstDumper {
                     dumper.block(&initializer.body);
                 });
             }
+            ClassMember::Destructor(destructor) => {
+                self.line("Destructor", destructor.span);
+                self.indented(|dumper| {
+                    dumper.line("Introducer", destructor.introducer_span);
+                    dumper.block(&destructor.body);
+                });
+            }
             ClassMember::Method(method) => {
                 self.line(
                     if method.mut_span.is_some() {

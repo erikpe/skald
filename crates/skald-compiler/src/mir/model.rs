@@ -131,6 +131,7 @@ impl MirProgram {
                         return_type: MirType::Unit,
                     })
             }
+            CallableId::Destructor(_) => None,
             CallableId::Method(method) => {
                 self.method(method).map(|declaration| MirCallableSignature {
                     parameters: &declaration.parameters,

@@ -47,6 +47,7 @@ pub const READ_ONLY_RECEIVER: &str = "TYP018";
 pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
 pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
 pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
+pub const UNSUPPORTED_DESTRUCTOR: &str = "TYP023";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -65,6 +66,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
+    reject_staged_destructors(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
     let classes = lower_class_declarations(program, &mut diagnostics);
@@ -94,6 +96,27 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
+}
+
+fn reject_staged_destructors(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
+    for class in program.classes.iter() {
+        let Some(destructor) = &class.destructor else {
+            continue;
+        };
+        diagnostics.push(
+            Diagnostic::error(
+                UNSUPPORTED_DESTRUCTOR,
+                format!(
+                    "destructor execution is not implemented for class `{}`",
+                    class.name
+                ),
+            )
+            .with_primary_label(
+                destructor.span,
+                "the declaration is resolved, but destruction bodies are not type-checked yet",
+            ),
+        );
+    }
 }
 
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {

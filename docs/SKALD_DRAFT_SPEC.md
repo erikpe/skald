@@ -1413,9 +1413,9 @@ liveness boundary frozen here.
 
 **Implementation status:** contract frozen by DD0 of the
 [Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md);
-syntax and execution remain staged for DD1–DD6. The parser-facing extension is
-recorded in
-[`grammar/README.md`](../grammar/README.md#frozen-next-extension-deterministic-destruction).
+syntax and resolution are implemented by DD1, while type checking and execution
+remain staged for DD2–DD6. The parser-facing extension is recorded in
+[`grammar/README.md`](../grammar/README.md#staged-extension-deterministic-destruction).
 
 This profile narrows the broader destruction rules in Section 5.7 to the
 compiler's current local-only inline-object model and normal control flow. It

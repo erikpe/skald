@@ -126,6 +126,22 @@ fn requires_one_explicit_initializer_even_for_empty_classes() {
 }
 
 #[test]
+fn resolved_destructors_stop_at_the_dd1_type_check_boundary() {
+    let output = check_text(concat!(
+        "class Resource { init() {} destroy {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, UNSUPPORTED_DESTRUCTOR);
+    assert!(diagnostic
+        .message
+        .contains("destructor execution is not implemented"));
+}
+
+#[test]
 fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
     let mut resolved = resolve_text(concat!(
         "class Other { init() {} }\n",

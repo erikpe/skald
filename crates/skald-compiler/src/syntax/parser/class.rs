@@ -39,7 +39,7 @@ impl Parser<'_> {
             let before = self.current;
             if let Some(member) = self.parse_class_member() {
                 members.push(member);
-            } else if self.previous().kind != TokenKind::RightBrace || !self.starts_class_member() {
+            } else if self.current == before || !self.starts_class_member() {
                 self.synchronize_class_member();
             }
             if self.current == before {
@@ -55,6 +55,7 @@ impl Parser<'_> {
         self.at_any(&[TokenKind::Fn, TokenKind::Mut, TokenKind::Ref])
             || (self.at(TokenKind::Identifier)
                 && (self.peek_ahead(1).kind == TokenKind::Colon
+                    || self.lexeme(self.peek()) == "destroy"
                     || (self.lexeme(self.peek()) == "init"
                         && self.peek_ahead(1).kind == TokenKind::LeftParen)))
     }
@@ -72,6 +73,21 @@ impl Parser<'_> {
             return None;
         }
 
+        if self.at(TokenKind::Mut)
+            && self.peek_ahead(1).kind == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(1)) == "destroy"
+        {
+            let modifier = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "destruction members do not use `mut`",
+                modifier.span,
+                "`destroy` already has an implicit mutable receiver",
+            );
+            self.parse_destructor();
+            return None;
+        }
+
         if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) {
             return self.parse_method().map(ClassMember::Method);
         }
@@ -84,19 +100,21 @@ impl Parser<'_> {
             if self.peek_ahead(1).kind == TokenKind::Colon {
                 return self.parse_field().map(ClassMember::Field);
             }
+            if text == "destroy" {
+                return self.parse_destructor().map(ClassMember::Destructor);
+            }
 
             let span = self.peek().span;
             let message = match text {
                 "assign" => "`assign` members are not supported by the inline-object profile",
-                "destroy" => "`destroy` members are not supported by the inline-object profile",
                 "init" => "malformed initializer declaration",
-                _ => "expected a field, initializer, or method declaration",
+                _ => "expected a field, initializer, destructor, or method declaration",
             };
             self.report(
                 INVALID_CLASS_MEMBER,
                 message,
                 span,
-                "class members use `name: type;`, `init(...) { ... }`, or `[mut] fn name(...) -> type { ... }`",
+                "class members use `name: type;`, `init(...) { ... }`, `destroy { ... }`, or `[mut] fn name(...) -> type { ... }`",
             );
             return None;
         }
@@ -105,7 +123,7 @@ impl Parser<'_> {
             INVALID_CLASS_MEMBER,
             "expected a class member declaration",
             self.peek().span,
-            "expected a field, initializer, or method",
+            "expected a field, initializer, destructor, or method",
         );
         None
     }
@@ -137,6 +155,65 @@ impl Parser<'_> {
         Some(InitializerDecl {
             introducer_span: introducer.span,
             parameters,
+            span: self.cover(introducer.span, body.span),
+            body,
+        })
+    }
+
+    fn parse_destructor(&mut self) -> Option<DestructorDecl> {
+        let introducer = self.advance();
+        debug_assert_eq!(self.lexeme(introducer), "destroy");
+        let mut valid = true;
+
+        if self.at(TokenKind::LeftParen) {
+            let parameters_span = self.peek().span;
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "destruction members do not have a parameter list",
+                parameters_span,
+                "remove the parentheses and parameters",
+            );
+            self.parse_parameter_list();
+            valid = false;
+        }
+
+        if let Some(arrow) = self.consume(TokenKind::Arrow) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "destruction members do not declare a result type",
+                arrow.span,
+                "`destroy` returns `unit` implicitly",
+            );
+            self.parse_type(
+                TypeContext::Result,
+                "expected a type after the invalid destruction result arrow",
+            );
+            valid = false;
+        }
+
+        if let Some(semicolon) = self.consume(TokenKind::Semicolon) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "destruction members require a body",
+                semicolon.span,
+                "replace `;` with `{ ... }`",
+            );
+            return None;
+        }
+
+        if !self.at(TokenKind::LeftBrace) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "malformed destruction declaration",
+                self.peek().span,
+                "expected `{` directly after `destroy`",
+            );
+            return None;
+        }
+
+        let body = self.parse_block()?;
+        valid.then_some(DestructorDecl {
+            introducer_span: introducer.span,
             span: self.cover(introducer.span, body.span),
             body,
         })

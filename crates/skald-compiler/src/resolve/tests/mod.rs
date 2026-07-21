@@ -1,6 +1,9 @@
 use super::*;
 use crate::{
-    identity::{BindingId, ClassId, FunctionId, InitializerId, LocalId, MethodId, ParameterId},
+    identity::{
+        BindingId, CallableId, ClassId, DestructorId, FunctionId, InitializerId, LocalId, MethodId,
+        ParameterId,
+    },
     lexer::lex,
     literal::NumericLiteralKind,
     source::SourceDatabase,

@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0 is complete and DD1 is next.
+Status: in progress; DD0–DD1 are complete and DD2 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -163,15 +163,15 @@ and failure behavior without making a new language-design decision.
 **Purpose:** Introduce stable source and identity representations without
 making destruction executable yet.
 
-- [ ] Parse `destroy { ... }` as a dedicated class member with a complete span.
-- [ ] Preserve `destroy` as an ordinary identifier outside the contextual form.
-- [ ] Recover cleanly from parameters, result annotations, missing braces, and
+- [x] Parse `destroy { ... }` as a dedicated class member with a complete span.
+- [x] Preserve `destroy` as an ordinary identifier outside the contextual form.
+- [x] Recover cleanly from parameters, result annotations, missing braces, and
       other malformed destruction declarations.
-- [ ] Reject duplicate destruction members deterministically.
-- [ ] Assign an owner-qualified lifecycle identity during resolution.
-- [ ] Resolve destructor bodies with an implicit mutable `self` and the normal
+- [x] Reject duplicate destruction members deterministically.
+- [x] Assign an owner-qualified lifecycle identity during resolution.
+- [x] Resolve destructor bodies with an implicit mutable `self` and the normal
       class-member namespace.
-- [ ] Extend exact AST/resolved dumps and keep declaration iteration stable.
+- [x] Extend exact AST/resolved dumps and keep declaration iteration stable.
 
 **Tests:** Syntax recovery, contextual spelling, duplicates, member lookup,
 forward declarations, identity ownership, and deterministic exact dumps.

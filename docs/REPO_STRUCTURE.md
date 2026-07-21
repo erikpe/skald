@@ -191,16 +191,22 @@ Value, `ref`, and `mut ref` parameters share one parameter-list parser across
 functions, external declarations, methods, and initializers. Modifier and type
 spans remain source-shaped in the AST and deterministic dump.
 
+The contextual `destroy { ... }` class member has a dedicated AST node and
+complete source span. Malformed parameters, results, modifiers, semicolons, and
+missing bodies recover at the class-member boundary. The same spelling remains
+an ordinary field, method, local, parameter, or top-level name outside that
+shape.
+
 One shared nesting budget limits recursive blocks, groups, unary expressions,
 and postfix calls to 128 active levels. Excessive input produces a source
 diagnostic and iterative declaration recovery rather than stack overflow.
 
 ### Resolution and identities
 
-Neutral identities include functions, classes, fields, initializers, methods,
-callables, parameters, locals, and bindings. `CallableId` identifies both a
-top-level function and class-owned executable bodies, and owns that body's
-local MIR identities.
+Neutral identities include functions, classes, fields, initializers,
+destructors, methods, callables, parameters, locals, and bindings. `CallableId`
+identifies both a top-level function and class-owned executable bodies, and owns
+that body's local MIR identities.
 
 Resolution collects top-level declarations before resolving bodies. Functions
 and classes share one namespace; members remain class-owned. Resolved IR, HIR,
@@ -218,6 +224,12 @@ does not decide alias access or whether a call argument is a value or place.
 Dense declaration tables and sparse optional-definition tables share private
 validated storage utilities while retaining phase-specific public wrappers.
 Member definitions use stable callable keys and deterministic ordering.
+
+DD1 resolves a destructor through an owner-qualified `DestructorId` and the
+shared callable-body resolver, including implicit `self`, locals, fields,
+methods, aliases, and forward references. The type checker currently emits the
+structured `TYP023` staging diagnostic, so destructor bodies cannot be omitted
+silently or reach HIR before DD2 defines their typed representation.
 
 ### Typed HIR
 

@@ -3,8 +3,8 @@
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId,
-        ParameterId,
+        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, LocalId,
+        MethodId, ParameterId,
     },
     literal::NumericLiteralKind,
     object_path::ObjectPath,
@@ -36,6 +36,10 @@ impl ResolvedProgram {
 
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
         self.class(id.class())?.initializer(id)
+    }
+
+    pub fn destructor(&self, id: DestructorId) -> Option<&ResolvedDestructorDeclaration> {
+        self.class(id.class())?.destructor(id)
     }
 
     pub fn method(&self, id: MethodId) -> Option<&ResolvedMethodDeclaration> {
@@ -94,6 +98,7 @@ pub struct ResolvedClassDeclaration {
     pub name_span: Span,
     pub fields: Vec<ResolvedFieldDeclaration>,
     pub initializer: Option<ResolvedInitializerDeclaration>,
+    pub destructor: Option<ResolvedDestructorDeclaration>,
     pub methods: Vec<ResolvedMethodDeclaration>,
     pub span: Span,
 }
@@ -113,6 +118,15 @@ impl ResolvedClassDeclaration {
         self.initializer
             .as_ref()
             .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn destructor(&self, id: DestructorId) -> Option<&ResolvedDestructorDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.destructor
+            .as_ref()
+            .filter(|destructor| destructor.id == id)
     }
 
     pub fn method(&self, id: MethodId) -> Option<&ResolvedMethodDeclaration> {
@@ -138,6 +152,12 @@ pub struct ResolvedFieldDeclaration {
 pub struct ResolvedInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<ResolvedParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedDestructorDeclaration {
+    pub id: DestructorId,
     pub span: Span,
 }
 
@@ -198,6 +218,7 @@ impl ResolvedClassDefinitionTable {
 pub struct ResolvedClassDefinition {
     pub class: ClassId,
     pub initializer: Option<ResolvedMemberDefinition>,
+    pub destructor: Option<ResolvedMemberDefinition>,
     pub methods: Vec<ResolvedMemberDefinition>,
     pub span: Span,
 }
@@ -210,11 +231,15 @@ impl ResolvedClassDefinition {
                 .initializer
                 .as_ref()
                 .filter(|definition| definition.callable == callable),
+            CallableId::Destructor(destructor) if destructor.class() == self.class => self
+                .destructor
+                .as_ref()
+                .filter(|definition| definition.callable == callable),
             CallableId::Method(method) if method.class() == self.class => self
                 .methods
                 .get(method.index())
                 .filter(|definition| definition.callable == callable),
-            CallableId::Initializer(_) | CallableId::Method(_) => None,
+            CallableId::Initializer(_) | CallableId::Destructor(_) | CallableId::Method(_) => None,
         }
     }
 }

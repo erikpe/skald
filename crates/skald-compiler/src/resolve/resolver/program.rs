@@ -20,6 +20,7 @@ struct ClassWorkItem {
     id: ClassId,
     ast_index: usize,
     initializer_member: Option<usize>,
+    destructor_member: Option<usize>,
     method_members: Vec<usize>,
 }
 
@@ -207,9 +208,11 @@ impl<'ast> ProgramResolver<'ast> {
     ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
         let mut fields = Vec::new();
         let mut initializer = None;
+        let mut destructor = None;
         let mut methods = Vec::new();
         let mut symbols = ClassSymbols::default();
         let mut initializer_member = None;
+        let mut destructor_member = None;
         let mut method_members = Vec::new();
 
         for (member_index, member) in class.members.iter().enumerate() {
@@ -264,6 +267,26 @@ impl<'ast> ProgramResolver<'ast> {
                     });
                     initializer_member = Some(member_index);
                 }
+                syntax::ClassMember::Destructor(source) => {
+                    if let Some(previous_span) = symbols.destructor_span {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                DUPLICATE_MEMBER,
+                                format!("duplicate destructor in class `{}`", class.name.text),
+                            )
+                            .with_primary_label(source.introducer_span, "redeclared here")
+                            .with_secondary_label(previous_span, "first declared here"),
+                        );
+                        continue;
+                    }
+                    let destructor_id = DestructorId::new(id, 0);
+                    symbols.destructor_span = Some(source.introducer_span);
+                    destructor = Some(ResolvedDestructorDeclaration {
+                        id: destructor_id,
+                        span: source.span,
+                    });
+                    destructor_member = Some(member_index);
+                }
                 syntax::ClassMember::Method(method) => {
                     let method_id = MethodId::new(id, methods.len());
                     if !declare_ordinary_member(
@@ -304,6 +327,7 @@ impl<'ast> ProgramResolver<'ast> {
                 name_span: class.name.span,
                 fields,
                 initializer,
+                destructor,
                 methods,
                 span: class.span,
             },
@@ -312,6 +336,7 @@ impl<'ast> ProgramResolver<'ast> {
                 id,
                 ast_index,
                 initializer_member,
+                destructor_member,
                 method_members,
             },
         )
@@ -394,6 +419,31 @@ impl<'ast> ProgramResolver<'ast> {
                     }
                 });
 
+                let destructor = item.destructor_member.map(|member_index| {
+                    let syntax::ClassMember::Destructor(source) = &class.members[member_index]
+                    else {
+                        unreachable!("destructor work must reference a destructor")
+                    };
+                    let metadata = declaration
+                        .destructor
+                        .as_ref()
+                        .expect("accepted destructor must have declaration metadata");
+                    let body = resolve_callable_body(
+                        metadata.id.into(),
+                        Some(item.id),
+                        &[],
+                        &source.body,
+                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
+                        &mut self.diagnostics,
+                    );
+                    ResolvedMemberDefinition {
+                        callable: metadata.id.into(),
+                        locals: body.locals,
+                        body: body.body,
+                        span: source.span,
+                    }
+                });
+
                 let methods = item
                     .method_members
                     .iter()
@@ -428,6 +478,7 @@ impl<'ast> ProgramResolver<'ast> {
                 ResolvedClassDefinition {
                     class: item.id,
                     initializer,
+                    destructor,
                     methods,
                     span: class.span,
                 }

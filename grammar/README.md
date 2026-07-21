@@ -382,12 +382,11 @@ The exact declaration, liveness, evaluation-order, diagnostic, IR, layout, and
 future-lifecycle contract is in the
 [frozen class-typed inline-field profile](../docs/SKALD_DRAFT_SPEC.md#544-frozen-class-typed-inline-field-profile).
 
-## Frozen next extension: deterministic destruction
+## Staged extension: deterministic destruction
 
-The next parser-facing object extension is frozen but not yet accepted by the
-compiler. DD1 of the
-[Deterministic Destruction Roadmap](../docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md)
-will enable the dedicated class-member form:
+The parser and resolver accept the dedicated class-member form implemented by
+DD1 of the
+[Deterministic Destruction Roadmap](../docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md):
 
 ```text
 destructor-declaration = "destroy" block
@@ -429,6 +428,12 @@ copying, exceptions, inheritance, shared ownership, arrays, explicit early
 destruction, or cleanup for failed construction. The complete frozen semantic
 and diagnostic contract is in the
 [local deterministic-destruction profile](../docs/SKALD_DRAFT_SPEC.md#545-frozen-local-deterministic-destruction-profile).
+
+DD1 deliberately stops at the resolution boundary. Destructor bodies carry a
+stable owner-qualified identity and resolve ordinary names, `self`, fields,
+methods, aliases, and locals, but type checking reports `TYP023` until DD2 adds
+the corresponding HIR profile. No destructor or implicit cleanup reaches MIR
+or native execution yet.
 
 ## Recovery and nesting
 

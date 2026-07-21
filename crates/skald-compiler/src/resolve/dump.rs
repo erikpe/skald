@@ -86,6 +86,14 @@ impl ResolvedDumper {
             } else {
                 dumper.indented(|dumper| dumper.raw_line("<none>"));
             }
+            dumper.heading("Destructor");
+            if let Some(destructor) = &class.destructor {
+                dumper.indented(|dumper| {
+                    dumper.line(&format!("Destructor {}", destructor.id), destructor.span);
+                });
+            } else {
+                dumper.indented(|dumper| dumper.raw_line("<none>"));
+            }
             dumper.heading("Methods");
             dumper.indented(|dumper| {
                 for method in &class.methods {
@@ -117,6 +125,9 @@ impl ResolvedDumper {
         self.indented(|dumper| {
             if let Some(initializer) = &class.initializer {
                 dumper.member_definition(initializer);
+            }
+            if let Some(destructor) = &class.destructor {
+                dumper.member_definition(destructor);
             }
             for method in &class.methods {
                 dumper.member_definition(method);

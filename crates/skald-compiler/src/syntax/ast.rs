@@ -44,6 +44,7 @@ pub struct ClassDecl {
 pub enum ClassMember {
     Field(FieldDecl),
     Initializer(InitializerDecl),
+    Destructor(DestructorDecl),
     Method(MethodDecl),
 }
 
@@ -52,6 +53,7 @@ impl ClassMember {
         match self {
             Self::Field(field) => field.span,
             Self::Initializer(initializer) => initializer.span,
+            Self::Destructor(destructor) => destructor.span,
             Self::Method(method) => method.span,
         }
     }
@@ -68,6 +70,13 @@ pub struct FieldDecl {
 pub struct InitializerDecl {
     pub introducer_span: Span,
     pub parameters: Vec<Parameter>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DestructorDecl {
+    pub introducer_span: Span,
     pub body: Block,
     pub span: Span,
 }
