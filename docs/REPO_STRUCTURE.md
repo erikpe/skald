@@ -282,9 +282,10 @@ mutable receiver calls, and the external-alias exclusion before backend
 lowering. Dumps expose modes, indirect bases, and argument kinds without
 target offsets or registers. These contracts are defined in the
 [alias-parameter implementation profile](SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile),
-and are covered by hand-built MIR tests. Source HIR-to-MIR alias lowering
-remains a future roadmap step; the driver reports that precise capability
-boundary for alias-bearing source today.
+and are covered by hand-built and source-driven MIR tests. HIR-to-MIR lowering
+maps typed alias bindings directly to indirect MIR places, retains the single
+source-ordered argument sequence, and introduces no access inference or ABI
+logic. Restricted alias source programs now continue through the backend.
 
 ## x86-64 System V backend
 

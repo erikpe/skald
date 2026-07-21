@@ -93,3 +93,31 @@ fn hand_built_aliases_mutate_forward_overlap_initialize_and_mix_abi_classes() {
     assert_eq!(result.stdout, b"50\n");
     assert!(result.stderr.is_empty());
 }
+
+#[test]
+fn source_aliases_lower_through_the_native_backend() {
+    let source = concat!(
+        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "class Counter {\n",
+        "    value: i64;\n",
+        "    init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "fn add(mut ref counter: Counter, amount: i64) -> unit {\n",
+        "    counter.value = counter.value + amount;\n",
+        "}\n",
+        "fn forward(mut ref counter: Counter, amount: i64) -> unit { add(counter, amount); }\n",
+        "fn main() -> i64 {\n",
+        "    var counter: Counter = Counter(40);\n",
+        "    forward(counter, 10);\n",
+        "    ska_rt_println_i64(counter.value);\n",
+        "    return 0;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(alias_println_i64_stub());
+
+    let result = run_native_assembly_output(&output);
+    assert!(result.status.success());
+    assert_eq!(result.stdout, b"50\n");
+    assert!(result.stderr.is_empty());
+}

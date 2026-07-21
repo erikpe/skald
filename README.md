@@ -40,20 +40,21 @@ The current Linux x86-64 compiler supports:
 - inline classes with primitive fields, one explicit initializer, direct local
   construction, field reads/writes, and statically dispatched receiver methods;
 - read-only `fn` and mutable `mut fn` receiver access;
+- restricted call-scoped `ref` and `mut ref` class parameters over inline
+  locals, method receivers, and forwarded aliases;
 - deterministic left-to-right operand and argument evaluation;
 - textual x86-64 System V assembly, native linking, exact diagnostics, and a
   small C runtime with primitive output functions.
 
-Inline objects are deliberately local-only today. Object parameters, results,
-ordinary object arguments, copying, destruction, object fields, inheritance,
-interfaces, `shared`, end-to-end alias compilation, arrays, optionals, loops,
-and checked exceptions are not implemented yet.
+Owning inline objects are deliberately local-only today. By-value object
+parameters, results and arguments, copying, destruction, object fields,
+inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
+exceptions are not implemented yet.
 
-The restricted alias-parameter work is implemented and tested independently
-through syntax, typed HIR, verified MIR, and the internal x86-64 pointer ABI.
-The HIR-to-MIR connection is intentionally still disabled, so alias-bearing
-source programs stop at a structured compiler capability diagnostic until that
-remaining pipeline slice is completed.
+Restricted alias parameters compile through syntax, typed HIR, verified MIR,
+and the internal x86-64 pointer ABI without copying object bytes. The remaining
+alias work is public-feature hardening: broader native golden coverage,
+diagnostic auditing, and final documentation cleanup.
 
 See [the grammar notes](grammar/README.md) for the exact accepted source subset
 and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the broader language

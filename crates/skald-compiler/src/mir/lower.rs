@@ -5,7 +5,7 @@ use crate::{
         BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirClassDeclaration,
         HirConditional, HirExpression, HirExpressionKind, HirFunctionDeclaration,
         HirFunctionDefinition, HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter,
-        HirProgram, HirStatement, HirUnaryOperation, Type,
+        HirParameterMode, HirProgram, HirStatement, HirUnaryOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId},
 };
@@ -13,10 +13,6 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    assert!(
-        hir.first_alias_parameter().is_none(),
-        "alias-bearing HIR requires AL6 HIR-to-MIR alias lowering"
-    );
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
@@ -70,7 +66,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 .initializer
                 .parameters
                 .iter()
-                .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
+                .map(lower_parameter)
                 .collect(),
             span: class.initializer.span,
         }],
@@ -84,11 +80,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
                     HirAccess::Mutable => MirReceiverAccess::Mutable,
                 },
-                parameters: method
-                    .parameters
-                    .iter()
-                    .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
-                    .collect(),
+                parameters: method.parameters.iter().map(lower_parameter).collect(),
                 return_type: lower_type(method.return_type),
                 span: method.span,
             })
@@ -101,11 +93,7 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
     MirFunctionDeclaration {
         id: declaration.id,
         name: declaration.name.clone(),
-        parameters: declaration
-            .parameters
-            .iter()
-            .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
-            .collect(),
+        parameters: declaration.parameters.iter().map(lower_parameter).collect(),
         return_type: lower_type(declaration.return_type),
         linkage: match &declaration.linkage {
             HirFunctionLinkage::Internal => MirFunctionLinkage::Internal,
@@ -248,7 +236,15 @@ impl<'hir> BodyLowerer<'hir> {
                 id,
                 source: BindingId::Parameter(parameter.id),
                 name: parameter.name.clone(),
-                kind: MirStorageKind::Parameter,
+                kind: match parameter.mode {
+                    HirParameterMode::Value => MirStorageKind::Parameter,
+                    HirParameterMode::ReadOnlyAlias => {
+                        MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly)
+                    }
+                    HirParameterMode::MutableAlias => {
+                        MirStorageKind::AliasParameter(MirAliasAccess::Mutable)
+                    }
+                },
                 ty: lower_type(parameter.ty),
                 span: parameter.span,
             });
@@ -287,15 +283,7 @@ impl<'hir> BodyLowerer<'hir> {
                             }));
                         }
                         crate::hir::HirLocalInitializer::Construct(construction) => {
-                            let arguments = construction
-                                .arguments
-                                .iter()
-                                .map(|argument| {
-                                    MirArgument::Value(self.lower_value_argument(argument).expect(
-                                        "typed constructor argument must produce a scalar value",
-                                    ))
-                                })
-                                .collect();
+                            let arguments = self.lower_call_arguments(&construction.arguments);
                             self.emit(MirInstruction::Initialize(MirInitialize {
                                 destination: storage.into(),
                                 target: construction.initializer,
@@ -507,15 +495,7 @@ impl<'hir> BodyLowerer<'hir> {
                 arguments,
             } => {
                 // Argument evaluation is likewise fixed left-to-right.
-                let arguments = arguments
-                    .iter()
-                    .map(|argument| {
-                        MirArgument::Value(
-                            self.lower_value_argument(argument)
-                                .expect("typed call argument must produce a value"),
-                        )
-                    })
-                    .collect();
+                let arguments = self.lower_call_arguments(arguments);
                 let result = (expression.ty != Type::Unit)
                     .then(|| self.new_value(lower_type(expression.ty), expression.span));
                 self.emit(MirInstruction::Call(MirCall {
@@ -540,15 +520,7 @@ impl<'hir> BodyLowerer<'hir> {
             } => {
                 // Receiver selection precedes all explicit argument effects.
                 let receiver = self.lower_object_place(receiver);
-                let arguments = arguments
-                    .iter()
-                    .map(|argument| {
-                        MirArgument::Value(
-                            self.lower_value_argument(argument)
-                                .expect("typed method argument must produce a scalar value"),
-                        )
-                    })
-                    .collect();
+                let arguments = self.lower_call_arguments(arguments);
                 let result = (expression.ty != Type::Unit)
                     .then(|| self.new_value(lower_type(expression.ty), expression.span));
                 self.emit(MirInstruction::Call(MirCall {
@@ -568,17 +540,27 @@ impl<'hir> BodyLowerer<'hir> {
             .project_field(place.field)
     }
 
-    fn lower_value_argument(&mut self, argument: &HirCallArgument) -> Option<ValueId> {
-        match argument {
-            HirCallArgument::Value(expression) => self.lower_expression(expression),
-            HirCallArgument::Place(_) => {
-                unreachable!("alias place arguments require AL6 HIR-to-MIR alias lowering")
-            }
-        }
+    fn lower_call_arguments(&mut self, arguments: &[HirCallArgument]) -> Vec<MirArgument> {
+        arguments
+            .iter()
+            .map(|argument| match argument {
+                HirCallArgument::Value(expression) => MirArgument::Value(
+                    self.lower_expression(expression)
+                        .expect("typed value argument must produce a scalar value"),
+                ),
+                HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
+            })
+            .collect()
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
-        self.storage_for_binding(place.binding).into()
+        let storage = self.storage_for_binding(place.binding);
+        match self.storage[storage.index()].kind {
+            MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
+            MirStorageKind::Receiver | MirStorageKind::Parameter | MirStorageKind::Local => {
+                MirPlace::base(storage)
+            }
+        }
     }
 
     fn storage_for_binding(&self, binding: BindingId) -> StorageId {
@@ -630,6 +612,15 @@ impl<'hir> BodyLowerer<'hir> {
             span,
         });
         result
+    }
+}
+
+fn lower_parameter(parameter: &HirParameter) -> MirParameter {
+    let ty = lower_type(parameter.ty);
+    match parameter.mode {
+        HirParameterMode::Value => MirParameter::value(ty),
+        HirParameterMode::ReadOnlyAlias => MirParameter::read_only_alias(ty),
+        HirParameterMode::MutableAlias => MirParameter::mutable_alias(ty),
     }
 }
 

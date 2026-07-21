@@ -103,20 +103,6 @@ impl HirProgram {
             }
         }
     }
-
-    pub fn first_alias_parameter(&self) -> Option<&HirParameter> {
-        self.declarations
-            .iter()
-            .flat_map(|declaration| &declaration.parameters)
-            .chain(self.classes.iter().flat_map(|class| {
-                class
-                    .initializer
-                    .parameters
-                    .iter()
-                    .chain(class.methods.iter().flat_map(|method| &method.parameters))
-            }))
-            .find(|parameter| parameter.mode != HirParameterMode::Value)
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

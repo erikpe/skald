@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: in progress; AL0–AL3 implemented.
+Status: in progress; AL0–AL6 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -324,7 +324,7 @@ declarations and promises no cross-module ABI stability.
 - [x] AL3 — Type-check alias access and build typed call arguments
 - [x] AL4 — Add verified alias parameters and place arguments to MIR
 - [x] AL5 — Lower the alias pointer ABI on Linux x86-64
-- [ ] AL6 — Connect typed aliases through HIR-to-MIR lowering
+- [x] AL6 — Connect typed aliases through HIR-to-MIR lowering
 - [ ] AL7 — Enable, harden, and document the complete native slice
 
 A task is complete only when all of its checkboxes, acceptance criteria, and
@@ -515,19 +515,19 @@ edge cases are deterministic.
 **Purpose:** Complete the source-to-machine path while keeping lowering
 mechanical and independently testable.
 
-- [ ] Lower HIR parameter descriptors into MIR descriptors and parameter
+- [x] Lower HIR parameter descriptors into MIR descriptors and parameter
       storage in stable source order.
-- [ ] Map alias-bound `BindingId` uses to indirect MIR place bases.
-- [ ] Lower value and alias arguments through one left-to-right traversal.
-- [ ] Lower local, `self`, grouped, and forwarded alias sources to exact MIR
+- [x] Map alias-bound `BindingId` uses to indirect MIR place bases.
+- [x] Lower value and alias arguments through one left-to-right traversal.
+- [x] Lower local, `self`, grouped, and forwarded alias sources to exact MIR
       places without constructing object values.
-- [ ] Lower alias arguments consistently for functions, methods, and
+- [x] Lower alias arguments consistently for functions, methods, and
       initializers.
-- [ ] Preserve existing scalar expression evaluation and receiver-before-
+- [x] Preserve existing scalar expression evaluation and receiver-before-
       arguments ordering.
-- [ ] Run MIR verification immediately after lowering and at the existing pass
+- [x] Run MIR verification immediately after lowering and at the existing pass
       and backend trust boundaries.
-- [ ] Update lowering tests and exact MIR snapshots without duplicating
+- [x] Update lowering tests and exact MIR snapshots without duplicating
       type-checker access logic.
 
 **Tests:** Source-driven MIR tests for read-only and mutable aliases,

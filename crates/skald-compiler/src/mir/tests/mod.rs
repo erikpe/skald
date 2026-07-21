@@ -5,6 +5,7 @@ use crate::{
     test_support::lower_source_to_mir,
 };
 
+mod alias_lowering;
 mod aliases;
 mod object_fixtures;
 mod objects;
