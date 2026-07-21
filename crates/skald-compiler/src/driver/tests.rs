@@ -11,7 +11,7 @@ use crate::{
     test_support::TemporaryDirectory,
 };
 
-use super::*;
+use super::{pipeline::UNSUPPORTED_DESTRUCTOR_LOWERING, *};
 
 fn run(args: &[&str]) -> (i32, String, String) {
     run_with_toolchain(args, &Toolchain::new("false", "missing-runtime.a"))
@@ -40,6 +40,29 @@ fn temporary_artifacts(directory: &Path) -> Vec<PathBuf> {
                 .is_some_and(|name| name.contains(".skac-") && name.ends_with(".tmp"))
         })
         .collect()
+}
+
+#[test]
+fn typed_destructors_stop_before_the_dd3_mir_boundary() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "destructor.ska",
+        concat!(
+            "class Resource { init() {} destroy { return; } }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect_err("DD2 destructor HIR must not be silently omitted by MIR lowering") else {
+        panic!("expected a staged source diagnostic");
+    };
+
+    assert_eq!(report.diagnostics.len(), 1);
+    let diagnostic = report.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, UNSUPPORTED_DESTRUCTOR_LOWERING);
+    assert!(diagnostic
+        .labels
+        .iter()
+        .any(|label| label.message.contains("type-checked")));
 }
 
 #[test]

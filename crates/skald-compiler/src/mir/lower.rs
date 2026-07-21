@@ -13,6 +13,10 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+    assert!(
+        !hir.has_destructors(),
+        "destructor HIR must stop at the DD2 phase boundary until MIR lowering is implemented"
+    );
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir

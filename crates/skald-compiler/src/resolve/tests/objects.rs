@@ -410,6 +410,19 @@ fn resolves_destructor_identity_receiver_body_and_forward_references() {
 }
 
 #[test]
+fn special_destructor_is_not_an_explicit_method_call_target() {
+    let output = resolve_text(concat!(
+        "class Resource { init() {} destroy { self.destroy(); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, UNKNOWN_MEMBER);
+    assert!(diagnostic.message.contains("has no member `destroy`"));
+}
+
+#[test]
 fn duplicate_destructors_are_diagnosed_in_source_order() {
     let output = resolve_text(concat!(
         "class Duplicate {\n",

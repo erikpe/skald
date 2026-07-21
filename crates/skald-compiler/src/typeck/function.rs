@@ -295,7 +295,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 INVALID_RETURN,
-                                "a `unit` function cannot return a value",
+                                format!("{} cannot return a value", self.callable_name),
                             )
                             .with_primary_label(statement.span, "use `return;` instead"),
                         );

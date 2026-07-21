@@ -79,6 +79,16 @@ impl HirDumper {
                     dumper.parameter(parameter);
                 }
             });
+            if let Some(destructor) = &class.destructor {
+                let access = match destructor.receiver_access {
+                    HirAccess::ReadOnly => "readonly",
+                    HirAccess::Mutable => "mutable",
+                };
+                dumper.line(
+                    &format!("Destructor {} {access} -> unit", destructor.id),
+                    destructor.span,
+                );
+            }
             dumper.heading("Methods");
             dumper.indented(|dumper| {
                 for method in &class.methods {
@@ -106,6 +116,9 @@ impl HirDumper {
         self.line(&format!("ClassDefinition {}", class.class), class.span);
         self.indented(|dumper| {
             dumper.member_definition(&class.initializer);
+            if let Some(destructor) = &class.destructor {
+                dumper.member_definition(destructor);
+            }
             for method in &class.methods {
                 dumper.member_definition(method);
             }

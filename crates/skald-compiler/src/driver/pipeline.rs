@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
     mir::lower_hir,
     passes::run_mir_pipeline,
@@ -13,6 +13,9 @@ use crate::{
     syntax::parse,
     typeck::type_check,
 };
+
+/// Temporary full-pipeline boundary while DD3 adds destructor lowering to MIR.
+pub(crate) const UNSUPPORTED_DESTRUCTOR_LOWERING: &str = "TYP023";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -73,6 +76,10 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    reject_destructors_before_mir(&hir, &mut diagnostics);
+    if diagnostics.has_errors() {
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let mir = run_mir_pipeline(lower_hir(&hir)).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 
@@ -83,6 +90,27 @@ pub fn compile_source_to_assembly(
             diagnostics,
         },
     })
+}
+
+fn reject_destructors_before_mir(hir: &crate::hir::HirProgram, diagnostics: &mut Diagnostics) {
+    for class in hir.classes.iter() {
+        let Some(destructor) = &class.destructor else {
+            continue;
+        };
+        diagnostics.push(
+            Diagnostic::error(
+                UNSUPPORTED_DESTRUCTOR_LOWERING,
+                format!(
+                    "destructor execution is not implemented for class `{}`",
+                    class.name
+                ),
+            )
+            .with_primary_label(
+                destructor.span,
+                "the body is type-checked, but MIR destruction is staged for DD3",
+            ),
+        );
+    }
 }
 
 fn diagnostic_failure(sources: SourceDatabase, diagnostics: Diagnostics) -> CompilationError {

@@ -75,6 +75,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
 mod alias_parameters;
 mod control_flow;
 mod declarations;
+mod destructors;
 mod diagnostics;
 mod dumps;
 mod expressions;

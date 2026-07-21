@@ -225,11 +225,13 @@ Dense declaration tables and sparse optional-definition tables share private
 validated storage utilities while retaining phase-specific public wrappers.
 Member definitions use stable callable keys and deterministic ordering.
 
-DD1 resolves a destructor through an owner-qualified `DestructorId` and the
-shared callable-body resolver, including implicit `self`, locals, fields,
-methods, aliases, and forward references. The type checker currently emits the
-structured `TYP023` staging diagnostic, so destructor bodies cannot be omitted
-silently or reach HIR before DD2 defines their typed representation.
+DD2 represents a destructor through its owner-qualified `DestructorId`, a
+dedicated HIR declaration, and the shared typed member-body representation.
+Its implicit mutable `self`, `unit` result, locals, fields, calls, aliases, and
+control flow use the same access and checking vocabulary as ordinary methods.
+The full pipeline emits the structured `TYP023` staging diagnostic after HIR
+until DD3 defines MIR cleanup, so typed destruction bodies cannot be silently
+omitted during lowering.
 
 ### Typed HIR
 
@@ -238,9 +240,9 @@ member targets, receiver access, object/field places, and destination-oriented
 construction. Failed type checking produces diagnostics but no executable HIR.
 
 Callable bodies share one checking engine with explicit context for functions,
-initializers, and methods. Type checking also computes `BlockFlow`, the
-authoritative structured fallthrough/termination summary consumed by return
-diagnostics and MIR lowering.
+initializers, destructors, and methods. Type checking also computes `BlockFlow`,
+the authoritative structured fallthrough/termination summary consumed by
+return diagnostics and MIR lowering.
 
 Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw

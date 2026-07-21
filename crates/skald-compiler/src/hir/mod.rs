@@ -10,11 +10,11 @@ pub use dump::dump_hir;
 pub use ir::{
     BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirCallStatement,
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition,
-    HirClassDefinitionTable, HirConditional, HirConditionalArm, HirConstruction, HirExpression,
-    HirExpressionKind, HirFieldAssignment, HirFieldConstruction, HirFieldDeclaration,
-    HirFieldPlace, HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
-    HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration, HirLocal,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectPath,
-    HirObjectPlace, HirParameter, HirParameterMode, HirProgram, HirReturn, HirStatement,
-    HirUnaryOperation, Type,
+    HirClassDefinitionTable, HirConditional, HirConditionalArm, HirConstruction,
+    HirDestructorDeclaration, HirExpression, HirExpressionKind, HirFieldAssignment,
+    HirFieldConstruction, HirFieldDeclaration, HirFieldPlace, HirFunctionDeclaration,
+    HirFunctionDeclarationTable, HirFunctionDefinition, HirFunctionDefinitionTable,
+    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirLocalDecl, HirLocalInitializer,
+    HirMemberDefinition, HirMethodDeclaration, HirObjectPath, HirObjectPlace, HirParameter,
+    HirParameterMode, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
 };

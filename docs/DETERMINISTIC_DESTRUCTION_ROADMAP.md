@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0–DD1 are complete and DD2 is next.
+Status: in progress; DD0–DD2 are complete and DD3 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -184,16 +184,16 @@ source-name lookup into later phases.
 
 **Purpose:** Complete all source-level destructor legality and access decisions.
 
-- [ ] Add the dedicated HIR lifecycle member and implicit mutable receiver.
-- [ ] Type-check destructor bodies with the existing field, method, call, alias,
+- [x] Add the dedicated HIR lifecycle member and implicit mutable receiver.
+- [x] Type-check destructor bodies with the existing field, method, call, alias,
       conditional, block, and return rules.
-- [ ] Require an implicit `unit` result and reject value returns.
-- [ ] Keep the complete object live throughout the user destruction body.
-- [ ] Reject direct construction into already-live fields and all object-value
+- [x] Require an implicit `unit` result and reject value returns.
+- [x] Keep the complete object live throughout the user destruction body.
+- [x] Reject direct construction into already-live fields and all object-value
       or explicit-destroy forms retained outside the profile.
-- [ ] Reuse the existing receiver/access vocabulary rather than creating a
+- [x] Reuse the existing receiver/access vocabulary rather than creating a
       destructor-only mutability path.
-- [ ] Extend deterministic HIR dumps and focused type-checker diagnostics.
+- [x] Extend deterministic HIR dumps and focused type-checker diagnostics.
 
 **Tests:** Mutable/read-only access, nested fields, receiver calls, aliases,
 conditionals, returns, excluded construction/value forms, and exact HIR dumps.
@@ -320,7 +320,7 @@ and introduces none of the deferred ownership mechanisms.
 The slice is complete when:
 
 - [ ] all DD0–DD6 tasks and acceptance criteria are complete;
-- [ ] destructor declarations have stable identities and typed mutable bodies;
+- [x] destructor declarations have stable identities and typed mutable bodies;
 - [ ] complete objects run their body then nested fields in frozen reverse order;
 - [ ] owning locals are destroyed once in reverse initialization order;
 - [ ] nested scopes, conditionals, fallthrough, and return clean up correctly;

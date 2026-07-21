@@ -4,10 +4,10 @@ use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
         HirAccess, HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition,
-        HirClassDefinitionTable, HirFieldDeclaration, HirFunctionDeclaration,
-        HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage,
-        HirInitializerDeclaration, HirMethodDeclaration, HirParameter, HirParameterMode,
-        HirProgram, Type,
+        HirClassDefinitionTable, HirDestructorDeclaration, HirFieldDeclaration,
+        HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinitionTable,
+        HirFunctionLinkage, HirInitializerDeclaration, HirMethodDeclaration, HirParameter,
+        HirParameterMode, HirProgram, Type,
     },
     identity::FunctionId,
     resolve::{
@@ -25,6 +25,7 @@ use super::{
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
+const DESTRUCTOR_RECEIVER_ACCESS: HirAccess = HirAccess::Mutable;
 
 pub const MISSING_ENTRY_POINT: &str = "TYP001";
 pub const INVALID_ENTRY_POINT: &str = "TYP002";
@@ -47,7 +48,6 @@ pub const READ_ONLY_RECEIVER: &str = "TYP018";
 pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
 pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
 pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
-pub const UNSUPPORTED_DESTRUCTOR: &str = "TYP023";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -66,7 +66,6 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
-    reject_staged_destructors(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
     let classes = lower_class_declarations(program, &mut diagnostics);
@@ -96,27 +95,6 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
-}
-
-fn reject_staged_destructors(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
-    for class in program.classes.iter() {
-        let Some(destructor) = &class.destructor else {
-            continue;
-        };
-        diagnostics.push(
-            Diagnostic::error(
-                UNSUPPORTED_DESTRUCTOR,
-                format!(
-                    "destructor execution is not implemented for class `{}`",
-                    class.name
-                ),
-            )
-            .with_primary_label(
-                destructor.span,
-                "the declaration is resolved, but destruction bodies are not type-checked yet",
-            ),
-        );
-    }
 }
 
 fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
@@ -186,6 +164,14 @@ fn lower_class_declaration(
         parameters: initializer.parameters.iter().map(lower_parameter).collect(),
         span: initializer.span,
     };
+    let destructor = class
+        .destructor
+        .as_ref()
+        .map(|destructor| HirDestructorDeclaration {
+            id: destructor.id,
+            receiver_access: DESTRUCTOR_RECEIVER_ACCESS,
+            span: destructor.span,
+        });
     let methods = class
         .methods
         .iter()
@@ -222,6 +208,7 @@ fn lower_class_declaration(
         name_span: class.name_span,
         fields,
         initializer,
+        destructor,
         methods,
         span: class.span,
     })
@@ -255,6 +242,29 @@ fn check_class_definitions(
                 diagnostics,
             )
             .check_member();
+            let destructor = class.destructor.as_ref().map(|destructor| {
+                let body = definition
+                    .destructor
+                    .as_ref()
+                    .expect("resolved destructor declaration must have a body");
+                CallableChecker::new_member(
+                    program,
+                    MemberCheckContext {
+                        callable: destructor.id.into(),
+                        parameters: &[],
+                        definition: body,
+                        return_type: Type::Unit,
+                        receiver: ReceiverContext {
+                            class: class.id,
+                            access: DESTRUCTOR_RECEIVER_ACCESS,
+                            initializer: false,
+                        },
+                        callable_name: format!("destructor for class `{}`", class.name),
+                    },
+                    diagnostics,
+                )
+                .check_member()
+            });
             let methods = class
                 .methods
                 .iter()
@@ -282,6 +292,7 @@ fn check_class_definitions(
             Some(HirClassDefinition {
                 class: class.id,
                 initializer: initializer_body,
+                destructor,
                 methods,
                 span: definition.span,
             })

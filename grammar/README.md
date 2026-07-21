@@ -429,11 +429,12 @@ destruction, or cleanup for failed construction. The complete frozen semantic
 and diagnostic contract is in the
 [local deterministic-destruction profile](../docs/SKALD_DRAFT_SPEC.md#545-frozen-local-deterministic-destruction-profile).
 
-DD1 deliberately stops at the resolution boundary. Destructor bodies carry a
-stable owner-qualified identity and resolve ordinary names, `self`, fields,
-methods, aliases, and locals, but type checking reports `TYP023` until DD2 adds
-the corresponding HIR profile. No destructor or implicit cleanup reaches MIR
-or native execution yet.
+DD2 carries destructor bodies into typed HIR with their stable owner-qualified
+identity, implicit mutable receiver, `unit` result, and ordinary typed places,
+calls, aliases, locals, and control flow. Invalid bodies fail before HIR. The
+full compilation pipeline reports `TYP023` after HIR until DD3 adds the
+corresponding MIR lifecycle representation; no destructor or implicit cleanup
+is silently omitted during lowering.
 
 ## Recovery and nesting
 

@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId,
-        ParameterId,
+        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, LocalId,
+        MethodId, ParameterId,
     },
     object_path::ObjectPath,
     source::Span,
@@ -59,6 +59,10 @@ pub struct HirProgram {
 }
 
 impl HirProgram {
+    pub fn has_destructors(&self) -> bool {
+        self.classes.iter().any(|class| class.destructor.is_some())
+    }
+
     pub fn class(&self, id: ClassId) -> Option<&HirClassDeclaration> {
         self.classes.get(id)
     }
@@ -73,6 +77,10 @@ impl HirProgram {
 
     pub fn method(&self, id: MethodId) -> Option<&HirMethodDeclaration> {
         self.class(id.class())?.method(id)
+    }
+
+    pub fn destructor(&self, id: DestructorId) -> Option<&HirDestructorDeclaration> {
+        self.class(id.class())?.destructor(id)
     }
 
     pub fn member_definition(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
@@ -98,7 +106,12 @@ impl HirProgram {
                         return_type: Type::Unit,
                     })
             }
-            CallableId::Destructor(_) => None,
+            CallableId::Destructor(destructor) => {
+                self.destructor(destructor).map(|_| HirCallableSignature {
+                    parameters: &[],
+                    return_type: Type::Unit,
+                })
+            }
             CallableId::Method(method) => {
                 self.method(method).map(|declaration| HirCallableSignature {
                     parameters: &declaration.parameters,
@@ -156,6 +169,7 @@ pub struct HirClassDeclaration {
     pub name_span: Span,
     pub fields: Vec<HirFieldDeclaration>,
     pub initializer: HirInitializerDeclaration,
+    pub destructor: Option<HirDestructorDeclaration>,
     pub methods: Vec<HirMethodDeclaration>,
     pub span: Span,
 }
@@ -180,6 +194,12 @@ impl HirClassDeclaration {
             .get(id.index())
             .filter(|method| method.id == id)
     }
+
+    pub fn destructor(&self, id: DestructorId) -> Option<&HirDestructorDeclaration> {
+        self.destructor
+            .as_ref()
+            .filter(|destructor| destructor.id == id && id.class() == self.id)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -195,6 +215,13 @@ pub struct HirFieldDeclaration {
 pub struct HirInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<HirParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirDestructorDeclaration {
+    pub id: DestructorId,
+    pub receiver_access: HirAccess,
     pub span: Span,
 }
 
@@ -264,6 +291,7 @@ impl HirClassDefinitionTable {
 pub struct HirClassDefinition {
     pub class: ClassId,
     pub initializer: HirMemberDefinition,
+    pub destructor: Option<HirMemberDefinition>,
     pub methods: Vec<HirMemberDefinition>,
     pub span: Span,
 }
@@ -278,6 +306,10 @@ impl HirClassDefinition {
             CallableId::Method(id) if id.class() == self.class => self
                 .methods
                 .get(id.index())
+                .filter(|definition| definition.callable == callable),
+            CallableId::Destructor(id) if id.class() == self.class => self
+                .destructor
+                .as_ref()
                 .filter(|definition| definition.callable == callable),
             CallableId::Initializer(_) | CallableId::Destructor(_) | CallableId::Method(_) => None,
         }
