@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS3 are complete and OVS4 is next.
+Status: in progress; OVS0–OVS4 are complete and OVS5 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -144,15 +144,15 @@ source/destination place operations with no class rvalues.
 
 **Purpose:** Extend destination-oriented MIR before target lowering.
 
-- [ ] Add explicit copy-construction and copy-assignment operations over exact
+- [x] Add explicit copy-construction and copy-assignment operations over exact
       semantic places and stable lifecycle operations.
-- [ ] Extend initialized-place state so a destination becomes live only after
+- [x] Extend initialized-place state so a destination becomes live only after
       successful normal completion.
-- [ ] Represent synthesized field composition in target-independent order.
-- [ ] Define bounded owning temporary storage and full-expression cleanup.
-- [ ] Verify ownership, liveness, access, type, overlap, operation capability,
+- [x] Represent synthesized field composition in target-independent order.
+- [x] Define bounded owning temporary storage and full-expression cleanup.
+- [x] Verify ownership, liveness, access, type, overlap, operation capability,
       and exactly-once cleanup across control flow.
-- [ ] Preserve the no-class-`MirValue` invariant and extend exact MIR dumps.
+- [x] Preserve the no-class-`MirValue` invariant and extend exact MIR dumps.
 
 **Acceptance criteria:** valid local copy/assignment MIR is fully structural;
 corrupt or hand-built MIR fails before backend instruction selection.

@@ -7,6 +7,7 @@ use crate::{
 
 mod alias_lowering;
 mod aliases;
+mod copy;
 mod object_fixtures;
 mod objects;
 

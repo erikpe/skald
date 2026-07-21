@@ -267,7 +267,7 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
     let second_object = StorageId::new(program.entry_function, 1);
     main.storage.push(MirStorage {
         id: second_object,
-        source: BindingId::Local(LocalId::new(program.entry_function, 1)),
+        source: Some(BindingId::Local(LocalId::new(program.entry_function, 1))),
         name: "second".to_owned(),
         kind: MirStorageKind::Local,
         ty: MirType::Class(class),
@@ -573,7 +573,7 @@ fn empty_member_definition(
     let receiver = StorageId::new(callable, 0);
     let mut storage = vec![MirStorage {
         id: receiver,
-        source: BindingId::Receiver(callable),
+        source: Some(BindingId::Receiver(callable)),
         name: "self".to_owned(),
         kind: MirStorageKind::Receiver,
         ty: MirType::Class(class),
@@ -631,7 +631,10 @@ fn alias_storage(
 ) -> MirStorage {
     MirStorage {
         id: StorageId::new(callable, storage_index),
-        source: BindingId::Parameter(ParameterId::new(callable, parameter_index)),
+        source: Some(BindingId::Parameter(ParameterId::new(
+            callable,
+            parameter_index,
+        ))),
         name: format!("alias{storage_index}"),
         kind: MirStorageKind::AliasParameter(access),
         ty: MirType::Class(class),
@@ -648,7 +651,10 @@ fn value_storage(
 ) -> MirStorage {
     MirStorage {
         id: StorageId::new(callable, storage_index),
-        source: BindingId::Parameter(ParameterId::new(callable, parameter_index)),
+        source: Some(BindingId::Parameter(ParameterId::new(
+            callable,
+            parameter_index,
+        ))),
         name: format!("value{parameter_index}"),
         kind: MirStorageKind::Parameter,
         ty,

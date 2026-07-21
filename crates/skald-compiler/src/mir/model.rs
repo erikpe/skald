@@ -5,7 +5,8 @@ use std::{collections::BTreeMap, fmt};
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, MethodId,
+        BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
+        InitializerId, MethodId,
     },
     source::Span,
 };
@@ -101,6 +102,10 @@ impl MirProgram {
         self.class(id.class())?.initializer(id)
     }
 
+    pub fn copy_assignment(&self, id: CopyAssignmentId) -> Option<&MirCopyAssignmentDeclaration> {
+        self.class(id.class())?.copy_assignment_declaration(id)
+    }
+
     pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
         self.class(id.class())?.method(id)
     }
@@ -137,7 +142,13 @@ impl MirProgram {
                         return_type: MirType::Unit,
                     })
             }
-            CallableId::CopyAssignment(_) => None,
+            CallableId::CopyAssignment(assignment) => {
+                self.copy_assignment(assignment)
+                    .map(|declaration| MirCallableSignature {
+                        parameters: std::slice::from_ref(&declaration.parameter),
+                        return_type: MirType::Unit,
+                    })
+            }
             CallableId::Destructor(destructor) => {
                 self.destructor(destructor).map(|_| MirCallableSignature {
                     parameters: &[],
@@ -247,6 +258,10 @@ pub struct MirClassDeclaration {
     pub name: String,
     pub fields: Vec<MirFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
+    pub copy_constructor_declaration: Option<MirInitializerDeclaration>,
+    pub copy_constructor: MirCopyCapability<InitializerId>,
+    pub copy_assignment_declaration: Option<MirCopyAssignmentDeclaration>,
+    pub copy_assignment: MirCopyCapability<CopyAssignmentId>,
     pub destruction: MirDestructionPlan,
     pub methods: Vec<MirMethodDeclaration>,
     pub span: Span,
@@ -261,10 +276,24 @@ impl MirClassDeclaration {
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
-        (id.class() == self.id)
+        let ordinary = (id.class() == self.id)
             .then(|| self.initializers.get(id.index()))
             .flatten()
-            .filter(|initializer| initializer.id == id)
+            .filter(|initializer| initializer.id == id);
+        ordinary.or_else(|| {
+            self.copy_constructor_declaration
+                .as_ref()
+                .filter(|declaration| declaration.id == id && id.class() == self.id)
+        })
+    }
+
+    pub fn copy_assignment_declaration(
+        &self,
+        id: CopyAssignmentId,
+    ) -> Option<&MirCopyAssignmentDeclaration> {
+        self.copy_assignment_declaration
+            .as_ref()
+            .filter(|declaration| declaration.id == id && id.class() == self.id)
     }
 
     pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
@@ -295,6 +324,61 @@ pub struct MirInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<MirParameter>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCopyAssignmentDeclaration {
+    pub id: CopyAssignmentId,
+    pub parameter: MirParameter,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirCopyCapability<I> {
+    User(I),
+    Synthesized(MirSynthesizedCopy<I>),
+    Unavailable,
+}
+
+impl<I: Copy> MirCopyCapability<I> {
+    pub const fn selected(&self) -> Option<MirSelectedCopyOperation<I>> {
+        match self {
+            Self::User(id) => Some(MirSelectedCopyOperation::User(*id)),
+            Self::Synthesized(copy) => Some(MirSelectedCopyOperation::Synthesized(copy.class)),
+            Self::Unavailable => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSynthesizedCopy<I> {
+    pub class: ClassId,
+    pub fields: Vec<MirSynthesizedFieldCopy<I>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirSynthesizedFieldCopy<I> {
+    Primitive {
+        field: FieldId,
+    },
+    Class {
+        field: FieldId,
+        operation: MirSelectedCopyOperation<I>,
+    },
+}
+
+impl<I> MirSynthesizedFieldCopy<I> {
+    pub const fn field(&self) -> FieldId {
+        match self {
+            Self::Primitive { field } | Self::Class { field, .. } => *field,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirSelectedCopyOperation<I> {
+    User(I),
+    Synthesized(ClassId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -676,6 +760,7 @@ pub enum MirStorageKind {
     Parameter,
     AliasParameter(MirAliasAccess),
     Local,
+    Temporary,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -687,7 +772,9 @@ pub enum MirAliasAccess {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStorage {
     pub id: StorageId,
-    pub source: BindingId,
+    /// Source binding for language-owned storage; compiler-owned temporaries
+    /// deliberately have no source binding.
+    pub source: Option<BindingId>,
     pub name: String,
     pub kind: MirStorageKind,
     pub ty: MirType,
@@ -776,6 +863,9 @@ pub enum MirInstruction {
     Cleanup(MirCleanup),
     Initialize(MirInitialize),
     Store(MirStore),
+    CopyConstruct(MirCopyConstruction),
+    CopyAssign(MirCopyAssignment),
+    EndFullExpression(MirEndFullExpression),
 }
 
 impl MirInstruction {
@@ -786,6 +876,9 @@ impl MirInstruction {
             Self::Cleanup(instruction) => instruction.span,
             Self::Initialize(instruction) => instruction.span,
             Self::Store(instruction) => instruction.span,
+            Self::CopyConstruct(instruction) => instruction.span,
+            Self::CopyAssign(instruction) => instruction.span,
+            Self::EndFullExpression(instruction) => instruction.span,
         }
     }
 }
@@ -816,6 +909,32 @@ pub struct MirInitialize {
     pub destination: MirPlace,
     pub target: InitializerId,
     pub arguments: Vec<MirArgument>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCopyConstruction {
+    pub destination: MirPlace,
+    pub source: MirPlace,
+    pub class: ClassId,
+    pub operation: MirSelectedCopyOperation<InitializerId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCopyAssignment {
+    pub destination: MirPlace,
+    pub source: MirPlace,
+    pub class: ClassId,
+    pub operation: MirSelectedCopyOperation<CopyAssignmentId>,
+    pub span: Span,
+}
+
+/// Ends one object-producing full expression and destroys its temporaries in
+/// reverse completion order.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirEndFullExpression {
+    pub temporaries: Vec<MirCleanup>,
     pub span: Span,
 }
 

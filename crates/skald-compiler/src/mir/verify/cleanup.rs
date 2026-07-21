@@ -16,6 +16,7 @@ struct ObjectState {
     live: HashSet<MirPlace>,
     cleaned: HashSet<MirPlace>,
     outstanding_local_cleanup: HashSet<MirPlace>,
+    live_temporaries: Vec<MirPlace>,
 }
 
 pub(super) fn analyze(
@@ -50,6 +51,19 @@ impl Analyzer<'_> {
                     initial.live.insert(MirPlace::base(receiver));
                 }
             }
+        }
+        for storage in self.function.storage_entries() {
+            if !matches!(storage.ty, MirType::Class(_)) {
+                continue;
+            }
+            let place = match storage.kind {
+                MirStorageKind::Parameter => MirPlace::base(storage.id),
+                MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
+                MirStorageKind::Receiver | MirStorageKind::Local | MirStorageKind::Temporary => {
+                    continue
+                }
+            };
+            initial.live.insert(place);
         }
 
         let mut incoming = vec![None; self.function.body().blocks.len()];
@@ -109,10 +123,16 @@ impl Analyzer<'_> {
                 message: "owning local remains live on normal return",
             });
         }
+        if !state.live_temporaries.is_empty() {
+            self.errors.push(CleanupLivenessError {
+                block: block.id,
+                message: "owning temporary remains live on normal return",
+            });
+        }
     }
 
     fn merge_state(
-        &self,
+        &mut self,
         target: BlockId,
         state: &ObjectState,
         incoming: &mut [Option<ObjectState>],
@@ -135,6 +155,18 @@ impl Analyzer<'_> {
                         .union(&state.outstanding_local_cleanup)
                         .cloned()
                         .collect(),
+                    live_temporaries: if existing.live_temporaries == state.live_temporaries {
+                        existing.live_temporaries.clone()
+                    } else {
+                        self.errors.push(CleanupLivenessError {
+                            block: target,
+                            message: "owning temporary liveness differs across control-flow paths",
+                        });
+                        // Keep one concrete ordering so later checks remain
+                        // conservative instead of silently forgetting live
+                        // temporaries at the join.
+                        existing.live_temporaries.clone()
+                    },
                 };
                 if *existing != merged {
                     *existing = merged;
@@ -153,15 +185,34 @@ impl Analyzer<'_> {
                         initialize.target.class(),
                     ) =>
                 {
-                    state.live.insert(initialize.destination.clone());
-                    if self.is_owning_local_root(&initialize.destination) {
-                        state
-                            .outstanding_local_cleanup
-                            .insert(initialize.destination.clone());
+                    self.initialize_place(block, state, &initialize.destination);
+                }
+                MirInstruction::CopyConstruct(copy)
+                    if self.is_owning_class_place(&copy.destination, copy.class) =>
+                {
+                    if !self.place_is_live(state, &copy.source) {
+                        self.errors.push(CleanupLivenessError {
+                            block: block.id,
+                            message: "copy-construction source is not live",
+                        });
                     }
-                    state
-                        .cleaned
-                        .retain(|place| !places_overlap(place, &initialize.destination));
+                    self.initialize_place(block, state, &copy.destination);
+                }
+                MirInstruction::CopyAssign(copy)
+                    if self.is_owning_class_place(&copy.destination, copy.class) =>
+                {
+                    if !self.place_is_live(state, &copy.destination) {
+                        self.errors.push(CleanupLivenessError {
+                            block: block.id,
+                            message: "copy-assignment destination is not live",
+                        });
+                    }
+                    if !self.place_is_live(state, &copy.source) {
+                        self.errors.push(CleanupLivenessError {
+                            block: block.id,
+                            message: "copy-assignment source is not live",
+                        });
+                    }
                 }
                 MirInstruction::Cleanup(cleanup)
                     if self.is_owning_class_place(&cleanup.destination, cleanup.target) =>
@@ -187,13 +238,73 @@ impl Analyzer<'_> {
                     } else {
                         state.cleaned.insert(cleanup.destination.clone());
                         state
+                            .live
+                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
+                        state
                             .outstanding_local_cleanup
                             .retain(|place| !place_is_ancestor(&cleanup.destination, place));
                     }
                 }
+                MirInstruction::EndFullExpression(end) => {
+                    let expected: Vec<_> = state.live_temporaries.iter().rev().cloned().collect();
+                    let actual: Vec<_> = end
+                        .temporaries
+                        .iter()
+                        .map(|cleanup| cleanup.destination.clone())
+                        .collect();
+                    if actual != expected {
+                        self.errors.push(CleanupLivenessError {
+                            block: block.id,
+                            message: "full-expression temporaries must be cleaned in reverse completion order",
+                        });
+                    }
+                    for place in &actual {
+                        if self.place_is_live(state, place) {
+                            state.live.retain(|live| !place_is_ancestor(place, live));
+                            state.cleaned.insert(place.clone());
+                        } else {
+                            self.errors.push(CleanupLivenessError {
+                                block: block.id,
+                                message: "full-expression cleanup destination is not live",
+                            });
+                        }
+                    }
+                    state
+                        .live_temporaries
+                        .retain(|temporary| !actual.contains(temporary));
+                }
                 _ => {}
             }
         }
+    }
+
+    fn initialize_place(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &mut ObjectState,
+        destination: &MirPlace,
+    ) {
+        if self.place_is_live(state, destination) {
+            self.errors.push(CleanupLivenessError {
+                block: block.id,
+                message: "initialization destination is already live",
+            });
+            return;
+        }
+        state.live.insert(destination.clone());
+        if self.is_owning_local_root(destination) {
+            state.outstanding_local_cleanup.insert(destination.clone());
+        }
+        if self.is_temporary_root(destination) {
+            state.live_temporaries.push(destination.clone());
+        }
+        state
+            .cleaned
+            .retain(|place| !places_overlap(place, destination));
+    }
+
+    fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
+        state.live.iter().any(|live| place_is_ancestor(live, place))
     }
 
     fn is_owning_class_place(&self, place: &MirPlace, expected_class: ClassId) -> bool {
@@ -229,6 +340,15 @@ impl Analyzer<'_> {
                 .function
                 .storage(place.base.storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Local)
+    }
+
+    fn is_temporary_root(&self, place: &MirPlace) -> bool {
+        place.projections.is_empty()
+            && matches!(place.base, MirPlaceBase::Storage(_))
+            && self
+                .function
+                .storage(place.base.storage())
+                .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
     }
 }
 

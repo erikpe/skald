@@ -75,7 +75,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
     let second = StorageId::new(main.function, 1);
     main.storage.push(MirStorage {
         id: second,
-        source: BindingId::Local(LocalId::new(main.function, 1)),
+        source: Some(BindingId::Local(LocalId::new(main.function, 1))),
         name: "copy".to_owned(),
         kind: MirStorageKind::Local,
         ty: MirType::Class(class),
@@ -542,7 +542,7 @@ fn alias_storage(
 ) -> MirStorage {
     MirStorage {
         id,
-        source: BindingId::Parameter(ParameterId::new(callable, index)),
+        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
         name: format!("alias{index}"),
         kind: MirStorageKind::AliasParameter(access),
         ty: MirType::Class(class),
@@ -559,7 +559,7 @@ fn value_parameter_storage(
 ) -> MirStorage {
     MirStorage {
         id,
-        source: BindingId::Parameter(ParameterId::new(callable, index)),
+        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
         name: format!("value{index}"),
         kind: MirStorageKind::Parameter,
         ty,
@@ -575,7 +575,7 @@ fn receiver_storage(
 ) -> MirStorage {
     MirStorage {
         id,
-        source: BindingId::Receiver(callable),
+        source: Some(BindingId::Receiver(callable)),
         name: "self".to_owned(),
         kind: MirStorageKind::Receiver,
         ty: MirType::Class(class),

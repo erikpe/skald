@@ -52,6 +52,8 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         write_span(output, initializer.span);
         output.push('\n');
     }
+    dump_copy_capability(output, "CopyConstructor", &class.copy_constructor);
+    dump_copy_capability(output, "CopyAssignment", &class.copy_assignment);
     if !class.destruction.steps.is_empty() {
         output.push_str("      DestructionPlan\n");
         if let Some(destructor) = &class.destruction.destructor {
@@ -82,6 +84,49 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         let _ = write!(output, ") -> {}", method.return_type);
         write_span(output, method.span);
         output.push('\n');
+    }
+}
+
+fn dump_copy_capability<I: Copy + std::fmt::Display>(
+    output: &mut String,
+    label: &str,
+    capability: &MirCopyCapability<I>,
+) {
+    let _ = writeln!(output, "      {label}");
+    match capability {
+        MirCopyCapability::User(id) => {
+            let _ = writeln!(output, "        User {id}");
+        }
+        MirCopyCapability::Synthesized(copy) => {
+            let _ = writeln!(output, "        Synthesized {}", copy.class);
+            for field in &copy.fields {
+                match field {
+                    MirSynthesizedFieldCopy::Primitive { field } => {
+                        let _ = writeln!(output, "          Primitive {field}");
+                    }
+                    MirSynthesizedFieldCopy::Class { field, operation } => {
+                        let _ = write!(output, "          Class {field} via ");
+                        dump_copy_operation(output, *operation);
+                        output.push('\n');
+                    }
+                }
+            }
+        }
+        MirCopyCapability::Unavailable => output.push_str("        Unavailable\n"),
+    }
+}
+
+fn dump_copy_operation<I: std::fmt::Display>(
+    output: &mut String,
+    operation: MirSelectedCopyOperation<I>,
+) {
+    match operation {
+        MirSelectedCopyOperation::User(id) => {
+            let _ = write!(output, "user {id}");
+        }
+        MirSelectedCopyOperation::Synthesized(class) => {
+            let _ = write!(output, "synthesized {class}");
+        }
     }
 }
 
@@ -145,8 +190,15 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly) => "ref-parameter",
             MirStorageKind::AliasParameter(MirAliasAccess::Mutable) => "mut-ref-parameter",
             MirStorageKind::Local => "local",
+            MirStorageKind::Temporary => "temporary",
         };
-        let _ = write!(output, "        {} {kind} {} ", storage.id, storage.source);
+        let _ = write!(output, "        {} {kind} ", storage.id);
+        match storage.source {
+            Some(source) => {
+                let _ = write!(output, "{source} ");
+            }
+            None => output.push_str("<temporary> "),
+        }
         write_quoted(output, &storage.name);
         let _ = write!(output, " : {}", storage.ty);
         write_span(output, storage.span);
@@ -227,6 +279,33 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &store.destination);
                 let _ = write!(output, ", {}", store.value);
                 write_span(output, store.span);
+            }
+            MirInstruction::CopyConstruct(copy) => {
+                output.push_str("copy-construct ");
+                dump_place(output, &copy.destination);
+                output.push_str(" from ");
+                dump_place(output, &copy.source);
+                let _ = write!(output, " as {} via ", copy.class);
+                dump_copy_operation(output, copy.operation);
+                write_span(output, copy.span);
+            }
+            MirInstruction::CopyAssign(copy) => {
+                output.push_str("copy-assign ");
+                dump_place(output, &copy.destination);
+                output.push_str(" from ");
+                dump_place(output, &copy.source);
+                let _ = write!(output, " as {} via ", copy.class);
+                dump_copy_operation(output, copy.operation);
+                write_span(output, copy.span);
+            }
+            MirInstruction::EndFullExpression(end) => {
+                output.push_str("end-full-expression");
+                for cleanup in &end.temporaries {
+                    output.push_str(" cleanup ");
+                    dump_place(output, &cleanup.destination);
+                    let _ = write!(output, " as {}", cleanup.target);
+                }
+                write_span(output, end.span);
             }
         }
         output.push('\n');

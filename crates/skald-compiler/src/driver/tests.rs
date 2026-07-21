@@ -59,7 +59,7 @@ fn unused_destructor_bodies_lower_through_the_backend() {
 }
 
 #[test]
-fn unused_copy_lifecycle_bodies_remain_hir_only_before_mir_copy_support() {
+fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
     let artifact = compile_source_to_assembly(
         "copy-lifecycle.ska",
         concat!(
@@ -73,12 +73,12 @@ fn unused_copy_lifecycle_bodies_remain_hir_only_before_mir_copy_support() {
         ),
         Target::X86_64SysV,
     )
-    .expect("OVS2 copy bodies must cross HIR without reaching MIR lowering");
+    .expect("OVS4 copy lifecycle bodies must lower as MIR member definitions");
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_init_0"));
-    assert!(!artifact.assembly.contains(".Lska_class_0_init_1"));
-    assert!(!artifact.assembly.contains(".Lska_class_0_assign_0"));
+    assert!(artifact.assembly.contains(".Lska_class_0_init_1"));
+    assert!(artifact.assembly.contains(".Lska_class_0_assign_0"));
 }
 
 #[test]
@@ -355,8 +355,8 @@ fn composes_the_complete_object_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn ovs3_copy_source_stops_cleanly_at_the_documented_hir_boundary() {
-    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+fn ovs4_copy_source_reaches_mir_and_stops_cleanly_at_the_backend_boundary() {
+    let CompilationError::Backend(error) = compile_source_to_assembly(
         "copy.ska",
         concat!(
             "class Value { init() {} }\n",
@@ -370,12 +370,9 @@ fn ovs3_copy_source_stops_cleanly_at_the_documented_hir_boundary() {
         Target::X86_64SysV,
     )
     .unwrap_err() else {
-        panic!("expected the OVS3 HIR-to-MIR boundary diagnostic");
+        panic!("expected the OVS4 MIR-to-backend boundary error");
     };
-
-    let diagnostic = report.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, "DRV001");
-    assert!(diagnostic.message.contains("has not reached MIR"));
+    assert!(error.message().contains("OVS5"));
 }
 
 #[test]

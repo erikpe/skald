@@ -35,6 +35,10 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
                 field(nested_payload, "payload", MirType::F64, span),
             ],
             initializers: vec![],
+            copy_constructor_declaration: None,
+            copy_constructor: MirCopyCapability::Unavailable,
+            copy_assignment_declaration: None,
+            copy_assignment: MirCopyCapability::Unavailable,
             destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
@@ -48,6 +52,10 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
                 field(container_tail, "tail", MirType::U8, span),
             ],
             initializers: vec![],
+            copy_constructor_declaration: None,
+            copy_constructor: MirCopyCapability::Unavailable,
+            copy_assignment_declaration: None,
+            copy_assignment: MirCopyCapability::Unavailable,
             destruction: MirDestructionPlan::new(None, &[container_nested]),
             methods: vec![],
             span,
@@ -57,6 +65,10 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             name: "Empty".to_owned(),
             fields: vec![],
             initializers: vec![],
+            copy_constructor_declaration: None,
+            copy_constructor: MirCopyCapability::Unavailable,
+            copy_assignment_declaration: None,
+            copy_assignment: MirCopyCapability::Unavailable,
             destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
@@ -76,7 +88,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
     {
         function.storage.push(MirStorage {
             id,
-            source: BindingId::Local(LocalId::new(function_id, index)),
+            source: Some(BindingId::Local(LocalId::new(function_id, index))),
             name: name.to_owned(),
             kind: MirStorageKind::Local,
             ty,
@@ -196,6 +208,10 @@ pub(super) fn counter_member_program() -> MirProgram {
             parameters: MirParameter::values([MirType::I64]),
             span,
         }],
+        copy_constructor_declaration: None,
+        copy_constructor: MirCopyCapability::Unavailable,
+        copy_assignment_declaration: None,
+        copy_assignment: MirCopyCapability::Unavailable,
         destruction: MirDestructionPlan::new(None, &[]),
         methods: vec![
             MirMethodDeclaration {
@@ -237,7 +253,7 @@ pub(super) fn counter_member_program() -> MirProgram {
     let object = StorageId::new(main_id, 0);
     main.storage.push(MirStorage {
         id: object,
-        source: BindingId::Local(LocalId::new(main_id, 0)),
+        source: Some(BindingId::Local(LocalId::new(main_id, 0))),
         name: "counter".to_owned(),
         kind: MirStorageKind::Local,
         ty: MirType::Class(class),
@@ -617,7 +633,7 @@ fn receiver_storage(
 ) -> MirStorage {
     MirStorage {
         id,
-        source: BindingId::Receiver(callable),
+        source: Some(BindingId::Receiver(callable)),
         name: "self".to_owned(),
         kind: MirStorageKind::Receiver,
         ty: MirType::Class(class),
@@ -634,7 +650,7 @@ fn parameter_storage(
 ) -> MirStorage {
     MirStorage {
         id,
-        source: BindingId::Parameter(ParameterId::new(callable, index)),
+        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
         name: format!("p{index}"),
         kind: MirStorageKind::Parameter,
         ty,

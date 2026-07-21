@@ -1588,8 +1588,11 @@ lifecycle declarations to stable identities. OVS2 type-checks their bodies and
 records canonical user, ordered synthesized, or unavailable capabilities in
 HIR. OVS3 accepts direct local copy initialization and live-object assignment
 between exact-class places, with explicit source, destination, and selected
-operation in HIR. MIR and backend execution of those operations begin in OVS4;
-the driver reports that phase boundary without entering MIR. Class value
+operation in HIR. OVS4 represents and verifies copy operations, selected
+capabilities, ordered synthesized field composition, and bounded
+full-expression temporary cleanup without class-valued MIR values. The x86-64
+backend reports the OVS5 boundary
+when reachable copy operations require instruction selection. Class value
 parameters/results, constructor or result temporaries in copy contexts,
 alias-rooted replacement, external object signatures, and other
 object-producing expressions remain rejected until their later slices.

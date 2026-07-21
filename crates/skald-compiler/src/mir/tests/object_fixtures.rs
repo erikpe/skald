@@ -32,6 +32,10 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
                 span,
             }],
             initializers: vec![],
+            copy_constructor_declaration: None,
+            copy_constructor: MirCopyCapability::Unavailable,
+            copy_assignment_declaration: None,
+            copy_assignment: MirCopyCapability::Unavailable,
             destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
@@ -50,6 +54,10 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
                 parameters: MirParameter::values([MirType::I64]),
                 span,
             }],
+            copy_constructor_declaration: None,
+            copy_constructor: MirCopyCapability::Unavailable,
+            copy_assignment_declaration: None,
+            copy_assignment: MirCopyCapability::Unavailable,
             destruction: MirDestructionPlan::new(None, &[outer_inner]),
             methods: vec![MirMethodDeclaration {
                 id: outer_method,
@@ -66,7 +74,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
     let object_storage = StorageId::new(function_id, 0);
     function.storage.push(MirStorage {
         id: object_storage,
-        source: BindingId::Local(LocalId::new(function_id, 0)),
+        source: Some(BindingId::Local(LocalId::new(function_id, 0))),
         name: "object".to_owned(),
         kind: MirStorageKind::Local,
         ty: MirType::Class(outer),

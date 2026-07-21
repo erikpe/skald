@@ -16,13 +16,15 @@ pub use lower::lower_hir;
 pub use model::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
     MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
-    MirClassDeclarationTable, MirCleanup, MirDefinitionRef, MirDestructionPlan, MirDestructionStep,
-    MirDestructorDeclaration, MirFieldDeclaration, MirFunctionDeclaration,
-    MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
-    MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
-    MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,
-    MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirReceiverAccess,
-    MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
+    MirClassDeclarationTable, MirCleanup, MirCopyAssignment, MirCopyAssignmentDeclaration,
+    MirCopyCapability, MirCopyConstruction, MirDefinitionRef, MirDestructionPlan,
+    MirDestructionStep, MirDestructorDeclaration, MirEndFullExpression, MirFieldDeclaration,
+    MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,
+    MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize, MirInitializerDeclaration,
+    MirInstruction, MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration,
+    MirParameter, MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram,
+    MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage,
+    MirStorageKind, MirStore, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminator, MirType,
     MirUnaryOperation, MirValue, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};

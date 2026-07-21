@@ -56,6 +56,15 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                     // Cleanup targets and their complete destruction plans are
                     // verified before target layout and instruction selection.
                     MirInstruction::Cleanup(_) => {}
+                    MirInstruction::CopyConstruct(_)
+                    | MirInstruction::CopyAssign(_)
+                    | MirInstruction::EndFullExpression(_) => {
+                        return Err(BackendError::new(
+                            Target::X86_64SysV,
+                            Some(function.callable()),
+                            "object copy operations require OVS5 backend lowering",
+                        ));
+                    }
                     MirInstruction::Assign(_) | MirInstruction::Store(_) => {}
                 }
             }

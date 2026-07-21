@@ -58,6 +58,14 @@ impl fmt::Display for MirVerificationErrors {
 
 impl std::error::Error for MirVerificationErrors {}
 
+fn place_is_ancestor(ancestor: &MirPlace, place: &MirPlace) -> bool {
+    ancestor.base == place.base && place.projections.starts_with(&ancestor.projections)
+}
+
+fn places_overlap(left: &MirPlace, right: &MirPlace) -> bool {
+    place_is_ancestor(left, right) || place_is_ancestor(right, left)
+}
+
 pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     let mut verifier = Verifier {
         program,
@@ -82,6 +90,12 @@ struct Verifier<'mir> {
 struct VerifiedPlace {
     ty: MirType,
     access: MirAliasAccess,
+}
+
+#[derive(Clone, Copy)]
+enum CopyOperationKind {
+    Construction,
+    Assignment,
 }
 
 impl Verifier<'_> {
@@ -228,7 +242,11 @@ impl Verifier<'_> {
                     .program
                     .initializer(initializer)
                     .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
-                CallableId::CopyAssignment(_) => None,
+                CallableId::CopyAssignment(assignment) => {
+                    self.program.copy_assignment(assignment).map(|declaration| {
+                        (std::slice::from_ref(&declaration.parameter), MirType::Unit)
+                    })
+                }
                 CallableId::Destructor(destructor) => self
                     .program
                     .destructor(destructor)
@@ -288,6 +306,8 @@ impl Verifier<'_> {
                     &initializer.parameters,
                 );
             }
+            self.verify_copy_constructor_metadata(class);
+            self.verify_copy_assignment_metadata(class);
             if let Some(destructor) = &class.destruction.destructor {
                 if destructor.id.class() != class.id || destructor.id.index() != 0 {
                     self.program_error(format!(
@@ -339,6 +359,194 @@ impl Verifier<'_> {
                         method.id
                     ));
                 }
+            }
+        }
+    }
+
+    fn verify_copy_constructor_metadata(&mut self, class: &MirClassDeclaration) {
+        if let Some(declaration) = &class.copy_constructor_declaration {
+            if declaration.id.class() != class.id || declaration.id.index() != 1 {
+                self.program_error(format!(
+                    "class {} copy-constructor declaration contains {}",
+                    class.id, declaration.id
+                ));
+            }
+            if declaration.parameters != [MirParameter::read_only_alias(MirType::Class(class.id))] {
+                self.program_error(format!(
+                    "copy constructor {} must take one read-only exact-class alias",
+                    declaration.id
+                ));
+            }
+        }
+        match &class.copy_constructor {
+            MirCopyCapability::User(id) => {
+                if class
+                    .copy_constructor_declaration
+                    .as_ref()
+                    .map(|item| item.id)
+                    != Some(*id)
+                {
+                    self.program_error(format!(
+                        "class {} user copy-constructor capability has no matching declaration",
+                        class.id
+                    ));
+                }
+                if self.program.member_definition((*id).into()).is_none() {
+                    self.program_error(format!("copy constructor {id} has no member definition"));
+                }
+            }
+            MirCopyCapability::Synthesized(copy) => {
+                if class.copy_constructor_declaration.is_some() {
+                    self.program_error(format!(
+                        "class {} synthesized copy constructor must not have a user declaration",
+                        class.id
+                    ));
+                }
+                self.verify_synthesized_constructor(class, copy);
+            }
+            MirCopyCapability::Unavailable => {
+                if class.copy_constructor_declaration.is_some() {
+                    self.program_error(format!(
+                        "class {} unavailable copy constructor must not have a user declaration",
+                        class.id
+                    ));
+                }
+            }
+        }
+    }
+
+    fn verify_copy_assignment_metadata(&mut self, class: &MirClassDeclaration) {
+        if let Some(declaration) = &class.copy_assignment_declaration {
+            if declaration.id.class() != class.id || declaration.id.index() != 0 {
+                self.program_error(format!(
+                    "class {} copy-assignment declaration contains {}",
+                    class.id, declaration.id
+                ));
+            }
+            if declaration.parameter != MirParameter::read_only_alias(MirType::Class(class.id)) {
+                self.program_error(format!(
+                    "copy assignment {} must take one read-only exact-class alias",
+                    declaration.id
+                ));
+            }
+        }
+        match &class.copy_assignment {
+            MirCopyCapability::User(id) => {
+                if class
+                    .copy_assignment_declaration
+                    .as_ref()
+                    .map(|item| item.id)
+                    != Some(*id)
+                {
+                    self.program_error(format!(
+                        "class {} user copy-assignment capability has no matching declaration",
+                        class.id
+                    ));
+                }
+                if self.program.member_definition((*id).into()).is_none() {
+                    self.program_error(format!("copy assignment {id} has no member definition"));
+                }
+            }
+            MirCopyCapability::Synthesized(copy) => {
+                if class.copy_assignment_declaration.is_some() {
+                    self.program_error(format!(
+                        "class {} synthesized copy assignment must not have a user declaration",
+                        class.id
+                    ));
+                }
+                self.verify_synthesized_assignment(class, copy);
+            }
+            MirCopyCapability::Unavailable => {
+                if class.copy_assignment_declaration.is_some() {
+                    self.program_error(format!(
+                        "class {} unavailable copy assignment must not have a user declaration",
+                        class.id
+                    ));
+                }
+            }
+        }
+    }
+
+    fn verify_synthesized_constructor(
+        &mut self,
+        class: &MirClassDeclaration,
+        copy: &MirSynthesizedCopy<crate::identity::InitializerId>,
+    ) {
+        if copy.class != class.id || copy.fields.len() != class.fields.len() {
+            self.program_error(format!(
+                "class {} synthesized copy-construction plan has the wrong owner or field count",
+                class.id
+            ));
+            return;
+        }
+        for (field, step) in class.fields.iter().zip(&copy.fields) {
+            let valid = match (field.ty, step) {
+                (
+                    MirType::Class(target),
+                    MirSynthesizedFieldCopy::Class {
+                        field: id,
+                        operation,
+                    },
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .class(target)
+                            .and_then(|class| class.copy_constructor.selected())
+                            == Some(*operation)
+                }
+                (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
+                    *id == field.id
+                }
+                _ => false,
+            };
+            if !valid {
+                self.program_error(format!(
+                    "class {} synthesized copy-construction plan is invalid at field {}",
+                    class.id, field.id
+                ));
+            }
+        }
+    }
+
+    fn verify_synthesized_assignment(
+        &mut self,
+        class: &MirClassDeclaration,
+        copy: &MirSynthesizedCopy<crate::identity::CopyAssignmentId>,
+    ) {
+        if copy.class != class.id || copy.fields.len() != class.fields.len() {
+            self.program_error(format!(
+                "class {} synthesized copy-assignment plan has the wrong owner or field count",
+                class.id
+            ));
+            return;
+        }
+        for (field, step) in class.fields.iter().zip(&copy.fields) {
+            let valid = match (field.ty, step) {
+                (
+                    MirType::Class(target),
+                    MirSynthesizedFieldCopy::Class {
+                        field: id,
+                        operation,
+                    },
+                ) => {
+                    *id == field.id
+                        && self
+                            .program
+                            .class(target)
+                            .and_then(|class| class.copy_assignment.selected())
+                            == Some(*operation)
+                }
+                (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
+                    *id == field.id
+                }
+                _ => false,
+            };
+            if !valid {
+                self.program_error(format!(
+                    "class {} synthesized copy-assignment plan is invalid at field {}",
+                    class.id, field.id
+                ));
             }
         }
     }
@@ -449,7 +657,10 @@ impl Verifier<'_> {
                     format!("storage table index {index} contains {}", storage.id),
                 );
             }
-            if storage.source.callable() != function.callable() {
+            if storage
+                .source
+                .is_some_and(|source| source.callable() != function.callable())
+            {
                 self.function_error(
                     function.callable(),
                     format!(
@@ -458,21 +669,25 @@ impl Verifier<'_> {
                     ),
                 );
             }
-            if !sources.insert(storage.source) {
+            if storage.source.is_some_and(|source| !sources.insert(source)) {
                 self.function_error(
                     function.callable(),
                     format!(
                         "source binding {} has multiple storage slots",
-                        storage.source
+                        storage.source.expect("duplicate source must be present")
                     ),
                 );
             }
             let source_matches_kind = matches!(
                 (storage.kind, storage.source),
-                (MirStorageKind::Receiver, BindingId::Receiver(_))
-                    | (MirStorageKind::Parameter, BindingId::Parameter(_))
-                    | (MirStorageKind::AliasParameter(_), BindingId::Parameter(_))
-                    | (MirStorageKind::Local, BindingId::Local(_))
+                (MirStorageKind::Receiver, Some(BindingId::Receiver(_)))
+                    | (MirStorageKind::Parameter, Some(BindingId::Parameter(_)))
+                    | (
+                        MirStorageKind::AliasParameter(_),
+                        Some(BindingId::Parameter(_))
+                    )
+                    | (MirStorageKind::Local, Some(BindingId::Local(_)))
+                    | (MirStorageKind::Temporary, None)
             );
             if !source_matches_kind {
                 self.function_error(
@@ -552,13 +767,13 @@ impl Verifier<'_> {
                     format!("duplicate parameter storage {parameter}"),
                 );
             }
-            if !matches!(storage.source, BindingId::Parameter(_)) {
+            if !matches!(storage.source, Some(BindingId::Parameter(_))) {
                 self.function_error(
                     function.callable(),
                     format!("parameter {parameter} does not identify parameter storage"),
                 );
             }
-            if !matches!(storage.source, BindingId::Parameter(id) if id.index() == index) {
+            if !matches!(storage.source, Some(BindingId::Parameter(id)) if id.index() == index) {
                 self.function_error(
                     function.callable(),
                     format!("parameter position {index} has mismatched source binding"),
@@ -631,7 +846,7 @@ impl Verifier<'_> {
         };
         if receiver_slots.len() != 1
             || storage.kind != MirStorageKind::Receiver
-            || storage.source != BindingId::Receiver(function.callable())
+            || storage.source != Some(BindingId::Receiver(function.callable()))
         {
             self.function_error(
                 function.callable(),
@@ -701,6 +916,16 @@ impl Verifier<'_> {
                             function.callable(),
                             block.id,
                             "cleanup destination must be owning storage",
+                        );
+                    }
+                    if function
+                        .storage(cleanup.destination.base.storage())
+                        .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "temporary storage must be cleaned at a full-expression boundary",
                         );
                     }
                     if self.program.class(cleanup.target).is_none() {
@@ -775,6 +1000,74 @@ impl Verifier<'_> {
                         &target.parameters,
                         &defined_in_block,
                     );
+                }
+                MirInstruction::CopyConstruct(copy) => {
+                    self.verify_copy_places(
+                        function,
+                        block,
+                        &copy.destination,
+                        &copy.source,
+                        copy.class,
+                        CopyOperationKind::Construction,
+                    );
+                    let selected = self
+                        .program
+                        .class(copy.class)
+                        .and_then(|class| class.copy_constructor.selected());
+                    if selected != Some(copy.operation) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "copy-construction operation does not match the class capability",
+                        );
+                    }
+                }
+                MirInstruction::CopyAssign(copy) => {
+                    self.verify_copy_places(
+                        function,
+                        block,
+                        &copy.destination,
+                        &copy.source,
+                        copy.class,
+                        CopyOperationKind::Assignment,
+                    );
+                    let selected = self
+                        .program
+                        .class(copy.class)
+                        .and_then(|class| class.copy_assignment.selected());
+                    if selected != Some(copy.operation) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "copy-assignment operation does not match the class capability",
+                        );
+                    }
+                }
+                MirInstruction::EndFullExpression(end) => {
+                    for cleanup in &end.temporaries {
+                        let destination = self.verify_place(function, block, &cleanup.destination);
+                        let is_temporary = function
+                            .storage(cleanup.destination.base.storage())
+                            .is_some_and(|storage| storage.kind == MirStorageKind::Temporary);
+                        if !is_temporary
+                            || !cleanup.destination.projections.is_empty()
+                            || !matches!(cleanup.destination.base, MirPlaceBase::Storage(_))
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "full-expression cleanup must name complete temporary storage",
+                            );
+                        }
+                        if destination.map(|place| place.ty) != Some(MirType::Class(cleanup.target))
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "full-expression cleanup has the wrong class type",
+                            );
+                        }
+                    }
                 }
                 MirInstruction::Store(store) => {
                     let destination = self.verify_place(function, block, &store.destination);
@@ -858,6 +1151,75 @@ impl Verifier<'_> {
                 self.verify_block_target(function, block, *false_target);
             }
             None => self.block_error(function.callable(), block.id, "block has no terminator"),
+        }
+    }
+
+    fn verify_copy_places(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        destination_place: &MirPlace,
+        source_place: &MirPlace,
+        class: crate::identity::ClassId,
+        operation: CopyOperationKind,
+    ) {
+        let destination = self.verify_place(function, block, destination_place);
+        let source = self.verify_place(function, block, source_place);
+        let construction = matches!(operation, CopyOperationKind::Construction);
+        if self.program.class(class).is_none() {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!("copy operation class {class} is not declared"),
+            );
+        }
+        if destination.map(|place| place.ty) != Some(MirType::Class(class))
+            || source.map(|place| place.ty) != Some(MirType::Class(class))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "copy source and destination must have the exact operation class",
+            );
+        }
+        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "copy destination requires mutable access",
+            );
+        }
+        let destination_storage = function.storage(destination_place.base.storage());
+        if matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
+            || destination_storage
+                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                if construction {
+                    "copy-construction destination must be owning storage"
+                } else {
+                    "copy-assignment destination must be owning storage"
+                },
+            );
+        }
+        if !construction
+            && destination_place.projections.is_empty()
+            && function.receiver() == Some(destination_place.base.storage())
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "copy assignment cannot replace the complete receiver",
+            );
+        }
+        if construction && places_overlap(destination_place, source_place) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "copy-construction source and destination must not overlap",
+            );
         }
     }
 

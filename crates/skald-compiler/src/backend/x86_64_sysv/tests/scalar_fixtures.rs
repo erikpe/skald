@@ -24,7 +24,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
         parameters: vec![],
         storage: vec![MirStorage {
             id: StorageId::new(compute_id, 0),
-            source: BindingId::Local(LocalId::new(compute_id, 0)),
+            source: Some(BindingId::Local(LocalId::new(compute_id, 0))),
             name: "result".to_owned(),
             kind: MirStorageKind::Local,
             ty: MirType::F64,
@@ -206,7 +206,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
         .enumerate()
         .map(|(index, ty)| MirStorage {
             id: StorageId::new(mixed_id, index),
-            source: BindingId::Parameter(ParameterId::new(mixed_id, index)),
+            source: Some(BindingId::Parameter(ParameterId::new(mixed_id, index))),
             name: format!("p{index}"),
             kind: MirStorageKind::Parameter,
             ty: *ty,

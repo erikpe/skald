@@ -3,9 +3,10 @@
 use crate::{
     hir::{
         BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirClassDeclaration,
-        HirConditional, HirExpression, HirExpressionKind, HirFunctionDeclaration,
-        HirFunctionDefinition, HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter,
-        HirParameterMode, HirProgram, HirStatement, HirUnaryOperation, Type,
+        HirConditional, HirCopyCapability, HirExpression, HirExpressionKind,
+        HirFunctionDeclaration, HirFunctionDefinition, HirFunctionLinkage, HirLocal,
+        HirMemberDefinition, HirParameter, HirParameterMode, HirProgram, HirSelectedCopyOperation,
+        HirStatement, HirSynthesizedFieldCopy, HirUnaryOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId},
 };
@@ -32,10 +33,9 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         .class_definitions
         .iter()
         .flat_map(|class| {
-            // Copy lifecycle definitions remain HIR-only until MIR gains
-            // explicit source/destination copy operations. Source programs
-            // cannot call them at this stage.
             std::iter::once(&class.initializer)
+                .chain(class.copy_constructor.iter())
+                .chain(class.copy_assignment.iter())
                 .chain(class.destructor.iter())
                 .chain(class.methods.iter())
         })
@@ -97,6 +97,22 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 .collect(),
             span: class.initializer.span,
         }],
+        copy_constructor_declaration: class.copy_constructor_declaration.as_ref().map(|copy| {
+            MirInitializerDeclaration {
+                id: copy.id,
+                parameters: copy.parameters.iter().map(lower_parameter).collect(),
+                span: copy.span,
+            }
+        }),
+        copy_constructor: lower_copy_capability(&class.copy_constructor),
+        copy_assignment_declaration: class.copy_assignment_declaration.as_ref().map(|copy| {
+            MirCopyAssignmentDeclaration {
+                id: copy.id,
+                parameter: lower_parameter(&copy.parameter),
+                span: copy.span,
+            }
+        }),
+        copy_assignment: lower_copy_capability(&class.copy_assignment),
         destruction: MirDestructionPlan::new(destructor, &class_field_ids),
         methods: class
             .methods
@@ -114,6 +130,44 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             })
             .collect(),
         span: class.span,
+    }
+}
+
+fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyCapability<I> {
+    match capability {
+        HirCopyCapability::User(id) => MirCopyCapability::User(*id),
+        HirCopyCapability::Synthesized(copy) => {
+            MirCopyCapability::Synthesized(MirSynthesizedCopy {
+                class: copy.class,
+                fields: copy
+                    .fields
+                    .iter()
+                    .map(|field| match *field {
+                        HirSynthesizedFieldCopy::Primitive { field } => {
+                            MirSynthesizedFieldCopy::Primitive { field }
+                        }
+                        HirSynthesizedFieldCopy::Class { field, operation } => {
+                            MirSynthesizedFieldCopy::Class {
+                                field,
+                                operation: lower_selected_copy_operation(operation),
+                            }
+                        }
+                    })
+                    .collect(),
+            })
+        }
+        HirCopyCapability::Unavailable => MirCopyCapability::Unavailable,
+    }
+}
+
+fn lower_selected_copy_operation<I>(
+    operation: HirSelectedCopyOperation<I>,
+) -> MirSelectedCopyOperation<I> {
+    match operation {
+        HirSelectedCopyOperation::User(id) => MirSelectedCopyOperation::User(id),
+        HirSelectedCopyOperation::Synthesized(class) => {
+            MirSelectedCopyOperation::Synthesized(class)
+        }
     }
 }
 
@@ -252,7 +306,7 @@ impl<'hir> BodyLowerer<'hir> {
             self.receiver_storage = Some(id);
             self.storage.push(MirStorage {
                 id,
-                source: BindingId::Receiver(self.input.callable),
+                source: Some(BindingId::Receiver(self.input.callable)),
                 name: "self".to_owned(),
                 kind: MirStorageKind::Receiver,
                 ty: MirType::Class(class),
@@ -264,7 +318,7 @@ impl<'hir> BodyLowerer<'hir> {
             self.parameter_storage.push(id);
             self.storage.push(MirStorage {
                 id,
-                source: BindingId::Parameter(parameter.id),
+                source: Some(BindingId::Parameter(parameter.id)),
                 name: parameter.name.clone(),
                 kind: match parameter.mode {
                     HirParameterMode::Value => MirStorageKind::Parameter,
@@ -284,7 +338,7 @@ impl<'hir> BodyLowerer<'hir> {
             self.local_storage.push(id);
             self.storage.push(MirStorage {
                 id,
-                source: BindingId::Local(local.id),
+                source: Some(BindingId::Local(local.id)),
                 name: local.name.clone(),
                 kind: MirStorageKind::Local,
                 ty: lower_type(local.ty),
@@ -326,8 +380,16 @@ impl<'hir> BodyLowerer<'hir> {
                                 construction.initializer.class(),
                             );
                         }
-                        crate::hir::HirLocalInitializer::Copy(_) => {
-                            unreachable!("local copy construction reaches MIR in OVS4")
+                        crate::hir::HirLocalInitializer::Copy(copy) => {
+                            self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                                destination: self.lower_object_place(&copy.destination),
+                                source: self.lower_object_place(&copy.source),
+                                class: copy.destination.class(),
+                                operation: lower_selected_copy_operation(copy.operation),
+                                span: copy.span,
+                            }));
+                            self.cleanup
+                                .register_initialized_local(storage, copy.destination.class());
                         }
                     }
                 }
@@ -373,10 +435,32 @@ impl<'hir> BodyLowerer<'hir> {
                         span: statement.span,
                     }));
                 }
-                HirStatement::FieldCopyConstruction(_)
-                | HirStatement::FieldCopyAssignment(_)
-                | HirStatement::CopyAssignment(_) => {
-                    unreachable!("copy statements belong only to HIR-only copy definitions")
+                HirStatement::FieldCopyConstruction(statement) => {
+                    self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                        destination: self.lower_field_place(&statement.place),
+                        source: self.lower_object_place(&statement.source),
+                        class: statement.source.class(),
+                        operation: lower_selected_copy_operation(statement.operation),
+                        span: statement.span,
+                    }));
+                }
+                HirStatement::FieldCopyAssignment(statement) => {
+                    self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
+                        destination: self.lower_field_place(&statement.place),
+                        source: self.lower_object_place(&statement.source),
+                        class: statement.source.class(),
+                        operation: lower_selected_copy_operation(statement.operation),
+                        span: statement.span,
+                    }));
+                }
+                HirStatement::CopyAssignment(statement) => {
+                    self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
+                        destination: self.lower_object_place(&statement.destination),
+                        source: self.lower_object_place(&statement.source),
+                        class: statement.destination.class(),
+                        operation: lower_selected_copy_operation(statement.operation),
+                        span: statement.span,
+                    }));
                 }
             }
         }
@@ -617,6 +701,9 @@ impl<'hir> BodyLowerer<'hir> {
             MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
             MirStorageKind::Receiver | MirStorageKind::Parameter | MirStorageKind::Local => {
                 MirPlace::base(storage)
+            }
+            MirStorageKind::Temporary => {
+                unreachable!("HIR object paths cannot be rooted at MIR temporaries")
             }
         };
         place
