@@ -255,6 +255,20 @@ copying, `assign`, `destroy`, inheritance, interfaces, virtual calls, casts,
 `shared`, alias bindings, access modifiers, static members, `final`, or object
 FFI.
 
+The next planned grammar extension is restricted alias parameters over exact
+inline class places:
+
+```text
+alias-parameter = ["mut"] "ref" identifier ":" class-name
+```
+
+This syntax is not accepted by the current parser. Its frozen declaration,
+place, access, lifetime, IR, and ABI contract is in the
+[restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
+Ordinary by-value parameters remain primitive-only, and the planned slice does
+not include local aliases, primitive aliases, shared sources, or borrow
+anchors.
+
 ## Recovery and nesting
 
 The parser accumulates structured diagnostics and synchronizes at parameter,
@@ -276,7 +290,8 @@ The following broader-language features remain design or implementation work:
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;
-- `shared` ownership and `ref` / `mut ref` alias parameters;
+- `shared` ownership and `ref` / `mut ref` alias parameters (the restricted
+  next-slice contract is frozen, but syntax and behavior are not implemented);
 - checked exceptions;
 - multiple source files, modules, generics, and closures.
 

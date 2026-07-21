@@ -57,7 +57,10 @@ with primitive fields. The safest progression is:
 1. **Alias parameters.** Add `ref` and `mut ref` parameters over existing
    places. Keep aliases call-scoped and non-storable so local references remain
    cheap and no general borrow checker is required. The focused implementation
-   plan is the [Alias Parameters Roadmap](ALIAS_PARAMETERS_ROADMAP.md).
+   plan is the [Alias Parameters Roadmap](ALIAS_PARAMETERS_ROADMAP.md). Its
+   frozen first profile accepts exact class aliases over inline locals, `self`,
+   and forwarded aliases only. Primitive aliases, local alias declarations,
+   shared sources, and borrow anchors remain later work.
 2. **Inline object fields.** Extend place projection and layout dependency
    handling before introducing cleanup. Recursive by-value containment must be
    rejected.

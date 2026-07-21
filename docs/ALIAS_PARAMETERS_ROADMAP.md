@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: planned; AL0–AL7 not yet implemented.
+Status: in progress; AL0 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -318,7 +318,7 @@ declarations and promises no cross-module ABI stability.
 
 ## 5. Progress Summary
 
-- [ ] AL0 — Freeze the restricted alias-parameter contract
+- [x] AL0 — Freeze the restricted alias-parameter contract
 - [ ] AL1 — Add binding-mode syntax and parser diagnostics
 - [ ] AL2 — Resolve alias signatures and existing object places
 - [ ] AL3 — Type-check alias access and build typed call arguments
@@ -337,18 +337,18 @@ relevant quality gates pass.
 **Purpose:** Remove semantic and ABI ambiguity before binding modes are copied
 through every compiler phase.
 
-- [ ] Add a restricted alias-parameter implementation profile to the draft
+- [x] Add a restricted alias-parameter implementation profile to the draft
       specification.
-- [ ] Freeze the grammar, supported declaration positions, exact class-type
+- [x] Freeze the grammar, supported declaration positions, exact class-type
       restriction, and valid argument-place forms.
-- [ ] Define the access-capability rules for locals, `self`, `ref`, and
+- [x] Define the access-capability rules for locals, `self`, `ref`, and
       `mut ref`.
-- [ ] Define forwarding, deliberate alias overlap, evaluation order, and the
+- [x] Define forwarding, deliberate alias overlap, evaluation order, and the
       non-escaping lifetime argument.
-- [ ] Define the MIR signature/call shape and indirect-place invariants.
-- [ ] Freeze the initial internal pointer ABI and external-declaration
+- [x] Define the MIR signature/call shape and indirect-place invariants.
+- [x] Freeze the initial internal pointer ABI and external-declaration
       exclusion.
-- [ ] Reconcile the draft specification, implemented grammar, repository
+- [x] Reconcile the draft specification, implemented grammar, repository
       architecture, and future-boundaries documentation.
 
 **Tests:** Cross-document review against current object-place, receiver,
@@ -590,4 +590,3 @@ The slice is complete when:
 - [ ] dumps, diagnostics, assembly, stdout, and exit behavior are deterministic;
 - [ ] living documentation describes the implemented state and this completed
       roadmap has moved to `docs/archive/`.
-

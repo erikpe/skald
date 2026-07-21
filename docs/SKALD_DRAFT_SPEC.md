@@ -996,6 +996,121 @@ These rules do not yet specify general temporary destruction, full-expression
 boundaries, or cleanup on non-local exits. Those remain prerequisites for
 `destroy`, shared ownership, aliases requiring anchors, and checked exceptions.
 
+#### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
+
+**Implementation status:** the contract is frozen for the next compiler slice;
+the current compiler does not yet accept this syntax. This profile extends the
+restricted inline-object profile in Section 5.4.2. It does not implement every
+alias source described by the broader model in Section 4.5.
+
+The parameter grammar added by this profile is:
+
+```text
+parameter       = value-parameter | alias-parameter
+value-parameter = identifier ":" primitive-type
+alias-parameter = ["mut"] "ref" identifier ":" class-name
+```
+
+`ref` and `mut ref` are parameter binding modes, not type constructors. The
+bound name's type is the named class, and the mode is represented separately
+from that type. `ref` becomes a keyword when this syntax is enabled; `mut ref`
+is the only mutable spelling. `ref mut`, repeated modifiers, and a binding mode
+in a local, field, result, static, element, or capture position are invalid.
+
+Alias parameters are accepted on internally defined top-level functions,
+instance methods, and initializers. An external declaration cannot contain an
+alias parameter. Ordinary by-value parameters retain the implemented
+primitive-only restriction; a class name without `ref` is not an object value
+parameter. This profile accepts only an exact concrete class as the designated
+type. Primitive, `unit`, optional, array, `shared`, interface, and function
+types, along with inheritance and implicit conversions, remain outside the
+profile.
+
+An argument for an alias parameter must be an existing, already-live inline
+class place of the exact designated class. The supported place sources are:
+
+- a directly constructed inline local;
+- `self` in an instance method, subject to that method's receiver access;
+- an existing alias parameter forwarded to another call;
+- grouping around one of those places.
+
+No other source expression is converted to an alias place. In particular,
+construction does not create a borrowable temporary, and object fields, array
+elements, static objects, optional payloads, and shared pointees are not yet
+available alias sources. An initializer's destination is not live while its
+body executes and its `self` cannot be passed as an alias. An initializer may
+receive an alias parameter and may read its primitive fields while initializing
+the new object's fields, subject to the existing straight-line initializer-body
+rules.
+
+An initializer of the enclosing class with the broader copy-constructor
+signature `init(ref other: T)` may therefore be written in this profile. It is
+invoked only by the existing explicit direct-local construction form
+`var copy: T = T(source);`. This does not enable implicit copy construction,
+ordinary object value arguments, synthesized copying, assignment, or any other
+general copy context.
+
+Place access has two capabilities, mutable and read-only. Mutable access may be
+restricted to read-only access without a runtime conversion; read-only access
+cannot be promoted to mutable access.
+
+- An inline local provides mutable access.
+- A method's `self` provides its declared receiver access.
+- A `ref` parameter provides read-only access: fields may be read, read-only
+  methods may be called, and the place may be forwarded only to another `ref`
+  parameter.
+- A `mut ref` parameter provides mutable access: fields may be read or written,
+  either receiver mode may be called, and the place may be forwarded to either
+  alias mode.
+
+The access restriction belongs to the binding, not to a different const class
+type or runtime representation. It is shallow in the same way as receiver
+mutability. This profile still has only primitive fields, so access does not
+yet propagate through an inline object-field chain.
+
+Aliases are deliberately non-exclusive. Multiple read-only or mutable alias
+arguments may designate the same object, and the compiler performs no overlap
+analysis. A read-only alias prevents mutation only through that binding; it
+does not guarantee that another alias cannot mutate the object during the
+call.
+
+Alias arguments participate in the existing source evaluation order. A method
+receiver is evaluated first and explicit arguments are then processed from
+left to right in one sequence. Selecting one of the supported alias places has
+no user-visible effect, but the compiler representation must not split value
+and alias arguments into reorderable lists. Forwarding preserves the same
+object address and does not create an alias value.
+
+Every supported place is stable for the complete call: a local remains in its
+declaring activation, `self` is kept alive by its caller, and a forwarded alias
+inherits the enclosing call's guarantee. Consequently this profile needs no
+allocation, ownership-provenance tag, retain/release operation, hidden borrow
+anchor, graph search, lifetime inference, or exclusivity-based borrow checker.
+The alias cannot escape because it is not a value and cannot be stored,
+returned, captured, assigned, rebound, or converted to `shared`.
+
+The target-independent compiler contract for this profile is:
+
+- syntax, resolved IR, HIR, and MIR carry parameter binding mode explicitly and
+  separately from the underlying nominal type;
+- resolution assigns ordinary stable `ParameterId` identities and selects
+  names, while type checking alone decides place eligibility, exact type, and
+  access sufficiency;
+- HIR and MIR keep value and alias arguments in one ordered sequence, with an
+  alias argument represented as a typed place rather than an object value;
+- a MIR alias parameter is an indirect place base whose incoming payload is an
+  address, distinct from owning local object storage;
+- field projection remains semantic through `FieldId`; no target offset or
+  register enters MIR;
+- MIR verification checks declaration/definition agreement, argument kind and
+  type, place ownership and liveness, projection validity, access sufficiency,
+  and the exclusion of aliases from external declarations and scalar value
+  operations before a backend is invoked.
+
+Local alias declarations, primitive alias parameters, object value parameters
+and results, shared sources and borrow anchors, polymorphism, whole-object
+replacement, and alias-bearing function values remain deferred.
+
 ### 5.5 Initialization Members
 
 An `init` declaration defines a constructor that initializes object storage.
@@ -1916,6 +2031,34 @@ identities through the same collision-proof symbol authority used for Skald
 definitions. Their exact textual spelling is not a language guarantee and is
 never recovered from source names below resolution.
 
+### 13.5 Stage-0 Alias-Parameter ABI
+
+**Implementation status:** the ABI contract is frozen for the restricted
+profile in Section 5.4.3; backend support is not yet implemented.
+
+An internal `ref` or `mut ref` parameter is passed as one pointer to the
+complete inline object storage. The pointer is integer-class, has the target's
+machine-pointer size and alignment, and never copies the object's bytes. Both
+alias modes have the same machine representation; their difference is enforced
+statically through place access.
+
+Alias parameters participate in the ordinary source-ordered System V argument
+layout. The hidden receiver, when present, remains the first integer-class
+argument. Each alias consumes the next integer register or shared stack
+argument slot, while primitive integer and SSE arguments retain their
+independent register counters and existing stack order.
+
+The callee stores an incoming alias address in a pointer-sized frame home.
+Access through that parameter loads the address and applies target-computed
+field offsets. The caller materializes the address of the verified source
+place directly into the assigned argument location. Forwarding an alias passes
+the same object address.
+
+This ABI is internal to the stage-0 compiler. Alias parameters remain forbidden
+in external declarations and no cross-module object ABI stability is promised.
+The restricted profile has no shared sources, so calls perform no retain,
+release, hidden anchoring, or runtime ownership search.
+
 ---
 
 ## 14. Relationship to Niflheim
@@ -2089,6 +2232,16 @@ Resolved decisions in this draft:
 - parameter aliases are the only alias bindings in the first implementation, while restricted lexical local aliases are reserved for a later stage;
 - alias parameters accept both inline places and matching shared pointees without separate function variants;
 - all aliases are non-rebindable and non-escaping, and future local aliases remain subject to the same syntax-directed lifetime restrictions;
+- the frozen restricted alias-parameter profile initially accepts exact
+  concrete class aliases over inline locals, method `self`, and forwarded alias
+  parameters; primitive aliases, shared sources, polymorphism, and local alias
+  declarations remain outside that profile;
+- restricted alias calls keep value and place arguments in one source-ordered
+  sequence, represent an alias parameter as an indirect MIR place base, and
+  pass one integer-class object pointer for either access mode;
+- the restricted profile permits explicit direct-local construction through
+  `init(ref other: T)` but does not thereby enable implicit or synthesized copy
+  contexts;
 - every shared allocation retains its complete dynamic type metadata across base, `Obj`, and interface conversions;
 - final shared release invokes the most-derived complete-object destruction entry and frees the original allocation exactly once;
 - shared destruction is automatically dynamic and does not require `destroy` to be declared virtual;

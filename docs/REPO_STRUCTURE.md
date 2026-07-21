@@ -221,6 +221,13 @@ Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw
 binary64 bits. No backend infers types from spelling.
 
+The next alias-parameter slice keeps parameter binding mode orthogonal to
+`Type`. Syntax, resolved IR, HIR, and MIR each own an explicit value/read-only-
+alias/mutable-alias mode. HIR type checking is the authority for converting an
+argument's source shape into either a scalar value argument or an exact class
+place with an access capability. Resolution continues to select identities
+without deciding type or mutability.
+
 ### MIR
 
 MIR is executable in shape but target-independent. It separates:
@@ -246,6 +253,17 @@ The pass pipeline currently verifies without transforming. SSA conversion or
 optimization should enter as an explicit pass or replaceable IR boundary when
 concrete optimization work justifies it.
 
+For the planned alias profile, MIR signatures use ordered parameter
+descriptors rather than parallel type/mode arrays. Calls and initializations
+likewise keep value and place arguments in one source-ordered sequence. An
+alias parameter is an indirect place base containing an object address, not
+owning class storage and not a transient object value. Verification must check
+mode/type agreement, argument kind, place ownership and projection, access
+sufficiency, and the external-alias exclusion before backend lowering. These
+contracts are frozen in the
+[alias-parameter implementation profile](SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile),
+but are not implemented yet.
+
 ## x86-64 System V backend
 
 The backend separates:
@@ -270,6 +288,13 @@ class argument. Integer and SSE arguments use independent register sequences;
 overflow arguments share source-ordered stack slots. The current lowering is
 intentionally stack-heavy and can later be replaced by register allocation
 without changing MIR.
+
+The planned alias ABI reuses the indirect-address mechanics without treating
+an alias as an implicit receiver. Each alias is one integer-class pointer in
+source parameter order, stored in a pointer-sized callee home and dereferenced
+before field projection. `ref` and `mut ref` have identical machine
+representations. The slice adds no object copy, allocation, retain/release,
+borrow anchor, or external object ABI.
 
 Internal symbols derive from stable identities. External declarations retain
 their exact source symbol. The generated C-compatible `main` wrapper calls the
