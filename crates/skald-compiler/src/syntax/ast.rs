@@ -101,9 +101,27 @@ pub struct ExternalFunctionDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Parameter {
+    pub binding_mode: ParameterBindingMode,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ParameterBindingMode {
+    Value,
+    ReadOnlyAlias { ref_span: Span },
+    MutableAlias { mut_span: Span, ref_span: Span },
+}
+
+impl ParameterBindingMode {
+    pub const fn start_span(self, fallback: Span) -> Span {
+        match self {
+            Self::Value => fallback,
+            Self::ReadOnlyAlias { ref_span } => ref_span,
+            Self::MutableAlias { mut_span, .. } => mut_span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -22,6 +22,7 @@ fn return_value(function: &FunctionDecl) -> &Expression {
     statement.value.as_ref().expect("expected a return value")
 }
 
+mod alias_parameters;
 mod conditionals;
 mod declarations;
 mod dumps;

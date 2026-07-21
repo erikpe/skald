@@ -224,6 +224,7 @@ fn object_ast_dump_is_exact_and_source_shaped() {
             "        Introducer @24..28\n",
             "        Parameters\n",
             "          Parameter @29..39\n",
+            "            Binding Value\n",
             "            Name \"value\" @29..34\n",
             "            Type I64 @36..39\n",
             "        Block @41..64\n",

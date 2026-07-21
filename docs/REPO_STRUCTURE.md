@@ -186,6 +186,13 @@ and recovery responsibilities. It performs no name or type lookup. Source types
 are parsed once, with callers choosing whether a context permits `unit` or a
 named class type.
 
+The parser represents parameter binding mode separately from source type.
+Value, `ref`, and `mut ref` parameters share one parameter-list parser across
+functions, external declarations, methods, and initializers. Modifier and type
+spans remain source-shaped in the AST and deterministic dump. Until resolution
+implements alias signatures, a structured capability diagnostic prevents a
+parsed named alias parameter from reaching primitive-only resolver assumptions.
+
 One shared nesting budget limits recursive blocks, groups, unary expressions,
 and postfix calls to 128 active levels. Excessive input produces a source
 diagnostic and iterative declaration recovery rather than stack overflow.

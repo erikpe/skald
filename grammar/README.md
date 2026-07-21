@@ -20,7 +20,7 @@ Reserved keywords are:
 fn var return extern unit
 i64 u64 u8 f64 bool true false
 if elif else
-class self mut
+class self mut ref
 ```
 
 `init` is contextual: it introduces the special initializer form only in a
@@ -84,15 +84,21 @@ function-definition = "fn" identifier parameter-list
 external-function-declaration = "extern" "fn" identifier parameter-list
                                 "->" result-type ";"
 
-parameter-list = "(" [parameter ("," parameter)*] ")"
-parameter      = identifier ":" primitive-type
+parameter-list  = "(" [parameter ("," parameter)*] ")"
+parameter       = value-parameter | alias-parameter
+value-parameter = identifier ":" primitive-type
+alias-parameter = ["mut"] "ref" identifier ":" class-name
+class-name      = identifier
 
 primitive-type = "i64" | "u64" | "u8" | "f64" | "bool"
 result-type    = primitive-type | "unit"
 ```
 
 Trailing commas are not accepted. `unit` is a result type only; it is not a
-parameter or local-storage type.
+parameter or local-storage type. The parser accepts alias parameters on
+defined functions, external declarations, methods, and initializers so later
+phases can apply declaration-specific legality rules. An alias parameter must
+use a syntactic class name; primitive aliases are not part of this profile.
 
 Functions and classes share one non-overloaded top-level namespace. All
 declarations are collected before bodies are resolved, so forward calls and
@@ -255,15 +261,12 @@ copying, `assign`, `destroy`, inheritance, interfaces, virtual calls, casts,
 `shared`, alias bindings, access modifiers, static members, `final`, or object
 FFI.
 
-The next planned grammar extension is restricted alias parameters over exact
-inline class places:
-
-```text
-alias-parameter = ["mut"] "ref" identifier ":" class-name
-```
-
-This syntax is not accepted by the current parser. Its frozen declaration,
-place, access, lifetime, IR, and ABI contract is in the
+The lexer and parser implement the restricted alias-parameter syntax and
+preserve value/read-only/mutable binding mode separately from type syntax in
+the AST. Semantic resolution and code generation are not implemented yet;
+well-formed alias syntax currently stops at a structured resolution capability
+diagnostic. Its frozen declaration, place, access, lifetime, IR, and ABI
+contract is in the
 [restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
 Ordinary by-value parameters remain primitive-only, and the planned slice does
 not include local aliases, primitive aliases, shared sources, or borrow
@@ -290,8 +293,9 @@ The following broader-language features remain design or implementation work:
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;
-- `shared` ownership and `ref` / `mut ref` alias parameters (the restricted
-  next-slice contract is frozen, but syntax and behavior are not implemented);
+- semantic and native `ref` / `mut ref` alias behavior beyond the implemented
+  lexer, parser, and AST boundary;
+- `shared` ownership and aliasing through shared sources;
 - checked exceptions;
 - multiple source files, modules, generics, and closures.
 

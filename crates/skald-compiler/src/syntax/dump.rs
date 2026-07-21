@@ -113,11 +113,29 @@ impl AstDumper {
             for parameter in parameters {
                 dumper.line("Parameter", parameter.span);
                 dumper.indented(|dumper| {
+                    dumper.parameter_binding_mode(parameter.binding_mode);
                     dumper.named("Name", &parameter.name.text, parameter.name.span);
                     dumper.type_syntax(&parameter.type_syntax);
                 });
             }
         });
+    }
+
+    fn parameter_binding_mode(&mut self, mode: ParameterBindingMode) {
+        match mode {
+            ParameterBindingMode::Value => self.heading("Binding Value"),
+            ParameterBindingMode::ReadOnlyAlias { ref_span } => {
+                self.heading("Binding ReadOnlyAlias");
+                self.indented(|dumper| dumper.line("Ref", ref_span));
+            }
+            ParameterBindingMode::MutableAlias { mut_span, ref_span } => {
+                self.heading("Binding MutableAlias");
+                self.indented(|dumper| {
+                    dumper.line("Mut", mut_span);
+                    dumper.line("Ref", ref_span);
+                });
+            }
+        }
     }
 
     fn type_syntax(&mut self, type_syntax: &TypeSyntax) {

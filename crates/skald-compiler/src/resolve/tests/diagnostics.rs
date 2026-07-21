@@ -1,6 +1,22 @@
 use super::*;
 
 #[test]
+fn parsed_alias_parameters_stop_at_a_structured_resolution_capability_boundary() {
+    let output = resolve_text(concat!(
+        "class Dog { init() {} }\n",
+        "fn inspect(ref dog: Dog) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, ALIAS_PARAMETER_NOT_RESOLVED);
+    assert!(diagnostic
+        .message
+        .contains("not available below syntax parsing yet"));
+}
+
+#[test]
 fn nan_and_infinity_spellings_are_rejected_as_single_unknown_names() {
     for spelling in ["NaN", "inf"] {
         let output = resolve_text(&format!(

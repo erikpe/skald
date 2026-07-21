@@ -25,6 +25,9 @@ pub const UNKNOWN_MEMBER: &str = "RES008";
 pub const INVALID_MEMBER_SELECTION: &str = "RES009";
 pub const SELF_OUTSIDE_MEMBER: &str = "RES010";
 pub const INVALID_CONSTRUCTION_TARGET: &str = "RES011";
+/// Temporary phase capability diagnostic removed when AL2 carries alias
+/// binding modes and nominal parameter types into resolved IR.
+pub const ALIAS_PARAMETER_NOT_RESOLVED: &str = "RES012";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

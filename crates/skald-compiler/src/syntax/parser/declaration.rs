@@ -6,6 +6,7 @@ use super::*;
 pub(super) enum TypeContext {
     Result,
     PrimitiveValue,
+    AliasParameter,
     LocalValue,
 }
 
@@ -15,7 +16,11 @@ impl TypeContext {
     }
 
     const fn accepts_named(self) -> bool {
-        matches!(self, Self::LocalValue)
+        matches!(self, Self::AliasParameter | Self::LocalValue)
+    }
+
+    const fn accepts_primitive(self) -> bool {
+        !matches!(self, Self::AliasParameter)
     }
 
     fn expected_label(self) -> String {
@@ -27,6 +32,7 @@ impl TypeContext {
                     format_type_list(STORED_TYPE_NAMES)
                 )
             }
+            Self::AliasParameter => "alias parameters must name an inline class type".to_owned(),
             Self::LocalValue => format!(
                 "locals must have type {} or a named class type",
                 format_type_list(STORED_TYPE_NAMES)
@@ -131,7 +137,7 @@ impl Parser<'_> {
                 continue;
             }
 
-            if self.at(TokenKind::Identifier) {
+            if self.starts_parameter() {
                 self.report(
                     EXPECTED_TOKEN,
                     "expected `,` between parameters",
@@ -149,20 +155,31 @@ impl Parser<'_> {
     }
 
     fn parse_parameter(&mut self) -> Option<Parameter> {
+        let binding_mode = self.parse_parameter_binding_mode()?;
         let name = self.parse_name("expected a parameter name");
         self.expect(TokenKind::Colon, "`:` after the parameter name");
+        let type_context = if binding_mode == ParameterBindingMode::Value {
+            TypeContext::PrimitiveValue
+        } else {
+            TypeContext::AliasParameter
+        };
         let type_syntax = self.parse_type(
-            TypeContext::PrimitiveValue,
-            format!(
-                "expected the parameter type {}",
-                format_type_list(STORED_TYPE_NAMES)
-            ),
+            type_context,
+            if type_context == TypeContext::AliasParameter {
+                "expected a class name as the alias parameter type".to_owned()
+            } else {
+                format!(
+                    "expected the parameter type {}",
+                    format_type_list(STORED_TYPE_NAMES)
+                )
+            },
         );
 
         match (name, type_syntax) {
             (Some(name), Some(type_syntax)) => {
-                let span = self.cover(name.span, type_syntax.span);
+                let span = self.cover(binding_mode.start_span(name.span), type_syntax.span);
                 Some(Parameter {
+                    binding_mode,
                     name,
                     type_syntax,
                     span,
@@ -172,6 +189,62 @@ impl Parser<'_> {
         }
     }
 
+    fn parse_parameter_binding_mode(&mut self) -> Option<ParameterBindingMode> {
+        if let Some(mut_token) = self.consume(TokenKind::Mut) {
+            let Some(ref_token) = self.consume(TokenKind::Ref) else {
+                self.report(
+                    EXPECTED_TOKEN,
+                    "expected `ref` after `mut` in a parameter",
+                    self.peek().span,
+                    "mutable alias parameters use `mut ref name: Class`",
+                );
+                return None;
+            };
+            if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
+                self.report_repeated_parameter_modifier();
+                return None;
+            }
+            return Some(ParameterBindingMode::MutableAlias {
+                mut_span: mut_token.span,
+                ref_span: ref_token.span,
+            });
+        }
+
+        if let Some(ref_token) = self.consume(TokenKind::Ref) {
+            if self.at(TokenKind::Mut) {
+                self.report(
+                    EXPECTED_TOKEN,
+                    "`mut` must precede `ref` in a mutable alias parameter",
+                    self.peek().span,
+                    "use `mut ref name: Class`",
+                );
+                return None;
+            }
+            if self.at(TokenKind::Ref) {
+                self.report_repeated_parameter_modifier();
+                return None;
+            }
+            return Some(ParameterBindingMode::ReadOnlyAlias {
+                ref_span: ref_token.span,
+            });
+        }
+
+        Some(ParameterBindingMode::Value)
+    }
+
+    fn report_repeated_parameter_modifier(&mut self) {
+        self.report(
+            EXPECTED_TOKEN,
+            "repeated alias parameter modifier",
+            self.peek().span,
+            "use exactly `ref` or `mut ref`",
+        );
+    }
+
+    fn starts_parameter(&self) -> bool {
+        self.at_any(&[TokenKind::Identifier, TokenKind::Mut, TokenKind::Ref])
+    }
+
     pub(super) fn parse_type(
         &mut self,
         context: TypeContext,
@@ -179,7 +252,7 @@ impl Parser<'_> {
     ) -> Option<TypeSyntax> {
         let token = self.peek();
         if let Some(kind) = token_type_kind(token.kind) {
-            if kind != TypeKind::Unit || context.accepts_unit() {
+            if context.accepts_primitive() && (kind != TypeKind::Unit || context.accepts_unit()) {
                 self.advance();
                 return Some(TypeSyntax {
                     kind,

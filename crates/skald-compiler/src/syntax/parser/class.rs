@@ -52,7 +52,7 @@ impl Parser<'_> {
     }
 
     fn starts_class_member(&self) -> bool {
-        self.at_any(&[TokenKind::Fn, TokenKind::Mut])
+        self.at_any(&[TokenKind::Fn, TokenKind::Mut, TokenKind::Ref])
             || (self.at(TokenKind::Identifier)
                 && (self.peek_ahead(1).kind == TokenKind::Colon
                     || (self.lexeme(self.peek()) == "init"
@@ -60,6 +60,18 @@ impl Parser<'_> {
     }
 
     fn parse_class_member(&mut self) -> Option<ClassMember> {
+        if self.at(TokenKind::Ref)
+            || (self.at(TokenKind::Mut) && self.peek_ahead(1).kind == TokenKind::Ref)
+        {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "alias bindings are not valid class fields",
+                self.peek().span,
+                "`ref` and `mut ref` are supported only on parameters",
+            );
+            return None;
+        }
+
         if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) {
             return self.parse_method().map(ClassMember::Method);
         }

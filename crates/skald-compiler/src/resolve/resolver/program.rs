@@ -447,15 +447,43 @@ fn resolve_parameters(
             continue;
         }
         names.insert(parameter.name.text.clone(), parameter.name.span);
+        let type_syntax = if parameter.binding_mode == syntax::ParameterBindingMode::Value {
+            resolve_scalar_type(&parameter.type_syntax)
+        } else {
+            report_unresolved_alias_parameter(parameter, diagnostics)
+        };
         resolved.push(ResolvedParameter {
             id: ParameterId::new(callable, resolved.len()),
             name: parameter.name.text.clone(),
             name_span: parameter.name.span,
-            type_syntax: resolve_scalar_type(&parameter.type_syntax),
+            type_syntax,
             span: parameter.span,
         });
     }
     resolved
+}
+
+fn report_unresolved_alias_parameter(
+    parameter: &syntax::Parameter,
+    diagnostics: &mut Diagnostics,
+) -> ResolvedType {
+    let modifier_span = parameter.binding_mode.start_span(parameter.name.span);
+    diagnostics.push(
+        Diagnostic::error(
+            ALIAS_PARAMETER_NOT_RESOLVED,
+            "alias parameters are not available below syntax parsing yet",
+        )
+        .with_primary_label(modifier_span, "binding mode is parsed but not resolved")
+        .with_note("semantic alias support is implemented by the next compiler phase slice"),
+    );
+
+    // Keep the binding structurally present so body resolution can continue
+    // and collect independent name errors. Type checking never observes this
+    // placeholder because the capability diagnostic stops the pipeline.
+    ResolvedType {
+        kind: ResolvedTypeKind::Unit,
+        span: parameter.type_syntax.span,
+    }
 }
 
 fn resolve_scalar_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {

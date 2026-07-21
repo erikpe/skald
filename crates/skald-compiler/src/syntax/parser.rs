@@ -108,6 +108,14 @@ impl<'source> Parser<'source> {
                     .map(TopLevelDeclaration::ExternalFunction)
             } else if self.at(TokenKind::Class) {
                 self.parse_class().map(TopLevelDeclaration::Class)
+            } else if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
+                self.report(
+                    EXPECTED_DECLARATION,
+                    "alias binding modifiers are valid only on parameters",
+                    self.peek().span,
+                    "expected a top-level `fn`, `extern fn`, or `class` declaration",
+                );
+                None
             } else {
                 self.report(
                     EXPECTED_DECLARATION,

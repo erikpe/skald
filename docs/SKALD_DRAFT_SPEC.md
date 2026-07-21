@@ -998,10 +998,12 @@ boundaries, or cleanup on non-local exits. Those remain prerequisites for
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
-**Implementation status:** the contract is frozen for the next compiler slice;
-the current compiler does not yet accept this syntax. This profile extends the
-restricted inline-object profile in Section 5.4.2. It does not implement every
-alias source described by the broader model in Section 4.5.
+**Implementation status:** the contract is frozen, and the lexer, parser, and
+source AST implement its parameter syntax. Resolution, typed IR, MIR, and
+backend behavior remain to be implemented. Well-formed alias syntax currently
+stops at a structured resolution capability diagnostic. This profile extends
+the restricted inline-object profile in Section 5.4.2. It does not implement
+every alias source described by the broader model in Section 4.5.
 
 The parameter grammar added by this profile is:
 
@@ -1013,9 +1015,9 @@ alias-parameter = ["mut"] "ref" identifier ":" class-name
 
 `ref` and `mut ref` are parameter binding modes, not type constructors. The
 bound name's type is the named class, and the mode is represented separately
-from that type. `ref` becomes a keyword when this syntax is enabled; `mut ref`
-is the only mutable spelling. `ref mut`, repeated modifiers, and a binding mode
-in a local, field, result, static, element, or capture position are invalid.
+from that type. `ref` is a keyword; `mut ref` is the only mutable spelling.
+`ref mut`, repeated modifiers, and a binding mode in a local, field, result,
+static, element, or capture position are invalid.
 
 Alias parameters are accepted on internally defined top-level functions,
 instance methods, and initializers. An external declaration cannot contain an

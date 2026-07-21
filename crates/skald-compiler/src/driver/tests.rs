@@ -7,6 +7,7 @@ use std::{
 use crate::{
     backend::Target,
     diagnostics::render_diagnostics,
+    resolve::ALIAS_PARAMETER_NOT_RESOLVED,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
     test_support::TemporaryDirectory,
 };
@@ -329,6 +330,31 @@ fn stops_before_semantic_phases_after_a_source_error() {
     let rendered = render_diagnostics(&report.sources, &report.diagnostics);
     assert!(rendered.contains("error[LEX001]: unexpected character `@`"));
     assert!(!rendered.contains("PAR"));
+}
+
+#[test]
+fn parsed_alias_syntax_stops_at_the_resolution_capability_boundary() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "alias-syntax.ska",
+        concat!(
+            "class Dog { init() {} }\n",
+            "fn inspect(ref dog: Dog) -> unit {}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("expected resolution capability diagnostics");
+    };
+
+    assert_eq!(report.diagnostics.len(), 1);
+    assert_eq!(
+        report.diagnostics.iter().next().unwrap().code,
+        ALIAS_PARAMETER_NOT_RESOLVED
+    );
+    let rendered = render_diagnostics(&report.sources, &report.diagnostics);
+    assert!(rendered.contains("error[RES012]"));
+    assert!(!rendered.contains("error[PAR"));
 }
 
 #[test]

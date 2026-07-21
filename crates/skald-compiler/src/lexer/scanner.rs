@@ -112,6 +112,7 @@ impl<'source> Lexer<'source> {
             "class" => TokenKind::Class,
             "self" => TokenKind::SelfValue,
             "mut" => TokenKind::Mut,
+            "ref" => TokenKind::Ref,
             "fn" => TokenKind::Fn,
             "extern" => TokenKind::Extern,
             "var" => TokenKind::Var,

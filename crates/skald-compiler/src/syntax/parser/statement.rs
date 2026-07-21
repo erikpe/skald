@@ -86,6 +86,16 @@ impl Parser<'_> {
         if self.at(TokenKind::LeftBrace) {
             return self.parse_block().map(Statement::Block);
         }
+        if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
+            self.report(
+                EXPECTED_STATEMENT,
+                "local alias bindings are not supported",
+                self.peek().span,
+                "`ref` and `mut ref` are supported only on parameters",
+            );
+            self.discard_misplaced_alias_binding();
+            return None;
+        }
 
         if self.starts_expression() {
             return self.parse_expression_or_assignment();
@@ -98,6 +108,20 @@ impl Parser<'_> {
             "expected `var`, `return`, `if`, an expression, a field assignment, or a nested block",
         );
         None
+    }
+
+    fn discard_misplaced_alias_binding(&mut self) {
+        while !self.at_any(&[
+            TokenKind::Semicolon,
+            TokenKind::RightBrace,
+            TokenKind::Fn,
+            TokenKind::Extern,
+            TokenKind::Class,
+            TokenKind::Eof,
+        ]) {
+            self.advance();
+        }
+        self.consume(TokenKind::Semicolon);
     }
 
     fn parse_conditional(&mut self) -> Option<ConditionalStatement> {

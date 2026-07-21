@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: in progress; AL0 implemented.
+Status: in progress; AL0–AL1 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -319,7 +319,7 @@ declarations and promises no cross-module ABI stability.
 ## 5. Progress Summary
 
 - [x] AL0 — Freeze the restricted alias-parameter contract
-- [ ] AL1 — Add binding-mode syntax and parser diagnostics
+- [x] AL1 — Add binding-mode syntax and parser diagnostics
 - [ ] AL2 — Resolve alias signatures and existing object places
 - [ ] AL3 — Type-check alias access and build typed call arguments
 - [ ] AL4 — Add verified alias parameters and place arguments to MIR
@@ -363,18 +363,18 @@ eligibility, mutability, lifetime, IR, or ABI rules.
 **Purpose:** Represent the source distinction precisely without teaching the
 parser ownership or access semantics.
 
-- [ ] Add `ref` tokenization and the exact `ref` / `mut ref` parameter grammar.
-- [ ] Add an AST parameter binding-mode enum separate from `TypeSyntax`.
-- [ ] Preserve the complete modifier/name/type span information needed for
+- [x] Add `ref` tokenization and the exact `ref` / `mut ref` parameter grammar.
+- [x] Add an AST parameter binding-mode enum separate from `TypeSyntax`.
+- [x] Preserve the complete modifier/name/type span information needed for
       diagnostics and dumps.
-- [ ] Parse binding modes uniformly for functions, methods, initializers, and
+- [x] Parse binding modes uniformly for functions, methods, initializers, and
       external declarations; leave legality to the appropriate semantic
       boundary.
-- [ ] Diagnose malformed order, repetition, missing components, and use of
+- [x] Diagnose malformed order, repetition, missing components, and use of
       modifiers where a declaration or expression is expected.
-- [ ] Extend parameter recovery so one malformed alias parameter does not hide
+- [x] Extend parameter recovery so one malformed alias parameter does not hide
       later parameters, members, or declarations.
-- [ ] Update exact AST dumps and split parser tests by alias concern if the
+- [x] Update exact AST dumps and split parser tests by alias concern if the
       existing declaration/object test modules become crowded.
 
 **Tests:** Lexer keyword/prefix tests; parser tests for every callable form,

@@ -99,8 +99,9 @@ fn recognizes_boolean_type_and_literal_keywords() {
 }
 
 #[test]
-fn recognizes_object_keywords_dot_and_contextual_initializer_name() {
-    let (_, _, output) = lex_text("class self mut init init_value object.field");
+fn recognizes_object_and_alias_keywords_without_reserving_prefixes() {
+    let (_, _, output) =
+        lex_text("class self mut ref reference ref_value init init_value object.field");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
 
     assert_eq!(
@@ -109,6 +110,9 @@ fn recognizes_object_keywords_dot_and_contextual_initializer_name() {
             TokenKind::Class,
             TokenKind::SelfValue,
             TokenKind::Mut,
+            TokenKind::Ref,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
             TokenKind::Identifier,
             TokenKind::Identifier,
             TokenKind::Identifier,
