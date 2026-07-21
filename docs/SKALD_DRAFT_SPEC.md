@@ -1586,7 +1586,12 @@ than redefining the normal local-object behavior frozen here.
 not enable copy or object-value source forms. OVS1 parses and resolves copy
 lifecycle declarations to stable identities. OVS2 type-checks their bodies and
 records canonical user, ordered synthesized, or unavailable capabilities in
-HIR. General object assignment, class value parameters/results, and other
+HIR. OVS3 accepts direct local copy initialization and live-object assignment
+between exact-class places, with explicit source, destination, and selected
+operation in HIR. MIR and backend execution of those operations begin in OVS4;
+the driver reports that phase boundary without entering MIR. Class value
+parameters/results, constructor or result temporaries in copy contexts,
+alias-rooted replacement, external object signatures, and other
 object-producing expressions remain rejected until their later slices.
 
 This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,

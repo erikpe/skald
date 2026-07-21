@@ -211,6 +211,16 @@ impl AstDumper {
                     dumper.indented(|dumper| dumper.expression(&statement.value));
                 });
             }
+            Statement::ObjectAssignment(statement) => {
+                self.line("ObjectAssignment", statement.span);
+                self.indented(|dumper| {
+                    dumper.heading("Place");
+                    dumper.indented(|dumper| dumper.expression(&statement.place));
+                    dumper.line("Equal", statement.equal_span);
+                    dumper.heading("Value");
+                    dumper.indented(|dumper| dumper.expression(&statement.value));
+                });
+            }
         }
     }
 

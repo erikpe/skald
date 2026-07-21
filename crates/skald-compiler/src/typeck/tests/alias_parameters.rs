@@ -138,7 +138,7 @@ fn checks_exact_nominal_type_and_requires_existing_object_places() {
 }
 
 #[test]
-fn aliases_remain_invalid_as_values_returns_and_construction_destinations() {
+fn aliases_are_copy_sources_but_remain_invalid_as_scalar_values_and_returns() {
     let output = check_text(concat!(
         "class Value { init() {} }\n",
         "fn scalar(value: i64) -> unit {}\n",
@@ -156,14 +156,7 @@ fn aliases_remain_invalid_as_values_returns_and_construction_destinations() {
         .iter()
         .map(|diagnostic| diagnostic.code)
         .collect();
-    assert_eq!(
-        codes,
-        [
-            INVALID_OBJECT_CONTEXT,
-            INVALID_OBJECT_CONTEXT,
-            INVALID_OBJECT_CONTEXT
-        ]
-    );
+    assert_eq!(codes, [INVALID_OBJECT_CONTEXT, INVALID_OBJECT_CONTEXT]);
 }
 
 #[test]

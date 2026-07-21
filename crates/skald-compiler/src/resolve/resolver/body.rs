@@ -158,6 +158,9 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             syntax::Statement::FieldAssignment(assignment) => self
                 .resolve_field_assignment(assignment)
                 .map(ResolvedStatement::FieldAssignment),
+            syntax::Statement::ObjectAssignment(assignment) => {
+                self.resolve_object_assignment(assignment)
+            }
         }
     }
 
@@ -569,6 +572,37 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         })
     }
 
+    fn resolve_object_assignment(
+        &mut self,
+        assignment: &syntax::ObjectAssignmentStatement,
+    ) -> Option<ResolvedStatement> {
+        if let Some(place) = terminal_member_through_groups(&assignment.place) {
+            let field_assignment = syntax::FieldAssignmentStatement {
+                place: place.clone(),
+                equal_span: assignment.equal_span,
+                value: assignment.value.clone(),
+                span: assignment.span,
+            };
+            return self
+                .resolve_field_assignment(&field_assignment)
+                .map(ResolvedStatement::FieldAssignment);
+        }
+
+        let destination = self.resolve_object_place(&assignment.place);
+        let source = self.resolve_expression(&assignment.value);
+        match (destination, source) {
+            (Some(destination), Some(source)) => Some(ResolvedStatement::ObjectAssignment(
+                ResolvedObjectAssignment {
+                    destination,
+                    equal_span: assignment.equal_span,
+                    source,
+                    span: assignment.span,
+                },
+            )),
+            _ => None,
+        }
+    }
+
     fn select_member(
         &mut self,
         class: ClassId,
@@ -634,6 +668,16 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             Diagnostic::error(UNKNOWN_NAME, format!("{kind} `{name}`"))
                 .with_primary_label(span, "not declared in this scope"),
         );
+    }
+}
+
+fn terminal_member_through_groups(
+    expression: &syntax::Expression,
+) -> Option<&syntax::MemberAccessExpr> {
+    match expression {
+        syntax::Expression::Grouped(grouped) => terminal_member_through_groups(&grouped.expression),
+        syntax::Expression::MemberAccess(member) => Some(member),
+        _ => None,
     }
 }
 

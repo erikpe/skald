@@ -27,6 +27,7 @@ use super::{
     },
 };
 
+mod copy;
 mod initializer;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -253,9 +254,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                     .expect("resolved local declaration must reference local metadata");
                 let expected = lower_type(&metadata.type_syntax);
                 let initializer = match expected {
-                    Type::Class(class) => self
-                        .check_construction_initializer(class, &local.initializer)
-                        .map(HirLocalInitializer::Construct),
+                    Type::Class(class) => {
+                        self.check_object_local_initializer(local.local, class, &local.initializer)
+                    }
                     _ => self
                         .check_expression(&local.initializer)
                         .and_then(|initializer| {
@@ -390,6 +391,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             }
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.check_field_assignment(assignment)
+            }
+            ResolvedStatement::ObjectAssignment(assignment) => {
+                self.check_object_assignment(assignment)
             }
         }
     }

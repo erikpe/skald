@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS2 are complete and OVS3 is next.
+Status: in progress; OVS0–OVS3 are complete and OVS4 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -127,14 +127,14 @@ operation for every class; invalid bodies cannot reach MIR.
 **Purpose:** Introduce the first source object-value contexts over existing
 stable places.
 
-- [ ] Accept direct exact-class local initialization from a local, receiver,
+- [x] Accept direct exact-class local initialization from a local, receiver,
       field, or read-only alias place.
-- [ ] Accept exact-class assignment to live owning locals and projected fields
+- [x] Accept exact-class assignment to live owning locals and projected fields
       within the frozen access boundary.
-- [ ] Select copy construction versus copy assignment explicitly in HIR.
-- [ ] Preserve left-to-right source evaluation and define overlap/self-assignment
+- [x] Select copy construction versus copy assignment explicitly in HIR.
+- [x] Preserve left-to-right source evaluation and define overlap/self-assignment
       behavior without inventing moves.
-- [ ] Keep unsupported parameters, results, general temporaries, and external
+- [x] Keep unsupported parameters, results, general temporaries, and external
       signatures diagnosed until their slices land.
 
 **Acceptance criteria:** typed HIR represents local copy operations as selected

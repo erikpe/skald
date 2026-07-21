@@ -322,7 +322,179 @@ fn type_checks_class_field_copy_operations_only_inside_copy_bodies() {
 }
 
 #[test]
-fn rejects_invalid_copy_body_liveness_returns_and_object_escape() {
+fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
+    let output = check_text(concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  init(ref other: Value) { self.value = other.value; }\n",
+        "  assign(ref other: Value) { self.value = other.value; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  left: Value; right: Value;\n",
+        "  init(value: i64) { self.left = Value(value); self.right = Value(value); }\n",
+        "  mut fn exercise(ref source: Value) -> unit {\n",
+        "    var whole: Holder = self;\n",
+        "    var field: Value = self.left;\n",
+        "    var alias: Value = source;\n",
+        "    self.left = source;\n",
+        "    self.right = self.left;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var first: Value = Value(1);\n",
+        "  var second: Value = first;\n",
+        "  second = first;\n",
+        "  second = second;\n",
+        "  var holder: Holder = Holder(2);\n",
+        "  (holder.left) = second;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let value = hir.class(ClassId::new(0)).unwrap();
+    let holder = hir.class(ClassId::new(1)).unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+
+    let HirStatement::Local(second) = &main.body.statements[1] else {
+        panic!("expected copied local");
+    };
+    let HirLocalInitializer::Copy(copy) = &second.initializer else {
+        panic!("expected explicit copy construction");
+    };
+    assert_eq!(copy.destination.root(), BindingId::Local(second.local));
+    assert_eq!(copy.source.root(), BindingId::Local(main.locals[0].id));
+    assert_eq!(
+        copy.operation,
+        HirSelectedCopyOperation::User(InitializerId::new(value.id, 1))
+    );
+
+    let HirStatement::CopyAssignment(assignment) = &main.body.statements[2] else {
+        panic!("expected explicit local copy assignment");
+    };
+    assert_eq!(
+        assignment.destination.root(),
+        BindingId::Local(second.local)
+    );
+    assert_eq!(
+        assignment.source.root(),
+        BindingId::Local(main.locals[0].id)
+    );
+    assert_eq!(
+        assignment.operation,
+        HirSelectedCopyOperation::User(CopyAssignmentId::new(value.id, 0))
+    );
+
+    let HirStatement::CopyAssignment(self_assignment) = &main.body.statements[3] else {
+        panic!("expected self-assignment to remain explicit");
+    };
+    assert_eq!(
+        self_assignment.destination.root(),
+        self_assignment.source.root()
+    );
+    assert_eq!(
+        self_assignment.destination.projections(),
+        self_assignment.source.projections()
+    );
+
+    let exercise = hir
+        .member_definition(holder.methods[0].id.into())
+        .expect("exercise method must have a definition");
+    let HirStatement::Local(whole) = &exercise.body.statements[0] else {
+        panic!("expected receiver copy");
+    };
+    let HirLocalInitializer::Copy(whole) = &whole.initializer else {
+        panic!("expected receiver copy construction");
+    };
+    assert_eq!(whole.source.root(), BindingId::Receiver(exercise.callable));
+    assert_eq!(
+        whole.operation,
+        HirSelectedCopyOperation::Synthesized(holder.id)
+    );
+
+    let HirStatement::Local(alias_copy) = &exercise.body.statements[2] else {
+        panic!("expected alias copy");
+    };
+    let HirLocalInitializer::Copy(alias_copy) = &alias_copy.initializer else {
+        panic!("expected alias copy construction");
+    };
+    assert_eq!(alias_copy.source.access, HirAccess::ReadOnly);
+
+    for statement in &exercise.body.statements[3..] {
+        let HirStatement::CopyAssignment(assignment) = statement else {
+            panic!("expected projected object assignment");
+        };
+        assert_eq!(
+            assignment.destination.root(),
+            BindingId::Receiver(exercise.callable)
+        );
+        assert_eq!(assignment.destination.projections().len(), 1);
+    }
+
+    let dump = dump_hir(&hir);
+    let copy_dump = dump
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            line.starts_with("CopyConstruction")
+                || line.starts_with("CopyAssignmentStatement")
+                || line.starts_with("Operation ")
+        })
+        .collect::<Vec<_>>();
+    assert!(copy_dump[0].starts_with("CopyConstruction @"));
+    assert_eq!(copy_dump[1], "Operation Synthesized c1");
+}
+
+#[test]
+fn diagnoses_object_assignment_outside_the_frozen_destination_and_source_boundary() {
+    let output = check_text(concat!(
+        "class Value { init() {} }\n",
+        "class Other { init() {} }\n",
+        "class Box {\n",
+        "  child: Value;\n",
+        "  init() { self.child = Value(); }\n",
+        "  mut fn replace(ref other: Box) -> unit { self = other; }\n",
+        "}\n",
+        "fn misuse(ref readonly: Value, mut ref alias: Box) -> unit {\n",
+        "  var value: Value = Value();\n",
+        "  var other: Other = Other();\n",
+        "  readonly = value;\n",
+        "  alias.child = value;\n",
+        "  value = Value();\n",
+        "  value = other;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_OBJECT_CONTEXT
+            && diagnostic.message.contains("complete method receiver")
+    }));
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| {
+                diagnostic.code == INVALID_OBJECT_CONTEXT
+                    && diagnostic.message.contains("through a parameter")
+            })
+            .count(),
+        2
+    );
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_OBJECT_CONTEXT
+            && diagnostic.message.contains("existing object place")
+    }));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_OBJECT_CONTEXT && diagnostic.message.contains("same class")
+    }));
+}
+
+#[test]
+fn rejects_invalid_copy_body_liveness_access_and_returns() {
     let output = check_text(concat!(
         "class Broken {\n",
         "  first: i64; second: i64;\n",
@@ -362,10 +534,6 @@ fn rejects_invalid_copy_body_liveness_returns_and_object_escape() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == INVALID_RETURN));
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
 }
 
 #[test]
@@ -736,10 +904,8 @@ fn rejects_premature_subobject_use_duplicate_construction_and_invalid_destinatio
         2
     );
     assert!(destinations.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_CONSTRUCTION
-            && diagnostic
-                .message
-                .contains("only in their owner's initializer")
+        diagnostic.code == INVALID_OBJECT_CONTEXT
+            && diagnostic.message.contains("existing object place")
     }));
 }
 
@@ -802,7 +968,7 @@ fn validates_exact_direct_construction_and_constructor_arguments() {
 }
 
 #[test]
-fn rejects_object_values_copying_and_general_construction() {
+fn rejects_object_values_outside_copy_initialization() {
     let output = check_text(concat!(
         "class Value { init() {} }\n",
         "fn main() -> i64 {\n",
@@ -820,7 +986,7 @@ fn rejects_object_values_copying_and_general_construction() {
             .iter()
             .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT)
             .count(),
-        2
+        1
     );
     assert!(output
         .diagnostics

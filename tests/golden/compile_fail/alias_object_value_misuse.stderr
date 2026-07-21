@@ -4,12 +4,6 @@ error[TYP014]: an inline object cannot be used as an ordinary value
 6 |     consume(value);
    |             ^^^^^ use the object as a field or method receiver
 
-error[TYP014]: an object local must be initialized by direct construction
- --> tests/golden/compile_fail/alias_object_value_misuse.ska:7:23
-   |
-7 |     var copy: Value = value;
-   |                       ^^^^^ expected an ungrouped `Class(...)` expression
-
 error[TYP014]: an inline object cannot be used as an ordinary value
  --> tests/golden/compile_fail/alias_object_value_misuse.ska:8:12
    |

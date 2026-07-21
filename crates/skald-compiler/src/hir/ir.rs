@@ -614,6 +614,7 @@ pub enum HirStatement {
     FieldConstruction(HirFieldConstruction),
     FieldCopyConstruction(HirFieldCopyConstruction),
     FieldCopyAssignment(HirFieldCopyAssignment),
+    CopyAssignment(HirCopyAssignment),
 }
 
 impl HirStatement {
@@ -628,6 +629,7 @@ impl HirStatement {
             Self::FieldConstruction(statement) => statement.span,
             Self::FieldCopyConstruction(statement) => statement.span,
             Self::FieldCopyAssignment(statement) => statement.span,
+            Self::CopyAssignment(statement) => statement.span,
         }
     }
 }
@@ -643,6 +645,15 @@ pub struct HirLocalDecl {
 pub enum HirLocalInitializer {
     Value(HirExpression),
     Construct(HirConstruction),
+    Copy(HirCopyConstruction),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCopyConstruction {
+    pub destination: HirObjectPlace,
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -690,6 +701,14 @@ pub struct HirFieldCopyConstruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldCopyAssignment {
     pub place: HirFieldPlace,
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCopyAssignment {
+    pub destination: HirObjectPlace,
     pub source: HirObjectPlace,
     pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
     pub span: Span,

@@ -392,10 +392,31 @@ fn unsupported_assignment_shapes_are_diagnosed_without_losing_later_statements()
     ));
 
     assert!(output.has_errors());
-    assert_eq!(output.diagnostics.len(), 2);
+    assert_eq!(output.diagnostics.len(), 1);
     let main = function(&output.ast, 0);
-    assert_eq!(main.body.statements.len(), 1);
-    assert!(matches!(main.body.statements[0], Statement::Return(_)));
+    assert_eq!(main.body.statements.len(), 2);
+    assert!(matches!(
+        main.body.statements[0],
+        Statement::ObjectAssignment(_)
+    ));
+    assert!(matches!(main.body.statements[1], Statement::Return(_)));
+}
+
+#[test]
+fn parses_whole_object_assignment_without_performing_type_lookup() {
+    let (sources, output) = parse_text("fn main() -> i64 { destination = (source); return 0; }");
+
+    assert!(output.diagnostics.is_empty());
+    let main = function(&output.ast, 0);
+    let Statement::ObjectAssignment(assignment) = &main.body.statements[0] else {
+        panic!("expected object assignment syntax");
+    };
+    assert_eq!(
+        source_text(&sources, assignment.place.span()),
+        "destination"
+    );
+    assert_eq!(source_text(&sources, assignment.equal_span), "=");
+    assert_eq!(source_text(&sources, assignment.value.span()), "(source)");
 }
 
 #[test]

@@ -355,6 +355,30 @@ fn composes_the_complete_object_frontend_and_backend_pipeline() {
 }
 
 #[test]
+fn ovs3_copy_source_stops_cleanly_at_the_documented_hir_boundary() {
+    let CompilationError::Diagnostics(report) = compile_source_to_assembly(
+        "copy.ska",
+        concat!(
+            "class Value { init() {} }\n",
+            "fn main() -> i64 {\n",
+            "  var source: Value = Value();\n",
+            "  var copy: Value = source;\n",
+            "  copy = source;\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap_err() else {
+        panic!("expected the OVS3 HIR-to-MIR boundary diagnostic");
+    };
+
+    let diagnostic = report.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, "DRV001");
+    assert!(diagnostic.message.contains("has not reached MIR"));
+}
+
+#[test]
 fn stops_before_semantic_phases_after_a_source_error() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "broken.ska",

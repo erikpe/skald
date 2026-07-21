@@ -22,6 +22,7 @@ pub(in crate::typeck) enum ObjectPlaceUse {
     Member,
     Alias,
     CopySource,
+    CopyDestination,
     InitializationDestination,
 }
 
@@ -40,7 +41,7 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    pub(super) fn check_object_place(
+    pub(in crate::typeck) fn check_object_place(
         &mut self,
         place: &ResolvedObjectPlace,
         place_use: ObjectPlaceUse,

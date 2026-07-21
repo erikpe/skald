@@ -275,6 +275,7 @@ impl HirDumper {
                     HirLocalInitializer::Construct(construction) => {
                         dumper.construction(construction)
                     }
+                    HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
                 });
             }
             HirStatement::Return(statement) => {
@@ -319,7 +320,24 @@ impl HirDumper {
                     dumper.selected_copy_operation(statement.operation);
                 });
             }
+            HirStatement::CopyAssignment(statement) => {
+                self.line("CopyAssignmentStatement", statement.span);
+                self.indented(|dumper| {
+                    dumper.object_place(&statement.destination);
+                    dumper.object_place(&statement.source);
+                    dumper.selected_copy_operation(statement.operation);
+                });
+            }
         }
+    }
+
+    fn copy_construction(&mut self, copy: &crate::hir::HirCopyConstruction) {
+        self.line("CopyConstruction", copy.span);
+        self.indented(|dumper| {
+            dumper.object_place(&copy.destination);
+            dumper.object_place(&copy.source);
+            dumper.selected_copy_operation(copy.operation);
+        });
     }
 
     fn selected_copy_operation<I: Display>(&mut self, operation: HirSelectedCopyOperation<I>) {

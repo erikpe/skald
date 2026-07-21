@@ -322,6 +322,15 @@ impl ResolvedDumper {
                     dumper.indented(|dumper| dumper.expression(&assignment.value));
                 });
             }
+            ResolvedStatement::ObjectAssignment(assignment) => {
+                self.line("ObjectAssignment", assignment.span);
+                self.indented(|dumper| {
+                    dumper.heading("Destination");
+                    dumper.indented(|dumper| dumper.object_place(&assignment.destination));
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&assignment.source));
+                });
+            }
         }
     }
 

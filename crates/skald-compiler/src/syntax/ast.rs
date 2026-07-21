@@ -180,6 +180,7 @@ pub enum Statement {
     Conditional(ConditionalStatement),
     Block(Block),
     FieldAssignment(FieldAssignmentStatement),
+    ObjectAssignment(ObjectAssignmentStatement),
 }
 
 impl Statement {
@@ -191,8 +192,17 @@ impl Statement {
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
+            Self::ObjectAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ObjectAssignmentStatement {
+    pub place: Expression,
+    pub equal_span: Span,
+    pub value: Expression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

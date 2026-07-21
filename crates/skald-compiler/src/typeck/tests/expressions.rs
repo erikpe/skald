@@ -43,7 +43,8 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::FieldAssignment(_)
                 | HirStatement::FieldConstruction(_)
                 | HirStatement::FieldCopyConstruction(_)
-                | HirStatement::FieldCopyAssignment(_) => {}
+                | HirStatement::FieldCopyAssignment(_)
+                | HirStatement::CopyAssignment(_) => {}
             }
         }
     }

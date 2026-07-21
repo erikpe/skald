@@ -5,11 +5,11 @@ error[TYP015]: constructor type does not match the object local
     |                       ^^^^^ constructs `Right`
   = note: the local requires `Left`
 
-error[TYP014]: an object local must be initialized by direct construction
- --> tests/golden/compile_fail/object_construction.ska:11:25
+error[TYP014]: copy source must be an existing object place
+ --> tests/golden/compile_fail/object_construction.ska:11:26
     |
 11 |     var grouped: Left = (Left(1));
-    |                         ^^^^^^^^^ expected an ungrouped `Class(...)` expression
+    |                          ^^^^^^^ expected an object binding, field, or grouping
 
 error[TYP004]: initializer expects 1 argument but received 0
  --> tests/golden/compile_fail/object_construction.ska:12:23

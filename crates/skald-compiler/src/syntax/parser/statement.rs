@@ -313,11 +313,19 @@ impl Parser<'_> {
         let end_span = semicolon.map_or_else(|| value.span(), |token| token.span);
 
         let Expression::MemberAccess(place) = expression else {
+            if is_receiver_place(&expression) {
+                return Some(Statement::ObjectAssignment(ObjectAssignmentStatement {
+                    span: self.cover(expression.span(), end_span),
+                    place: expression,
+                    equal_span: equal.span,
+                    value,
+                }));
+            }
             self.report(
                 EXPECTED_STATEMENT,
-                "only a field place may be assigned",
+                "only an object or field place may be assigned",
                 equal.span,
-                "general local and expression assignment is not supported",
+                "primitive local and expression assignment is not supported",
             );
             return None;
         };

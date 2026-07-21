@@ -1,7 +1,7 @@
 //! Field initialization, construction destinations, and liveness transitions.
 
 use super::*;
-use crate::hir::{HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace};
+use crate::hir::{HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace, HirObjectPlace};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_field_assignment(
@@ -34,7 +34,12 @@ impl CallableChecker<'_, '_> {
         let field_type = lower_type(&field.type_syntax);
         let field_id = place.field;
         let mut valid = true;
-        if place.receiver.access == HirAccess::ReadOnly {
+        if place.receiver.access == HirAccess::ReadOnly
+            && !matches!(
+                (field_type, body_kind),
+                (Type::Class(_), MemberBodyKind::MethodOrDestructor)
+            )
+        {
             self.diagnostics.push(
                 Diagnostic::error(
                     READ_ONLY_RECEIVER,
@@ -141,19 +146,19 @@ impl CallableChecker<'_, '_> {
                     }))
                 }
                 MemberBodyKind::MethodOrDestructor => {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_CONSTRUCTION,
-                            "class fields can be constructed only in their owner's initializer",
-                        )
-                        .with_primary_label(
+                    let destination = HirObjectPlace {
+                        path: place.receiver.path.clone().project(
+                            place.field,
+                            class,
                             assignment.span,
-                            "expected a direct uninitialized field of this initializer's `self`",
                         ),
+                        access: place.receiver.access,
+                    };
+                    return self.finish_copy_assignment(
+                        destination,
+                        &assignment.value,
+                        assignment.span,
                     );
-                    valid = false;
-                    let _ = self.check_field_construction(class, &field_name, &assignment.value);
-                    None
                 }
             },
             _ => self.check_primitive_field_value(place, field_type, &field_name, assignment),
@@ -167,7 +172,7 @@ impl CallableChecker<'_, '_> {
         CheckedStatement::falls_through(valid.then_some(hir))
     }
 
-    fn report_unavailable_copy_operation(
+    pub(super) fn report_unavailable_copy_operation(
         &mut self,
         class: crate::identity::ClassId,
         construction: bool,

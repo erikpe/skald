@@ -1,9 +1,3 @@
-error[TYP014]: an object local must be initialized by direct construction
- --> tests/golden/compile_fail/object_value_contexts.ska:7:23
-   |
-7 |     var copy: Value = first;
-   |                       ^^^^^ expected an ungrouped `Class(...)` expression
-
 error[TYP015]: construction is allowed only as an object local initializer
  --> tests/golden/compile_fail/object_value_contexts.ska:8:23
    |

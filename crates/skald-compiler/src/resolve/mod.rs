@@ -19,7 +19,7 @@ pub use ir::{
     ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable,
     ResolvedFunctionLinkage, ResolvedGroupedExpr, ResolvedInitializerDeclaration, ResolvedLocal,
     ResolvedLocalDecl, ResolvedMemberDefinition, ResolvedMethodCallExpr, ResolvedMethodDeclaration,
-    ResolvedNumericLiteralExpr, ResolvedObjectPlace, ResolvedParameter,
+    ResolvedNumericLiteralExpr, ResolvedObjectAssignment, ResolvedObjectPlace, ResolvedParameter,
     ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
     ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };

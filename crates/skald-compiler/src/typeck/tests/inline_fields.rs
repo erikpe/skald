@@ -150,7 +150,7 @@ fn enforces_one_access_matrix_through_nested_paths() {
 }
 
 #[test]
-fn rejects_nested_class_endpoints_in_every_value_or_replacement_context() {
+fn accepts_nested_copy_sources_but_rejects_scalar_and_alias_replacement_contexts() {
     let output = check_text(concat!(
         "class Leaf { value: i64; init() { self.value = 0; } }\n",
         "class Branch { leaf: Leaf; init() { self.leaf = Leaf(); } }\n",
@@ -180,8 +180,8 @@ fn rejects_nested_class_endpoints_in_every_value_or_replacement_context() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_OBJECT_CONTEXT
+            && diagnostic.message.contains("through a parameter")
+    }));
 }

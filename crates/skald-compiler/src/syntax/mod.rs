@@ -13,8 +13,9 @@ pub use ast::{
     CompilationUnit, ConditionalArm, ConditionalStatement, CopyAssignmentDecl, DestructorDecl,
     Expression, ExpressionStatement, ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl,
     FunctionDecl, GroupedExpr, IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr,
-    MethodDecl, Name, NumericLiteralExpr, Parameter, ParameterBindingMode, ReturnStatement,
-    SelfExpr, Statement, TopLevelDeclaration, TypeKind, TypeSyntax, UnaryExpr, UnaryOperator,
+    MethodDecl, Name, NumericLiteralExpr, ObjectAssignmentStatement, Parameter,
+    ParameterBindingMode, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
+    TypeSyntax, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

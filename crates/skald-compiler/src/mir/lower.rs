@@ -326,6 +326,9 @@ impl<'hir> BodyLowerer<'hir> {
                                 construction.initializer.class(),
                             );
                         }
+                        crate::hir::HirLocalInitializer::Copy(_) => {
+                            unreachable!("local copy construction reaches MIR in OVS4")
+                        }
                     }
                 }
                 HirStatement::Return(statement) => {
@@ -370,7 +373,9 @@ impl<'hir> BodyLowerer<'hir> {
                         span: statement.span,
                     }));
                 }
-                HirStatement::FieldCopyConstruction(_) | HirStatement::FieldCopyAssignment(_) => {
+                HirStatement::FieldCopyConstruction(_)
+                | HirStatement::FieldCopyAssignment(_)
+                | HirStatement::CopyAssignment(_) => {
                     unreachable!("copy statements belong only to HIR-only copy definitions")
                 }
             }

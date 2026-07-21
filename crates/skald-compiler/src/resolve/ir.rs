@@ -477,6 +477,7 @@ pub enum ResolvedStatement {
     Conditional(ResolvedConditional),
     Block(ResolvedBlock),
     FieldAssignment(ResolvedFieldAssignment),
+    ObjectAssignment(ResolvedObjectAssignment),
 }
 
 impl ResolvedStatement {
@@ -488,8 +489,17 @@ impl ResolvedStatement {
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
+            Self::ObjectAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedObjectAssignment {
+    pub destination: ResolvedObjectPlace,
+    pub equal_span: Span,
+    pub source: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
