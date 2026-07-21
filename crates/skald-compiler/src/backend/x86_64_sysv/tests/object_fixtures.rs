@@ -633,7 +633,12 @@ fn parameter_storage(
     }
 }
 
-fn field(id: FieldId, name: &str, ty: MirType, span: crate::source::Span) -> MirFieldDeclaration {
+pub(super) fn field(
+    id: FieldId,
+    name: &str,
+    ty: MirType,
+    span: crate::source::Span,
+) -> MirFieldDeclaration {
     MirFieldDeclaration {
         id,
         name: name.to_owned(),
@@ -642,7 +647,7 @@ fn field(id: FieldId, name: &str, ty: MirType, span: crate::source::Span) -> Mir
     }
 }
 
-fn assignment(
+pub(super) fn assignment(
     function: FunctionId,
     index: usize,
     kind: MirRvalueKind,
@@ -656,7 +661,7 @@ fn assignment(
     })
 }
 
-fn store(place: MirPlace, value: ValueId, span: crate::source::Span) -> MirInstruction {
+pub(super) fn store(place: MirPlace, value: ValueId, span: crate::source::Span) -> MirInstruction {
     MirInstruction::Store(MirStore {
         destination: place,
         value,

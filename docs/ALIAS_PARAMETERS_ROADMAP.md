@@ -323,7 +323,7 @@ declarations and promises no cross-module ABI stability.
 - [x] AL2 — Resolve alias signatures and existing object places
 - [x] AL3 — Type-check alias access and build typed call arguments
 - [x] AL4 — Add verified alias parameters and place arguments to MIR
-- [ ] AL5 — Lower the alias pointer ABI on Linux x86-64
+- [x] AL5 — Lower the alias pointer ABI on Linux x86-64
 - [ ] AL6 — Connect typed aliases through HIR-to-MIR lowering
 - [ ] AL7 — Enable, harden, and document the complete native slice
 
@@ -485,20 +485,20 @@ offsets or registers.
 **Purpose:** Prove the machine representation independently with verified,
 hand-built MIR before connecting the frontend.
 
-- [ ] Classify every alias descriptor as one integer-class machine pointer.
-- [ ] Spill incoming alias registers/stack slots into pointer-sized frame
+- [x] Classify every alias descriptor as one integer-class machine pointer.
+- [x] Spill incoming alias registers/stack slots into pointer-sized frame
       homes without allocating inline class payload storage.
-- [ ] Resolve indirect alias places and field projections through their stored
+- [x] Resolve indirect alias places and field projections through their stored
       pointer.
-- [ ] Materialize outgoing alias place addresses into integer registers or
+- [x] Materialize outgoing alias place addresses into integer registers or
       source-ordered stack slots.
-- [ ] Preserve independent integer/SSE counters for mixed receiver, alias, and
+- [x] Preserve independent integer/SSE counters for mixed receiver, alias, and
       primitive signatures.
-- [ ] Share receiver/alias indirect-address machinery where it improves
+- [x] Share receiver/alias indirect-address machinery where it improves
       clarity without conflating their semantic identities.
-- [ ] Extend target legality to reject unsupported descriptors and malformed
+- [x] Extend target legality to reject unsupported descriptors and malformed
       object-bearing external signatures before instruction selection.
-- [ ] Keep layout computation in the target data-layout service and use
+- [x] Keep layout computation in the target data-layout service and use
       checked displacement/frame arithmetic.
 
 **Tests:** ABI classification boundaries; register and stack exhaustion;

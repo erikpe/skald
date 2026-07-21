@@ -107,6 +107,47 @@ fn lowers_exhausted_mixed_receiver_abi_through_stack_arguments() {
     assert_system_assembler_accepts(&output);
 }
 
+#[test]
+fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
+    let (program, ids) = alias_counter_program();
+    verify_mir(&program).unwrap();
+    let data = layout::DataLayout::compute(&program).unwrap();
+    assert_eq!(data.ty(MirType::Class(ids.class)).unwrap().size(), 32);
+
+    let function = program.definitions.get(ids.add).unwrap();
+    let planned = frame::FrameLayout::plan(function.into(), &data).unwrap();
+    assert_eq!(planned.storage(function.parameters[0]), -8);
+    assert_eq!(planned.storage(function.parameters[1]), -16);
+    assert_eq!(planned.size(), 48);
+
+    let first = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    let second = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    assert_eq!(first, second);
+    assert!(first.contains(".Lska_fn_3:"));
+    assert!(first.contains(".Lska_fn_4:"));
+    assert!(first.contains("movq %rdi, -8(%rbp)"));
+    assert!(first.contains("movq -8(%rbp), %rdi"));
+    assert!(first.contains("call .Lska_fn_3"));
+    assert!(first.contains("call .Lska_class_0_init_1"));
+    assert!(first.contains("call .Lska_class_0_method_3"));
+    assert_system_assembler_accepts(&format!("{first}\n{}", println_i64_stub()));
+}
+
+#[test]
+fn lowers_exhausted_receiver_alias_and_sse_arguments_through_ordered_stack_slots() {
+    let program = exhausted_receiver_alias_abi_program();
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert!(output.contains("subq $16, %rsp"));
+    assert!(output.contains("leaq -32(%rbp), %rax"));
+    assert!(output.contains("movq %rax, (%rsp)"));
+    assert!(output.contains("movsd %xmm14, 8(%rsp)"));
+    assert!(output.contains("movq 16(%rbp), %rax"));
+    assert!(output.contains("movsd 24(%rbp), %xmm14"));
+    assert_system_assembler_accepts(&output);
+}
+
 pub(super) fn println_i64_stub() -> &'static str {
     concat!(
         ".section .rodata\n",

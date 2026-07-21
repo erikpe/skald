@@ -3,8 +3,8 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirDefinitionRef, MirPlace, MirPlaceProjection, MirProgram, MirStorageKind, MirType,
-        StorageId, ValueId,
+        MirDefinitionRef, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirStorageKind,
+        MirType, StorageId, ValueId,
     },
 };
 
@@ -23,8 +23,18 @@ pub(super) struct FramePlace {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FramePlaceBase {
-    FramePointer,
-    ReceiverPointer { home: i32 },
+    Direct,
+    Receiver { home: i32 },
+    AliasParameter { home: i32 },
+}
+
+impl FramePlaceBase {
+    pub(super) const fn pointer_home(self) -> Option<i32> {
+        match self {
+            Self::Direct => None,
+            Self::Receiver { home } | Self::AliasParameter { home } => Some(home),
+        }
+    }
 }
 
 impl FramePlace {
@@ -61,7 +71,9 @@ impl FrameLayout {
         let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
             let (size, alignment) = match (storage.kind, storage.ty) {
-                (MirStorageKind::Receiver, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
+                (MirStorageKind::Receiver | MirStorageKind::AliasParameter(_), _) => {
+                    (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)
+                }
                 (_, MirType::Class(_) | MirType::Unit) => {
                     let ty = data_layout.ty(storage.ty)?;
                     (ty.size(), ty.alignment())
@@ -108,15 +120,20 @@ impl FrameLayout {
         let storage = function
             .storage(storage_id)
             .expect("verified place base must identify storage");
-        let (base, mut displacement) = if storage.kind == MirStorageKind::Receiver {
-            (
-                FramePlaceBase::ReceiverPointer {
+        let (base, mut displacement) = match place.base {
+            MirPlaceBase::Storage(_) if storage.kind == MirStorageKind::Receiver => (
+                FramePlaceBase::Receiver {
                     home: self.storage(storage_id),
                 },
                 0,
-            )
-        } else {
-            (FramePlaceBase::FramePointer, self.storage(storage_id))
+            ),
+            MirPlaceBase::AliasParameter(_) => (
+                FramePlaceBase::AliasParameter {
+                    home: self.storage(storage_id),
+                },
+                0,
+            ),
+            MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
         };
         let mut ty = storage.ty;
         for projection in &place.projections {

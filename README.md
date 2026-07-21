@@ -46,8 +46,14 @@ The current Linux x86-64 compiler supports:
 
 Inline objects are deliberately local-only today. Object parameters, results,
 ordinary object arguments, copying, destruction, object fields, inheritance,
-interfaces, `shared`, aliases, arrays, optionals, loops, and checked exceptions
-are not implemented yet.
+interfaces, `shared`, end-to-end alias compilation, arrays, optionals, loops,
+and checked exceptions are not implemented yet.
+
+The restricted alias-parameter work is implemented and tested independently
+through syntax, typed HIR, verified MIR, and the internal x86-64 pointer ABI.
+The HIR-to-MIR connection is intentionally still disabled, so alias-bearing
+source programs stop at a structured compiler capability diagnostic until that
+remaining pipeline slice is completed.
 
 See [the grammar notes](grammar/README.md) for the exact accepted source subset
 and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the broader language

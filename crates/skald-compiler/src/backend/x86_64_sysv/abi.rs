@@ -1,6 +1,6 @@
 //! System V AMD64 scalar argument classification used by this backend.
 
-use crate::mir::MirType;
+use crate::mir::{MirParameter, MirParameterMode, MirType};
 
 use super::machine::{Register, XmmRegister};
 
@@ -46,11 +46,16 @@ enum ScalarClass {
 ///
 /// Keep this match exhaustive: adding a MIR type must make its target ABI
 /// treatment an explicit backend decision before the compiler builds again.
-const fn scalar_class(ty: MirType) -> Option<ScalarClass> {
-    match ty {
-        MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => Some(ScalarClass::Integer),
-        MirType::F64 => Some(ScalarClass::Sse),
-        MirType::Class(_) | MirType::Unit => None,
+const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
+    match parameter.mode {
+        MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias => {
+            Some(ScalarClass::Integer)
+        }
+        MirParameterMode::Value => match parameter.ty {
+            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => Some(ScalarClass::Integer),
+            MirType::F64 => Some(ScalarClass::Sse),
+            MirType::Class(_) | MirType::Unit => None,
+        },
     }
 }
 
@@ -71,25 +76,25 @@ pub(super) struct CallLayout {
 }
 
 impl CallLayout {
-    pub(super) fn classify(types: &[MirType]) -> Option<Self> {
-        Self::classify_internal(types, false)
+    pub(super) fn classify(parameters: &[MirParameter]) -> Option<Self> {
+        Self::classify_internal(parameters, false)
     }
 
-    pub(super) fn classify_with_receiver(types: &[MirType]) -> Option<Self> {
-        Self::classify_internal(types, true)
+    pub(super) fn classify_with_receiver(parameters: &[MirParameter]) -> Option<Self> {
+        Self::classify_internal(parameters, true)
     }
 
-    fn classify_internal(types: &[MirType], has_receiver: bool) -> Option<Self> {
+    fn classify_internal(parameters: &[MirParameter], has_receiver: bool) -> Option<Self> {
         let receiver = has_receiver.then_some(ArgumentLocation::IntegerRegister(
             INTEGER_ARGUMENT_REGISTERS[0],
         ));
         let mut integer_index = usize::from(has_receiver);
         let mut sse_index = 0;
         let mut stack_count = 0usize;
-        let mut locations = Vec::with_capacity(types.len());
+        let mut locations = Vec::with_capacity(parameters.len());
 
-        for &ty in types {
-            let location = match scalar_class(ty)? {
+        for &parameter in parameters {
+            let location = match parameter_class(parameter)? {
                 ScalarClass::Sse if sse_index < SSE_ARGUMENT_REGISTERS.len() => {
                     let register = SSE_ARGUMENT_REGISTERS[sse_index];
                     sse_index += 1;
@@ -150,8 +155,13 @@ mod tests {
 
     #[test]
     fn integer_and_sse_register_counters_are_independent() {
-        let layout =
-            CallLayout::classify(&[MirType::I64, MirType::F64, MirType::U8, MirType::F64]).unwrap();
+        let layout = CallLayout::classify(&MirParameter::values([
+            MirType::I64,
+            MirType::F64,
+            MirType::U8,
+            MirType::F64,
+        ]))
+        .unwrap();
 
         assert_eq!(
             layout.locations(),
@@ -167,13 +177,13 @@ mod tests {
 
     #[test]
     fn classifies_every_payload_primitive_through_one_exhaustive_boundary() {
-        let layout = CallLayout::classify(&[
+        let layout = CallLayout::classify(&MirParameter::values([
             MirType::I64,
             MirType::U64,
             MirType::U8,
             MirType::Bool,
             MirType::F64,
-        ])
+        ]))
         .unwrap();
 
         assert_eq!(
@@ -193,7 +203,7 @@ mod tests {
         let mut types = vec![MirType::I64; 6];
         types.extend([MirType::F64; 8]);
         types.extend([MirType::F64, MirType::I64, MirType::F64]);
-        let layout = CallLayout::classify(&types).unwrap();
+        let layout = CallLayout::classify(&MirParameter::values(types)).unwrap();
 
         assert_eq!(
             &layout.locations()[14..],
@@ -212,19 +222,19 @@ mod tests {
 
     #[test]
     fn rejects_payload_free_parameters_and_unrepresentable_layouts() {
-        assert!(CallLayout::classify(&[MirType::Unit]).is_none());
+        assert!(CallLayout::classify(&MirParameter::values([MirType::Unit])).is_none());
         assert_eq!(align_up(8, STACK_ALIGNMENT), Some(16));
         assert_eq!(align_up(16, STACK_ALIGNMENT), Some(16));
     }
 
     #[test]
     fn hidden_receiver_consumes_only_the_first_integer_location() {
-        let layout = CallLayout::classify_with_receiver(&[
+        let layout = CallLayout::classify_with_receiver(&MirParameter::values([
             MirType::I64,
             MirType::F64,
             MirType::I64,
             MirType::F64,
-        ])
+        ]))
         .unwrap();
 
         assert_eq!(
@@ -247,8 +257,64 @@ mod tests {
         let mut types = vec![MirType::I64; 5];
         types.extend([MirType::F64; 8]);
         types.extend([MirType::I64, MirType::F64]);
-        let layout = CallLayout::classify_with_receiver(&types).unwrap();
+        let layout = CallLayout::classify_with_receiver(&MirParameter::values(types)).unwrap();
 
+        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(0));
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(8));
+        assert_eq!(layout.stack_size(), 16);
+    }
+
+    #[test]
+    fn alias_descriptors_are_integer_class_independent_of_access_mode() {
+        let class = crate::identity::ClassId::new(0);
+        let layout = CallLayout::classify(&[
+            MirParameter::read_only_alias(MirType::Class(class)),
+            MirParameter::value(MirType::F64),
+            MirParameter::mutable_alias(MirType::Class(class)),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::SseRegister(XmmRegister::Xmm0),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+            ]
+        );
+    }
+
+    #[test]
+    fn aliases_and_sse_values_exhaust_independently_in_source_order() {
+        let class = crate::identity::ClassId::new(0);
+        let mut parameters = vec![MirParameter::read_only_alias(MirType::Class(class)); 6];
+        parameters.extend(MirParameter::values([MirType::F64; 8]));
+        parameters.extend([
+            MirParameter::mutable_alias(MirType::Class(class)),
+            MirParameter::value(MirType::F64),
+        ]);
+        let layout = CallLayout::classify(&parameters).unwrap();
+
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(0));
+        assert_eq!(layout.locations()[15], ArgumentLocation::Stack(8));
+        assert_eq!(layout.stack_size(), 16);
+    }
+
+    #[test]
+    fn receiver_aliases_and_sse_values_keep_independent_counters() {
+        let class = crate::identity::ClassId::new(0);
+        let mut parameters = vec![MirParameter::read_only_alias(MirType::Class(class)); 5];
+        parameters.extend(MirParameter::values([MirType::F64; 8]));
+        parameters.extend([
+            MirParameter::mutable_alias(MirType::Class(class)),
+            MirParameter::value(MirType::F64),
+        ]);
+        let layout = CallLayout::classify_with_receiver(&parameters).unwrap();
+
+        assert_eq!(
+            layout.receiver(),
+            Some(ArgumentLocation::IntegerRegister(Register::Rdi))
+        );
         assert_eq!(layout.locations()[13], ArgumentLocation::Stack(0));
         assert_eq!(layout.locations()[14], ArgumentLocation::Stack(8));
         assert_eq!(layout.stack_size(), 16);

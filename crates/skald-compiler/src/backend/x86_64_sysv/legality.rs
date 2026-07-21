@@ -3,7 +3,7 @@
 use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
-    mir::{verify_mir, MirCallTarget, MirInstruction, MirParameter, MirParameterMode, MirProgram},
+    mir::{verify_mir, MirCallTarget, MirInstruction, MirParameter, MirProgram},
 };
 
 use super::{abi, layout::DataLayout};
@@ -23,7 +23,6 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
         let signature = program
             .callable_signature(function.callable())
             .expect("verified definition must be declared");
-        reject_alias_parameters(function.callable(), signature.parameters)?;
         if classify(signature.parameters, function.receiver().is_some()).is_none() {
             return Err(abi_limit(function.callable(), "incoming argument area"));
         }
@@ -46,7 +45,6 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                                 .declarations
                                 .get(target)
                                 .expect("verified call target must be declared");
-                            reject_alias_parameters(function.callable(), &target.parameters)?;
                             if classify(&target.parameters, false).is_none() {
                                 return Err(abi_limit(
                                     function.callable(),
@@ -78,7 +76,6 @@ fn check_member_target(
     let signature = program
         .callable_signature(target)
         .expect("verified member target must be declared");
-    reject_alias_parameters(caller, signature.parameters)?;
     if classify(signature.parameters, true).is_none() {
         return Err(abi_limit(caller, "outgoing argument area"));
     }
@@ -86,29 +83,11 @@ fn check_member_target(
 }
 
 fn classify(parameters: &[MirParameter], has_receiver: bool) -> Option<abi::CallLayout> {
-    let types: Vec<_> = parameters.iter().map(|parameter| parameter.ty).collect();
     if has_receiver {
-        abi::CallLayout::classify_with_receiver(&types)
+        abi::CallLayout::classify_with_receiver(parameters)
     } else {
-        abi::CallLayout::classify(&types)
+        abi::CallLayout::classify(parameters)
     }
-}
-
-fn reject_alias_parameters(
-    caller: CallableId,
-    parameters: &[MirParameter],
-) -> Result<(), BackendError> {
-    if parameters
-        .iter()
-        .any(|parameter| parameter.mode != MirParameterMode::Value)
-    {
-        return Err(BackendError::new(
-            Target::X86_64SysV,
-            Some(caller),
-            "alias parameter ABI lowering is not implemented",
-        ));
-    }
-    Ok(())
 }
 
 fn abi_limit(function: CallableId, area: &str) -> BackendError {

@@ -3,7 +3,7 @@
 use crate::mir::{MirPlace, MirStore, MirType, StorageId, ValueId};
 
 use super::{
-    super::frame::{FramePlace, FramePlaceBase},
+    super::frame::FramePlace,
     super::machine::{ByteRegister, FloatOperand, Instruction, Operand, Register, XmmRegister},
     FrameLayout, InstructionSelector,
 };
@@ -34,9 +34,9 @@ impl InstructionSelector<'_, '_> {
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place);
-        let base = match layout.base() {
-            FramePlaceBase::FramePointer => Register::Rbp,
-            FramePlaceBase::ReceiverPointer { home } => {
+        let base = match layout.base().pointer_home() {
+            None => Register::Rbp,
+            Some(home) => {
                 load_rax(memory(Register::Rbp, home), self.output);
                 self.output.push(Instruction::Move {
                     source: Register::Rax.into(),
@@ -53,12 +53,12 @@ impl InstructionSelector<'_, '_> {
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place);
-        match layout.base() {
-            FramePlaceBase::FramePointer => self.output.push(Instruction::LoadEffectiveAddress {
+        match layout.base().pointer_home() {
+            None => self.output.push(Instruction::LoadEffectiveAddress {
                 source: memory(Register::Rbp, layout.displacement()),
                 destination,
             }),
-            FramePlaceBase::ReceiverPointer { home } => {
+            Some(home) => {
                 self.output.push(Instruction::Move {
                     source: memory(Register::Rbp, home),
                     destination: destination.into(),

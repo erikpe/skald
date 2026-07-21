@@ -76,3 +76,20 @@ fn hand_built_members_construct_mutate_and_print_through_receiver_calls() {
     assert_eq!(result.stdout, b"42\n");
     assert!(result.stderr.is_empty());
 }
+
+#[test]
+fn hand_built_aliases_mutate_forward_overlap_initialize_and_mix_abi_classes() {
+    let (program, _) = alias_counter_program();
+    let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    output.push_str(alias_println_i64_stub());
+
+    let result = run_native_assembly_output(&output);
+    assert!(
+        result.status.success(),
+        "alias program failed with {:?}: {}",
+        result.status,
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(result.stdout, b"50\n");
+    assert!(result.stderr.is_empty());
+}

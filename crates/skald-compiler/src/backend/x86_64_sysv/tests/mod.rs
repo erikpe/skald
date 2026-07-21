@@ -9,14 +9,15 @@ use crate::{
         BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId, ParameterId,
     },
     mir::{
-        verify_mir, BlockId, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
-        MirBody, MirCall, MirCallTarget, MirClassDeclaration, MirClassDeclarationTable,
-        MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
-        MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize,
-        MirInitializerDeclaration, MirInstruction, MirMemberDefinition, MirMemberDefinitionTable,
-        MirMethodDeclaration, MirParameter, MirPlace, MirProgram, MirReceiverAccess, MirRvalue,
-        MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
-        MirUnaryOperation, MirValue, StorageId, ValueId,
+        verify_mir, BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock,
+        MirBinaryOperation, MirBody, MirCall, MirCallTarget, MirClassDeclaration,
+        MirClassDeclarationTable, MirFieldDeclaration, MirFunctionDeclaration,
+        MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
+        MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
+        MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,
+        MirParameterMode, MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
+        MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirUnaryOperation, MirValue,
+        StorageId, ValueId,
     },
     source::SourceDatabase,
     test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
@@ -30,6 +31,8 @@ mod control_flow_fixtures;
 use control_flow_fixtures::*;
 mod object_fixtures;
 use object_fixtures::*;
+mod alias_fixtures;
+use alias_fixtures::*;
 mod native_support;
 use native_support::*;
 

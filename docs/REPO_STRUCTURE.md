@@ -282,9 +282,9 @@ mutable receiver calls, and the external-alias exclusion before backend
 lowering. Dumps expose modes, indirect bases, and argument kinds without
 target offsets or registers. These contracts are defined in the
 [alias-parameter implementation profile](SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile),
-and are covered by hand-built MIR tests. Source HIR-to-MIR alias lowering and
-the pointer ABI remain future roadmap steps; the driver reports that precise
-capability boundary for alias-bearing source today.
+and are covered by hand-built MIR tests. Source HIR-to-MIR alias lowering
+remains a future roadmap step; the driver reports that precise capability
+boundary for alias-bearing source today.
 
 ## x86-64 System V backend
 
@@ -311,12 +311,15 @@ overflow arguments share source-ordered stack slots. The current lowering is
 intentionally stack-heavy and can later be replaced by register allocation
 without changing MIR.
 
-The planned alias ABI reuses the indirect-address mechanics without treating
-an alias as an implicit receiver. Each alias is one integer-class pointer in
-source parameter order, stored in a pointer-sized callee home and dereferenced
-before field projection. `ref` and `mut ref` have identical machine
-representations. The slice adds no object copy, allocation, retain/release,
-borrow anchor, or external object ABI.
+The implemented internal alias ABI reuses indirect-address mechanics without
+treating an alias as an implicit receiver. Each alias is one integer-class
+pointer in source parameter order, stored in a pointer-sized callee home and
+dereferenced before field projection. Outgoing place addresses use the
+assigned integer register or source-ordered stack slot, independently of SSE
+value arguments.
+`ref` and `mut ref` have identical machine representations. Layout and checked
+offset arithmetic remain target-owned. The slice adds no object copy,
+allocation, retain/release, borrow anchor, or external object ABI.
 
 Internal symbols derive from stable identities. External declarations retain
 their exact source symbol. The generated C-compatible `main` wrapper calls the

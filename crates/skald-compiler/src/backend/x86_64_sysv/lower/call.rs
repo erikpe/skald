@@ -5,7 +5,8 @@ use crate::{
     identity::CallableId,
     mir::{
         MirArgument, MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef,
-        MirFunctionLinkage, MirInitialize, MirParameter, MirPlace, MirType, ValueId,
+        MirFunctionLinkage, MirInitialize, MirParameter, MirParameterMode, MirPlace, MirType,
+        ValueId,
     },
 };
 
@@ -55,22 +56,25 @@ pub(super) fn spill_parameters(
         }
     }
 
-    for (storage, location) in function.parameters().iter().zip(layout.locations()) {
+    for ((storage, parameter), location) in function
+        .parameters()
+        .iter()
+        .zip(signature.parameters)
+        .zip(layout.locations())
+    {
         let incoming = location.incoming().ok_or_else(|| {
             argument_area_error(
                 function,
                 "incoming argument area exceeds the x86-64 ABI encoding limits",
             )
         })?;
-        let ty = function
-            .storage(*storage)
-            .expect("verified parameter storage must exist")
-            .ty;
         let destination = value::frame_storage(frame, *storage);
         match incoming {
-            ArgumentLocation::IntegerRegister(register) if ty == MirType::U8 => {
+            ArgumentLocation::IntegerRegister(register)
+                if parameter.mode == MirParameterMode::Value && parameter.ty == MirType::U8 =>
+            {
                 value::load_rax(register.into(), output);
-                value::store_canonical_rax(ty, destination, output);
+                value::store_canonical_rax(parameter.ty, destination, output);
             }
             ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
                 source: register.into(),
@@ -79,7 +83,9 @@ pub(super) fn spill_parameters(
             ArgumentLocation::SseRegister(register) => {
                 value::store_float(register, value::float_operand(destination), output)
             }
-            ArgumentLocation::Stack(displacement) if ty == MirType::F64 => {
+            ArgumentLocation::Stack(displacement)
+                if parameter.mode == MirParameterMode::Value && parameter.ty == MirType::F64 =>
+            {
                 value::load_float(
                     value::float_memory(Register::Rbp, displacement),
                     XmmRegister::Xmm14,
@@ -93,7 +99,10 @@ pub(super) fn spill_parameters(
             }
             ArgumentLocation::Stack(displacement) => {
                 value::load_rax(value::memory(Register::Rbp, displacement), output);
-                value::store_canonical_rax(ty, destination, output);
+                if parameter.mode == MirParameterMode::Value {
+                    value::canonicalize_rax(parameter.ty, output);
+                }
+                value::store_rax(destination, output);
             }
         }
     }
@@ -159,15 +168,12 @@ impl InstructionSelector<'_, '_> {
             };
             self.materialize_place_address(receiver, register);
         }
-        for ((argument, ty), location) in arguments
+        for ((argument, parameter), location) in arguments
             .iter()
             .zip(signature.parameters)
             .zip(layout.locations())
         {
-            let MirArgument::Value(argument) = argument else {
-                unreachable!("target legality rejects alias arguments before selection")
-            };
-            self.select_argument(*argument, ty.ty, *location);
+            self.select_argument(argument, *parameter, *location);
         }
 
         self.output
@@ -186,7 +192,39 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn select_argument(&mut self, argument: ValueId, ty: MirType, location: ArgumentLocation) {
+    fn select_argument(
+        &mut self,
+        argument: &MirArgument,
+        parameter: MirParameter,
+        location: ArgumentLocation,
+    ) {
+        match (argument, parameter.mode) {
+            (MirArgument::Value(argument), MirParameterMode::Value) => {
+                self.select_value_argument(*argument, parameter.ty, location);
+            }
+            (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
+            | (MirArgument::Place(place), MirParameterMode::MutableAlias) => match location {
+                ArgumentLocation::IntegerRegister(register) => {
+                    self.materialize_place_address(place, register);
+                }
+                ArgumentLocation::Stack(displacement) => {
+                    self.materialize_place_address(place, Register::Rax);
+                    value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+                }
+                ArgumentLocation::SseRegister(_) => {
+                    unreachable!("alias descriptors are always integer-class")
+                }
+            },
+            _ => unreachable!("verified argument kind must match its parameter mode"),
+        }
+    }
+
+    fn select_value_argument(
+        &mut self,
+        argument: ValueId,
+        ty: MirType,
+        location: ArgumentLocation,
+    ) {
         let source = value::frame_value(self.frame, argument);
         match location {
             ArgumentLocation::IntegerRegister(register) => self.output.push(Instruction::Move {
@@ -247,11 +285,10 @@ impl InstructionSelector<'_, '_> {
 }
 
 fn classify_call(parameters: &[MirParameter], has_receiver: bool) -> Option<CallLayout> {
-    let parameter_types: Vec<_> = parameters.iter().map(|parameter| parameter.ty).collect();
     if has_receiver {
-        CallLayout::classify_with_receiver(&parameter_types)
+        CallLayout::classify_with_receiver(parameters)
     } else {
-        CallLayout::classify(&parameter_types)
+        CallLayout::classify(parameters)
     }
 }
 
