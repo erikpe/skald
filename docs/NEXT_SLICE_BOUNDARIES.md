@@ -57,7 +57,8 @@ progression is:
 
 1. **Class-typed inline object fields.** Extend place projection and layout
    dependency handling before introducing cleanup. Recursive by-value
-   containment must be rejected.
+   containment must be rejected. The focused implementation plan is the
+   [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
 2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
    cleanup, and cleanup-aware control-flow edges.
 3. **Object value semantics.** Add copy construction and assignment before

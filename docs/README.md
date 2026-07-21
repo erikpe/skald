@@ -14,6 +14,11 @@ direction:
 - [Implemented grammar](../grammar/README.md) — exact source subset accepted by
   the current compiler.
 
+Active implementation plans:
+
+- [Class-typed inline object fields roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) —
+  acyclic inline containment, direct field construction, and nested places.
+
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current
 behavior.
