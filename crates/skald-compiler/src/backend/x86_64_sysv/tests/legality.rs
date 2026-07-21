@@ -60,6 +60,7 @@ fn unused_object_metadata_is_accepted_after_obj3() {
         name: "Empty".to_owned(),
         fields: vec![],
         initializers: vec![],
+        destruction: MirDestructionPlan::new(None, &[]),
         methods: vec![],
         span: mir.span,
     }]);
@@ -134,16 +135,18 @@ fn external_alias_signature_is_a_structured_verification_error() {
 fn recursive_inline_layout_is_a_structured_target_error() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     let class = ClassId::new(0);
+    let recursive_field = FieldId::new(class, 0);
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
         name: "Recursive".to_owned(),
         fields: vec![MirFieldDeclaration {
-            id: FieldId::new(class, 0),
+            id: recursive_field,
             name: "self".to_owned(),
             ty: MirType::Class(class),
             span: mir.span,
         }],
         initializers: vec![],
+        destruction: MirDestructionPlan::new(None, &[recursive_field]),
         methods: vec![],
         span: mir.span,
     }]);
@@ -159,16 +162,18 @@ fn recursive_inline_layout_is_a_structured_target_error() {
 fn incomplete_class_metadata_is_rejected_before_layout() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     let class = ClassId::new(0);
+    let missing_field = FieldId::new(class, 0);
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
         name: "Incomplete".to_owned(),
         fields: vec![MirFieldDeclaration {
-            id: FieldId::new(class, 0),
+            id: missing_field,
             name: "missing".to_owned(),
             ty: MirType::Class(ClassId::new(1)),
             span: mir.span,
         }],
         initializers: vec![],
+        destruction: MirDestructionPlan::new(None, &[missing_field]),
         methods: vec![],
         span: mir.span,
     }]);

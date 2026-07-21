@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0–DD2 are complete and DD3 is next.
+Status: in progress; DD0–DD3 are complete and DD4 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -206,16 +206,16 @@ stable IDs, types, places, and access; invalid source cannot reach MIR.
 **Purpose:** Give MIR an explicit, maintainable representation of object
 lifetime ends before inserting cleanup on source control-flow edges.
 
-- [ ] Define one MIR cleanup operation over a typed semantic object place.
-- [ ] Represent user destruction bodies and recursive field cleanup without
+- [x] Define one MIR cleanup operation over a typed semantic object place.
+- [x] Represent user destruction bodies and recursive field cleanup without
       embedding target offsets or backend layout decisions.
-- [ ] Make body-before-fields and reverse-field order explicit in MIR or a
+- [x] Make body-before-fields and reverse-field order explicit in MIR or a
       target-independent generated cleanup body.
-- [ ] Extend the shared place walker to verify cleanup bases and projections.
-- [ ] Reject wrong-class, non-owning, read-only, dead, duplicated, foreign, or
+- [x] Extend the shared place walker to verify cleanup bases and projections.
+- [x] Reject wrong-class, non-owning, read-only, dead, duplicated, foreign, or
       scalar cleanup targets structurally.
-- [ ] Preserve the no-class-`MirValue` invariant.
-- [ ] Extend exact MIR dumps and pass-pipeline verification.
+- [x] Preserve the no-class-`MirValue` invariant.
+- [x] Extend exact MIR dumps and pass-pipeline verification.
 
 **Tests:** Hand-built valid cleanup MIR, verifier mutations for every invariant,
 deep projected fields, empty classes, and deterministic exact dumps.
@@ -326,7 +326,7 @@ The slice is complete when:
 - [ ] nested scopes, conditionals, fallthrough, and return clean up correctly;
 - [ ] return expressions are evaluated before cleanup and their values survive;
 - [ ] aliases remain non-owning and primitives require no cleanup;
-- [ ] MIR explicitly represents and verifies cleanup over semantic places;
+- [x] MIR explicitly represents and verifies cleanup over semantic places;
 - [ ] the backend lowers cleanup without inferring lexical lifetime rules;
 - [ ] malformed source and MIR fail structurally rather than panicking;
 - [ ] observable output and compiler artifacts are deterministic;

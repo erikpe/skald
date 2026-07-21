@@ -52,6 +52,28 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         write_span(output, initializer.span);
         output.push('\n');
     }
+    if !class.destruction.steps.is_empty() {
+        output.push_str("      DestructionPlan\n");
+        if let Some(destructor) = &class.destruction.destructor {
+            let _ = write!(
+                output,
+                "        Destructor {} {}",
+                destructor.id, destructor.receiver_access
+            );
+            write_span(output, destructor.span);
+            output.push('\n');
+        }
+        for step in &class.destruction.steps {
+            match step {
+                MirDestructionStep::UserBody(destructor) => {
+                    let _ = writeln!(output, "        UserBody {destructor}");
+                }
+                MirDestructionStep::Field(field) => {
+                    let _ = writeln!(output, "        Field {field}");
+                }
+            }
+        }
+    }
     for method in &class.methods {
         let _ = write!(output, "      Method {} ", method.id);
         write_quoted(output, &method.name);
@@ -180,6 +202,12 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 }
                 output.push(')');
                 write_span(output, call.span);
+            }
+            MirInstruction::Cleanup(cleanup) => {
+                output.push_str("cleanup ");
+                dump_place(output, &cleanup.destination);
+                let _ = write!(output, " as {}", cleanup.target);
+                write_span(output, cleanup.span);
             }
             MirInstruction::Initialize(initialize) => {
                 output.push_str("initialize ");

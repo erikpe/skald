@@ -53,6 +53,13 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                             }
                         }
                     },
+                    MirInstruction::Cleanup(_) => {
+                        return Err(BackendError::new(
+                            Target::X86_64SysV,
+                            Some(function.callable()),
+                            "cleanup instruction lowering is staged for DD5",
+                        ));
+                    }
                     MirInstruction::Assign(_) | MirInstruction::Store(_) => {}
                 }
             }

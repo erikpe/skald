@@ -6,6 +6,8 @@ use crate::identity::{BindingId, CallableId};
 
 use super::model::*;
 
+mod cleanup;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirVerificationError {
     pub callable: Option<CallableId>,
@@ -226,7 +228,10 @@ impl Verifier<'_> {
                     .program
                     .initializer(initializer)
                     .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
-                CallableId::Destructor(_) => None,
+                CallableId::Destructor(destructor) => self
+                    .program
+                    .destructor(destructor)
+                    .map(|_| (&[][..], MirType::Unit)),
                 CallableId::Method(method) => self
                     .program
                     .method(method)
@@ -281,6 +286,43 @@ impl Verifier<'_> {
                     &format!("initializer {}", initializer.id),
                     &initializer.parameters,
                 );
+            }
+            if let Some(destructor) = &class.destruction.destructor {
+                if destructor.id.class() != class.id || destructor.id.index() != 0 {
+                    self.program_error(format!(
+                        "class {} destructor declaration contains {}",
+                        class.id, destructor.id
+                    ));
+                }
+                if destructor.receiver_access != MirReceiverAccess::Mutable {
+                    self.program_error(format!(
+                        "destructor {} must have mutable receiver access",
+                        destructor.id
+                    ));
+                }
+                if self
+                    .program
+                    .member_definition(destructor.id.into())
+                    .is_none()
+                {
+                    self.program_error(format!(
+                        "destructor {} has no member definition",
+                        destructor.id
+                    ));
+                }
+            }
+            let class_fields: Vec<_> = class
+                .fields
+                .iter()
+                .filter_map(|field| matches!(field.ty, MirType::Class(_)).then_some(field.id))
+                .collect();
+            let expected_plan =
+                MirDestructionPlan::new(class.destruction.destructor.clone(), &class_fields);
+            if class.destruction.steps != expected_plan.steps {
+                self.program_error(format!(
+                    "class {} destruction plan must run its user body first and class fields in reverse declaration order",
+                    class.id
+                ));
             }
             for (index, method) in class.methods.iter().enumerate() {
                 if method.id.class() != class.id || method.id.index() != index {
@@ -376,6 +418,9 @@ impl Verifier<'_> {
                 self.block_error(function.callable(), block.id, "duplicate block ID");
             }
             self.verify_block(return_type, function, block, &mut defined_values);
+        }
+        for error in cleanup::analyze(self.program, function) {
+            self.block_error(function.callable(), error.block, error.message);
         }
 
         for value in function.values() {
@@ -647,6 +692,46 @@ impl Verifier<'_> {
                 }
                 MirInstruction::Call(call) => {
                     self.verify_call(function, block, call, defined_values, &mut defined_in_block);
+                }
+                MirInstruction::Cleanup(cleanup) => {
+                    let destination = self.verify_place(function, block, &cleanup.destination);
+                    if matches!(cleanup.destination.base, MirPlaceBase::AliasParameter(_)) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "cleanup destination must be owning storage",
+                        );
+                    }
+                    if self.program.class(cleanup.target).is_none() {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("cleanup target {} is not declared", cleanup.target),
+                        );
+                    }
+                    match destination.map(|place| place.ty) {
+                        Some(MirType::Class(class)) if class != cleanup.target => {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "cleanup destination has the wrong class type",
+                            );
+                        }
+                        Some(MirType::Class(_)) => {}
+                        Some(_) => self.block_error(
+                            function.callable(),
+                            block.id,
+                            "cleanup destination must have class type",
+                        ),
+                        None => {}
+                    }
+                    if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "cleanup destination requires mutable access",
+                        );
+                    }
                 }
                 MirInstruction::Initialize(initialize) => {
                     let destination = self.verify_place(function, block, &initialize.destination);

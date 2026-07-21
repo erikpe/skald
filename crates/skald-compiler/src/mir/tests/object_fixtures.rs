@@ -32,6 +32,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
                 span,
             }],
             initializers: vec![],
+            destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
         },
@@ -49,6 +50,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
                 parameters: MirParameter::values([MirType::I64]),
                 span,
             }],
+            destruction: MirDestructionPlan::new(None, &[outer_inner]),
             methods: vec![MirMethodDeclaration {
                 id: outer_method,
                 name: "get".to_owned(),

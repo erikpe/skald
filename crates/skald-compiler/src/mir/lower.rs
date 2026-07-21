@@ -13,10 +13,6 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    assert!(
-        !hir.has_destructors(),
-        "destructor HIR must stop at the DD2 phase boundary until MIR lowering is implemented"
-    );
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
@@ -31,7 +27,11 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     let member_definitions = hir
         .class_definitions
         .iter()
-        .flat_map(|class| std::iter::once(&class.initializer).chain(class.methods.iter()))
+        .flat_map(|class| {
+            std::iter::once(&class.initializer)
+                .chain(class.destructor.iter())
+                .chain(class.methods.iter())
+        })
         .map(|definition| lower_member_definition(hir, definition))
         .collect();
     let mir = MirProgram {
@@ -51,19 +51,35 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
 }
 
 fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
+    let fields: Vec<_> = class
+        .fields
+        .iter()
+        .map(|field| MirFieldDeclaration {
+            id: field.id,
+            name: field.name.clone(),
+            ty: lower_type(field.ty),
+            span: field.span,
+        })
+        .collect();
+    let destructor = class
+        .destructor
+        .as_ref()
+        .map(|destructor| MirDestructorDeclaration {
+            id: destructor.id,
+            receiver_access: match destructor.receiver_access {
+                HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
+                HirAccess::Mutable => MirReceiverAccess::Mutable,
+            },
+            span: destructor.span,
+        });
+    let class_field_ids: Vec<_> = fields
+        .iter()
+        .filter_map(|field| matches!(field.ty, MirType::Class(_)).then_some(field.id))
+        .collect();
     MirClassDeclaration {
         id: class.id,
         name: class.name.clone(),
-        fields: class
-            .fields
-            .iter()
-            .map(|field| MirFieldDeclaration {
-                id: field.id,
-                name: field.name.clone(),
-                ty: lower_type(field.ty),
-                span: field.span,
-            })
-            .collect(),
+        fields,
         initializers: vec![MirInitializerDeclaration {
             id: class.initializer.id,
             parameters: class
@@ -74,6 +90,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 .collect(),
             span: class.initializer.span,
         }],
+        destruction: MirDestructionPlan::new(destructor, &class_field_ids),
         methods: class
             .methods
             .iter()

@@ -229,9 +229,9 @@ DD2 represents a destructor through its owner-qualified `DestructorId`, a
 dedicated HIR declaration, and the shared typed member-body representation.
 Its implicit mutable `self`, `unit` result, locals, fields, calls, aliases, and
 control flow use the same access and checking vocabulary as ordinary methods.
-The full pipeline emits the structured `TYP023` staging diagnostic after HIR
-until DD3 defines MIR cleanup, so typed destruction bodies cannot be silently
-omitted during lowering.
+DD3 lowers those bodies into ordinary MIR member definitions and records one
+canonical class destruction plan: the optional user body followed by
+class-typed fields in reverse declaration order.
 
 ### Typed HIR
 
@@ -278,6 +278,7 @@ MIR is executable in shape but target-independent. It separates:
 - block-local transient scalar values;
 - direct calls and receiver-bearing method calls;
 - initialization into a destination from ordinary assignment/store;
+- complete-object cleanup over a typed semantic place;
 - basic blocks with `Return`, `Goto`, and boolean `Branch` terminators.
 
 MIR signatures use ordered parameter descriptors that keep value,
@@ -293,6 +294,15 @@ Field projections retain semantic `FieldId`s, not target offsets.
 Direct class-field initialization has its own HIR statement and lowers to MIR
 construction with an explicit projected destination; scalar field stores stay
 ordinary assignments.
+
+Each MIR class carries an explicit target-independent destruction plan. Plans
+reference only `DestructorId` and `FieldId`, and cleanup instructions reference
+only `ClassId` and `MirPlace`. The verifier enforces body-before-fields and
+reverse-field order, validates cleanup through the shared place walker, and
+tracks definite object liveness across control-flow edges to reject non-owning,
+read-only, dead, overlapping, foreign, wrong-class, and scalar targets. DD4
+will insert cleanup instructions at lexical exits; DD5 will lower already
+verified operations without reconstructing lifetime or field-order policy.
 
 The x86-64 data-layout builder resolves class dependencies recursively,
 retains source field order, and rejects cycles or sizes beyond addressable

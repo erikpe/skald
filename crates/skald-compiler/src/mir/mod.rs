@@ -16,7 +16,8 @@ pub use lower::lower_hir;
 pub use model::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
     MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
-    MirClassDeclarationTable, MirDefinitionRef, MirFieldDeclaration, MirFunctionDeclaration,
+    MirClassDeclarationTable, MirCleanup, MirDefinitionRef, MirDestructionPlan, MirDestructionStep,
+    MirDestructorDeclaration, MirFieldDeclaration, MirFunctionDeclaration,
     MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
     MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
     MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,

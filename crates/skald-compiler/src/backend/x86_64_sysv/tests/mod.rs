@@ -11,7 +11,7 @@ use crate::{
     mir::{
         verify_mir, BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock,
         MirBinaryOperation, MirBody, MirCall, MirCallTarget, MirClassDeclaration,
-        MirClassDeclarationTable, MirFieldDeclaration, MirFunctionDeclaration,
+        MirClassDeclarationTable, MirDestructionPlan, MirFieldDeclaration, MirFunctionDeclaration,
         MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
         MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
         MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,

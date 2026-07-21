@@ -1413,9 +1413,10 @@ liveness boundary frozen here.
 
 **Implementation status:** contract frozen by DD0 of the
 [Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md);
-syntax and resolution are implemented by DD1 and typed HIR by DD2, while MIR
-cleanup and execution remain staged for DD3–DD6. The parser-facing extension
-is recorded in [`grammar/README.md`](../grammar/README.md#staged-extension-deterministic-destruction).
+syntax and resolution are implemented by DD1, typed HIR by DD2, and verified
+target-independent cleanup MIR by DD3. Cleanup-edge planning and execution
+remain staged for DD4–DD6. The parser-facing extension is recorded in
+[`grammar/README.md`](../grammar/README.md#staged-extension-deterministic-destruction).
 
 This profile narrows the broader destruction rules in Section 5.7 to the
 compiler's current local-only inline-object model and normal control flow. It

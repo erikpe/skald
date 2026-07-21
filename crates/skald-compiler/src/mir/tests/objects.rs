@@ -22,6 +22,8 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
             "    Class c1 \"Outer\" @0..30\n",
             "      Field c1:field0 \"inner\" : class c0 @0..30\n",
             "      Initializer c1:init0(i64) @0..30\n",
+            "      DestructionPlan\n",
+            "        Field c1:field0\n",
             "      Method c1:method0 \"get\" readonly () -> i64 @0..30\n",
             "  Declarations\n",
             "    Declaration f0 \"main\" internal @0..30\n",

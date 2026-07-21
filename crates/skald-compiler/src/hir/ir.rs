@@ -59,10 +59,6 @@ pub struct HirProgram {
 }
 
 impl HirProgram {
-    pub fn has_destructors(&self) -> bool {
-        self.classes.iter().any(|class| class.destructor.is_some())
-    }
-
     pub fn class(&self, id: ClassId) -> Option<&HirClassDeclaration> {
         self.classes.get(id)
     }

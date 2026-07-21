@@ -145,6 +145,7 @@ fn f64_arithmetic_mir() -> MirProgram {
 
 mod builder;
 mod control_flow;
+mod destruction;
 mod dump;
 mod inline_fields;
 mod lowering;

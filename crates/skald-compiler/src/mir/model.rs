@@ -4,7 +4,9 @@ use std::{collections::BTreeMap, fmt};
 
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
-    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    identity::{
+        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, MethodId,
+    },
     source::Span,
 };
 
@@ -103,6 +105,10 @@ impl MirProgram {
         self.class(id.class())?.method(id)
     }
 
+    pub fn destructor(&self, id: DestructorId) -> Option<&MirDestructorDeclaration> {
+        self.class(id.class())?.destructor(id)
+    }
+
     pub fn member_definition(&self, callable: CallableId) -> Option<&MirMemberDefinition> {
         self.member_definitions.get(callable)
     }
@@ -131,7 +137,12 @@ impl MirProgram {
                         return_type: MirType::Unit,
                     })
             }
-            CallableId::Destructor(_) => None,
+            CallableId::Destructor(destructor) => {
+                self.destructor(destructor).map(|_| MirCallableSignature {
+                    parameters: &[],
+                    return_type: MirType::Unit,
+                })
+            }
             CallableId::Method(method) => {
                 self.method(method).map(|declaration| MirCallableSignature {
                     parameters: &declaration.parameters,
@@ -235,6 +246,7 @@ pub struct MirClassDeclaration {
     pub name: String,
     pub fields: Vec<MirFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
+    pub destruction: MirDestructionPlan,
     pub methods: Vec<MirMethodDeclaration>,
     pub span: Span,
 }
@@ -260,6 +272,13 @@ impl MirClassDeclaration {
             .flatten()
             .filter(|method| method.id == id)
     }
+
+    pub fn destructor(&self, id: DestructorId) -> Option<&MirDestructorDeclaration> {
+        self.destruction
+            .destructor
+            .as_ref()
+            .filter(|destructor| destructor.id == id && id.class() == self.id)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -275,6 +294,44 @@ pub struct MirInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<MirParameter>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirDestructorDeclaration {
+    pub id: DestructorId,
+    pub receiver_access: MirReceiverAccess,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirDestructionPlan {
+    pub destructor: Option<MirDestructorDeclaration>,
+    pub steps: Vec<MirDestructionStep>,
+}
+
+impl MirDestructionPlan {
+    /// Builds the canonical complete-object order from class-typed fields in
+    /// declaration order: the optional user body first, then fields in reverse.
+    pub fn new(destructor: Option<MirDestructorDeclaration>, class_fields: &[FieldId]) -> Self {
+        let mut steps = Vec::with_capacity(class_fields.len() + usize::from(destructor.is_some()));
+        if let Some(declaration) = &destructor {
+            steps.push(MirDestructionStep::UserBody(declaration.id));
+        }
+        steps.extend(
+            class_fields
+                .iter()
+                .rev()
+                .copied()
+                .map(MirDestructionStep::Field),
+        );
+        Self { destructor, steps }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirDestructionStep {
+    UserBody(DestructorId),
+    Field(FieldId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -715,6 +772,7 @@ pub struct MirBasicBlock {
 pub enum MirInstruction {
     Assign(MirAssignment),
     Call(MirCall),
+    Cleanup(MirCleanup),
     Initialize(MirInitialize),
     Store(MirStore),
 }
@@ -724,10 +782,18 @@ impl MirInstruction {
         match self {
             Self::Assign(instruction) => instruction.span,
             Self::Call(instruction) => instruction.span,
+            Self::Cleanup(instruction) => instruction.span,
             Self::Initialize(instruction) => instruction.span,
             Self::Store(instruction) => instruction.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCleanup {
+    pub destination: MirPlace,
+    pub target: ClassId,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

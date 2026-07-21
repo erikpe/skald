@@ -35,6 +35,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
                 field(nested_payload, "payload", MirType::F64, span),
             ],
             initializers: vec![],
+            destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
         },
@@ -47,6 +48,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
                 field(container_tail, "tail", MirType::U8, span),
             ],
             initializers: vec![],
+            destruction: MirDestructionPlan::new(None, &[container_nested]),
             methods: vec![],
             span,
         },
@@ -55,6 +57,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             name: "Empty".to_owned(),
             fields: vec![],
             initializers: vec![],
+            destruction: MirDestructionPlan::new(None, &[]),
             methods: vec![],
             span,
         },
@@ -193,6 +196,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             parameters: MirParameter::values([MirType::I64]),
             span,
         }],
+        destruction: MirDestructionPlan::new(None, &[]),
         methods: vec![
             MirMethodDeclaration {
                 id: add,
