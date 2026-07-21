@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: planned; IOF0–IOF6 are not yet implemented.
+Status: in progress; IOF0 is complete and IOF1–IOF6 are planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -260,7 +260,7 @@ address.
 
 ## 4. Progress Summary
 
-- [ ] IOF0 — Freeze the class-typed-field contract
+- [x] IOF0 — Freeze the class-typed-field contract
 - [ ] IOF1 — Resolve field types and reject containment cycles
 - [ ] IOF2 — Generalize semantic object places to projection paths
 - [ ] IOF3 — Construct class fields and track initializer liveness
@@ -278,19 +278,19 @@ relevant quality gates pass.
 **Purpose:** Remove ambiguity about containment, initialization, access, and
 evaluation before those decisions are duplicated across phases.
 
-- [ ] Add a restricted class-typed-field profile to the draft specification.
-- [ ] Update the parser-facing grammar for primitive or named class field
+- [x] Add a restricted class-typed-field profile to the draft specification.
+- [x] Update the parser-facing grammar for primitive or named class field
       types without enabling object types in other value positions.
-- [ ] Define exact source forms for primitive field initialization and direct
+- [x] Define exact source forms for primitive field initialization and direct
       class-field construction.
-- [ ] Freeze field liveness, exactly-once initialization, and the permitted use
+- [x] Freeze field liveness, exactly-once initialization, and the permitted use
       of already-constructed subobjects inside an enclosing initializer.
-- [ ] Freeze nested read/write, receiver, alias, grouping, access-propagation,
+- [x] Freeze nested read/write, receiver, alias, grouping, access-propagation,
       and evaluation-order rules.
-- [ ] Define deterministic source diagnostics for unknown field types, direct
+- [x] Define deterministic source diagnostics for unknown field types, direct
       recursion, indirect containment cycles, wrong constructors, premature
       use, duplicate/missing initialization, and object-value misuse.
-- [ ] Reconcile the new profile with the later destruction, copy, inheritance,
+- [x] Reconcile the new profile with the later destruction, copy, inheritance,
       shared-ownership, and exception contracts without implementing them.
 
 **Tests:** Cross-document review against `grammar/README.md`, the current HIR

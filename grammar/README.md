@@ -1,7 +1,8 @@
 # Implemented Skald Grammar
 
-This document describes the source language accepted by the current compiler.
-It is intentionally narrower than the broader design in
+Except for the clearly labeled frozen next-slice extension near the end, this
+document describes the source language accepted by the current compiler. It is
+intentionally narrower than the broader design in
 [`SKALD_DRAFT_SPEC.md`](../docs/SKALD_DRAFT_SPEC.md).
 
 ## Lexical structure
@@ -285,6 +286,85 @@ Ordinary by-value parameters remain primitive-only. Local aliases, primitive
 aliases, shared sources, borrow anchors, object fields/elements, polymorphic
 conversion, and whole-object replacement through an alias are not implemented.
 
+## Frozen next-slice extension: class-typed inline fields
+
+This section freezes the parser-facing extension for the next object-model
+slice. **It is not part of the grammar accepted by the current compiler.** The
+implemented grammar above remains authoritative until the
+[Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
+is complete.
+
+The extension changes the class field type and projected assignment-place
+productions:
+
+```text
+field-declaration = identifier ":" field-type ";"
+field-type        = primitive-type | class-name
+class-name        = identifier
+
+field-assignment = receiver-place "." identifier "=" expression ";"
+receiver-place   = place-root ("." identifier)*
+place-root       = identifier | "self" | "(" receiver-place ")"
+```
+
+It does not admit named types for by-value parameters, results, external
+functions, primitive locals, or any other type position. A named local type
+continues to use the existing direct-construction-only object-local rules.
+`unit` remains invalid as a field type. The projected receiver production
+selects an assignment-shaped statement from syntax already expressible by the
+postfix parser; it does not create general assignment expressions. No new
+token, keyword, precedence level, or postfix suffix is introduced.
+
+A class field is initialized in the enclosing class's straight-line `init`
+body with the existing assignment-shaped statement:
+
+```ska
+self.primitive = primitive_expression;
+self.child = Child(arguments);
+```
+
+For a class field, the complete right side must be an ungrouped constructor of
+the field's exact class. This is construction into the field's storage, not
+assignment of an object value. Only a direct field of the current initializer's
+`self` is a construction destination. Grouping around `self` remains
+transparent; construction into a nested path or any already-live place is not
+part of the extension.
+
+After construction, the existing postfix syntax can designate nested inline
+places:
+
+```ska
+outer.inner.value
+outer.inner.observe()
+inspect(outer.inner)
+```
+
+A path starts at an inline local, live method `self`, or alias parameter and
+may cross class-typed fields. A class endpoint is valid only as a method
+receiver or exact-class alias argument; it is not an ordinary object value. A
+primitive endpoint may be read, and may be assigned when the path has mutable
+access. Grouping around a place is transparent.
+
+The root binding's access applies to the complete path. A read-only method
+receiver or `ref` root permits reads, read-only calls, and `ref` arguments. A
+mutable local, mutable receiver, or `mut ref` root additionally permits
+primitive writes, mutable calls, and `mut ref` arguments. Whole-object
+replacement remains invalid.
+
+Each direct primitive or class field is initialized exactly once. A class
+field becomes live only after its nested initializer returns normally. A path
+through an uninitialized field is invalid; later initializer statements may
+use an already-completed field as a receiver or alias argument. The incomplete
+enclosing `self` remains invalid as a complete receiver or alias argument.
+
+Class containment must be acyclic. Direct self-containment and indirect cycles
+are source-level semantic errors. Forward references, repeated acyclic field
+types, diamonds, and empty contained classes are valid.
+
+The exact declaration, liveness, evaluation-order, diagnostic, IR, layout, and
+future-lifecycle contract is in the
+[frozen class-typed inline-field profile](../docs/SKALD_DRAFT_SPEC.md#544-frozen-class-typed-inline-field-profile).
+
 ## Recovery and nesting
 
 The parser accumulates structured diagnostics and synchronizes at parameter,
@@ -303,6 +383,7 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
+- class-typed inline object fields and nested object places;
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;

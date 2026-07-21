@@ -913,7 +913,9 @@ The profile has these declaration and name rules:
 Every field has one of the implemented primitive types `i64`, `u64`, `u8`,
 `f64`, or `bool`. Object fields, base classes, interfaces, static members,
 `final`, access modifiers, virtual/override declarations, `assign`, and
-`destroy` are rejected in this profile. Empty classes are valid.
+`destroy` are rejected in this profile. Empty classes are valid. The
+class-typed field extension is frozen separately in Section 5.4.4 but is not
+part of this implemented profile.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
 implicit mutable `self`, takes only by-value primitive parameters, and returns
@@ -1052,6 +1054,10 @@ receive an alias parameter and may read its primitive fields while initializing
 the new object's fields, subject to the existing straight-line initializer-body
 rules.
 
+Section 5.4.4 freezes the next profile's extension from object fields to alias
+sources. Until that profile is implemented, the source forms in this section
+remain the complete accepted alias-source set.
+
 An initializer of the enclosing class with the broader copy-constructor
 signature `init(ref other: T)` may therefore be written in this profile. It is
 invoked only by the existing explicit direct-local construction form
@@ -1119,6 +1125,273 @@ The target-independent compiler contract for this profile is:
 Local alias declarations, primitive alias parameters, object value parameters
 and results, shared sources and borrow anchors, polymorphism, whole-object
 replacement, and alias-bearing function values remain deferred.
+
+#### 5.4.4 Frozen Class-Typed Inline-Field Profile
+
+**Implementation status:** contract frozen; implementation is planned by the
+[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
+The current compiler continues to accept only the implemented profiles in
+Sections 5.4.2 and 5.4.3 until that roadmap is complete. The parser-facing
+extension is recorded separately from the implemented grammar in
+[`grammar/README.md`](../grammar/README.md#frozen-next-slice-extension-class-typed-inline-fields).
+
+This profile extends the restricted stage-0 object and alias profiles with
+class-typed fields, direct construction into those fields, recursively
+projected places, and alias arguments designating contained subobjects. It does
+not add object values, copying, destruction, inheritance, or shared ownership.
+
+##### Field declarations and containment
+
+The field grammar for this profile is:
+
+```text
+field-declaration = identifier ":" field-type ";"
+field-type        = primitive-type | class-name
+```
+
+`unit` remains invalid as a field type. A `class-name` must resolve to an exact
+concrete class in the same compilation unit. It cannot name a function, and an
+unknown name is an error. Top-level collection continues to precede field-type
+resolution, so a field may name a class declared later in the source file.
+Class identity remains nominal.
+
+A class-typed field contains one complete inline subobject. It is not a
+pointer, nullable handle, alias, or separately allocated value. Two fields of
+the same class contain two distinct subobjects. An empty class used as a field
+still has a nonzero addressable target extent.
+
+The directed graph whose vertices are classes and whose edges are class-typed
+fields must be acyclic. Both a direct field of the enclosing class type and an
+indirect cycle are invalid independent of target layout:
+
+```ska
+class Direct {
+    child: Direct; // invalid direct containment cycle
+    init() { self.child = Direct(); }
+}
+
+class Left {
+    right: Right;
+    init() { self.right = Right(); }
+}
+
+class Right {
+    left: Left; // invalid indirect containment cycle
+    init() { self.left = Left(); }
+}
+```
+
+Source-level cycle checking occurs after field types have stable `ClassId` and
+`FieldId` identities but before HIR is accepted, MIR is lowered, or a target is
+selected. Diagnostics emit one primary error for each recursive strongly
+connected containment component. Components are ordered by the earliest class
+declaration they contain. The displayed representative cycle begins with the
+earliest declared participating class and follows a deterministic
+field-declaration-order path back to that class. The diagnostic identifies
+every field edge in that path. A backend must retain defensive cycle rejection
+for malformed or hand-built IR, but a valid source program never relies on the
+backend to establish containment legality.
+
+Acyclic diamonds, repeated class field types, forward dependencies, and empty
+subobjects are valid. Physical layout may compute dependencies in any order,
+but language-visible field order remains source declaration order.
+
+##### Direct field construction and liveness
+
+The restricted initializer body remains a straight-line sequence of direct
+field-initialization statements. The meaning of the right side depends on the
+declared field type:
+
+```ska
+class Child {
+    value: i64;
+    init(value: i64) { self.value = value; }
+}
+
+class Parent {
+    tag: i64;
+    child: Child;
+
+    init(tag: i64, child_value: i64) {
+        self.tag = tag;                  // primitive initialization
+        self.child = Child(child_value); // construction in field storage
+    }
+}
+```
+
+`self.field = primitive_expression;` initializes a primitive field exactly as
+in Section 5.4.2. When `field` has class type `T`, the complete right side must
+be the ungrouped direct construction `T(arguments)`. Its constructor class must
+match the field's exact nominal type. The construction does not produce an
+object value and the statement is not assignment to a live object.
+
+The only new construction destination is a direct field of the current
+initializer's `self`. Grouping around `self` is transparent, but a field
+projection cannot precede the destination field. Construction into an existing
+local, method receiver, alias parameter, already-live field, or deeper path is
+invalid. Each nested class's own initializer remains solely responsible for
+constructing that class's direct fields.
+
+Every direct primitive or class field must be initialized exactly once before
+the enclosing initializer completes. Source initialization order need not
+match declaration order. Duplicate initialization is invalid at the second
+statement, and each missing field is diagnosed at its declaration. A scalar
+right side for a class field, a construction for a primitive field, a grouped
+construction, and construction of the wrong class are distinct invalid forms
+and must not fall back to ordinary object-value type checking.
+
+Destination storage exists before constructor arguments are evaluated, but a
+class field is not live while its arguments or nested initializer execute. It
+becomes a complete live subobject only when the nested initializer returns
+normally. The enclosing `self` becomes a live complete object only after all
+of its direct fields are initialized and its initializer returns normally.
+
+Before a direct class field is live, no path beginning with that field may be
+read, used as a method receiver, or passed as an alias. After it becomes live,
+later initializer expressions may:
+
+- read its primitive fields at any nested depth;
+- call a method on the completed subobject or one of its completed
+  subobjects; and
+- pass the completed subobject or one of its completed subobjects to an exact-
+  class `ref` or `mut ref` parameter.
+
+The same initializer expressions may call methods through already-live alias
+parameters received from the caller. The incomplete enclosing `self` remains
+invalid as a complete method receiver or alias argument. The initializer's
+statement grammar is otherwise unchanged: local declarations, nested blocks,
+conditionals, explicit returns, and effect-only call statements remain
+unavailable. Construction remains unavailable as a nested expression or
+ordinary call argument.
+
+There are no checked exceptions or other recoverable construction failures in
+this profile. Definite-initialization state changes only after a nested
+initializer returns normally. Later destruction and exception work may attach
+cleanup to these explicit completion points without changing when a subobject
+becomes live.
+
+##### Nested places, receivers, and aliases
+
+An object place consists of one supported live root followed by zero or more
+class-field projections. Its root is:
+
+1. a directly constructed inline local;
+2. a live method `self`;
+3. an existing `ref` or `mut ref` parameter; or
+4. grouping around one of those roots or a projected place.
+
+A class-typed endpoint remains a place. It may be a method receiver or alias
+argument, but it is not an expression value. Selecting a final primitive field
+loads or stores a scalar according to the existing expression or assignment
+context. These forms therefore become valid:
+
+```ska
+var value: i64 = outer.inner.value;
+outer.inner.value = 42;
+outer.inner.observe();
+update(outer.inner);
+```
+
+The first form requires a primitive terminal field. The second requires
+mutable access. The third selects a method of the terminal class. The fourth
+requires an exact-class alias parameter. A class field remains invalid as a
+scalar expression, return value, ordinary value argument, value local
+initializer, or whole-object assignment source or destination.
+
+The root binding determines access for the complete inline path:
+
+- an inline local, mutable method `self`, or `mut ref` parameter provides
+  mutable access to every contained subobject;
+- read-only method `self` or a `ref` parameter provides read-only access to
+  every contained subobject;
+- read-only access permits primitive reads, read-only method calls, and `ref`
+  arguments;
+- mutable access additionally permits primitive writes, mutable method calls,
+  and `mut ref` arguments.
+
+This propagation is physical containment, not a runtime conversion, recursive
+const type, or ownership operation. No path permits whole-object replacement
+in this profile. Aliases remain non-exclusive; two arguments may designate the
+same contained subobject or overlapping containing/subobject places.
+
+An alias to an inline field remains call-scoped and non-owning. A local or
+receiver root keeps its complete containing storage alive for the call. A
+forwarded alias root inherits the enclosing call's guarantee. A completed
+field borrowed while its parent initializer is active is kept alive by the
+destination storage and initializer activation even though the complete parent
+is not live yet. These forms require no allocation, provenance tag,
+retain/release operation, hidden borrow anchor, graph search, lifetime
+inference, or exclusivity checking.
+
+##### Evaluation and phase boundaries
+
+The profile extends the existing observable ordering rules as follows:
+
+- an object-place root is selected before its field projections, and
+  projections are selected from left to right;
+- a nested method receiver is selected before its explicit arguments;
+- all explicit call and constructor arguments are evaluated left to right in
+  one sequence, including alias-place selection at its source position;
+- primitive field assignment selects the complete destination place, evaluates
+  the complete scalar right side, and then stores;
+- class-field construction selects and reserves the destination place,
+  evaluates arguments left to right, invokes the exact initializer, and marks
+  the field live only after normal return.
+
+Current place selection has no user-visible side effects, but IR must preserve
+this order so later array elements, shared anchors, temporaries, and cleanup do
+not require a semantic rewrite.
+
+Resolution assigns every class and member identity and records the complete
+projection path. HIR records the terminal class, root access capability, and
+whether the operation is a scalar load/store, receiver call, alias argument,
+or construction destination. MIR uses the existing storage base plus ordered
+`Field(FieldId)` projections and `MirInitialize` into a destination place.
+Class endpoints never become scalar MIR values. Target offsets, alignments,
+frame locations, and address arithmetic remain backend-owned.
+
+Required source diagnostics cover at least:
+
+- unknown names and functions used as field types;
+- direct and indirect recursive containment;
+- a scalar, grouped constructor, or wrong-class constructor used for a class
+  field;
+- construction into a non-direct, foreign, or already-live destination;
+- premature, duplicate, or missing field initialization;
+- nested mutation or mutable aliasing through read-only access;
+- exact-class alias mismatch; and
+- every attempt to use a class-field endpoint as an ordinary object value or
+  replace a live whole object.
+
+Diagnostics and dumps use source/stable-identity order. Exact wording may
+evolve, but an error must identify the invalid use and the declaration or
+earlier initialization that establishes the violated rule; it must not depend
+on hash-map iteration or target layout.
+
+##### Boundary with later object-model slices
+
+This profile establishes complete contained subobjects but makes their scope
+end unobservable. It adds no `destroy` body, implicit field destruction,
+initialized-place cleanup state in MIR, or cleanup-aware control-flow edge. The
+destruction slice will destroy fields of a complete object in the broader
+reverse-declaration order and will define cleanup for partial construction and
+non-local exits using the completion points preserved here.
+
+There is no implicit or synthesized copy construction or assignment. A user
+may pass a field to an existing explicit alias parameter, including an
+initializer declared as `init(ref other: T)`, but copying the underlying field
+as a value remains unavailable. Later synthesized copy operations must compose
+the copy capabilities of class fields rather than treating their bytes as
+untyped storage.
+
+Inheritance will later add base-subobject dependencies and projections without
+changing the rule that by-value containment must have finite layout. Shared
+ownership will later anchor an inline field through the allocation that
+contains it; this profile has only inline roots whose storage already encloses
+the call. Checked exceptions will later destroy only subobjects whose
+initializers completed, rather than treating the incomplete enclosing object
+as live. None of those future rules changes the source forms or normal-return
+liveness boundary frozen here.
 
 ### 5.5 Initialization Members
 
@@ -2013,6 +2286,15 @@ Primitive field size and alignment on this target are:
 | `u8` | 1 | 1 |
 | `bool` | 1 | 1 |
 
+Under the frozen class-typed inline-field profile in Section 5.4.4, a class
+field uses the recursively computed size and alignment of its exact class.
+Class layout dependencies may be computed in any deterministic order, while
+fields within each class remain laid out in declaration order. The semantic
+containment graph must already be acyclic before target lowering. The backend
+nevertheless rejects a recursive or incomplete MIR layout structurally.
+Resolving a nested place adds each checked field offset in projection order;
+all offset and extent arithmetic remains checked target-size arithmetic.
+
 `bool` and `u8` fields retain their language widths even if the stack-heavy
 backend uses wider homes for unrelated scalar temporaries. Layout computation
 uses checked target-size arithmetic. A class whose size, alignment, field
@@ -2042,8 +2324,8 @@ never recovered from source names below resolution.
 
 ### 13.5 Stage-0 Alias-Parameter ABI
 
-**Implementation status:** the ABI contract is frozen for the restricted
-profile in Section 5.4.3; backend support is not yet implemented.
+**Implementation status:** implemented by the Linux x86-64 System V backend
+for the restricted profile in Section 5.4.3.
 
 An internal `ref` or `mut ref` parameter is passed as one pointer to the
 complete inline object storage. The pointer is integer-class, has the target's
@@ -2153,10 +2435,13 @@ corresponding language area is considered complete:
   destruction, and cleanup sequencing for every control-flow exit.
 - **Initialization rules:** the implemented inline-object profile defines
   straight-line definite initialization for primitive fields during direct
-  local construction. Default initialization in other storage contexts,
-  object/base field ordering, branching or throwing initializers, and exact
-  rules for implicit constructors, copy constructors, assignment members, and
-  destructors remain open.
+  local construction. The frozen class-typed inline-field profile additionally
+  defines exact direct field construction, normal-return subobject liveness,
+  nested access, and acyclic containment. Default initialization in other
+  storage contexts, base-subobject ordering, branching or throwing
+  initializers, partial-construction cleanup, and exact rules for implicit
+  constructors, synthesized copying, assignment members, and destructors
+  remain open.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
@@ -2228,6 +2513,21 @@ Resolved decisions in this draft:
 - restricted method receivers evaluate before explicit arguments and lower as
   hidden first integer-class arguments, while MIR retains semantic places and
   field identities rather than target offsets;
+- the frozen class-typed inline-field profile permits exact concrete class
+  field types while retaining primitive-only value parameters/results and
+  place-only object semantics;
+- inline class containment must be acyclic, is rejected semantically before
+  target selection, and is laid out recursively in declaration order with
+  checked target arithmetic;
+- a class field is constructed exactly once by
+  `self.field = ExactClass(arguments);`, becomes live only after its nested
+  initializer returns normally, and never materializes as an object value;
+- completed class fields may form nested primitive field places, direct method
+  receivers, and exact-class alias arguments, with access inherited unchanged
+  from the root local, receiver, or alias binding;
+- class-typed fields do not by themselves enable whole-object replacement,
+  implicit copying, destruction, partial-construction cleanup, inheritance,
+  shared ownership, or checked exceptions;
 - copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;
