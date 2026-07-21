@@ -1,7 +1,7 @@
 //! Instruction selection and ABI lowering into the target assembly model.
 
 use crate::{
-    backend::{BackendError, Target},
+    backend::BackendError,
     identity::CallableId,
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
 };
@@ -141,13 +141,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         match instruction {
             MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
             MirInstruction::Call(call) => self.select_call(call)?,
-            MirInstruction::Cleanup(_) => {
-                return Err(BackendError::new(
-                    Target::X86_64SysV,
-                    Some(self.function.callable()),
-                    "cleanup instruction lowering is staged for DD5",
-                ));
-            }
+            // Legality has proved this cleanup's complete destruction plan has
+            // no user code. Non-trivial cleanup remains an explicit DD5 error.
+            MirInstruction::Cleanup(_) => {}
             MirInstruction::Initialize(initialize) => self.select_initialize(initialize)?,
             MirInstruction::Store(store) => self.select_store(store)?,
         }

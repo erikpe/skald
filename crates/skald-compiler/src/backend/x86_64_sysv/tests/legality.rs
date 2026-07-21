@@ -70,6 +70,21 @@ fn unused_object_metadata_is_accepted_after_obj3() {
 }
 
 #[test]
+fn non_trivial_source_cleanup_remains_a_structured_dd5_error() {
+    let mir = lower_source_to_mir(concat!(
+        "class Resource { init() {} destroy {} }\n",
+        "class Owner { resource: Resource; init() { self.resource = Resource(); } }\n",
+        "fn main() -> i64 { var owner: Owner = Owner(); return 0; }\n",
+    ));
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error
+        .message()
+        .contains("non-trivial cleanup instruction lowering is staged for DD5"));
+}
+
+#[test]
 fn member_call_without_a_definition_is_a_structured_backend_error() {
     let (mut mir, ids) = projected_object_program();
     let initializer = InitializerId::new(ids.container, 0);
@@ -90,6 +105,13 @@ fn member_call_without_a_definition_is_a_structured_backend_error() {
             destination: ids.first.into(),
             target: initializer,
             arguments: vec![],
+            span: mir.span,
+        }));
+    function.body.blocks[0]
+        .instructions
+        .push(MirInstruction::Cleanup(MirCleanup {
+            destination: ids.first.into(),
+            target: ids.container,
             span: mir.span,
         }));
 

@@ -1002,10 +1002,11 @@ The profile adds these observable evaluation-order rules:
 - construction reserves its destination, evaluates arguments left to right,
   invokes `init`, and makes the destination live only after normal completion.
 
-These implemented rules do not specify destruction or cleanup. Section 5.4.5
-freezes owning-local cleanup on the currently supported normal exits. General
-temporaries, other control-flow exits, shared ownership, aliases requiring
-anchors, and checked exceptions remain later work.
+Section 5.4.5 extends these rules with implemented MIR cleanup planning for
+owning locals on the currently supported normal exits. Executing non-trivial
+cleanup is staged for the backend slice. General temporaries, other
+control-flow exits, shared ownership, aliases requiring anchors, and checked
+exceptions remain later work.
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
@@ -1385,13 +1386,11 @@ on hash-map iteration or target layout.
 
 ##### Boundary with later object-model slices
 
-This profile establishes complete contained subobjects but makes their scope
-end unobservable. It adds no `destroy` body, implicit field destruction,
-initialized-place cleanup state in MIR, or cleanup-aware control-flow edge. The
-frozen destruction profile in Section 5.4.5 will destroy completed local
-objects on normal scope and return exits, including fields in reverse
-declaration order, using the completion points preserved here. Failed-
-construction and exceptional cleanup remain later work.
+This profile establishes complete contained subobjects. The frozen destruction
+profile in Section 5.4.5 now represents `destroy` bodies, recursive field
+plans, initialized-place cleanup state, and cleanup-aware normal control-flow
+edges in MIR using the completion points preserved here. Backend execution,
+failed-construction cleanup, and exceptional cleanup remain later work.
 
 There is no implicit or synthesized copy construction or assignment. A user
 may pass a field to an existing explicit alias parameter, including an
@@ -1414,8 +1413,9 @@ liveness boundary frozen here.
 **Implementation status:** contract frozen by DD0 of the
 [Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md);
 syntax and resolution are implemented by DD1, typed HIR by DD2, and verified
-target-independent cleanup MIR by DD3. Cleanup-edge planning and execution
-remain staged for DD4–DD6. The parser-facing extension is recorded in
+target-independent cleanup MIR by DD3. DD4 plans lexical and return cleanup
+edges; non-trivial backend execution and hardening remain staged for DD5–DD6.
+The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#staged-extension-deterministic-destruction).
 
 This profile narrows the broader destruction rules in Section 5.7 to the

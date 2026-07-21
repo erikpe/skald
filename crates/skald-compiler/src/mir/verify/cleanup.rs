@@ -15,6 +15,7 @@ pub(super) struct CleanupLivenessError {
 struct ObjectState {
     live: HashSet<MirPlace>,
     cleaned: HashSet<MirPlace>,
+    outstanding_local_cleanup: HashSet<MirPlace>,
 }
 
 pub(super) fn analyze(
@@ -80,7 +81,8 @@ impl Analyzer<'_> {
                         self.merge_state(target, &state, &mut incoming, &mut pending);
                     }
                 }
-                Some(MirTerminator::Return { .. }) | None => {}
+                Some(MirTerminator::Return { .. }) => self.check_normal_return(block, &state),
+                None => {}
             }
         }
 
@@ -91,8 +93,21 @@ impl Analyzer<'_> {
                 .get(block.id.index())
                 .is_none_or(|state| state.is_none())
             {
-                self.apply_block(block, &mut ObjectState::default());
+                let mut state = ObjectState::default();
+                self.apply_block(block, &mut state);
+                if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
+                    self.check_normal_return(block, &state);
+                }
             }
+        }
+    }
+
+    fn check_normal_return(&mut self, block: &MirBasicBlock, state: &ObjectState) {
+        if !state.outstanding_local_cleanup.is_empty() {
+            self.errors.push(CleanupLivenessError {
+                block: block.id,
+                message: "owning local remains live on normal return",
+            });
         }
     }
 
@@ -115,6 +130,11 @@ impl Analyzer<'_> {
                 let merged = ObjectState {
                     live: existing.live.intersection(&state.live).cloned().collect(),
                     cleaned: existing.cleaned.union(&state.cleaned).cloned().collect(),
+                    outstanding_local_cleanup: existing
+                        .outstanding_local_cleanup
+                        .union(&state.outstanding_local_cleanup)
+                        .cloned()
+                        .collect(),
                 };
                 if *existing != merged {
                     *existing = merged;
@@ -134,6 +154,11 @@ impl Analyzer<'_> {
                     ) =>
                 {
                     state.live.insert(initialize.destination.clone());
+                    if self.is_owning_local_root(&initialize.destination) {
+                        state
+                            .outstanding_local_cleanup
+                            .insert(initialize.destination.clone());
+                    }
                     state
                         .cleaned
                         .retain(|place| !places_overlap(place, &initialize.destination));
@@ -161,6 +186,9 @@ impl Analyzer<'_> {
                         });
                     } else {
                         state.cleaned.insert(cleanup.destination.clone());
+                        state
+                            .outstanding_local_cleanup
+                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
                     }
                 }
                 _ => {}
@@ -193,6 +221,14 @@ impl Analyzer<'_> {
             ty = field.ty;
         }
         ty == MirType::Class(expected_class)
+    }
+
+    fn is_owning_local_root(&self, place: &MirPlace) -> bool {
+        place.projections.is_empty()
+            && self
+                .function
+                .storage(place.base.storage())
+                .is_some_and(|storage| storage.kind == MirStorageKind::Local)
     }
 }
 

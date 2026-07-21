@@ -300,9 +300,13 @@ reference only `DestructorId` and `FieldId`, and cleanup instructions reference
 only `ClassId` and `MirPlace`. The verifier enforces body-before-fields and
 reverse-field order, validates cleanup through the shared place walker, and
 tracks definite object liveness across control-flow edges to reject non-owning,
-read-only, dead, overlapping, foreign, wrong-class, and scalar targets. DD4
-will insert cleanup instructions at lexical exits; DD5 will lower already
-verified operations without reconstructing lifetime or field-order policy.
+read-only, dead, overlapping, foreign, wrong-class, and scalar targets. A
+separate cleanup planner registers successfully initialized owning locals by
+lexical scope, emits reverse-order cleanup on fallthrough and `return`, and
+keeps return-value evaluation ahead of cleanup. Verification also carries
+outstanding local-cleanup obligations through joins. DD5 will lower non-trivial
+verified operations without reconstructing lifetime or field-order policy;
+until then, the backend erases only plans proven to contain no user code.
 
 The x86-64 data-layout builder resolves class dependencies recursively,
 retains source field order, and rejects cycles or sizes beyond addressable

@@ -6,6 +6,7 @@
 //! that can be replaced later.
 
 mod abi;
+mod destruction;
 mod emit;
 mod frame;
 mod layout;

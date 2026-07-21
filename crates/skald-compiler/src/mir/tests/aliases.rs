@@ -261,6 +261,9 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
         .get(program.entry_function)
         .unwrap()
         .clone();
+    main.body.blocks[0]
+        .instructions
+        .retain(|instruction| !matches!(instruction, MirInstruction::Cleanup(_)));
     let second_object = StorageId::new(program.entry_function, 1);
     main.storage.push(MirStorage {
         id: second_object,
@@ -319,6 +322,16 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
                 MirArgument::Value(scalar),
             ],
             result: None,
+            span,
+        }),
+        MirInstruction::Cleanup(MirCleanup {
+            destination: second_object.into(),
+            target: class,
+            span,
+        }),
+        MirInstruction::Cleanup(MirCleanup {
+            destination: object_ids.object_storage.into(),
+            target: class,
             span,
         }),
     ]);

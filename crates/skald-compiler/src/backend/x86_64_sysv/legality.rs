@@ -6,7 +6,7 @@ use crate::{
     mir::{verify_mir, MirCallTarget, MirInstruction, MirParameter, MirProgram},
 };
 
-use super::{abi, layout::DataLayout};
+use super::{abi, destruction, layout::DataLayout};
 
 pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
     verify_mir(program).map_err(|errors| {
@@ -53,12 +53,14 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                             }
                         }
                     },
-                    MirInstruction::Cleanup(_) => {
-                        return Err(BackendError::new(
-                            Target::X86_64SysV,
-                            Some(function.callable()),
-                            "cleanup instruction lowering is staged for DD5",
-                        ));
+                    MirInstruction::Cleanup(cleanup) => {
+                        if destruction::requires_runtime_work(program, cleanup.target) {
+                            return Err(BackendError::new(
+                                Target::X86_64SysV,
+                                Some(function.callable()),
+                                "non-trivial cleanup instruction lowering is staged for DD5",
+                            ));
+                        }
                     }
                     MirInstruction::Assign(_) | MirInstruction::Store(_) => {}
                 }

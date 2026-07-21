@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0–DD3 are complete and DD4 is next.
+Status: in progress; DD0–DD4 are complete and DD5 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -228,17 +228,17 @@ sequence while remaining target-independent and place-only.
 **Purpose:** Insert each cleanup exactly once on every implemented normal
 control-flow path.
 
-- [ ] Track successfully initialized owning locals per lexical scope during
+- [x] Track successfully initialized owning locals per lexical scope during
       lowering.
-- [ ] Emit reverse-order cleanup on ordinary block and function fallthrough.
-- [ ] Emit cleanup for every exited scope on `return`.
-- [ ] Evaluate and preserve primitive return values before cleanup execution.
-- [ ] Handle nested and conditional scopes without cleaning unexecuted locals
+- [x] Emit reverse-order cleanup on ordinary block and function fallthrough.
+- [x] Emit cleanup for every exited scope on `return`.
+- [x] Evaluate and preserve primitive return values before cleanup execution.
+- [x] Handle nested and conditional scopes without cleaning unexecuted locals
       or duplicating cleanup at joins.
-- [ ] Leave primitive locals and non-owning alias parameters out of cleanup.
-- [ ] Centralize edge cleanup planning so later loops and exceptions can extend
+- [x] Leave primitive locals and non-owning alias parameters out of cleanup.
+- [x] Centralize edge cleanup planning so later loops and exceptions can extend
       the same state model.
-- [ ] Verify cleanup placement and initialized-place transitions.
+- [x] Verify cleanup placement and initialized-place transitions.
 
 **Tests:** Multiple locals, nested blocks, each conditional arm, early return,
 return expressions with effects, empty scopes, aliases, and exact MIR order.
@@ -298,22 +298,22 @@ and introduces none of the deferred ownership mechanisms.
 
 ## 5. Required quality gates
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test`
-- [ ] `make golden-test`
-- [ ] `make check`
-- [ ] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
-- [ ] Cleanup order is explicit above the backend boundary
-- [ ] No source-name lookup below resolution
-- [ ] No target layout or ABI location in HIR/MIR
-- [ ] No class object represented as a scalar MIR value
-- [ ] No copy, exception, inheritance, shared, allocation, or anchor semantics
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test`
+- [x] `make golden-test`
+- [x] `make check`
+- [x] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
+- [x] Cleanup order is explicit above the backend boundary
+- [x] No source-name lookup below resolution
+- [x] No target layout or ABI location in HIR/MIR
+- [x] No class object represented as a scalar MIR value
+- [x] No copy, exception, inheritance, shared, allocation, or anchor semantics
       introduced accidentally
-- [ ] Touched Rust modules retain concise facades and cohesive ownership
-- [ ] Living documentation and milestone checkboxes match behavior
+- [x] Touched Rust modules retain concise facades and cohesive ownership
+- [x] Living documentation and milestone checkboxes match behavior
 
 ## 6. Completion gate
 
@@ -323,9 +323,9 @@ The slice is complete when:
 - [x] destructor declarations have stable identities and typed mutable bodies;
 - [ ] complete objects run their body then nested fields in frozen reverse order;
 - [ ] owning locals are destroyed once in reverse initialization order;
-- [ ] nested scopes, conditionals, fallthrough, and return clean up correctly;
+- [x] nested scopes, conditionals, fallthrough, and return plan cleanup correctly;
 - [ ] return expressions are evaluated before cleanup and their values survive;
-- [ ] aliases remain non-owning and primitives require no cleanup;
+- [x] aliases remain non-owning and primitives require no cleanup;
 - [x] MIR explicitly represents and verifies cleanup over semantic places;
 - [ ] the backend lowers cleanup without inferring lexical lifetime rules;
 - [ ] malformed source and MIR fail structurally rather than panicking;

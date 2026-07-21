@@ -151,6 +151,19 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
         })
         .expect("counter fixture must read through its forwarding getter");
     get_call.receiver = Some(MirPlace::base(second));
+    let first_cleanup = main.body.blocks[0]
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::Cleanup(_)))
+        .expect("counter fixture must clean its owning local");
+    main.body.blocks[0].instructions.insert(
+        first_cleanup,
+        MirInstruction::Cleanup(MirCleanup {
+            destination: second.into(),
+            target: class,
+            span,
+        }),
+    );
 
     let sum = FunctionId::new(1);
     let existing_sum = program.definitions.get(sum).unwrap().clone();

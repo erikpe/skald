@@ -116,6 +116,11 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         result: Some(method_result),
         span,
     }));
+    block.instructions.push(MirInstruction::Cleanup(MirCleanup {
+        destination: object_storage.into(),
+        target: outer,
+        span,
+    }));
 
     (
         program,

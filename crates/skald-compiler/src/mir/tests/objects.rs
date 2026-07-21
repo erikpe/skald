@@ -44,6 +44,7 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
             "          initialize f0:s0 with c1:init0(value(f0:v0)) @0..30\n",
             "          f0:v1 = load f0:s0.field(c1:field0).field(c0:field0) : i64 @0..30\n",
             "          f0:v2 = call c1:method0 on f0:s0() @0..30\n",
+            "          cleanup f0:s0 as c1 @0..30\n",
             "          return f0:v0 @19..28\n",
         )
     );
@@ -242,6 +243,7 @@ fn source_object_mir_dump_is_exact_and_identity_based() {
             "          f0:v0 = const.i64 1 : i64 @146..147\n",
             "          initialize f0:s0 with c0:init0(value(f0:v0)) @142..148\n",
             "          f0:v1 = call c0:method0 on f0:s0() @157..168\n",
+            "          cleanup f0:s0 as c0 @150..169\n",
             "          return f0:v1 @150..169\n",
             "  MemberDefinitions\n",
             "    MemberDefinition c0:init0 @24..64\n",

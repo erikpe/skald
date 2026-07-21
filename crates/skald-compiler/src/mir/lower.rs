@@ -12,6 +12,10 @@ use crate::{
 
 use super::{build::MirBodyBuilder, model::*};
 
+mod cleanup;
+
+use cleanup::CleanupPlanner;
+
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
@@ -199,6 +203,7 @@ struct BodyLowerer<'hir> {
     storage: Vec<MirStorage>,
     values: Vec<MirValue>,
     body: MirBodyBuilder,
+    cleanup: CleanupPlanner,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -213,6 +218,7 @@ impl<'hir> BodyLowerer<'hir> {
             ),
             values: Vec::new(),
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
+            cleanup: CleanupPlanner::new(),
             receiver_storage: None,
             input,
         };
@@ -285,6 +291,7 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     fn lower_block(&mut self, block: &HirBlock) {
+        self.cleanup.enter_scope();
         for statement in &block.statements {
             if self.body.is_current_terminated() {
                 break;
@@ -311,6 +318,10 @@ impl<'hir> BodyLowerer<'hir> {
                                 arguments,
                                 span: construction.span,
                             }));
+                            self.cleanup.register_initialized_local(
+                                storage,
+                                construction.initializer.class(),
+                            );
                         }
                     }
                 }
@@ -319,6 +330,7 @@ impl<'hir> BodyLowerer<'hir> {
                         self.lower_expression(value)
                             .expect("typed return expression must produce a value")
                     });
+                    self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
                     self.terminate(MirTerminator::Return {
                         value,
                         span: statement.span,
@@ -357,6 +369,10 @@ impl<'hir> BodyLowerer<'hir> {
                 }
             }
         }
+        if !self.body.is_current_terminated() {
+            self.emit_cleanups(self.cleanup.for_current_scope(block.span));
+        }
+        self.cleanup.leave_scope();
     }
 
     fn lower_conditional(&mut self, conditional: &HirConditional) {
@@ -627,6 +643,12 @@ impl<'hir> BodyLowerer<'hir> {
         self.body
             .push_instruction(instruction)
             .expect("HIR lowering must not emit after a terminator");
+    }
+
+    fn emit_cleanups(&mut self, cleanups: Vec<MirCleanup>) {
+        for cleanup in cleanups {
+            self.emit(MirInstruction::Cleanup(cleanup));
+        }
     }
 
     fn terminate(&mut self, terminator: MirTerminator) {

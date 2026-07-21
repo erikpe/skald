@@ -302,6 +302,11 @@ pub(super) fn counter_member_program() -> MirProgram {
             result: None,
             span,
         }),
+        MirInstruction::Cleanup(MirCleanup {
+            destination: object.into(),
+            target: class,
+            span,
+        }),
     ]);
     program
 }

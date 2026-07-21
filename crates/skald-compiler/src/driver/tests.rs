@@ -43,7 +43,7 @@ fn temporary_artifacts(directory: &Path) -> Vec<PathBuf> {
 }
 
 #[test]
-fn destructor_bodies_cross_the_dd3_pipeline_before_cleanup_insertion() {
+fn unused_destructor_bodies_remain_lowerable_before_dd5() {
     let artifact = compile_source_to_assembly(
         "destructor.ska",
         concat!(
@@ -52,7 +52,7 @@ fn destructor_bodies_cross_the_dd3_pipeline_before_cleanup_insertion() {
         ),
         Target::X86_64SysV,
     )
-    .expect("DD3 must lower typed destructor bodies into verified MIR");
+    .expect("DD4 must not reject a destructor that no cleanup edge reaches");
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_destroy_0"));
