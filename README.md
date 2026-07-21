@@ -1,167 +1,136 @@
 # Skald
 
-Skald is an exploratory, statically typed, compiled programming language intended for learning, small personal projects, and compiler experimentation. Its design aims to remain understandable enough that one person can study and implement the compiler and runtime without giving up deterministic resource management or object-oriented programming.
+Skald is an exploratory, statically typed, compiled language for learning,
+small personal projects, and compiler experimentation. It aims to keep both the
+language and its implementation understandable without giving up deterministic
+resource management or an object-oriented programming model.
 
-The compiler is named **`skac`**, and the canonical suffix for Skald source files is **`.ska`**.
+The compiler is named **`skac`**. Skald source files use the **`.ska`** suffix.
 
-## Design overview
+## Language direction
 
-Skald is built around deterministic lifetimes rather than garbage collection:
+Skald is designed around deterministic lifetimes rather than garbage
+collection:
 
 - class types are inline values by default;
-- `shared T` is a non-null, reference-counted owning handle to a heap allocation;
-- `ref name: T` and `mut ref name: T` are call-scoped alias-binding modes rather than general reference types;
-- caller-owned borrow anchors keep aliased storage alive without general lifetime inference or Rust-style borrow checking;
+- `shared T` is planned as a non-null reference-counted owning handle;
+- `ref name: T` and `mut ref name: T` are planned call-scoped alias bindings,
+  with caller-owned anchors where shared storage must be kept alive;
 - assignment updates an existing value without ending its lifetime;
-- `init`, `assign`, and `destroy` are contextual lifecycle declarations, and destruction is deterministic even through polymorphic shared handles;
-- optionality is explicit with `T?`, and ordinary non-optional values are never null.
+- `init`, `assign`, and `destroy` are contextual lifecycle declarations;
+- optionality is explicit with `T?`; ordinary non-optional values are not null.
 
-The object model includes classes, single inheritance, interfaces, explicit virtual dispatch, and distinct receiver access modes. Ordinary instance `fn` methods have read-only receivers, while `mut fn` methods may mutate their receivers. Read-only access and `final` fields are shallow across shared ownership.
+The broader design includes classes, single inheritance, interfaces, explicit
+virtual dispatch, receiver mutability, and deterministic destruction. The
+current implementation intentionally supports a smaller subset described
+below. The language specification remains a draft and may change as future
+slices exercise the design.
 
-The initial design deliberately excludes garbage collection, raw pointers in safe code, general-purpose lifetime analysis, concurrency, captured closures, and user-defined generics. Checked exceptions are part of the intended language because exceptional control flow must preserve deterministic cleanup, although they may be implemented after the initial non-exception core.
+## Implemented language
 
-## Initial implementation
+The current Linux x86-64 compiler supports:
 
-The stage-0 `skac` compiler is written in Rust and organized as an explicit modern compiler pipeline. The initial host and target platform is Linux x86-64 using the System V ABI. `skac` emits textual assembly, which is assembled and linked with a minimal C runtime using the system toolchain.
+- one UTF-8 source file with ASCII identifiers and `//` comments;
+- `i64`, `u64`, `u8`, `f64`, `bool`, and payload-free `unit` results;
+- literals, unary numeric negation, and exact-type `+`, `-`, and `*`;
+- local variables, nested lexical blocks, functions, recursion, and direct
+  calls;
+- `if` / `elif` / `else` with exact boolean conditions;
+- restricted exact-symbol `extern fn` declarations over primitive values;
+- inline classes with primitive fields, one explicit initializer, direct local
+  construction, field reads/writes, and statically dispatched receiver methods;
+- read-only `fn` and mutable `mut fn` receiver access;
+- deterministic left-to-right operand and argument evaluation;
+- textual x86-64 System V assembly, native linking, exact diagnostics, and a
+  small C runtime with primitive output functions.
 
-The compiler is designed for multiple backends. AArch64 Linux is expected after the x86-64 path has established the target-independent IR and backend boundary.
+Inline objects are deliberately local-only today. Object parameters, results,
+ordinary object arguments, copying, destruction, object fields, inheritance,
+interfaces, `shared`, aliases, arrays, optionals, loops, and checked exceptions
+are not implemented yet.
 
-Niflheim remains a frequent source of design and testing experience, while Skald deliberately uses a cleaner phase architecture rather than reusing the organically grown Python implementation.
+See [the grammar notes](grammar/README.md) for the exact accepted source subset
+and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the broader language
+design.
 
-## Status
+## Compiler design
 
-Skald is currently an exploratory language design. Milestones M0 through M8
-complete the first vertical slice, and output-roadmap milestones O0 through O6
-add exact stdout expectations, local `unit` functions, payload-free unit
-returns, effect-only call statements, a directly tested runtime `i64` output
-ABI, and restricted exact-symbol external function declarations. The stage-0
-compiler emits deterministic x86-64 System V assembly, links it with the
-minimal runtime, and has exact source-to-stdout, process-status, and
-compile-failure golden coverage. The language specification remains a draft,
-and syntax, semantics, and implementation interfaces may change as further
-slices are implemented and tested.
-
-C0 specifies the next slice's `bool` type, restricted external ABI extension,
-bootstrap boolean output, and `if` / `elif` / `else` semantics. C1 implements
-and directly tests `ska_rt_println_bool(bool)` in runtime ABI version 3. C2
-implements straight-line `bool` values throughout the compiler, including
-ordinary source-to-runtime boolean output and the restricted external ABI.
-C3 adds verified target-independent multi-block MIR with explicit jumps and
-boolean branches. C4 lowers that control flow to deterministic x86-64 System V
-labels and branches. C5 implements Niflheim-style `if` / `elif` / `else`
-statements end-to-end, including lexical arm scopes, exact boolean conditions,
-definite-return analysis, and source-ordered native branch behavior. C6
-completes the slice with exact nested-conditional, return-analysis, diagnostic,
-and cross-process determinism coverage.
-
-The remaining-primitive roadmap is complete through T7. T0 fixes `u` and
-`u8` integer suffixes, decimal `f64` literals, exact non-promoting arithmetic,
-unsigned modular behavior, binary64 semantics, mixed integer/SSE ABI rules,
-and the runtime observability contract. T1 implements and directly tests
-runtime ABI version 4 output for `u64`, `u8`, and raw `f64` bits. T2 introduces
-the shared numeric-literal pipeline. T3 implements `u64` end-to-end, including
-the concise `u` literal suffix, modular arithmetic, internal and restricted
-external calls, x86-64 lowering, and exact native output. T4 adds `u8`
-end-to-end, with modulo-256 arithmetic and explicit canonicalization at value
-and ABI boundaries. T5 adds raw-bit `f64` MIR, verification, mixed
-integer/SSE System V call layout, and SSE2 lowering. T6 connects that path to
-source syntax and exact semantics, including finite binary64 literals,
-non-promoting arithmetic, calls, returns, conditionals, and raw-bit output. T7
-completes exact native and failure coverage, including every literal-overflow
-family, malformed numeric forms, mixed integer/SSE calls, and independent-run
-assembly and diagnostic determinism.
-
-The compiler implementation cleanup roadmap is complete through R12. Stable
-program identities now live outside resolution, structured return flow is
-computed once in typed HIR, compiler phases and their tests are split by
-responsibility, repeated test setup is test-only, and compiler artifacts are
-published atomically. The final audit found no migration compatibility layer;
-future slices can extend the existing phase interfaces directly.
-
-The next slice is a restricted inline-object core: nominal classes, primitive
-fields, direct construction into local storage, and direct receiver methods.
-OBJ0 has frozen its grammar, initialization, layout, receiver ABI, evaluation,
-and exclusion contracts. OBJ1 adds stable nominal class/member identities and
-one tagged callable identity shared by function, initializer, and method body
-ownership. OBJ2 adds canonical class/member MIR metadata, typed projected
-places, destination initialization, receiver-bearing direct calls, and the
-verifier rules that keep objects out of transient scalar values. OBJ3 adds the
-checked x86-64 data-layout authority, aligned inline frame allocations, and
-width-correct lowering of nested field places. OBJ4 adds executable MIR member
-bodies, identity-derived symbols, hidden receiver-address passing, receiver
-forwarding, and mixed integer/SSE/stack ABI lowering. OBJ5 adds source-shaped
-AST support for classes, fields, initializers, receiver methods, named local
-types, member access, direct-construction call syntax, and field assignment,
-with class-local recovery and exact spans. OBJ6 adds two-pass top-level and
-member collection, phase-owned resolved class tables, callable-owned member
-bodies, and stable identity selection for named types, construction, `self`,
-fields, and methods. OBJ7 adds nominal class/member HIR, direct-local
-construction, typed field places, definite field initialization, receiver
-access enforcement, reusable method return-flow analysis, and deterministic
-object HIR dumps. OBJ8 lowers that model into verified MIR: class/member
-metadata and executable bodies retain stable identities, objects occupy places
-rather than transient values, construction writes directly into local storage,
-and field/method operations preserve source evaluation order. OBJ9 enables and
-hardens the complete native source path with exact execution and failure
-goldens, mixed receiver-ABI coverage, and cross-process determinism checks. The
-restricted inline-object slice is complete. Copying, destruction,
-polymorphism, and shared ownership remain deferred to dedicated follow-up
-roadmaps.
-
-## Development
-
-Initial development requires Linux, a stable Rust toolchain with rustfmt and Clippy, GNU Make, a C11 compiler, and an archiver. The Rust workspace currently has no third-party crate dependencies.
-
-Common commands:
+The stage-0 compiler is written in Rust and follows an explicit pipeline:
 
 ```text
-make fmt            # format Rust source
-make check          # formatting, type checks, Clippy, Rust tests, and C runtime tests
-make build-check    # type-check every Rust workspace target
-make compiler-test  # Rust workspace tests only
-make golden-test    # native source-to-executable golden cases
+source → tokens → AST → resolved IR → typed HIR → verified MIR
+       → x86-64 backend → GNU assembly → system linker + C runtime
+```
+
+Semantic phases use stable identities rather than repeating source-name lookup.
+MIR is target-independent and verified before backend lowering. Target layout,
+ABI classification, frame planning, instruction selection, and assembly syntax
+remain inside the backend. The compiler is structured to admit additional
+backends and a later SSA-based optimization layer without changing the source
+or semantic phases.
+
+Skald currently targets Linux x86-64 System V. Linux AArch64 is the next
+expected backend after the language core grows further.
+
+## Building and using `skac`
+
+Development requires Linux, stable Rust with rustfmt and Clippy, GNU Make, a
+C11 compiler, and an archiver. The Rust workspace has no third-party crate
+dependencies.
+
+```text
+make check          # formatting, checks, Clippy, Rust/golden tests, runtime tests
+make golden-test    # source-to-native and compile-failure golden cases
 make runtime        # build build/runtime/libskald_runtime.a
-make runtime-test   # build and run direct C runtime tests
-cargo run -p skac -- --help
+make runtime-test   # direct C runtime tests
+
+cargo run -p skac -- samples/inline_counter.ska -o build/inline_counter
+cargo run -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
 ```
 
-Build artifacts are written below `target/` and `build/`.
+Executable output uses `cc` by default. `CC` selects another compatible compiler
+driver, and `SKALD_RUNTIME_ARCHIVE` selects another runtime archive. Output is
+published atomically; failed compilation or linking preserves an existing
+destination.
 
-Compile an executable or stop after deterministic textual assembly emission:
+## Future work
 
-```text
-make runtime
-cargo run -p skac -- samples/vertical/exit_42.ska -o build/exit_42
-cargo run -p skac -- samples/vertical/exit_42.ska --emit asm -o build/exit_42.s
-```
+The next language slices should deepen object semantics rather than broaden the
+syntax indiscriminately. Likely directions are:
 
-Executable output uses `cc` by default and links `build/runtime/libskald_runtime.a`. Set `CC` to select another compatible C compiler driver or `SKALD_RUNTIME_ARCHIVE` to use another runtime archive. Without `-o`, executable output uses the input path without `.ska`; assembly output uses `.s`.
+1. `ref` and `mut ref` object parameters;
+2. inline object fields and recursive layout validation;
+3. deterministic `destroy` and cleanup-aware control flow;
+4. copy construction/assignment and object value parameters/results;
+5. inheritance, interfaces, virtual dispatch, and casts;
+6. `shared` ownership and borrow anchors;
+7. loops/iterators, arrays, optionals, and checked exceptions;
+8. an AArch64 backend and, when useful, SSA conversion and optimization.
 
-`skac` publishes output atomically through a temporary file beside the
-destination. Failed compilation or linking therefore preserves an existing
-output. An explicit output path may not refer to the input source, including
-through a symbolic or hard link.
+These are directions, not promises of syntax or ordering. Each substantial
+feature should receive a focused design and implementation plan before work
+begins. Current extension constraints are collected in
+[Future Development Boundaries](docs/NEXT_SLICE_BOUNDARIES.md).
 
 ## History
 
-Skald began as a draft called **Niflheim2**, using the earlier Niflheim language and compiler as a starting point. Niflheim used garbage-collected reference objects. The experimental successor introduced inline object values, deterministic destruction, reference-counted shared ownership, and call-scoped borrowing.
+Skald began as a draft called **Niflheim2**, derived from the earlier Niflheim
+language. Moving from garbage-collected reference objects to inline values,
+deterministic destruction, shared ownership, and call-scoped aliases changed
+the design enough to make it a separate language and repository.
 
-Those changes eventually made the design a new language rather than a compatible Niflheim revision, so it was renamed Skald and moved into its own repository. The old implementation remains useful as historical context and as a record of compiler-design lessons, but it is not the implementation base or normative specification for Skald.
-
-In the current development checkout, the Niflheim repository is available as the sibling directory [`../niflheim`](../niflheim).
+Niflheim remains useful historical context and a source of compiler-design
+lessons, but it is neither Skald's implementation base nor its normative
+specification. In this checkout it is available at [`../niflheim`](../niflheim).
 
 ## Documentation
 
-- [Skald draft language specification](docs/SKALD_DRAFT_SPEC.md) — the canonical description of the language design.
-- [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md) — design principles, phase boundaries, backend layout, runtime boundary, and testing structure.
-- [First vertical slice roadmap](docs/FIRST_VERTICAL_SLICE_ROADMAP.md) — the minimal end-to-end implementation plan and completion criteria.
-- [`i64` output and golden-test observability roadmap](docs/I64_OUTPUT_ROADMAP.md) — PR-sized slices for `unit`, restricted external calls, runtime integer output, and exact stdout goldens.
-- [`bool` and conditional control-flow roadmap](docs/BOOL_CONDITIONALS_ROADMAP.md) — PR-sized tasks for boolean values and output, verified multi-block MIR, and Niflheim-style `if` / `elif` / `else`.
-- [Remaining primitive-types roadmap](docs/PRIMITIVE_TYPES_ROADMAP.md) — PR-sized tasks for `u64`, `u8`, and `f64`, including literals, arithmetic, runtime observability, and mixed integer/SSE ABI lowering.
-- [Compiler implementation cleanup roadmap](docs/IMPLEMENTATION_CLEANUP_ROADMAP.md) — ordered refactoring tasks for dependency direction, artifact safety, control-flow analysis, module size, and test maintainability.
-- [First inline objects roadmap](docs/INLINE_OBJECTS_ROADMAP.md) — PR-sized tasks for nominal classes, direct local construction, primitive fields, receiver methods, projected places, and x86-64 layout.
-- [Compiler debugging artifacts](docs/DEBUGGING.md) — deterministic phase dumps, assembly inspection, and verifier boundaries.
-- [Next-slice boundaries](docs/NEXT_SLICE_BOUNDARIES.md) — responsibilities and extension rules that future language work should preserve.
-- [Niflheim language specification](../niflheim/docs/LANGUAGE_MVP_SPEC_V0.1.md) — historical background for the language from which the first Skald draft was derived.
+- [Documentation index](docs/README.md)
+- [Draft language specification](docs/SKALD_DRAFT_SPEC.md)
+- [Implemented grammar and semantic subset](grammar/README.md)
+- [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
+- [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
+- [Compiler debugging artifacts](docs/DEBUGGING.md)
+- [Archived implementation roadmaps](docs/archive/README.md)
 
-Skald documentation takes precedence whenever its behavior differs from Niflheim.
+Skald documentation takes precedence wherever it differs from Niflheim.

@@ -1,113 +1,108 @@
-# Boundaries for the Next Language Slice
+# Future Development Boundaries
 
-Status: post-T7/R12; restricted inline-object OBJ0–OBJ9 complete.
+This document records the architectural constraints and unresolved design work
+that future Skald slices should preserve. It describes the current extension
+surface; completed implementation history lives in [`archive/`](archive/README.md).
 
-The first vertical slice is complete. The next slice may add language behavior, but it should extend the following boundaries instead of bypassing or merging them.
+## Stable compiler responsibilities
 
-## Stable responsibilities
+1. **Source and diagnostics** own files, UTF-8 byte spans, line maps,
+   structured diagnostics, and stable rendering.
+2. **Lexing** owns token formation and source spelling, not names or types.
+3. **Syntax** owns grammatical source shape and recovery. AST nodes remain
+   unresolved.
+4. **Resolution** is the only source-name selection phase. Later phases use
+   stable typed identities.
+5. **Typed HIR** owns language types, receiver access, selected operations, and
+   selected callable/member identities.
+6. **MIR** owns executable evaluation order, addressable places, transient
+   values, construction, calls, basic blocks, and terminators without target
+   registers or byte offsets.
+7. **The MIR pass pipeline** owns target-independent verification and future
+   transformations. Correctness must not depend on optimization.
+8. **Backends** own target legality, data layout, ABI classification, frames,
+   registers, symbols, instruction selection, and assembly formatting.
+9. **The driver** owns phase orchestration, file I/O, tool invocation, artifact
+   publication, and process exit codes.
+10. **The C runtime** exposes a small versioned ABI. Language facilities that
+    can live safely in generated code or the future standard library should not
+    migrate into it.
 
-1. **Source and diagnostics** own files, UTF-8 byte spans, line maps, structured diagnostics, and stable rendering. New phases reuse these types rather than inventing phase-local locations or printing errors directly.
-2. **Lexing** owns spelling and token formation only. It does not decide names, types, or constant semantics.
-3. **Syntax** owns grammatical source shape and recovery. AST nodes may grow, but they remain unresolved and preserve source spans.
-4. **Resolution** is the only source-name-to-declaration selection phase. Every executable reference below it uses a typed stable ID. Callable declarations own signatures and linkage independently of optional local definitions.
-5. **Typed HIR** owns language-level types and selected semantic operations. It preserves the callable declaration/definition split, and a successful HIR contains no unresolved calls, untyped expressions, or placeholder error nodes.
-6. **MIR** owns executable evaluation order, storage, temporaries, calls with optional results, basic blocks, and terminators without target registers or ABI rules. Calls consult canonical declarations rather than definition storage.
-7. **The MIR pass pipeline** is the visible home for target-independent verification and transformations. Correctness does not depend on an optimization pass.
-8. **Backends** own target legality, ABI lowering, frame and register decisions, target instructions, entry wrappers, symbols, and assembly formatting. Unsupported valid MIR is rejected explicitly until implemented.
-9. **The driver/toolchain layer** owns file I/O, phase orchestration, artifact publication, subprocesses, and process exit codes. Compiler phases never invoke host tools.
-10. **The C runtime** exposes only its versioned ABI. It is not a place for language semantics that can live in generated code or the future standard library.
+These are responsibility boundaries, not promises that individual Rust data
+structures are frozen.
 
-These are responsibility boundaries, not promises that every current Rust data structure is frozen. Types and APIs should evolve when new semantics require it, while preserving dependency direction.
+## Rules for extending the language
 
-## Extension checklist
+Every substantial feature should:
 
-For each new construct or type:
+1. state its source and runtime semantics before implementation;
+2. update the grammar or explicitly record that no syntax changes;
+3. assign stable identities during resolution rather than performing name
+   lookup below it;
+4. make types, access modes, and selected operations explicit in HIR;
+5. express evaluation and control flow explicitly in MIR;
+6. extend MIR verification before relying on a new representation;
+7. keep ABI, layout, and register decisions out of target-independent IR;
+8. make each backend either support the new MIR or reject it structurally;
+9. add focused phase tests, deterministic dumps, failure diagnostics, and
+   native goldens where behavior is observable;
+10. update living documentation and place the completed implementation plan in
+    `docs/archive/`.
 
-1. update the draft specification or explicitly record the provisional behavior;
-2. extend the lexical and grammar contract where syntax changes;
-3. add source AST and recovery behavior;
-4. assign or reuse stable resolved identities without adding name lookup below resolution;
-5. make types and selected operations explicit in HIR;
-6. lower evaluation and control flow explicitly into MIR;
-7. extend MIR verification before relying on the new representation;
-8. make each backend either lower the new MIR or reject it through target legality;
-9. add focused phase tests, deterministic dump coverage, compile-failure goldens, and successful execution goldens where observable;
-10. update architecture and roadmap status in the same change.
+## Object-model sequence
 
-## Likely next-slice pressure points
+The implemented object core deliberately stops at direct local inline objects
+with primitive fields. The safest progression is:
 
-The `bool` and Niflheim-style `if` / `elif` / `else` slice is complete through
-C6 in [`BOOL_CONDITIONALS_ROADMAP.md`](BOOL_CONDITIONALS_ROADMAP.md). It adds a
-semantic boolean type in HIR and MIR, multiple MIR blocks with explicit
-conditional and unconditional terminators, control-flow-aware MIR verification,
-branch selection in the backend, and exact native and failure coverage. The
-implementation preserves the phase boundary: branches are
-ordinary MIR control flow and the backend never rediscovers high-level syntax.
+1. **Alias parameters.** Add `ref` and `mut ref` parameters over existing
+   places. Keep aliases call-scoped and non-storable so local references remain
+   cheap and no general borrow checker is required.
+2. **Inline object fields.** Extend place projection and layout dependency
+   handling before introducing cleanup. Recursive by-value containment must be
+   rejected.
+3. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
+   cleanup, and cleanup-aware control-flow edges.
+4. **Object value semantics.** Add copy construction and assignment before
+   object parameters/results, return storage, temporaries, and permitted
+   elision.
+5. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
+   interfaces, casts, and dynamic type metadata.
+6. **Shared ownership.** Add allocation, reference counting, complete dynamic
+   destruction, and syntax-directed borrow anchors.
+7. **Checked exceptions.** Integrate partial construction and cleanup with
+   exceptional control flow rather than retrofitting it afterward.
 
-The selected next slice adds the remaining primitive types `u64`, `u8`, and
-`f64`, following [`PRIMITIVE_TYPES_ROADMAP.md`](PRIMITIVE_TYPES_ROADMAP.md).
-It deliberately separates full-width unsigned arithmetic, narrow-value
-canonicalization, and floating-point/SSE ABI work into distinct milestones.
-T0 through T7 are complete: the contracts are fixed, runtime ABI version 4 can
-observe all three types directly, numeric spellings share one classified
-pipeline, and `u64` works end-to-end with modular arithmetic and integer-class
-ABI lowering, and `u8` works end-to-end with modulo-256 arithmetic and
-centralized canonicalization. Raw-bit `f64` MIR, verification, mixed-class
-System V layout, and SSE2 lowering are available end-to-end. T6 connects the
-source-level `f64` grammar and exact type system to that path, converting
-finite decimal literals once into raw binary64 bits and supporting arithmetic,
-locals, calls, returns, external calls, and conditional-arm values. T7
-completes native boundary, mixed-ABI, failure-family, and repeated-process
-determinism coverage. The primitive slice is complete.
+Each step needs a dedicated roadmap. In particular, object parameters or
+results should not precede their copy, destruction, ABI, and return-storage
+contracts.
 
-The selected next language slice is the restricted inline-object core in
-[`INLINE_OBJECTS_ROADMAP.md`](INLINE_OBJECTS_ROADMAP.md). It adds nominal
-classes, primitive fields, direct construction into local storage, and direct
-receiver methods while excluding copies, destruction, general object
-temporaries, polymorphism, and shared ownership. Its backend-first sequence
-establishes identities, projected MIR places, layout, and the hidden receiver
-ABI before enabling source syntax end-to-end. OBJ0 completed the written
-language, layout, and ABI contract. OBJ1 establishes nominal object/member
-identities and callable-owned body-local identities. OBJ2 adds canonical MIR
-class/member metadata, typed field-projected places, explicit destination
-initialization, receiver-bearing calls, and structural/type verification;
-OBJ3 adds checked dependency-ordered x86-64 class layout, aligned object frame
-storage, and width-correct projected-place addressing. OBJ4 adds verified
-executable member bodies and the x86-64 hidden receiver ABI,
-including receiver forwarding, identity-derived symbols, and mixed-class stack
-arguments. OBJ5 adds the source-shaped class/member AST, named local types,
-coherent member/call postfix parsing, field assignments, precise syntax spans,
-and class-body recovery. OBJ6 adds deterministic program-wide class/member
-collection, phase-owned resolved class declarations and definitions, and
-identity-selected named types, construction, receivers, fields, and methods.
-OBJ7 adds phase-owned nominal class/member HIR, destination-oriented local
-construction, typed object and field places, straight-line definite field
-initialization, receiver-access checking, method flow analysis, exclusions,
-and deterministic dumps. OBJ8 connects that HIR to canonical class/member MIR,
-callable-owned receiver storage, projected places, destination initialization,
-and source-ordered calls. The produced MIR passes the structural verifier and
-the existing object backend. OBJ9 enables and hardens the public native path
-with successful and failing goldens, mixed receiver-ABI coverage, and
-cross-process determinism. The first inline-object slice is complete.
+## Other planned language work
 
-The first inline object stresses layout, construction state, receiver access,
-and the boundary of future cleanup and return conventions. It requires a
-written ABI/layout contract before code generation and must not be combined
-casually with shared ownership or exceptions.
+- loops and iterator protocols;
+- arrays and their storage/initialization rules;
+- optional values and scoped access to conditional payloads;
+- integer division, remainder, comparisons, bitwise operations, shifts, and
+  explicit casts;
+- richer floating-point operations and user-facing formatting;
+- strings and a Skald-written standard library;
+- access control, `final`, static members, and broader module organization.
 
-Broader integer operations primarily stress specified edge-case semantics and instruction selection. AArch64 stresses the target interface and should leave semantic phases unchanged.
+Arrays, optionals, loops, aliases, destruction, shared ownership, and checked
+exceptions all interact with lifetime or control-flow rules. They should not be
+added as isolated parser features.
 
-Arrays, optionals, loops/iterators, checked exceptions, shared ownership, and general local reference aliases remain deferred. Each crosses several of the boundaries above and should receive its own scoped roadmap rather than entering as an incidental parser feature.
+## Compiler evolution
 
-The completed output and boolean/conditional slices intentionally do not
-generalize foreign linkage or I/O. T0 extends their exact-symbol C-ABI contract
-only with by-value `u64`, `u8`, and `f64` as their implementation milestones
-land. Alternate link names, variadic calls, non-primitive ABI types, ownership-bearing arguments,
-cross-module declaration coalescing, recoverable output errors, and the final
-standard-library I/O interface remain deferred and require explicit contracts
-before implementation. `unit` remains a payload-free result type and is not
-yet permitted as a parameter, local, or first-class value.
+- Add Linux AArch64 behind the existing backend boundary.
+- Introduce SSA only when concrete optimization work justifies it; conversion
+  should be an explicit pass or a replaceable IR boundary.
+- Replace the stack-heavy x86-64 location strategy with register allocation
+  without changing MIR semantics.
+- Add multiple source files, modules, and incremental compilation only after
+  ownership of declarations and compilation sessions is specified.
+- Keep deterministic artifacts and structured verifier errors as these systems
+  become more sophisticated.
 
-## Deliberately replaceable implementation choices
-
-The stack-heavy x86-64 location strategy, textual GNU assembly syntax, one-library-crate organization, recursive-descent parser, non-SSA MIR, and source-tree runtime discovery are practical stage-0 choices. They may be replaced behind their current boundaries when measurements or new features justify the work. The next slice should not preemptively replace them without a concrete requirement.
+Alternate link names, variadic calls, object-bearing FFI, cross-module
+declaration coalescing, concurrency, captured closures, user-defined generics,
+and package management remain outside the current plan.

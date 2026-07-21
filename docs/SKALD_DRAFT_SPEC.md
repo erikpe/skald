@@ -127,8 +127,7 @@ Unqualified names resolve local-first. If multiple imports provide the same unqu
 
 ### 3.1 Restricted Bootstrap External Functions
 
-The implemented first post-vertical-slice output extension defines this
-deliberately narrow external declaration form:
+The compiler implements this deliberately narrow external declaration form:
 
 ```ska
 extern fn external_name(value: i64) -> unit;
@@ -136,12 +135,11 @@ extern fn external_value(value: i64) -> i64;
 ```
 
 It is a top-level declaration terminated by a semicolon and has no Skald body.
-Parameter names are mandatory. The implemented T6 profile permits by-value
+Parameter names are mandatory. The implemented profile permits by-value
 `i64`, `u64`, `u8`, `f64`, and `bool` parameters and an `i64`, `u64`, `u8`,
 `f64`, `bool`, or `unit` result.
 
-The C-series boolean extension adds by-value `bool` parameters and `bool`
-results to that same restricted profile:
+The same restricted profile supports by-value `bool` parameters and results:
 
 ```ska
 extern fn external_predicate(value: i64) -> bool;
@@ -153,9 +151,7 @@ function values, variadic arguments, alternate link names, or user-selected
 calling conventions. Supporting `bool` does not otherwise generalize the
 foreign-function interface.
 
-The T-series primitive extension adds by-value `u64`, `u8`, and `f64`
-parameters and results to this same restricted profile as each type becomes
-implemented. On Linux x86-64 System V they correspond to C `uint64_t`,
+On Linux x86-64 System V, `u64`, `u8`, and `f64` correspond to C `uint64_t`,
 `uint8_t`, and `double`. A supported target must represent C `double` as
 IEEE-754 binary64 before it can implement Skald `f64`.
 
@@ -887,17 +883,9 @@ The initial language has no separate `const T` type syntax. The compiler tracks 
 
 #### 5.4.2 Restricted Stage-0 Inline-Object Profile
 
-**Implementation status:** OBJ0 specifies this profile completely, OBJ5
-implements its source grammar and source-shaped AST, OBJ6 resolves nominal
-class types and member selections to stable identities, and OBJ7 produces
-typed class/member HIR while enforcing construction, initialization, excluded
-object-value contexts, and receiver access. OBJ8 lowers that model to verified
-class/member MIR with place-based construction and identity-selected field and
-method operations. OBJ9 enables the complete Linux x86-64 source-to-native path
-and covers successful execution, restricted-profile failures, ABI boundaries,
-and determinism. The restricted stage-0 profile is implemented end to end.
-This subsection narrows the broader class model above for the first
-implementation; it does not remove features from the eventual language.
+**Implementation status:** this restricted profile is implemented end to end
+for Linux x86-64. This subsection narrows the broader class model above for the
+current compiler; it does not remove features from the eventual language.
 
 The first implemented object profile contains nominal top-level classes,
 primitive fields, one explicit initializer, local inline storage, direct field
@@ -1443,9 +1431,9 @@ Expressions:
 
 ### 10.1 Conditional Statements
 
-**Implementation status:** implemented end-to-end by C5 and hardened by C6 in
-the stage-0 x86-64 compiler, including nested native behavior, exact
-diagnostics, return analysis, and repeated-process determinism coverage.
+**Implementation status:** implemented end to end, including nested native
+behavior, exact diagnostics, return analysis, and repeated-process determinism
+coverage.
 
 The initial conditional form follows Niflheim's chained-arm spelling:
 
@@ -1515,8 +1503,8 @@ Function return syntax follows the declared result type:
 - every reachable path through a non-`unit` function must return a value, so
   reaching its closing brace is a compile-time error.
 
-The first post-vertical-slice implementation supports expression statements
-only for calls whose result is `unit`:
+The implemented language supports expression statements only for calls whose
+result is `unit`:
 
 ```ska
 do_work();       // valid when do_work returns unit
@@ -1626,7 +1614,7 @@ T-series remaining-primitive profile implements no primitive casts at all and
 performs no contextual literal conversion or numeric promotion. Initializers,
 arguments, returns, and operator operands must already have the exact required
 type. Conditions likewise still require an expression already typed as
-`bool`. Cast syntax, lowering, and failure behavior require a later roadmap.
+`bool`. Cast syntax, lowering, and failure behavior require a separate design.
 
 Object casts:
 
@@ -1763,9 +1751,8 @@ Thread-safe reference counting is out of scope unless concurrency is added later
 
 ### 13.1 Bootstrap `i64` Output
 
-**Implementation status:** implemented by the stage-0 x86-64 compiler,
-introduced in runtime ABI version 2, and retained in ABI version 4, with exact
-source-to-stdout golden coverage.
+**Implementation status:** implemented by the stage-0 x86-64 compiler under
+runtime ABI version 4, with exact source-to-stdout golden coverage.
 
 Until strings and the standard I/O library exist, the runtime exposes one
 low-level output operation:
@@ -1800,11 +1787,10 @@ runtime facilities with ordinary functions and richer error handling.
 
 ### 13.2 Bootstrap `bool` Output
 
-**Implementation status:** implemented end-to-end by C2. The runtime symbol was
-introduced by C1 in ABI version 3; the compiler accepts the declaration below
-as an ordinary restricted external function.
+**Implementation status:** implemented end to end. The compiler accepts the
+declaration below as an ordinary restricted external function.
 
-Runtime ABI version 3 exposes:
+The runtime ABI exposes:
 
 ```c
 #include <stdbool.h>
@@ -1830,8 +1816,7 @@ The function completes and checks the entire record before returning. A
 detected write or flush failure is an unrecoverable runtime error and
 terminates the process unsuccessfully under the same policy as
 `ska_rt_println_i64`. The exact diagnostic, status, or terminating signal is
-not guaranteed. Adding this public symbol changed
-`SKALD_RUNTIME_ABI_VERSION` from 2 to 3.
+not guaranteed. The symbol is part of the current runtime ABI version 4.
 
 This operation exists only for bootstrap observability. It does not introduce
 formatting, recoverable I/O, or a final standard-library printing API, and no
@@ -1839,10 +1824,8 @@ compiler phase recognizes its name specially.
 
 ### 13.3 Bootstrap Remaining-Primitive Output
 
-**Implementation status:** implemented directly in the C runtime by T1. T1
-changed the runtime ABI version from 3 to 4 once, adding all three symbols
-below. Compiler source support is complete for `u64` in T3, `u8` in T4, and
-`f64` in T6.
+**Implementation status:** implemented end to end. All three symbols below are
+part of runtime ABI version 4.
 
 ```c
 #include <stdint.h>
@@ -1882,8 +1865,7 @@ special recognition from the compiler.
 
 ### 13.4 Stage-0 Inline-Object Layout and Receiver ABI
 
-**Implementation status:** specified by OBJ0 for the initial Linux x86-64
-System V backend; implementation follows in OBJ1–OBJ9.
+**Implementation status:** implemented by the Linux x86-64 System V backend.
 
 This subsection is a stage-0 compiler ABI contract, not a promise of stable
 cross-module object ABI. Inline layout remains an implementation choice in the
@@ -1973,7 +1955,7 @@ Niflheim code should not be expected to compile as Skald code without substantia
 
 ## 15. Specification Status and Open Design Questions
 
-### 15.1 Features Deferred Beyond the First Vertical Slice
+### 15.1 Deferred Language Areas
 
 The following intended features are deliberately not specified well enough to implement yet:
 
@@ -1981,27 +1963,56 @@ The following intended features are deliberately not specified well enough to im
 - arrays, including construction, element lifetime, copying, mutation, indexing, and slicing;
 - loops and iteration, including `while`, `for ... in`, `break`, `continue`, and the iterator contract;
 - checked exceptions, including throwing, catching, exception-set checking, cleanup, and lowering;
-- locally declared alias bindings and scoped narrowing aliases; parameter aliases are the only supported alias-binding form in the first implementation.
+- locally declared alias bindings and scoped narrowing aliases; parameter
+  aliases are planned as the first supported alias-binding form.
 
-Their existing sections preserve design direction and reserve likely syntax, but are non-normative where they do not give a complete rule. A compiler may omit these features from the first vertical slice without being considered inconsistent with this draft.
+Their existing sections preserve design direction and reserve likely syntax,
+but are non-normative where they do not give a complete rule. These features
+are outside the currently implemented language subset.
 
 ### 15.2 Other Major Underspecified Areas
 
-The following are also substantial gaps. They need not all be part of the first vertical slice, but each must be settled before the corresponding language area is considered complete:
+The following are also substantial gaps. Each must be settled before the
+corresponding language area is considered complete:
 
-- **Lexical and grammatical definition:** the implemented scalar slices and the restricted OBJ inline-object profile have explicit lexical and grammatical contracts in [`grammar/README.md`](../grammar/README.md), but the complete language still needs token and comment rules, additional literal families, later operator precedence and associativity, and rules for resolving syntactic ambiguities.
-- **Name, type, and call resolution:** the implemented first vertical slice defines single-file function and lexical-local resolution in [`grammar/README.md`](../grammar/README.md), without overloading or implicit conversions. The complete language still needs cross-module forward references, declaration cycles, overload availability or prohibition, candidate selection, implicit-conversion ranking, and generic diagnostics for ambiguous or invalid calls.
-- **Primitive edge-case semantics:** the first vertical slice defines decimal `i64` literal range checking, including the unary-minus spelling of `i64::MIN`, and the completed T0–T7 slice defines `u64`/`u8` modular `+`, `-`, and `*` plus binary64 `f64` behavior for the same operator surface. Signed `i64` overflow, division or remainder by zero, the signed minimum divided by negative one, shifts, implementation of the proposed explicit casts, comparisons (including unordered NaN behavior), NaN payload propagation through arithmetic, decimal floating formatting, and whether future constant evaluation diagnoses or reproduces runtime failures remain open. A non-x86-64 backend must separately define and test its C ABI mapping, binary64 conformance, floating environment assumptions, and mixed-class argument placement before claiming this primitive profile.
-- **Evaluation and cleanup ordering:** the first vertical slice defines left-to-right operand and argument evaluation, and the restricted OBJ profile additionally defines receiver, field access/assignment, and direct-construction order in [`grammar/README.md`](../grammar/README.md). The complete language still needs full-expression boundaries, temporary destruction order, and cleanup sequencing for every control-flow exit. These are prerequisites before destructors, shared-handle temporaries, or borrow anchors can be implemented reliably.
-- **Initialization rules:** the restricted OBJ profile defines straight-line definite initialization for primitive fields during direct local construction. Default initialization in other storage contexts, object/base field ordering, branching or throwing initializers, and exact rules for implicit constructors, copy constructors, assignment members, and destructors remain open.
+- **Lexical and grammatical definition:** the implemented primitive and
+  restricted inline-object profile has an explicit lexical and grammatical
+  contract in [`grammar/README.md`](../grammar/README.md), but the complete
+  language still needs token and comment rules, additional literal families,
+  later operator precedence and associativity, and rules for resolving
+  syntactic ambiguities.
+- **Name, type, and call resolution:** the implemented subset defines
+  single-file function/class and lexical-local resolution in
+  [`grammar/README.md`](../grammar/README.md), without overloading or implicit
+  conversions. The complete language still needs cross-module references,
+  declaration cycles, overload availability or prohibition, candidate
+  selection, conversion ranking, and ambiguity diagnostics.
+- **Primitive edge-case semantics:** the implemented subset defines literal
+  ranges, `u64`/`u8` modular `+`, `-`, and `*`, and binary64 `f64` behavior for
+  the same operator surface. Signed `i64` overflow, division or remainder by
+  zero, shifts, explicit casts, comparisons, NaN behavior, decimal floating
+  formatting, and future constant evaluation remain open. Every additional
+  backend must separately validate its C ABI mapping, binary64 behavior,
+  floating environment, and mixed-class argument placement.
+- **Evaluation and cleanup ordering:** the implemented subset defines
+  left-to-right operands/arguments plus receiver, field, and direct-
+  construction order in [`grammar/README.md`](../grammar/README.md). The
+  complete language still needs full-expression boundaries, temporary
+  destruction, and cleanup sequencing for every control-flow exit.
+- **Initialization rules:** the implemented inline-object profile defines
+  straight-line definite initialization for primitive fields during direct
+  local construction. Default initialization in other storage contexts,
+  object/base field ordering, branching or throwing initializers, and exact
+  rules for implicit constructors, copy constructors, assignment members, and
+  destructors remain open.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The most urgent remaining gap for the ownership model is complete evaluation
-and cleanup ordering. OBJ0 settles the subset exercised by direct local objects
-without cleanup. The broader contract must be settled before adding
+and cleanup ordering. Direct local objects settle only the subset without
+cleanup. The broader contract must be settled before adding
 deterministic destruction, shared ownership, anchored borrowing, or checked
 exception exits.
 
@@ -2038,12 +2049,14 @@ Resolved decisions in this draft:
 - `unit` functions use `return;` or implicit fallthrough, while non-`unit` functions must return a value on every reachable path;
 - the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
-- runtime ABI version 3 implements `ska_rt_println_bool`, which writes lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable detected-output-failure policy, and remains an ordinary external function;
-- T3 implements `u64`, T4 implements `u8`, T5 implements target-independent
-  raw-bit `f64` MIR and x86-64 SSE2 lowering, and T6 implements source-level
-  `f64` end-to-end; `double` is not a Skald type keyword;
+- the current runtime ABI implements `ska_rt_println_bool`, which writes
+  lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable
+  detected-output-failure policy, and remains an ordinary external function;
+- `u64`, `u8`, and raw-bit binary64 `f64` are implemented end to end;
+  `double` is not a Skald type keyword;
 - decimal `u64` literals use suffix `u`, decimal `u8` literals use suffix `u8`, decimal-point or exponent literals are `f64`, and expected type never reinterprets a numeric literal;
-- the T-series profile has no implicit numeric conversions, promotions, or primitive casts, and keeps `main` exactly `fn main() -> i64`;
+- the implemented numeric profile has no implicit conversions, promotions, or
+  primitive casts, and keeps `main` exactly `fn main() -> i64`;
 - `u64` and `u8` `+`, `-`, and `*` wrap modulo their widths, while `f64` arithmetic follows binary64 under the default round-to-nearest, ties-to-even environment;
 - System V integer and SSE argument registers are allocated independently for mixed scalar signatures, and every Skald-visible `u8` is canonical in `0..=255`;
 - runtime ABI version 4 implements `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;

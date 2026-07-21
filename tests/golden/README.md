@@ -17,7 +17,7 @@ The failure corpus covers every diagnostic family reachable from implemented
 source: invalid unit/value returns, value-context and discarded calls,
 external-entry and restricted-signature rules, duplicate declarations,
 malformed syntax, condition types and scopes, and definite-return behavior.
-The `println_i64` and `println_bool` run cases cover ordered runtime output,
+The primitive output run cases cover ordered runtime output,
 representative values, primitive extrema, locals, parameters, function
 results, and process status independently of exact stdout.
 

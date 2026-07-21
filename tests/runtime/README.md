@@ -29,12 +29,12 @@ The successful-output harness compares the exact bytes produced by
 `INT64_MIN`, `INT64_MAX`, and consecutive calls. The expected representation
 uses ASCII decimal digits followed by exactly one LF per call.
 
-Runtime ABI version 3 introduced `ska_rt_println_bool(bool)`. The output harness
+The current runtime ABI includes `ska_rt_println_bool(bool)`. The output harness
 checks exact lowercase `false` and `true` records and consecutive mixed calls.
 The public header supplies the standard C `bool` type; runtime implementation
 details such as `FILE *` remain private.
 
-Runtime ABI version 4 adds `ska_rt_println_u64(uint64_t)`,
+Runtime ABI version 4 also includes `ska_rt_println_u64(uint64_t)`,
 `ska_rt_println_u8(uint8_t)`, and `ska_rt_println_f64_bits(double)`. The output
 harness checks unsigned zero, one, representative values and maxima; positive
 and negative binary64 zero; an exact fraction; minimum subnormal and maximum

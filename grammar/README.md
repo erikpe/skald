@@ -1,690 +1,284 @@
-# Grammar
+# Implemented Skald Grammar
 
-This directory is reserved for the canonical Skald grammar and parser-facing grammar notes. The complete language grammar is still an identified specification gap. The first-slice, output, `bool`/conditional, and `u64` contracts below describe implemented behavior.
+This document describes the source language accepted by the current compiler.
+It is intentionally narrower than the broader design in
+[`SKALD_DRAFT_SPEC.md`](../docs/SKALD_DRAFT_SPEC.md).
 
-## First vertical slice lexical contract
+## Lexical structure
 
-M1 implements only the token surface needed by the first vertical slice. This is an implementation contract for that slice, not the final complete-language grammar.
-
-Keywords:
-
-```text
-fn var return i64
-```
-
-Identifiers use ASCII spelling:
+Skald source is UTF-8. Identifiers are currently ASCII:
 
 ```text
 identifier-start    = A..Z | a..z | _
 identifier-continue = identifier-start | 0..9
+identifier          = identifier-start identifier-continue*
 ```
 
-Decimal integer literals contain one or more ASCII digits. A decimal digit
-sequence immediately followed by unsupported ASCII letters or `_` is consumed
-as one malformed literal so that forms such as `12abc`, `1_000`, and `0xff`
-produce one focused diagnostic. T6 extends the numeric scanner with the
-decimal-point and exponent forms specified below. The lexer validates spelling
-but deliberately leaves numeric range checking and binary64 conversion to type
-checking.
-
-Punctuation and operators:
+Reserved keywords are:
 
 ```text
-( ) { } , : ; -> + - * =
+fn var return extern unit
+i64 u64 u8 f64 bool true false
+if elif else
+class self mut
 ```
 
-Ignored trivia consists of ASCII space, tab, carriage return, newline, and `//` line comments. A line comment ends immediately before newline or at end of file. Block comments are not part of the first slice.
+`init` is contextual: it introduces the special initializer form only in a
+class body. Elsewhere it is an ordinary identifier.
 
-Skald source is UTF-8, but non-ASCII characters are not accepted in M1 identifiers. An unsupported Unicode scalar is consumed as one invalid token with a byte-accurate span and character-based diagnostic column.
+Ignored trivia consists of ASCII space, tab, carriage return, newline, and
+`//` line comments. Block comments are not supported.
 
-## First vertical slice grammar
-
-M2 implements this source grammar:
+Punctuation and operators are:
 
 ```text
-compilation-unit = function-declaration* EOF
-
-function-declaration = "fn" identifier parameter-list "->" "i64" block
-parameter-list       = "(" [ parameter ("," parameter)* ] ")"
-parameter            = identifier ":" "i64"
-
-block                = "{" statement* "}"
-statement            = local-declaration | return-statement | block
-local-declaration    = "var" identifier ":" "i64" "=" expression ";"
-return-statement     = "return" expression ";"
-
-expression           = additive
-additive             = multiplicative (("+" | "-") multiplicative)*
-multiplicative       = unary ("*" unary)*
-unary                = "-" unary | postfix
-postfix              = primary ("(" [ arguments ] ")")*
-arguments            = expression ("," expression)*
-primary              = identifier | decimal-integer | "(" expression ")"
+( ) { } , : ; . -> + - * =
 ```
 
-Trailing commas are not accepted in M2. Calls are parsed as postfix expressions without name lookup or call-target validation; M3 owns those semantic decisions. Parenthesized expressions remain explicit grouped AST nodes so the source AST preserves their full spans.
+## Literals
 
-Operator precedence, from highest to lowest, is:
+```text
+i64-literal = decimal-digits
+u64-literal = decimal-digits "u"
+u8-literal  = decimal-digits "u8"
 
-1. postfix call;
-2. unary `-`;
-3. binary `*`;
-4. binary `+` and `-`.
+f64-literal = decimal-digits "." decimal-digits [exponent]
+            | decimal-digits exponent
+exponent    = ("e" | "E") ["+" | "-"] decimal-digits
 
-Unary `-` associates right-to-left. The binary operators and repeated postfix calls associate left-to-right. Parentheses override precedence.
+bool-literal = "true" | "false"
+```
 
-Parser recovery may synthesize missing punctuation to retain a useful source AST. Structurally incomplete declarations and statements are omitted from that AST, diagnostics are accumulated, and later semantic phases must not run when parsing reports errors.
+Leading `-` is the unary negation operator, not part of a literal token.
+Underscores, hexadecimal/octal/binary integers, integer suffixes other than
+`u` and `u8`, leading-dot floats, trailing-dot floats, `f64` suffixes, `NaN`,
+and infinity spellings are not accepted.
 
-### Parser implementation ownership
+Literal types come from spelling; expected context does not reinterpret them.
+The accepted integer ranges are:
 
-The implemented recovering recursive-descent parser retains one cursor and
-diagnostic state. Grammar code is organized into declaration, statement,
-expression, and recovery modules so synchronization and precedence decisions
-remain local and reviewable. Shared token movement, lexeme access, span
-covering, and diagnostic construction live on the common parser state.
+- `i64`: `0` through `9223372036854775807`, plus the unary-negated magnitude
+  `9223372036854775808` for `i64::MIN`;
+- `u64`: `0u` through `18446744073709551615u`;
+- `u8`: `0u8` through `255u8`.
 
-All primitive type keywords pass through one token-to-`TypeKind` conversion.
-Callers provide an explicit type context: function results accept `value-type`
-or `unit`, while parameter and local storage require `value-type`. This is an
-implementation organization rule for the grammar shown in this document; it
-does not add implicit conversions or change the accepted source language.
+Finite decimal `f64` literals are rounded to IEEE-754 binary64 using nearest,
+ties-to-even. A spelling that rounds to infinity is rejected. Typed IR stores
+the resulting raw bits rather than retaining host-formatted floating values.
 
-The compiler accepts at most 128 simultaneously active recursive syntax
-constructs. A function body consumes one level; grouped and unary expressions,
-postfix calls while parsing their arguments, and nested blocks each consume one
-additional level. This deliberately generous implementation limit bounds both
-parser recursion and recursive trees passed to later phases. Exceeding it emits
-the single `PAR005` diagnostic, discards the affected top-level declaration,
-and resumes at the next `fn` or `extern fn` declaration. The budget is a shared
-counter on parser state, so ordinary parsing performs no allocation for depth
-tracking.
+Malformed numeric text is consumed as one invalid token when possible, giving
+one focused diagnostic rather than a cascade.
 
-## `i64` output extension contract
-
-O0 fixed the following grammar and semantic contract for the post-M8 `i64`
-output extension. O3 implemented `unit`, unit returns, and restricted call
-statements; O5 implemented the remaining `extern` declaration syntax. The
-accepted extension grammar is:
+## Compilation unit and declarations
 
 ```text
 compilation-unit = top-level-declaration* EOF
 
-top-level-declaration          = function-declaration
-                               | external-function-declaration
-function-declaration           = "fn" identifier parameter-list "->" type block
-external-function-declaration  = "extern" "fn" identifier parameter-list "->" type ";"
-parameter-list                 = "(" [ parameter ("," parameter)* ] ")"
-parameter                      = identifier ":" "i64"
-type                           = "i64" | "unit"
-
-block                 = "{" statement* "}"
-statement             = local-declaration
-                      | return-statement
-                      | call-statement
-                      | block
-local-declaration     = "var" identifier ":" "i64" "=" expression ";"
-return-statement      = "return" [ expression ] ";"
-call-statement        = expression ";"
-```
-
-The expression grammar and precedence remain unchanged. Although
-`call-statement` is parsed through the general expression grammar, semantic
-analysis accepts it only when, after ignoring grouping parentheses, its
-outermost operation is a function call and its result type is `unit`. An
-arithmetic expression, binding, literal, or value-returning call cannot be
-discarded as a statement in this extension. This is intentionally narrower
-than the complete draft language's eventual expression-statement rules.
-
-Return behavior is determined by the declared function result type:
-
-- an `i64` function uses `return expression;`, the expression must have type
-  `i64`, and every reachable path must return a value;
-- a `unit` function uses `return;` and must not provide an expression;
-- reaching the closing brace of a `unit` function is an implicit `return;`;
-- reaching the closing brace of an `i64` function is a compile-time error.
-
-The entry point remains a source-defined `fn main() -> i64`. An external
-declaration never supplies the entry point, and declaring an external function
-named `main` is a compile-time error.
-
-### Restricted external-function profile
-
-The implemented O-series profile supports only top-level external declarations
-whose parameters are by-value `i64` values and whose result is `i64` or
-`unit`. Parameter names are mandatory. Alias parameters, `shared`, objects,
-arrays, optionals, function values, variadic arguments, alternate link names,
-and user-selected calling conventions are outside this profile.
-
-Defined and external functions occupy one non-overloaded top-level function
-namespace. Repeating a name is a compile-time error in every combination,
-including two identical external declarations and an external declaration plus
-a definition. As in the first slice, the first declaration remains selected
-only for diagnostic recovery. Locals may shadow functions under the existing
-lexical rules.
-
-The source identifier of an external declaration is its exact linker symbol;
-there is no mangling, module prefix, or `link_name` override in this profile.
-Calls use stable resolved callable identities below name resolution rather than
-reselecting the declaration by this string. Compiler-generated symbols for
-Skald-defined functions must use a target-private spelling that cannot equal
-any valid external source identifier. The compiler must not reserve an
-otherwise valid identifier prefix merely to avoid its own symbol collisions.
-
-External calls use the selected target's C ABI. On the initial Linux x86-64
-System V target, Skald `i64` corresponds to C `int64_t`, and a Skald `unit`
-result corresponds to C `void`. `unit` has no ABI payload or meaningful result
-register. Calls evaluate arguments from left to right before entering the
-external function, consistently with ordinary Skald calls.
-
-An external declaration is a trusted statement about the linked symbol. The
-compiler checks Skald call sites against the declared signature but cannot
-verify the definition supplied to the linker. A missing symbol is a link error;
-a supplied definition with an incompatible C ABI type is outside Skald's
-language guarantees. General foreign linkage, cross-module declaration
-coalescing, and ownership-bearing foreign calls remain unspecified.
-
-Resolution assigns external and defined functions dense callable IDs in their
-shared source order. Resolved IR, HIR, and MIR retain every external signature
-and its exact-symbol linkage but allocate no definition/body entry for it.
-Calls below resolution use only the stable ID. The x86-64 backend selects the
-external symbol from declaration metadata and sends arguments through the same
-System V call-lowering path used for Skald definitions. An unavailable symbol
-therefore remains valid through compilation and fails only when the driver
-invokes the linker.
-
-## `bool` and conditional extension contract
-
-C0 fixed the source and semantic contract for the C-series slice. C2 implements
-the straight-line boolean grammar below through the x86-64 target. C3 and C4
-provide verified multi-block MIR and backend branch support, and C5 implements
-the conditional grammar below end-to-end.
-
-The implemented straight-line subset adds these keywords:
-
-```text
-bool true false
-```
-
-The implemented conditional subset adds `if`, `elif`, and `else`. All use
-only punctuation already present in the lexer. `true` and `false` are boolean
-literals, not identifiers.
-
-### Straight-line boolean grammar
-
-C2 extends the implemented O-series grammar as follows:
-
-```text
-function-declaration          = "fn" identifier parameter-list "->" result-type block
-external-function-declaration = "extern" "fn" identifier parameter-list "->" result-type ";"
-parameter-list                = "(" [ parameter ("," parameter)* ] ")"
-parameter                     = identifier ":" value-type
-result-type                   = value-type | "unit"
-value-type                    = "i64" | "bool"
-
-local-declaration = "var" identifier ":" value-type "=" expression ";"
-primary           = identifier
-                  | decimal-integer
-                  | "true"
-                  | "false"
-                  | "(" expression ")"
-```
-
-All other expression productions and precedence levels remain unchanged.
-`bool` may appear in parameters, function results, initialized locals, and the
-existing call expression path. `unit` remains payload-free and is not a
-parameter or local type. The entry point remains exactly
-`fn main() -> i64`.
-
-`bool` is distinct from `i64`; neither implicitly converts to the other.
-Local initializers, arguments, and return expressions must exactly match their
-declared types. The literals `false` and `true` are the only literal boolean
-values. This slice adds no casts, equality, ordering, logical negation,
-`&&`, or `||`.
-
-The restricted exact-symbol external profile accepts
-by-value `bool` parameters and `bool` results alongside its existing `i64` and
-`unit` forms. On Linux x86-64 System V, Skald `bool` maps to C `bool`
-(`_Bool`). Outgoing values are canonical false or true. An external boolean
-result is normalized from the ABI result byte before it becomes a Skald value.
-Alias parameters, ownership-bearing values, alternate symbol names, variadic
-calls, and user-selected calling conventions remain unsupported.
-
-### Conditional grammar and semantics
-
-C5 adds the implemented statement production:
-
-```text
-statement    = local-declaration
-             | return-statement
-             | call-statement
-             | if-statement
-             | block
-if-statement = "if" "(" expression ")" block
-               ("elif" "(" expression ")" block)*
-               ["else" block]
-```
-
-Conditions and blocks are mandatory. There may be any number of `elif` arms
-and at most one final `else`. `elif` is the only chained-arm spelling;
-`else if` is invalid because `else` must be followed immediately by a block.
-The construct is a statement and produces no value.
-
-Every condition must have type exactly `bool`. Conditions are evaluated from
-left to right until the first `true` result. Only that arm executes, and later
-conditions and blocks are skipped. When every condition is `false`, the
-`else` block executes if present; otherwise execution continues after the
-statement. Integers and other values are not conditions without a separately
-specified explicit conversion.
-
-Every condition resolves in the scope containing the whole `if` statement.
-Every arm block creates an independent child scope. A binding declared in an
-arm is unavailable in other arms, later `elif` conditions, and after the
-statement. Existing nested-block shadowing rules apply within an arm.
-
-An `if` statement definitely returns only when it has an `else` block and
-every `if`, `elif`, and `else` block definitely returns. The rule composes
-through nested blocks and conditionals. Consequently, a non-`unit` function
-may rely on an exhaustive, all-returning conditional to satisfy its mandatory
-return, while a conditional without `else` can never do so by itself. Unit
-functions retain implicit fallthrough return.
-
-The initial conditional profile does not include `if` expressions, implicit
-truthiness, boolean operators or casts, pattern matching, optional presence
-tests, flow-sensitive narrowing, loops, or branch optimization. Constant
-conditions retain ordinary source semantics; optimization is not required for
-correctness.
-
-C6 completes this grammar slice's external coverage with nested exhaustive
-conditionals, non-exhaustive return rejection, exact parser and semantic
-diagnostics, and repeated-process determinism checks. It does not expand the
-grammar or introduce any of the excluded forms above.
-
-## Remaining primitive extension contract
-
-T0 fixes the syntax and semantic contract for the `u64`, `u8`, and `f64`
-extension. T3 and T4 enable the integer forms end-to-end, and T6 enables the
-`f64` form through the complete supported pipeline.
-
-T2 implements the shared numeric scanner and carries an explicit literal kind,
-original spelling, and complete span through the source and resolved IR. T3
-enables `u64` and the concise `u` suffix end-to-end, T4 enables `u8` and the
-`u8` suffix, and T6 enables the contracted `f64` spellings. Literal kind is
-carried explicitly, so no later phase guesses a type by inspecting suffix
-text.
-
-T5 adds raw-bit `f64` MIR and x86-64 SSE2 support beneath this grammar
-boundary. T6 adds the `f64` source keyword and floating literals together with
-their resolved and typed representations.
-
-The extension adds these case-sensitive type keywords:
-
-```text
-u64 u8 f64
-```
-
-`double` is not a type keyword and remains an ordinary identifier. The numeric
-literal grammar is:
-
-```text
-ascii-digit     = "0" | "1" | "2" | "3" | "4"
-                | "5" | "6" | "7" | "8" | "9"
-decimal-digits  = ascii-digit+
-exponent        = ("e" | "E") ["+" | "-"] decimal-digits
-
-i64-literal     = decimal-digits
-u64-literal     = decimal-digits "u"
-u8-literal      = decimal-digits "u8"
-f64-literal     = decimal-digits "." decimal-digits [exponent]
-                | decimal-digits exponent
-numeric-literal = i64-literal | u64-literal | u8-literal | f64-literal
-```
-
-The alternatives are classified by their complete spelling: the suffix is
-part of one numeric token, not an identifier token following an integer.
-Numeric-looking malformed text is consumed together where possible. This
-includes unknown or uppercase suffixes, `u64`, incomplete exponents, repeated
-decimal points, digit separators, and identifier tails. A decimal point must
-have digits on both sides, so `.5` and `1.` are rejected in this profile.
-
-An unsuffixed integer always has type `i64`; expected type does not reinterpret
-it. The suffix `u` selects `u64`, and `u8` selects `u8`. Decimal-point and
-exponent forms select `f64`; there is no `f64` suffix. Leading `-` remains the
-existing unary operator and is never part of a literal token.
-
-Integer bounds are checked during type checking:
-
-- `u64`: `0u` through `18446744073709551615u`;
-- `u8`: `0u8` through `255u8`;
-- `i64`: the existing range and unary-minus `i64::MIN` rule remain unchanged.
-
-A decimal `f64` spelling is converted to nearest IEEE-754 binary64 with ties
-to even. Results may be subnormal or underflow to positive zero. A literal
-that rounds to infinity is rejected as out of range. Source spelling and span
-remain available for diagnostics, while typed IR stores the resulting raw bits
-and deterministic dumps use 16 lowercase hexadecimal digits.
-
-The extended type productions are:
-
-```text
-value-type  = "i64" | "u64" | "u8" | "bool" | "f64"
-result-type = value-type | "unit"
-primary     = identifier
-            | numeric-literal
-            | "true"
-            | "false"
-            | "(" expression ")"
-```
-
-Every initializer, argument, non-`unit` return, and binary arithmetic operand
-must match exactly. There is no expected-type literal inference, implicit
-promotion, signed/unsigned mixing, or primitive cast in this slice. Conditions
-still require exactly `bool`, and `main` remains exactly
-`fn main() -> i64`.
-
-The existing `+`, `-`, and `*` tokens apply to equal numeric operand types.
-Unsigned results wrap modulo their width, with `u8` canonicalized to `0..=255`
-at every observable boundary. `f64` uses IEEE-754 binary64 operations under the
-default round-to-nearest, ties-to-even environment. Unary `-` accepts `i64` and
-`f64`, but not `u64` or `u8`. Division, remainder, exponentiation, bitwise and
-shift operators, casts, comparisons, and implicit conversions remain outside
-this extension.
-
-The restricted external profile maps `u64`, `u8`, and `f64` to C `uint64_t`,
-`uint8_t`, and compatible binary64 `double`. On Linux x86-64 System V, integer
-and SSE arguments use independent register sequences, `u8` is normalized at
-Skald boundaries, and `f64` returns in `%xmm0`. The exact ABI and bootstrap
-output records are normative in Sections 3.1 and 13.3 of the draft
-specification.
-
-T7 completes exact native and compile-failure coverage for this contract. It
-does not add syntax: division, remainder, casts, comparisons, decimal floating
-formatting, and source spellings for non-finite floating values remain outside
-the implemented grammar.
-
-## First vertical slice name resolution
-
-M3 uses two passes over a single compilation unit. The first pass collects every uniquely named top-level function in source order; the second resolves function bodies. Calls may therefore refer to functions declared later in the file and may be recursive. Function overloading is not part of the first slice, so repeating a top-level function name is an error and the first declaration remains the selected one.
-
-Function, parameter, and local identities are dense, deterministic IDs assigned in source order. Parameter and local IDs include their owning function ID. Resolved binding uses contain a parameter or local ID, and resolved direct calls contain a function ID; later phases must not compare source names to choose declarations. Resolution also selects the unique function named `main` as the entry candidate, if present, while M4 owns entry-signature validation and the missing-entry diagnostic.
-
-Name visibility follows these rules:
-
-- parameters and the function body's outermost block share one lexical scope;
-- a duplicate parameter, or a top-level local with the same name as a parameter, is an error;
-- a local becomes visible only after its initializer, so its initializer cannot refer to the binding being declared;
-- a nested block creates a scope and may shadow a binding in an enclosing scope;
-- leaving a nested block restores the enclosing binding;
-- duplicate names in the same lexical scope are errors, and the first binding remains selected for recovery;
-- a local binding shadows a function name, including at a call site.
-
-The first slice has no function values. A bare function name is therefore invalid as a value. A direct-call target must be an unparenthesized identifier that resolves to a function; calling a local, calling an unknown name, or calling another expression form is diagnosed. Resolution returns a partial resolved program with accumulated diagnostics, but later semantic phases must not run when resolution reports errors.
-
-## First vertical slice type checking
-
-M4 has one semantic type, `i64`. Every function parameter, local, return value, literal, binding expression, call, grouped expression, and arithmetic expression has that type. Local initializers and return expressions must match their declarations, unary `-` requires `i64`, and binary `+`, `-`, and `*` require two `i64` operands and produce `i64`. The typed HIR records these choices as `NegateI64`, `AddI64`, `SubtractI64`, and `MultiplyI64` operations rather than carrying unresolved source operators forward.
-
-Every direct call is checked against the already resolved function ID. Its argument count must exactly match the target's parameter count, argument types are checked positionally, and the HIR call retains the same exact function ID. Argument and operand evaluation order remains a later MIR concern; M4 preserves source order in its vectors and expression tree.
-
-Decimal literals are converted during M4:
-
-- `0` through `9223372036854775807` are valid positive `i64` values;
-- unary minus may directly enclose, with optional grouping parentheses, the magnitude `9223372036854775808`, producing `-9223372036854775808` (`i64::MIN`);
-- that magnitude is invalid without the enclosing unary minus;
-- larger positive or negative magnitudes are diagnosed as out of range.
-
-This special treatment of `i64::MIN` is signed-literal normalization, not general constant folding. Arithmetic overflow behavior remains outside the first-slice contract.
-
-An `i64`, `u64`, `u8`, or `bool` function must return a value on every
-reachable path. A return in an unconditionally executed nested block satisfies this requirement,
-as does an `if` statement with a final `else` when every arm definitely returns. A
-`unit` function may use `return;` or reach its closing brace; attaching any
-expression to its return is invalid. Conversely, `return;` is invalid in an
-`i64` function. Unit-returning calls have type `unit`, which cannot be used in
-an `i64` value context. Expression statements accept only calls returning
-`unit`; in particular, an `i64` call cannot be silently discarded. The entry
-candidate selected by resolution must still have the exact signature
-`fn main() -> i64`.
-
-Type checking accumulates diagnostics across functions but emits an executable `HirProgram` only when the entire resolved program succeeds. Consequently, every expression in an available HIR program has a concrete type, every operation is selected, every call has a checked arity and exact target, and the entry function is valid.
-
-## First vertical slice evaluation and MIR
-
-M5 fixes expression evaluation order to left-to-right. A binary expression completely evaluates its left operand before its right operand. A direct call evaluates arguments completely in source order before performing the call. Nested expressions follow the same recursive rule. This ordering is part of the first-slice language behavior, even where current `i64`-only expressions have no visible side effects beyond calls.
-
-MIR separates addressable storage from transient computed values:
-
-- parameters and source locals receive dense, owner-qualified storage IDs;
-- constants, loads, unary and binary results, and value-returning call results receive dense, owner-qualified value IDs;
-- local initialization becomes an explicit value computation followed by a store;
-- reading a parameter or local becomes an explicit load;
-- arithmetic and direct calls are ordered three-address instructions;
-- return is a basic-block terminator with an optional operand selected by the
-  declared result type.
-
-C3 extends target-independent MIR with explicit `Goto` and boolean `Branch`
-terminators. Blocks and branch targets have stable owner-qualified IDs, and
-terminators expose successors in semantic order. C5 lowers source conditionals
-to explicit condition, arm, false-continuation, and optional join blocks. It
-omits a join when every exhaustive arm terminates and continues to omit source
-statements after an unconditional return.
-
-Successful lowering runs the MIR verifier in debug builds. The verifier checks
-function ownership and density of storage, value, and block IDs; parameter
-storage order; single definitions; block-local definition-before-use; operand
-and storage types; direct-call targets, argument counts, and signature types;
-return types; entry blocks; branch condition types; target ownership and
-existence; and block termination. Every represented block is checked even when
-unreachable. Storage, rather than transient values, carries state across block
-edges until a later SSA design explicitly changes that rule. Backends consume
-verified MIR and do not inspect HIR, resolved source names, or the AST.
-
-O2 changed the compiler representation without changing first-slice language
-behavior. Resolved IR, typed HIR, and MIR store dense callable
-declarations separately from optional local definitions. A declaration owns
-the stable function ID, canonical signature, and linkage; a definition owns
-the body and body-local state. MIR calls are dedicated instructions with an
-explicit direct target and optional result ID. O3 uses that representation:
-every `i64` call has a result, while a `unit` call has none. Unit returns also
-have no MIR operand, and implicit fallthrough in a unit function lowers to the
-same payload-free return. The verifier rejects unit-typed storage and transient
-values, making the no-payload rule explicit. The backend derives internal or external symbols from declaration
-linkage; call instructions never contain linker-symbol strings.
-
-## Restricted inline-object extension contract
-
-OBJ0 freezes the parser-facing contract for the first inline-object slice, and
-OBJ5 implements this source grammar and its source-shaped AST. Parsing performs
-no class or member lookup. OBJ6 performs that lookup in a separate two-pass
-resolver and records stable identities in resolved IR. OBJ7 type-checks those
-forms into nominal, identity-based HIR and enforces the restricted construction,
-initialization, and receiver rules. OBJ8 lowers successful object HIR to
-verified, place-based MIR accepted by the existing backend. OBJ9 enables and
-hardens the complete public source-to-native path. The restricted grammar and
-semantic profile described below are implemented end to end.
-
-The extension adds the globally reserved keywords:
-
-```text
-class self mut
-```
-
-`init` is contextual rather than globally reserved. It introduces a special
-initializer only when it appears directly in a class body followed by `(`.
-Elsewhere it remains an identifier. A field named `init` and an ordinary method
-declared as `fn init(...)` are therefore syntactically distinct from the
-special member.
-
-The grammar extends the implemented compilation unit as follows:
-
-```text
-top-level-declaration = function-declaration
+top-level-declaration = function-definition
                       | external-function-declaration
                       | class-declaration
 
-class-declaration = "class" identifier "{" class-member* "}"
-class-member      = field-declaration
-                  | initializer-declaration
-                  | method-declaration
+function-definition = "fn" identifier parameter-list
+                      "->" result-type block
 
-field-declaration       = identifier ":" primitive-value-type ";"
-initializer-declaration = "init" primitive-parameter-list block
-method-declaration      = ["mut"] "fn" identifier
-                          primitive-parameter-list "->" method-result-type block
+external-function-declaration = "extern" "fn" identifier parameter-list
+                                "->" result-type ";"
 
-primitive-parameter-list = "(" [ primitive-parameter
-                                ("," primitive-parameter)* ] ")"
-primitive-parameter      = identifier ":" primitive-value-type
-primitive-value-type     = "i64" | "u64" | "u8" | "f64" | "bool"
-method-result-type       = primitive-value-type | "unit"
+parameter-list = "(" [parameter ("," parameter)*] ")"
+parameter      = identifier ":" primitive-type
+
+primitive-type = "i64" | "u64" | "u8" | "f64" | "bool"
+result-type    = primitive-type | "unit"
 ```
 
-Object locals use an identifier-shaped named type:
+Trailing commas are not accepted. `unit` is a result type only; it is not a
+parameter or local-storage type.
+
+Functions and classes share one non-overloaded top-level namespace. All
+declarations are collected before bodies are resolved, so forward calls and
+recursion are valid. A duplicate declaration is an error. The entry point must
+be a defined, non-external `fn main() -> i64`.
+
+External declarations use their source identifier as an exact linker symbol.
+Their parameters and results are restricted to implemented primitive values or
+`unit`; object-bearing and alternate-name FFI are not supported.
+
+## Statements and blocks
 
 ```text
+block = "{" statement* "}"
+
+statement = local-declaration
+          | return-statement
+          | call-statement
+          | conditional-statement
+          | field-assignment
+          | block
+
 local-declaration = "var" identifier ":" local-type "=" expression ";"
-local-type        = primitive-value-type | identifier
+local-type        = primitive-type | identifier
+
+return-statement = "return" [expression] ";"
+call-statement   = expression ";"
+
+conditional-statement = "if" "(" expression ")" block
+                        ("elif" "(" expression ")" block)*
+                        ["else" block]
+
+field-assignment = receiver-place "." identifier "=" expression ";"
+receiver-place   = identifier | "self" | "(" receiver-place ")"
 ```
 
-Named type syntax may be preserved wherever the parser reuses its general type
-parser, but the OBJ profile accepts a class type semantically only on a local
-declaration. Fields, parameters, results, and external declarations remain
-restricted as stated below.
+A call statement must be a call returning `unit`; arbitrary expressions and
+value-returning calls cannot be discarded. A `unit` function may use
+`return;` or fall through its closing brace. A value-returning function must
+return a value on every reachable path.
 
-Postfix syntax gains member access, and `self` becomes a primary expression:
+Conditions have exactly type `bool`; Skald has no implicit truthiness.
+`elif` is a distinct keyword and grammar form. `else if` is not accepted.
+Conditions are resolved in the containing scope, while every arm body owns a
+separate child scope.
+
+Parameters and a function body's outermost block share one lexical scope. A
+local becomes visible only after its initializer. Nested blocks may shadow
+outer bindings; duplicate names in one scope are errors. A local also shadows a
+top-level callable at a call site.
+
+General local assignment, compound assignment, chained assignment, and
+assignment expressions are not implemented.
+
+## Expressions
 
 ```text
-postfix       = primary (member-suffix | call-suffix)*
+expression     = additive
+additive       = multiplicative (("+" | "-") multiplicative)*
+multiplicative = unary ("*" unary)*
+unary          = "-" unary | postfix
+postfix        = primary (member-suffix | call-suffix)*
+
 member-suffix = "." identifier
 call-suffix   = "(" [arguments] ")"
-primary       = identifier
-              | numeric-literal
-              | boolean-literal
-              | "self"
-              | "(" expression ")"
+arguments     = expression ("," expression)*
+
+primary = identifier
+        | numeric-literal
+        | bool-literal
+        | "self"
+        | "(" expression ")"
 ```
 
-Member access and calls share the highest precedence and associate from left to
-right. Thus `counter.get()` is a call whose callee is the member access
-`counter.get`. Grouping does not change whether an expression denotes an
-otherwise valid place. Construction uses the same call-shaped syntax as
-`Counter(40)`; resolution decides whether its leading identifier selects a
-class or a function.
+Postfix operations bind most tightly, followed by unary `-`, multiplication,
+then addition and subtraction. Unary operators associate right-to-left; binary
+and postfix operations associate left-to-right.
 
-This slice adds only member assignment statements:
+A direct function call target is an ungrouped identifier selected during
+resolution. Function values and calls through arbitrary expressions are not
+implemented. Member selection and construction are also resolved before type
+checking; later phases never select declarations by source name.
+
+Operands, receivers, and arguments evaluate deterministically from left to
+right. A receiver is evaluated before explicit arguments.
+
+## Primitive semantics
+
+Initializers, arguments, returns, assignments, and binary operands require
+exactly matching types. There are no implicit conversions, promotions, or
+expected-type literal inference.
+
+`+`, `-`, and `*` accept two operands of the same numeric type:
+
+- `i64` uses signed integer operations; overflow behavior is not yet specified;
+- `u64` wraps modulo 2^64;
+- `u8` wraps modulo 256 and is canonicalized at observable boundaries;
+- `f64` uses IEEE-754 binary64 operations in the default nearest/ties-to-even
+  environment.
+
+Unary `-` accepts `i64` and `f64`. It does not accept `u64`, `u8`, or `bool`.
+Division, remainder, comparisons, bitwise operations, shifts, and casts are not
+implemented.
+
+## Inline classes
 
 ```text
-statement                  = existing-statement
-                           | field-assignment-statement
-field-assignment-statement = field-place "=" expression ";"
-field-place                = receiver-place "." identifier
-receiver-place             = identifier | "self" | "(" receiver-place ")"
+class-declaration = "class" identifier "{" class-member* "}"
+
+class-member = field-declaration
+             | initializer-declaration
+             | method-declaration
+
+field-declaration = identifier ":" primitive-type ";"
+
+initializer-declaration = "init" parameter-list block
+
+method-declaration = ["mut"] "fn" identifier parameter-list
+                     "->" result-type block
 ```
 
-Assignment remains a statement and produces no value. General binding
-assignment, chained assignment, compound assignment, and assignment to an
-arbitrary expression are not introduced. The parser retains source shape and
-spans; resolution and type checking decide whether a receiver is a valid local
-inline object or `self` and whether its selected member is a field.
+Classes are nominal. Fields and ordinary methods share one non-overloaded
+member namespace. Each class, including an empty class, must declare exactly
+one explicit `init`; initializer overloading and synthesized initializers are
+not available.
 
-### Restricted declaration and name rules
-
-- Classes and top-level defined/external functions share one non-overloaded
-  top-level declaration namespace. A repeated name in any combination is an
-  error. All top-level declarations are collected before bodies are resolved.
-- Fields and ordinary methods share one non-overloaded ordinary-member
-  namespace within a class. A field and method cannot have the same name, and
-  methods cannot overload by signature.
-- The one special `init` declaration occupies a separate special-member slot.
-  It may coexist with an ordinary field or method named `init`, subject to the
-  ordinary-member collision rule between that field and method.
-- All fields and methods are accessible wherever the object place is visible in
-  this profile. Access modifiers are not accepted yet.
-- `self` is valid only inside the enclosing class's `init` or instance-method
-  body. It cannot be shadowed or declared as an ordinary name.
-- Class types are nominal. Forward references to a class declared later in the
-  same source file are valid after declaration collection.
-
-### Restricted construction and initialization rules
-
-Every class, including an empty class, declares exactly one explicit `init`.
-There is no synthesized, default, copy, overloaded, or delegating initializer.
-Its parameters are by-value primitives and its result is implicit `unit`.
-
-An initializer body contains only zero or more statements of this form:
+Initializer bodies are straight-line sequences of:
 
 ```ska
 self.field = primitive_expression;
 ```
 
-The right-hand side may contain primitive literals, initializer parameters,
-already-initialized fields of `self`, grouping, implemented primitive
-unary/binary operations, and calls to top-level defined or external functions
-whose arguments and result fit the primitive profile. It cannot contain `self`
-by itself, a method call, object construction, or another object-valued
-expression. The body contains no locals, nested blocks, conditionals, call
-statements, or explicit `return`.
+Every field must be assigned exactly once. A field cannot be read before its
+own assignment. Right-hand expressions may use primitive literals,
+initializer parameters, already initialized fields, primitive operations, and
+supported top-level function calls. Initializers cannot contain locals,
+blocks, conditionals, call statements, returns, construction, or instance
+method calls.
 
-Each field must be assigned exactly once on the one straight-line path. Fields
-may be assigned in any order, but reading a field before its own assignment is
-an error. Assigning an unknown field, assigning a field twice, leaving one
-unassigned, or assigning a different primitive type is an error. An empty
-class therefore has an empty `init()` body.
-
-Construction is legal only as the complete initializer of a new local whose
-declared type is exactly the selected class:
+Construction is legal only as the complete initializer of a new exact-type
+local:
 
 ```ska
 var counter: Counter = Counter(40);
 ```
 
-It is not a general value expression. It cannot be grouped and used elsewhere,
-passed, returned, assigned to existing storage, used as a receiver, or nested
-in a primitive expression. Constructor arity and argument types match exactly;
-there are no implicit conversions. Object locals may appear in any existing
-lexical block, including a method or conditional arm.
+It is not a general object expression and cannot be grouped for another use,
+passed, returned, copied, assigned to existing storage, or used as a receiver.
+Constructor arguments evaluate left to right before `init` begins.
 
-Destination storage is reserved before argument evaluation but does not yet
-contain a live object. Arguments evaluate completely from left to right. The
-initializer is entered only afterward, and its assignments execute in source
-order. Normal completion makes the destination live. Checked exceptions are
-absent, so this profile has no recoverable failed-construction path.
+Fields may be read or assigned through an inline local or `self`. Ordinary
+`fn` methods have read-only receivers. `mut fn` methods may assign fields and
+call mutable methods; read-only methods may only read fields and call
+read-only methods. A local inline object permits either receiver mode. Dispatch
+is static and direct.
 
-An inline local's lifetime ends with its lexical storage scope. Since its
-fields are primitive and `destroy` is unavailable, ending that lifetime emits
-no observable cleanup in this slice.
+The current object profile has only primitive fields and primitive parameters
+and results. It does not include object fields, object arguments/results,
+copying, `assign`, `destroy`, inheritance, interfaces, virtual calls, casts,
+`shared`, alias bindings, access modifiers, static members, `final`, or object
+FFI.
 
-### Restricted field and method use
+## Recovery and nesting
 
-A field may be read as a primitive value or written by member assignment when
-its receiver is `self` or a local inline object, with grouping allowed around
-that receiver place. Object fields do not exist yet, so a valid source field
-place has exactly one field projection.
+The parser accumulates structured diagnostics and synchronizes at parameter,
+statement, block, class-member, and top-level boundaries. Structurally invalid
+declarations are omitted from the partial AST; later semantic phases run only
+after the preceding phase succeeds.
 
-Methods are statically selected and called directly. Explicit parameters are
-by-value primitives, and results are primitive or `unit`. A receiver evaluates
-before every explicit argument; arguments then evaluate left to right.
-Read-only `fn` methods may read fields and call read-only methods on `self`.
-`mut fn` methods may also write fields and call mutable methods. An `init`
-receiver is implicitly mutable but may not call methods because the complete
-object is not live. A local object may call either receiver mode.
+Recursive syntax nesting is limited to 128 active levels across blocks,
+grouping, unary expressions, and postfix calls. Exceeding the limit reports
+`PAR005` and skips the affected declaration without recursive recovery.
 
-Method bodies otherwise use implemented statements and primitive semantics.
-Object-valued parameters/results/arguments, whole-object assignment, copying,
-destruction, object fields, inheritance, interfaces, virtual calls, `shared`,
-aliases, static/final/private members, and object FFI remain outside the
-profile.
+## Not yet implemented
 
-### Evaluation order added by this profile
+The following broader-language features remain design or implementation work:
 
-- Evaluate a method receiver before its explicit arguments.
-- Evaluate explicit arguments from left to right before the call.
-- Evaluate a field receiver place before loading its field.
-- For field assignment, evaluate the receiver place first, then its complete
-  right-hand value, then perform the store.
-- Reserve a construction destination, evaluate arguments from left to right,
-  enter `init`, and make the destination live only after normal completion.
+- loops and iterators;
+- arrays and optionals;
+- strings and standard-library containers;
+- object value parameters/results and general temporaries;
+- deterministic destruction and cleanup;
+- inheritance, interfaces, virtual dispatch, and access control;
+- `shared` ownership and `ref` / `mut ref` alias parameters;
+- checked exceptions;
+- multiple source files, modules, generics, and closures.
 
-These rules extend the existing left-to-right operand/call contract. Temporary
-destruction, cleanup on non-local control flow, and full-expression lifetime
-boundaries remain deferred because this profile has no general object
-temporary, destructor, shared handle, alias, or exception.
+Their intended direction is discussed in the draft specification and
+[`Future Development Boundaries`](../docs/NEXT_SLICE_BOUNDARIES.md).
