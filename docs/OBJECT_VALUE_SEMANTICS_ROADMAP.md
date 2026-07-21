@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS1 are complete and OVS2 is next.
+Status: in progress; OVS0–OVS2 are complete and OVS3 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -108,15 +108,15 @@ identity, while object copy expressions remain rejected.
 **Purpose:** Complete lifecycle-body legality and determine whether each class
 supports copy construction and assignment.
 
-- [ ] Represent copy construction and assignment in HIR with an implicit
+- [x] Represent copy construction and assignment in HIR with an implicit
       mutable destination `self` and read-only source alias.
-- [ ] Apply initializer liveness to copy constructors and live-object rules to
+- [x] Apply initializer liveness to copy constructors and live-object rules to
       assignment bodies.
-- [ ] Validate recursive class-field capabilities in deterministic dependency
+- [x] Validate recursive class-field capabilities in deterministic dependency
       order, including empty and forward-declared classes.
-- [ ] Define synthesized operations as ordered semantic field operations, not
+- [x] Define synthesized operations as ordered semantic field operations, not
       raw memory copies.
-- [ ] Reject cycles, missing capabilities, invalid field access, object-value
+- [x] Reject cycles, missing capabilities, invalid field access, object-value
       escape, and unsupported lifecycle calls with focused diagnostics.
 
 **Acceptance criteria:** HIR exposes one canonical copy capability and selected

@@ -21,6 +21,7 @@ use super::super::{
 pub(in crate::typeck) enum ObjectPlaceUse {
     Member,
     Alias,
+    CopySource,
     InitializationDestination,
 }
 
@@ -44,8 +45,10 @@ impl CallableChecker<'_, '_> {
         place: &ResolvedObjectPlace,
         place_use: ObjectPlaceUse,
     ) -> Option<HirObjectPlace> {
-        let allow_initializing_self =
-            !matches!(place_use, ObjectPlaceUse::Alias) || !place.projections.is_empty();
+        let allow_initializing_self = !matches!(
+            place_use,
+            ObjectPlaceUse::Alias | ObjectPlaceUse::CopySource
+        ) || !place.projections.is_empty();
         let mut checked =
             self.check_binding_place(place.root, place.span, allow_initializing_self)?;
         let mut class = checked.class();
@@ -70,7 +73,9 @@ impl CallableChecker<'_, '_> {
         );
         if !matches!(place_use, ObjectPlaceUse::InitializationDestination) {
             if let Some(field) = place.direct_field() {
-                if !self.check_initializer_field_liveness(field, place.span) {
+                if place.root == BindingId::Receiver(self.callable)
+                    && !self.check_initializer_field_liveness(field, place.span)
+                {
                     return None;
                 }
             }
@@ -129,6 +134,86 @@ impl CallableChecker<'_, '_> {
         }
     }
 
+    pub(in crate::typeck) fn check_copy_source_place(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected_class: crate::identity::ClassId,
+    ) -> Option<HirObjectPlace> {
+        let place = match expression {
+            ResolvedExpression::Binding(binding)
+                if matches!(self.binding_type(binding.binding), Type::Class(_)) =>
+            {
+                self.check_binding_place(binding.binding, binding.span, false)
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                let mut place =
+                    self.check_copy_source_place(&grouped.expression, expected_class)?;
+                place.path.span = grouped.span;
+                Some(place)
+            }
+            ResolvedExpression::FieldAccess(access) => {
+                let field = self
+                    .program
+                    .field(access.field)
+                    .expect("resolved copy-source field must exist");
+                let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "copy source must designate a class object",
+                        )
+                        .with_primary_label(access.member_span, "this field has a primitive type"),
+                    );
+                    return None;
+                };
+                let place = access
+                    .receiver
+                    .clone()
+                    .project(access.field, class, access.span);
+                self.check_object_place(&place, ObjectPlaceUse::CopySource)
+            }
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "copy source must be an existing object place",
+                    )
+                    .with_primary_label(
+                        expression.span(),
+                        "expected an object binding, field, or grouping",
+                    ),
+                );
+                return None;
+            }
+        }?;
+
+        if place.class() != expected_class {
+            let actual = &self
+                .program
+                .class(place.class())
+                .expect("copy-source class must exist")
+                .name;
+            let expected = &self
+                .program
+                .class(expected_class)
+                .expect("copy-destination class must exist")
+                .name;
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_OBJECT_CONTEXT,
+                    "copy source and destination must have the same class",
+                )
+                .with_primary_label(
+                    place.span(),
+                    format!("source has class `{actual}`, expected `{expected}`"),
+                ),
+            );
+            return None;
+        }
+
+        Some(place)
+    }
+
     fn check_binding_place(
         &mut self,
         binding: BindingId,
@@ -150,7 +235,7 @@ impl CallableChecker<'_, '_> {
                 let receiver = self
                     .receiver
                     .expect("resolved receiver place must occur in a member");
-                if receiver.initializer && !allow_initializing_self {
+                if receiver.body_kind.initializes_receiver() && !allow_initializing_self {
                     self.diagnostics.push(
                         Diagnostic::error(
                             INVALID_ALIAS_ARGUMENT,
@@ -186,7 +271,10 @@ impl CallableChecker<'_, '_> {
     }
 
     pub(super) fn check_initializer_field_liveness(&mut self, field: FieldId, span: Span) -> bool {
-        let Some(receiver) = self.receiver.filter(|receiver| receiver.initializer) else {
+        let Some(receiver) = self
+            .receiver
+            .filter(|receiver| receiver.body_kind.initializes_receiver())
+        else {
             return true;
         };
         if field.class() != receiver.class || self.initialized_fields.contains(&field) {

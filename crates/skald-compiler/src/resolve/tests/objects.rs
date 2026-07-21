@@ -566,6 +566,23 @@ fn special_destructor_is_not_an_explicit_method_call_target() {
 }
 
 #[test]
+fn copy_lifecycle_slots_are_not_explicit_method_call_targets() {
+    let output = resolve_text(concat!(
+        "class Value {\n",
+        "  init() {}\n",
+        "  init(ref other: Value) {}\n",
+        "  assign(ref other: Value) { self.assign(other); }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, UNKNOWN_MEMBER);
+    assert!(diagnostic.message.contains("has no member `assign`"));
+}
+
+#[test]
 fn duplicate_destructors_are_diagnosed_in_source_order() {
     let output = resolve_text(concat!(
         "class Duplicate {\n",

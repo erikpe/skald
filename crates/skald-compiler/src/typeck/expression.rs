@@ -206,7 +206,8 @@ impl CallableChecker<'_, '_> {
                     access.span,
                     ObjectPlaceUse::Member,
                 )?;
-                if place.receiver.path.is_root()
+                if place.receiver.root() == BindingId::Receiver(self.callable)
+                    && place.receiver.path.is_root()
                     && !self.check_initializer_field_liveness(place.field, access.member_span)
                 {
                     return None;
@@ -261,7 +262,9 @@ impl CallableChecker<'_, '_> {
             .method(call.method)
             .expect("resolved method call must reference a method");
         let mut valid = true;
-        if self.receiver.is_some_and(|context| context.initializer)
+        if self
+            .receiver
+            .is_some_and(|context| context.body_kind.initializes_receiver())
             && receiver.root() == BindingId::Receiver(self.callable)
             && receiver.path.is_root()
         {

@@ -18,21 +18,36 @@ use crate::{
 };
 
 use super::{
+    capabilities::CopyCapabilities,
     expression::{is_call_through_groups, require_type, ObjectPlaceUse},
     program::{
-        lower_type, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT, INVALID_CONSTRUCTION,
-        INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN, MISSING_RETURN,
-        READ_ONLY_RECEIVER,
+        lower_type, COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT,
+        INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN,
+        MISSING_RETURN, READ_ONLY_RECEIVER,
     },
 };
 
 mod initializer;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum MemberBodyKind {
+    OrdinaryInitializer,
+    CopyConstructor,
+    CopyAssignment,
+    MethodOrDestructor,
+}
+
+impl MemberBodyKind {
+    pub(super) const fn initializes_receiver(self) -> bool {
+        matches!(self, Self::OrdinaryInitializer | Self::CopyConstructor)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct ReceiverContext {
     pub(super) class: ClassId,
     pub(super) access: HirAccess,
-    pub(super) initializer: bool,
+    pub(super) body_kind: MemberBodyKind,
 }
 
 pub(super) struct MemberCheckContext<'program> {
@@ -46,6 +61,7 @@ pub(super) struct MemberCheckContext<'program> {
 
 pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) program: &'program ResolvedProgram,
+    pub(super) copy_capabilities: &'program CopyCapabilities,
     pub(super) callable: CallableId,
     pub(super) parameters: &'program [ResolvedParameter],
     pub(super) locals: &'program [ResolvedLocal],
@@ -61,12 +77,14 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
 impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     pub(super) fn new(
         program: &'program ResolvedProgram,
+        copy_capabilities: &'program CopyCapabilities,
         declaration: &'program ResolvedFunctionDeclaration,
         definition: &'program ResolvedFunctionDefinition,
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
+            copy_capabilities,
             callable: declaration.id.into(),
             parameters: &declaration.parameters,
             locals: &definition.locals,
@@ -112,11 +130,13 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
 
     pub(super) fn new_member(
         program: &'program ResolvedProgram,
+        copy_capabilities: &'program CopyCapabilities,
         context: MemberCheckContext<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
         Self {
             program,
+            copy_capabilities,
             callable: context.callable,
             parameters: context.parameters,
             locals: &context.definition.locals,
@@ -134,7 +154,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         let locals = self.lower_locals();
         let body = self.check_block(self.body);
         let receiver = self.receiver.expect("member checker needs receiver");
-        if receiver.initializer {
+        if receiver.body_kind.initializes_receiver() {
             let class = self
                 .program
                 .class(receiver.class)
@@ -207,7 +227,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     }
 
     fn check_statement(&mut self, statement: &ResolvedStatement) -> CheckedStatement {
-        if self.receiver.is_some_and(|receiver| receiver.initializer)
+        if self
+            .receiver
+            .is_some_and(|receiver| receiver.body_kind.initializes_receiver())
             && !matches!(statement, ResolvedStatement::FieldAssignment(_))
         {
             self.diagnostics.push(

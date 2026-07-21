@@ -1,8 +1,14 @@
 use super::*;
+use crate::typeck::{capabilities::CopyCapabilities, function::MemberBodyKind};
 use crate::{
     diagnostics::Diagnostics,
-    hir::{HirAccess, HirCallArgument, HirLocalInitializer},
-    identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    hir::{
+        HirAccess, HirCallArgument, HirCopyCapability, HirLocalInitializer,
+        HirSelectedCopyOperation, HirSynthesizedFieldCopy,
+    },
+    identity::{
+        BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, MethodId,
+    },
     mir::{lower_hir, verify_mir, MirInstruction, MirPlaceProjection},
     typeck::function::{CallableChecker, MemberCheckContext, ReceiverContext},
 };
@@ -126,7 +132,7 @@ fn requires_one_explicit_initializer_even_for_empty_classes() {
 }
 
 #[test]
-fn keeps_resolved_copy_lifecycle_bodies_out_of_hir_until_ovs2() {
+fn lowers_valid_copy_lifecycle_declarations_and_bodies_into_hir() {
     let output = check_text(concat!(
         "class Value {\n",
         "  value: i64;\n",
@@ -137,22 +143,229 @@ fn keeps_resolved_copy_lifecycle_bodies_out_of_hir_until_ovs2() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let class = hir.class(ClassId::new(0)).unwrap();
+    let copy_constructor = InitializerId::new(class.id, 1);
+    let copy_assignment = CopyAssignmentId::new(class.id, 0);
+    assert_eq!(
+        class.copy_constructor,
+        HirCopyCapability::User(copy_constructor)
+    );
+    assert_eq!(
+        class.copy_assignment,
+        HirCopyCapability::User(copy_assignment)
+    );
+    assert_eq!(
+        class
+            .copy_constructor_declaration
+            .as_ref()
+            .unwrap()
+            .parameters[0]
+            .mode,
+        crate::hir::HirParameterMode::ReadOnlyAlias
+    );
+    assert_eq!(
+        class
+            .copy_assignment_declaration
+            .as_ref()
+            .unwrap()
+            .parameter
+            .mode,
+        crate::hir::HirParameterMode::ReadOnlyAlias
+    );
+    assert!(matches!(
+        hir.member_definition(copy_constructor.into())
+            .unwrap()
+            .body
+            .statements[0],
+        HirStatement::FieldAssignment(_)
+    ));
+    assert!(matches!(
+        hir.member_definition(copy_assignment.into())
+            .unwrap()
+            .body
+            .statements[0],
+        HirStatement::FieldAssignment(_)
+    ));
+}
+
+#[test]
+fn computes_ordered_copy_capabilities_for_empty_primitive_and_forward_nested_classes() {
+    let output = check_text(concat!(
+        "class Outer {\n",
+        "  inner: Inner; count: i64;\n",
+        "  init() { self.inner = Inner(0); self.count = 0; }\n",
+        "}\n",
+        "class Empty { init() {} }\n",
+        "class Inner {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  init(ref other: Inner) { self.value = other.value; }\n",
+        "  assign(ref other: Inner) { self.value = other.value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+
+    let outer = hir.class(ClassId::new(0)).unwrap();
+    let HirCopyCapability::Synthesized(construction) = &outer.copy_constructor else {
+        panic!("expected synthesized outer copy construction");
+    };
+    assert_eq!(construction.class, outer.id);
+    assert_eq!(construction.fields.len(), 2);
+    assert_eq!(construction.fields[0].field(), outer.fields[0].id);
+    assert_eq!(construction.fields[1].field(), outer.fields[1].id);
+    assert!(matches!(
+        construction.fields[0],
+        HirSynthesizedFieldCopy::Class {
+            operation: HirSelectedCopyOperation::User(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        construction.fields[1],
+        HirSynthesizedFieldCopy::Primitive { .. }
+    ));
+
+    let HirCopyCapability::Synthesized(assignment) = &outer.copy_assignment else {
+        panic!("expected synthesized outer copy assignment");
+    };
+    assert!(matches!(
+        assignment.fields[0],
+        HirSynthesizedFieldCopy::Class {
+            operation: HirSelectedCopyOperation::User(_),
+            ..
+        }
+    ));
+    let empty = hir.class(ClassId::new(1)).unwrap();
+    let HirCopyCapability::Synthesized(empty_construction) = &empty.copy_constructor else {
+        panic!("expected empty synthesized construction");
+    };
+    assert!(empty_construction.fields.is_empty());
+}
+
+#[test]
+fn type_checks_class_field_copy_operations_only_inside_copy_bodies() {
+    let output = check_text(concat!(
+        "class Child { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Parent {\n",
+        "  child: Child; value: i64;\n",
+        "  init(value: i64) { self.child = Child(value); self.value = value; }\n",
+        "  init(ref other: Parent) { self.child = other.child; self.value = other.value; }\n",
+        "  assign(ref other: Parent) { self.child = other.child; self.value = other.value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let parent = hir.class(ClassId::new(1)).unwrap();
+    let constructor = hir
+        .member_definition(
+            parent
+                .copy_constructor_declaration
+                .as_ref()
+                .unwrap()
+                .id
+                .into(),
+        )
+        .unwrap();
+    let assignment = hir
+        .member_definition(
+            parent
+                .copy_assignment_declaration
+                .as_ref()
+                .unwrap()
+                .id
+                .into(),
+        )
+        .unwrap();
+    let HirStatement::FieldCopyConstruction(copy_child) = &constructor.body.statements[0] else {
+        panic!("expected class-field copy construction");
+    };
+    assert_eq!(copy_child.source.class(), ClassId::new(0));
+    assert_eq!(copy_child.source.access, HirAccess::ReadOnly);
+    assert_eq!(
+        copy_child.operation,
+        HirSelectedCopyOperation::Synthesized(ClassId::new(0))
+    );
+    let HirStatement::FieldCopyAssignment(assign_child) = &assignment.body.statements[0] else {
+        panic!("expected class-field copy assignment");
+    };
+    assert_eq!(assign_child.place.field, parent.fields[0].id);
+    assert_eq!(assign_child.source.class(), ClassId::new(0));
+
+    let dump = dump_hir(&hir);
+    let copy_lines: Vec<_> = dump
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            line.starts_with("User c1:")
+                || line.starts_with("MemberDefinition c1:init1")
+                || line.starts_with("MemberDefinition c1:assign0")
+                || line.starts_with("FieldCopy")
+        })
+        .map(|line| line.split(" @").next().unwrap())
+        .collect();
+    assert_eq!(
+        copy_lines,
+        [
+            "User c1:init1",
+            "User c1:assign0",
+            "MemberDefinition c1:init1",
+            "FieldCopyConstruction",
+            "MemberDefinition c1:assign0",
+            "FieldCopyAssignment",
+        ]
+    );
+}
+
+#[test]
+fn rejects_invalid_copy_body_liveness_returns_and_object_escape() {
+    let output = check_text(concat!(
+        "class Broken {\n",
+        "  first: i64; second: i64;\n",
+        "  init() { self.first = 0; self.second = 0; }\n",
+        "  init(ref other: Broken) {\n",
+        "    self.first = self.second;\n",
+        "    self.first = other.first;\n",
+        "    self.first = other.first;\n",
+        "    return;\n",
+        "  }\n",
+        "  assign(ref other: Broken) {\n",
+        "    var escaped: Broken = other;\n",
+        "    other.first = 1;\n",
+        "    return 2;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
     assert!(output.hir.is_none());
-    let diagnostics: Vec<_> = output
+    assert!(output
         .diagnostics
         .iter()
-        .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION)
-        .collect();
-    assert_eq!(diagnostics.len(), 2);
-    assert!(diagnostics
+        .any(|diagnostic| diagnostic.code == INVALID_INITIALIZER_BODY));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == FIELD_INITIALIZATION
+            && diagnostic.message.contains("used before initialization")
+    }));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == FIELD_INITIALIZATION && diagnostic.message.contains("more than once")
+    }));
+    assert!(output
+        .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.message.contains("copy-constructor")));
-    assert!(diagnostics
+        .any(|diagnostic| diagnostic.code == READ_ONLY_RECEIVER));
+    assert!(output
+        .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.message.contains("copy-assignment")));
-    assert!(diagnostics.iter().all(|diagnostic| diagnostic.labels[0]
-        .message
-        .contains("declaration is resolved")));
+        .any(|diagnostic| diagnostic.code == INVALID_RETURN));
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
 }
 
 #[test]
@@ -206,6 +419,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
         FieldId::new(ClassId::new(2), 0),
         FieldId::new(ClassId::new(1), 0),
     ];
+    let copy_capabilities = CopyCapabilities::compute(&resolved);
 
     let inspect_declaration = resolved.declarations.get(FunctionId::new(1)).unwrap();
     let inspect_definition = resolved.definitions.get(FunctionId::new(1)).unwrap();
@@ -219,6 +433,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let mut diagnostics = Diagnostics::new();
     let inspect = CallableChecker::new(
         &resolved,
+        &copy_capabilities,
         inspect_declaration,
         inspect_definition,
         &mut diagnostics,
@@ -246,6 +461,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let mut diagnostics = Diagnostics::new();
     let mutable = CallableChecker::new(
         &resolved,
+        &copy_capabilities,
         mutable_declaration,
         mutable_definition,
         &mut diagnostics,
@@ -263,6 +479,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let mut diagnostics = Diagnostics::new();
     let local = CallableChecker::new(
         &resolved,
+        &copy_capabilities,
         local_declaration,
         local_definition,
         &mut diagnostics,
@@ -282,6 +499,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let mut diagnostics = Diagnostics::new();
     let member = CallableChecker::new_member(
         &resolved,
+        &copy_capabilities,
         MemberCheckContext {
             callable: method.id.into(),
             parameters: &method.parameters,
@@ -290,7 +508,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
             receiver: ReceiverContext {
                 class: class.id,
                 access: HirAccess::ReadOnly,
-                initializer: false,
+                body_kind: MemberBodyKind::MethodOrDestructor,
             },
             callable_name: "method `nested`".to_owned(),
         },
@@ -320,8 +538,16 @@ fn class_field_selection_does_not_create_an_object_rvalue() {
     let declaration = resolved.declarations.get(FunctionId::new(0)).unwrap();
     let definition = resolved.definitions.get(FunctionId::new(0)).unwrap();
     let mut diagnostics = Diagnostics::new();
+    let copy_capabilities = CopyCapabilities::compute(&resolved);
 
-    let _ = CallableChecker::new(&resolved, declaration, definition, &mut diagnostics).check();
+    let _ = CallableChecker::new(
+        &resolved,
+        &copy_capabilities,
+        declaration,
+        definition,
+        &mut diagnostics,
+    )
+    .check();
 
     assert!(diagnostics
         .iter()
@@ -711,6 +937,12 @@ fn object_hir_dump_is_exact_and_identity_based() {
             "        Field c0:field0 \"value\" : i64 @12..23\n",
             "      Initializer c0:init0 @24..64\n",
             "        Parameter c0:init0:p0 \"value\" value : i64 @29..39\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "          Primitive c0:field0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
+            "          Primitive c0:field0\n",
             "      Methods\n",
             "        Method c0:method0 \"get\" readonly -> i64 @65..103\n",
             "  ClassDefinitions\n",

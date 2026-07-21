@@ -32,6 +32,9 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         .class_definitions
         .iter()
         .flat_map(|class| {
+            // Copy lifecycle definitions remain HIR-only until MIR gains
+            // explicit source/destination copy operations. Source programs
+            // cannot call them at this stage.
             std::iter::once(&class.initializer)
                 .chain(class.destructor.iter())
                 .chain(class.methods.iter())
@@ -366,6 +369,9 @@ impl<'hir> BodyLowerer<'hir> {
                         arguments,
                         span: statement.span,
                     }));
+                }
+                HirStatement::FieldCopyConstruction(_) | HirStatement::FieldCopyAssignment(_) => {
+                    unreachable!("copy statements belong only to HIR-only copy definitions")
                 }
             }
         }

@@ -1,6 +1,6 @@
 //! Deterministic textual rendering of typed HIR.
 
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 
 use crate::{
     dump_format::{write_indentation, write_quoted, write_span},
@@ -79,6 +79,22 @@ impl HirDumper {
                     dumper.parameter(parameter);
                 }
             });
+            dumper.heading("CopyConstructor");
+            dumper.indented(|dumper| {
+                dumper.copy_capability(&class.copy_constructor);
+                if let Some(declaration) = &class.copy_constructor_declaration {
+                    for parameter in &declaration.parameters {
+                        dumper.parameter(parameter);
+                    }
+                }
+            });
+            dumper.heading("CopyAssignment");
+            dumper.indented(|dumper| {
+                dumper.copy_capability(&class.copy_assignment);
+                if let Some(declaration) = &class.copy_assignment_declaration {
+                    dumper.parameter(&declaration.parameter);
+                }
+            });
             if let Some(destructor) = &class.destructor {
                 let access = match destructor.receiver_access {
                     HirAccess::ReadOnly => "readonly",
@@ -116,6 +132,12 @@ impl HirDumper {
         self.line(&format!("ClassDefinition {}", class.class), class.span);
         self.indented(|dumper| {
             dumper.member_definition(&class.initializer);
+            if let Some(copy_constructor) = &class.copy_constructor {
+                dumper.member_definition(copy_constructor);
+            }
+            if let Some(copy_assignment) = &class.copy_assignment {
+                dumper.member_definition(copy_assignment);
+            }
             if let Some(destructor) = &class.destructor {
                 dumper.member_definition(destructor);
             }
@@ -134,6 +156,34 @@ impl HirDumper {
             dumper.locals(&definition.locals);
             dumper.block(&definition.body);
         });
+    }
+
+    fn copy_capability<I: Copy + Display>(&mut self, capability: &HirCopyCapability<I>) {
+        match capability {
+            HirCopyCapability::User(id) => self.raw_line(&format!("User {id}")),
+            HirCopyCapability::Unavailable => self.raw_line("Unavailable"),
+            HirCopyCapability::Synthesized(operation) => {
+                self.raw_line(&format!("Synthesized {}", operation.class));
+                self.indented(|dumper| {
+                    for field in &operation.fields {
+                        match field {
+                            HirSynthesizedFieldCopy::Primitive { field } => {
+                                dumper.raw_line(&format!("Primitive {field}"));
+                            }
+                            HirSynthesizedFieldCopy::Class { field, operation } => {
+                                let selected = match operation {
+                                    HirSelectedCopyOperation::User(id) => format!("User {id}"),
+                                    HirSelectedCopyOperation::Synthesized(class) => {
+                                        format!("Synthesized {class}")
+                                    }
+                                };
+                                dumper.raw_line(&format!("Class {field} using {selected}"));
+                            }
+                        }
+                    }
+                });
+            }
+        }
     }
 
     fn declaration(&mut self, declaration: &HirFunctionDeclaration) {
@@ -252,6 +302,31 @@ impl HirDumper {
                     dumper.field_place(&statement.place);
                     dumper.construction(&statement.construction);
                 });
+            }
+            HirStatement::FieldCopyConstruction(statement) => {
+                self.line("FieldCopyConstruction", statement.span);
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.object_place(&statement.source);
+                    dumper.selected_copy_operation(statement.operation);
+                });
+            }
+            HirStatement::FieldCopyAssignment(statement) => {
+                self.line("FieldCopyAssignment", statement.span);
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.object_place(&statement.source);
+                    dumper.selected_copy_operation(statement.operation);
+                });
+            }
+        }
+    }
+
+    fn selected_copy_operation<I: Display>(&mut self, operation: HirSelectedCopyOperation<I>) {
+        match operation {
+            HirSelectedCopyOperation::User(id) => self.raw_line(&format!("Operation User {id}")),
+            HirSelectedCopyOperation::Synthesized(class) => {
+                self.raw_line(&format!("Operation Synthesized {class}"));
             }
         }
     }
@@ -420,6 +495,10 @@ impl HirDumper {
     fn heading(&mut self, name: &str) {
         self.write_indentation();
         let _ = writeln!(self.output, "{name}");
+    }
+
+    fn raw_line(&mut self, text: &str) {
+        self.heading(text);
     }
 
     fn line(&mut self, name: &str, span: Span) {

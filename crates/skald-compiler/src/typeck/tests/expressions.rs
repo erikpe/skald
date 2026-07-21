@@ -40,7 +40,10 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::Call(statement) => assert_expression_is_fully_typed(&statement.call),
                 HirStatement::Conditional(_) => {}
                 HirStatement::Block(_) => {}
-                HirStatement::FieldAssignment(_) | HirStatement::FieldConstruction(_) => {}
+                HirStatement::FieldAssignment(_)
+                | HirStatement::FieldConstruction(_)
+                | HirStatement::FieldCopyConstruction(_)
+                | HirStatement::FieldCopyAssignment(_) => {}
             }
         }
     }

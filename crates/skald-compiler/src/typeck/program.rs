@@ -4,10 +4,10 @@ use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
         HirAccess, HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition,
-        HirClassDefinitionTable, HirDestructorDeclaration, HirFieldDeclaration,
-        HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinitionTable,
-        HirFunctionLinkage, HirInitializerDeclaration, HirMethodDeclaration, HirParameter,
-        HirParameterMode, HirProgram, Type,
+        HirClassDefinitionTable, HirCopyAssignmentDeclaration, HirDestructorDeclaration,
+        HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
+        HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration,
+        HirMethodDeclaration, HirParameter, HirParameterMode, HirProgram, Type,
     },
     identity::FunctionId,
     resolve::{
@@ -19,8 +19,9 @@ use crate::{
 };
 
 use super::{
+    capabilities::CopyCapabilities,
     containment::validate_containment,
-    function::{CallableChecker, MemberCheckContext, ReceiverContext},
+    function::{CallableChecker, MemberBodyKind, MemberCheckContext, ReceiverContext},
 };
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
@@ -48,6 +49,7 @@ pub const READ_ONLY_RECEIVER: &str = "TYP018";
 pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
 pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
 pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
+pub const COPY_OPERATION_UNAVAILABLE: &str = "TYP023";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -68,18 +70,26 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
-    let classes = lower_class_declarations(program, &mut diagnostics);
+    let copy_capabilities = CopyCapabilities::compute(program);
+    let classes = lower_class_declarations(program, &copy_capabilities, &mut diagnostics);
     let declarations = program.declarations.iter().map(lower_declaration).collect();
     let definitions = program
         .declarations
         .iter()
         .map(|declaration| {
             program.definitions.get(declaration.id).map(|definition| {
-                CallableChecker::new(program, declaration, definition, &mut diagnostics).check()
+                CallableChecker::new(
+                    program,
+                    &copy_capabilities,
+                    declaration,
+                    definition,
+                    &mut diagnostics,
+                )
+                .check()
             })
         })
         .collect();
-    let class_definitions = check_class_definitions(program, &mut diagnostics);
+    let class_definitions = check_class_definitions(program, &copy_capabilities, &mut diagnostics);
 
     let hir = if diagnostics.has_errors() {
         None
@@ -107,46 +117,22 @@ fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &m
 
 fn lower_class_declarations(
     program: &ResolvedProgram,
+    copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
 ) -> Vec<HirClassDeclaration> {
     program
         .classes
         .iter()
-        .filter_map(|class| lower_class_declaration(class, diagnostics))
+        .filter_map(|class| lower_class_declaration(class, copy_capabilities, diagnostics))
         .collect()
 }
 
 fn lower_class_declaration(
     class: &ResolvedClassDeclaration,
+    copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
     let mut valid = true;
-    if let Some(copy_constructor) = &class.copy_constructor_declaration {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_OBJECT_DECLARATION,
-                "copy-constructor bodies cannot be type-checked yet",
-            )
-            .with_primary_label(
-                copy_constructor.span,
-                "the declaration is resolved, but its body is not supported yet",
-            ),
-        );
-        valid = false;
-    }
-    if let Some(copy_assignment) = &class.copy_assignment_declaration {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_OBJECT_DECLARATION,
-                "copy-assignment bodies cannot be type-checked yet",
-            )
-            .with_primary_label(
-                copy_assignment.span,
-                "the declaration is resolved, but its body is not supported yet",
-            ),
-        );
-        valid = false;
-    }
     let fields = class
         .fields
         .iter()
@@ -190,6 +176,24 @@ fn lower_class_declaration(
         parameters: initializer.parameters.iter().map(lower_parameter).collect(),
         span: initializer.span,
     };
+    let copy_constructor_declaration =
+        class
+            .copy_constructor_declaration
+            .as_ref()
+            .map(|copy| HirInitializerDeclaration {
+                id: copy.id,
+                parameters: copy.parameters.iter().map(lower_parameter).collect(),
+                span: copy.span,
+            });
+    let copy_assignment_declaration =
+        class
+            .copy_assignment_declaration
+            .as_ref()
+            .map(|copy| HirCopyAssignmentDeclaration {
+                id: copy.id,
+                parameter: lower_parameter(&copy.parameter),
+                span: copy.span,
+            });
     let destructor = class
         .destructor
         .as_ref()
@@ -234,6 +238,10 @@ fn lower_class_declaration(
         name_span: class.name_span,
         fields,
         initializer,
+        copy_constructor_declaration,
+        copy_constructor: copy_capabilities.constructor(class.id).clone(),
+        copy_assignment_declaration,
+        copy_assignment: copy_capabilities.assignment(class.id).clone(),
         destructor,
         methods,
         span: class.span,
@@ -242,6 +250,7 @@ fn lower_class_declaration(
 
 fn check_class_definitions(
     program: &ResolvedProgram,
+    copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
 ) -> Vec<HirClassDefinition> {
     program
@@ -253,6 +262,7 @@ fn check_class_definitions(
             let initializer_definition = definition.initializer.as_ref()?;
             let initializer_body = CallableChecker::new_member(
                 program,
+                copy_capabilities,
                 MemberCheckContext {
                     callable: initializer.id.into(),
                     parameters: &initializer.parameters,
@@ -261,13 +271,61 @@ fn check_class_definitions(
                     receiver: ReceiverContext {
                         class: class.id,
                         access: HirAccess::Mutable,
-                        initializer: true,
+                        body_kind: MemberBodyKind::OrdinaryInitializer,
                     },
                     callable_name: format!("initializer for class `{}`", class.name),
                 },
                 diagnostics,
             )
             .check_member();
+            let copy_constructor = class.copy_constructor_declaration.as_ref().map(|copy| {
+                let body = definition
+                    .copy_constructor
+                    .as_ref()
+                    .expect("resolved copy-constructor declaration must have a body");
+                CallableChecker::new_member(
+                    program,
+                    copy_capabilities,
+                    MemberCheckContext {
+                        callable: copy.id.into(),
+                        parameters: &copy.parameters,
+                        definition: body,
+                        return_type: Type::Unit,
+                        receiver: ReceiverContext {
+                            class: class.id,
+                            access: HirAccess::Mutable,
+                            body_kind: MemberBodyKind::CopyConstructor,
+                        },
+                        callable_name: format!("copy constructor for class `{}`", class.name),
+                    },
+                    diagnostics,
+                )
+                .check_member()
+            });
+            let copy_assignment = class.copy_assignment_declaration.as_ref().map(|copy| {
+                let body = definition
+                    .copy_assignment
+                    .as_ref()
+                    .expect("resolved copy-assignment declaration must have a body");
+                CallableChecker::new_member(
+                    program,
+                    copy_capabilities,
+                    MemberCheckContext {
+                        callable: copy.id.into(),
+                        parameters: std::slice::from_ref(&copy.parameter),
+                        definition: body,
+                        return_type: Type::Unit,
+                        receiver: ReceiverContext {
+                            class: class.id,
+                            access: HirAccess::Mutable,
+                            body_kind: MemberBodyKind::CopyAssignment,
+                        },
+                        callable_name: format!("copy assignment for class `{}`", class.name),
+                    },
+                    diagnostics,
+                )
+                .check_member()
+            });
             let destructor = class.destructor.as_ref().map(|destructor| {
                 let body = definition
                     .destructor
@@ -275,6 +333,7 @@ fn check_class_definitions(
                     .expect("resolved destructor declaration must have a body");
                 CallableChecker::new_member(
                     program,
+                    copy_capabilities,
                     MemberCheckContext {
                         callable: destructor.id.into(),
                         parameters: &[],
@@ -283,7 +342,7 @@ fn check_class_definitions(
                         receiver: ReceiverContext {
                             class: class.id,
                             access: DESTRUCTOR_RECEIVER_ACCESS,
-                            initializer: false,
+                            body_kind: MemberBodyKind::MethodOrDestructor,
                         },
                         callable_name: format!("destructor for class `{}`", class.name),
                     },
@@ -298,6 +357,7 @@ fn check_class_definitions(
                 .map(|(method, body)| {
                     CallableChecker::new_member(
                         program,
+                        copy_capabilities,
                         MemberCheckContext {
                             callable: method.id.into(),
                             parameters: &method.parameters,
@@ -306,7 +366,7 @@ fn check_class_definitions(
                             receiver: ReceiverContext {
                                 class: class.id,
                                 access: lower_receiver_access(method.receiver_access),
-                                initializer: false,
+                                body_kind: MemberBodyKind::MethodOrDestructor,
                             },
                             callable_name: format!("method `{}`", method.name),
                         },
@@ -318,6 +378,8 @@ fn check_class_definitions(
             Some(HirClassDefinition {
                 class: class.id,
                 initializer: initializer_body,
+                copy_constructor,
+                copy_assignment,
                 destructor,
                 methods,
                 span: definition.span,
@@ -569,8 +631,10 @@ mod tests {
         assert!(resolved.diagnostics.is_empty());
 
         let mut diagnostics = Diagnostics::new();
+        let copy_capabilities = CopyCapabilities::compute(&resolved.program);
         let outer = lower_class_declaration(
             resolved.program.classes.get(ClassId::new(0)).unwrap(),
+            &copy_capabilities,
             &mut diagnostics,
         )
         .expect("class-typed fields should lower to HIR declarations");

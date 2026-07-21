@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, LocalId,
-        MethodId, ParameterId,
+        BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
+        InitializerId, LocalId, MethodId, ParameterId,
     },
     object_path::ObjectPath,
     source::Span,
@@ -71,6 +71,10 @@ impl HirProgram {
         self.class(id.class())?.initializer(id)
     }
 
+    pub fn copy_assignment(&self, id: CopyAssignmentId) -> Option<&HirCopyAssignmentDeclaration> {
+        self.class(id.class())?.copy_assignment_declaration(id)
+    }
+
     pub fn method(&self, id: MethodId) -> Option<&HirMethodDeclaration> {
         self.class(id.class())?.method(id)
     }
@@ -102,7 +106,13 @@ impl HirProgram {
                         return_type: Type::Unit,
                     })
             }
-            CallableId::CopyAssignment(_) => None,
+            CallableId::CopyAssignment(assignment) => {
+                self.copy_assignment(assignment)
+                    .map(|declaration| HirCallableSignature {
+                        parameters: std::slice::from_ref(&declaration.parameter),
+                        return_type: Type::Unit,
+                    })
+            }
             CallableId::Destructor(destructor) => {
                 self.destructor(destructor).map(|_| HirCallableSignature {
                     parameters: &[],
@@ -166,6 +176,10 @@ pub struct HirClassDeclaration {
     pub name_span: Span,
     pub fields: Vec<HirFieldDeclaration>,
     pub initializer: HirInitializerDeclaration,
+    pub copy_constructor_declaration: Option<HirInitializerDeclaration>,
+    pub copy_constructor: HirCopyCapability<InitializerId>,
+    pub copy_assignment_declaration: Option<HirCopyAssignmentDeclaration>,
+    pub copy_assignment: HirCopyCapability<CopyAssignmentId>,
     pub destructor: Option<HirDestructorDeclaration>,
     pub methods: Vec<HirMethodDeclaration>,
     pub span: Span,
@@ -180,7 +194,28 @@ impl HirClassDeclaration {
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
-        (id.class() == self.id && self.initializer.id == id).then_some(&self.initializer)
+        if id.class() != self.id {
+            return None;
+        }
+        (self.initializer.id == id)
+            .then_some(&self.initializer)
+            .or_else(|| {
+                self.copy_constructor_declaration
+                    .as_ref()
+                    .filter(|declaration| declaration.id == id)
+            })
+    }
+
+    pub fn copy_assignment_declaration(
+        &self,
+        id: CopyAssignmentId,
+    ) -> Option<&HirCopyAssignmentDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.copy_assignment_declaration
+            .as_ref()
+            .filter(|declaration| declaration.id == id)
     }
 
     pub fn method(&self, id: MethodId) -> Option<&HirMethodDeclaration> {
@@ -213,6 +248,66 @@ pub struct HirInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<HirParameter>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCopyAssignmentDeclaration {
+    pub id: CopyAssignmentId,
+    pub parameter: HirParameter,
+    pub span: Span,
+}
+
+/// Whether a class supports one copy operation and which implementation was
+/// selected. Synthesized capabilities retain their ordered semantic field
+/// operations so later phases never infer copying from layout.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirCopyCapability<I> {
+    User(I),
+    Synthesized(HirSynthesizedCopy<I>),
+    Unavailable,
+}
+
+impl<I: Copy> HirCopyCapability<I> {
+    pub const fn selected(&self) -> Option<HirSelectedCopyOperation<I>> {
+        match self {
+            Self::User(id) => Some(HirSelectedCopyOperation::User(*id)),
+            Self::Synthesized(operation) => {
+                Some(HirSelectedCopyOperation::Synthesized(operation.class))
+            }
+            Self::Unavailable => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirSynthesizedCopy<I> {
+    pub class: ClassId,
+    pub fields: Vec<HirSynthesizedFieldCopy<I>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirSynthesizedFieldCopy<I> {
+    Primitive {
+        field: FieldId,
+    },
+    Class {
+        field: FieldId,
+        operation: HirSelectedCopyOperation<I>,
+    },
+}
+
+impl<I> HirSynthesizedFieldCopy<I> {
+    pub const fn field(&self) -> FieldId {
+        match self {
+            Self::Primitive { field } | Self::Class { field, .. } => *field,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirSelectedCopyOperation<I> {
+    User(I),
+    Synthesized(ClassId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -288,6 +383,8 @@ impl HirClassDefinitionTable {
 pub struct HirClassDefinition {
     pub class: ClassId,
     pub initializer: HirMemberDefinition,
+    pub copy_constructor: Option<HirMemberDefinition>,
+    pub copy_assignment: Option<HirMemberDefinition>,
     pub destructor: Option<HirMemberDefinition>,
     pub methods: Vec<HirMemberDefinition>,
     pub span: Span,
@@ -297,9 +394,18 @@ impl HirClassDefinition {
     pub fn member(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
         match callable {
             CallableId::Function(_) => None,
-            CallableId::Initializer(id) if id.class() == self.class => {
-                (self.initializer.callable == callable).then_some(&self.initializer)
-            }
+            CallableId::Initializer(id) if id.class() == self.class => (self.initializer.callable
+                == callable)
+                .then_some(&self.initializer)
+                .or_else(|| {
+                    self.copy_constructor
+                        .as_ref()
+                        .filter(|definition| definition.callable == callable)
+                }),
+            CallableId::CopyAssignment(id) if id.class() == self.class => self
+                .copy_assignment
+                .as_ref()
+                .filter(|definition| definition.callable == callable),
             CallableId::Method(id) if id.class() == self.class => self
                 .methods
                 .get(id.index())
@@ -506,6 +612,8 @@ pub enum HirStatement {
     Block(HirBlock),
     FieldAssignment(HirFieldAssignment),
     FieldConstruction(HirFieldConstruction),
+    FieldCopyConstruction(HirFieldCopyConstruction),
+    FieldCopyAssignment(HirFieldCopyAssignment),
 }
 
 impl HirStatement {
@@ -518,6 +626,8 @@ impl HirStatement {
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::FieldConstruction(statement) => statement.span,
+            Self::FieldCopyConstruction(statement) => statement.span,
+            Self::FieldCopyAssignment(statement) => statement.span,
         }
     }
 }
@@ -566,6 +676,22 @@ pub struct HirFieldAssignment {
 pub struct HirFieldConstruction {
     pub place: HirFieldPlace,
     pub construction: HirConstruction,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFieldCopyConstruction {
+    pub place: HirFieldPlace,
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFieldCopyAssignment {
+    pub place: HirFieldPlace,
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
     pub span: Span,
 }
 

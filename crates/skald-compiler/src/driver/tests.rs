@@ -59,6 +59,29 @@ fn unused_destructor_bodies_lower_through_the_backend() {
 }
 
 #[test]
+fn unused_copy_lifecycle_bodies_remain_hir_only_before_mir_copy_support() {
+    let artifact = compile_source_to_assembly(
+        "copy-lifecycle.ska",
+        concat!(
+            "class Value {\n",
+            "  value: i64;\n",
+            "  init(value: i64) { self.value = value; }\n",
+            "  init(ref other: Value) { self.value = other.value; }\n",
+            "  assign(ref other: Value) { self.value = other.value; }\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .expect("OVS2 copy bodies must cross HIR without reaching MIR lowering");
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains(".Lska_class_0_init_0"));
+    assert!(!artifact.assembly.contains(".Lska_class_0_init_1"));
+    assert!(!artifact.assembly.contains(".Lska_class_0_assign_0"));
+}
+
+#[test]
 fn help_and_version_are_available_without_compilation() {
     let (exit_code, stdout, stderr) = run(&["skac", "--help"]);
     assert_eq!(exit_code, 0);
