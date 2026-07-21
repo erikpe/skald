@@ -40,10 +40,15 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         }
         HirExpressionKind::DirectCall { arguments, .. } => {
             for argument in arguments {
-                assert_expression_is_fully_typed(argument);
+                assert_call_argument_is_fully_typed(argument);
             }
         }
-        HirExpressionKind::FieldRead(_) | HirExpressionKind::MethodCall { .. } => {}
+        HirExpressionKind::MethodCall { arguments, .. } => {
+            for argument in arguments {
+                assert_call_argument_is_fully_typed(argument);
+            }
+        }
+        HirExpressionKind::FieldRead(_) => {}
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
@@ -53,6 +58,21 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
     }
 }
 
+fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
+    match argument {
+        crate::hir::HirCallArgument::Value(expression) => {
+            assert_expression_is_fully_typed(expression)
+        }
+        crate::hir::HirCallArgument::Place(place) => {
+            assert!(matches!(
+                place.access,
+                crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
+            ));
+        }
+    }
+}
+
+mod alias_parameters;
 mod control_flow;
 mod declarations;
 mod diagnostics;

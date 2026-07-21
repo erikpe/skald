@@ -3,13 +3,13 @@
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
-        HirBinaryOperation, HirExpression, HirExpressionKind, HirFieldPlace, HirObjectPlace,
-        HirReceiverAccess, HirUnaryOperation, Type,
+        HirAccess, HirBinaryOperation, HirCallArgument, HirExpression, HirExpressionKind,
+        HirFieldPlace, HirObjectPlace, HirUnaryOperation, Type,
     },
     identity::{BindingId, FieldId},
     resolve::{
         ResolvedBinaryOperator, ResolvedExpression, ResolvedObjectPlace, ResolvedParameter,
-        ResolvedUnaryOperator,
+        ResolvedParameterBindingMode, ResolvedUnaryOperator,
     },
     source::Span,
 };
@@ -18,7 +18,8 @@ use super::{
     function::CallableChecker,
     literal::{classify_i64_magnitude, i64_literal_through_groups, Magnitude},
     program::{
-        lower_type, FIELD_INITIALIZATION, INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY,
+        lower_parameter_mode, lower_type, FIELD_INITIALIZATION, INSUFFICIENT_ALIAS_ACCESS,
+        INVALID_ALIAS_ARGUMENT, INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY,
         INVALID_OBJECT_CONTEXT, READ_ONLY_RECEIVER, TYPE_MISMATCH, WRONG_ARGUMENT_COUNT,
     },
 };
@@ -163,60 +164,19 @@ impl CallableChecker<'_, '_> {
                 })
             }
             ResolvedExpression::DirectCall(call) => {
-                let mut arguments = Vec::with_capacity(call.arguments.len());
-                let mut valid = true;
-                for argument in &call.arguments {
-                    match self.check_expression(argument) {
-                        Some(argument) => arguments.push(argument),
-                        None => valid = false,
-                    }
-                }
-
                 let target = self
                     .program
                     .declarations
                     .get(call.function)
                     .expect("resolved direct-call target must exist");
-                if arguments.len() == call.arguments.len()
-                    && call.arguments.len() == target.parameters.len()
-                {
-                    for (argument, parameter) in arguments.iter().zip(&target.parameters) {
-                        valid &= require_type(
-                            argument.ty,
-                            lower_type(&parameter.type_syntax),
-                            argument.span,
-                            "call argument",
-                            self.diagnostics,
-                        );
-                    }
-                } else if call.arguments.len() != target.parameters.len() {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            WRONG_ARGUMENT_COUNT,
-                            format!(
-                                "function `{}` expects {} argument{} but received {}",
-                                target.name,
-                                target.parameters.len(),
-                                if target.parameters.len() == 1 {
-                                    ""
-                                } else {
-                                    "s"
-                                },
-                                call.arguments.len()
-                            ),
-                        )
-                        .with_primary_label(
-                            call.callee_span,
-                            "called with the wrong number of arguments",
-                        )
-                        .with_secondary_label(target.name_span, "function declared here"),
-                    );
-                    valid = false;
-                }
-
-                if !valid {
-                    return None;
-                }
+                let arguments = self.check_arguments(
+                    &call.arguments,
+                    &target.parameters,
+                    call.callee_span,
+                    "function",
+                    Some(&target.name),
+                    Some(target.name_span),
+                )?;
                 Some(HirExpression {
                     kind: HirExpressionKind::DirectCall {
                         function: call.function,
@@ -302,7 +262,7 @@ impl CallableChecker<'_, '_> {
             valid = false;
         }
         if method.receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
-            && receiver.access == HirReceiverAccess::ReadOnly
+            && receiver.access == HirAccess::ReadOnly
         {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -322,6 +282,8 @@ impl CallableChecker<'_, '_> {
             &method.parameters,
             call.member_span,
             "method",
+            Some(&method.name),
+            Some(method.name_span),
         )?;
         valid.then_some(HirExpression {
             kind: HirExpressionKind::MethodCall {
@@ -340,41 +302,111 @@ impl CallableChecker<'_, '_> {
         parameters: &[ResolvedParameter],
         target_span: Span,
         target_kind: &'static str,
-    ) -> Option<Vec<HirExpression>> {
+        target_name: Option<&str>,
+        declaration_span: Option<Span>,
+    ) -> Option<Vec<HirCallArgument>> {
         let mut arguments = Vec::with_capacity(source.len());
         let mut valid = true;
-        for argument in source {
-            match self.check_expression(argument) {
-                Some(argument) => arguments.push(argument),
-                None => valid = false,
+        for (index, argument) in source.iter().enumerate() {
+            match parameters.get(index) {
+                Some(parameter) => match self.check_argument(argument, parameter) {
+                    Some(argument) => arguments.push(argument),
+                    None => valid = false,
+                },
+                None => {
+                    let _ = self.check_expression(argument);
+                    valid = false;
+                }
             }
         }
         if source.len() != parameters.len() {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    WRONG_ARGUMENT_COUNT,
-                    format!(
-                        "{target_kind} expects {} argument{} but received {}",
-                        parameters.len(),
-                        if parameters.len() == 1 { "" } else { "s" },
-                        source.len()
-                    ),
-                )
-                .with_primary_label(target_span, "called with the wrong number of arguments"),
-            );
+            let target = target_name
+                .map(|name| format!("{target_kind} `{name}`"))
+                .unwrap_or_else(|| target_kind.to_owned());
+            let mut diagnostic = Diagnostic::error(
+                WRONG_ARGUMENT_COUNT,
+                format!(
+                    "{target} expects {} argument{} but received {}",
+                    parameters.len(),
+                    if parameters.len() == 1 { "" } else { "s" },
+                    source.len()
+                ),
+            )
+            .with_primary_label(target_span, "called with the wrong number of arguments");
+            if let Some(declaration_span) = declaration_span {
+                diagnostic = diagnostic
+                    .with_secondary_label(declaration_span, format!("{target_kind} declared here"));
+            }
+            self.diagnostics.push(diagnostic);
             valid = false;
-        } else if arguments.len() == source.len() {
-            for (argument, parameter) in arguments.iter().zip(parameters) {
-                valid &= require_type(
+        }
+        valid.then_some(arguments)
+    }
+
+    fn check_argument(
+        &mut self,
+        source: &ResolvedExpression,
+        parameter: &ResolvedParameter,
+    ) -> Option<HirCallArgument> {
+        match parameter.binding_mode {
+            ResolvedParameterBindingMode::Value => {
+                let argument = self.check_expression(source)?;
+                require_type(
                     argument.ty,
                     lower_type(&parameter.type_syntax),
                     argument.span,
                     "call argument",
                     self.diagnostics,
-                );
+                )
+                .then_some(HirCallArgument::Value(argument))
+            }
+            ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+            | ResolvedParameterBindingMode::MutableAlias { .. } => {
+                let place = self.check_alias_argument_place(source)?;
+                let Type::Class(expected_class) = lower_type(&parameter.type_syntax) else {
+                    return None;
+                };
+                if place.class != expected_class {
+                    let actual = &self
+                        .program
+                        .class(place.class)
+                        .expect("resolved alias argument class must exist")
+                        .name;
+                    let expected = &self
+                        .program
+                        .class(expected_class)
+                        .expect("resolved alias parameter class must exist")
+                        .name;
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            TYPE_MISMATCH,
+                            format!("alias argument has type `{actual}`, expected `{expected}`"),
+                        )
+                        .with_primary_label(place.span, "this place has the wrong class")
+                        .with_secondary_label(
+                            parameter.type_syntax.span,
+                            "alias parameter type declared here",
+                        ),
+                    );
+                    return None;
+                }
+                let required = lower_parameter_mode(parameter.binding_mode)
+                    .required_access()
+                    .expect("alias parameter mode must require place access");
+                if !place.access.permits(required) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INSUFFICIENT_ALIAS_ACCESS,
+                            "read-only access cannot satisfy a mutable alias parameter",
+                        )
+                        .with_primary_label(place.span, "this place provides read-only access")
+                        .with_secondary_label(parameter.span, "mutable alias declared here"),
+                    );
+                    return None;
+                }
+                Some(HirCallArgument::Place(place))
             }
         }
-        valid.then_some(arguments)
     }
 
     pub(super) fn check_field_place(
@@ -391,30 +423,106 @@ impl CallableChecker<'_, '_> {
     }
 
     fn check_object_place(&mut self, place: ResolvedObjectPlace) -> Option<HirObjectPlace> {
-        let access = match place.binding {
-            BindingId::Receiver(_) => {
-                self.receiver
-                    .expect("resolved receiver place must occur in a member")
-                    .access
+        let checked = self.check_binding_place(place.binding, place.span, true)?;
+        assert_eq!(
+            checked.class, place.class,
+            "resolved object-place class must match its binding"
+        );
+        Some(checked)
+    }
+
+    fn check_alias_argument_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirObjectPlace> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                self.check_binding_place(binding.binding, binding.span, false)
             }
-            BindingId::Local(_) => HirReceiverAccess::Mutable,
-            BindingId::Parameter(_) => {
+            ResolvedExpression::Grouped(grouped) => {
+                let mut place = self.check_alias_argument_place(&grouped.expression)?;
+                place.span = grouped.span;
+                Some(place)
+            }
+            _ => {
                 self.diagnostics.push(
                     Diagnostic::error(
-                        INVALID_OBJECT_CONTEXT,
-                        "object parameters are unavailable in the stage-0 profile",
+                        INVALID_ALIAS_ARGUMENT,
+                        "alias argument must be an existing object place",
                     )
-                    .with_primary_label(place.span, "expected an inline object local or `self`"),
+                    .with_primary_label(
+                        expression.span(),
+                        "expected an object local, `self`, alias parameter, or grouping",
+                    ),
                 );
-                return None;
+                None
+            }
+        }
+    }
+
+    fn check_binding_place(
+        &mut self,
+        binding: BindingId,
+        span: Span,
+        allow_initializing_self: bool,
+    ) -> Option<HirObjectPlace> {
+        let Type::Class(class) = self.binding_type(binding) else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_ALIAS_ARGUMENT,
+                    "alias argument must designate an object",
+                )
+                .with_primary_label(span, "this binding has a primitive type"),
+            );
+            return None;
+        };
+        let access = match binding {
+            BindingId::Receiver(_) => {
+                let receiver = self
+                    .receiver
+                    .expect("resolved receiver place must occur in a member");
+                if receiver.initializer && !allow_initializing_self {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_ALIAS_ARGUMENT,
+                            "initializer `self` is not a live alias source",
+                        )
+                        .with_primary_label(span, "the object becomes live after `init` returns"),
+                    );
+                    return None;
+                }
+                receiver.access
+            }
+            BindingId::Local(_) => HirAccess::Mutable,
+            BindingId::Parameter(id) => {
+                let parameter = self.parameter(id);
+                let Some(access) = lower_parameter_mode(parameter.binding_mode).required_access()
+                else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "an object value parameter cannot be used as an alias place",
+                        )
+                        .with_primary_label(span, "use an explicit alias parameter"),
+                    );
+                    return None;
+                };
+                access
             }
         };
         Some(HirObjectPlace {
-            binding: place.binding,
-            class: place.class,
+            binding,
+            class,
             access,
-            span: place.span,
+            span,
         })
+    }
+
+    fn parameter(&self, id: crate::identity::ParameterId) -> &ResolvedParameter {
+        self.parameters
+            .get(id.index())
+            .filter(|parameter| parameter.id == id)
+            .expect("resolved parameter ID must exist")
     }
 
     fn binding_type(&self, binding: BindingId) -> Type {
@@ -429,14 +537,7 @@ impl CallableChecker<'_, '_> {
                     .expect("receiver binding must be checked in a member body")
                     .class,
             ),
-            BindingId::Parameter(id) => lower_type(
-                &self
-                    .parameters
-                    .get(id.index())
-                    .filter(|parameter| parameter.id == id)
-                    .expect("resolved parameter ID must exist")
-                    .type_syntax,
-            ),
+            BindingId::Parameter(id) => lower_type(&self.parameter(id).type_syntax),
             BindingId::Local(id) => lower_type(
                 &self
                     .locals

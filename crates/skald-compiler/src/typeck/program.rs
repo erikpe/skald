@@ -3,10 +3,11 @@
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
-        HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
-        HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
-        HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration,
-        HirMethodDeclaration, HirParameter, HirProgram, HirReceiverAccess, Type,
+        HirAccess, HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition,
+        HirClassDefinitionTable, HirFieldDeclaration, HirFunctionDeclaration,
+        HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage,
+        HirInitializerDeclaration, HirMethodDeclaration, HirParameter, HirParameterMode,
+        HirProgram, Type,
     },
     identity::FunctionId,
     resolve::{
@@ -40,9 +41,9 @@ pub const INVALID_CONSTRUCTION: &str = "TYP015";
 pub const INVALID_INITIALIZER_BODY: &str = "TYP016";
 pub const FIELD_INITIALIZATION: &str = "TYP017";
 pub const READ_ONLY_RECEIVER: &str = "TYP018";
-/// Temporary capability boundary removed when AL3 gives HIR explicit alias
-/// parameter and argument-place semantics.
-pub const ALIAS_PARAMETER_NOT_TYPE_CHECKED: &str = "TYP019";
+pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
+pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
+pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -59,7 +60,7 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    report_unimplemented_alias_parameters(program, &mut diagnostics);
+    check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     let classes = lower_class_declarations(program, &mut diagnostics);
@@ -91,31 +92,11 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     TypeCheckOutput { hir, diagnostics }
 }
 
-fn report_unimplemented_alias_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
-    let function_parameters = program
-        .declarations
-        .iter()
-        .flat_map(|declaration| &declaration.parameters);
-    let member_parameters = program.classes.iter().flat_map(|class| {
-        class
-            .initializer
-            .iter()
-            .flat_map(|initializer| &initializer.parameters)
-            .chain(class.methods.iter().flat_map(|method| &method.parameters))
-    });
-
-    for parameter in function_parameters.chain(member_parameters) {
-        if parameter.binding_mode == ResolvedParameterBindingMode::Value {
-            continue;
+fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
+    for declaration in program.declarations.iter() {
+        if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
+            validate_parameters(&declaration.parameters, diagnostics, "function");
         }
-        diagnostics.push(
-            Diagnostic::error(
-                ALIAS_PARAMETER_NOT_TYPE_CHECKED,
-                "alias parameters are not available in typed HIR yet",
-            )
-            .with_primary_label(parameter.span, "the alias signature was resolved here")
-            .with_note("AL3 adds alias access checking and typed place arguments"),
-        );
     }
 }
 
@@ -175,7 +156,7 @@ fn lower_class_declaration(
         );
         return None;
     };
-    valid &= validate_primitive_parameters(&initializer.parameters, diagnostics, "initializer");
+    valid &= validate_parameters(&initializer.parameters, diagnostics, "initializer");
     let initializer = HirInitializerDeclaration {
         id: initializer.id,
         parameters: initializer.parameters.iter().map(lower_parameter).collect(),
@@ -185,7 +166,7 @@ fn lower_class_declaration(
         .methods
         .iter()
         .map(|method| {
-            valid &= validate_primitive_parameters(&method.parameters, diagnostics, "method");
+            valid &= validate_parameters(&method.parameters, diagnostics, "method");
             let return_type = lower_type(&method.return_type);
             if !is_payload_primitive(return_type) && return_type != Type::Unit {
                 diagnostics.push(
@@ -242,7 +223,7 @@ fn check_class_definitions(
                     return_type: Type::Unit,
                     receiver: ReceiverContext {
                         class: class.id,
-                        access: HirReceiverAccess::Mutable,
+                        access: HirAccess::Mutable,
                         initializer: true,
                     },
                     callable_name: format!("initializer for class `{}`", class.name),
@@ -284,31 +265,51 @@ fn check_class_definitions(
         .collect()
 }
 
-fn validate_primitive_parameters(
+fn validate_parameters(
     parameters: &[ResolvedParameter],
     diagnostics: &mut Diagnostics,
     owner: &'static str,
 ) -> bool {
     let mut valid = true;
     for parameter in parameters {
-        if parameter.binding_mode != ResolvedParameterBindingMode::Value {
-            continue;
-        }
-        if !is_payload_primitive(lower_type(&parameter.type_syntax)) {
-            diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OBJECT_DECLARATION,
-                    format!(
-                        "{owner} parameter `{}` must have a primitive type",
-                        parameter.name
+        let ty = lower_type(&parameter.type_syntax);
+        match parameter.binding_mode {
+            ResolvedParameterBindingMode::Value if !is_payload_primitive(ty) => {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_DECLARATION,
+                        format!(
+                            "{owner} parameter `{}` must have a primitive type",
+                            parameter.name
+                        ),
+                    )
+                    .with_primary_label(
+                        parameter.type_syntax.span,
+                        "object and `unit` value parameters are unavailable",
                     ),
-                )
-                .with_primary_label(
-                    parameter.type_syntax.span,
-                    "object and `unit` parameters are unavailable",
-                ),
-            );
-            valid = false;
+                );
+                valid = false;
+            }
+            ResolvedParameterBindingMode::ReadOnlyAlias { .. }
+            | ResolvedParameterBindingMode::MutableAlias { .. }
+                if !matches!(ty, Type::Class(_)) =>
+            {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_ALIAS_PARAMETER,
+                        format!(
+                            "{owner} alias parameter `{}` must name a class",
+                            parameter.name
+                        ),
+                    )
+                    .with_primary_label(
+                        parameter.type_syntax.span,
+                        "primitive and `unit` aliases are unavailable",
+                    ),
+                );
+                valid = false;
+            }
+            _ => {}
         }
     }
     valid
@@ -317,6 +318,7 @@ fn validate_primitive_parameters(
 fn lower_parameter(parameter: &ResolvedParameter) -> HirParameter {
     HirParameter {
         id: parameter.id,
+        mode: lower_parameter_mode(parameter.binding_mode),
         name: parameter.name.clone(),
         name_span: parameter.name_span,
         ty: lower_type(&parameter.type_syntax),
@@ -331,10 +333,18 @@ const fn is_payload_primitive(ty: Type) -> bool {
     )
 }
 
-const fn lower_receiver_access(access: ResolvedReceiverAccess) -> HirReceiverAccess {
+pub(super) const fn lower_parameter_mode(mode: ResolvedParameterBindingMode) -> HirParameterMode {
+    match mode {
+        ResolvedParameterBindingMode::Value => HirParameterMode::Value,
+        ResolvedParameterBindingMode::ReadOnlyAlias { .. } => HirParameterMode::ReadOnlyAlias,
+        ResolvedParameterBindingMode::MutableAlias { .. } => HirParameterMode::MutableAlias,
+    }
+}
+
+const fn lower_receiver_access(access: ResolvedReceiverAccess) -> HirAccess {
     match access {
-        ResolvedReceiverAccess::ReadOnly => HirReceiverAccess::ReadOnly,
-        ResolvedReceiverAccess::Mutable => HirReceiverAccess::Mutable,
+        ResolvedReceiverAccess::ReadOnly => HirAccess::ReadOnly,
+        ResolvedReceiverAccess::Mutable => HirAccess::Mutable,
     }
 }
 
@@ -401,6 +411,24 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
         let ResolvedFunctionLinkage::External { symbol } = &declaration.linkage else {
             continue;
         };
+        if let Some(parameter) = declaration
+            .parameters
+            .iter()
+            .find(|parameter| parameter.binding_mode != ResolvedParameterBindingMode::Value)
+        {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_EXTERNAL_DECLARATION,
+                    format!(
+                        "external function `{}` cannot declare alias parameters",
+                        declaration.name
+                    ),
+                )
+                .with_primary_label(parameter.span, "aliases have no supported C ABI yet")
+                .with_note("external parameters must be passed by value"),
+            );
+            continue;
+        }
         let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
             matches!(
                 lower_type(&parameter.type_syntax),
@@ -435,17 +463,7 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
 }
 
 fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDeclaration {
-    let parameters = function
-        .parameters
-        .iter()
-        .map(|parameter| HirParameter {
-            id: parameter.id,
-            name: parameter.name.clone(),
-            name_span: parameter.name_span,
-            ty: lower_type(&parameter.type_syntax),
-            span: parameter.span,
-        })
-        .collect();
+    let parameters = function.parameters.iter().map(lower_parameter).collect();
 
     HirFunctionDeclaration {
         id: function.id,

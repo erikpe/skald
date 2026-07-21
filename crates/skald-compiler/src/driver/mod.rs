@@ -11,6 +11,7 @@ mod toolchain;
 pub use cli::run_cli;
 pub use pipeline::{
     compile_source_to_assembly, AssemblyArtifact, CompilationError, CompilationReport,
+    ALIAS_MIR_NOT_IMPLEMENTED,
 };
 pub use toolchain::{Toolchain, ToolchainError, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV};
 

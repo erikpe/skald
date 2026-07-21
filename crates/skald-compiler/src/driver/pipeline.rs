@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
     mir::lower_hir,
     passes::run_mir_pipeline,
@@ -13,6 +13,8 @@ use crate::{
     syntax::parse,
     typeck::type_check,
 };
+
+pub const ALIAS_MIR_NOT_IMPLEMENTED: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -73,6 +75,20 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    if let Some(parameter) = hir.first_alias_parameter() {
+        diagnostics.push(
+            Diagnostic::error(
+                ALIAS_MIR_NOT_IMPLEMENTED,
+                "alias parameters are not available in MIR yet",
+            )
+            .with_primary_label(
+                parameter.span,
+                "typed alias signature reaches the AL3 boundary",
+            )
+            .with_note("AL4 adds MIR parameter modes and place arguments"),
+        );
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let mir = run_mir_pipeline(lower_hir(&hir)).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 

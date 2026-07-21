@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: in progress; AL0–AL2 implemented.
+Status: in progress; AL0–AL3 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -321,7 +321,7 @@ declarations and promises no cross-module ABI stability.
 - [x] AL0 — Freeze the restricted alias-parameter contract
 - [x] AL1 — Add binding-mode syntax and parser diagnostics
 - [x] AL2 — Resolve alias signatures and existing object places
-- [ ] AL3 — Type-check alias access and build typed call arguments
+- [x] AL3 — Type-check alias access and build typed call arguments
 - [ ] AL4 — Add verified alias parameters and place arguments to MIR
 - [ ] AL5 — Lower the alias pointer ABI on Linux x86-64
 - [ ] AL6 — Connect typed aliases through HIR-to-MIR lowering
@@ -418,25 +418,25 @@ access/type checking.
 **Purpose:** Make type and access semantics explicit in HIR before any address
 or ABI lowering occurs.
 
-- [ ] Add a HIR parameter mode and a single typed parameter descriptor used by
+- [x] Add a HIR parameter mode and a single typed parameter descriptor used by
       all callable signature queries.
-- [ ] Add ordered HIR call arguments that distinguish scalar values from
+- [x] Add ordered HIR call arguments that distinguish scalar values from
       class places.
-- [ ] Centralize place-capability calculation for local objects, `self`, and
+- [x] Centralize place-capability calculation for local objects, `self`, and
       alias parameters.
-- [ ] Check exact nominal class equality and reject implicit conversion or
+- [x] Check exact nominal class equality and reject implicit conversion or
       ordinary object-value fallback.
-- [ ] Allow mutable-to-read-only capability reduction and reject every
+- [x] Allow mutable-to-read-only capability reduction and reject every
       read-only-to-mutable path.
-- [ ] Enforce field-write and mutable-method restrictions through alias bases
+- [x] Enforce field-write and mutable-method restrictions through alias bases
       using the same access vocabulary as receivers.
-- [ ] Support alias arguments for direct functions, methods, and initializers,
+- [x] Support alias arguments for direct functions, methods, and initializers,
       including forwarding and mixed value/alias lists.
-- [ ] Reject alias modes on extern declarations and all non-class types in this
+- [x] Reject alias modes on extern declarations and all non-class types in this
       profile with focused diagnostics.
-- [ ] Keep aliases invalid in returns, scalar expressions, ordinary value
+- [x] Keep aliases invalid in returns, scalar expressions, ordinary value
       arguments, construction destinations, and every escaping position.
-- [ ] Extend HIR dumps with parameter modes, ordered argument kinds, and place
+- [x] Extend HIR dumps with parameter modes, ordered argument kinds, and place
       access.
 
 **Tests:** Type-checker tests covering the complete access matrix, exact-type

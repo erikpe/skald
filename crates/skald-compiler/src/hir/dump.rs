@@ -83,8 +83,8 @@ impl HirDumper {
             dumper.indented(|dumper| {
                 for method in &class.methods {
                     let access = match method.receiver_access {
-                        HirReceiverAccess::ReadOnly => "readonly",
-                        HirReceiverAccess::Mutable => "mutable",
+                        HirAccess::ReadOnly => "readonly",
+                        HirAccess::Mutable => "mutable",
                     };
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Method {} ", method.id);
@@ -170,7 +170,12 @@ impl HirDumper {
         self.write_indentation();
         let _ = write!(self.output, "Parameter {} ", parameter.id);
         write_quoted(&mut self.output, &parameter.name);
-        let _ = write!(self.output, " : {}", parameter.ty.name());
+        let mode = match parameter.mode {
+            HirParameterMode::Value => "value",
+            HirParameterMode::ReadOnlyAlias => "ref",
+            HirParameterMode::MutableAlias => "mut-ref",
+        };
+        let _ = write!(self.output, " {mode} : {}", parameter.ty.name());
         write_span(&mut self.output, parameter.span);
         self.output.push('\n');
     }
@@ -309,7 +314,7 @@ impl HirDumper {
                 self.typed_line(&format!("DirectCall {function}"), expression);
                 self.indented(|dumper| {
                     for argument in arguments {
-                        dumper.expression(argument);
+                        dumper.call_argument(argument);
                     }
                 });
             }
@@ -330,7 +335,7 @@ impl HirDumper {
                 self.indented(|dumper| {
                     dumper.object_place(receiver);
                     for argument in arguments {
-                        dumper.expression(argument);
+                        dumper.call_argument(argument);
                     }
                 });
             }
@@ -347,9 +352,22 @@ impl HirDumper {
         );
         self.indented(|dumper| {
             for argument in &construction.arguments {
-                dumper.expression(argument);
+                dumper.call_argument(argument);
             }
         });
+    }
+
+    fn call_argument(&mut self, argument: &HirCallArgument) {
+        match argument {
+            HirCallArgument::Value(expression) => {
+                self.line("ValueArgument", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+            HirCallArgument::Place(place) => {
+                self.line("PlaceArgument", place.span);
+                self.indented(|dumper| dumper.object_place(place));
+            }
+        }
     }
 
     fn field_place(&mut self, place: &HirFieldPlace) {
@@ -359,8 +377,8 @@ impl HirDumper {
 
     fn object_place(&mut self, place: &HirObjectPlace) {
         let access = match place.access {
-            HirReceiverAccess::ReadOnly => "readonly",
-            HirReceiverAccess::Mutable => "mutable",
+            HirAccess::ReadOnly => "readonly",
+            HirAccess::Mutable => "mutable",
         };
         self.line(
             &format!(

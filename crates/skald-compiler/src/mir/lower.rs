@@ -2,10 +2,10 @@
 
 use crate::{
     hir::{
-        BlockFlow, HirBinaryOperation, HirBlock, HirClassDeclaration, HirConditional,
-        HirExpression, HirExpressionKind, HirFunctionDeclaration, HirFunctionDefinition,
-        HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter, HirProgram,
-        HirReceiverAccess, HirStatement, HirUnaryOperation, Type,
+        BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirClassDeclaration,
+        HirConditional, HirExpression, HirExpressionKind, HirFunctionDeclaration,
+        HirFunctionDefinition, HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter,
+        HirProgram, HirStatement, HirUnaryOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId},
 };
@@ -13,6 +13,10 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+    assert!(
+        hir.first_alias_parameter().is_none(),
+        "alias-bearing HIR requires AL4 MIR parameter and place-argument support"
+    );
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
@@ -77,8 +81,8 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 id: method.id,
                 name: method.name.clone(),
                 receiver_access: match method.receiver_access {
-                    HirReceiverAccess::ReadOnly => MirReceiverAccess::ReadOnly,
-                    HirReceiverAccess::Mutable => MirReceiverAccess::Mutable,
+                    HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
+                    HirAccess::Mutable => MirReceiverAccess::Mutable,
                 },
                 parameter_types: method
                     .parameters
@@ -287,7 +291,7 @@ impl<'hir> BodyLowerer<'hir> {
                                 .arguments
                                 .iter()
                                 .map(|argument| {
-                                    self.lower_expression(argument).expect(
+                                    self.lower_value_argument(argument).expect(
                                         "typed constructor argument must produce a scalar value",
                                     )
                                 })
@@ -506,7 +510,7 @@ impl<'hir> BodyLowerer<'hir> {
                 let arguments = arguments
                     .iter()
                     .map(|argument| {
-                        self.lower_expression(argument)
+                        self.lower_value_argument(argument)
                             .expect("typed call argument must produce a value")
                     })
                     .collect();
@@ -537,7 +541,7 @@ impl<'hir> BodyLowerer<'hir> {
                 let arguments = arguments
                     .iter()
                     .map(|argument| {
-                        self.lower_expression(argument)
+                        self.lower_value_argument(argument)
                             .expect("typed method argument must produce a scalar value")
                     })
                     .collect();
@@ -558,6 +562,15 @@ impl<'hir> BodyLowerer<'hir> {
     fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
         self.lower_object_place(&place.receiver)
             .project_field(place.field)
+    }
+
+    fn lower_value_argument(&mut self, argument: &HirCallArgument) -> Option<ValueId> {
+        match argument {
+            HirCallArgument::Value(expression) => self.lower_expression(expression),
+            HirCallArgument::Place(_) => {
+                unreachable!("alias place arguments require AL4 MIR support")
+            }
+        }
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {

@@ -103,6 +103,20 @@ impl HirProgram {
             }
         }
     }
+
+    pub fn first_alias_parameter(&self) -> Option<&HirParameter> {
+        self.declarations
+            .iter()
+            .flat_map(|declaration| &declaration.parameters)
+            .chain(self.classes.iter().flat_map(|class| {
+                class
+                    .initializer
+                    .parameters
+                    .iter()
+                    .chain(class.methods.iter().flat_map(|method| &method.parameters))
+            }))
+            .find(|parameter| parameter.mode != HirParameterMode::Value)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -195,9 +209,18 @@ pub struct HirInitializerDeclaration {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirReceiverAccess {
+pub enum HirAccess {
     ReadOnly,
     Mutable,
+}
+
+impl HirAccess {
+    pub const fn permits(self, required: Self) -> bool {
+        matches!(
+            (self, required),
+            (Self::Mutable, _) | (Self::ReadOnly, Self::ReadOnly)
+        )
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -205,7 +228,7 @@ pub struct HirMethodDeclaration {
     pub id: MethodId,
     pub name: String,
     pub name_span: Span,
-    pub receiver_access: HirReceiverAccess,
+    pub receiver_access: HirAccess,
     pub parameters: Vec<HirParameter>,
     pub return_type: Type,
     pub span: Span,
@@ -392,10 +415,28 @@ impl HirFunctionDefinition {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirParameter {
     pub id: ParameterId,
+    pub mode: HirParameterMode,
     pub name: String,
     pub name_span: Span,
     pub ty: Type,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirParameterMode {
+    Value,
+    ReadOnlyAlias,
+    MutableAlias,
+}
+
+impl HirParameterMode {
+    pub const fn required_access(self) -> Option<HirAccess> {
+        match self {
+            Self::Value => None,
+            Self::ReadOnlyAlias => Some(HirAccess::ReadOnly),
+            Self::MutableAlias => Some(HirAccess::Mutable),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -474,7 +515,7 @@ pub enum HirLocalInitializer {
 pub struct HirConstruction {
     pub class: ClassId,
     pub initializer: InitializerId,
-    pub arguments: Vec<HirExpression>,
+    pub arguments: Vec<HirCallArgument>,
     pub span: Span,
 }
 
@@ -539,22 +580,37 @@ pub enum HirExpressionKind {
     },
     DirectCall {
         function: FunctionId,
-        arguments: Vec<HirExpression>,
+        arguments: Vec<HirCallArgument>,
     },
     FieldRead(HirFieldPlace),
     MethodCall {
         receiver: HirObjectPlace,
         method: MethodId,
-        arguments: Vec<HirExpression>,
+        arguments: Vec<HirCallArgument>,
     },
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirCallArgument {
+    Value(HirExpression),
+    Place(HirObjectPlace),
+}
+
+impl HirCallArgument {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Value(expression) => expression.span,
+            Self::Place(place) => place.span,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HirObjectPlace {
     pub binding: BindingId,
     pub class: ClassId,
-    pub access: HirReceiverAccess,
+    pub access: HirAccess,
     pub span: Span,
 }
 

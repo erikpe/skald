@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    hir::{HirLocalInitializer, HirReceiverAccess},
+    hir::{HirAccess, HirLocalInitializer},
     identity::{BindingId, ClassId, FieldId, InitializerId, MethodId},
 };
 
@@ -22,11 +22,8 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     assert_eq!(class.fields[0].id, FieldId::new(class.id, 0));
     assert_eq!(class.initializer.id, InitializerId::new(class.id, 0));
     assert_eq!(class.methods[0].id, MethodId::new(class.id, 0));
-    assert_eq!(class.methods[0].receiver_access, HirReceiverAccess::Mutable);
-    assert_eq!(
-        class.methods[1].receiver_access,
-        HirReceiverAccess::ReadOnly
-    );
+    assert_eq!(class.methods[0].receiver_access, HirAccess::Mutable);
+    assert_eq!(class.methods[1].receiver_access, HirAccess::ReadOnly);
 
     let initializer = hir.member_definition(class.initializer.id.into()).unwrap();
     let HirStatement::FieldAssignment(assignment) = &initializer.body.statements[0] else {
@@ -270,7 +267,7 @@ fn methods_reuse_structured_definite_return_analysis() {
 }
 
 #[test]
-fn resolved_alias_signatures_stop_before_hir_for_every_internal_owner() {
+fn lowers_alias_signatures_for_every_internal_owner() {
     let output = check_text(concat!(
         "class Thing {\n",
         "  init(ref other: Thing) {}\n",
@@ -280,13 +277,21 @@ fn resolved_alias_signatures_stop_before_hir_for_every_internal_owner() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.hir.is_none());
-    let codes: Vec<_> = output
-        .diagnostics
-        .iter()
-        .map(|diagnostic| diagnostic.code)
-        .collect();
-    assert_eq!(codes, vec![ALIAS_PARAMETER_NOT_TYPE_CHECKED; 3]);
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    assert_eq!(
+        hir.declarations.get(FunctionId::new(0)).unwrap().parameters[0].mode,
+        crate::hir::HirParameterMode::ReadOnlyAlias
+    );
+    let class = hir.class(ClassId::new(0)).unwrap();
+    assert_eq!(
+        class.initializer.parameters[0].mode,
+        crate::hir::HirParameterMode::ReadOnlyAlias
+    );
+    assert_eq!(
+        class.methods[0].parameters[0].mode,
+        crate::hir::HirParameterMode::MutableAlias
+    );
 }
 
 #[test]
@@ -307,7 +312,7 @@ fn object_hir_dump_is_exact_and_identity_based() {
             "      Fields\n",
             "        Field c0:field0 \"value\" : i64 @12..23\n",
             "      Initializer c0:init0 @24..64\n",
-            "        Parameter c0:init0:p0 \"value\" : i64 @29..39\n",
+            "        Parameter c0:init0:p0 \"value\" value : i64 @29..39\n",
             "      Methods\n",
             "        Method c0:method0 \"get\" readonly -> i64 @65..103\n",
             "  ClassDefinitions\n",
@@ -336,7 +341,8 @@ fn object_hir_dump_is_exact_and_identity_based() {
             "      Block @123..171\n",
             "        LocalDeclaration f0:l0 @125..149\n",
             "          Construct c0 via c0:init0 @142..148\n",
-            "            Integer 1 : i64 @146..147\n",
+            "            ValueArgument @146..147\n",
+            "              Integer 1 : i64 @146..147\n",
             "        Return @150..169\n",
             "          MethodCall c0:method0 : i64 @157..168\n",
             "            ObjectPlace f0:l0 : class c0 mutable @157..162\n",

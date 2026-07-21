@@ -5,9 +5,9 @@ use std::collections::BTreeSet;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        BlockFlow, HirBlock, HirCallStatement, HirConditional, HirConditionalArm, HirConstruction,
-        HirFieldAssignment, HirFunctionDefinition, HirLocal, HirLocalDecl, HirLocalInitializer,
-        HirMemberDefinition, HirReceiverAccess, HirReturn, HirStatement, Type,
+        BlockFlow, HirAccess, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
+        HirConstruction, HirFieldAssignment, HirFunctionDefinition, HirLocal, HirLocalDecl,
+        HirLocalInitializer, HirMemberDefinition, HirReturn, HirStatement, Type,
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
     resolve::{
@@ -29,7 +29,7 @@ use super::{
 #[derive(Clone, Copy)]
 pub(super) struct ReceiverContext {
     pub(super) class: ClassId,
-    pub(super) access: HirReceiverAccess,
+    pub(super) access: HirAccess,
     pub(super) initializer: bool,
 }
 
@@ -421,6 +421,8 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             &initializer.parameters,
             construction.callee_span,
             "initializer",
+            None,
+            None,
         )?;
         Some(HirConstruction {
             class: construction.class,
@@ -440,7 +442,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             return CheckedStatement::falls_through(None);
         };
         let mut valid = true;
-        if place.receiver.access == HirReceiverAccess::ReadOnly {
+        if place.receiver.access == HirAccess::ReadOnly {
             self.diagnostics.push(
                 Diagnostic::error(
                     READ_ONLY_RECEIVER,

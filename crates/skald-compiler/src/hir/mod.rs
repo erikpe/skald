@@ -8,12 +8,12 @@ mod ir;
 
 pub use dump::dump_hir;
 pub use ir::{
-    BlockFlow, HirBinaryOperation, HirBlock, HirCallStatement, HirCallableSignature,
-    HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
-    HirConditional, HirConditionalArm, HirConstruction, HirExpression, HirExpressionKind,
-    HirFieldAssignment, HirFieldDeclaration, HirFieldPlace, HirFunctionDeclaration,
-    HirFunctionDeclarationTable, HirFunctionDefinition, HirFunctionDefinitionTable,
-    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirLocalDecl, HirLocalInitializer,
-    HirMemberDefinition, HirMethodDeclaration, HirObjectPlace, HirParameter, HirProgram,
-    HirReceiverAccess, HirReturn, HirStatement, HirUnaryOperation, Type,
+    BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirCallStatement,
+    HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable, HirClassDefinition,
+    HirClassDefinitionTable, HirConditional, HirConditionalArm, HirConstruction, HirExpression,
+    HirExpressionKind, HirFieldAssignment, HirFieldDeclaration, HirFieldPlace,
+    HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
+    HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration, HirLocal,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectPlace,
+    HirParameter, HirParameterMode, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
 };

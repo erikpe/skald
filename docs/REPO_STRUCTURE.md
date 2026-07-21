@@ -234,11 +234,16 @@ Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw
 binary64 bits. No backend infers types from spelling.
 
-The next alias-parameter slice adds a HIR binding mode orthogonal to `Type`.
-HIR type checking is the authority for converting an argument's source shape
-into either a scalar value argument or an exact class place with an access
-capability. Until that representation exists, a structured type-checking
-capability diagnostic prevents resolved alias signatures from reaching MIR.
+HIR parameter descriptors carry value/read-only-alias/mutable-alias mode
+orthogonally to `Type`, and every callable signature query returns those same
+descriptors. Calls and constructions retain one source-ordered argument list
+whose entries are either typed scalar values or exact-class object places.
+
+One `HirAccess` vocabulary describes read-only or mutable capability for
+method receivers and alias places. Type checking derives it centrally for
+locals, `self`, and alias parameters, permits mutable-to-read-only reduction,
+and enforces field, method, forwarding, and non-escaping rules. HIR therefore
+contains all source-level alias decisions needed by later phases.
 
 ### MIR
 
@@ -249,6 +254,10 @@ MIR is executable in shape but target-independent. It separates:
 - direct calls and receiver-bearing method calls;
 - initialization into a destination from ordinary assignment/store;
 - basic blocks with `Return`, `Goto`, and boolean `Branch` terminators.
+
+Alias parameters and place arguments are not represented in MIR yet. A
+structured driver capability diagnostic stops alias-bearing HIR before MIR
+lowering; AL4 replaces this boundary with verified MIR semantics.
 
 Expression and argument lowering preserves the language's left-to-right order.
 State crossing block edges uses storage because MIR is not currently SSA.
