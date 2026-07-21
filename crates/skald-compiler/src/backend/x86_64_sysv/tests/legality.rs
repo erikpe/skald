@@ -70,18 +70,16 @@ fn unused_object_metadata_is_accepted_after_obj3() {
 }
 
 #[test]
-fn non_trivial_source_cleanup_remains_a_structured_dd5_error() {
+fn recursively_non_trivial_source_cleanup_is_accepted_after_dd5() {
     let mir = lower_source_to_mir(concat!(
         "class Resource { init() {} destroy {} }\n",
         "class Owner { resource: Resource; init() { self.resource = Resource(); } }\n",
         "fn main() -> i64 { var owner: Owner = Owner(); return 0; }\n",
     ));
 
-    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
-    assert_eq!(error.target(), Target::X86_64SysV);
-    assert!(error
-        .message()
-        .contains("non-trivial cleanup instruction lowering is staged for DD5"));
+    let output = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assert!(output.contains("call .Lska_class_0_destroy_0"));
+    assert_system_assembler_accepts(&output);
 }
 
 #[test]

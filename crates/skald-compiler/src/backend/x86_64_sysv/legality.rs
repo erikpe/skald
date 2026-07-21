@@ -6,7 +6,7 @@ use crate::{
     mir::{verify_mir, MirCallTarget, MirInstruction, MirParameter, MirProgram},
 };
 
-use super::{abi, destruction, layout::DataLayout};
+use super::{abi, layout::DataLayout};
 
 pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
     verify_mir(program).map_err(|errors| {
@@ -53,15 +53,9 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                             }
                         }
                     },
-                    MirInstruction::Cleanup(cleanup) => {
-                        if destruction::requires_runtime_work(program, cleanup.target) {
-                            return Err(BackendError::new(
-                                Target::X86_64SysV,
-                                Some(function.callable()),
-                                "non-trivial cleanup instruction lowering is staged for DD5",
-                            ));
-                        }
-                    }
+                    // Cleanup targets and their complete destruction plans are
+                    // verified before target layout and instruction selection.
+                    MirInstruction::Cleanup(_) => {}
                     MirInstruction::Assign(_) | MirInstruction::Store(_) => {}
                 }
             }

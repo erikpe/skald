@@ -15,6 +15,7 @@ use super::{
 
 mod assignment;
 mod call;
+mod cleanup;
 mod terminator;
 mod value;
 
@@ -141,9 +142,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         match instruction {
             MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
             MirInstruction::Call(call) => self.select_call(call)?,
-            // Legality has proved this cleanup's complete destruction plan has
-            // no user code. Non-trivial cleanup remains an explicit DD5 error.
-            MirInstruction::Cleanup(_) => {}
+            MirInstruction::Cleanup(cleanup) => self.select_cleanup(cleanup)?,
             MirInstruction::Initialize(initialize) => self.select_initialize(initialize)?,
             MirInstruction::Store(store) => self.select_store(store)?,
         }

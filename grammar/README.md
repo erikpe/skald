@@ -382,7 +382,7 @@ The exact declaration, liveness, evaluation-order, diagnostic, IR, layout, and
 future-lifecycle contract is in the
 [frozen class-typed inline-field profile](../docs/SKALD_DRAFT_SPEC.md#544-frozen-class-typed-inline-field-profile).
 
-## Staged extension: deterministic destruction
+## Restricted extension: deterministic destruction
 
 The parser and resolver accept the dedicated class-member form implemented by
 DD1 of the
@@ -431,10 +431,10 @@ and diagnostic contract is in the
 
 DD3 carries destructor bodies and canonical body-before-fields destruction
 plans into target-independent MIR. Cleanup is a verified operation over a
-semantic object place; it contains no target offset or ABI detail. DD4 still
-needs to insert those operations on lexical fallthrough and return edges, and
-DD5 will lower them in the backend, so automatic destruction is not executable
-yet.
+semantic object place; it contains no target offset or ABI detail. DD4 inserts
+those operations on lexical fallthrough and return edges, and DD5 lowers the
+verified plans through the x86-64 hidden-receiver ABI. Automatic destruction is
+therefore executable within the restricted profile above.
 
 ## Recovery and nesting
 
@@ -455,7 +455,6 @@ The following broader-language features remain design or implementation work:
 - arrays and optionals;
 - strings and standard-library containers;
 - object value parameters/results and general temporaries;
-- implementation of the frozen deterministic-destruction profile;
 - inheritance, interfaces, virtual dispatch, and access control;
 - local alias declarations and alias sources beyond inline locals, method
   `self`, and forwarded parameters;

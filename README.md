@@ -48,14 +48,16 @@ The current Linux x86-64 compiler supports:
 - read-only `fn` and mutable `mut fn` receiver access;
 - restricted call-scoped `ref` and `mut ref` class parameters over inline
   locals, method receivers, and forwarded aliases;
+- optional contextual `destroy { ... }` members and automatic deterministic
+  cleanup of owning inline locals on normal block and `return` exits, including
+  recursive class fields in reverse declaration order;
 - deterministic left-to-right operand and argument evaluation;
 - textual x86-64 System V assembly, native linking, exact diagnostics, and a
   small C runtime with primitive output functions.
 
 Owning inline objects are deliberately local-only today. By-value object
-parameters, results and arguments, copying, destruction, inheritance,
-interfaces, `shared`, arrays, optionals, loops, and checked exceptions are not
-implemented yet.
+parameters, results and arguments, copying, inheritance, interfaces, `shared`,
+arrays, optionals, loops, and checked exceptions are not implemented yet.
 
 Restricted alias parameters compile through syntax, typed HIR, verified MIR,
 and the internal x86-64 pointer ABI without copying object bytes. Native and
@@ -111,8 +113,8 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. [deterministic `destroy` and cleanup-aware control
-   flow](docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md);
+1. harden and publish the implemented deterministic `destroy` and normal-exit
+   cleanup profile;
 2. copy construction/assignment and object value parameters/results;
 3. inheritance, interfaces, virtual dispatch, and casts;
 4. `shared` ownership and borrow anchors;

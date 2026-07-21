@@ -304,9 +304,12 @@ read-only, dead, overlapping, foreign, wrong-class, and scalar targets. A
 separate cleanup planner registers successfully initialized owning locals by
 lexical scope, emits reverse-order cleanup on fallthrough and `return`, and
 keeps return-value evaluation ahead of cleanup. Verification also carries
-outstanding local-cleanup obligations through joins. DD5 will lower non-trivial
-verified operations without reconstructing lifetime or field-order policy;
-until then, the backend erases only plans proven to contain no user code.
+outstanding local-cleanup obligations through joins. The backend lowers each
+verified cleanup mechanically: it calls the optional user body through the
+existing hidden-receiver ABI, then recursively follows the plan's semantic
+field steps. Return values remain in their existing scalar frame homes until
+the terminator reloads them after cleanup. No lexical lifetime or field-order
+policy is reconstructed below MIR.
 
 The x86-64 data-layout builder resolves class dependencies recursively,
 retains source field order, and rejects cycles or sizes beyond addressable
@@ -364,6 +367,12 @@ class argument. Integer and SSE arguments use independent register sequences;
 overflow arguments share source-ordered stack slots. The current lowering is
 intentionally stack-heavy and can later be replaced by register allocation
 without changing MIR.
+
+Destructors use the same hidden-receiver call path. Recursive cleanup projects
+the existing object place through target-owned field offsets and emits no
+aggregate copies, allocation, or deallocation. Empty destruction plans produce
+no instructions; user bodies and nested class fields execute in the exact
+order already verified in MIR.
 
 The implemented internal alias ABI reuses indirect-address mechanics without
 treating an alias as an implicit receiver. Each alias is one integer-class

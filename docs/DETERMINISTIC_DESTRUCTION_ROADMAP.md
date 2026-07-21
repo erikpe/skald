@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0–DD4 are complete and DD5 is next.
+Status: in progress; DD0–DD5 are complete and DD6 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -251,16 +251,16 @@ owning objects whose construction completed, in the frozen order, once.
 **Purpose:** Make verified cleanup observable without moving language lifetime
 rules into the backend.
 
-- [ ] Lower cleanup through the existing local, receiver, and projected-place
+- [x] Lower cleanup through the existing local, receiver, and projected-place
       address machinery.
-- [ ] Call user destruction bodies with the existing hidden-receiver ABI.
-- [ ] Execute recursive field cleanup in the order already represented by MIR.
-- [ ] Preserve live primitive return values across cleanup calls.
-- [ ] Support empty, padded, mixed, nested, and forward-declared class layouts.
-- [ ] Extend frame/call planning without aggregate copying or deallocation.
-- [ ] Retain structured errors for malformed cleanup MIR and incomplete or
+- [x] Call user destruction bodies with the existing hidden-receiver ABI.
+- [x] Execute recursive field cleanup in the order already represented by MIR.
+- [x] Preserve live primitive return values across cleanup calls.
+- [x] Support empty, padded, mixed, nested, and forward-declared class layouts.
+- [x] Extend frame/call planning without aggregate copying or deallocation.
+- [x] Retain structured errors for malformed cleanup MIR and incomplete or
       recursive class metadata.
-- [ ] Keep generated symbols and assembly deterministic.
+- [x] Keep generated symbols and assembly deterministic.
 
 **Tests:** Assembly snapshots, register preservation, deep place addressing,
 layout cases, assembler acceptance, malformed MIR, and native execution.
@@ -321,16 +321,16 @@ The slice is complete when:
 
 - [ ] all DD0–DD6 tasks and acceptance criteria are complete;
 - [x] destructor declarations have stable identities and typed mutable bodies;
-- [ ] complete objects run their body then nested fields in frozen reverse order;
-- [ ] owning locals are destroyed once in reverse initialization order;
+- [x] complete objects run their body then nested fields in frozen reverse order;
+- [x] owning locals are destroyed once in reverse initialization order;
 - [x] nested scopes, conditionals, fallthrough, and return plan cleanup correctly;
-- [ ] return expressions are evaluated before cleanup and their values survive;
+- [x] return expressions are evaluated before cleanup and their values survive;
 - [x] aliases remain non-owning and primitives require no cleanup;
 - [x] MIR explicitly represents and verifies cleanup over semantic places;
-- [ ] the backend lowers cleanup without inferring lexical lifetime rules;
-- [ ] malformed source and MIR fail structurally rather than panicking;
-- [ ] observable output and compiler artifacts are deterministic;
-- [ ] full quality gates pass and living documentation matches the compiler.
+- [x] the backend lowers cleanup without inferring lexical lifetime rules;
+- [x] malformed source and MIR fail structurally rather than panicking;
+- [x] observable output and compiler artifacts are deterministic;
+- [x] full quality gates pass and living documentation matches the compiler.
 
 The following object-model roadmap should add copy construction, assignment,
 object parameters/results, return storage, temporaries, and permitted elision

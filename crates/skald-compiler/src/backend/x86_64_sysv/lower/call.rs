@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::CallableId,
+    identity::{CallableId, DestructorId},
     mir::{
         MirArgument, MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef,
         MirFunctionLinkage, MirInitialize, MirParameter, MirParameterMode, MirPlace, MirType,
@@ -135,6 +135,14 @@ impl InstructionSelector<'_, '_> {
             &initialize.arguments,
             None,
         )
+    }
+
+    pub(super) fn select_destructor_call(
+        &mut self,
+        target: DestructorId,
+        receiver: &MirPlace,
+    ) -> Result<(), BackendError> {
+        self.select_callable(CallableId::Destructor(target), Some(receiver), &[], None)
     }
 
     fn select_callable(

@@ -1,0 +1,67 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Root {
+    marker: i64;
+    owner: Owner;
+
+    init(left: i64, right: i64, owner_marker: i64, marker: i64) {
+        self.marker = marker;
+        self.owner = Owner(left, right, owner_marker);
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Owner {
+    prefix: u8;
+    left: Leaf;
+    ratio: f64;
+    empty: Empty;
+    right: Leaf;
+    suffix: bool;
+    marker: i64;
+
+    init(left: i64, right: i64, marker: i64) {
+        self.prefix = 1u8;
+        self.left = Leaf(left);
+        self.ratio = 2.5;
+        self.empty = Empty();
+        self.right = Leaf(right);
+        self.suffix = true;
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Leaf {
+    small: u8;
+    value: i64;
+    enabled: bool;
+
+    init(value: i64) {
+        self.small = 1u8;
+        self.value = value;
+        self.enabled = true;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value);
+    }
+}
+
+class Empty {
+    init() {}
+}
+
+fn main() -> i64 {
+    var outer: Root = Root(11, 12, 10, 100);
+    {
+        var inner: Root = Root(21, 22, 20, 200);
+    }
+    return 37;
+}

@@ -39,6 +39,7 @@ use native_support::*;
 mod assembler;
 mod calls;
 mod control_flow;
+mod destruction;
 mod instruction_selection;
 mod legality;
 mod native_execution;

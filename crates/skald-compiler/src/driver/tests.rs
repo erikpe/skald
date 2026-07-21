@@ -43,7 +43,7 @@ fn temporary_artifacts(directory: &Path) -> Vec<PathBuf> {
 }
 
 #[test]
-fn unused_destructor_bodies_remain_lowerable_before_dd5() {
+fn unused_destructor_bodies_lower_through_the_backend() {
     let artifact = compile_source_to_assembly(
         "destructor.ska",
         concat!(
@@ -52,7 +52,7 @@ fn unused_destructor_bodies_remain_lowerable_before_dd5() {
         ),
         Target::X86_64SysV,
     )
-    .expect("DD4 must not reject a destructor that no cleanup edge reaches");
+    .expect("DD5 must lower valid destructor definitions deterministically");
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_destroy_0"));
