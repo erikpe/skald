@@ -117,11 +117,13 @@ fn lifecycle_spellings_remain_ordinary_names_outside_special_member_syntax() {
         "    fn destroy() -> unit {}\n",
         "}\n",
         "fn init(assign: i64) -> i64 { var destroy: i64 = assign; return destroy; }\n",
+        "fn destroy() -> unit {}\n",
     ));
 
     assert!(output.diagnostics.is_empty());
     assert_eq!(class(&output.ast, 0).members.len(), 7);
     assert_eq!(function(&output.ast, 1).name.text, "init");
+    assert_eq!(function(&output.ast, 2).name.text, "destroy");
 }
 
 #[test]

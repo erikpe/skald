@@ -382,6 +382,54 @@ The exact declaration, liveness, evaluation-order, diagnostic, IR, layout, and
 future-lifecycle contract is in the
 [frozen class-typed inline-field profile](../docs/SKALD_DRAFT_SPEC.md#544-frozen-class-typed-inline-field-profile).
 
+## Frozen next extension: deterministic destruction
+
+The next parser-facing object extension is frozen but not yet accepted by the
+compiler. DD1 of the
+[Deterministic Destruction Roadmap](../docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md)
+will enable the dedicated class-member form:
+
+```text
+destructor-declaration = "destroy" block
+```
+
+The form has no `fn`, parameter list, result annotation, modifier, or trailing
+semicolon:
+
+```ska
+class Resource {
+    state: i64;
+
+    init(state: i64) {
+        self.state = state;
+    }
+
+    destroy {
+        record(self.state);
+    }
+}
+```
+
+`destroy` is contextual only when it begins this direct class-member form. It
+remains an identifier in `destroy: i64`, `fn destroy() -> unit`, parameters,
+locals, and top-level function names. The special member occupies its own
+single declaration slot, so one class may also have an ordinary field or method
+named `destroy`; a second special declaration is a duplicate.
+
+The body uses the same statement grammar as an implemented `unit` method. It
+has an implicit mutable `self`, permits `return;` or fallthrough, and rejects a
+value return. The complete receiver and all its fields remain live throughout
+the body. Direct construction into an already-live field, an explicit call of
+the special member, and a standalone early-destruction statement remain
+invalid.
+
+Automatic cleanup is limited to successfully constructed owning object locals
+on normal block fallthrough and `return`. It does not add object values,
+copying, exceptions, inheritance, shared ownership, arrays, explicit early
+destruction, or cleanup for failed construction. The complete frozen semantic
+and diagnostic contract is in the
+[local deterministic-destruction profile](../docs/SKALD_DRAFT_SPEC.md#545-frozen-local-deterministic-destruction-profile).
+
 ## Recovery and nesting
 
 The parser accumulates structured diagnostics and synchronizes at parameter,
@@ -401,7 +449,7 @@ The following broader-language features remain design or implementation work:
 - arrays and optionals;
 - strings and standard-library containers;
 - object value parameters/results and general temporaries;
-- deterministic destruction and cleanup;
+- implementation of the frozen deterministic-destruction profile;
 - inheritance, interfaces, virtual dispatch, and access control;
 - local alias declarations and alias sources beyond inline locals, method
   `self`, and forwarded parameters;

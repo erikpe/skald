@@ -918,7 +918,8 @@ are implemented. Nested scalar access, receivers, and alias arguments are
 lowered through complete identity paths and execute against recursively laid
 out x86-64 storage. Base classes, interfaces, static members, `final`, access
 modifiers, virtual/override declarations, `assign`, and `destroy` remain
-rejected. Empty classes are valid.
+rejected by the current compiler. Section 5.4.5 freezes the next restricted
+`destroy` extension. Empty classes are valid.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
 implicit mutable `self`, takes only by-value primitive parameters, and returns
@@ -1001,9 +1002,10 @@ The profile adds these observable evaluation-order rules:
 - construction reserves its destination, evaluates arguments left to right,
   invokes `init`, and makes the destination live only after normal completion.
 
-These rules do not yet specify general temporary destruction, full-expression
-boundaries, or cleanup on non-local exits. Those remain prerequisites for
-`destroy`, shared ownership, aliases requiring anchors, and checked exceptions.
+These implemented rules do not specify destruction or cleanup. Section 5.4.5
+freezes owning-local cleanup on the currently supported normal exits. General
+temporaries, other control-flow exits, shared ownership, aliases requiring
+anchors, and checked exceptions remain later work.
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
@@ -1386,9 +1388,10 @@ on hash-map iteration or target layout.
 This profile establishes complete contained subobjects but makes their scope
 end unobservable. It adds no `destroy` body, implicit field destruction,
 initialized-place cleanup state in MIR, or cleanup-aware control-flow edge. The
-destruction slice will destroy fields of a complete object in the broader
-reverse-declaration order and will define cleanup for partial construction and
-non-local exits using the completion points preserved here.
+frozen destruction profile in Section 5.4.5 will destroy completed local
+objects on normal scope and return exits, including fields in reverse
+declaration order, using the completion points preserved here. Failed-
+construction and exceptional cleanup remain later work.
 
 There is no implicit or synthesized copy construction or assignment. A user
 may pass a field to an existing explicit alias parameter, including an
@@ -1405,6 +1408,177 @@ the call. Checked exceptions will later destroy only subobjects whose
 initializers completed, rather than treating the incomplete enclosing object
 as live. None of those future rules changes the source forms or normal-return
 liveness boundary frozen here.
+
+#### 5.4.5 Frozen Local Deterministic-Destruction Profile
+
+**Implementation status:** contract frozen by DD0 of the
+[Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md);
+syntax and execution remain staged for DD1–DD6. The parser-facing extension is
+recorded in
+[`grammar/README.md`](../grammar/README.md#frozen-next-extension-deterministic-destruction).
+
+This profile narrows the broader destruction rules in Section 5.7 to the
+compiler's current local-only inline-object model and normal control flow. It
+adds an observable end to the lifetimes already established by direct local and
+class-field construction. It does not add another construction form, an object
+value, or an operation that ends a live object early.
+
+##### Declaration and body contract
+
+The only new source production is:
+
+```text
+destructor-declaration = "destroy" block
+```
+
+The contextual spelling `destroy` selects a special destruction member only
+when it directly introduces that class-member form. The declaration has no
+`fn`, name, modifiers, parameter list, result annotation, or semicolon. These
+forms are therefore invalid special declarations:
+
+```ska
+destroy() {}
+destroy -> unit {}
+mut destroy {}
+destroy;
+```
+
+The spelling remains an ordinary identifier everywhere that does not parse a
+special member. A field `destroy: i64`, an ordinary `fn destroy() -> unit`, and
+locals, parameters, or top-level functions named `destroy` remain valid. The
+special member does not enter the ordinary field/method namespace and may
+coexist with those declarations.
+
+Each class has one optional destruction-member slot. A second special
+`destroy { ... }` declaration in the same class is an error at the second
+declaration, with the first declaration identified as the established member.
+An absent declaration means an empty user body; it does not suppress recursive
+field cleanup.
+
+The destruction body has an implicit mutable `self`, no parameters, and an
+implicit `unit` result. Its statement surface is the same as an ordinary
+implemented `unit` method: primitive and directly constructed object locals,
+nested blocks, conditionals, field assignments, unit-producing calls, method
+calls, and `return;` are permitted. A value return is invalid. Falling through
+the closing brace and executing `return;` have the same destruction-member
+completion semantics.
+
+The receiver is a complete live object for the entire user body. All its
+completed inline fields remain live and may be read, mutated, used as receivers,
+or passed as aliases according to the existing mutable-access rules. The body
+may construct its own local objects, whose scopes are cleaned normally. It may
+not construct into any already-live field of `self`, replace a whole object,
+use an object as a value, explicitly invoke a special destruction member, or
+explicitly end any object's lifetime. An ordinary method named `destroy` is a
+separate directly callable method and has no lifecycle effect.
+
+##### Lifetime registration and normal cleanup
+
+Storage reservation does not register cleanup. An owning object local becomes
+registered only after all constructor arguments have evaluated, its exact
+initializer has returned normally, and the declaration has established the
+complete local as live. Registration occurs before execution advances to the
+next statement. Primitive locals, alias-parameter homes, method receivers, and
+alias arguments are never registered as owning cleanup entries.
+
+The implemented language has no checked exceptions, recoverable initializer
+failure, object-producing return expression, or other path that can leave a
+partially constructed local while continuing execution. Consequently this
+profile emits no failed-construction cleanup. Later exception work will use the
+existing per-field and complete-object liveness points to clean only completed
+subobjects.
+
+Each runtime activation maintains the semantic equivalent of an initialized-
+owning-place stack per active lexical scope. The required observable order is:
+
+1. normal fallthrough from a block destroys that block's registered locals in
+   reverse registration order before entering its continuation;
+2. only the selected conditional arm executes or registers locals, and its
+   child scope is cleaned before control reaches the conditional join;
+3. `return` first evaluates and preserves its primitive result, then cleans
+   every exited scope from innermost to outermost, using reverse registration
+   order within each scope, and only then transfers the preserved result;
+4. implicit fallthrough from a `unit` callable cleans its body scope by the
+   same rule before returning;
+5. a `return;` inside a destruction body first cleans locals owned by that body
+   and its nested scopes, then completes the user body and begins field cleanup
+   for the object being destroyed.
+
+Source order fixes registration order for declarations that execute in one
+scope. Branches do not merge registrations from unexecuted arms. Current place
+selection and primitive expressions create no owning temporary cleanup entry.
+Calls must finish before cleanup continues, so any alias passed by a cleanup
+body remains valid for that complete call and cannot escape it.
+
+##### Complete-object and field order
+
+Destroying one complete object performs these steps exactly once:
+
+1. execute its user destruction body, if present;
+2. after that body and all body-local cleanup complete, destroy class-typed
+   fields in reverse source declaration order;
+3. finish the object's lifetime without copying or deallocating its inline
+   storage.
+
+Primitive fields have no destruction step. An absent user body is an empty
+first step. Each class-typed field is itself a complete object and recursively
+uses the same body-then-reverse-fields procedure. Field destruction order is
+declaration order reversed, independent of the order in which the initializer
+constructed the fields. Acyclic containment guarantees that this recursion is
+finite. Empty classes and classes containing only primitive fields still run a
+declared user body exactly once.
+
+No source code runs after field cleanup begins for an object, so a partially
+destroyed receiver cannot be observed. Inline storage is not deallocated; its
+lexical storage duration simply ends after cleanup.
+
+##### Diagnostics and phase boundary
+
+Required source diagnostic categories are:
+
+- malformed destruction declaration, identifying the required
+  `destroy { ... }` shape and the forbidden parameters, result, modifiers, or
+  semicolon;
+- duplicate destruction member, identifying both the second and first
+  declarations;
+- value return from a destruction body, identifying its implicit `unit`
+  result;
+- construction into an already-live receiver field or another unsupported
+  object destination;
+- attempted use of the special member as a callable or value; and
+- attempted explicit early destruction or any retained object-value form.
+
+Diagnostics use source order and stable identities. Exact prose may evolve,
+but every category receives a stable diagnostic code at the phase that owns the
+invalid construct. Parser recovery must retain later class members and top-
+level declarations. No malformed supported source may reach a backend
+assertion.
+
+Resolution will assign the special member an owner-qualified lifecycle identity
+rather than selecting it by the spelling `destroy` below that phase. HIR will
+own source-level receiver and body legality. MIR will explicitly represent
+cleanup operations, initialized owning places, and cleanup order on normal
+control-flow edges. Recursive field order must be explicit in target-
+independent IR or target-independent generated cleanup bodies. A backend may
+resolve semantic places to offsets and emit calls, but it must not infer lexical
+lifetime, registration state, or language destruction order.
+
+##### Exclusions and extension boundary
+
+This profile adds no object assignment, copy construction, move, object value
+parameter/result, object temporary, return storage, elision, explicit destroy
+statement, early lifetime end, or replacement through an alias. It adds no
+exception edge, unwinding, cleanup pad, panic cleanup, or observable failed-
+construction path. It also excludes loops and their exits, arrays, optionals,
+statics, globals, inheritance and base subobjects, virtual destruction, dynamic
+type metadata, `shared`, allocation, reference counting, deallocation, and
+borrow anchors.
+
+Those exclusions are semantic boundaries, not invitations for a backend to
+ignore cleanup. Every normal fallthrough and `return` supported by the current
+language must follow the order above. Later copy/value, inheritance, shared,
+loop, and exception roadmaps must extend this initialized-place model rather
+than redefining the normal local-object behavior frozen here.
 
 ### 5.5 Initialization Members
 
@@ -1464,6 +1638,11 @@ Rules:
 ### 5.7 Destruction Members
 
 A `destroy` declaration defines the class-specific destruction body that runs deterministically when an object's lifetime ends.
+
+Section 5.4.5 is the frozen implementation subset for local inline objects and
+normal control flow. The inheritance, array, shared-ownership, dynamic-type,
+and exceptional-cleanup rules below remain broader language design until their
+dedicated profiles are frozen.
 
 Syntax:
 
@@ -2444,8 +2623,11 @@ corresponding language area is considered complete:
 - **Evaluation and cleanup ordering:** the implemented subset defines
   left-to-right operands/arguments plus receiver, field, and direct-
   construction order in [`grammar/README.md`](../grammar/README.md). The
-  complete language still needs full-expression boundaries, temporary
-  destruction, and cleanup sequencing for every control-flow exit.
+  frozen local deterministic-destruction profile additionally defines cleanup
+  for owning locals on implemented normal block, conditional, and return exits.
+  The complete language still needs full-expression boundaries, temporary
+  destruction, and cleanup sequencing for loops, exceptions, and later
+  control-flow forms.
 - **Initialization rules:** the implemented inline-object profile defines
   straight-line definite initialization for primitive fields during direct
   local construction. The frozen class-typed inline-field profile additionally
@@ -2460,11 +2642,10 @@ corresponding language area is considered complete:
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
-The most urgent remaining gap for the ownership model is complete evaluation
-and cleanup ordering. Direct local objects settle only the subset without
-cleanup. The broader contract must be settled before adding
-deterministic destruction, shared ownership, anchored borrowing, or checked
-exception exits.
+The local normal-flow destruction contract is frozen in Section 5.4.5 but not
+yet implemented. Temporary, loop, failed-construction, and exceptional cleanup
+remain broader ownership-model gaps that must be settled before their
+associated features are implemented.
 
 ### 15.3 Open Design Questions
 
@@ -2541,6 +2722,18 @@ Resolved decisions in this draft:
 - class-typed fields do not by themselves enable whole-object replacement,
   implicit copying, destruction, partial-construction cleanup, inheritance,
   shared ownership, or checked exceptions;
+- the frozen local deterministic-destruction profile adds one optional
+  contextual `destroy { ... }` member with a mutable complete `self`, an
+  implicit `unit` result, and ordinary unit-method statements;
+- successfully initialized owning object locals register at complete
+  constructor return and clean up on normal exits from innermost scope outward,
+  in reverse registration order within each scope;
+- `return` evaluates and preserves its primitive result before cleanup, and a
+  complete object runs its user destruction body before recursively destroying
+  class fields in reverse declaration order;
+- the local destruction profile does not add explicit early destruction,
+  object values or copying, failed-construction or exceptional cleanup,
+  inheritance, shared ownership, deallocation, arrays, or loop exits;
 - copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;

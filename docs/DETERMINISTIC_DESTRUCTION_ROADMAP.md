@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: planned; DD0 is the next implementation slice.
+Status: in progress; DD0 is complete and DD1 is next.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -139,16 +139,16 @@ Each task should be independently reviewable and keep the compiler building.
 
 **Purpose:** Settle observable behavior before adding syntax or IR.
 
-- [ ] Reconcile the draft specification's broad destruction design with the
+- [x] Reconcile the draft specification's broad destruction design with the
       local-only, no-exception compiler profile above.
-- [ ] Freeze contextual syntax, duplicate-declaration behavior, receiver
+- [x] Freeze contextual syntax, duplicate-declaration behavior, receiver
       capability, allowed statements, and diagnostic vocabulary.
-- [ ] Freeze local, nested-scope, conditional, and return cleanup order.
-- [ ] Freeze body-before-fields and reverse-field order for inline containment.
-- [ ] State precisely when construction registers an owning place for cleanup.
-- [ ] Record all exclusions, especially copy/value, failed construction,
+- [x] Freeze local, nested-scope, conditional, and return cleanup order.
+- [x] Freeze body-before-fields and reverse-field order for inline containment.
+- [x] State precisely when construction registers an owning place for cleanup.
+- [x] Record all exclusions, especially copy/value, failed construction,
       exceptions, inheritance, shared ownership, and explicit early destroy.
-- [ ] Add parser-facing grammar examples and cross-document consistency tests
+- [x] Add parser-facing grammar examples and cross-document consistency tests
       or assertions where useful.
 
 **Tests:** Specification/grammar review; parser fixtures for the frozen syntax
