@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0–IOF3 are complete and IOF4–IOF6 are planned.
+Status: in progress; IOF0–IOF4 are complete and IOF5–IOF6 are planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -264,7 +264,7 @@ address.
 - [x] IOF1 — Resolve field types and reject containment cycles
 - [x] IOF2 — Generalize semantic object places to projection paths
 - [x] IOF3 — Construct class fields and track initializer liveness
-- [ ] IOF4 — Type-check nested access, receivers, and alias arguments
+- [x] IOF4 — Type-check nested access, receivers, and alias arguments
 - [ ] IOF5 — Lower and execute projected subobjects through MIR and x86-64
 - [ ] IOF6 — Harden, document, and publish the complete slice
 
@@ -400,21 +400,21 @@ without representing construction as an object expression.
 **Purpose:** Make contained objects useful through one consistent access and
 liveness model rather than feature-specific exceptions.
 
-- [ ] Read and write primitive leaf fields through projection paths of any
+- [x] Read and write primitive leaf fields through projection paths of any
       finite supported depth.
-- [ ] Call read-only and mutable methods on live class-field endpoints.
-- [ ] Accept live class-field endpoints as exact-class `ref` or `mut ref`
+- [x] Call read-only and mutable methods on live class-field endpoints.
+- [x] Accept live class-field endpoints as exact-class `ref` or `mut ref`
       arguments, including forwarding from alias-rooted paths.
-- [ ] Propagate the root binding's read-only or mutable capability unchanged
+- [x] Propagate the root binding's read-only or mutable capability unchanged
       through every inline projection.
-- [ ] Enforce the same access matrix for nested stores, mutable receiver calls,
+- [x] Enforce the same access matrix for nested stores, mutable receiver calls,
       and mutable alias arguments.
-- [ ] During an initializer, permit method calls and alias use only through
+- [x] During an initializer, permit method calls and alias use only through
       already-live external places or completed class fields; keep incomplete
       `self` unavailable as a complete receiver or alias.
-- [ ] Reject a class-field endpoint in scalar, return, ordinary value-argument,
+- [x] Reject a class-field endpoint in scalar, return, ordinary value-argument,
       local-initializer, or whole-object assignment contexts.
-- [ ] Keep exact nominal matching and the existing non-exclusive alias policy;
+- [x] Keep exact nominal matching and the existing non-exclusive alias policy;
       do not add subtype conversion, overlap checking, or borrow anchors.
 
 **Tests:** Complete read-only/mutable matrix across local, `self`, `ref`, and

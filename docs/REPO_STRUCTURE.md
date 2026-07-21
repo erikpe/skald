@@ -245,6 +245,11 @@ locals, `self`, and alias parameters, permits mutable-to-read-only reduction,
 and enforces field, method, forwarding, and non-escaping rules. HIR therefore
 contains all source-level alias decisions needed by later phases.
 
+Inline object-place checking lives in a focused private expression submodule.
+It validates resolved identity paths, propagates the root capability unchanged,
+and applies initializer liveness uniformly before reads, receiver calls, or
+alias arguments enter HIR.
+
 Resolved IR and HIR share one target-independent object-path shape: a root
 `BindingId`, ordered class-field `FieldId` projections, a terminal `ClassId`,
 and the complete source span. HIR wraps that identity path in one `HirAccess`

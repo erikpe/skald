@@ -78,5 +78,6 @@ mod declarations;
 mod diagnostics;
 mod dumps;
 mod expressions;
+mod inline_fields;
 mod literals;
 mod objects;

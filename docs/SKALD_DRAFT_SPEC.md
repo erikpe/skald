@@ -914,7 +914,9 @@ Every executable field has one of the primitive types `i64`, `u64`, `u8`,
 `f64`, or `bool`, or an acyclic inline class type. Class-typed field
 declarations, nominal resolution, HIR declaration metadata, containment-cycle
 validation, direct construction, and initializer liveness from Section 5.4.4
-are implemented. Complete projected use remains staged. Base classes,
+are implemented. Nested scalar access, receivers, and alias arguments are
+type-checked through complete identity paths; native hardening remains staged.
+Base classes,
 interfaces, static members,
 `final`, access modifiers, virtual/override declarations, `assign`, and
 `destroy` remain rejected. Empty classes are valid.
@@ -1133,14 +1135,16 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; IOF1–IOF3 of the
+**Implementation status:** contract frozen; IOF1–IOF4 of the
 [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) are
 implemented. The compiler accepts and resolves class-typed field declarations,
 records canonical HIR field types, rejects recursive containment before target
 selection, represents nested object places as root bindings plus ordered
 semantic field identities, and distinguishes direct subobject construction
-from scalar stores while enforcing initializer liveness. Complete executable
-nested access remains planned. The parser-facing extension is recorded in
+from scalar stores while enforcing initializer liveness. The type checker
+supports nested scalar fields, method receivers, and exact-class alias
+arguments with one root-derived access capability. MIR/backend hardening and
+native coverage remain planned. The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with

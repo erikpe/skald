@@ -267,11 +267,12 @@ The current object profile has primitive by-value parameters and results. The
 compiler accepts class-typed field declarations, resolves them to nominal
 class identities, rejects recursive inline containment, records nested
 semantic place paths, and type-checks direct construction into class fields
-with precise initializer liveness. Complete projected access and native
-coverage remain staged behind the roadmap below. It does not include object values in
-arguments/results, copying, `assign`, `destroy`, inheritance,
-interfaces, virtual calls, casts, `shared`, access
-modifiers, static members, `final`, or object FFI.
+with precise initializer liveness. Nested primitive access, method receivers,
+and exact-class alias arguments are type-checked through those paths. Native
+coverage remains staged behind the roadmap below. It does not include object
+values in arguments/results, copying, `assign`, `destroy`, inheritance,
+interfaces, virtual calls, casts, `shared`, access modifiers, static members,
+`final`, or object FFI.
 
 Restricted alias parameters are implemented end to end. Binding mode remains
 separate from nominal class type in every semantic IR. A `ref` parameter may
@@ -300,13 +301,14 @@ conversion, and whole-object replacement through an alias are not implemented.
 ## Frozen staged extension: class-typed inline fields
 
 This section freezes the complete parser-facing extension for the current
-object-model sequence. IOF1–IOF3 of the
+object-model sequence. IOF1–IOF4 of the
 [Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
 implement field declarations, nominal type resolution, HIR metadata, and
 target-independent containment-cycle rejection, plus resolved/HIR projection
 paths for nested receivers and alias endpoints, direct class-field
-construction, and initializer liveness. Complete projected access and native
-coverage below remain staged for later roadmap tasks.
+construction, initializer liveness, and complete source-level projected access
+checking. Native lowering and coverage below remain staged for later roadmap
+tasks.
 
 The extension changes the class field type and projected assignment-place
 productions:
