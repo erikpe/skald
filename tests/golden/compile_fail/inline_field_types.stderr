@@ -1,0 +1,14 @@
+error[RES007]: unknown type `Unknown`
+ --> tests/golden/compile_fail/inline_field_types.ska:6:14
+   |
+6 |     missing: Unknown;
+   |              ^^^^^^^ no class with this name is declared
+
+error[RES007]: `Helper` does not name a class
+ --> tests/golden/compile_fail/inline_field_types.ska:7:15
+   |
+7 |     function: Helper;
+   |               ^^^^^^ expected a class type
+   |
+1 | fn Helper() -> i64 {
+   |    ------ function declared here

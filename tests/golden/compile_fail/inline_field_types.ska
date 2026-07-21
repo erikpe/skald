@@ -1,0 +1,14 @@
+fn Helper() -> i64 {
+    return 0;
+}
+
+class Invalid {
+    missing: Unknown;
+    function: Helper;
+
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

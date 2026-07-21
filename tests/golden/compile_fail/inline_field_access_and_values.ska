@@ -1,0 +1,39 @@
+class Leaf {
+    value: i64;
+    init() {
+        self.value = 0;
+    }
+    mut fn change() -> unit {
+        self.value = 1;
+    }
+}
+
+class Other {
+    init() {}
+}
+
+class Root {
+    leaf: Leaf;
+    init() {
+        self.leaf = Leaf();
+    }
+}
+
+fn mutate(mut ref leaf: Leaf) -> unit {}
+fn take_other(ref other: Other) -> unit {}
+fn scalar(value: i64) -> unit {}
+
+fn misuse(ref root: Root, ref replacement: Leaf) -> i64 {
+    root.leaf.value = 1;
+    root.leaf.change();
+    mutate(root.leaf);
+    take_other(root.leaf);
+    scalar(root.leaf);
+    var copy: Leaf = root.leaf;
+    root.leaf = replacement;
+    return root.leaf;
+}
+
+fn main() -> i64 {
+    return 0;
+}

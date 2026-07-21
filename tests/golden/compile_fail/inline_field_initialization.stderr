@@ -1,0 +1,48 @@
+error[TYP015]: constructor type does not match class field `wrong`
+ --> tests/golden/compile_fail/inline_field_initialization.ska:23:22
+    |
+23 |         self.wrong = Other();
+    |                      ^^^^^ constructs `Other`
+  = note: the field requires `Child`
+
+error[TYP015]: class field `grouped` requires direct construction
+ --> tests/golden/compile_fail/inline_field_initialization.ska:24:24
+    |
+24 |         self.grouped = (Child(1));
+    |                        ^^^^^^^^^^ expected an ungrouped `Child(...)` construction
+
+error[TYP017]: field `child` is used before initialization
+ --> tests/golden/compile_fail/inline_field_initialization.ska:25:22
+    |
+25 |         self.first = self.child.get();
+    |                      ^^^^^^^^^^ this field is not initialized yet
+
+error[TYP017]: field `child` is initialized more than once
+ --> tests/golden/compile_fail/inline_field_initialization.ska:27:14
+    |
+27 |         self.child = Child(3);
+    |              ^^^^^ duplicate field initialization
+
+error[TYP017]: field `wrong` is not initialized
+ --> tests/golden/compile_fail/inline_field_initialization.ska:16:5
+    |
+16 |     wrong: Child;
+    |     ^^^^^ this field needs one assignment in `init`
+
+error[TYP017]: field `grouped` is not initialized
+ --> tests/golden/compile_fail/inline_field_initialization.ska:17:5
+    |
+17 |     grouped: Child;
+    |     ^^^^^^^ this field needs one assignment in `init`
+
+error[TYP017]: field `first` is not initialized
+ --> tests/golden/compile_fail/inline_field_initialization.ska:19:5
+    |
+19 |     first: i64;
+    |     ^^^^^ this field needs one assignment in `init`
+
+error[TYP017]: field `missing` is not initialized
+ --> tests/golden/compile_fail/inline_field_initialization.ska:20:5
+    |
+20 |     missing: i64;
+    |     ^^^^^^^ this field needs one assignment in `init`

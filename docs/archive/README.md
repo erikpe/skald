@@ -21,3 +21,4 @@ Archived plans:
 - [Compiler implementation cleanup](IMPLEMENTATION_CLEANUP_ROADMAP.md)
 - [First inline objects](INLINE_OBJECTS_ROADMAP.md)
 - [Alias parameters](ALIAS_PARAMETERS_ROADMAP.md)
+- [Class-typed inline object fields](INLINE_OBJECT_FIELDS_ROADMAP.md)

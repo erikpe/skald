@@ -74,6 +74,13 @@ resolved, HIR, MIR, and assembly renderings. Native object/alias goldens
 independently compare public `skac` assembly and exact failure diagnostics
 across processes.
 
+Class-typed inline fields remain semantic identity paths in resolved IR, HIR,
+and MIR dumps. A nested path is rendered as one root binding followed by
+ordered `FieldId` projections; byte offsets appear only in backend assembly.
+The `inline_object_nested_fields` golden exercises the same paths through
+local, receiver, and alias roots while the runner checks assembly bytes across
+two independent compiler processes.
+
 Assembly is directly available through the public compiler command:
 
 ```text

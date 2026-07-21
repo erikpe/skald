@@ -45,6 +45,15 @@ boundaries. Compile-failure cases snapshot construction and value exclusions,
 field initialization state, initializer-body restrictions, declaration
 restrictions, and read-only receiver violations.
 
+The class-typed inline-field cases extend that coverage through acyclic nested
+storage, forward layout dependencies, padding, empty subobjects, direct field
+construction, deep local/receiver/alias access, method calls, deliberate alias
+forwarding, and observable constructor evaluation order. Their failure
+snapshots cover unknown and non-class field types, direct and indirect
+containment cycles, wrong and grouped constructors, premature/duplicate/missing
+initialization, read-only nested mutation, alias access/type mismatches,
+object-value escape, and whole-object replacement.
+
 The alias corpus covers read-only and mutable access, forwarding, grouped
 places, deliberate overlap, method `self`, initializer aliases, nested calls,
 conditionals, and signatures that independently exhaust integer and SSE

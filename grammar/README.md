@@ -296,21 +296,20 @@ object bytes. The complete declaration, place, access, lifetime, IR, and ABI
 contract is in the
 [restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
 Ordinary by-value parameters remain primitive-only. Local aliases, primitive
-aliases, shared sources, borrow anchors, object fields/elements, polymorphic
-conversion, and whole-object replacement through an alias are not implemented.
+aliases, shared sources, borrow anchors, array elements, polymorphic conversion,
+and whole-object replacement through an alias are not implemented.
 
 ## Frozen staged extension: class-typed inline fields
 
-This section freezes the complete parser-facing extension for the current
-object-model sequence. IOF1–IOF5 of the
-[Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
-implement field declarations, nominal type resolution, HIR metadata, and
-target-independent containment-cycle rejection, plus resolved/HIR projection
-paths for nested receivers and alias endpoints, direct class-field
+This section records the complete parser-facing extension implemented by
+IOF0–IOF6 of the
+[archived Class-Typed Inline Object Fields Roadmap](../docs/archive/INLINE_OBJECT_FIELDS_ROADMAP.md).
+The compiler implements field declarations, nominal type resolution, HIR
+metadata, and target-independent containment-cycle rejection, plus resolved/HIR
+projection paths for nested receivers and alias endpoints, direct class-field
 construction, initializer liveness, and complete source-level projected access
 checking. MIR verification and x86-64 lowering preserve the same identity paths
-through native execution; publication hardening remains in the final roadmap
-task.
+through deterministic native execution.
 
 The extension changes the class field type and projected assignment-place
 productions:
@@ -401,8 +400,6 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
-- construction and use of class-typed inline object fields and nested object
-  places;
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;

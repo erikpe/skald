@@ -1,0 +1,94 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn mark(value: i64) -> i64 {
+    ska_rt_println_i64(value);
+    return value;
+}
+
+class Root {
+    bundle: Bundle;
+    total: i64;
+
+    init(left: i64, right: i64) {
+        self.total = mark(30);
+        self.bundle = Bundle(mark(left), mark(right));
+    }
+
+    fn inspect() -> i64 {
+        return self.bundle.left.get() + self.bundle.right.value + self.total;
+    }
+
+    mut fn adjust() -> unit {
+        self.bundle.right.bump(3);
+        add(self.bundle.left, 2);
+    }
+}
+
+class Empty {
+    init() {}
+}
+
+class Cell {
+    small: u8;
+    value: i64;
+    enabled: bool;
+
+    init(value: i64) {
+        self.enabled = true;
+        self.value = value;
+        self.small = 1u8;
+    }
+
+    fn get() -> i64 {
+        return self.value;
+    }
+
+    mut fn bump(amount: i64) -> unit {
+        self.value = self.value + amount;
+    }
+}
+
+class Bundle {
+    prefix: u8;
+    empty: Empty;
+    left: Cell;
+    right: Cell;
+    suffix: u8;
+
+    init(left: i64, right: i64) {
+        self.right = Cell(right);
+        self.prefix = 2u8;
+        self.empty = Empty();
+        self.left = Cell(left);
+        self.suffix = 3u8;
+    }
+}
+
+fn read(ref cell: Cell) -> i64 {
+    return cell.get();
+}
+
+fn add(mut ref cell: Cell, amount: i64) -> unit {
+    cell.value = cell.value + amount;
+}
+
+fn relay(mut ref root: Root) -> i64 {
+    add(root.bundle.left, 5);
+    return read(root.bundle.right);
+}
+
+fn forward(ref root: Root) -> i64 {
+    return read(root.bundle.right);
+}
+
+fn main() -> i64 {
+    var root: Root = Root(mark(10), mark(20));
+    ska_rt_println_i64(root.bundle.left.value);
+    root.bundle.left.value = 11;
+    root.adjust();
+    ska_rt_println_i64(root.inspect());
+    ska_rt_println_i64(relay(root));
+    ska_rt_println_i64(read(root.bundle.left));
+    ska_rt_println_i64(forward(root));
+    return 0;
+}

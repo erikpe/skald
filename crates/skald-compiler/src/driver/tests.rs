@@ -411,6 +411,75 @@ fn malformed_and_excluded_alias_sources_never_reach_mir_or_backend_panics() {
 }
 
 #[test]
+fn malformed_and_excluded_inline_field_sources_fail_before_backend_lowering() {
+    let cases = [
+        (
+            "unknown-class-field",
+            "class Root { child: Missing; init() {} } fn main() -> i64 { return 0; }",
+        ),
+        (
+            "recursive-containment",
+            concat!(
+                "class Root { child: Root; init() { self.child = Root(); } } ",
+                "fn main() -> i64 { return 0; }",
+            ),
+        ),
+        (
+            "grouped-construction",
+            concat!(
+                "class Child { init() {} } ",
+                "class Root { child: Child; init() { self.child = (Child()); } } ",
+                "fn main() -> i64 { return 0; }",
+            ),
+        ),
+        (
+            "premature-projection",
+            concat!(
+                "class Child { value: i64; init() { self.value = 0; } ",
+                "fn get() -> i64 { return self.value; } } ",
+                "class Root { child: Child; value: i64; init() { ",
+                "self.value = self.child.get(); self.child = Child(); } } ",
+                "fn main() -> i64 { return 0; }",
+            ),
+        ),
+        (
+            "object-value",
+            concat!(
+                "class Child { init() {} } ",
+                "class Root { child: Child; init() { self.child = Child(); } } ",
+                "fn copy(ref root: Root) -> i64 { return root.child; } ",
+                "fn main() -> i64 { return 0; }",
+            ),
+        ),
+        (
+            "readonly-projection",
+            concat!(
+                "class Child { value: i64; init() { self.value = 0; } } ",
+                "class Root { child: Child; init() { self.child = Child(); } } ",
+                "fn write(ref root: Root) -> unit { root.child.value = 1; } ",
+                "fn main() -> i64 { return 0; }",
+            ),
+        ),
+    ];
+
+    for (case, source) in cases {
+        let result = std::panic::catch_unwind(|| {
+            compile_source_to_assembly(
+                format!("malformed-inline-field-{case}.ska"),
+                source,
+                Target::X86_64SysV,
+            )
+        });
+        let compilation = result
+            .unwrap_or_else(|_| panic!("compiler panicked for malformed inline-field case {case}"));
+        assert!(
+            matches!(compilation, Err(CompilationError::Diagnostics(_))),
+            "malformed inline-field case {case} crossed the diagnostic boundary: {compilation:?}"
+        );
+    }
+}
+
+#[test]
 fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
     let expression = format!(
         "{}1{}",

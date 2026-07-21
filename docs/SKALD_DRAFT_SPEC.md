@@ -1134,9 +1134,9 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; IOF1–IOF5 of the
-[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) are
-implemented. The compiler accepts and resolves class-typed field declarations,
+**Implementation status:** implemented; IOF0–IOF6 of the
+[archived Class-Typed Inline Object Fields Roadmap](archive/INLINE_OBJECT_FIELDS_ROADMAP.md)
+are complete. The compiler accepts and resolves class-typed field declarations,
 records canonical HIR field types, rejects recursive containment before target
 selection, represents nested object places as root bindings plus ordered
 semantic field identities, and distinguishes direct subobject construction
@@ -1144,8 +1144,8 @@ from scalar stores while enforcing initializer liveness. The type checker
 supports nested scalar fields, method receivers, and exact-class alias
 arguments with one root-derived access capability. Verified MIR retains those
 paths as semantic field identities, and the x86-64 backend resolves them with
-checked target offsets for native execution. Publication hardening remains
-planned. The parser-facing extension is recorded in
+checked target offsets for deterministic native execution. The parser-facing
+extension is recorded in
 [`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with

@@ -111,14 +111,13 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. construction and recursive place projection through class-typed inline
-   object fields;
-2. deterministic `destroy` and cleanup-aware control flow;
-3. copy construction/assignment and object value parameters/results;
-4. inheritance, interfaces, virtual dispatch, and casts;
-5. `shared` ownership and borrow anchors;
-6. loops/iterators, arrays, optionals, and checked exceptions;
-7. an AArch64 backend and, when useful, SSA conversion and optimization.
+1. [deterministic `destroy` and cleanup-aware control
+   flow](docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md);
+2. copy construction/assignment and object value parameters/results;
+3. inheritance, interfaces, virtual dispatch, and casts;
+4. `shared` ownership and borrow anchors;
+5. loops/iterators, arrays, optionals, and checked exceptions;
+6. an AArch64 backend and, when useful, SSA conversion and optimization.
 
 These are directions, not promises of syntax or ordering. Each substantial
 feature should receive a focused design and implementation plan before work

@@ -16,8 +16,9 @@ direction:
 
 Active implementation plans:
 
-- [Class-typed inline object fields roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) —
-  acyclic inline containment, direct field construction, and nested places.
+- [Deterministic destruction roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md) —
+  explicit `destroy`, initialized-place state, reverse-order cleanup, and
+  cleanup-aware normal exits.
 
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current

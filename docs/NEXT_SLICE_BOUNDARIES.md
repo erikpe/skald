@@ -51,29 +51,28 @@ Every substantial feature should:
 
 ## Object-model sequence
 
-The implemented object core includes direct local inline objects with
-primitive executable fields, restricted call-scoped alias parameters, and
-class-typed field declarations with source-level containment validation and
-semantic nested-place paths, direct field construction, and initializer
-liveness, plus type-checked nested scalar access, method receivers, and alias
-arguments through verified MIR and native x86-64 execution. The remaining
-progression is:
+The implemented object core includes direct local inline objects, restricted
+call-scoped alias parameters, and acyclic class-typed inline fields with direct
+construction, initializer liveness, nested scalar access, method receivers,
+and alias arguments through verified MIR and native x86-64 execution. The
+remaining progression is:
 
-1. **Complete class-typed inline object fields.** Finish golden coverage,
-   documentation review, and source-reachable hardening before introducing
-   cleanup. The focused implementation plan is the
-   [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
-2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
-   cleanup, and cleanup-aware control-flow edges.
-3. **Object value semantics.** Add copy construction and assignment before
+1. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
+   cleanup, and cleanup-aware control-flow edges. The focused implementation
+   plan is the [Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md).
+2. **Object value semantics.** Add copy construction and assignment before
    object parameters/results, return storage, temporaries, and permitted
    elision.
-4. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
+3. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
    interfaces, casts, and dynamic type metadata.
-5. **Shared ownership.** Add allocation, reference counting, complete dynamic
+4. **Shared ownership.** Add allocation, reference counting, complete dynamic
    destruction, and syntax-directed borrow anchors.
-6. **Checked exceptions.** Integrate partial construction and cleanup with
+5. **Checked exceptions.** Integrate partial construction and cleanup with
    exceptional control flow rather than retrofitting it afterward.
+
+The completed implementation history and acceptance criteria for class-typed
+fields are preserved in the
+[archived inline-field roadmap](archive/INLINE_OBJECT_FIELDS_ROADMAP.md).
 
 Each step needs a dedicated roadmap. In particular, object parameters or
 results should not precede their copy, destruction, ABI, and return-storage

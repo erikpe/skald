@@ -1,0 +1,16 @@
+error[TYP022]: recursive inline containment: `Direct.child -> Direct`
+ --> tests/golden/compile_fail/inline_field_containment.ska:2:12
+   |
+2 |     child: Direct;
+   |            ^^^^^^ field `child` contains `Direct` inline
+  = note: inline class fields must form an acyclic, finite layout
+
+error[TYP022]: recursive inline containment: `Left.right -> Right.left -> Left`
+ --> tests/golden/compile_fail/inline_field_containment.ska:9:12
+   |
+9 |     right: Right;
+   |            ^^^^^ field `right` contains `Right` inline
+    |
+16 |     left: Left;
+    |           ---- field `left` contains `Left` inline
+  = note: inline class fields must form an acyclic, finite layout

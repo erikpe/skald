@@ -1,0 +1,24 @@
+class Direct {
+    child: Direct;
+    init() {
+        self.child = Direct();
+    }
+}
+
+class Left {
+    right: Right;
+    init() {
+        self.right = Right();
+    }
+}
+
+class Right {
+    left: Left;
+    init() {
+        self.left = Left();
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

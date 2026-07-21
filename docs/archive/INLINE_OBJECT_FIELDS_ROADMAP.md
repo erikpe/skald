@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0–IOF5 are complete and IOF6 is planned.
+Status: complete; IOF0–IOF6 are implemented and verified.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -266,7 +266,7 @@ address.
 - [x] IOF3 — Construct class fields and track initializer liveness
 - [x] IOF4 — Type-check nested access, receivers, and alias arguments
 - [x] IOF5 — Lower and execute projected subobjects through MIR and x86-64
-- [ ] IOF6 — Harden, document, and publish the complete slice
+- [x] IOF6 — Harden, document, and publish the complete slice
 
 A task is complete only when its checkboxes, tests, acceptance criteria, and
 relevant quality gates pass.
@@ -468,25 +468,25 @@ the target boundary and checked offsets below it.
 **Purpose:** Make class-typed fields a dependable public feature and leave the
 repository ready for the destruction roadmap.
 
-- [ ] Add native goldens covering mixed/nested fields, access through each root
+- [x] Add native goldens covering mixed/nested fields, access through each root
       kind, method calls, aliasing, evaluation order, padding, and empty
       subobjects.
-- [ ] Add compile-failure goldens for recursive containment, unknown/non-class
+- [x] Add compile-failure goldens for recursive containment, unknown/non-class
       field types, wrong or grouped constructors, premature/duplicate/missing
       initialization, read-only mutation, wrong alias access/type, object-value
       misuse, and whole-object replacement.
-- [ ] Assert exact stdout, exit status, empty runtime stderr, deterministic
+- [x] Assert exact stdout, exit status, empty runtime stderr, deterministic
       assembly, and deterministic diagnostics across compiler processes.
-- [ ] Audit source-reachable assertions and backend assumptions; convert
+- [x] Audit source-reachable assertions and backend assumptions; convert
       malformed supported input into structured diagnostics where needed.
-- [ ] Update `grammar/README.md`, the draft specification, repository
+- [x] Update `grammar/README.md`, the draft specification, repository
       architecture, top-level README, debugging notes, golden-test docs, and
       future boundaries to describe implemented behavior.
-- [ ] Remove obsolete primitive-field-only and object-field exclusion text
+- [x] Remove obsolete primitive-field-only and object-field exclusion text
       while retaining the copy, destruction, polymorphism, shared, and object-
       value exclusions.
-- [ ] Run the complete quality gate and resolve all warnings or nondeterminism.
-- [ ] Mark every roadmap checkbox complete, move this document to
+- [x] Run the complete quality gate and resolve all warnings or nondeterminism.
+- [x] Mark every roadmap checkbox complete, move this document to
       `docs/archive/`, update the archive index, and make destruction the next
       active object-model roadmap only after the slice is fully implemented.
 
@@ -500,45 +500,46 @@ describing implemented class fields as future work.
 
 ## 6. Required Quality Gates
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test`
-- [ ] `make golden-test`
-- [ ] `make check`
-- [ ] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
-- [ ] Recursive containment rejected before MIR and target selection
-- [ ] Backend recursion and malformed-metadata defenses retained
-- [ ] No source-name lookup below resolution
-- [ ] No target size, alignment, offset, register, or ABI location in HIR/MIR
-- [ ] No class object represented as a scalar MIR value
-- [ ] No copy, destruction, cleanup, allocation, or borrow-anchor semantics
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test`
+- [x] `make golden-test`
+- [x] `make check`
+- [x] Deterministic AST, resolved, HIR, MIR, assembly, and diagnostics
+- [x] Recursive containment rejected before MIR and target selection
+- [x] Backend recursion and malformed-metadata defenses retained
+- [x] No source-name lookup below resolution
+- [x] No target size, alignment, offset, register, or ABI location in HIR/MIR
+- [x] No class object represented as a scalar MIR value
+- [x] No copy, destruction, cleanup, allocation, or borrow-anchor semantics
       introduced accidentally
-- [ ] Touched Rust modules retain concise facades and cohesive implementation
+- [x] Touched Rust modules retain concise facades and cohesive implementation
       ownership
-- [ ] Documentation and milestone checkboxes match behavior
+- [x] Documentation and milestone checkboxes match behavior
 
 ## 7. Completion Gate
 
 The slice is complete when:
 
-- [ ] all IOF0–IOF6 tasks and their acceptance criteria are complete;
-- [ ] class fields form a validated acyclic inline-containment graph;
-- [ ] every class field is constructed exactly once in its final storage;
-- [ ] incomplete subobjects cannot be observed and completed subobjects can be
+- [x] all IOF0–IOF6 tasks and their acceptance criteria are complete;
+- [x] class fields form a validated acyclic inline-containment graph;
+- [x] every class field is constructed exactly once in its final storage;
+- [x] incomplete subobjects cannot be observed and completed subobjects can be
       used through supported nested places;
-- [ ] read-only and mutable access propagate consistently through containment;
-- [ ] nested fields work as receivers and call-scoped alias arguments without
+- [x] read-only and mutable access propagate consistently through containment;
+- [x] nested fields work as receivers and call-scoped alias arguments without
       copying or additional ownership machinery;
-- [ ] MIR remains target-independent and class objects remain place-only;
-- [ ] the x86-64 backend owns dependency-ordered layout and checked offsets;
-- [ ] malformed source and malformed MIR fail structurally rather than
+- [x] MIR remains target-independent and class objects remain place-only;
+- [x] the x86-64 backend owns dependency-ordered layout and checked offsets;
+- [x] malformed source and malformed MIR fail structurally rather than
       panicking or being miscompiled;
-- [ ] dumps, diagnostics, assembly, stdout, and exit behavior are deterministic;
-- [ ] full quality gates pass and living documentation matches the compiler.
+- [x] dumps, diagnostics, assembly, stdout, and exit behavior are deterministic;
+- [x] full quality gates pass and living documentation matches the compiler.
 
-The next object-model roadmap is deterministic destruction: `destroy`,
-initialized-place state in executable control flow, reverse-order scope
-cleanup, and cleanup-aware exits. Copy/value semantics, polymorphism, shared
-ownership, and checked exceptions remain later dedicated slices.
+The next object-model roadmap is
+[deterministic destruction](../DETERMINISTIC_DESTRUCTION_ROADMAP.md): `destroy`,
+initialized-place state in executable control flow, reverse-order scope cleanup,
+and cleanup-aware exits. Copy/value semantics, polymorphism, shared ownership,
+and checked exceptions remain later dedicated slices.
