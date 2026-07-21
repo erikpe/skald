@@ -76,6 +76,12 @@ struct Verifier<'mir> {
     errors: Vec<MirVerificationError>,
 }
 
+#[derive(Clone, Copy)]
+struct VerifiedPlace {
+    ty: MirType,
+    access: MirAliasAccess,
+}
+
 impl Verifier<'_> {
     fn verify(&mut self) {
         self.verify_classes();
@@ -104,7 +110,7 @@ impl Verifier<'_> {
                 ));
             }
             if entry_declaration.is_some_and(|declaration| {
-                !declaration.parameter_types.is_empty() || declaration.return_type != MirType::I64
+                !declaration.parameters.is_empty() || declaration.return_type != MirType::I64
             }) {
                 self.program_error("entry function must have signature `fn main() -> i64`");
             }
@@ -125,16 +131,10 @@ impl Verifier<'_> {
             if !seen.insert(declaration.id) {
                 self.function_error(declaration.id, "duplicate function declaration ID");
             }
-            if declaration
-                .parameter_types
-                .iter()
-                .any(|ty| !ty.is_scalar_value())
-            {
-                self.function_error(
-                    declaration.id,
-                    "function parameters must have scalar value types",
-                );
-            }
+            self.verify_parameters_declaration(
+                &format!("function {}", declaration.id),
+                &declaration.parameters,
+            );
             if matches!(declaration.return_type, MirType::Class(_)) {
                 self.function_error(
                     declaration.id,
@@ -142,6 +142,16 @@ impl Verifier<'_> {
                 );
             }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
+                if declaration
+                    .parameters
+                    .iter()
+                    .any(|parameter| parameter.mode != MirParameterMode::Value)
+                {
+                    self.function_error(
+                        declaration.id,
+                        "external function cannot declare alias parameters",
+                    );
+                }
                 if symbol != &declaration.name || !is_source_identifier(symbol) {
                     self.function_error(
                         declaration.id,
@@ -182,7 +192,7 @@ impl Verifier<'_> {
                 );
             }
             self.verify_definition(
-                &declaration.parameter_types,
+                &declaration.parameters,
                 declaration.return_type,
                 definition.into(),
             );
@@ -215,18 +225,18 @@ impl Verifier<'_> {
                 CallableId::Initializer(initializer) => self
                     .program
                     .initializer(initializer)
-                    .map(|declaration| (&declaration.parameter_types[..], MirType::Unit)),
+                    .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
                 CallableId::Method(method) => self
                     .program
                     .method(method)
-                    .map(|declaration| (&declaration.parameter_types[..], declaration.return_type)),
+                    .map(|declaration| (&declaration.parameters[..], declaration.return_type)),
                 CallableId::Function(_) => None,
             };
-            let Some((parameter_types, return_type)) = signature else {
+            let Some((parameters, return_type)) = signature else {
                 self.function_error(callable, "member definition has no matching declaration");
                 continue;
             };
-            self.verify_definition(parameter_types, return_type, definition.into());
+            self.verify_definition(parameters, return_type, definition.into());
         }
     }
 
@@ -268,7 +278,7 @@ impl Verifier<'_> {
                 }
                 self.verify_member_parameters(
                     &format!("initializer {}", initializer.id),
-                    &initializer.parameter_types,
+                    &initializer.parameters,
                 );
             }
             for (index, method) in class.methods.iter().enumerate() {
@@ -278,10 +288,7 @@ impl Verifier<'_> {
                         class.id, method.id
                     ));
                 }
-                self.verify_member_parameters(
-                    &format!("method {}", method.id),
-                    &method.parameter_types,
-                );
+                self.verify_member_parameters(&format!("method {}", method.id), &method.parameters);
                 if matches!(method.return_type, MirType::Class(_)) {
                     self.program_error(format!(
                         "method {} result cannot have class type in this MIR profile",
@@ -292,22 +299,45 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_member_parameters(&mut self, owner: &str, types: &[MirType]) {
-        if types.iter().any(|ty| !ty.is_scalar_value()) {
-            self.program_error(format!("{owner} parameters must have scalar value types"));
+    fn verify_parameters_declaration(&mut self, owner: &str, parameters: &[MirParameter]) {
+        for (index, parameter) in parameters.iter().enumerate() {
+            match parameter.mode {
+                MirParameterMode::Value if !parameter.ty.is_scalar_value() => self.program_error(
+                    format!("{owner} value parameter {index} must have scalar value type"),
+                ),
+                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
+                    if !matches!(parameter.ty, MirType::Class(_)) =>
+                {
+                    self.program_error(format!(
+                        "{owner} alias parameter {index} must have class type"
+                    ));
+                }
+                _ => {}
+            }
+            if let MirType::Class(class) = parameter.ty {
+                if self.program.class(class).is_none() {
+                    self.program_error(format!(
+                        "{owner} parameter {index} has undeclared class type {class}"
+                    ));
+                }
+            }
         }
+    }
+
+    fn verify_member_parameters(&mut self, owner: &str, parameters: &[MirParameter]) {
+        self.verify_parameters_declaration(owner, parameters);
     }
 
     fn verify_definition(
         &mut self,
-        parameter_types: &[MirType],
+        parameters: &[MirParameter],
         return_type: MirType,
         function: MirDefinitionRef<'_>,
     ) {
         self.verify_storage(function);
         self.verify_values(function);
         self.verify_receiver(function);
-        self.verify_parameters(parameter_types, function);
+        self.verify_parameters(parameters, function);
 
         if function.body().entry.callable() != function.callable() {
             self.function_error(
@@ -394,6 +424,7 @@ impl Verifier<'_> {
                 (storage.kind, storage.source),
                 (MirStorageKind::Receiver, BindingId::Receiver(_))
                     | (MirStorageKind::Parameter, BindingId::Parameter(_))
+                    | (MirStorageKind::AliasParameter(_), BindingId::Parameter(_))
                     | (MirStorageKind::Local, BindingId::Local(_))
             );
             if !source_matches_kind {
@@ -448,14 +479,14 @@ impl Verifier<'_> {
         }
     }
 
-    fn verify_parameters(&mut self, parameter_types: &[MirType], function: MirDefinitionRef<'_>) {
-        if function.parameters().len() != parameter_types.len() {
+    fn verify_parameters(&mut self, parameters: &[MirParameter], function: MirDefinitionRef<'_>) {
+        if function.parameters().len() != parameters.len() {
             self.function_error(
                 function.callable(),
                 format!(
                     "definition has {} parameters but declaration requires {}",
                     function.parameters().len(),
-                    parameter_types.len()
+                    parameters.len()
                 ),
             );
         }
@@ -474,9 +505,7 @@ impl Verifier<'_> {
                     format!("duplicate parameter storage {parameter}"),
                 );
             }
-            if storage.kind != MirStorageKind::Parameter
-                || !matches!(storage.source, BindingId::Parameter(_))
-            {
+            if !matches!(storage.source, BindingId::Parameter(_)) {
                 self.function_error(
                     function.callable(),
                     format!("parameter {parameter} does not identify parameter storage"),
@@ -488,13 +517,44 @@ impl Verifier<'_> {
                     format!("parameter position {index} has mismatched source binding"),
                 );
             }
-            if parameter_types
-                .get(index)
-                .is_some_and(|ty| *ty != storage.ty)
-            {
+            let Some(descriptor) = parameters.get(index) else {
+                continue;
+            };
+            let expected_kind = match descriptor.mode {
+                MirParameterMode::Value => MirStorageKind::Parameter,
+                MirParameterMode::ReadOnlyAlias => {
+                    MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly)
+                }
+                MirParameterMode::MutableAlias => {
+                    MirStorageKind::AliasParameter(MirAliasAccess::Mutable)
+                }
+            };
+            if storage.kind != expected_kind {
+                self.function_error(
+                    function.callable(),
+                    format!("parameter position {index} storage mode differs from declaration"),
+                );
+            }
+            if descriptor.ty != storage.ty {
                 self.function_error(
                     function.callable(),
                     format!("parameter position {index} type differs from declaration"),
+                );
+            }
+        }
+        for storage in function.storage_entries().iter().filter(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Parameter | MirStorageKind::AliasParameter(_)
+            )
+        }) {
+            if !seen.contains(&storage.id) {
+                self.function_error(
+                    function.callable(),
+                    format!(
+                        "parameter storage {} is not listed by the definition",
+                        storage.id
+                    ),
                 );
             }
         }
@@ -588,11 +648,14 @@ impl Verifier<'_> {
                     self.verify_call(function, block, call, defined_values, &mut defined_in_block);
                 }
                 MirInstruction::Initialize(initialize) => {
-                    for argument in &initialize.arguments {
-                        self.verify_value_use(function, block, *argument, &defined_in_block);
+                    let destination = self.verify_place(function, block, &initialize.destination);
+                    if matches!(initialize.destination.base, MirPlaceBase::AliasParameter(_)) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "initializer destination must be owning storage",
+                        );
                     }
-                    let destination_ty =
-                        self.verify_place(function, block, &initialize.destination);
                     let Some(target) = self.program.initializer(initialize.target) else {
                         self.block_error(
                             function.callable(),
@@ -601,11 +664,20 @@ impl Verifier<'_> {
                         );
                         continue;
                     };
-                    if destination_ty != Some(MirType::Class(initialize.target.class())) {
+                    if destination.map(|place| place.ty)
+                        != Some(MirType::Class(initialize.target.class()))
+                    {
                         self.block_error(
                             function.callable(),
                             block.id,
                             "initializer destination has the wrong class type",
+                        );
+                    }
+                    if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "initializer destination requires mutable access",
                         );
                     }
                     self.verify_arguments(
@@ -613,11 +685,13 @@ impl Verifier<'_> {
                         block,
                         "initializer",
                         &initialize.arguments,
-                        &target.parameter_types,
+                        &target.parameters,
+                        &defined_in_block,
                     );
                 }
                 MirInstruction::Store(store) => {
-                    let storage_ty = self.verify_place(function, block, &store.destination);
+                    let destination = self.verify_place(function, block, &store.destination);
+                    let storage_ty = destination.map(|place| place.ty);
                     let value_ty =
                         self.verify_value_use(function, block, store.value, &defined_in_block);
                     if storage_ty.is_some_and(|ty| !ty.is_scalar_value()) {
@@ -632,6 +706,13 @@ impl Verifier<'_> {
                             function.callable(),
                             block.id,
                             "store operand type mismatch",
+                        );
+                    }
+                    if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "store destination requires mutable access",
                         );
                     }
                 }
@@ -722,10 +803,7 @@ impl Verifier<'_> {
         defined_values: &mut HashSet<ValueId>,
         defined_in_block: &mut HashSet<ValueId>,
     ) {
-        for argument in &call.arguments {
-            self.verify_value_use(function, block, *argument, defined_in_block);
-        }
-
+        let arguments_defined = defined_in_block.clone();
         let result_ty = match call.result {
             Some(result) => {
                 let metadata = function.value(result);
@@ -749,7 +827,7 @@ impl Verifier<'_> {
             None => None,
         };
 
-        let (parameter_types, return_type) = match call.target {
+        let (parameters, return_type) = match call.target {
             MirCallTarget::Direct(target_id) => {
                 if call.receiver.is_some() {
                     self.block_error(
@@ -766,7 +844,7 @@ impl Verifier<'_> {
                     );
                     return;
                 };
-                (&target.parameter_types, target.return_type)
+                (&target.parameters, target.return_type)
             }
             MirCallTarget::Method(target_id) => {
                 let Some(target) = self.program.method(target_id) else {
@@ -779,13 +857,22 @@ impl Verifier<'_> {
                 };
                 match &call.receiver {
                     Some(receiver) => {
-                        if self.verify_place(function, block, receiver)
-                            != Some(MirType::Class(target_id.class()))
+                        let receiver = self.verify_place(function, block, receiver);
+                        if receiver.map(|place| place.ty) != Some(MirType::Class(target_id.class()))
                         {
                             self.block_error(
                                 function.callable(),
                                 block.id,
                                 "method receiver has the wrong class type",
+                            );
+                        }
+                        if target.receiver_access == MirReceiverAccess::Mutable
+                            && receiver.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "mutable method receiver requires mutable access",
                             );
                         }
                     }
@@ -795,10 +882,17 @@ impl Verifier<'_> {
                         "method call requires a receiver",
                     ),
                 }
-                (&target.parameter_types, target.return_type)
+                (&target.parameters, target.return_type)
             }
         };
-        self.verify_arguments(function, block, "call", &call.arguments, parameter_types);
+        self.verify_arguments(
+            function,
+            block,
+            "call",
+            &call.arguments,
+            parameters,
+            &arguments_defined,
+        );
 
         match (return_type, result_ty) {
             (MirType::Unit, Some(_)) => self.block_error(
@@ -861,7 +955,9 @@ impl Verifier<'_> {
                 }
             }
             MirRvalueKind::Load(place) => {
-                let place_ty = self.verify_place(function, block, place);
+                let place_ty = self
+                    .verify_place(function, block, place)
+                    .map(|place| place.ty);
                 if place_ty.is_some_and(|ty| !ty.is_scalar_value()) {
                     self.block_error(
                         function.callable(),
@@ -927,29 +1023,81 @@ impl Verifier<'_> {
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         kind: &str,
-        arguments: &[ValueId],
-        parameter_types: &[MirType],
+        arguments: &[MirArgument],
+        parameters: &[MirParameter],
+        defined: &HashSet<ValueId>,
     ) {
-        if arguments.len() != parameter_types.len() {
+        if arguments.len() != parameters.len() {
             self.block_error(
                 function.callable(),
                 block.id,
                 format!(
                     "{kind} has {} arguments but requires {}",
                     arguments.len(),
-                    parameter_types.len()
+                    parameters.len()
                 ),
             );
         }
         for (index, argument) in arguments.iter().enumerate() {
-            let argument_ty = function.value(*argument).map(|value| value.ty);
-            let parameter_ty = parameter_types.get(index).copied();
-            if argument_ty.is_some() && parameter_ty.is_some() && argument_ty != parameter_ty {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("{kind} argument {index} type mismatch"),
-                );
+            let Some(parameter) = parameters.get(index) else {
+                match argument {
+                    MirArgument::Value(value) => {
+                        self.verify_value_use(function, block, *value, defined);
+                    }
+                    MirArgument::Place(place) => {
+                        self.verify_place(function, block, place);
+                    }
+                }
+                continue;
+            };
+            match (argument, parameter.mode) {
+                (MirArgument::Value(value), MirParameterMode::Value) => {
+                    let argument_ty = self.verify_value_use(function, block, *value, defined);
+                    if argument_ty.is_some() && argument_ty != Some(parameter.ty) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} argument {index} type mismatch"),
+                        );
+                    }
+                }
+                (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
+                | (MirArgument::Place(place), MirParameterMode::MutableAlias) => {
+                    let argument = self.verify_place(function, block, place);
+                    if argument.is_some_and(|argument| argument.ty != parameter.ty) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} argument {index} type mismatch"),
+                        );
+                    }
+                    if parameter.mode == MirParameterMode::MutableAlias
+                        && argument
+                            .is_some_and(|argument| argument.access != MirAliasAccess::Mutable)
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} argument {index} requires mutable access"),
+                        );
+                    }
+                }
+                (MirArgument::Value(value), _) => {
+                    self.verify_value_use(function, block, *value, defined);
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} argument {index} must be a place"),
+                    );
+                }
+                (MirArgument::Place(place), MirParameterMode::Value) => {
+                    self.verify_place(function, block, place);
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} argument {index} must be a value"),
+                    );
+                }
             }
         }
     }
@@ -959,14 +1107,35 @@ impl Verifier<'_> {
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
         place: &MirPlace,
-    ) -> Option<MirType> {
-        let Some(storage) = function.storage(place.base) else {
+    ) -> Option<VerifiedPlace> {
+        let storage_id = place.base.storage();
+        let Some(storage) = function.storage(storage_id) else {
             self.block_error(
                 function.callable(),
                 block.id,
-                format!("place base {} is not declared in this function", place.base),
+                format!("place base {storage_id} is not declared in this function"),
             );
             return None;
+        };
+        let access = match (place.base, storage.kind) {
+            (MirPlaceBase::Storage(_), MirStorageKind::AliasParameter(_)) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("alias parameter storage {storage_id} requires an indirect base"),
+                );
+                return None;
+            }
+            (MirPlaceBase::AliasParameter(_), MirStorageKind::AliasParameter(access)) => access,
+            (MirPlaceBase::AliasParameter(_), _) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("indirect alias base {storage_id} is not alias parameter storage"),
+                );
+                return None;
+            }
+            (MirPlaceBase::Storage(_), _) => self.storage_access(function, storage),
         };
         let mut ty = storage.ty;
         for projection in &place.projections {
@@ -1000,7 +1169,30 @@ impl Verifier<'_> {
                 }
             }
         }
-        Some(ty)
+        Some(VerifiedPlace { ty, access })
+    }
+
+    fn storage_access(
+        &self,
+        function: MirDefinitionRef<'_>,
+        storage: &MirStorage,
+    ) -> MirAliasAccess {
+        if storage.kind != MirStorageKind::Receiver {
+            return MirAliasAccess::Mutable;
+        }
+        match function.callable() {
+            CallableId::Method(method) => match self
+                .program
+                .method(method)
+                .map(|method| method.receiver_access)
+            {
+                Some(MirReceiverAccess::ReadOnly) => MirAliasAccess::ReadOnly,
+                Some(MirReceiverAccess::Mutable) => MirAliasAccess::Mutable,
+                None => MirAliasAccess::ReadOnly,
+            },
+            CallableId::Initializer(_) => MirAliasAccess::Mutable,
+            CallableId::Function(_) => MirAliasAccess::ReadOnly,
+        }
     }
 
     fn verify_value_use(

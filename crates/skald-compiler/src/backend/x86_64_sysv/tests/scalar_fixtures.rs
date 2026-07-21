@@ -139,7 +139,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                     MirInstruction::Call(MirCall {
                         target: MirCallTarget::Direct(validate_id),
                         receiver: None,
-                        arguments: vec![ValueId::new(main_id, 0)],
+                        arguments: MirArgument::values([ValueId::new(main_id, 0)]),
                         result: Some(ValueId::new(main_id, 1)),
                         span,
                     }),
@@ -161,7 +161,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
             MirFunctionDeclaration {
                 id: compute_id,
                 name: "compute".to_owned(),
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::F64,
                 linkage: MirFunctionLinkage::Internal,
                 span,
@@ -169,7 +169,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
             MirFunctionDeclaration {
                 id: validate_id,
                 name: "validate_f64".to_owned(),
-                parameter_types: vec![MirType::F64],
+                parameters: MirParameter::values([MirType::F64]),
                 return_type: MirType::I64,
                 linkage: MirFunctionLinkage::External {
                     symbol: "validate_f64".to_owned(),
@@ -179,7 +179,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
             MirFunctionDeclaration {
                 id: main_id,
                 name: "main".to_owned(),
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::I64,
                 linkage: MirFunctionLinkage::Internal,
                 span,
@@ -272,9 +272,9 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     instructions.push(MirInstruction::Call(MirCall {
         target: MirCallTarget::Direct(mixed_id),
         receiver: None,
-        arguments: (0..parameter_types.len())
-            .map(|index| ValueId::new(main_id, index))
-            .collect(),
+        arguments: MirArgument::values(
+            (0..parameter_types.len()).map(|index| ValueId::new(main_id, index)),
+        ),
         result: Some(call_result),
         span,
     }));
@@ -319,7 +319,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
             MirFunctionDeclaration {
                 id: mixed_id,
                 name: "mixed".to_owned(),
-                parameter_types,
+                parameters: MirParameter::values(parameter_types),
                 return_type: MirType::F64,
                 linkage: MirFunctionLinkage::Internal,
                 span,
@@ -327,7 +327,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
             MirFunctionDeclaration {
                 id: main_id,
                 name: "main".to_owned(),
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::I64,
                 linkage: MirFunctionLinkage::Internal,
                 span,

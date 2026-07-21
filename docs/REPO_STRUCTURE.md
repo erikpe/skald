@@ -255,9 +255,11 @@ MIR is executable in shape but target-independent. It separates:
 - initialization into a destination from ordinary assignment/store;
 - basic blocks with `Return`, `Goto`, and boolean `Branch` terminators.
 
-Alias parameters and place arguments are not represented in MIR yet. A
-structured driver capability diagnostic stops alias-bearing HIR before MIR
-lowering; AL4 replaces this boundary with verified MIR semantics.
+MIR signatures use ordered parameter descriptors that keep value,
+read-only-alias, and mutable-alias modes separate from the underlying type.
+Calls and initializations retain one ordered argument sequence containing
+explicit value and place variants. Alias parameter homes are indirect place
+bases, distinct from owning storage, and carry verifier-visible access.
 
 Expression and argument lowering preserves the language's left-to-right order.
 State crossing block edges uses storage because MIR is not currently SSA.
@@ -274,16 +276,15 @@ The pass pipeline currently verifies without transforming. SSA conversion or
 optimization should enter as an explicit pass or replaceable IR boundary when
 concrete optimization work justifies it.
 
-For the planned alias profile, MIR signatures use ordered parameter
-descriptors rather than parallel type/mode arrays. Calls and initializations
-likewise keep value and place arguments in one source-ordered sequence. An
-alias parameter is an indirect place base containing an object address, not
-owning class storage and not a transient object value. Verification must check
-mode/type agreement, argument kind, place ownership and projection, access
-sufficiency, and the external-alias exclusion before backend lowering. These
-contracts are frozen in the
+The verifier checks alias mode/type agreement, parameter storage, argument
+kind, place ownership and projection, access sufficiency, read-only writes and
+mutable receiver calls, and the external-alias exclusion before backend
+lowering. Dumps expose modes, indirect bases, and argument kinds without
+target offsets or registers. These contracts are defined in the
 [alias-parameter implementation profile](SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile),
-but are not implemented yet.
+and are covered by hand-built MIR tests. Source HIR-to-MIR alias lowering and
+the pointer ABI remain future roadmap steps; the driver reports that precise
+capability boundary for alias-bearing source today.
 
 ## x86-64 System V backend
 

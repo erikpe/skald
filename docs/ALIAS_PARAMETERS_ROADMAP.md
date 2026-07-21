@@ -322,7 +322,7 @@ declarations and promises no cross-module ABI stability.
 - [x] AL1 — Add binding-mode syntax and parser diagnostics
 - [x] AL2 — Resolve alias signatures and existing object places
 - [x] AL3 — Type-check alias access and build typed call arguments
-- [ ] AL4 — Add verified alias parameters and place arguments to MIR
+- [x] AL4 — Add verified alias parameters and place arguments to MIR
 - [ ] AL5 — Lower the alias pointer ABI on Linux x86-64
 - [ ] AL6 — Connect typed aliases through HIR-to-MIR lowering
 - [ ] AL7 — Enable, harden, and document the complete native slice
@@ -453,22 +453,22 @@ is sufficient. Lower phases do not repeat source-level type checking.
 **Purpose:** Establish a target-independent, corruption-resistant address
 model before changing a backend.
 
-- [ ] Replace bare MIR parameter-type arrays with ordered parameter
+- [x] Replace bare MIR parameter-type arrays with ordered parameter
       descriptors containing mode and underlying type.
-- [ ] Introduce ordered MIR call/initialization arguments with value and place
+- [x] Introduce ordered MIR call/initialization arguments with value and place
       variants.
-- [ ] Represent alias parameter homes as indirect place bases, distinct from
+- [x] Represent alias parameter homes as indirect place bases, distinct from
       owning local object storage.
-- [ ] Carry read-only versus mutable access in the MIR location where the
+- [x] Carry read-only versus mutable access in the MIR location where the
       verifier can enforce writes and mutable receiver calls.
-- [ ] Extend MIR builders and fixtures with small helpers for parameter
+- [x] Extend MIR builders and fixtures with small helpers for parameter
       descriptors and ordered call arguments.
-- [ ] Verify declaration/definition agreement, parameter storage, call kinds,
+- [x] Verify declaration/definition agreement, parameter storage, call kinds,
       exact types, place ownership, projection validity, and access sufficiency.
-- [ ] Reject alias parameters on external MIR declarations.
-- [ ] Extend MIR dumps with stable mode, indirect-base, and argument-kind
+- [x] Reject alias parameters on external MIR declarations.
+- [x] Extend MIR dumps with stable mode, indirect-base, and argument-kind
       rendering.
-- [ ] Refactor duplicated signature zip/count checks into verifier helpers when
+- [x] Refactor duplicated signature zip/count checks into verifier helpers when
       that makes the new invariants easier to audit.
 
 **Tests:** Hand-built valid MIR for direct calls, methods, initializers,

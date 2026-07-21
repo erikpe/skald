@@ -76,7 +76,7 @@ fn member_call_without_a_definition_is_a_structured_backend_error() {
         .initializers
         .push(MirInitializerDeclaration {
             id: initializer,
-            parameter_types: vec![],
+            parameters: vec![],
             span: mir.span,
         });
     let function = mir
@@ -104,13 +104,13 @@ fn member_call_without_a_definition_is_a_structured_backend_error() {
 fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
     let mut mir = counter_member_program();
     let declaration = &mut mir.declarations.entries_mut_for_test()[0];
-    declaration.parameter_types = vec![MirType::Class(ClassId::new(0))];
+    declaration.parameters = MirParameter::values([MirType::Class(ClassId::new(0))]);
 
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert!(error.message().contains("input MIR failed verification"));
     assert!(error
         .message()
-        .contains("function parameters must have scalar value types"));
+        .contains("value parameter 0 must have scalar value type"));
 }
 
 #[test]

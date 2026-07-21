@@ -14,14 +14,15 @@ pub use build::{MirBodyBuilder, MirBuildError};
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{
-    BlockId, MirAssignment, MirBasicBlock, MirBinaryOperation, MirBody, MirCall, MirCallTarget,
-    MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable, MirDefinitionRef,
-    MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
-    MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize,
-    MirInitializerDeclaration, MirInstruction, MirMemberDefinition, MirMemberDefinitionTable,
-    MirMethodDeclaration, MirPlace, MirPlaceProjection, MirProgram, MirReceiverAccess, MirRvalue,
-    MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirUnaryOperation,
-    MirValue, StorageId, ValueId,
+    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
+    MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
+    MirClassDeclarationTable, MirDefinitionRef, MirFieldDeclaration, MirFunctionDeclaration,
+    MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
+    MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
+    MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,
+    MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirReceiverAccess,
+    MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
+    MirUnaryOperation, MirValue, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 

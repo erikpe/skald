@@ -46,14 +46,14 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             }],
             initializers: vec![MirInitializerDeclaration {
                 id: outer_initializer,
-                parameter_types: vec![MirType::I64],
+                parameters: MirParameter::values([MirType::I64]),
                 span,
             }],
             methods: vec![MirMethodDeclaration {
                 id: outer_method,
                 name: "get".to_owned(),
                 receiver_access: MirReceiverAccess::ReadOnly,
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::I64,
                 span,
             }],
@@ -90,7 +90,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         .push(MirInstruction::Initialize(MirInitialize {
             destination: object_storage.into(),
             target: outer_initializer,
-            arguments: vec![ValueId::new(function_id, 0)],
+            arguments: MirArgument::values([ValueId::new(function_id, 0)]),
             span,
         }));
     block

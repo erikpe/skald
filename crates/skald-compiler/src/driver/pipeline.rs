@@ -14,7 +14,7 @@ use crate::{
     typeck::type_check,
 };
 
-pub const ALIAS_MIR_NOT_IMPLEMENTED: &str = "DRV001";
+pub const ALIAS_LOWERING_NOT_IMPLEMENTED: &str = "DRV001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -78,14 +78,14 @@ pub fn compile_source_to_assembly(
     if let Some(parameter) = hir.first_alias_parameter() {
         diagnostics.push(
             Diagnostic::error(
-                ALIAS_MIR_NOT_IMPLEMENTED,
-                "alias parameters are not available in MIR yet",
+                ALIAS_LOWERING_NOT_IMPLEMENTED,
+                "alias parameters are not connected to MIR lowering yet",
             )
             .with_primary_label(
                 parameter.span,
-                "typed alias signature reaches the AL3 boundary",
+                "typed alias signature reaches the AL6 boundary",
             )
-            .with_note("AL4 adds MIR parameter modes and place arguments"),
+            .with_note("MIR supports aliases; AL6 connects typed HIR to that representation"),
         );
         return Err(diagnostic_failure(sources, diagnostics));
     }

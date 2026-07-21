@@ -76,7 +76,7 @@ fn dumps_member_receiver_storage_and_bodies_deterministically() {
     assert!(dump.contains("Receiver c0:init0:s0"));
     assert!(dump.contains("c0:init0:s0 receiver c0:init0:self \"self\" : class c0"));
     assert!(dump.contains("MemberDefinition c0:method0"));
-    assert!(dump.contains("call f1(c0:method0:v0, c0:method0:v1)"));
+    assert!(dump.contains("call f1(value(c0:method0:v0), value(c0:method0:v1))"));
 }
 
 #[test]

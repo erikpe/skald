@@ -15,7 +15,7 @@ use super::{build::MirBodyBuilder, model::*};
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     assert!(
         hir.first_alias_parameter().is_none(),
-        "alias-bearing HIR requires AL4 MIR parameter and place-argument support"
+        "alias-bearing HIR requires AL6 HIR-to-MIR alias lowering"
     );
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
@@ -66,11 +66,11 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             .collect(),
         initializers: vec![MirInitializerDeclaration {
             id: class.initializer.id,
-            parameter_types: class
+            parameters: class
                 .initializer
                 .parameters
                 .iter()
-                .map(|parameter| lower_type(parameter.ty))
+                .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
                 .collect(),
             span: class.initializer.span,
         }],
@@ -84,10 +84,10 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
                     HirAccess::Mutable => MirReceiverAccess::Mutable,
                 },
-                parameter_types: method
+                parameters: method
                     .parameters
                     .iter()
-                    .map(|parameter| lower_type(parameter.ty))
+                    .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
                     .collect(),
                 return_type: lower_type(method.return_type),
                 span: method.span,
@@ -101,10 +101,10 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
     MirFunctionDeclaration {
         id: declaration.id,
         name: declaration.name.clone(),
-        parameter_types: declaration
+        parameters: declaration
             .parameters
             .iter()
-            .map(|parameter| lower_type(parameter.ty))
+            .map(|parameter| MirParameter::value(lower_type(parameter.ty)))
             .collect(),
         return_type: lower_type(declaration.return_type),
         linkage: match &declaration.linkage {
@@ -291,9 +291,9 @@ impl<'hir> BodyLowerer<'hir> {
                                 .arguments
                                 .iter()
                                 .map(|argument| {
-                                    self.lower_value_argument(argument).expect(
+                                    MirArgument::Value(self.lower_value_argument(argument).expect(
                                         "typed constructor argument must produce a scalar value",
-                                    )
+                                    ))
                                 })
                                 .collect();
                             self.emit(MirInstruction::Initialize(MirInitialize {
@@ -510,8 +510,10 @@ impl<'hir> BodyLowerer<'hir> {
                 let arguments = arguments
                     .iter()
                     .map(|argument| {
-                        self.lower_value_argument(argument)
-                            .expect("typed call argument must produce a value")
+                        MirArgument::Value(
+                            self.lower_value_argument(argument)
+                                .expect("typed call argument must produce a value"),
+                        )
                     })
                     .collect();
                 let result = (expression.ty != Type::Unit)
@@ -541,8 +543,10 @@ impl<'hir> BodyLowerer<'hir> {
                 let arguments = arguments
                     .iter()
                     .map(|argument| {
-                        self.lower_value_argument(argument)
-                            .expect("typed method argument must produce a scalar value")
+                        MirArgument::Value(
+                            self.lower_value_argument(argument)
+                                .expect("typed method argument must produce a scalar value"),
+                        )
                     })
                     .collect();
                 let result = (expression.ty != Type::Unit)
@@ -568,7 +572,7 @@ impl<'hir> BodyLowerer<'hir> {
         match argument {
             HirCallArgument::Value(expression) => self.lower_expression(expression),
             HirCallArgument::Place(_) => {
-                unreachable!("alias place arguments require AL4 MIR support")
+                unreachable!("alias place arguments require AL6 HIR-to-MIR alias lowering")
             }
         }
     }

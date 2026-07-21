@@ -113,7 +113,10 @@ fn lowers_boolean_constants_storage_calls_and_returns_as_boolean_mir() {
 
     assert!(verify_mir(&mir).is_ok());
     let identity_declaration = mir.declarations.get(FunctionId::new(1)).unwrap();
-    assert_eq!(identity_declaration.parameter_types, [MirType::Bool]);
+    assert_eq!(
+        identity_declaration.parameters,
+        [MirParameter::value(MirType::Bool)]
+    );
     assert_eq!(identity_declaration.return_type, MirType::Bool);
     let identity = mir.definitions.get(FunctionId::new(1)).unwrap();
     assert_eq!(identity.storage[0].ty, MirType::Bool);
@@ -200,6 +203,6 @@ fn lowers_unit_calls_and_returns_without_payload_values() {
     assert!(calls.iter().all(|call| call.result.is_none()));
     let dump = dump_mir(&mir);
     assert_eq!(dump, dump_mir(&mir));
-    assert!(dump.contains("call f0(f2:v0)"));
+    assert!(dump.contains("call f0(value(f2:v0))"));
     assert!(dump.contains("return @"));
 }

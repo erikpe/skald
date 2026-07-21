@@ -47,7 +47,7 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
     }
     for initializer in &class.initializers {
         let _ = write!(output, "      Initializer {}(", initializer.id);
-        dump_types(output, &initializer.parameter_types);
+        dump_parameters(output, &initializer.parameters);
         output.push(')');
         write_span(output, initializer.span);
         output.push('\n');
@@ -56,19 +56,24 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
         let _ = write!(output, "      Method {} ", method.id);
         write_quoted(output, &method.name);
         let _ = write!(output, " {} (", method.receiver_access);
-        dump_types(output, &method.parameter_types);
+        dump_parameters(output, &method.parameters);
         let _ = write!(output, ") -> {}", method.return_type);
         write_span(output, method.span);
         output.push('\n');
     }
 }
 
-fn dump_types(output: &mut String, types: &[MirType]) {
-    for (index, ty) in types.iter().enumerate() {
+fn dump_parameters(output: &mut String, parameters: &[MirParameter]) {
+    for (index, parameter) in parameters.iter().enumerate() {
         if index != 0 {
             output.push_str(", ");
         }
-        let _ = write!(output, "{ty}");
+        match parameter.mode {
+            MirParameterMode::Value => {}
+            MirParameterMode::ReadOnlyAlias => output.push_str("ref "),
+            MirParameterMode::MutableAlias => output.push_str("mut ref "),
+        }
+        let _ = write!(output, "{}", parameter.ty);
     }
 }
 
@@ -85,12 +90,7 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
     write_span(output, declaration.span);
     output.push('\n');
     output.push_str("      Signature (");
-    for (index, parameter) in declaration.parameter_types.iter().enumerate() {
-        if index != 0 {
-            output.push_str(", ");
-        }
-        let _ = write!(output, "{parameter}");
-    }
+    dump_parameters(output, &declaration.parameters);
     let _ = writeln!(output, ") -> {}", declaration.return_type);
 }
 
@@ -120,6 +120,8 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
         let kind = match storage.kind {
             MirStorageKind::Receiver => "receiver",
             MirStorageKind::Parameter => "parameter",
+            MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly) => "ref-parameter",
+            MirStorageKind::AliasParameter(MirAliasAccess::Mutable) => "mut-ref-parameter",
             MirStorageKind::Local => "local",
         };
         let _ = write!(output, "        {} {kind} {} ", storage.id, storage.source);
@@ -174,7 +176,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     if index != 0 {
                         output.push_str(", ");
                     }
-                    let _ = write!(output, "{argument}");
+                    dump_argument(output, argument);
                 }
                 output.push(')');
                 write_span(output, call.span);
@@ -187,7 +189,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     if index != 0 {
                         output.push_str(", ");
                     }
-                    let _ = write!(output, "{argument}");
+                    dump_argument(output, argument);
                 }
                 output.push(')');
                 write_span(output, initialize.span);
@@ -285,12 +287,32 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
 }
 
 fn dump_place(output: &mut String, place: &MirPlace) {
-    let _ = write!(output, "{}", place.base);
+    match place.base {
+        MirPlaceBase::Storage(storage) => {
+            let _ = write!(output, "{storage}");
+        }
+        MirPlaceBase::AliasParameter(storage) => {
+            let _ = write!(output, "indirect({storage})");
+        }
+    }
     for projection in &place.projections {
         match projection {
             MirPlaceProjection::Field(field) => {
                 let _ = write!(output, ".field({field})");
             }
+        }
+    }
+}
+
+fn dump_argument(output: &mut String, argument: &MirArgument) {
+    match argument {
+        MirArgument::Value(value) => {
+            let _ = write!(output, "value({value})");
+        }
+        MirArgument::Place(place) => {
+            output.push_str("place(");
+            dump_place(output, place);
+            output.push(')');
         }
     }
 }

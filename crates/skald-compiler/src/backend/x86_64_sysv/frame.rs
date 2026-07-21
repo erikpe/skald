@@ -104,18 +104,19 @@ impl FrameLayout {
         data_layout: &DataLayout,
         place: &MirPlace,
     ) -> FramePlace {
+        let storage_id = place.base.storage();
         let storage = function
-            .storage(place.base)
+            .storage(storage_id)
             .expect("verified place base must identify storage");
         let (base, mut displacement) = if storage.kind == MirStorageKind::Receiver {
             (
                 FramePlaceBase::ReceiverPointer {
-                    home: self.storage(place.base),
+                    home: self.storage(storage_id),
                 },
                 0,
             )
         } else {
-            (FramePlaceBase::FramePointer, self.storage(place.base))
+            (FramePlaceBase::FramePointer, self.storage(storage_id))
         };
         let mut ty = storage.ty;
         for projection in &place.projections {

@@ -4,8 +4,8 @@ use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
     mir::{
-        MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef, MirFunctionLinkage,
-        MirInitialize, MirPlace, MirType, ValueId,
+        MirArgument, MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef,
+        MirFunctionLinkage, MirInitialize, MirParameter, MirPlace, MirType, ValueId,
     },
 };
 
@@ -23,8 +23,8 @@ pub(super) fn spill_parameters(
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
-    let layout = classify_call(signature.parameter_types, function.receiver().is_some())
-        .ok_or_else(|| {
+    let layout =
+        classify_call(signature.parameters, function.receiver().is_some()).ok_or_else(|| {
             argument_area_error(
                 function,
                 "incoming argument area exceeds the x86-64 ABI encoding limits",
@@ -132,20 +132,19 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         target: CallableId,
         receiver: Option<&MirPlace>,
-        arguments: &[ValueId],
+        arguments: &[MirArgument],
         result: Option<ValueId>,
     ) -> Result<(), BackendError> {
         let signature = self
             .program
             .callable_signature(target)
             .expect("verified call target must be declared");
-        let layout =
-            classify_call(signature.parameter_types, receiver.is_some()).ok_or_else(|| {
-                argument_area_error(
-                    self.function,
-                    "outgoing argument area exceeds the x86-64 ABI encoding limits",
-                )
-            })?;
+        let layout = classify_call(signature.parameters, receiver.is_some()).ok_or_else(|| {
+            argument_area_error(
+                self.function,
+                "outgoing argument area exceeds the x86-64 ABI encoding limits",
+            )
+        })?;
 
         if layout.stack_size() != 0 {
             self.output
@@ -162,10 +161,13 @@ impl InstructionSelector<'_, '_> {
         }
         for ((argument, ty), location) in arguments
             .iter()
-            .zip(signature.parameter_types)
+            .zip(signature.parameters)
             .zip(layout.locations())
         {
-            self.select_argument(*argument, *ty, *location);
+            let MirArgument::Value(argument) = argument else {
+                unreachable!("target legality rejects alias arguments before selection")
+            };
+            self.select_argument(*argument, ty.ty, *location);
         }
 
         self.output
@@ -244,11 +246,12 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn classify_call(parameter_types: &[MirType], has_receiver: bool) -> Option<CallLayout> {
+fn classify_call(parameters: &[MirParameter], has_receiver: bool) -> Option<CallLayout> {
+    let parameter_types: Vec<_> = parameters.iter().map(|parameter| parameter.ty).collect();
     if has_receiver {
-        CallLayout::classify_with_receiver(parameter_types)
+        CallLayout::classify_with_receiver(&parameter_types)
     } else {
-        CallLayout::classify(parameter_types)
+        CallLayout::classify(&parameter_types)
     }
 }
 

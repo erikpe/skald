@@ -39,7 +39,7 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
             "      Blocks\n",
             "        f0:b0 @17..30\n",
             "          f0:v0 = const.i64 7 : i64 @26..27\n",
-            "          initialize f0:s0 with c1:init0(f0:v0) @0..30\n",
+            "          initialize f0:s0 with c1:init0(value(f0:v0)) @0..30\n",
             "          f0:v1 = load f0:s0.field(c1:field0).field(c0:field0) : i64 @0..30\n",
             "          f0:v2 = call c1:method0 on f0:s0() @0..30\n",
             "          return f0:v0 @19..28\n",
@@ -238,7 +238,7 @@ fn source_object_mir_dump_is_exact_and_identity_based() {
             "      Blocks\n",
             "        f0:b0 @123..171\n",
             "          f0:v0 = const.i64 1 : i64 @146..147\n",
-            "          initialize f0:s0 with c0:init0(f0:v0) @142..148\n",
+            "          initialize f0:s0 with c0:init0(value(f0:v0)) @142..148\n",
             "          f0:v1 = call c0:method0 on f0:s0() @157..168\n",
             "          return f0:v1 @150..169\n",
             "  MemberDefinitions\n",
@@ -355,7 +355,10 @@ fn preserves_object_storage_and_call_order_across_nested_control_flow() {
             _ => None,
         })
     {
-        assert_eq!(call.receiver.as_ref().unwrap().base, relay.receiver);
+        assert_eq!(
+            call.receiver.as_ref().unwrap().base,
+            MirPlaceBase::Storage(relay.receiver)
+        );
     }
 }
 

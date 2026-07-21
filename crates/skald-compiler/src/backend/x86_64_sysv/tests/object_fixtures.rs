@@ -190,7 +190,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         fields: vec![field(value_field, "value", MirType::I64, span)],
         initializers: vec![MirInitializerDeclaration {
             id: initializer,
-            parameter_types: vec![MirType::I64],
+            parameters: MirParameter::values([MirType::I64]),
             span,
         }],
         methods: vec![
@@ -198,7 +198,7 @@ pub(super) fn counter_member_program() -> MirProgram {
                 id: add,
                 name: "add".to_owned(),
                 receiver_access: MirReceiverAccess::Mutable,
-                parameter_types: vec![MirType::I64],
+                parameters: MirParameter::values([MirType::I64]),
                 return_type: MirType::Unit,
                 span,
             },
@@ -206,7 +206,7 @@ pub(super) fn counter_member_program() -> MirProgram {
                 id: get,
                 name: "get".to_owned(),
                 receiver_access: MirReceiverAccess::ReadOnly,
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::I64,
                 span,
             },
@@ -214,7 +214,7 @@ pub(super) fn counter_member_program() -> MirProgram {
                 id: get_via_receiver,
                 name: "get_via_receiver".to_owned(),
                 receiver_access: MirReceiverAccess::ReadOnly,
-                parameter_types: vec![],
+                parameters: vec![],
                 return_type: MirType::I64,
                 span,
             },
@@ -267,7 +267,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         MirInstruction::Initialize(MirInitialize {
             destination: object.into(),
             target: initializer,
-            arguments: vec![ValueId::new(main_id, 1)],
+            arguments: MirArgument::values([ValueId::new(main_id, 1)]),
             span,
         }),
         assignment(
@@ -280,7 +280,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(add),
             receiver: Some(object.into()),
-            arguments: vec![ValueId::new(main_id, 2)],
+            arguments: MirArgument::values([ValueId::new(main_id, 2)]),
             result: None,
             span,
         }),
@@ -294,7 +294,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Direct(FunctionId::new(0)),
             receiver: None,
-            arguments: vec![ValueId::new(main_id, 3)],
+            arguments: MirArgument::values([ValueId::new(main_id, 3)]),
             result: None,
             span,
         }),
@@ -314,7 +314,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
             id: method,
             name: "exhaust".to_owned(),
             receiver_access: MirReceiverAccess::ReadOnly,
-            parameter_types: parameter_types.clone(),
+            parameters: MirParameter::values(parameter_types.clone()),
             return_type: MirType::Unit,
             span: program.span,
         });
@@ -387,7 +387,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
                 rvalue: MirRvalue { kind, ty },
                 span: program.span,
             }));
-        arguments.push(value);
+        arguments.push(MirArgument::Value(value));
     }
     function.body.blocks[0]
         .instructions
@@ -500,7 +500,10 @@ fn add_definition(
                     MirInstruction::Call(MirCall {
                         target: MirCallTarget::Direct(sum),
                         receiver: None,
-                        arguments: vec![ValueId::new(callable, 0), ValueId::new(callable, 1)],
+                        arguments: MirArgument::values([
+                            ValueId::new(callable, 0),
+                            ValueId::new(callable, 1),
+                        ]),
                         result: Some(ValueId::new(callable, 2)),
                         span,
                     }),

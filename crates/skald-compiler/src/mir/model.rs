@@ -120,20 +120,20 @@ impl MirProgram {
                 self.declarations
                     .get(function)
                     .map(|declaration| MirCallableSignature {
-                        parameter_types: &declaration.parameter_types,
+                        parameters: &declaration.parameters,
                         return_type: declaration.return_type,
                     })
             }
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
                     .map(|declaration| MirCallableSignature {
-                        parameter_types: &declaration.parameter_types,
+                        parameters: &declaration.parameters,
                         return_type: MirType::Unit,
                     })
             }
             CallableId::Method(method) => {
                 self.method(method).map(|declaration| MirCallableSignature {
-                    parameter_types: &declaration.parameter_types,
+                    parameters: &declaration.parameters,
                     return_type: declaration.return_type,
                 })
             }
@@ -143,8 +143,48 @@ impl MirProgram {
 
 #[derive(Clone, Copy, Debug)]
 pub struct MirCallableSignature<'mir> {
-    pub parameter_types: &'mir [MirType],
+    pub parameters: &'mir [MirParameter],
     pub return_type: MirType,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirParameter {
+    pub mode: MirParameterMode,
+    pub ty: MirType,
+}
+
+impl MirParameter {
+    pub const fn value(ty: MirType) -> Self {
+        Self {
+            mode: MirParameterMode::Value,
+            ty,
+        }
+    }
+
+    pub const fn read_only_alias(ty: MirType) -> Self {
+        Self {
+            mode: MirParameterMode::ReadOnlyAlias,
+            ty,
+        }
+    }
+
+    pub const fn mutable_alias(ty: MirType) -> Self {
+        Self {
+            mode: MirParameterMode::MutableAlias,
+            ty,
+        }
+    }
+
+    pub fn values(types: impl IntoIterator<Item = MirType>) -> Vec<Self> {
+        types.into_iter().map(Self::value).collect()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirParameterMode {
+    Value,
+    ReadOnlyAlias,
+    MutableAlias,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -232,7 +272,7 @@ pub struct MirFieldDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirInitializerDeclaration {
     pub id: InitializerId,
-    pub parameter_types: Vec<MirType>,
+    pub parameters: Vec<MirParameter>,
     pub span: Span,
 }
 
@@ -256,7 +296,7 @@ pub struct MirMethodDeclaration {
     pub id: MethodId,
     pub name: String,
     pub receiver_access: MirReceiverAccess,
-    pub parameter_types: Vec<MirType>,
+    pub parameters: Vec<MirParameter>,
     pub return_type: MirType,
     pub span: Span,
 }
@@ -299,7 +339,7 @@ impl MirFunctionDeclarationTable {
 pub struct MirFunctionDeclaration {
     pub id: FunctionId,
     pub name: String,
-    pub parameter_types: Vec<MirType>,
+    pub parameters: Vec<MirParameter>,
     pub return_type: MirType,
     pub linkage: MirFunctionLinkage,
     pub span: Span,
@@ -575,7 +615,14 @@ impl MirFunctionDefinition {
 pub enum MirStorageKind {
     Receiver,
     Parameter,
+    AliasParameter(MirAliasAccess),
     Local,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirAliasAccess {
+    ReadOnly,
+    Mutable,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -597,14 +644,21 @@ pub struct MirValue {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct MirPlace {
-    pub base: StorageId,
+    pub base: MirPlaceBase,
     pub projections: Vec<MirPlaceProjection>,
 }
 
 impl MirPlace {
     pub fn base(base: StorageId) -> Self {
         Self {
-            base,
+            base: MirPlaceBase::Storage(base),
+            projections: Vec::new(),
+        }
+    }
+
+    pub fn alias_parameter(base: StorageId) -> Self {
+        Self {
+            base: MirPlaceBase::AliasParameter(base),
             projections: Vec::new(),
         }
     }
@@ -612,6 +666,20 @@ impl MirPlace {
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirPlaceBase {
+    Storage(StorageId),
+    AliasParameter(StorageId),
+}
+
+impl MirPlaceBase {
+    pub const fn storage(self) -> StorageId {
+        match self {
+            Self::Storage(storage) | Self::AliasParameter(storage) => storage,
+        }
     }
 }
 
@@ -679,7 +747,7 @@ pub struct MirStore {
 pub struct MirInitialize {
     pub destination: MirPlace,
     pub target: InitializerId,
-    pub arguments: Vec<ValueId>,
+    pub arguments: Vec<MirArgument>,
     pub span: Span,
 }
 
@@ -687,9 +755,33 @@ pub struct MirInitialize {
 pub struct MirCall {
     pub target: MirCallTarget,
     pub receiver: Option<MirPlace>,
-    pub arguments: Vec<ValueId>,
+    pub arguments: Vec<MirArgument>,
     pub result: Option<ValueId>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirArgument {
+    Value(ValueId),
+    Place(MirPlace),
+}
+
+impl From<ValueId> for MirArgument {
+    fn from(value: ValueId) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<MirPlace> for MirArgument {
+    fn from(place: MirPlace) -> Self {
+        Self::Place(place)
+    }
+}
+
+impl MirArgument {
+    pub fn values(values: impl IntoIterator<Item = ValueId>) -> Vec<Self> {
+        values.into_iter().map(Self::Value).collect()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

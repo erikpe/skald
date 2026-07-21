@@ -332,7 +332,7 @@ fn stops_before_semantic_phases_after_a_source_error() {
 }
 
 #[test]
-fn typed_alias_syntax_stops_at_the_mir_capability_boundary() {
+fn typed_alias_syntax_stops_at_the_hir_to_mir_lowering_boundary() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "alias-syntax.ska",
         concat!(
@@ -349,7 +349,7 @@ fn typed_alias_syntax_stops_at_the_mir_capability_boundary() {
     assert_eq!(report.diagnostics.len(), 1);
     assert_eq!(
         report.diagnostics.iter().next().unwrap().code,
-        ALIAS_MIR_NOT_IMPLEMENTED
+        ALIAS_LOWERING_NOT_IMPLEMENTED
     );
     let rendered = render_diagnostics(&report.sources, &report.diagnostics);
     assert!(rendered.contains("error[DRV001]"));
