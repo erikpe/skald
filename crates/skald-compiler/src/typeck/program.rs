@@ -121,6 +121,32 @@ fn lower_class_declaration(
     diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
     let mut valid = true;
+    if let Some(copy_constructor) = &class.copy_constructor_declaration {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_OBJECT_DECLARATION,
+                "copy-constructor bodies cannot be type-checked yet",
+            )
+            .with_primary_label(
+                copy_constructor.span,
+                "the declaration is resolved, but its body is not supported yet",
+            ),
+        );
+        valid = false;
+    }
+    if let Some(copy_assignment) = &class.copy_assignment_declaration {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_OBJECT_DECLARATION,
+                "copy-assignment bodies cannot be type-checked yet",
+            )
+            .with_primary_label(
+                copy_assignment.span,
+                "the declaration is resolved, but its body is not supported yet",
+            ),
+        );
+        valid = false;
+    }
     let fields = class
         .fields
         .iter()

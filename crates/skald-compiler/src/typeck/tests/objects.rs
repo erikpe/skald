@@ -126,6 +126,36 @@ fn requires_one_explicit_initializer_even_for_empty_classes() {
 }
 
 #[test]
+fn keeps_resolved_copy_lifecycle_bodies_out_of_hir_until_ovs2() {
+    let output = check_text(concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  init(ref other: Value) { self.value = other.value; }\n",
+        "  assign(ref other: Value) { self.value = other.value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let diagnostics: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION)
+        .collect();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("copy-constructor")));
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("copy-assignment")));
+    assert!(diagnostics.iter().all(|diagnostic| diagnostic.labels[0]
+        .message
+        .contains("declaration is resolved")));
+}
+
+#[test]
 fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
     let mut resolved = resolve_text(concat!(
         "class Other { init() {} }\n",
@@ -637,9 +667,10 @@ fn methods_reuse_structured_definite_return_analysis() {
 fn lowers_alias_signatures_for_every_internal_owner() {
     let output = check_text(concat!(
         "class Thing {\n",
-        "  init(ref other: Thing) {}\n",
+        "  init(ref other: Other) {}\n",
         "  fn inspect(mut ref other: Thing) -> unit {}\n",
         "}\n",
+        "class Other { init() {} }\n",
         "fn take(ref thing: Thing) -> unit {}\n",
         "fn main() -> i64 { return 0; }\n",
     ));

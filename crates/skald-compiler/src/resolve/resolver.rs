@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    identity::{ClassId, DestructorId, FieldId, FunctionId, InitializerId, MethodId},
+    identity::{
+        ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId, MethodId,
+    },
     source::Span,
     syntax,
 };
@@ -25,6 +27,7 @@ pub const UNKNOWN_MEMBER: &str = "RES008";
 pub const INVALID_MEMBER_SELECTION: &str = "RES009";
 pub const SELF_OUTSIDE_MEMBER: &str = "RES010";
 pub const INVALID_CONSTRUCTION_TARGET: &str = "RES011";
+pub const INVALID_LIFECYCLE_SIGNATURE: &str = "RES012";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -119,5 +122,7 @@ pub(super) struct ClassSymbols {
     pub(super) ordinary: HashMap<String, OrdinaryMemberSymbol>,
     pub(super) initializer: Option<InitializerId>,
     pub(super) initializer_span: Option<Span>,
+    pub(super) copy_constructor_span: Option<Span>,
+    pub(super) copy_assignment_span: Option<Span>,
     pub(super) destructor_span: Option<Span>,
 }

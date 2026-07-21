@@ -1583,10 +1583,10 @@ than redefining the normal local-object behavior frozen here.
 
 **Implementation status:** semantic contract frozen by OVS0 of the
 [Object Value Semantics Roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md). OVS0 does
-not enable copy or object-value source forms. Until their named implementation
-slices land, the compiler continues to reject `assign` members, object
-assignment, class value parameters/results, and general object-producing
-expressions at their existing boundaries.
+not enable copy or object-value source forms. OVS1 parses and resolves copy
+lifecycle declarations to stable identities, but rejects their bodies before
+HIR until OVS2. Object assignment, class value parameters/results, and general
+object-producing expressions remain rejected at their existing boundaries.
 
 This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,
 normal control flow, and the already implemented alias and destruction model.

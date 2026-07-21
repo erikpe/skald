@@ -20,6 +20,8 @@ struct ClassWorkItem {
     id: ClassId,
     ast_index: usize,
     initializer_member: Option<usize>,
+    copy_constructor_member: Option<usize>,
+    copy_assignment_member: Option<usize>,
     destructor_member: Option<usize>,
     method_members: Vec<usize>,
 }
@@ -208,12 +210,18 @@ impl<'ast> ProgramResolver<'ast> {
     ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
         let mut fields = Vec::new();
         let mut initializer = None;
+        let mut copy_constructor_declaration = None;
+        let mut copy_assignment_declaration = None;
         let mut destructor = None;
         let mut methods = Vec::new();
         let mut symbols = ClassSymbols::default();
         let mut initializer_member = None;
+        let mut copy_constructor_member = None;
+        let mut copy_assignment_member = None;
         let mut destructor_member = None;
         let mut method_members = Vec::new();
+        let mut next_initializer_index = 0;
+        let mut copy_assignment_invalid = false;
 
         for (member_index, member) in class.members.iter().enumerate() {
             match member {
@@ -241,21 +249,34 @@ impl<'ast> ProgramResolver<'ast> {
                     });
                 }
                 syntax::ClassMember::Initializer(source) => {
-                    if let Some(previous_span) = symbols.initializer_span {
+                    let is_copy = is_copy_constructor(source, id, &self.top_levels);
+                    let previous_span = if is_copy {
+                        symbols.copy_constructor_span
+                    } else {
+                        symbols.initializer_span
+                    };
+                    if let Some(previous_span) = previous_span {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 DUPLICATE_MEMBER,
-                                format!("duplicate initializer in class `{}`", class.name.text),
+                                format!(
+                                    "duplicate {} in class `{}`",
+                                    if is_copy {
+                                        "copy constructor"
+                                    } else {
+                                        "ordinary initializer"
+                                    },
+                                    class.name.text
+                                ),
                             )
                             .with_primary_label(source.introducer_span, "redeclared here")
                             .with_secondary_label(previous_span, "first declared here"),
                         );
                         continue;
                     }
-                    let initializer_id = InitializerId::new(id, 0);
-                    symbols.initializer = Some(initializer_id);
-                    symbols.initializer_span = Some(source.introducer_span);
-                    initializer = Some(ResolvedInitializerDeclaration {
+                    let initializer_id = InitializerId::new(id, next_initializer_index);
+                    next_initializer_index += 1;
+                    let declaration = ResolvedInitializerDeclaration {
                         id: initializer_id,
                         parameters: resolve_parameters(
                             initializer_id.into(),
@@ -264,8 +285,48 @@ impl<'ast> ProgramResolver<'ast> {
                             &mut self.diagnostics,
                         ),
                         span: source.span,
-                    });
-                    initializer_member = Some(member_index);
+                    };
+                    if is_copy {
+                        symbols.copy_constructor_span = Some(source.introducer_span);
+                        copy_constructor_declaration = Some(declaration);
+                        copy_constructor_member = Some(member_index);
+                    } else {
+                        symbols.initializer = Some(initializer_id);
+                        symbols.initializer_span = Some(source.introducer_span);
+                        initializer = Some(declaration);
+                        initializer_member = Some(member_index);
+                    }
+                }
+                syntax::ClassMember::CopyAssignment(source) => {
+                    if let Some(previous_span) = symbols.copy_assignment_span {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                DUPLICATE_MEMBER,
+                                format!("duplicate copy assignment in class `{}`", class.name.text),
+                            )
+                            .with_primary_label(source.introducer_span, "redeclared here")
+                            .with_secondary_label(previous_span, "first declared here"),
+                        );
+                        continue;
+                    }
+                    symbols.copy_assignment_span = Some(source.introducer_span);
+                    let assignment_id = CopyAssignmentId::new(id, 0);
+                    if let Some(parameter) = resolve_copy_assignment_parameter(
+                        assignment_id,
+                        id,
+                        source,
+                        &self.top_levels,
+                        &mut self.diagnostics,
+                    ) {
+                        copy_assignment_declaration = Some(ResolvedCopyAssignmentDeclaration {
+                            id: assignment_id,
+                            parameter,
+                            span: source.span,
+                        });
+                        copy_assignment_member = Some(member_index);
+                    } else {
+                        copy_assignment_invalid = true;
+                    }
                 }
                 syntax::ClassMember::Destructor(source) => {
                     if let Some(previous_span) = symbols.destructor_span {
@@ -327,6 +388,22 @@ impl<'ast> ProgramResolver<'ast> {
                 name_span: class.name.span,
                 fields,
                 initializer,
+                copy_constructor: copy_constructor_declaration
+                    .as_ref()
+                    .map_or(ResolvedCopyOperation::Synthesized(id), |declaration| {
+                        ResolvedCopyOperation::User(declaration.id)
+                    }),
+                copy_constructor_declaration,
+                copy_assignment: if copy_assignment_invalid {
+                    ResolvedCopyOperation::Unavailable
+                } else {
+                    copy_assignment_declaration
+                        .as_ref()
+                        .map_or(ResolvedCopyOperation::Synthesized(id), |declaration| {
+                            ResolvedCopyOperation::User(declaration.id)
+                        })
+                },
+                copy_assignment_declaration,
                 destructor,
                 methods,
                 span: class.span,
@@ -336,6 +413,8 @@ impl<'ast> ProgramResolver<'ast> {
                 id,
                 ast_index,
                 initializer_member,
+                copy_constructor_member,
+                copy_assignment_member,
                 destructor_member,
                 method_members,
             },
@@ -419,6 +498,46 @@ impl<'ast> ProgramResolver<'ast> {
                     }
                 });
 
+                let copy_constructor = item.copy_constructor_member.map(|member_index| {
+                    let syntax::ClassMember::Initializer(source) = &class.members[member_index]
+                    else {
+                        unreachable!("copy-constructor work must reference an initializer")
+                    };
+                    let metadata = declaration
+                        .copy_constructor_declaration
+                        .as_ref()
+                        .expect("accepted copy constructor must have declaration metadata");
+                    resolve_member_definition(
+                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
+                        metadata.id.into(),
+                        item.id,
+                        &metadata.parameters,
+                        &source.body,
+                        source.span,
+                        &mut self.diagnostics,
+                    )
+                });
+
+                let copy_assignment = item.copy_assignment_member.map(|member_index| {
+                    let syntax::ClassMember::CopyAssignment(source) = &class.members[member_index]
+                    else {
+                        unreachable!("copy-assignment work must reference copy assignment")
+                    };
+                    let metadata = declaration
+                        .copy_assignment_declaration
+                        .as_ref()
+                        .expect("accepted copy assignment must have declaration metadata");
+                    resolve_member_definition(
+                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
+                        metadata.id.into(),
+                        item.id,
+                        std::slice::from_ref(&metadata.parameter),
+                        &source.body,
+                        source.span,
+                        &mut self.diagnostics,
+                    )
+                });
+
                 let destructor = item.destructor_member.map(|member_index| {
                     let syntax::ClassMember::Destructor(source) = &class.members[member_index]
                     else {
@@ -478,12 +597,122 @@ impl<'ast> ProgramResolver<'ast> {
                 ResolvedClassDefinition {
                     class: item.id,
                     initializer,
+                    copy_constructor,
+                    copy_assignment,
                     destructor,
                     methods,
                     span: class.span,
                 }
             })
             .collect()
+    }
+}
+
+fn is_copy_constructor(
+    initializer: &syntax::InitializerDecl,
+    owner: ClassId,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+) -> bool {
+    let [parameter] = initializer.parameters.as_slice() else {
+        return false;
+    };
+    if !matches!(
+        parameter.binding_mode,
+        syntax::ParameterBindingMode::ReadOnlyAlias { .. }
+    ) {
+        return false;
+    }
+    let syntax::TypeKind::Named(name) = &parameter.type_syntax.kind else {
+        return false;
+    };
+    matches!(
+        top_levels.get(&name.text),
+        Some(TopLevelSymbol {
+            kind: TopLevelSymbolKind::Class(class),
+            ..
+        }) if *class == owner
+    )
+}
+
+fn resolve_copy_assignment_parameter(
+    callable: CopyAssignmentId,
+    owner: ClassId,
+    assignment: &syntax::CopyAssignmentDecl,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> Option<ResolvedParameter> {
+    let [parameter] = assignment.parameters.as_slice() else {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_LIFECYCLE_SIGNATURE,
+                "copy assignment requires exactly one source parameter",
+            )
+            .with_primary_label(
+                assignment.span,
+                "use `assign(ref name: EnclosingClass) { ... }`",
+            ),
+        );
+        return None;
+    };
+
+    if !matches!(
+        parameter.binding_mode,
+        syntax::ParameterBindingMode::ReadOnlyAlias { .. }
+    ) {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_LIFECYCLE_SIGNATURE,
+                "copy-assignment source must be a read-only alias",
+            )
+            .with_primary_label(parameter.span, "use `ref name: EnclosingClass`"),
+        );
+        return None;
+    }
+
+    let ty = resolve_type(&parameter.type_syntax, top_levels, diagnostics)?;
+    if ty.kind != ResolvedTypeKind::Class(owner) {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_LIFECYCLE_SIGNATURE,
+                "copy-assignment source must have the exact enclosing class type",
+            )
+            .with_primary_label(parameter.type_syntax.span, "expected the enclosing class"),
+        );
+        return None;
+    }
+
+    Some(ResolvedParameter {
+        id: ParameterId::new(callable, 0),
+        binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
+        name: parameter.name.text.clone(),
+        name_span: parameter.name.span,
+        type_syntax: ty,
+        span: parameter.span,
+    })
+}
+
+fn resolve_member_definition(
+    environment: BodyResolutionEnvironment<'_>,
+    callable: CallableId,
+    owner: ClassId,
+    parameters: &[ResolvedParameter],
+    body: &syntax::Block,
+    span: Span,
+    diagnostics: &mut Diagnostics,
+) -> ResolvedMemberDefinition {
+    let body = resolve_callable_body(
+        callable,
+        Some(owner),
+        parameters,
+        body,
+        environment,
+        diagnostics,
+    );
+    ResolvedMemberDefinition {
+        callable,
+        locals: body.locals,
+        body: body.body,
+        span,
     }
 }
 

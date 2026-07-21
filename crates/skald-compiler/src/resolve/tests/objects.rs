@@ -100,6 +100,149 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
 }
 
 #[test]
+fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
+    let output = resolve_text(concat!(
+        "class Value {\n",
+        "    value: i64;\n",
+        "    init(ref other: Value) { self.value = other.value; }\n",
+        "    init(value: i64) { self.value = value; }\n",
+        "    assign(ref source: Value) { self.value = source.value; }\n",
+        "}\n",
+        "class Empty { init() {} }\n",
+        "fn main() -> i64 { var value: Value = Value(1); return value.value; }\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    let value = class(&output, 0);
+    let ordinary = value.initializer.as_ref().unwrap();
+    let copy_constructor = value.copy_constructor_declaration.as_ref().unwrap();
+    let copy_assignment = value.copy_assignment_declaration.as_ref().unwrap();
+    assert_eq!(copy_constructor.id, InitializerId::new(value.id, 0));
+    assert_eq!(ordinary.id, InitializerId::new(value.id, 1));
+    assert_eq!(copy_assignment.id, CopyAssignmentId::new(value.id, 0));
+    assert_eq!(
+        value.copy_constructor,
+        ResolvedCopyOperation::User(copy_constructor.id)
+    );
+    assert_eq!(
+        value.copy_assignment,
+        ResolvedCopyOperation::User(copy_assignment.id)
+    );
+
+    let definition = output.program.class_definitions.get(value.id).unwrap();
+    let copy_constructor_body = definition.copy_constructor.as_ref().unwrap();
+    let copy_assignment_body = definition.copy_assignment.as_ref().unwrap();
+    assert_eq!(copy_constructor_body.callable, copy_constructor.id.into());
+    assert_eq!(copy_assignment_body.callable, copy_assignment.id.into());
+    let ResolvedStatement::FieldAssignment(assignment) = &copy_assignment_body.body.statements[0]
+    else {
+        panic!("expected the copy-assignment body to resolve");
+    };
+    assert_eq!(
+        assignment.receiver.root,
+        BindingId::Receiver(copy_assignment.id.into())
+    );
+    let ResolvedExpression::FieldAccess(source) = &assignment.value else {
+        panic!("expected source field access");
+    };
+    assert_eq!(
+        source.receiver.root,
+        BindingId::Parameter(copy_assignment.parameter.id)
+    );
+
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedExpression::Construct(construct) = local_initializer(&main.body.statements[0])
+    else {
+        panic!("expected ordinary construction");
+    };
+    assert_eq!(construct.initializer, ordinary.id);
+
+    let empty = class(&output, 1);
+    assert_eq!(
+        empty.copy_constructor,
+        ResolvedCopyOperation::Synthesized(empty.id)
+    );
+    assert_eq!(
+        empty.copy_assignment,
+        ResolvedCopyOperation::Synthesized(empty.id)
+    );
+
+    let dump = dump_resolved(&output.program);
+    let identity_lines: Vec<_> = dump
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("User c0:") || line.starts_with("MemberDefinition c0:"))
+        .map(|line| line.split(" @").next().unwrap())
+        .collect();
+    assert_eq!(
+        identity_lines,
+        [
+            "User c0:init0",
+            "User c0:assign0",
+            "MemberDefinition c0:init1",
+            "MemberDefinition c0:init0",
+            "MemberDefinition c0:assign0",
+        ]
+    );
+}
+
+#[test]
+fn diagnoses_malformed_and_duplicate_copy_lifecycle_slots_deterministically() {
+    let output = resolve_text(concat!(
+        "class Other { init() {} }\n",
+        "class Duplicate {\n",
+        "    init() {}\n",
+        "    init(value: i64) {}\n",
+        "    init(ref first: Duplicate) {}\n",
+        "    init(ref second: Duplicate) {}\n",
+        "    assign(ref first: Duplicate) {}\n",
+        "    assign(ref second: Duplicate) {}\n",
+        "}\n",
+        "class MissingSource { init() {} assign() {} }\n",
+        "class MutableSource { init() {} assign(mut ref other: MutableSource) {} }\n",
+        "class WrongSource { init() {} assign(ref other: Other) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 6);
+    assert_eq!(diagnostics[0].code, DUPLICATE_MEMBER);
+    assert_eq!(
+        diagnostics[0].message,
+        "duplicate ordinary initializer in class `Duplicate`"
+    );
+    assert_eq!(diagnostics[1].code, DUPLICATE_MEMBER);
+    assert_eq!(
+        diagnostics[1].message,
+        "duplicate copy constructor in class `Duplicate`"
+    );
+    assert_eq!(diagnostics[2].code, DUPLICATE_MEMBER);
+    assert_eq!(
+        diagnostics[2].message,
+        "duplicate copy assignment in class `Duplicate`"
+    );
+    assert!(diagnostics[0..3]
+        .iter()
+        .all(
+            |diagnostic| diagnostic.labels[0].message == "redeclared here"
+                && diagnostic.labels[1].message == "first declared here"
+        ));
+    assert!(diagnostics[3..]
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_LIFECYCLE_SIGNATURE));
+    for class_index in 2..=4 {
+        assert_eq!(
+            class(&output, class_index).copy_assignment,
+            ResolvedCopyOperation::Unavailable
+        );
+    }
+}
+
+#[test]
 fn top_level_and_member_namespaces_reject_cross_kind_duplicates() {
     let output = resolve_text(concat!(
         "class Same { init() {} }\n",
@@ -477,9 +620,13 @@ fn resolved_destructor_dump_is_exact_and_identity_based() {
             "  ClassDeclarations\n",
             "    Class c0 \"Empty\" @0..45\n",
             "      Fields\n",
-            "      Initializer\n",
+            "      OrdinaryInitializer\n",
             "        Initializer c0:init0 @14..23\n",
             "          Parameters\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
             "      Destructor\n",
             "        Destructor c0:destroy0 @24..43\n",
             "      Methods\n",
@@ -583,12 +730,16 @@ fn resolved_object_dump_is_exact_and_identity_based() {
             "      Fields\n",
             "        Field c0:field0 \"value\" @12..23\n",
             "          Type I64 @19..22\n",
-            "      Initializer\n",
+            "      OrdinaryInitializer\n",
             "        Initializer c0:init0 @24..64\n",
             "          Parameters\n",
             "            Parameter c0:init0:p0 \"value\" @29..39\n",
             "              Binding Value\n",
             "              Type I64 @36..39\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
             "      Destructor\n",
             "        <none>\n",
             "      Methods\n",

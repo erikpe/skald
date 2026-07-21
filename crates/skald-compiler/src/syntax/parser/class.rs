@@ -56,6 +56,8 @@ impl Parser<'_> {
             || (self.at(TokenKind::Identifier)
                 && (self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
+                    || (self.lexeme(self.peek()) == "assign"
+                        && self.peek_ahead(1).kind == TokenKind::LeftParen)
                     || (self.lexeme(self.peek()) == "init"
                         && self.peek_ahead(1).kind == TokenKind::LeftParen)))
     }
@@ -75,16 +77,21 @@ impl Parser<'_> {
 
         if self.at(TokenKind::Mut)
             && self.peek_ahead(1).kind == TokenKind::Identifier
-            && self.lexeme(self.peek_ahead(1)) == "destroy"
+            && matches!(self.lexeme(self.peek_ahead(1)), "assign" | "destroy")
         {
             let modifier = self.advance();
+            let lifecycle = self.lexeme(self.peek()).to_owned();
             self.report(
                 INVALID_CLASS_MEMBER,
-                "destruction members do not use `mut`",
+                format!("{lifecycle} members do not use `mut`"),
                 modifier.span,
-                "`destroy` already has an implicit mutable receiver",
+                format!("`{lifecycle}` already has an implicit mutable receiver"),
             );
-            self.parse_destructor();
+            if lifecycle == "assign" {
+                self.parse_copy_assignment();
+            } else {
+                self.parse_destructor();
+            }
             return None;
         }
 
@@ -100,13 +107,18 @@ impl Parser<'_> {
             if self.peek_ahead(1).kind == TokenKind::Colon {
                 return self.parse_field().map(ClassMember::Field);
             }
+            if text == "assign" && self.peek_ahead(1).kind == TokenKind::LeftParen {
+                return self
+                    .parse_copy_assignment()
+                    .map(ClassMember::CopyAssignment);
+            }
             if text == "destroy" {
                 return self.parse_destructor().map(ClassMember::Destructor);
             }
 
             let span = self.peek().span;
             let message = match text {
-                "assign" => "`assign` members are not supported by the inline-object profile",
+                "assign" => "malformed copy-assignment declaration",
                 "init" => "malformed initializer declaration",
                 _ => "expected a field, initializer, destructor, or method declaration",
             };
@@ -114,7 +126,7 @@ impl Parser<'_> {
                 INVALID_CLASS_MEMBER,
                 message,
                 span,
-                "class members use `name: type;`, `init(...) { ... }`, `destroy { ... }`, or `[mut] fn name(...) -> type { ... }`",
+                "class members use `name: type;`, `init(...) { ... }`, `assign(ref name: Class) { ... }`, `destroy { ... }`, or `[mut] fn name(...) -> type { ... }`",
             );
             return None;
         }
@@ -153,6 +165,45 @@ impl Parser<'_> {
         let parameters = self.parse_parameter_list()?;
         let body = self.parse_block()?;
         Some(InitializerDecl {
+            introducer_span: introducer.span,
+            parameters,
+            span: self.cover(introducer.span, body.span),
+            body,
+        })
+    }
+
+    fn parse_copy_assignment(&mut self) -> Option<CopyAssignmentDecl> {
+        let introducer = self.advance();
+        debug_assert_eq!(self.lexeme(introducer), "assign");
+        let parameters = self.parse_parameter_list()?;
+        let mut valid = true;
+
+        if let Some(arrow) = self.consume(TokenKind::Arrow) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "copy-assignment members do not declare a result type",
+                arrow.span,
+                "`assign` returns `unit` implicitly",
+            );
+            self.parse_type(
+                TypeContext::Result,
+                "expected a type after the invalid copy-assignment result arrow",
+            );
+            valid = false;
+        }
+
+        if let Some(semicolon) = self.consume(TokenKind::Semicolon) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "copy-assignment members require a body",
+                semicolon.span,
+                "replace `;` with `{ ... }`",
+            );
+            return None;
+        }
+
+        let body = self.parse_block()?;
+        valid.then_some(CopyAssignmentDecl {
             introducer_span: introducer.span,
             parameters,
             span: self.cover(introducer.span, body.span),

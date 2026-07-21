@@ -63,6 +63,14 @@ impl AstDumper {
                     dumper.block(&initializer.body);
                 });
             }
+            ClassMember::CopyAssignment(assignment) => {
+                self.line("CopyAssignment", assignment.span);
+                self.indented(|dumper| {
+                    dumper.line("Introducer", assignment.introducer_span);
+                    dumper.parameters(&assignment.parameters);
+                    dumper.block(&assignment.body);
+                });
+            }
             ClassMember::Destructor(destructor) => {
                 self.line("Destructor", destructor.span);
                 self.indented(|dumper| {

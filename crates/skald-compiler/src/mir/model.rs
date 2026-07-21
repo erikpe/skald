@@ -137,6 +137,7 @@ impl MirProgram {
                         return_type: MirType::Unit,
                     })
             }
+            CallableId::CopyAssignment(_) => None,
             CallableId::Destructor(destructor) => {
                 self.destructor(destructor).map(|_| MirCallableSignature {
                     parameters: &[],

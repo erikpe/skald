@@ -152,6 +152,46 @@ fn parses_a_dedicated_destructor_with_a_complete_source_span() {
 }
 
 #[test]
+fn parses_copy_assignment_as_a_dedicated_contextual_member() {
+    let (sources, output) =
+        parse_text("class Value { init() {} assign(ref other: Value) { return; } }");
+    assert!(output.diagnostics.is_empty());
+
+    let value = class(&output.ast, 0);
+    let ClassMember::CopyAssignment(assignment) = &value.members[1] else {
+        panic!("expected a copy-assignment declaration");
+    };
+    assert_eq!(source_text(&sources, assignment.introducer_span), "assign");
+    assert_eq!(assignment.parameters.len(), 1);
+    assert_eq!(assignment.parameters[0].name.text, "other");
+    assert_eq!(assignment.body.statements.len(), 1);
+
+    assert_eq!(
+        dump_ast(&output.ast),
+        concat!(
+            "CompilationUnit @0..62\n",
+            "  Class @0..62\n",
+            "    Name \"Value\" @6..11\n",
+            "    Members\n",
+            "      Initializer @14..23\n",
+            "        Introducer @14..18\n",
+            "        Parameters\n",
+            "        Block @21..23\n",
+            "      CopyAssignment @24..60\n",
+            "        Introducer @24..30\n",
+            "        Parameters\n",
+            "          Parameter @31..47\n",
+            "            Binding ReadOnlyAlias\n",
+            "              Ref @31..34\n",
+            "            Name \"other\" @35..40\n",
+            "            Type Named \"Value\" @42..47\n",
+            "        Block @49..60\n",
+            "          Return @51..58\n",
+        )
+    );
+}
+
+#[test]
 fn malformed_destructors_recover_to_later_class_members() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",
@@ -190,6 +230,39 @@ fn malformed_destructors_recover_to_later_class_members() {
         |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
     ));
     assert_eq!(function(&output.ast, 1).name.text, "main");
+}
+
+#[test]
+fn malformed_copy_assignments_recover_to_later_class_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "    init() {}\n",
+        "    assign(ref other: Broken) -> unit {}\n",
+        "    after_result: i64;\n",
+        "    mut assign(ref other: Broken) {}\n",
+        "    after_modifier: i64;\n",
+        "    assign(ref other: Broken);\n",
+        "    after_semicolon: i64;\n",
+        "    assign(ref other: Broken)\n",
+        "    fn recovered() -> unit {}\n",
+        "}\n",
+    ));
+
+    assert!(output.has_errors());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_CLASS_MEMBER
+            || diagnostic.code == EXPECTED_TOKEN));
+    let broken = class(&output.ast, 0);
+    for expected in ["after_result", "after_modifier", "after_semicolon"] {
+        assert!(broken.members.iter().any(
+            |member| matches!(member, ClassMember::Field(field) if field.name.text == expected)
+        ));
+    }
+    assert!(broken.members.iter().any(
+        |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
+    ));
 }
 
 #[test]
@@ -236,6 +309,10 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
     assert!(broken
         .members
         .iter()
+        .any(|member| matches!(member, ClassMember::CopyAssignment(_))));
+    assert!(broken
+        .members
+        .iter()
         .any(|member| matches!(member, ClassMember::Field(field) if field.name.text == "first")));
     assert!(broken
         .members
@@ -248,10 +325,6 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
         .iter()
         .all(|diagnostic| diagnostic.code == INVALID_CLASS_MEMBER
             || diagnostic.code == EXPECTED_TOKEN));
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.message.contains("`assign` members")));
     assert!(output
         .diagnostics
         .iter()

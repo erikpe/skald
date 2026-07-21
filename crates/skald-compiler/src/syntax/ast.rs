@@ -44,6 +44,7 @@ pub struct ClassDecl {
 pub enum ClassMember {
     Field(FieldDecl),
     Initializer(InitializerDecl),
+    CopyAssignment(CopyAssignmentDecl),
     Destructor(DestructorDecl),
     Method(MethodDecl),
 }
@@ -53,6 +54,7 @@ impl ClassMember {
         match self {
             Self::Field(field) => field.span,
             Self::Initializer(initializer) => initializer.span,
+            Self::CopyAssignment(assignment) => assignment.span,
             Self::Destructor(destructor) => destructor.span,
             Self::Method(method) => method.span,
         }
@@ -68,6 +70,14 @@ pub struct FieldDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InitializerDecl {
+    pub introducer_span: Span,
+    pub parameters: Vec<Parameter>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CopyAssignmentDecl {
     pub introducer_span: Span,
     pub parameters: Vec<Parameter>,
     pub body: Block,

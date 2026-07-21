@@ -102,6 +102,7 @@ impl HirProgram {
                         return_type: Type::Unit,
                     })
             }
+            CallableId::CopyAssignment(_) => None,
             CallableId::Destructor(destructor) => {
                 self.destructor(destructor).map(|_| HirCallableSignature {
                     parameters: &[],
@@ -307,7 +308,10 @@ impl HirClassDefinition {
                 .destructor
                 .as_ref()
                 .filter(|definition| definition.callable == callable),
-            CallableId::Initializer(_) | CallableId::Destructor(_) | CallableId::Method(_) => None,
+            CallableId::Initializer(_)
+            | CallableId::CopyAssignment(_)
+            | CallableId::Destructor(_)
+            | CallableId::Method(_) => None,
         }
     }
 }

@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0 is complete and OVS1 is next.
+Status: in progress; OVS0–OVS1 are complete and OVS2 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -91,14 +91,14 @@ ownership, and diagnostics without making another language-design decision.
 **Purpose:** Add stable declaration and operation identities without enabling
 object values.
 
-- [ ] Parse `assign(ref other: T) { ... }` as a dedicated lifecycle member and
+- [x] Parse `assign(ref other: T) { ... }` as a dedicated lifecycle member and
       retain `assign` as a contextual spelling.
-- [ ] Permit and distinguish the frozen ordinary/copy initializer set.
-- [ ] Resolve exact owner-class signatures and reject malformed or duplicate
+- [x] Permit and distinguish the frozen ordinary/copy initializer set.
+- [x] Resolve exact owner-class signatures and reject malformed or duplicate
       declarations deterministically.
-- [ ] Represent selected user-defined and synthesized copy operations without
+- [x] Represent selected user-defined and synthesized copy operations without
       lower-phase source-name lookup.
-- [ ] Extend exact AST/resolved dumps and recovery tests.
+- [x] Extend exact AST/resolved dumps and recovery tests.
 
 **Acceptance criteria:** valid copy declarations cross resolution by stable
 identity, while object copy expressions remain rejected.

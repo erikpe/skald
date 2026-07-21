@@ -3,8 +3,8 @@
 use crate::{
     function_table::{DenseFunctionTable, SparseFunctionTable},
     identity::{
-        BindingId, CallableId, ClassId, DestructorId, FieldId, FunctionId, InitializerId, LocalId,
-        MethodId, ParameterId,
+        BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
+        InitializerId, LocalId, MethodId, ParameterId,
     },
     literal::NumericLiteralKind,
     object_path::ObjectPath,
@@ -40,6 +40,13 @@ impl ResolvedProgram {
 
     pub fn destructor(&self, id: DestructorId) -> Option<&ResolvedDestructorDeclaration> {
         self.class(id.class())?.destructor(id)
+    }
+
+    pub fn copy_assignment(
+        &self,
+        id: CopyAssignmentId,
+    ) -> Option<&ResolvedCopyAssignmentDeclaration> {
+        self.class(id.class())?.copy_assignment_declaration(id)
     }
 
     pub fn method(&self, id: MethodId) -> Option<&ResolvedMethodDeclaration> {
@@ -98,6 +105,10 @@ pub struct ResolvedClassDeclaration {
     pub name_span: Span,
     pub fields: Vec<ResolvedFieldDeclaration>,
     pub initializer: Option<ResolvedInitializerDeclaration>,
+    pub copy_constructor_declaration: Option<ResolvedInitializerDeclaration>,
+    pub copy_constructor: ResolvedCopyOperation<InitializerId>,
+    pub copy_assignment_declaration: Option<ResolvedCopyAssignmentDeclaration>,
+    pub copy_assignment: ResolvedCopyOperation<CopyAssignmentId>,
     pub destructor: Option<ResolvedDestructorDeclaration>,
     pub methods: Vec<ResolvedMethodDeclaration>,
     pub span: Span,
@@ -118,6 +129,23 @@ impl ResolvedClassDeclaration {
         self.initializer
             .as_ref()
             .filter(|initializer| initializer.id == id)
+            .or_else(|| {
+                self.copy_constructor_declaration
+                    .as_ref()
+                    .filter(|initializer| initializer.id == id)
+            })
+    }
+
+    pub fn copy_assignment_declaration(
+        &self,
+        id: CopyAssignmentId,
+    ) -> Option<&ResolvedCopyAssignmentDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.copy_assignment_declaration
+            .as_ref()
+            .filter(|assignment| assignment.id == id)
     }
 
     pub fn destructor(&self, id: DestructorId) -> Option<&ResolvedDestructorDeclaration> {
@@ -152,6 +180,20 @@ pub struct ResolvedFieldDeclaration {
 pub struct ResolvedInitializerDeclaration {
     pub id: InitializerId,
     pub parameters: Vec<ResolvedParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedCopyOperation<I> {
+    User(I),
+    Synthesized(ClassId),
+    Unavailable,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedCopyAssignmentDeclaration {
+    pub id: CopyAssignmentId,
+    pub parameter: ResolvedParameter,
     pub span: Span,
 }
 
@@ -218,6 +260,8 @@ impl ResolvedClassDefinitionTable {
 pub struct ResolvedClassDefinition {
     pub class: ClassId,
     pub initializer: Option<ResolvedMemberDefinition>,
+    pub copy_constructor: Option<ResolvedMemberDefinition>,
+    pub copy_assignment: Option<ResolvedMemberDefinition>,
     pub destructor: Option<ResolvedMemberDefinition>,
     pub methods: Vec<ResolvedMemberDefinition>,
     pub span: Span,
@@ -230,6 +274,11 @@ impl ResolvedClassDefinition {
             CallableId::Initializer(initializer) if initializer.class() == self.class => self
                 .initializer
                 .as_ref()
+                .or(self.copy_constructor.as_ref())
+                .filter(|definition| definition.callable == callable),
+            CallableId::CopyAssignment(assignment) if assignment.class() == self.class => self
+                .copy_assignment
+                .as_ref()
                 .filter(|definition| definition.callable == callable),
             CallableId::Destructor(destructor) if destructor.class() == self.class => self
                 .destructor
@@ -239,7 +288,10 @@ impl ResolvedClassDefinition {
                 .methods
                 .get(method.index())
                 .filter(|definition| definition.callable == callable),
-            CallableId::Initializer(_) | CallableId::Destructor(_) | CallableId::Method(_) => None,
+            CallableId::Initializer(_)
+            | CallableId::CopyAssignment(_)
+            | CallableId::Destructor(_)
+            | CallableId::Method(_) => None,
         }
     }
 }

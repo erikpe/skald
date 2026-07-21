@@ -77,7 +77,7 @@ impl ResolvedDumper {
                     dumper.indented(|dumper| dumper.type_syntax(&field.type_syntax));
                 }
             });
-            dumper.heading("Initializer");
+            dumper.heading("OrdinaryInitializer");
             if let Some(initializer) = &class.initializer {
                 dumper.indented(|dumper| {
                     dumper.line(&format!("Initializer {}", initializer.id), initializer.span);
@@ -86,6 +86,38 @@ impl ResolvedDumper {
             } else {
                 dumper.indented(|dumper| dumper.raw_line("<none>"));
             }
+            dumper.heading("CopyConstructor");
+            dumper.indented(|dumper| match class.copy_constructor {
+                ResolvedCopyOperation::User(id) => {
+                    let declaration = class
+                        .copy_constructor_declaration
+                        .as_ref()
+                        .expect("user copy constructor must have declaration metadata");
+                    dumper.line(&format!("User {id}"), declaration.span);
+                    dumper.indented(|dumper| dumper.parameters(&declaration.parameters));
+                }
+                ResolvedCopyOperation::Synthesized(class) => {
+                    dumper.raw_line(&format!("Synthesized {class}"));
+                }
+                ResolvedCopyOperation::Unavailable => dumper.raw_line("Unavailable"),
+            });
+            dumper.heading("CopyAssignment");
+            dumper.indented(|dumper| match class.copy_assignment {
+                ResolvedCopyOperation::User(id) => {
+                    let declaration = class
+                        .copy_assignment_declaration
+                        .as_ref()
+                        .expect("user copy assignment must have declaration metadata");
+                    dumper.line(&format!("User {id}"), declaration.span);
+                    dumper.indented(|dumper| {
+                        dumper.parameters(std::slice::from_ref(&declaration.parameter))
+                    });
+                }
+                ResolvedCopyOperation::Synthesized(class) => {
+                    dumper.raw_line(&format!("Synthesized {class}"));
+                }
+                ResolvedCopyOperation::Unavailable => dumper.raw_line("Unavailable"),
+            });
             dumper.heading("Destructor");
             if let Some(destructor) = &class.destructor {
                 dumper.indented(|dumper| {
@@ -125,6 +157,12 @@ impl ResolvedDumper {
         self.indented(|dumper| {
             if let Some(initializer) = &class.initializer {
                 dumper.member_definition(initializer);
+            }
+            if let Some(copy_constructor) = &class.copy_constructor {
+                dumper.member_definition(copy_constructor);
+            }
+            if let Some(copy_assignment) = &class.copy_assignment {
+                dumper.member_definition(copy_assignment);
             }
             if let Some(destructor) = &class.destructor {
                 dumper.member_definition(destructor);

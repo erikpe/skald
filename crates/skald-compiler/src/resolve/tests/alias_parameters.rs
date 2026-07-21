@@ -10,9 +10,10 @@ fn resolves_alias_modes_nominal_types_and_parameter_ids_for_every_internal_owner
         "}\n",
         "class Dog {\n",
         "    age: i64;\n",
-        "    init(ref source: Dog) { self.age = source.age; }\n",
+        "    init(ref source: Source) { self.age = source.age; }\n",
         "    fn compare(ref other: Dog) -> i64 { return other.age; }\n",
         "}\n",
+        "class Source { age: i64; init() { self.age = 0; } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
@@ -51,7 +52,7 @@ fn resolves_alias_modes_nominal_types_and_parameter_ids_for_every_internal_owner
     ));
     assert_eq!(
         initializer.parameters[0].type_syntax.kind,
-        ResolvedTypeKind::Class(dog.id)
+        ResolvedTypeKind::Class(ClassId::new(1))
     );
     assert!(matches!(
         dog.methods[0].parameters[0].binding_mode,
@@ -188,9 +189,13 @@ fn resolved_alias_dump_is_exact_and_identity_based() {
             "      Fields\n",
             "        Field c0:field0 \"age\" @92..101\n",
             "          Type I64 @97..100\n",
-            "      Initializer\n",
+            "      OrdinaryInitializer\n",
             "        Initializer c0:init0 @102..126\n",
             "          Parameters\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
             "      Destructor\n",
             "        <none>\n",
             "      Methods\n",
