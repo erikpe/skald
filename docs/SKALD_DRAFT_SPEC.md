@@ -915,11 +915,10 @@ Every executable field has one of the primitive types `i64`, `u64`, `u8`,
 declarations, nominal resolution, HIR declaration metadata, containment-cycle
 validation, direct construction, and initializer liveness from Section 5.4.4
 are implemented. Nested scalar access, receivers, and alias arguments are
-type-checked through complete identity paths; native hardening remains staged.
-Base classes,
-interfaces, static members,
-`final`, access modifiers, virtual/override declarations, `assign`, and
-`destroy` remain rejected. Empty classes are valid.
+lowered through complete identity paths and execute against recursively laid
+out x86-64 storage. Base classes, interfaces, static members, `final`, access
+modifiers, virtual/override declarations, `assign`, and `destroy` remain
+rejected. Empty classes are valid.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
 implicit mutable `self`, takes only by-value primitive parameters, and returns
@@ -1135,7 +1134,7 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; IOF1–IOF4 of the
+**Implementation status:** contract frozen; IOF1–IOF5 of the
 [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) are
 implemented. The compiler accepts and resolves class-typed field declarations,
 records canonical HIR field types, rejects recursive containment before target
@@ -1143,8 +1142,10 @@ selection, represents nested object places as root bindings plus ordered
 semantic field identities, and distinguishes direct subobject construction
 from scalar stores while enforcing initializer liveness. The type checker
 supports nested scalar fields, method receivers, and exact-class alias
-arguments with one root-derived access capability. MIR/backend hardening and
-native coverage remain planned. The parser-facing extension is recorded in
+arguments with one root-derived access capability. Verified MIR retains those
+paths as semantic field identities, and the x86-64 backend resolves them with
+checked target offsets for native execution. Publication hardening remains
+planned. The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with

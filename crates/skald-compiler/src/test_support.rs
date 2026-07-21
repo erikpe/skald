@@ -22,6 +22,44 @@ use crate::{
 
 static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
+pub(crate) const INLINE_FIELD_SOURCE: &str = concat!(
+    "class Root {\n",
+    "  flag: bool; left: Branch; right: Branch;\n",
+    "  init(left: i64, right: i64) {\n",
+    "    self.right = Branch(right);\n",
+    "    self.flag = true;\n",
+    "    self.left = Branch(left);\n",
+    "  }\n",
+    "  fn total() -> i64 { return self.left.leaf.value + self.right.leaf.read(); }\n",
+    "  mut fn adjust() -> i64 {\n",
+    "    self.left.leaf.value = self.left.leaf.value + 1;\n",
+    "    return mutate(self.right.leaf, 5) + self.left.leaf.read();\n",
+    "  }\n",
+    "}\n",
+    "class Empty { init() {} }\n",
+    "class Leaf {\n",
+    "  small: u8; value: i64;\n",
+    "  init(value: i64) { self.value = value; self.small = 1u8; }\n",
+    "  fn read() -> i64 { return self.value; }\n",
+    "  mut fn add(delta: i64) -> i64 { self.value = self.value + delta; return self.value; }\n",
+    "}\n",
+    "class Branch {\n",
+    "  tag: u8; empty: Empty; leaf: Leaf; tail: u8;\n",
+    "  init(value: i64) {\n",
+    "    self.leaf = Leaf(value); self.tag = 2u8; self.empty = Empty(); self.tail = 3u8;\n",
+    "  }\n",
+    "}\n",
+    "fn read(ref leaf: Leaf) -> i64 { return leaf.read(); }\n",
+    "fn mutate(mut ref leaf: Leaf, delta: i64) -> i64 { return leaf.add(delta); }\n",
+    "fn forward(mut ref root: Root) -> i64 {\n",
+    "  return mutate(root.left.leaf, 3) + read(root.right.leaf);\n",
+    "}\n",
+    "fn main() -> i64 {\n",
+    "  var root: Root = Root(10, 20);\n",
+    "  return forward(root) + root.adjust() + root.total();\n",
+    "}\n",
+);
+
 pub(crate) fn lex_source(text: impl Into<String>) -> (SourceDatabase, SourceId, LexOutput) {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("test.ska", text);

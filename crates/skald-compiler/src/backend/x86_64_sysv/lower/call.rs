@@ -166,14 +166,14 @@ impl InstructionSelector<'_, '_> {
             let ArgumentLocation::IntegerRegister(register) = location else {
                 unreachable!("receiver is always the first integer-class argument")
             };
-            self.materialize_place_address(receiver, register);
+            self.materialize_place_address(receiver, register)?;
         }
         for ((argument, parameter), location) in arguments
             .iter()
             .zip(signature.parameters)
             .zip(layout.locations())
         {
-            self.select_argument(argument, *parameter, *location);
+            self.select_argument(argument, *parameter, *location)?;
         }
 
         self.output
@@ -197,7 +197,7 @@ impl InstructionSelector<'_, '_> {
         argument: &MirArgument,
         parameter: MirParameter,
         location: ArgumentLocation,
-    ) {
+    ) -> Result<(), BackendError> {
         match (argument, parameter.mode) {
             (MirArgument::Value(argument), MirParameterMode::Value) => {
                 self.select_value_argument(*argument, parameter.ty, location);
@@ -205,10 +205,10 @@ impl InstructionSelector<'_, '_> {
             (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
             | (MirArgument::Place(place), MirParameterMode::MutableAlias) => match location {
                 ArgumentLocation::IntegerRegister(register) => {
-                    self.materialize_place_address(place, register);
+                    self.materialize_place_address(place, register)?;
                 }
                 ArgumentLocation::Stack(displacement) => {
-                    self.materialize_place_address(place, Register::Rax);
+                    self.materialize_place_address(place, Register::Rax)?;
                     value::store_rax(value::memory(Register::Rsp, displacement), self.output);
                 }
                 ArgumentLocation::SseRegister(_) => {
@@ -217,6 +217,7 @@ impl InstructionSelector<'_, '_> {
             },
             _ => unreachable!("verified argument kind must match its parameter mode"),
         }
+        Ok(())
     }
 
     fn select_value_argument(

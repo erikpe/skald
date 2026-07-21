@@ -146,5 +146,6 @@ fn f64_arithmetic_mir() -> MirProgram {
 mod builder;
 mod control_flow;
 mod dump;
+mod inline_fields;
 mod lowering;
 mod verification;

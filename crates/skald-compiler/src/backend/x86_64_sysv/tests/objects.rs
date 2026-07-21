@@ -1,5 +1,99 @@
 use super::super::{frame, layout};
 use super::*;
+use crate::test_support::INLINE_FIELD_SOURCE;
+
+#[test]
+fn lays_out_and_addresses_deep_source_subobjects_from_every_storage_base() {
+    let program = lower_text(INLINE_FIELD_SOURCE);
+    let data = layout::DataLayout::compute(&program).unwrap();
+    let root = ClassId::new(0);
+    let empty = ClassId::new(1);
+    let leaf = ClassId::new(2);
+    let branch = ClassId::new(3);
+    let root_left = FieldId::new(root, 1);
+    let branch_leaf = FieldId::new(branch, 2);
+    let leaf_small = FieldId::new(leaf, 0);
+    let leaf_value = FieldId::new(leaf, 1);
+
+    assert_eq!(data.ty(MirType::Class(empty)).unwrap().size(), 1);
+    assert_eq!(data.ty(MirType::Class(leaf)).unwrap().size(), 16);
+    assert_eq!(data.ty(MirType::Class(branch)).unwrap().size(), 32);
+    assert_eq!(data.ty(MirType::Class(root)).unwrap().size(), 72);
+    assert_eq!(data.field(root_left).unwrap().offset, 8);
+    assert_eq!(data.field(branch_leaf).unwrap().offset, 8);
+    assert_eq!(data.field(leaf_value).unwrap().offset, 8);
+
+    let main = program.definitions.get(FunctionId::new(3)).unwrap();
+    let main_frame = frame::FrameLayout::plan(main.into(), &data).unwrap();
+    let direct = main_frame
+        .place(
+            &program,
+            main.into(),
+            &data,
+            &MirPlace::base(main.storage[0].id)
+                .project_field(root_left)
+                .project_field(branch_leaf)
+                .project_field(leaf_value),
+        )
+        .unwrap();
+    assert_eq!(direct.base(), frame::FramePlaceBase::Direct);
+    assert_eq!(direct.displacement(), -48);
+    assert_eq!(direct.ty(), MirType::I64);
+
+    let adjust = program
+        .member_definition(MethodId::new(root, 1).into())
+        .unwrap();
+    let adjust_frame = frame::FrameLayout::plan(adjust.into(), &data).unwrap();
+    let receiver = adjust_frame
+        .place(
+            &program,
+            adjust.into(),
+            &data,
+            &MirPlace::base(adjust.receiver)
+                .project_field(root_left)
+                .project_field(branch_leaf)
+                .project_field(leaf_small),
+        )
+        .unwrap();
+    assert!(matches!(
+        receiver.base(),
+        frame::FramePlaceBase::Receiver { .. }
+    ));
+    assert_eq!(receiver.displacement(), 16);
+    assert_eq!(receiver.ty(), MirType::U8);
+    assert!(receiver.uses_byte_access());
+
+    let forward = program.definitions.get(FunctionId::new(2)).unwrap();
+    let forward_frame = frame::FrameLayout::plan(forward.into(), &data).unwrap();
+    let alias = forward_frame
+        .place(
+            &program,
+            forward.into(),
+            &data,
+            &MirPlace::alias_parameter(forward.parameters[0])
+                .project_field(root_left)
+                .project_field(branch_leaf)
+                .project_field(leaf_value),
+        )
+        .unwrap();
+    assert!(matches!(
+        alias.base(),
+        frame::FramePlaceBase::AliasParameter { .. }
+    ));
+    assert_eq!(alias.displacement(), 24);
+    assert_eq!(alias.ty(), MirType::I64);
+}
+
+#[test]
+fn source_projected_assembly_is_deterministic_and_accepted() {
+    let first = assembly(INLINE_FIELD_SOURCE);
+    let second = assembly(INLINE_FIELD_SOURCE);
+
+    assert_eq!(first, second);
+    assert!(first.contains("call .Lska_class_3_init_0"));
+    assert!(first.contains("call .Lska_class_2_method_1"));
+    assert_system_assembler_accepts(&first);
+}
 
 #[test]
 fn computes_nested_class_layouts_and_aligned_object_frame_slots() {

@@ -56,11 +56,12 @@ primitive executable fields, restricted call-scoped alias parameters, and
 class-typed field declarations with source-level containment validation and
 semantic nested-place paths, direct field construction, and initializer
 liveness, plus type-checked nested scalar access, method receivers, and alias
-arguments. The remaining progression is:
+arguments through verified MIR and native x86-64 execution. The remaining
+progression is:
 
-1. **Complete class-typed inline object fields.** Harden MIR projection
-   verification, executable layout handling, and native coverage before
-   introducing cleanup. The focused implementation plan is the
+1. **Complete class-typed inline object fields.** Finish golden coverage,
+   documentation review, and source-reachable hardening before introducing
+   cleanup. The focused implementation plan is the
    [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
 2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
    cleanup, and cleanup-aware control-flow edges.

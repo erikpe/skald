@@ -12,6 +12,8 @@ use crate::{
 
 use super::abi;
 
+const MAX_ADDRESSABLE_SIZE: usize = i32::MAX as usize;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct TypeLayout {
     size: usize,
@@ -199,6 +201,9 @@ fn layout_class(fields: &[TypeLayout]) -> Option<ClassLayout> {
     if fields.is_empty() {
         size = 1;
     }
+    if size > MAX_ADDRESSABLE_SIZE {
+        return None;
+    }
     Some(ClassLayout {
         ty: TypeLayout::new(size, alignment),
         fields: field_layouts,
@@ -261,5 +266,6 @@ mod tests {
     fn rejects_checked_size_and_alignment_overflow() {
         assert!(layout_class(&[TypeLayout::new(usize::MAX, 1), TypeLayout::new(1, 1),]).is_none());
         assert!(layout_class(&[TypeLayout::new(usize::MAX - 3, 8)]).is_none());
+        assert!(layout_class(&[TypeLayout::new(MAX_ADDRESSABLE_SIZE + 1, 1)]).is_none());
     }
 }

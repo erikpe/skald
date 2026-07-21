@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0–IOF4 are complete and IOF5–IOF6 are planned.
+Status: in progress; IOF0–IOF5 are complete and IOF6 is planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -265,7 +265,7 @@ address.
 - [x] IOF2 — Generalize semantic object places to projection paths
 - [x] IOF3 — Construct class fields and track initializer liveness
 - [x] IOF4 — Type-check nested access, receivers, and alias arguments
-- [ ] IOF5 — Lower and execute projected subobjects through MIR and x86-64
+- [x] IOF5 — Lower and execute projected subobjects through MIR and x86-64
 - [ ] IOF6 — Harden, document, and publish the complete slice
 
 A task is complete only when its checkboxes, tests, acceptance criteria, and
@@ -431,26 +431,26 @@ source-level member selection or access inference.
 **Purpose:** Connect the typed feature to the prepared place/layout machinery
 and harden that machinery at the new source-reachable depth.
 
-- [ ] Lower HIR object paths to ordered MIR field projections from direct,
+- [x] Lower HIR object paths to ordered MIR field projections from direct,
       receiver, and indirect alias storage bases.
-- [ ] Lower class-field construction to `MirInitialize` with the exact
+- [x] Lower class-field construction to `MirInitialize` with the exact
       projected destination and source-ordered arguments.
-- [ ] Keep class endpoints as places for receivers and alias arguments; never
+- [x] Keep class endpoints as places for receivers and alias arguments; never
       allocate a class-typed `MirValue`.
-- [ ] Audit and, where useful, refactor MIR place verification so one projection
+- [x] Audit and, where useful, refactor MIR place verification so one projection
       walker returns terminal type and access for loads, stores, receivers,
       arguments, and initialization.
-- [ ] Verify every projection owner/type step, terminal scalar load/store,
+- [x] Verify every projection owner/type step, terminal scalar load/store,
       exact initializer destination, and access requirement.
-- [ ] Extend deterministic MIR dumps and pass-pipeline preservation tests for
+- [x] Extend deterministic MIR dumps and pass-pipeline preservation tests for
       deep projected construction, calls, aliases, loads, and stores.
-- [ ] Exercise dependency-ordered class layout for forward references, deep
+- [x] Exercise dependency-ordered class layout for forward references, deep
       containment, padding, repeated types, and empty subobjects.
-- [ ] Resolve deep target addresses with checked offset arithmetic through the
+- [x] Resolve deep target addresses with checked offset arithmetic through the
       existing backend place path for local, receiver, and alias bases.
-- [ ] Preserve the existing hidden-receiver and alias pointer ABI; add no
+- [x] Preserve the existing hidden-receiver and alias pointer ABI; add no
       aggregate argument/result classification.
-- [ ] Apply small facade-oriented refactors in MIR or backend modules if new
+- [x] Apply small facade-oriented refactors in MIR or backend modules if new
       logic would otherwise duplicate projection or layout responsibilities.
 
 **Tests:** Source-driven MIR lowering; hand-built verifier mutations; exact MIR

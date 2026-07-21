@@ -269,8 +269,9 @@ class identities, rejects recursive inline containment, records nested
 semantic place paths, and type-checks direct construction into class fields
 with precise initializer liveness. Nested primitive access, method receivers,
 and exact-class alias arguments are type-checked through those paths. Native
-coverage remains staged behind the roadmap below. It does not include object
-values in arguments/results, copying, `assign`, `destroy`, inheritance,
+lowering executes those operations through recursively laid-out inline
+storage. It does not include object values in arguments/results, copying,
+`assign`, `destroy`, inheritance,
 interfaces, virtual calls, casts, `shared`, access modifiers, static members,
 `final`, or object FFI.
 
@@ -301,14 +302,15 @@ conversion, and whole-object replacement through an alias are not implemented.
 ## Frozen staged extension: class-typed inline fields
 
 This section freezes the complete parser-facing extension for the current
-object-model sequence. IOF1–IOF4 of the
+object-model sequence. IOF1–IOF5 of the
 [Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
 implement field declarations, nominal type resolution, HIR metadata, and
 target-independent containment-cycle rejection, plus resolved/HIR projection
 paths for nested receivers and alias endpoints, direct class-field
 construction, initializer liveness, and complete source-level projected access
-checking. Native lowering and coverage below remain staged for later roadmap
-tasks.
+checking. MIR verification and x86-64 lowering preserve the same identity paths
+through native execution; publication hardening remains in the final roadmap
+task.
 
 The extension changes the class field type and projected assignment-place
 productions:

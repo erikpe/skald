@@ -1,7 +1,11 @@
 //! Assignment and rvalue instruction selection.
 
-use crate::mir::{
-    MirAssignment, MirBinaryOperation, MirPlace, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
+use crate::{
+    backend::BackendError,
+    mir::{
+        MirAssignment, MirBinaryOperation, MirPlace, MirRvalueKind, MirType, MirUnaryOperation,
+        ValueId,
+    },
 };
 
 use super::{
@@ -24,12 +28,20 @@ enum FloatBinaryOperation {
 }
 
 impl InstructionSelector<'_, '_> {
-    pub(super) fn select_assignment(&mut self, assignment: &MirAssignment) {
+    pub(super) fn select_assignment(
+        &mut self,
+        assignment: &MirAssignment,
+    ) -> Result<(), BackendError> {
         let destination = value::frame_value(self.frame, assignment.result);
-        self.select_rvalue(&assignment.rvalue.kind, assignment.rvalue.ty, destination);
+        self.select_rvalue(&assignment.rvalue.kind, assignment.rvalue.ty, destination)
     }
 
-    fn select_rvalue(&mut self, kind: &MirRvalueKind, ty: MirType, destination: Operand) {
+    fn select_rvalue(
+        &mut self,
+        kind: &MirRvalueKind,
+        ty: MirType,
+        destination: Operand,
+    ) -> Result<(), BackendError> {
         match kind {
             MirRvalueKind::ConstantI64(value) => {
                 self.select_integer_constant(*value as u64, ty, destination)
@@ -45,7 +57,7 @@ impl InstructionSelector<'_, '_> {
                 self.select_integer_constant(u64::from(*value), ty, destination)
             }
             MirRvalueKind::Load(place) => {
-                self.select_load(place, ty, destination);
+                self.select_load(place, ty, destination)?;
             }
             MirRvalueKind::Unary { operation, operand } => {
                 self.select_unary(*operation, *operand, ty, destination)
@@ -56,6 +68,7 @@ impl InstructionSelector<'_, '_> {
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
         }
+        Ok(())
     }
 
     fn select_integer_constant(&mut self, bits: u64, ty: MirType, destination: Operand) {
@@ -82,8 +95,13 @@ impl InstructionSelector<'_, '_> {
         );
     }
 
-    fn select_load(&mut self, place: &MirPlace, ty: MirType, destination: Operand) {
-        let (source_layout, source) = self.frame_place(place);
+    fn select_load(
+        &mut self,
+        place: &MirPlace,
+        ty: MirType,
+        destination: Operand,
+    ) -> Result<(), BackendError> {
+        let (source_layout, source) = self.frame_place(place)?;
         debug_assert_eq!(source_layout.ty(), ty);
         if ty == MirType::F64 {
             value::load_float(
@@ -104,6 +122,7 @@ impl InstructionSelector<'_, '_> {
             }
             value::store_canonical_rax(ty, destination, self.output);
         }
+        Ok(())
     }
 
     fn select_unary(

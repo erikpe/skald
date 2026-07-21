@@ -139,10 +139,10 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     /// in sibling modules so adding an instruction identifies one clear owner.
     fn select(&mut self, instruction: &MirInstruction) -> Result<(), BackendError> {
         match instruction {
-            MirInstruction::Assign(assignment) => self.select_assignment(assignment),
+            MirInstruction::Assign(assignment) => self.select_assignment(assignment)?,
             MirInstruction::Call(call) => self.select_call(call)?,
             MirInstruction::Initialize(initialize) => self.select_initialize(initialize)?,
-            MirInstruction::Store(store) => self.select_store(store),
+            MirInstruction::Store(store) => self.select_store(store)?,
         }
         Ok(())
     }

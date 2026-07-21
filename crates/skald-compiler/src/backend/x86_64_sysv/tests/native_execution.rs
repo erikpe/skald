@@ -1,4 +1,15 @@
 use super::*;
+use crate::test_support::INLINE_FIELD_SOURCE;
+
+#[test]
+fn source_inline_fields_construct_and_execute_through_deep_places() {
+    let output = assembly(INLINE_FIELD_SOURCE);
+    let result = run_native_assembly_output(&output);
+
+    assert_eq!(result.status.code(), Some(111));
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
 
 #[test]
 fn verified_f64_mir_executes_through_internal_and_external_abi_boundaries() {

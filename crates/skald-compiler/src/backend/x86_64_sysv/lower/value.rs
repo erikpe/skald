@@ -1,6 +1,9 @@
 //! Stack-home movement and canonical representation selection.
 
-use crate::mir::{MirPlace, MirStore, MirType, StorageId, ValueId};
+use crate::{
+    backend::BackendError,
+    mir::{MirPlace, MirStore, MirType, StorageId, ValueId},
+};
 
 use super::{
     super::frame::FramePlace,
@@ -9,8 +12,8 @@ use super::{
 };
 
 impl InstructionSelector<'_, '_> {
-    pub(super) fn select_store(&mut self, store: &MirStore) {
-        let (destination_layout, destination) = self.frame_place(&store.destination);
+    pub(super) fn select_store(&mut self, store: &MirStore) -> Result<(), BackendError> {
+        let (destination_layout, destination) = self.frame_place(&store.destination)?;
         let ty = destination_layout.ty();
         let source = frame_value(self.frame, store.value);
 
@@ -28,12 +31,16 @@ impl InstructionSelector<'_, '_> {
                 store_canonical_rax(ty, destination, self.output);
             }
         }
+        Ok(())
     }
 
-    pub(super) fn frame_place(&mut self, place: &MirPlace) -> (FramePlace, Operand) {
+    pub(super) fn frame_place(
+        &mut self,
+        place: &MirPlace,
+    ) -> Result<(FramePlace, Operand), BackendError> {
         let layout = self
             .frame
-            .place(self.program, self.function, self.data_layout, place);
+            .place(self.program, self.function, self.data_layout, place)?;
         let base = match layout.base().pointer_home() {
             None => Register::Rbp,
             Some(home) => {
@@ -46,13 +53,17 @@ impl InstructionSelector<'_, '_> {
             }
         };
         let operand = memory(base, layout.displacement());
-        (layout, operand)
+        Ok((layout, operand))
     }
 
-    pub(super) fn materialize_place_address(&mut self, place: &MirPlace, destination: Register) {
+    pub(super) fn materialize_place_address(
+        &mut self,
+        place: &MirPlace,
+        destination: Register,
+    ) -> Result<(), BackendError> {
         let layout = self
             .frame
-            .place(self.program, self.function, self.data_layout, place);
+            .place(self.program, self.function, self.data_layout, place)?;
         match layout.base().pointer_home() {
             None => self.output.push(Instruction::LoadEffectiveAddress {
                 source: memory(Register::Rbp, layout.displacement()),
@@ -71,6 +82,7 @@ impl InstructionSelector<'_, '_> {
                 }
             }
         }
+        Ok(())
     }
 }
 

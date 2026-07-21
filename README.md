@@ -44,7 +44,7 @@ The current Linux x86-64 compiler supports:
 - class-typed field declarations with nominal resolution, source-level
   rejection of recursive inline containment, target-independent nested
   object-place paths, direct field construction, initializer liveness, and
-  type-checked projected reads, writes, method receivers, and alias arguments;
+  executable projected reads, writes, method receivers, and alias arguments;
 - read-only `fn` and mutable `mut fn` receiver access;
 - restricted call-scoped `ref` and `mut ref` class parameters over inline
   locals, method receivers, and forwarded aliases;
@@ -53,10 +53,9 @@ The current Linux x86-64 compiler supports:
   small C runtime with primitive output functions.
 
 Owning inline objects are deliberately local-only today. By-value object
-parameters, results and arguments, copying, destruction, published native
-support for recursively projected class-typed fields,
-inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
-exceptions are not implemented yet.
+parameters, results and arguments, copying, destruction, inheritance,
+interfaces, `shared`, arrays, optionals, loops, and checked exceptions are not
+implemented yet.
 
 Restricted alias parameters compile through syntax, typed HIR, verified MIR,
 and the internal x86-64 pointer ABI without copying object bytes. Native and

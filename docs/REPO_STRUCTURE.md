@@ -280,11 +280,22 @@ Direct class-field initialization has its own HIR statement and lowers to MIR
 construction with an explicit projected destination; scalar field stores stay
 ordinary assignments.
 
+The x86-64 data-layout builder resolves class dependencies recursively,
+retains source field order, and rejects cycles or sizes beyond addressable
+target limits. Frame place resolution accumulates checked field offsets for
+direct, hidden-receiver, and indirect-alias bases and returns structured
+backend errors if a displacement cannot be represented.
+
 The verifier checks ID ownership and density, declaration/definition agreement,
 storage and value types, definition-before-use, call signatures and receivers,
 place projection typing, construction targets, block targets, branches,
 returns, and termination—including unreachable blocks. Verification runs after
 lowering, in the pass pipeline, and at the backend boundary.
+
+One MIR place walker validates the base, every semantic field projection, the
+terminal type, and root-derived access for loads, stores, initialization,
+receivers, and alias arguments. Class endpoints remain places and never become
+transient `MirValue`s.
 
 The pass pipeline currently verifies without transforming. SSA conversion or
 optimization should enter as an explicit pass or replaceable IR boundary when

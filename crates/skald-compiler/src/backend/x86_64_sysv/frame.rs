@@ -115,7 +115,7 @@ impl FrameLayout {
         function: MirDefinitionRef<'_>,
         data_layout: &DataLayout,
         place: &MirPlace,
-    ) -> FramePlace {
+    ) -> Result<FramePlace, BackendError> {
         let storage_id = place.base.storage();
         let storage = function
             .storage(storage_id)
@@ -143,10 +143,10 @@ impl FrameLayout {
                         .field(field_id)
                         .expect("verified field must have a target layout");
                     let offset = i32::try_from(field_layout.offset)
-                        .expect("planned field offset must fit frame addressing");
+                        .map_err(|_| place_address_error(function.callable()))?;
                     displacement = displacement
                         .checked_add(offset)
-                        .expect("planned place must fit frame addressing");
+                        .ok_or_else(|| place_address_error(function.callable()))?;
                     ty = program
                         .field(field_id)
                         .expect("verified field must be declared")
@@ -154,12 +154,12 @@ impl FrameLayout {
                 }
             }
         }
-        FramePlace {
+        Ok(FramePlace {
             base,
             displacement,
             ty,
             byte_access: !place.projections.is_empty() && matches!(ty, MirType::U8 | MirType::Bool),
-        }
+        })
     }
 }
 
@@ -205,5 +205,13 @@ fn frame_too_large(callable: crate::identity::CallableId) -> BackendError {
         Target::X86_64SysV,
         Some(callable),
         "stack frame is too large for x86-64 frame-relative addressing",
+    )
+}
+
+fn place_address_error(callable: crate::identity::CallableId) -> BackendError {
+    BackendError::new(
+        Target::X86_64SysV,
+        Some(callable),
+        "projected place exceeds x86-64 displacement limits",
     )
 }
