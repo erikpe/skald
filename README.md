@@ -14,8 +14,9 @@ collection:
 
 - class types are inline values by default;
 - `shared T` is planned as a non-null reference-counted owning handle;
-- `ref name: T` and `mut ref name: T` are planned call-scoped alias bindings,
-  with caller-owned anchors where shared storage must be kept alive;
+- `ref name: T` and `mut ref name: T` are call-scoped alias bindings; the
+  current restricted profile supports exact inline class places, while later
+  shared sources will require caller-owned anchors;
 - assignment updates an existing value without ending its lifetime;
 - `init`, `assign`, and `destroy` are contextual lifecycle declarations;
 - optionality is explicit with `T?`; ordinary non-optional values are not null.
@@ -52,9 +53,9 @@ inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
 exceptions are not implemented yet.
 
 Restricted alias parameters compile through syntax, typed HIR, verified MIR,
-and the internal x86-64 pointer ABI without copying object bytes. The remaining
-alias work is public-feature hardening: broader native golden coverage,
-diagnostic auditing, and final documentation cleanup.
+and the internal x86-64 pointer ABI without copying object bytes. Native and
+compile-failure goldens cover access, forwarding, overlap, `self`, initializer
+aliases, evaluation order, and mixed register/stack signatures.
 
 See [the grammar notes](grammar/README.md) for the exact accepted source subset
 and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the broader language
@@ -105,14 +106,13 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. `ref` and `mut ref` object parameters;
-2. inline object fields and recursive layout validation;
-3. deterministic `destroy` and cleanup-aware control flow;
-4. copy construction/assignment and object value parameters/results;
-5. inheritance, interfaces, virtual dispatch, and casts;
-6. `shared` ownership and borrow anchors;
-7. loops/iterators, arrays, optionals, and checked exceptions;
-8. an AArch64 backend and, when useful, SSA conversion and optimization.
+1. class-typed inline object fields and recursive layout validation;
+2. deterministic `destroy` and cleanup-aware control flow;
+3. copy construction/assignment and object value parameters/results;
+4. inheritance, interfaces, virtual dispatch, and casts;
+5. `shared` ownership and borrow anchors;
+6. loops/iterators, arrays, optionals, and checked exceptions;
+7. an AArch64 backend and, when useful, SSA conversion and optimization.
 
 These are directions, not promises of syntax or ordering. Each substantial
 feature should receive a focused design and implementation plan before work

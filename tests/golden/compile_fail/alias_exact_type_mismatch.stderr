@@ -1,0 +1,8 @@
+error[TYP005]: alias argument has type `Right`, expected `Left`
+ --> tests/golden/compile_fail/alias_exact_type_mismatch.ska:8:13
+   |
+8 |     inspect(value);
+   |             ^^^^^ this place has the wrong class
+   |
+4 | fn inspect(ref value: Left) -> unit {}
+   |                       ---- alias parameter type declared here

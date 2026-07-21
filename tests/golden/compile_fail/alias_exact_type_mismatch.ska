@@ -1,0 +1,10 @@
+class Left { init() {} }
+class Right { init() {} }
+
+fn inspect(ref value: Left) -> unit {}
+
+fn main() -> i64 {
+    var value: Right = Right();
+    inspect(value);
+    return 0;
+}

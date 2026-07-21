@@ -1,0 +1,9 @@
+class Value { init() {} }
+
+fn inspect(ref value: Value, amount: i64) -> unit {}
+
+fn main() -> i64 {
+    var value: Value = Value();
+    inspect(value);
+    return 0;
+}

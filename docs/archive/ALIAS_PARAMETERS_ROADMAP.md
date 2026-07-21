@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: in progress; AL0–AL6 implemented.
+Status: complete; AL0–AL7 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -325,7 +325,7 @@ declarations and promises no cross-module ABI stability.
 - [x] AL4 — Add verified alias parameters and place arguments to MIR
 - [x] AL5 — Lower the alias pointer ABI on Linux x86-64
 - [x] AL6 — Connect typed aliases through HIR-to-MIR lowering
-- [ ] AL7 — Enable, harden, and document the complete native slice
+- [x] AL7 — Enable, harden, and document the complete native slice
 
 A task is complete only when all of its checkboxes, acceptance criteria, and
 relevant quality gates pass.
@@ -544,24 +544,24 @@ access inference, ABI classification, or anchor logic.
 **Purpose:** Make alias parameters a dependable public feature and close every
 failure path exposed by end-to-end use.
 
-- [ ] Add native golden programs that observe read-only access, mutation,
+- [x] Add native golden programs that observe read-only access, mutation,
       forwarding, deliberate overlap, `self`, initializer aliases, nested
       calls, conditionals, and mixed register/stack signatures.
-- [ ] Add compile-failure goldens for malformed syntax, excluded declaration
+- [x] Add compile-failure goldens for malformed syntax, excluded declaration
       positions/types, object-value misuse, exact-type mismatch, read-only
       mutation, mutable forwarding from `ref`, extern aliases, and wrong arity.
-- [ ] Assert exact stdout, exit status, empty runtime stderr, deterministic
+- [x] Assert exact stdout, exit status, empty runtime stderr, deterministic
       assembly, and deterministic diagnostics across compiler processes.
-- [ ] Add a representative cross-process object/alias phase-determinism case.
-- [ ] Audit panics and backend assumptions reachable from malformed supported
+- [x] Add a representative cross-process object/alias phase-determinism case.
+- [x] Audit panics and backend assumptions reachable from malformed supported
       source; convert failures to structured diagnostics where appropriate.
-- [ ] Update `grammar/README.md`, the draft specification, top-level README,
+- [x] Update `grammar/README.md`, the draft specification, top-level README,
       debugging notes, golden-test documentation, and future boundaries to
       describe the implemented feature rather than the roadmap.
-- [ ] Remove obsolete “alias parameters not implemented” statements from
+- [x] Remove obsolete “alias parameters not implemented” statements from
       living documentation while retaining exclusions for local aliases,
       primitive aliases, shared sources, and anchors.
-- [ ] Run `make check` and archive this roadmap only after every checkbox and
+- [x] Run `make check` and archive this roadmap only after every checkbox and
       acceptance criterion is satisfied.
 
 **Tests:** Full `make check`, including compiler unit/integration tests, all
@@ -576,17 +576,17 @@ describing a completed implementation sequence as future work.
 
 The slice is complete when:
 
-- [ ] all AL0–AL7 tasks and their acceptance criteria are complete;
-- [ ] `ref` and `mut ref` remain binding modes rather than reference types;
-- [ ] valid arguments are restricted to existing, stable inline class places;
-- [ ] read-only and mutable access are enforced consistently through calls,
+- [x] all AL0–AL7 tasks and their acceptance criteria are complete;
+- [x] `ref` and `mut ref` remain binding modes rather than reference types;
+- [x] valid arguments are restricted to existing, stable inline class places;
+- [x] read-only and mutable access are enforced consistently through calls,
       fields, methods, HIR, MIR, and verification;
-- [ ] aliases remain call-scoped, non-owning, non-storable, and non-returnable;
-- [ ] no borrow checker, runtime provenance tag, ownership search, retain, or
+- [x] aliases remain call-scoped, non-owning, non-storable, and non-returnable;
+- [x] no borrow checker, runtime provenance tag, ownership search, retain, or
       release is introduced;
-- [ ] the x86-64 ABI passes one pointer per alias and never copies object bytes;
-- [ ] malformed source and malformed MIR fail structurally rather than
+- [x] the x86-64 ABI passes one pointer per alias and never copies object bytes;
+- [x] malformed source and malformed MIR fail structurally rather than
       panicking or being miscompiled;
-- [ ] dumps, diagnostics, assembly, stdout, and exit behavior are deterministic;
-- [ ] living documentation describes the implemented state and this completed
+- [x] dumps, diagnostics, assembly, stdout, and exit behavior are deterministic;
+- [x] living documentation describes the implemented state and this completed
       roadmap has moved to `docs/archive/`.

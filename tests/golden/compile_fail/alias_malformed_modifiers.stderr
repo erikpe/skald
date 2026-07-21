@@ -1,0 +1,5 @@
+error[PAR002]: `mut` must precede `ref` in a mutable alias parameter
+ --> tests/golden/compile_fail/alias_malformed_modifiers.ska:3:18
+   |
+3 | fn malformed(ref mut value: Value) -> unit {}
+   |                  ^^^ use `mut ref name: Class`

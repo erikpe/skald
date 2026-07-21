@@ -1,0 +1,39 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+
+class Counter {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+fn mixed(
+    ref source: Counter,
+    a: i64, b: i64, c: i64, d: i64, e: i64,
+    x0: f64, x1: f64, x2: f64, x3: f64,
+    x4: f64, x5: f64, x6: f64, x7: f64,
+    mut ref destination: Counter,
+    x8: f64,
+    amount: i64
+) -> unit {
+    ska_rt_println_f64_bits(x8);
+    destination.value = destination.value + source.value + amount;
+}
+
+fn main() -> i64 {
+    var source: Counter = Counter(2);
+    var destination: Counter = Counter(3);
+    mixed(
+        source,
+        10, 20, 30, 40, 50,
+        1.0, 2.0, 3.0, 4.0,
+        5.0, 6.0, 7.0, 8.0,
+        destination,
+        9.5,
+        7
+    );
+    ska_rt_println_i64(destination.value);
+    return 0;
+}

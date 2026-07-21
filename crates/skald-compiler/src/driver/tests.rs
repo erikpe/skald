@@ -388,6 +388,29 @@ fn malformed_supported_sources_never_panic() {
 }
 
 #[test]
+fn malformed_and_excluded_alias_sources_never_reach_mir_or_backend_panics() {
+    let cases = [
+        "class Value { init() {} } fn malformed(ref mut value: Value) -> unit {} fn main() -> i64 { return 0; }",
+        "fn inspect(ref value: i64) -> unit {} fn main() -> i64 { return 0; }",
+        "class Value { init() {} } extern fn inspect(ref value: Value) -> unit; fn main() -> i64 { return 0; }",
+        "class Value { init() {} } fn inspect(mut ref value: Value) -> unit {} fn forward(ref value: Value) -> unit { inspect(value); } fn main() -> i64 { return 0; }",
+        "class Value { init() {} } fn inspect(ref value: Value) -> unit {} fn main() -> i64 { inspect(Value()); return 0; }",
+    ];
+
+    for (index, source) in cases.into_iter().enumerate() {
+        let result = compile_source_to_assembly(
+            format!("malformed-alias-{index}.ska"),
+            source,
+            Target::X86_64SysV,
+        );
+        assert!(
+            matches!(result, Err(CompilationError::Diagnostics(_))),
+            "malformed alias case {index} crossed the diagnostic boundary: {result:?}"
+        );
+    }
+}
+
+#[test]
 fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
     let expression = format!(
         "{}1{}",

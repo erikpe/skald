@@ -51,29 +51,23 @@ Every substantial feature should:
 
 ## Object-model sequence
 
-The implemented object core deliberately stops at direct local inline objects
-with primitive fields. The safest progression is:
+The implemented object core includes direct local inline objects with
+primitive fields and restricted call-scoped alias parameters. The remaining
+progression is:
 
-1. **Alias parameters.** Add `ref` and `mut ref` parameters over existing
-   places. Keep aliases call-scoped and non-storable so local references remain
-   cheap and no general borrow checker is required. The focused implementation
-   plan is the [Alias Parameters Roadmap](ALIAS_PARAMETERS_ROADMAP.md). Its
-   frozen first profile accepts exact class aliases over inline locals, `self`,
-   and forwarded aliases only. Primitive aliases, local alias declarations,
-   shared sources, and borrow anchors remain later work.
-2. **Inline object fields.** Extend place projection and layout dependency
-   handling before introducing cleanup. Recursive by-value containment must be
-   rejected.
-3. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
+1. **Class-typed inline object fields.** Extend place projection and layout
+   dependency handling before introducing cleanup. Recursive by-value
+   containment must be rejected.
+2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
    cleanup, and cleanup-aware control-flow edges.
-4. **Object value semantics.** Add copy construction and assignment before
+3. **Object value semantics.** Add copy construction and assignment before
    object parameters/results, return storage, temporaries, and permitted
    elision.
-5. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
+4. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
    interfaces, casts, and dynamic type metadata.
-6. **Shared ownership.** Add allocation, reference counting, complete dynamic
+5. **Shared ownership.** Add allocation, reference counting, complete dynamic
    destruction, and syntax-directed borrow anchors.
-7. **Checked exceptions.** Integrate partial construction and cleanup with
+6. **Checked exceptions.** Integrate partial construction and cleanup with
    exceptional control flow rather than retrofitting it afterward.
 
 Each step needs a dedicated roadmap. In particular, object parameters or
@@ -91,9 +85,9 @@ contracts.
 - strings and a Skald-written standard library;
 - access control, `final`, static members, and broader module organization.
 
-Arrays, optionals, loops, aliases, destruction, shared ownership, and checked
-exceptions all interact with lifetime or control-flow rules. They should not be
-added as isolated parser features.
+Arrays, optionals, loops, local/shared alias sources, destruction, shared
+ownership, and checked exceptions all interact with lifetime or control-flow
+rules. They should not be added as isolated parser features.
 
 ## Compiler evolution
 

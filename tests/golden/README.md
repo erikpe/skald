@@ -45,6 +45,14 @@ boundaries. Compile-failure cases snapshot construction and value exclusions,
 field initialization state, initializer-body restrictions, declaration
 restrictions, and read-only receiver violations.
 
+The alias corpus covers read-only and mutable access, forwarding, grouped
+places, deliberate overlap, method `self`, initializer aliases, nested calls,
+conditionals, and signatures that independently exhaust integer and SSE
+registers before passing aliases and scalar values on the stack. Failure cases
+snapshot malformed modifiers, excluded local and primitive aliases,
+object-value misuse, exact nominal mismatches, read-only mutation, invalid
+mutable forwarding, external aliases, and wrong arity.
+
 Run it from the repository root with:
 
 ```text

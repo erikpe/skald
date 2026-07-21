@@ -14,11 +14,6 @@ direction:
 - [Implemented grammar](../grammar/README.md) — exact source subset accepted by
   the current compiler.
 
-Active implementation plans:
-
-- [Alias parameters roadmap](ALIAS_PARAMETERS_ROADMAP.md) — `ref` and
-  `mut ref` parameters over existing inline class places.
-
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current
 behavior.

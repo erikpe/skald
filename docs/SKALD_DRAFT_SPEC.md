@@ -977,10 +977,11 @@ because the complete receiver is not live yet. Method bodies otherwise use the
 already implemented primitive statements, expressions, calls, locals, and
 conditionals.
 
-Object parameters, results, ordinary arguments, and FFI types; general object
-temporaries; copying, assignment, moves, slicing, and elision; inheritance,
-interfaces, polymorphism, casts, and dynamic metadata; `shared`, `new`, alias
-bindings, and borrow anchors are all deferred beyond this profile.
+Object value parameters, results, ordinary value arguments, and FFI types;
+general object temporaries; copying, assignment, moves, slicing, and elision;
+inheritance, interfaces, polymorphism, casts, and dynamic metadata; `shared`,
+`new`, and borrow anchors are deferred beyond this profile. The restricted
+alias-parameter extension is defined in the following subsection.
 
 The profile adds these observable evaluation-order rules:
 
@@ -998,17 +999,18 @@ boundaries, or cleanup on non-local exits. Those remain prerequisites for
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
-**Implementation status:** the contract and frontend through typed HIR are
-implemented. Resolved IR carries binding mode separately from nominal class
-identity; alias names have stable parameter identities and may form existing
-object-place bases. HIR carries explicit value/read-only-alias/mutable-alias
-parameter modes and one source-ordered sequence of value or place arguments.
-Type checking enforces exact class identity, place eligibility, access
-capability, forwarding, and non-escaping restrictions. MIR and backend
-behavior remain to be implemented, so well-formed alias programs currently
-stop at a structured pre-MIR capability diagnostic. This profile extends the
-restricted inline-object profile in Section 5.4.2. It does not implement every
-alias source described by the broader model in Section 4.5.
+**Implementation status:** this restricted profile is implemented end to end
+on Linux x86-64. Resolved IR carries binding mode separately from nominal
+class identity; alias names have stable parameter identities and may form
+existing object-place bases. HIR carries explicit
+value/read-only-alias/mutable-alias parameter modes and one source-ordered
+sequence of value or place arguments. Type checking enforces exact class
+identity, place eligibility, access capability, forwarding, and non-escaping
+restrictions. Verified MIR uses indirect alias-parameter places, and the
+backend passes one pointer per alias using the internal ABI described below.
+This profile extends the restricted inline-object profile in Section 5.4.2. It
+does not implement every alias source described by the broader model in
+Section 4.5.
 
 The parameter grammar added by this profile is:
 
@@ -2113,8 +2115,8 @@ The following intended features are deliberately not specified well enough to im
 - arrays, including construction, element lifetime, copying, mutation, indexing, and slicing;
 - loops and iteration, including `while`, `for ... in`, `break`, `continue`, and the iterator contract;
 - checked exceptions, including throwing, catching, exception-set checking, cleanup, and lowering;
-- locally declared alias bindings and scoped narrowing aliases; parameter
-  aliases are planned as the first supported alias-binding form.
+- locally declared alias bindings and scoped narrowing aliases; restricted
+  call-scoped parameter aliases are implemented as described in Section 5.4.3.
 
 Their existing sections preserve design direction and reserve likely syntax,
 but are non-normative where they do not give a complete rule. These features

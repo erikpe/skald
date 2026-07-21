@@ -1,0 +1,6 @@
+error[TYP009]: external function `inspect` cannot declare alias parameters
+ --> tests/golden/compile_fail/alias_external.ska:3:19
+   |
+3 | extern fn inspect(ref value: Value) -> unit;
+   |                   ^^^^^^^^^^^^^^^^ aliases have no supported C ABI yet
+  = note: external parameters must be passed by value

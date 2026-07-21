@@ -1,0 +1,79 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Counter {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+
+    mut fn add(amount: i64) -> unit {
+        self.value = self.value + amount;
+    }
+
+    mut fn add_from(mut ref other: Counter) -> unit {
+        add_amount(self, read(other));
+    }
+}
+
+class Snapshot {
+    value: i64;
+
+    init(ref source: Counter) {
+        self.value = read(source);
+    }
+}
+
+fn read(ref counter: Counter) -> i64 {
+    return counter.read();
+}
+
+fn add_amount(mut ref counter: Counter, amount: i64) -> unit {
+    counter.add(amount);
+}
+
+fn forward(mut ref counter: Counter, amount: i64) -> unit {
+    add_amount((counter), amount);
+}
+
+fn touch_twice(mut ref left: Counter, mut ref right: Counter) -> unit {
+    add_amount(left, 1);
+    add_amount(right, 2);
+}
+
+fn choose(mut ref counter: Counter, flag: bool) -> unit {
+    if (flag) {
+        forward(counter, 3);
+    }
+    else {
+        forward(counter, 100);
+    }
+}
+
+fn main() -> i64 {
+    var counter: Counter = Counter(10);
+    ska_rt_println_i64(read(counter));
+
+    forward(counter, 5);
+    ska_rt_println_i64(read(counter));
+
+    touch_twice(counter, counter);
+    ska_rt_println_i64(read(counter));
+
+    counter.add_from(counter);
+    ska_rt_println_i64(read(counter));
+
+    var snapshot: Snapshot = Snapshot(counter);
+    ska_rt_println_i64(snapshot.value);
+
+    choose(counter, true);
+    ska_rt_println_i64(read(counter));
+
+    forward(counter, read(counter));
+    ska_rt_println_i64(read(counter));
+    return 7;
+}

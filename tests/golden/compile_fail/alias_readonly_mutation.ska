@@ -1,0 +1,12 @@
+class Counter {
+    value: i64;
+    init() { self.value = 0; }
+    mut fn add(amount: i64) -> unit { self.value = self.value + amount; }
+}
+
+fn misuse(ref counter: Counter) -> unit {
+    counter.value = 1;
+    counter.add(1);
+}
+
+fn main() -> i64 { return 0; }

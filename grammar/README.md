@@ -258,22 +258,32 @@ is static and direct.
 The current native-code object profile has only primitive fields and primitive
 by-value parameters and results. It does not include object fields, object
 values in arguments/results, copying, `assign`, `destroy`, inheritance,
-interfaces, virtual calls, casts, `shared`, native alias calls, access
+interfaces, virtual calls, casts, `shared`, access
 modifiers, static members, `final`, or object FFI.
 
-The frontend through typed HIR implements restricted alias parameters. Binding
-mode remains separate from nominal class type in the source AST, resolved IR,
-and HIR. Type checking converts each source-ordered call argument into either a
-primitive value or exact-class object place, calculates read-only/mutable
-access for locals, `self`, and aliases, and enforces capability reduction and
-non-escaping restrictions. MIR and native lowering are not implemented yet;
-well-formed alias programs currently stop at a structured pre-MIR capability
-diagnostic. The frozen declaration, place, access, lifetime, IR, and ABI
+Restricted alias parameters are implemented end to end. Binding mode remains
+separate from nominal class type in every semantic IR. A `ref` parameter may
+read fields, call read-only methods, and be forwarded to `ref`; a `mut ref`
+parameter may additionally write fields, call mutable methods, and satisfy
+either alias mode. Mutable inline locals and mutable method `self` may satisfy
+either mode, while read-only `self` may satisfy only `ref`.
+
+An alias argument must be an already-live exact-class place: an inline local,
+method `self`, a forwarded alias parameter, or a grouped form of one of these.
+Aliases are call-scoped, non-owning, non-storable, non-returnable, and
+non-exclusive; passing the same local to multiple mutable alias parameters is
+valid. Initializers may receive aliases, but their not-yet-live `self` cannot
+be an alias argument. Calls retain one left-to-right sequence of primitive
+values and alias places, with a method receiver selected first.
+
+MIR represents an alias parameter as an indirect place base. The Linux x86-64
+System V backend passes one integer-class pointer per alias without copying
+object bytes. The complete declaration, place, access, lifetime, IR, and ABI
 contract is in the
 [restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
-Ordinary by-value parameters remain primitive-only, and the planned slice does
-not include local aliases, primitive aliases, shared sources, or borrow
-anchors.
+Ordinary by-value parameters remain primitive-only. Local aliases, primitive
+aliases, shared sources, borrow anchors, object fields/elements, polymorphic
+conversion, and whole-object replacement through an alias are not implemented.
 
 ## Recovery and nesting
 
@@ -296,8 +306,8 @@ The following broader-language features remain design or implementation work:
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;
-- semantic and native `ref` / `mut ref` alias behavior beyond the implemented
-  lexer, parser, and AST boundary;
+- local alias declarations and alias sources beyond inline locals, method
+  `self`, and forwarded parameters;
 - `shared` ownership and aliasing through shared sources;
 - checked exceptions;
 - multiple source files, modules, generics, and closures.

@@ -1,0 +1,5 @@
+class Value { init() {} }
+
+fn malformed(ref mut value: Value) -> unit {}
+
+fn main() -> i64 { return 0; }

@@ -1,0 +1,7 @@
+class Value { init() {} }
+
+fn main() -> i64 {
+    var value: Value = Value();
+    ref alias: Value = value;
+    return 0;
+}

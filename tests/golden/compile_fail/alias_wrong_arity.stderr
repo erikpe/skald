@@ -1,0 +1,8 @@
+error[TYP004]: function `inspect` expects 2 arguments but received 1
+ --> tests/golden/compile_fail/alias_wrong_arity.ska:7:5
+   |
+7 |     inspect(value);
+   |     ^^^^^^^ called with the wrong number of arguments
+   |
+3 | fn inspect(ref value: Value, amount: i64) -> unit {}
+   |    ------- function declared here

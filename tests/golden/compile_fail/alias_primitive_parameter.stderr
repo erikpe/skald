@@ -1,0 +1,5 @@
+error[PAR002]: expected a class name as the alias parameter type
+ --> tests/golden/compile_fail/alias_primitive_parameter.ska:1:23
+   |
+1 | fn inspect(ref value: i64) -> unit {}
+   |                       ^^^ alias parameters must name an inline class type

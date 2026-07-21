@@ -1,0 +1,11 @@
+class Value { init() {} }
+
+fn consume(value: i64) -> unit {}
+
+fn misuse(ref value: Value) -> i64 {
+    consume(value);
+    var copy: Value = value;
+    return value;
+}
+
+fn main() -> i64 { return 0; }
