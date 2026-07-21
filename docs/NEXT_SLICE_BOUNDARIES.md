@@ -56,7 +56,8 @@ with primitive fields. The safest progression is:
 
 1. **Alias parameters.** Add `ref` and `mut ref` parameters over existing
    places. Keep aliases call-scoped and non-storable so local references remain
-   cheap and no general borrow checker is required.
+   cheap and no general borrow checker is required. The focused implementation
+   plan is the [Alias Parameters Roadmap](ALIAS_PARAMETERS_ROADMAP.md).
 2. **Inline object fields.** Extend place projection and layout dependency
    handling before introducing cleanup. Recursive by-value containment must be
    rejected.
