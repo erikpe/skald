@@ -6,8 +6,8 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
         BlockFlow, HirAccess, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
-        HirConstruction, HirFieldAssignment, HirFunctionDefinition, HirLocal, HirLocalDecl,
-        HirLocalInitializer, HirMemberDefinition, HirReturn, HirStatement, Type,
+        HirConstruction, HirFieldAssignment, HirFieldConstruction, HirFunctionDefinition, HirLocal,
+        HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirReturn, HirStatement, Type,
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
     resolve::{
@@ -18,13 +18,15 @@ use crate::{
 };
 
 use super::{
-    expression::{is_call_through_groups, require_type},
+    expression::{is_call_through_groups, require_type, ObjectPlaceUse},
     program::{
         lower_type, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT, INVALID_CONSTRUCTION,
         INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN, MISSING_RETURN,
         READ_ONLY_RECEIVER,
     },
 };
+
+mod initializer;
 
 #[derive(Clone, Copy)]
 pub(super) struct ReceiverContext {
@@ -215,7 +217,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                 )
                 .with_primary_label(
                     statement.span(),
-                    "expected `self.field = primitive_expression;`",
+                    "expected direct initialization of a field of `self`",
                 ),
             );
             return CheckedStatement::falls_through(None);
@@ -412,6 +414,64 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             );
             return None;
         }
+        self.check_construction_arguments(construction)
+    }
+
+    fn check_field_construction(
+        &mut self,
+        expected_class: ClassId,
+        field_name: &str,
+        expression: &crate::resolve::ResolvedExpression,
+    ) -> Option<HirConstruction> {
+        let crate::resolve::ResolvedExpression::Construct(construction) = expression else {
+            let expected_name = &self
+                .program
+                .class(expected_class)
+                .expect("resolved field class must exist")
+                .name;
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_CONSTRUCTION,
+                    format!("class field `{field_name}` requires direct construction"),
+                )
+                .with_primary_label(
+                    expression.span(),
+                    format!("expected an ungrouped `{expected_name}(...)` construction"),
+                ),
+            );
+            return None;
+        };
+        if construction.class != expected_class {
+            let actual_name = &self
+                .program
+                .class(construction.class)
+                .expect("resolved constructor class must exist")
+                .name;
+            let expected_name = &self
+                .program
+                .class(expected_class)
+                .expect("resolved field class must exist")
+                .name;
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_CONSTRUCTION,
+                    format!("constructor type does not match class field `{field_name}`"),
+                )
+                .with_primary_label(
+                    construction.callee_span,
+                    format!("constructs `{actual_name}`"),
+                )
+                .with_note(format!("the field requires `{expected_name}`")),
+            );
+            return None;
+        }
+        self.check_construction_arguments(construction)
+    }
+
+    fn check_construction_arguments(
+        &mut self,
+        construction: &crate::resolve::ResolvedConstructExpr,
+    ) -> Option<HirConstruction> {
         let initializer = self
             .program
             .initializer(construction.initializer)
@@ -430,79 +490,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             arguments,
             span: construction.span,
         })
-    }
-
-    fn check_field_assignment(
-        &mut self,
-        assignment: &crate::resolve::ResolvedFieldAssignment,
-    ) -> CheckedStatement {
-        let place = self.check_field_place(&assignment.receiver, assignment.field, assignment.span);
-        let value = self.check_expression(&assignment.value);
-        let Some(place) = place else {
-            return CheckedStatement::falls_through(None);
-        };
-        let mut valid = true;
-        if place.receiver.access == HirAccess::ReadOnly {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    READ_ONLY_RECEIVER,
-                    "cannot assign through a read-only receiver",
-                )
-                .with_primary_label(
-                    assignment.member_span,
-                    "field assignment requires mutable receiver access",
-                ),
-            );
-            valid = false;
-        }
-        if self.receiver.is_some_and(|receiver| receiver.initializer) {
-            if place.receiver.root() != BindingId::Receiver(self.callable)
-                || !place.receiver.path.is_root()
-            {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_INITIALIZER_BODY,
-                        "an initializer can assign only its own fields",
-                    )
-                    .with_primary_label(assignment.span, "expected a field of `self`"),
-                );
-                valid = false;
-            } else if !self.initialized_fields.insert(place.field) {
-                let field = self
-                    .program
-                    .field(place.field)
-                    .expect("selected field must exist");
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        FIELD_INITIALIZATION,
-                        format!("field `{}` is initialized more than once", field.name),
-                    )
-                    .with_primary_label(assignment.member_span, "duplicate field initialization"),
-                );
-                valid = false;
-            }
-        }
-        let Some(value) = value else {
-            return CheckedStatement::falls_through(None);
-        };
-        let field = self
-            .program
-            .field(place.field)
-            .expect("selected field must exist");
-        valid &= require_type(
-            value.ty,
-            lower_type(&field.type_syntax),
-            value.span,
-            "field assignment",
-            self.diagnostics,
-        );
-        CheckedStatement::falls_through(valid.then_some(HirStatement::FieldAssignment(
-            HirFieldAssignment {
-                place,
-                value,
-                span: assignment.span,
-            },
-        )))
     }
 
     fn check_conditional(&mut self, conditional: &ResolvedConditional) -> CheckedStatement {

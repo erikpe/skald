@@ -233,6 +233,13 @@ impl HirDumper {
                     dumper.expression(&statement.value);
                 });
             }
+            HirStatement::FieldConstruction(statement) => {
+                self.line("FieldConstruction", statement.span);
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.construction(&statement.construction);
+                });
+            }
         }
     }
 

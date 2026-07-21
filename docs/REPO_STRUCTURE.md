@@ -271,6 +271,9 @@ Expression and argument lowering preserves the language's left-to-right order.
 State crossing block edges uses storage because MIR is not currently SSA.
 Objects occupy class-typed places and are never transient scalar `MirValue`s.
 Field projections retain semantic `FieldId`s, not target offsets.
+Direct class-field initialization has its own HIR statement and lowers to MIR
+construction with an explicit projected destination; scalar field stores stay
+ordinary assignments.
 
 The verifier checks ID ownership and density, declaration/definition agreement,
 storage and value types, definition-before-use, call signatures and receivers,

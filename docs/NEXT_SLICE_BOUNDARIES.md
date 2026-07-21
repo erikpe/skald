@@ -54,11 +54,12 @@ Every substantial feature should:
 The implemented object core includes direct local inline objects with
 primitive executable fields, restricted call-scoped alias parameters, and
 class-typed field declarations with source-level containment validation and
-semantic nested-place paths. The remaining progression is:
+semantic nested-place paths, direct field construction, and initializer
+liveness. The remaining progression is:
 
-1. **Complete class-typed inline object fields.** Extend construction and
-   executable projected access/layout handling before introducing
-   cleanup. The focused implementation plan is the
+1. **Complete class-typed inline object fields.** Extend executable projected
+   access and layout handling before introducing cleanup. The focused
+   implementation plan is the
    [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
 2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
    cleanup, and cleanup-aware control-flow edges.

@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0–IOF2 are complete and IOF3–IOF6 are planned.
+Status: in progress; IOF0–IOF3 are complete and IOF4–IOF6 are planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -263,7 +263,7 @@ address.
 - [x] IOF0 — Freeze the class-typed-field contract
 - [x] IOF1 — Resolve field types and reject containment cycles
 - [x] IOF2 — Generalize semantic object places to projection paths
-- [ ] IOF3 — Construct class fields and track initializer liveness
+- [x] IOF3 — Construct class fields and track initializer liveness
 - [ ] IOF4 — Type-check nested access, receivers, and alias arguments
 - [ ] IOF5 — Lower and execute projected subobjects through MIR and x86-64
 - [ ] IOF6 — Harden, document, and publish the complete slice
@@ -367,23 +367,23 @@ representations.
 **Purpose:** Initialize nested objects directly in their final storage while
 preserving a precise boundary between incomplete and live subobjects.
 
-- [ ] Interpret `self.field = Class(...)` as destination-directed construction
+- [x] Interpret `self.field = Class(...)` as destination-directed construction
       when the declared field type is a class.
-- [ ] Require an ungrouped constructor of the exact field class and reject a
+- [x] Require an ungrouped constructor of the exact field class and reject a
       scalar expression, wrong class, ordinary object place, or other object
       context with a focused diagnostic.
-- [ ] Permit class construction only into a direct field of the current
+- [x] Permit class construction only into a direct field of the current
       initializer's `self`; reject nested, foreign, local, alias, and live
       destinations.
-- [ ] Add an explicit HIR statement for construction into a field place,
+- [x] Add an explicit HIR statement for construction into a field place,
       reusing the existing typed construction payload and ordered arguments.
-- [ ] Track each direct field as uninitialized or initialized and transition a
+- [x] Track each direct field as uninitialized or initialized and transition a
       class field only after its constructor arguments check successfully.
-- [ ] Apply the existing exactly-once and missing-field checks uniformly to
+- [x] Apply the existing exactly-once and missing-field checks uniformly to
       primitive and class fields.
-- [ ] Reject reads, receiver use, or aliasing through an uninitialized direct
+- [x] Reject reads, receiver use, or aliasing through an uninitialized direct
       field while allowing prior initialized fields in later expressions.
-- [ ] Preserve source statement order and left-to-right constructor argument
+- [x] Preserve source statement order and left-to-right constructor argument
       order without adding cleanup state or exception edges.
 
 **Tests:** Mixed primitive/class fields; declaration-order and non-declaration-

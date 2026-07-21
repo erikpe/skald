@@ -3,6 +3,7 @@ use crate::{
     diagnostics::Diagnostics,
     hir::{HirAccess, HirCallArgument, HirLocalInitializer},
     identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    mir::{lower_hir, verify_mir, MirInstruction, MirPlaceProjection},
     typeck::function::{CallableChecker, MemberCheckContext, ReceiverContext},
 };
 
@@ -69,7 +70,7 @@ fn diagnoses_missing_duplicate_and_premature_field_initialization() {
         .iter()
         .filter(|diagnostic| diagnostic.code == FIELD_INITIALIZATION)
         .collect();
-    assert_eq!(field_errors.len(), 3);
+    assert_eq!(field_errors.len(), 4);
     assert!(field_errors
         .iter()
         .any(|error| error.message.contains("before initialization")));
@@ -79,6 +80,13 @@ fn diagnoses_missing_duplicate_and_premature_field_initialization() {
     assert!(field_errors
         .iter()
         .any(|error| error.message.contains("not initialized")));
+    assert_eq!(
+        field_errors
+            .iter()
+            .filter(|error| error.message.contains("not initialized"))
+            .count(),
+        2
+    );
 }
 
 #[test]
@@ -289,6 +297,219 @@ fn class_field_selection_does_not_create_an_object_rvalue() {
         .iter()
         .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT
             && diagnostic.message.contains("is not a value")));
+}
+
+#[test]
+fn constructs_class_fields_and_exposes_them_only_after_successful_initialization() {
+    let output = check_text(concat!(
+        "class Seed { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Child { value: i64; init(ref seed: Seed) { self.value = seed.value; } fn get() -> i64 { return self.value; } }\n",
+        "fn inspect(ref child: Child) -> i64 { return child.get(); }\n",
+        "class Parent {\n",
+        "  child: Child; tag: i64; total: i64;\n",
+        "  init(ref seed: Seed) {\n",
+        "    self.tag = 1;\n",
+        "    self.child = Child(seed);\n",
+        "    self.total = inspect(self.child) + self.child.get();\n",
+        "  }\n",
+        "  fn get() -> i64 { return self.total + self.tag; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var seed: Seed = Seed(20);\n",
+        "  var parent: Parent = Parent(seed);\n",
+        "  return parent.get();\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let parent = hir.class(ClassId::new(2)).unwrap();
+    let initializer = hir.member_definition(parent.initializer.id.into()).unwrap();
+    assert!(matches!(
+        initializer.body.statements.as_slice(),
+        [
+            HirStatement::FieldAssignment(_),
+            HirStatement::FieldConstruction(_),
+            HirStatement::FieldAssignment(_),
+        ]
+    ));
+    let HirStatement::FieldConstruction(statement) = &initializer.body.statements[1] else {
+        unreachable!();
+    };
+    assert_eq!(statement.place.field, FieldId::new(parent.id, 0));
+    assert_eq!(statement.construction.class, ClassId::new(1));
+    assert_eq!(
+        statement.construction.initializer,
+        InitializerId::new(ClassId::new(1), 0)
+    );
+    let HirCallArgument::Place(seed) = &statement.construction.arguments[0] else {
+        panic!("expected alias constructor argument");
+    };
+    assert_eq!(seed.access, HirAccess::ReadOnly);
+
+    let dump = dump_hir(&hir);
+    let field_construction: Vec<_> = dump
+        .lines()
+        .filter(|line| {
+            line.contains("FieldConstruction") || line.contains("Construct c1 via c1:init0")
+        })
+        .map(str::trim)
+        .collect();
+    assert_eq!(
+        field_construction,
+        [
+            "FieldConstruction @345..370",
+            "Construct c1 via c1:init0 @358..369",
+        ]
+    );
+
+    let mir = lower_hir(&hir);
+    assert!(verify_mir(&mir).is_ok());
+    let parent_initializer = mir.member_definition(parent.initializer.id.into()).unwrap();
+    let construction = parent_initializer.body.blocks[0]
+        .instructions
+        .iter()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize)
+                if initialize.target == InitializerId::new(ClassId::new(1), 0) =>
+            {
+                Some(initialize)
+            }
+            _ => None,
+        })
+        .expect("field construction should lower to destination initialization");
+    assert_eq!(
+        construction.destination.projections,
+        [MirPlaceProjection::Field(FieldId::new(parent.id, 0))]
+    );
+}
+
+#[test]
+fn diagnoses_invalid_class_field_construction_forms_without_object_rvalues() {
+    let scalar = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent { child: Child; init() { self.child = 1; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(scalar.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CONSTRUCTION
+            && diagnostic.message.contains("requires direct construction")
+    }));
+
+    let grouped = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent { child: Child; init() { self.child = (Child()); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(grouped.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CONSTRUCTION
+            && diagnostic.labels[0].message.contains("ungrouped")
+    }));
+
+    let wrong = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Other { init() {} }\n",
+        "class Parent { child: Child; init() { self.child = Other(); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(wrong.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CONSTRUCTION
+            && diagnostic.message.contains("does not match class field")
+    }));
+
+    let primitive = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent { value: i64; init() { self.value = Child(); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(primitive.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CONSTRUCTION && diagnostic.message.contains("primitive field")
+    }));
+}
+
+#[test]
+fn rejects_premature_subobject_use_duplicate_construction_and_invalid_destinations() {
+    let premature = check_text(concat!(
+        "class Child { value: i64; init(value: i64) { self.value = value; } fn get() -> i64 { return self.value; } }\n",
+        "fn inspect(ref child: Child) -> i64 { return child.get(); }\n",
+        "class Parent { child: Child; first: i64; second: i64; init() {\n",
+        "  self.first = self.child.get();\n",
+        "  self.second = inspect(self.child);\n",
+        "  self.child = Child(1);\n",
+        "  self.child = Child(2);\n",
+        "} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert_eq!(
+        premature
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == FIELD_INITIALIZATION)
+            .count(),
+        5
+    );
+    assert_eq!(
+        premature
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message.contains("used before initialization"))
+            .count(),
+        2
+    );
+    assert!(premature
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("more than once")));
+
+    let destinations = check_text(concat!(
+        "class Child { init() {} }\n",
+        "class Box { child: Child; init() { self.child = Child(); } }\n",
+        "class Parent { box: Box; init(mut ref other: Parent) {\n",
+        "  self.box.child = Child();\n",
+        "  other.box = Box();\n",
+        "  self.box = Box();\n",
+        "} mut fn replace() -> unit { self.box = Box(); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert_eq!(
+        destinations
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_INITIALIZER_BODY)
+            .count(),
+        2
+    );
+    assert!(destinations.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CONSTRUCTION
+            && diagnostic
+                .message
+                .contains("only in their owner's initializer")
+    }));
+}
+
+#[test]
+fn failed_constructor_arguments_do_not_make_a_class_field_live() {
+    let output = check_text(concat!(
+        "class Child { value: i64; init(value: i64) { self.value = value; } fn get() -> i64 { return self.value; } }\n",
+        "class Parent { child: Child; result: i64; init() {\n",
+        "  self.child = Child(true);\n",
+        "  self.result = self.child.get();\n",
+        "} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == FIELD_INITIALIZATION
+            && diagnostic.message.contains("used before initialization")
+    }));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == FIELD_INITIALIZATION
+            && diagnostic.message == "field `child` is not initialized"
+    }));
 }
 
 #[test]

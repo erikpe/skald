@@ -910,11 +910,12 @@ The profile has these declaration and name rules:
 - class identity is nominal, and a class declared later in the same source file
   may be selected after top-level declaration collection.
 
-Every executable field has one of the implemented primitive types `i64`,
-`u64`, `u8`, `f64`, or `bool`. Class-typed field declarations, nominal
-resolution, HIR declaration metadata, and containment-cycle validation are
-implemented as the first stage of Section 5.4.4; construction and use of those
-fields are not yet executable. Base classes, interfaces, static members,
+Every executable field has one of the primitive types `i64`, `u64`, `u8`,
+`f64`, or `bool`, or an acyclic inline class type. Class-typed field
+declarations, nominal resolution, HIR declaration metadata, containment-cycle
+validation, direct construction, and initializer liveness from Section 5.4.4
+are implemented. Complete projected use remains staged. Base classes,
+interfaces, static members,
 `final`, access modifiers, virtual/override declarations, `assign`, and
 `destroy` remain rejected. Empty classes are valid.
 
@@ -923,18 +924,21 @@ implicit mutable `self`, takes only by-value primitive parameters, and returns
 `unit` implicitly. No initializer is synthesized, including for an empty
 class. Copy and delegating initializers are unavailable.
 
-The initializer body is a straight-line sequence containing only:
+The initializer body is a straight-line sequence containing only direct field
+initializations:
 
 ```ska
 self.field = primitive_expression;
+self.child = Child(arguments);
 ```
 
 The expression may use primitive literals, initializer parameters, fields of
 `self` that have already been initialized, grouping, implemented primitive
 operators, and calls to top-level defined or external functions with supported
-primitive signatures. It cannot use `self` as a complete value, call an
-instance method, construct an object, or contain another object-valued
-expression. Initializer bodies have no local declarations, nested blocks,
+primitive signatures. A class-typed field requires ungrouped construction of
+its exact class directly in that field's storage. It cannot use `self` as a
+complete value or contain another object-valued expression. Initializer bodies
+have no local declarations, nested blocks,
 conditionals, effect-only call statements, or explicit return.
 
 Every field is assigned exactly once before normal completion. Assignment order
@@ -1129,13 +1133,14 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; IOF1–IOF2 of the
+**Implementation status:** contract frozen; IOF1–IOF3 of the
 [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) are
 implemented. The compiler accepts and resolves class-typed field declarations,
 records canonical HIR field types, rejects recursive containment before target
-selection, and represents nested object places as root bindings plus ordered
-semantic field identities. Direct field construction and complete executable
-nested access remain planned. The parser-facing extension is recorded in
+selection, represents nested object places as root bindings plus ordered
+semantic field identities, and distinguishes direct subobject construction
+from scalar stores while enforcing initializer liveness. Complete executable
+nested access remains planned. The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with

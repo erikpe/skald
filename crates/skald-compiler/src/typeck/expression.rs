@@ -28,6 +28,13 @@ use super::{
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
+#[derive(Clone, Copy)]
+pub(super) enum ObjectPlaceUse {
+    Member,
+    Alias,
+    InitializationDestination,
+}
+
 impl CallableChecker<'_, '_> {
     pub(super) fn check_expression(
         &mut self,
@@ -197,24 +204,15 @@ impl CallableChecker<'_, '_> {
                 })
             }
             ResolvedExpression::FieldAccess(access) => {
-                let place = self.check_field_place(&access.receiver, access.field, access.span)?;
-                if self.receiver.is_some_and(|receiver| receiver.initializer)
-                    && place.receiver.root() == BindingId::Receiver(self.callable)
-                    && !self
-                        .initialized_fields
-                        .contains(&place.receiver.path.direct_field().unwrap_or(place.field))
+                let place = self.check_field_place(
+                    &access.receiver,
+                    access.field,
+                    access.span,
+                    ObjectPlaceUse::Member,
+                )?;
+                if place.receiver.path.is_root()
+                    && !self.check_initializer_field_liveness(place.field, access.member_span)
                 {
-                    let field = self
-                        .program
-                        .field(place.field)
-                        .expect("selected field must exist");
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            FIELD_INITIALIZATION,
-                            format!("field `{}` is read before initialization", field.name),
-                        )
-                        .with_primary_label(access.member_span, "field is not initialized yet"),
-                    );
                     return None;
                 }
                 let field = self
@@ -261,13 +259,16 @@ impl CallableChecker<'_, '_> {
         &mut self,
         call: &crate::resolve::ResolvedMethodCallExpr,
     ) -> Option<HirExpression> {
-        let receiver = self.check_object_place(&call.receiver, true)?;
+        let receiver = self.check_object_place(&call.receiver, ObjectPlaceUse::Member)?;
         let method = self
             .program
             .method(call.method)
             .expect("resolved method call must reference a method");
         let mut valid = true;
-        if self.receiver.is_some_and(|context| context.initializer) {
+        if self.receiver.is_some_and(|context| context.initializer)
+            && receiver.root() == BindingId::Receiver(self.callable)
+            && receiver.path.is_root()
+        {
             self.diagnostics.push(
                 Diagnostic::error(
                     INVALID_INITIALIZER_BODY,
@@ -430,9 +431,10 @@ impl CallableChecker<'_, '_> {
         place: &ResolvedObjectPlace,
         field: FieldId,
         span: Span,
+        place_use: ObjectPlaceUse,
     ) -> Option<HirFieldPlace> {
         Some(HirFieldPlace {
-            receiver: self.check_object_place(place, true)?,
+            receiver: self.check_object_place(place, place_use)?,
             field,
             span,
         })
@@ -441,8 +443,10 @@ impl CallableChecker<'_, '_> {
     fn check_object_place(
         &mut self,
         place: &ResolvedObjectPlace,
-        allow_initializing_self: bool,
+        place_use: ObjectPlaceUse,
     ) -> Option<HirObjectPlace> {
+        let allow_initializing_self =
+            !matches!(place_use, ObjectPlaceUse::Alias) || !place.projections.is_empty();
         let mut checked =
             self.check_binding_place(place.root, place.span, allow_initializing_self)?;
         let mut class = checked.class();
@@ -465,6 +469,13 @@ impl CallableChecker<'_, '_> {
             class, place.class,
             "resolved object-place terminal class must match its projections"
         );
+        if !matches!(place_use, ObjectPlaceUse::InitializationDestination) {
+            if let Some(field) = place.direct_field() {
+                if !self.check_initializer_field_liveness(field, place.span) {
+                    return None;
+                }
+            }
+        }
         checked.path = place.clone();
         Some(checked)
     }
@@ -501,7 +512,7 @@ impl CallableChecker<'_, '_> {
                     .receiver
                     .clone()
                     .project(access.field, class, access.span);
-                self.check_object_place(&place, false)
+                self.check_object_place(&place, ObjectPlaceUse::Alias)
             }
             _ => {
                 self.diagnostics.push(
@@ -573,6 +584,27 @@ impl CallableChecker<'_, '_> {
             path: ObjectPath::root(binding, class, span),
             access,
         })
+    }
+
+    fn check_initializer_field_liveness(&mut self, field: FieldId, span: Span) -> bool {
+        let Some(receiver) = self.receiver.filter(|receiver| receiver.initializer) else {
+            return true;
+        };
+        if field.class() != receiver.class || self.initialized_fields.contains(&field) {
+            return true;
+        }
+        let declaration = self
+            .program
+            .field(field)
+            .expect("selected initializer field must exist");
+        self.diagnostics.push(
+            Diagnostic::error(
+                FIELD_INITIALIZATION,
+                format!("field `{}` is used before initialization", declaration.name),
+            )
+            .with_primary_label(span, "this field is not initialized yet"),
+        );
+        false
     }
 
     fn parameter(&self, id: crate::identity::ParameterId) -> &ResolvedParameter {

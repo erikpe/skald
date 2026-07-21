@@ -472,6 +472,7 @@ pub enum HirStatement {
     Conditional(HirConditional),
     Block(HirBlock),
     FieldAssignment(HirFieldAssignment),
+    FieldConstruction(HirFieldConstruction),
 }
 
 impl HirStatement {
@@ -483,6 +484,7 @@ impl HirStatement {
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
+            Self::FieldConstruction(statement) => statement.span,
         }
     }
 }
@@ -524,6 +526,13 @@ pub struct HirCallStatement {
 pub struct HirFieldAssignment {
     pub place: HirFieldPlace,
     pub value: HirExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirFieldConstruction {
+    pub place: HirFieldPlace,
+    pub construction: HirConstruction,
     pub span: Span,
 }
 

@@ -326,7 +326,7 @@ impl Parser<'_> {
                 EXPECTED_STATEMENT,
                 "invalid field-assignment receiver",
                 place.receiver.span(),
-                "expected a local name, `self`, or grouping around one",
+                "expected an object-place path rooted at a local name or `self`",
             );
             return None;
         }
@@ -344,6 +344,11 @@ fn is_receiver_place(expression: &Expression) -> bool {
     match expression {
         Expression::Identifier(_) | Expression::SelfValue(_) => true,
         Expression::Grouped(grouped) => is_receiver_place(&grouped.expression),
-        _ => false,
+        Expression::MemberAccess(member) => is_receiver_place(&member.receiver),
+        Expression::NumericLiteral(_)
+        | Expression::Boolean(_)
+        | Expression::Unary(_)
+        | Expression::Binary(_)
+        | Expression::Call(_) => false,
     }
 }

@@ -324,6 +324,16 @@ impl<'hir> BodyLowerer<'hir> {
                         span: assignment.span,
                     }));
                 }
+                HirStatement::FieldConstruction(statement) => {
+                    let destination = self.lower_field_place(&statement.place);
+                    let arguments = self.lower_call_arguments(&statement.construction.arguments);
+                    self.emit(MirInstruction::Initialize(MirInitialize {
+                        destination,
+                        target: statement.construction.initializer,
+                        arguments,
+                        span: statement.span,
+                    }));
+                }
             }
         }
     }

@@ -228,18 +228,23 @@ member namespace. Each class, including an empty class, must declare exactly
 one explicit `init`; initializer overloading and synthesized initializers are
 not available.
 
-Initializer bodies are straight-line sequences of:
+Initializer bodies are straight-line sequences of direct field
+initializations. Primitive and class fields use these respective forms:
 
 ```ska
 self.field = primitive_expression;
+self.child = Child(arguments);
 ```
 
 Every field must be assigned exactly once. A field cannot be read before its
 own assignment. Right-hand expressions may use primitive literals,
 initializer parameters, already initialized fields, primitive operations, and
-supported top-level function calls. Initializers cannot contain locals,
-blocks, conditionals, call statements, returns, construction, or instance
-method calls.
+supported top-level function calls. A class field requires an ungrouped
+constructor of its exact class and becomes available only after its
+constructor arguments check successfully. Initializers cannot contain locals,
+blocks, conditionals, call statements, returns, or general object-valued
+expressions. The staged inline-field profile below defines the restricted
+receiver and alias uses available after a class field is initialized.
 
 Construction is legal only as the complete initializer of a new exact-type
 local:
@@ -258,12 +263,12 @@ call mutable methods; read-only methods may only read fields and call
 read-only methods. A local inline object permits either receiver mode. Dispatch
 is static and direct.
 
-The current executable native-code object profile has only primitive fields
-and primitive by-value parameters and results. The compiler accepts
-class-typed field declarations, resolves them to nominal class identities,
-rejects recursive inline containment, and records nested semantic place paths.
-Construction and executable use of those fields remain staged behind the
-roadmap below. It does not include object values in
+The current object profile has primitive by-value parameters and results. The
+compiler accepts class-typed field declarations, resolves them to nominal
+class identities, rejects recursive inline containment, records nested
+semantic place paths, and type-checks direct construction into class fields
+with precise initializer liveness. Complete projected access and native
+coverage remain staged behind the roadmap below. It does not include object values in
 arguments/results, copying, `assign`, `destroy`, inheritance,
 interfaces, virtual calls, casts, `shared`, access
 modifiers, static members, `final`, or object FFI.
@@ -295,12 +300,13 @@ conversion, and whole-object replacement through an alias are not implemented.
 ## Frozen staged extension: class-typed inline fields
 
 This section freezes the complete parser-facing extension for the current
-object-model sequence. IOF1–IOF2 of the
+object-model sequence. IOF1–IOF3 of the
 [Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
 implement field declarations, nominal type resolution, HIR metadata, and
 target-independent containment-cycle rejection, plus resolved/HIR projection
-paths for nested receivers and alias endpoints. Construction and complete
-executable behavior below remain staged for later roadmap tasks.
+paths for nested receivers and alias endpoints, direct class-field
+construction, and initializer liveness. Complete projected access and native
+coverage below remain staged for later roadmap tasks.
 
 The extension changes the class field type and projected assignment-place
 productions:
