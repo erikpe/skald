@@ -167,7 +167,7 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
 }
 
 #[test]
-fn named_types_remain_excluded_from_fields_parameters_and_results() {
+fn named_types_are_accepted_for_fields_but_not_value_parameters_or_results() {
     let (_, output) = parse_text(concat!(
         "class Invalid {\n",
         "    child: Other;\n",
@@ -180,11 +180,40 @@ fn named_types_remain_excluded_from_fields_parameters_and_results() {
 
     assert!(output.has_errors());
     assert_eq!(output.ast.declarations.len(), 2);
-    assert!(class(&output.ast, 0)
+    let invalid = class(&output.ast, 0);
+    let child = invalid
+        .members
+        .iter()
+        .find_map(|member| match member {
+            ClassMember::Field(field) if field.name.text == "child" => Some(field),
+            _ => None,
+        })
+        .expect("named field type should remain in the AST");
+    assert!(matches!(
+        &child.type_syntax.kind,
+        TypeKind::Named(name) if name.text == "Other"
+    ));
+    assert!(invalid
         .members
         .iter()
         .any(|member| matches!(member, ClassMember::Field(field) if field.name.text == "valid")));
     assert_eq!(function(&output.ast, 1).name.text, "main");
+}
+
+#[test]
+fn unit_remains_invalid_as_a_field_type() {
+    let (_, output) = parse_text(concat!(
+        "class Invalid { empty: unit; init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, EXPECTED_TOKEN);
+    assert!(diagnostic.message.contains("expected a field type"));
+    assert!(diagnostic.labels[0]
+        .message
+        .contains("or a named class type"));
 }
 
 #[test]

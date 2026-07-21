@@ -18,7 +18,10 @@ use crate::{
     source::Span,
 };
 
-use super::function::{CallableChecker, MemberCheckContext, ReceiverContext};
+use super::{
+    containment::validate_containment,
+    function::{CallableChecker, MemberCheckContext, ReceiverContext},
+};
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -63,6 +66,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
+    validate_containment(program, &mut diagnostics);
     let classes = lower_class_declarations(program, &mut diagnostics);
     let declarations = program.declarations.iter().map(lower_declaration).collect();
     let definitions = program
@@ -121,16 +125,13 @@ fn lower_class_declaration(
         .iter()
         .map(|field| {
             let ty = lower_type(&field.type_syntax);
-            if !is_payload_primitive(ty) {
+            if ty == Type::Unit {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
-                        format!("field `{}` must have a primitive type", field.name),
+                        format!("field `{}` cannot have type `unit`", field.name),
                     )
-                    .with_primary_label(
-                        field.type_syntax.span,
-                        "object and `unit` fields are unavailable",
-                    ),
+                    .with_primary_label(field.type_syntax.span, "fields require storage"),
                 );
                 valid = false;
             }
@@ -490,5 +491,31 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
         ResolvedTypeKind::Class(class) => Type::Class(class),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{identity::ClassId, test_support::resolve_source};
+
+    #[test]
+    fn lowers_named_fields_to_canonical_class_types() {
+        let resolved = resolve_source(concat!(
+            "class Outer { child: Inner; init() {} }\n",
+            "class Inner { init() {} }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ));
+        assert!(resolved.diagnostics.is_empty());
+
+        let mut diagnostics = Diagnostics::new();
+        let outer = lower_class_declaration(
+            resolved.program.classes.get(ClassId::new(0)).unwrap(),
+            &mut diagnostics,
+        )
+        .expect("class-typed fields should lower to HIR declarations");
+
+        assert!(diagnostics.is_empty());
+        assert_eq!(outer.fields[0].ty, Type::Class(ClassId::new(1)));
     }
 }

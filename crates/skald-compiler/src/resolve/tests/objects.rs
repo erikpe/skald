@@ -151,6 +151,51 @@ fn identical_member_names_are_independent_between_owners() {
 }
 
 #[test]
+fn resolves_named_field_types_through_the_top_level_class_table() {
+    let output = resolve_text(concat!(
+        "class Outer { child: Inner; init() {} }\n",
+        "class Inner { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let outer = class(&output, 0);
+    let inner = class(&output, 1);
+    assert_eq!(
+        outer.fields[0].type_syntax.kind,
+        ResolvedTypeKind::Class(inner.id)
+    );
+    assert!(dump_resolved(&output.program).contains(concat!(
+        "Field c0:field0 \"child\"",
+        " @14..27\n",
+        "          Type Class c1 @21..26"
+    )));
+}
+
+#[test]
+fn diagnoses_unknown_and_non_class_named_field_types() {
+    let unknown = resolve_text(concat!(
+        "class Holder { value: Missing; init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert_eq!(unknown.diagnostics.len(), 1);
+    assert_eq!(
+        unknown.diagnostics.iter().next().unwrap().code,
+        UNKNOWN_TYPE
+    );
+
+    let function = resolve_text(concat!(
+        "fn NotAClass() -> i64 { return 0; }\n",
+        "class Holder { value: NotAClass; init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert_eq!(function.diagnostics.len(), 1);
+    let diagnostic = function.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, UNKNOWN_TYPE);
+    assert!(diagnostic.message.contains("does not name a class"));
+}
+
+#[test]
 fn diagnoses_unknown_types_members_and_wrong_owner_selection() {
     let unknown_type = resolve_text("fn main() -> i64 { var missing: Missing = 0; return 0; }");
     assert_eq!(unknown_type.diagnostics.len(), 1);

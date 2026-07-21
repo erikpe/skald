@@ -910,12 +910,13 @@ The profile has these declaration and name rules:
 - class identity is nominal, and a class declared later in the same source file
   may be selected after top-level declaration collection.
 
-Every field has one of the implemented primitive types `i64`, `u64`, `u8`,
-`f64`, or `bool`. Object fields, base classes, interfaces, static members,
+Every executable field has one of the implemented primitive types `i64`,
+`u64`, `u8`, `f64`, or `bool`. Class-typed field declarations, nominal
+resolution, HIR declaration metadata, and containment-cycle validation are
+implemented as the first stage of Section 5.4.4; construction and use of those
+fields are not yet executable. Base classes, interfaces, static members,
 `final`, access modifiers, virtual/override declarations, `assign`, and
-`destroy` are rejected in this profile. Empty classes are valid. The
-class-typed field extension is frozen separately in Section 5.4.4 but is not
-part of this implemented profile.
+`destroy` remain rejected. Empty classes are valid.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
 implicit mutable `self`, takes only by-value primitive parameters, and returns
@@ -1128,12 +1129,13 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; implementation is planned by the
-[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
-The current compiler continues to accept only the implemented profiles in
-Sections 5.4.2 and 5.4.3 until that roadmap is complete. The parser-facing
-extension is recorded separately from the implemented grammar in
-[`grammar/README.md`](../grammar/README.md#frozen-next-slice-extension-class-typed-inline-fields).
+**Implementation status:** contract frozen; IOF1 of the
+[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) is
+implemented. The compiler accepts and resolves class-typed field declarations,
+records canonical HIR field types, and rejects recursive containment before
+target selection. Direct field construction and nested place use remain
+planned. The parser-facing extension is recorded in
+[`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with
 class-typed fields, direct construction into those fields, recursively

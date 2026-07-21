@@ -8,6 +8,7 @@ pub(super) enum TypeContext {
     PrimitiveValue,
     AliasParameter,
     LocalValue,
+    Field,
 }
 
 impl TypeContext {
@@ -16,7 +17,7 @@ impl TypeContext {
     }
 
     const fn accepts_named(self) -> bool {
-        matches!(self, Self::AliasParameter | Self::LocalValue)
+        matches!(self, Self::AliasParameter | Self::LocalValue | Self::Field)
     }
 
     const fn accepts_primitive(self) -> bool {
@@ -26,15 +27,17 @@ impl TypeContext {
     fn expected_label(self) -> String {
         match self {
             Self::Result => format!("expected {}", format_type_list(RESULT_TYPE_NAMES)),
-            Self::PrimitiveValue => {
-                format!(
-                    "parameters and fields must have type {}",
-                    format_type_list(STORED_TYPE_NAMES)
-                )
-            }
+            Self::PrimitiveValue => format!(
+                "value parameters must have type {}",
+                format_type_list(STORED_TYPE_NAMES)
+            ),
             Self::AliasParameter => "alias parameters must name an inline class type".to_owned(),
             Self::LocalValue => format!(
                 "locals must have type {} or a named class type",
+                format_type_list(STORED_TYPE_NAMES)
+            ),
+            Self::Field => format!(
+                "fields must have type {} or a named class type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         }

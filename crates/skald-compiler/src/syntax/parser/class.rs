@@ -114,9 +114,9 @@ impl Parser<'_> {
         let name = self.parse_name("expected a field name")?;
         self.expect(TokenKind::Colon, "`:` after the field name");
         let type_syntax = self.parse_type(
-            TypeContext::PrimitiveValue,
+            TypeContext::Field,
             format!(
-                "expected a primitive field type {}",
+                "expected a field type {} or a class name",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         )?;

@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0 is complete and IOF1–IOF6 are planned.
+Status: in progress; IOF0–IOF1 are complete and IOF2–IOF6 are planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -261,7 +261,7 @@ address.
 ## 4. Progress Summary
 
 - [x] IOF0 — Freeze the class-typed-field contract
-- [ ] IOF1 — Resolve field types and reject containment cycles
+- [x] IOF1 — Resolve field types and reject containment cycles
 - [ ] IOF2 — Generalize semantic object places to projection paths
 - [ ] IOF3 — Construct class fields and track initializer liveness
 - [ ] IOF4 — Type-check nested access, receivers, and alias arguments
@@ -306,23 +306,23 @@ excluded-feature behavior.
 **Purpose:** Make class metadata semantically complete and reject impossible
 inline layouts before executable bodies or targets consume it.
 
-- [ ] Allow a field declaration to carry a named type while retaining the
+- [x] Allow a field declaration to carry a named type while retaining the
       focused `unit` and unsupported-type diagnostics.
-- [ ] Resolve a named field type through the collected top-level class table,
+- [x] Resolve a named field type through the collected top-level class table,
       assigning a stable `ClassId` and diagnosing unknown names or functions
       used as types.
-- [ ] Replace primitive-only field lowering with canonical `Type::Class`
+- [x] Replace primitive-only field lowering with canonical `Type::Class`
       metadata in HIR while preserving source spans and declaration order.
-- [ ] Add a target-independent containment validator over resolved class and
+- [x] Add a target-independent containment validator over resolved class and
       field identities.
-- [ ] Reject direct and indirect cycles with a stable path that names the
+- [x] Reject direct and indirect cycles with a stable path that names the
       participating classes and fields; avoid duplicate diagnostics caused by
       traversal start order.
-- [ ] Accept acyclic diamonds, repeated field types, forward dependencies, and
+- [x] Accept acyclic diamonds, repeated field types, forward dependencies, and
       nested empty classes.
-- [ ] Keep the backend's recursive-layout check as a structured defense for
+- [x] Keep the backend's recursive-layout check as a structured defense for
       malformed hand-built MIR.
-- [ ] Put the graph traversal and its tests in a cohesive module, exposing only
+- [x] Put the graph traversal and its tests in a cohesive module, exposing only
       a narrow validation entry point through the type-checker facade.
 
 **Tests:** Parser AST tests; resolved and HIR metadata/dump tests; unknown and

@@ -38,8 +38,11 @@ The current Linux x86-64 compiler supports:
   calls;
 - `if` / `elif` / `else` with exact boolean conditions;
 - restricted exact-symbol `extern fn` declarations over primitive values;
-- inline classes with primitive fields, one explicit initializer, direct local
-  construction, field reads/writes, and statically dispatched receiver methods;
+- inline classes with primitive executable fields, one explicit initializer,
+  direct local construction, field reads/writes, and statically dispatched
+  receiver methods;
+- class-typed field declarations with nominal resolution and source-level
+  rejection of recursive inline containment;
 - read-only `fn` and mutable `mut fn` receiver access;
 - restricted call-scoped `ref` and `mut ref` class parameters over inline
   locals, method receivers, and forwarded aliases;
@@ -48,7 +51,8 @@ The current Linux x86-64 compiler supports:
   small C runtime with primitive output functions.
 
 Owning inline objects are deliberately local-only today. By-value object
-parameters, results and arguments, copying, destruction, object fields,
+parameters, results and arguments, copying, destruction, construction or use
+of class-typed object fields,
 inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
 exceptions are not implemented yet.
 
@@ -106,7 +110,8 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. class-typed inline object fields and recursive layout validation;
+1. construction and recursive place projection through class-typed inline
+   object fields;
 2. deterministic `destroy` and cleanup-aware control flow;
 3. copy construction/assignment and object value parameters/results;
 4. inheritance, interfaces, virtual dispatch, and casts;

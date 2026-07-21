@@ -213,7 +213,9 @@ class-member = field-declaration
              | initializer-declaration
              | method-declaration
 
-field-declaration = identifier ":" primitive-type ";"
+field-declaration = identifier ":" field-type ";"
+field-type        = primitive-type | class-name
+class-name        = identifier
 
 initializer-declaration = "init" parameter-list block
 
@@ -256,9 +258,12 @@ call mutable methods; read-only methods may only read fields and call
 read-only methods. A local inline object permits either receiver mode. Dispatch
 is static and direct.
 
-The current native-code object profile has only primitive fields and primitive
-by-value parameters and results. It does not include object fields, object
-values in arguments/results, copying, `assign`, `destroy`, inheritance,
+The current executable native-code object profile has only primitive fields
+and primitive by-value parameters and results. The compiler accepts
+class-typed field declarations, resolves them to nominal class identities, and
+rejects recursive inline containment, but construction and use of those fields
+remain staged behind the roadmap below. It does not include object values in
+arguments/results, copying, `assign`, `destroy`, inheritance,
 interfaces, virtual calls, casts, `shared`, access
 modifiers, static members, `final`, or object FFI.
 
@@ -286,13 +291,14 @@ Ordinary by-value parameters remain primitive-only. Local aliases, primitive
 aliases, shared sources, borrow anchors, object fields/elements, polymorphic
 conversion, and whole-object replacement through an alias are not implemented.
 
-## Frozen next-slice extension: class-typed inline fields
+## Frozen staged extension: class-typed inline fields
 
-This section freezes the parser-facing extension for the next object-model
-slice. **It is not part of the grammar accepted by the current compiler.** The
-implemented grammar above remains authoritative until the
+This section freezes the complete parser-facing extension for the current
+object-model sequence. IOF1 of the
 [Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
-is complete.
+implements field declarations, nominal type resolution, HIR metadata, and
+target-independent containment-cycle rejection. The projected-place and
+construction behavior below remains staged for later roadmap tasks.
 
 The extension changes the class field type and projected assignment-place
 productions:
@@ -383,7 +389,8 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
-- class-typed inline object fields and nested object places;
+- construction and use of class-typed inline object fields and nested object
+  places;
 - object value parameters/results and general temporaries;
 - deterministic destruction and cleanup;
 - inheritance, interfaces, virtual dispatch, and access control;

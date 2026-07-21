@@ -215,6 +215,11 @@ impl<'ast> ProgramResolver<'ast> {
         for (member_index, member) in class.members.iter().enumerate() {
             match member {
                 syntax::ClassMember::Field(field) => {
+                    let Some(type_syntax) =
+                        resolve_type(&field.type_syntax, &self.top_levels, &mut self.diagnostics)
+                    else {
+                        continue;
+                    };
                     if !declare_ordinary_member(
                         &mut symbols,
                         &field.name,
@@ -228,7 +233,7 @@ impl<'ast> ProgramResolver<'ast> {
                         id: field_id,
                         name: field.name.text.clone(),
                         name_span: field.name.span,
-                        type_syntax: resolve_scalar_type(&field.type_syntax),
+                        type_syntax,
                         span: field.span,
                     });
                 }

@@ -52,12 +52,13 @@ Every substantial feature should:
 ## Object-model sequence
 
 The implemented object core includes direct local inline objects with
-primitive fields and restricted call-scoped alias parameters. The remaining
-progression is:
+primitive executable fields, restricted call-scoped alias parameters, and
+class-typed field declarations with source-level containment validation. The
+remaining progression is:
 
-1. **Class-typed inline object fields.** Extend place projection and layout
-   dependency handling before introducing cleanup. Recursive by-value
-   containment must be rejected. The focused implementation plan is the
+1. **Complete class-typed inline object fields.** Extend construction, place
+   projection, and executable layout dependency handling before introducing
+   cleanup. The focused implementation plan is the
    [Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md).
 2. **Destruction.** Add `destroy`, initialized-place state, reverse-order scope
    cleanup, and cleanup-aware control-flow edges.

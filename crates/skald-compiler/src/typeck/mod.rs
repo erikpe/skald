@@ -1,10 +1,12 @@
 //! Type checking and construction of typed HIR.
 
+mod containment;
 mod expression;
 mod function;
 mod literal;
 mod program;
 
+pub use containment::RECURSIVE_INLINE_CONTAINMENT;
 pub use program::{
     type_check, TypeCheckOutput, F64_LITERAL_OUT_OF_RANGE, FIELD_INITIALIZATION,
     INSUFFICIENT_ALIAS_ACCESS, INTEGER_LITERAL_OUT_OF_RANGE, INVALID_ALIAS_ARGUMENT,

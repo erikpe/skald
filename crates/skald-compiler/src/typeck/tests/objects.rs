@@ -116,8 +116,9 @@ fn requires_one_explicit_initializer_even_for_empty_classes() {
 }
 
 #[test]
-fn rejects_object_bearing_member_signatures_at_the_type_boundary() {
+fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
     let mut resolved = resolve_text(concat!(
+        "class Other { init() {} }\n",
         "class Value {\n",
         "  field: i64;\n",
         "  init(value: i64) { self.field = value; }\n",
@@ -125,8 +126,8 @@ fn rejects_object_bearing_member_signatures_at_the_type_boundary() {
         "}\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    let class = &mut resolved.classes.entries_mut_for_test()[0];
-    class.fields[0].type_syntax.kind = crate::resolve::ResolvedTypeKind::Class(class.id);
+    let class = &mut resolved.classes.entries_mut_for_test()[1];
+    class.fields[0].type_syntax.kind = crate::resolve::ResolvedTypeKind::Class(ClassId::new(0));
     class.initializer.as_mut().unwrap().parameters[0]
         .type_syntax
         .kind = crate::resolve::ResolvedTypeKind::Class(class.id);
@@ -141,8 +142,12 @@ fn rejects_object_bearing_member_signatures_at_the_type_boundary() {
             .iter()
             .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION)
             .count(),
-        3
+        2
     );
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code != RECURSIVE_INLINE_CONTAINMENT));
 }
 
 #[test]
