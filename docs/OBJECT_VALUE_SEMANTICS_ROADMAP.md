@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS5 are complete and OVS6 is next.
+Status: in progress; OVS0–OVS6 are complete and OVS7 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -179,15 +179,15 @@ exact deterministic lifecycle order and no backend-owned semantic selection.
 **Purpose:** Establish caller-to-callee ownership without coupling language IR
 to System V aggregate classification.
 
-- [ ] Accept exact-class value parameters and object-place arguments only when
+- [x] Accept exact-class value parameters and object-place arguments only when
       the selected copy constructor is available.
-- [ ] Make caller-side evaluation and callee destination ownership explicit.
-- [ ] Specify cleanup responsibility on every supported normal exit.
-- [ ] Add a target-independent calling convention contract for owned object
+- [x] Make caller-side evaluation and callee destination ownership explicit.
+- [x] Specify cleanup responsibility on every supported normal exit.
+- [x] Add a target-independent calling convention contract for owned object
       parameters, then map it to x86-64 storage/address passing.
-- [ ] Cover mixed scalar/object/alias signatures, overlap, recursion, stack
+- [x] Cover mixed scalar/object/alias signatures, overlap, recursion, stack
       pressure, and deterministic diagnostics.
-- [ ] Keep object-bearing `extern fn` signatures excluded.
+- [x] Keep object-bearing `extern fn` signatures excluded.
 
 **Acceptance criteria:** a value parameter owns an independent copy with one
 cleanup, while aliases retain their existing non-owning semantics.

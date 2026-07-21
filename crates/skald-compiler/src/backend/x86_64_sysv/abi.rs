@@ -52,9 +52,11 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             Some(ScalarClass::Integer)
         }
         MirParameterMode::Value => match parameter.ty {
-            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool => Some(ScalarClass::Integer),
+            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool | MirType::Class(_) => {
+                Some(ScalarClass::Integer)
+            }
             MirType::F64 => Some(ScalarClass::Sse),
-            MirType::Class(_) | MirType::Unit => None,
+            MirType::Unit => None,
         },
     }
 }

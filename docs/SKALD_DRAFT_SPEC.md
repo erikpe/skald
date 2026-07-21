@@ -1028,7 +1028,7 @@ The parameter grammar added by this profile is:
 
 ```text
 parameter       = value-parameter | alias-parameter
-value-parameter = identifier ":" primitive-type
+value-parameter = identifier ":" (primitive-type | class-name)
 alias-parameter = ["mut"] "ref" identifier ":" class-name
 ```
 
@@ -1040,12 +1040,12 @@ static, element, or capture position are invalid.
 
 Alias parameters are accepted on internally defined top-level functions,
 instance methods, and initializers. An external declaration cannot contain an
-alias parameter. Ordinary by-value parameters retain the implemented
-primitive-only restriction; a class name without `ref` is not an object value
-parameter. This profile accepts only an exact concrete class as the designated
-type. Primitive, `unit`, optional, array, `shared`, interface, and function
-types, along with inheritance and implicit conversions, remain outside the
-profile.
+alias parameter. OVS6 extends ordinary internal by-value parameters with exact
+concrete class names; the resulting parameter owns a copy and is not an alias.
+External value parameters remain primitive-only. This alias profile accepts
+only an exact concrete class as the designated type. Primitive, `unit`,
+optional, array, `shared`, interface, and function alias types, along with
+inheritance and implicit conversions, remain outside the profile.
 
 An argument for an alias parameter must be an existing, already-live inline
 class place of the exact designated class. The supported place sources are:
@@ -1132,9 +1132,10 @@ The target-independent compiler contract for this profile is:
   and the exclusion of aliases from external declarations and scalar value
   operations before a backend is invoked.
 
-Local alias declarations, primitive alias parameters, object value parameters
-and results, shared sources and borrow anchors, polymorphism, whole-object
-replacement, and alias-bearing function values remain deferred.
+Local alias declarations, primitive alias parameters, object results, shared
+sources and borrow anchors, polymorphism, whole-object replacement, and alias-
+bearing function values remain deferred. Exact-class internal value parameters
+are implemented by the staged object-value profile in Section 5.4.6.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
@@ -1593,10 +1594,14 @@ capabilities, ordered synthesized field composition, and bounded
 full-expression temporary cleanup without class-valued MIR values. OVS5 lowers
 user lifecycle calls and recursively synthesized field operations through
 checked x86-64 place addressing, with explicit temporary frame storage and no
-implicit byte-copy path. Class value
-parameters/results, constructor or result temporaries in copy contexts,
-alias-rooted replacement, external object signatures, and other
-object-producing expressions remain rejected until their later slices.
+implicit byte-copy path. OVS6 implements internal exact-class value parameters
+from existing object-place arguments. HIR selects their copy construction;
+MIR makes caller destination ownership, transfer, callee cleanup, and ordering
+explicit; and x86-64 passes an address without exposing that target choice to
+semantic IR. Class results, constructor- or result-produced value arguments,
+general object temporaries, alias-rooted replacement, external object
+signatures, and other object-producing expressions remain rejected until
+their later slices.
 
 This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,
 normal control flow, and the already implemented alias and destruction model.
@@ -1760,6 +1765,10 @@ temporary rules below: it is materialized first, the parameter is copy-
 constructed from it, and it remains live through the call. Construction of
 that parameter completes before the next argument is evaluated. The callee
 body begins only after every argument and owned parameter has completed.
+
+The implemented OVS6 boundary accepts only the existing-place branch above.
+Constructor- and result-produced arguments remain reserved for the temporary
+and result slices.
 
 On every supported normal callee exit, the return result is established first,
 then body temporaries and locals are cleaned according to their scopes, and
@@ -3014,8 +3023,8 @@ Resolved decisions in this draft:
   hidden first integer-class arguments, while MIR retains semantic places and
   field identities rather than target offsets;
 - the frozen class-typed inline-field profile permits exact concrete class
-  field types while retaining primitive-only value parameters/results and
-  place-only object semantics;
+  field types; by itself that slice retained primitive-only value parameters
+  and results plus place-only object semantics;
 - inline class containment must be acyclic, is rejected semantically before
   target selection, and is laid out recursively in declaration order with
   checked target arithmetic;

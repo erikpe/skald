@@ -10,6 +10,7 @@ mod aliases;
 mod copy;
 mod object_fixtures;
 mod objects;
+mod value_parameters;
 
 fn lower_text(text: &str) -> MirProgram {
     lower_source_to_mir(text)

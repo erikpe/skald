@@ -80,18 +80,23 @@ impl CallableChecker<'_, '_> {
                 false
             }
             BindingId::Receiver(_) => true,
-            BindingId::Parameter(_) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_OBJECT_CONTEXT,
-                        "object assignment through a parameter is not supported",
-                    )
-                    .with_primary_label(
-                        destination.span(),
-                        "alias-rooted replacement is outside the object-value profile",
-                    ),
-                );
-                false
+            BindingId::Parameter(id) => {
+                let parameter = self.parameter(id);
+                if parameter.binding_mode == crate::resolve::ResolvedParameterBindingMode::Value {
+                    true
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "an alias-rooted object cannot be replaced",
+                        )
+                        .with_primary_label(
+                            destination.span(),
+                            "assign an owning local, value parameter, or mutable `self` field",
+                        ),
+                    );
+                    false
+                }
             }
         };
 

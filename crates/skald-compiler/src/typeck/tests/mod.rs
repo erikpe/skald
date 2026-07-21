@@ -69,6 +69,12 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
                 crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
             ));
         }
+        crate::hir::HirCallArgument::Copy(copy) => {
+            assert!(matches!(
+                copy.source.access,
+                crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
+            ));
+        }
     }
 }
 
@@ -83,3 +89,4 @@ mod expressions;
 mod inline_fields;
 mod literals;
 mod objects;
+mod value_parameters;

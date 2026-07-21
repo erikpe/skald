@@ -135,7 +135,7 @@ fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
     assert!(error.message().contains("input MIR failed verification"));
     assert!(error
         .message()
-        .contains("value parameter 0 must have scalar value type"));
+        .contains("external function cannot declare alias or object value parameters"));
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn external_alias_signature_is_a_structured_verification_error() {
     assert!(error.message().contains("input MIR failed verification"));
     assert!(error
         .message()
-        .contains("external function cannot declare alias parameters"));
+        .contains("external function cannot declare alias or object value parameters"));
 }
 
 #[test]

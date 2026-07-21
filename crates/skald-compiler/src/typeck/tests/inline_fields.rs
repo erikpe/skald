@@ -182,6 +182,6 @@ fn accepts_nested_copy_sources_but_rejects_scalar_and_alias_replacement_contexts
         .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
     assert!(output.diagnostics.iter().any(|diagnostic| {
         diagnostic.code == INVALID_OBJECT_CONTEXT
-            && diagnostic.message.contains("through a parameter")
+            && diagnostic.message.contains("alias-rooted object")
     }));
 }

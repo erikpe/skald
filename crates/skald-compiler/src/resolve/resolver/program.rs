@@ -737,15 +737,9 @@ fn resolve_parameters(
             continue;
         }
         names.insert(parameter.name.text.clone(), parameter.name.span);
-        let type_syntax = match parameter.binding_mode {
-            syntax::ParameterBindingMode::Value => resolve_scalar_type(&parameter.type_syntax),
-            syntax::ParameterBindingMode::ReadOnlyAlias { .. }
-            | syntax::ParameterBindingMode::MutableAlias { .. } => {
-                let Some(ty) = resolve_type(&parameter.type_syntax, top_levels, diagnostics) else {
-                    continue;
-                };
-                ty
-            }
+        let Some(type_syntax) = resolve_type(&parameter.type_syntax, top_levels, diagnostics)
+        else {
+            continue;
         };
         resolved.push(ResolvedParameter {
             id: ParameterId::new(callable, resolved.len()),
@@ -782,7 +776,7 @@ fn resolve_scalar_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
         syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
         syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
         syntax::TypeKind::Named(_) => {
-            unreachable!("named types are admitted only for locals in the OBJ profile")
+            unreachable!("this declaration context admits only scalar syntax")
         }
     };
     ResolvedType {

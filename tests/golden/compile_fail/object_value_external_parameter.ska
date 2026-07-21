@@ -1,0 +1,9 @@
+class Value {
+    init() {}
+}
+
+extern fn consume(value: Value) -> unit;
+
+fn main() -> i64 {
+    return 0;
+}

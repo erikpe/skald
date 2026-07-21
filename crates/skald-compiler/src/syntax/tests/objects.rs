@@ -332,7 +332,7 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
 }
 
 #[test]
-fn named_types_are_accepted_for_fields_but_not_value_parameters_or_results() {
+fn named_types_are_accepted_for_fields_and_value_parameters_but_not_results() {
     let (_, output) = parse_text(concat!(
         "class Invalid {\n",
         "    child: Other;\n",
@@ -356,6 +356,18 @@ fn named_types_are_accepted_for_fields_but_not_value_parameters_or_results() {
         .expect("named field type should remain in the AST");
     assert!(matches!(
         &child.type_syntax.kind,
+        TypeKind::Named(name) if name.text == "Other"
+    ));
+    let initializer = invalid
+        .members
+        .iter()
+        .find_map(|member| match member {
+            ClassMember::Initializer(initializer) => Some(initializer),
+            _ => None,
+        })
+        .expect("initializer should remain in the AST");
+    assert!(matches!(
+        &initializer.parameters[0].type_syntax.kind,
         TypeKind::Named(name) if name.text == "Other"
     ));
     assert!(invalid

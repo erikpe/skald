@@ -760,6 +760,8 @@ pub enum MirStorageKind {
     Parameter,
     AliasParameter(MirAliasAccess),
     Local,
+    /// Caller-owned storage transferred to one callee value parameter.
+    Argument,
     Temporary,
 }
 
@@ -772,8 +774,8 @@ pub enum MirAliasAccess {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStorage {
     pub id: StorageId,
-    /// Source binding for language-owned storage; compiler-owned temporaries
-    /// deliberately have no source binding.
+    /// Source binding for language-owned storage; compiler-owned argument and
+    /// temporary storage deliberately have no source binding.
     pub source: Option<BindingId>,
     pub name: String,
     pub kind: MirStorageKind,
@@ -951,6 +953,9 @@ pub struct MirCall {
 pub enum MirArgument {
     Value(ValueId),
     Place(MirPlace),
+    /// A complete live caller destination transferred to the corresponding
+    /// class value parameter for the duration of the call.
+    OwnedPlace(MirPlace),
 }
 
 impl From<ValueId> for MirArgument {

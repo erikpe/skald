@@ -190,6 +190,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly) => "ref-parameter",
             MirStorageKind::AliasParameter(MirAliasAccess::Mutable) => "mut-ref-parameter",
             MirStorageKind::Local => "local",
+            MirStorageKind::Argument => "argument",
             MirStorageKind::Temporary => "temporary",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
@@ -197,7 +198,11 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             Some(source) => {
                 let _ = write!(output, "{source} ");
             }
-            None => output.push_str("<temporary> "),
+            None => match storage.kind {
+                MirStorageKind::Argument => output.push_str("<argument> "),
+                MirStorageKind::Temporary => output.push_str("<temporary> "),
+                _ => unreachable!("verified language storage has a source binding"),
+            },
         }
         write_quoted(output, &storage.name);
         let _ = write!(output, " : {}", storage.ty);
@@ -418,6 +423,11 @@ fn dump_argument(output: &mut String, argument: &MirArgument) {
         }
         MirArgument::Place(place) => {
             output.push_str("place(");
+            dump_place(output, place);
+            output.push(')');
+        }
+        MirArgument::OwnedPlace(place) => {
+            output.push_str("owned(");
             dump_place(output, place);
             output.push(')');
         }

@@ -280,8 +280,24 @@ impl<'hir> BodyLowerer<'hir> {
             input,
         };
         lowerer.allocate_storage();
+        lowerer.cleanup.enter_scope();
+        for (parameter, storage) in lowerer
+            .input
+            .parameters
+            .iter()
+            .zip(&lowerer.parameter_storage)
+        {
+            if let (HirParameterMode::Value, Type::Class(class)) = (parameter.mode, parameter.ty) {
+                lowerer.cleanup.register_owned(*storage, class);
+            }
+        }
         lowerer.lower_block(lowerer.input.source_body);
         if !lowerer.body.is_current_terminated() && lowerer.input.return_type == Type::Unit {
+            lowerer.emit_cleanups(
+                lowerer
+                    .cleanup
+                    .for_current_scope(lowerer.input.source_body.span),
+            );
             lowerer.terminate(MirTerminator::Return {
                 value: None,
                 span: lowerer.input.source_body.span,
@@ -291,6 +307,7 @@ impl<'hir> BodyLowerer<'hir> {
             lowerer.body.is_current_terminated(),
             "type-checked callable must lower to a terminated entry block"
         );
+        lowerer.cleanup.leave_scope();
         LoweredBody {
             receiver: lowerer.receiver_storage,
             parameters: lowerer.parameter_storage,
@@ -375,10 +392,8 @@ impl<'hir> BodyLowerer<'hir> {
                                 arguments,
                                 span: construction.span,
                             }));
-                            self.cleanup.register_initialized_local(
-                                storage,
-                                construction.initializer.class(),
-                            );
+                            self.cleanup
+                                .register_owned(storage, construction.initializer.class());
                         }
                         crate::hir::HirLocalInitializer::Copy(copy) => {
                             self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
@@ -389,7 +404,7 @@ impl<'hir> BodyLowerer<'hir> {
                                 span: copy.span,
                             }));
                             self.cleanup
-                                .register_initialized_local(storage, copy.destination.class());
+                                .register_owned(storage, copy.destination.class());
                         }
                     }
                 }
@@ -691,8 +706,32 @@ impl<'hir> BodyLowerer<'hir> {
                         .expect("typed value argument must produce a scalar value"),
                 ),
                 HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
+                HirCallArgument::Copy(copy) => {
+                    let destination = self.new_argument_storage(copy.source.class(), copy.span);
+                    self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                        destination: MirPlace::base(destination),
+                        source: self.lower_object_place(&copy.source),
+                        class: copy.source.class(),
+                        operation: lower_selected_copy_operation(copy.operation),
+                        span: copy.span,
+                    }));
+                    MirArgument::OwnedPlace(MirPlace::base(destination))
+                }
             })
             .collect()
+    }
+
+    fn new_argument_storage(&mut self, class: ClassId, span: crate::source::Span) -> StorageId {
+        let id = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id,
+            source: None,
+            name: format!("argument{}", id.index()),
+            kind: MirStorageKind::Argument,
+            ty: MirType::Class(class),
+            span,
+        });
+        id
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
@@ -702,8 +741,8 @@ impl<'hir> BodyLowerer<'hir> {
             MirStorageKind::Receiver | MirStorageKind::Parameter | MirStorageKind::Local => {
                 MirPlace::base(storage)
             }
-            MirStorageKind::Temporary => {
-                unreachable!("HIR object paths cannot be rooted at MIR temporaries")
+            MirStorageKind::Argument | MirStorageKind::Temporary => {
+                unreachable!("HIR object paths cannot use compiler-owned storage")
             }
         };
         place

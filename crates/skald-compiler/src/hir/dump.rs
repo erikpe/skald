@@ -480,6 +480,13 @@ impl HirDumper {
                 self.line("PlaceArgument", place.span());
                 self.indented(|dumper| dumper.object_place(place));
             }
+            HirCallArgument::Copy(copy) => {
+                self.line("CopyArgument", copy.span);
+                self.indented(|dumper| {
+                    dumper.object_place(&copy.source);
+                    dumper.selected_copy_operation(copy.operation);
+                });
+            }
         }
     }
 

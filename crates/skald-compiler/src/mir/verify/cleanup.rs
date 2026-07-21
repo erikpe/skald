@@ -16,6 +16,8 @@ struct ObjectState {
     live: HashSet<MirPlace>,
     cleaned: HashSet<MirPlace>,
     outstanding_local_cleanup: HashSet<MirPlace>,
+    outstanding_parameter_cleanup: HashSet<MirPlace>,
+    live_arguments: HashSet<MirPlace>,
     live_temporaries: Vec<MirPlace>,
 }
 
@@ -57,11 +59,16 @@ impl Analyzer<'_> {
                 continue;
             }
             let place = match storage.kind {
-                MirStorageKind::Parameter => MirPlace::base(storage.id),
-                MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
-                MirStorageKind::Receiver | MirStorageKind::Local | MirStorageKind::Temporary => {
-                    continue
+                MirStorageKind::Parameter => {
+                    let place = MirPlace::base(storage.id);
+                    initial.outstanding_parameter_cleanup.insert(place.clone());
+                    place
                 }
+                MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
+                MirStorageKind::Receiver
+                | MirStorageKind::Local
+                | MirStorageKind::Argument
+                | MirStorageKind::Temporary => continue,
             };
             initial.live.insert(place);
         }
@@ -123,6 +130,18 @@ impl Analyzer<'_> {
                 message: "owning local remains live on normal return",
             });
         }
+        if !state.outstanding_parameter_cleanup.is_empty() {
+            self.errors.push(CleanupLivenessError {
+                block: block.id,
+                message: "owning value parameter remains live on normal return",
+            });
+        }
+        if !state.live_arguments.is_empty() {
+            self.errors.push(CleanupLivenessError {
+                block: block.id,
+                message: "caller argument storage remains live without ownership transfer",
+            });
+        }
         if !state.live_temporaries.is_empty() {
             self.errors.push(CleanupLivenessError {
                 block: block.id,
@@ -155,6 +174,16 @@ impl Analyzer<'_> {
                         .union(&state.outstanding_local_cleanup)
                         .cloned()
                         .collect(),
+                    outstanding_parameter_cleanup: existing
+                        .outstanding_parameter_cleanup
+                        .union(&state.outstanding_parameter_cleanup)
+                        .cloned()
+                        .collect(),
+                    live_arguments: existing
+                        .live_arguments
+                        .union(&state.live_arguments)
+                        .cloned()
+                        .collect(),
                     live_temporaries: if existing.live_temporaries == state.live_temporaries {
                         existing.live_temporaries.clone()
                     } else {
@@ -185,6 +214,7 @@ impl Analyzer<'_> {
                         initialize.target.class(),
                     ) =>
                 {
+                    self.consume_owned_arguments(block, state, &initialize.arguments);
                     self.initialize_place(block, state, &initialize.destination);
                 }
                 MirInstruction::CopyConstruct(copy)
@@ -214,6 +244,9 @@ impl Analyzer<'_> {
                         });
                     }
                 }
+                MirInstruction::Call(call) => {
+                    self.consume_owned_arguments(block, state, &call.arguments);
+                }
                 MirInstruction::Cleanup(cleanup)
                     if self.is_owning_class_place(&cleanup.destination, cleanup.target) =>
                 {
@@ -242,6 +275,9 @@ impl Analyzer<'_> {
                             .retain(|place| !place_is_ancestor(&cleanup.destination, place));
                         state
                             .outstanding_local_cleanup
+                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
+                        state
+                            .outstanding_parameter_cleanup
                             .retain(|place| !place_is_ancestor(&cleanup.destination, place));
                     }
                 }
@@ -295,12 +331,36 @@ impl Analyzer<'_> {
         if self.is_owning_local_root(destination) {
             state.outstanding_local_cleanup.insert(destination.clone());
         }
+        if self.is_argument_root(destination) {
+            state.live_arguments.insert(destination.clone());
+        }
         if self.is_temporary_root(destination) {
             state.live_temporaries.push(destination.clone());
         }
         state
             .cleaned
             .retain(|place| !places_overlap(place, destination));
+    }
+
+    fn consume_owned_arguments(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &mut ObjectState,
+        arguments: &[MirArgument],
+    ) {
+        for argument in arguments {
+            let MirArgument::OwnedPlace(place) = argument else {
+                continue;
+            };
+            if !state.live_arguments.remove(place) || !self.place_is_live(state, place) {
+                self.errors.push(CleanupLivenessError {
+                    block: block.id,
+                    message: "owned call argument is not a live caller argument",
+                });
+            } else {
+                state.live.retain(|live| !place_is_ancestor(place, live));
+            }
+        }
     }
 
     fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
@@ -349,6 +409,15 @@ impl Analyzer<'_> {
                 .function
                 .storage(place.base.storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
+    }
+
+    fn is_argument_root(&self, place: &MirPlace) -> bool {
+        place.projections.is_empty()
+            && matches!(place.base, MirPlaceBase::Storage(_))
+            && self
+                .function
+                .storage(place.base.storage())
+                .is_some_and(|storage| storage.kind == MirStorageKind::Argument)
     }
 }
 

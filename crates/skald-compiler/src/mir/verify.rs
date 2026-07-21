@@ -158,14 +158,13 @@ impl Verifier<'_> {
                 );
             }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
-                if declaration
-                    .parameters
-                    .iter()
-                    .any(|parameter| parameter.mode != MirParameterMode::Value)
-                {
+                if declaration.parameters.iter().any(|parameter| {
+                    parameter.mode != MirParameterMode::Value
+                        || matches!(parameter.ty, MirType::Class(_))
+                }) {
                     self.function_error(
                         declaration.id,
-                        "external function cannot declare alias parameters",
+                        "external function cannot declare alias or object value parameters",
                     );
                 }
                 if symbol != &declaration.name || !is_source_identifier(symbol) {
@@ -554,8 +553,8 @@ impl Verifier<'_> {
     fn verify_parameters_declaration(&mut self, owner: &str, parameters: &[MirParameter]) {
         for (index, parameter) in parameters.iter().enumerate() {
             match parameter.mode {
-                MirParameterMode::Value if !parameter.ty.is_scalar_value() => self.program_error(
-                    format!("{owner} value parameter {index} must have scalar value type"),
+                MirParameterMode::Value if parameter.ty == MirType::Unit => self.program_error(
+                    format!("{owner} value parameter {index} cannot have type `unit`"),
                 ),
                 MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
                     if !matches!(parameter.ty, MirType::Class(_)) =>
@@ -687,6 +686,7 @@ impl Verifier<'_> {
                         Some(BindingId::Parameter(_))
                     )
                     | (MirStorageKind::Local, Some(BindingId::Local(_)))
+                    | (MirStorageKind::Argument, None)
                     | (MirStorageKind::Temporary, None)
             );
             if !source_matches_kind {
@@ -705,6 +705,16 @@ impl Verifier<'_> {
                         "storage {} cannot have payload-free type `unit`",
                         storage.id
                     ),
+                );
+            }
+            if matches!(
+                storage.kind,
+                MirStorageKind::Argument | MirStorageKind::Temporary
+            ) && !matches!(storage.ty, MirType::Class(_))
+            {
+                self.function_error(
+                    function.callable(),
+                    format!("compiler-owned storage {} must have class type", storage.id),
                 );
             }
             if let MirType::Class(class) = storage.ty {
@@ -920,12 +930,17 @@ impl Verifier<'_> {
                     }
                     if function
                         .storage(cleanup.destination.base.storage())
-                        .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
+                        .is_some_and(|storage| {
+                            matches!(
+                                storage.kind,
+                                MirStorageKind::Argument | MirStorageKind::Temporary
+                            )
+                        })
                     {
                         self.block_error(
                             function.callable(),
                             block.id,
-                            "temporary storage must be cleaned at a full-expression boundary",
+                            "caller argument and temporary storage require their dedicated lifetime boundary",
                         );
                     }
                     if self.program.class(cleanup.target).is_none() {
@@ -1487,13 +1502,14 @@ impl Verifier<'_> {
                 ),
             );
         }
+        let mut owned_arguments = HashSet::new();
         for (index, argument) in arguments.iter().enumerate() {
             let Some(parameter) = parameters.get(index) else {
                 match argument {
                     MirArgument::Value(value) => {
                         self.verify_value_use(function, block, *value, defined);
                     }
-                    MirArgument::Place(place) => {
+                    MirArgument::Place(place) | MirArgument::OwnedPlace(place) => {
                         self.verify_place(function, block, place);
                     }
                 }
@@ -1507,6 +1523,39 @@ impl Verifier<'_> {
                             function.callable(),
                             block.id,
                             format!("{kind} argument {index} type mismatch"),
+                        );
+                    }
+                }
+                (MirArgument::OwnedPlace(place), MirParameterMode::Value)
+                    if matches!(parameter.ty, MirType::Class(_)) =>
+                {
+                    let argument = self.verify_place(function, block, place);
+                    let complete_argument_storage = matches!(place.base, MirPlaceBase::Storage(_))
+                        && place.projections.is_empty()
+                        && function
+                            .storage(place.base.storage())
+                            .is_some_and(|storage| storage.kind == MirStorageKind::Argument);
+                    if !complete_argument_storage {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!(
+                                "{kind} argument {index} must transfer complete caller argument storage"
+                            ),
+                        );
+                    }
+                    if argument.is_some_and(|argument| argument.ty != parameter.ty) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} argument {index} type mismatch"),
+                        );
+                    }
+                    if !owned_arguments.insert(place.clone()) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} argument {index} transfers storage more than once"),
                         );
                     }
                 }
@@ -1544,7 +1593,15 @@ impl Verifier<'_> {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        format!("{kind} argument {index} must be a value"),
+                        format!("{kind} argument {index} must be a scalar value or owned place"),
+                    );
+                }
+                (MirArgument::OwnedPlace(place), _) => {
+                    self.verify_place(function, block, place);
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} argument {index} cannot transfer ownership"),
                     );
                 }
             }

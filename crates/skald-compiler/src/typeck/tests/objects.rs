@@ -479,7 +479,7 @@ fn diagnoses_object_assignment_outside_the_frozen_destination_and_source_boundar
             .iter()
             .filter(|diagnostic| {
                 diagnostic.code == INVALID_OBJECT_CONTEXT
-                    && diagnostic.message.contains("through a parameter")
+                    && diagnostic.message.contains("alias-rooted object")
             })
             .count(),
         2
@@ -537,7 +537,7 @@ fn rejects_invalid_copy_body_liveness_access_and_returns() {
 }
 
 #[test]
-fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
+fn accepts_object_parameters_but_rejects_object_results_at_the_type_boundary() {
     let mut resolved = resolve_text(concat!(
         "class Other { init() {} }\n",
         "class Value {\n",
@@ -563,7 +563,7 @@ fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
             .iter()
             .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION)
             .count(),
-        2
+        1
     );
     assert!(output
         .diagnostics

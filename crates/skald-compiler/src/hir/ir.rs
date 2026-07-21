@@ -771,6 +771,14 @@ pub enum HirExpressionKind {
 pub enum HirCallArgument {
     Value(HirExpression),
     Place(HirObjectPlace),
+    Copy(HirCopyArgument),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCopyArgument {
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub span: Span,
 }
 
 impl HirCallArgument {
@@ -778,6 +786,7 @@ impl HirCallArgument {
         match self {
             Self::Value(expression) => expression.span,
             Self::Place(place) => place.span(),
+            Self::Copy(copy) => copy.span,
         }
     }
 }

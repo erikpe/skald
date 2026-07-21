@@ -21,7 +21,7 @@ fn disabled_numeric_literal_recovery_keeps_the_following_statement() {
 #[test]
 fn malformed_function_does_not_hide_the_next_declaration() {
     let (_, output) = parse_text(concat!(
-        "fn broken(value: Missing) -> i64 { return value; }\n",
+        "fn broken(value: unit) -> i64 { return value; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 

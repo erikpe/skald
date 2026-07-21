@@ -46,4 +46,5 @@ mod instruction_selection;
 mod legality;
 mod native_execution;
 mod objects;
+mod value_parameters;
 use objects::println_i64_stub;

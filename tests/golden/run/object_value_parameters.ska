@@ -1,0 +1,55 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Value {
+    field: i64;
+
+    init(field: i64) {
+        self.field = field;
+    }
+
+    init(ref other: Value) {
+        self.field = other.field + 100;
+    }
+
+    assign(ref other: Value) {
+        self.field = other.field + 200;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.field);
+    }
+}
+
+fn crowded(
+    first: i64,
+    second: i64,
+    third: i64,
+    fourth: i64,
+    fifth: i64,
+    sixth: i64,
+    value: Value,
+    ref alias: Value,
+    tail: i64
+) -> i64 {
+    value = alias;
+    return first + second + third + fourth + fifth + sixth
+        + value.field + alias.field + tail;
+}
+
+fn recurse(value: Value, again: bool) -> i64 {
+    if (again) {
+        return recurse(value, false);
+    }
+    return value.field;
+}
+
+fn cleanup_pair(first: Value, second: Value) -> unit {}
+
+fn main() -> i64 {
+    var source: Value = Value(10);
+    var other: Value = Value(20);
+    ska_rt_println_i64(crowded(1, 2, 3, 4, 5, 6, source, source, 7));
+    cleanup_pair(source, other);
+    ska_rt_println_i64(recurse(source, true));
+    return 0;
+}

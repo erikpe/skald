@@ -1,26 +1,8 @@
-error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`
- --> tests/golden/compile_fail/object_declaration_exclusions.ska:8:17
-   |
-8 |     init(value: Inner) {}
-   |                 ^^^^^ value parameters must have type `i64`, `u64`, `u8`, `f64`, or `bool`
-
-error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`
- --> tests/golden/compile_fail/object_declaration_exclusions.ska:10:20
-    |
-10 |     fn copy(value: Inner) -> Inner {
-    |                    ^^^^^ value parameters must have type `i64`, `u64`, `u8`, `f64`, or `bool`
-
 error[PAR002]: expected a method return type after `->`
  --> tests/golden/compile_fail/object_declaration_exclusions.ska:10:30
     |
 10 |     fn copy(value: Inner) -> Inner {
     |                              ^^^^^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
-
-error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`
- --> tests/golden/compile_fail/object_declaration_exclusions.ska:15:16
-    |
-15 | fn take(value: Inner) -> i64 {
-    |                ^^^^^ value parameters must have type `i64`, `u64`, `u8`, `f64`, or `bool`
 
 error[PAR002]: expected a return type after `->`
  --> tests/golden/compile_fail/object_declaration_exclusions.ska:19:14

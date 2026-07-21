@@ -251,18 +251,9 @@ impl CallableChecker<'_, '_> {
             BindingId::Local(_) => HirAccess::Mutable,
             BindingId::Parameter(id) => {
                 let parameter = self.parameter(id);
-                let Some(access) = lower_parameter_mode(parameter.binding_mode).required_access()
-                else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_OBJECT_CONTEXT,
-                            "an object value parameter cannot be used as an alias place",
-                        )
-                        .with_primary_label(span, "use an explicit alias parameter"),
-                    );
-                    return None;
-                };
-                access
+                lower_parameter_mode(parameter.binding_mode)
+                    .required_access()
+                    .unwrap_or(HirAccess::Mutable)
             }
         };
         Some(HirObjectPlace {
@@ -295,7 +286,7 @@ impl CallableChecker<'_, '_> {
         false
     }
 
-    fn parameter(&self, id: ParameterId) -> &ResolvedParameter {
+    pub(in crate::typeck) fn parameter(&self, id: ParameterId) -> &ResolvedParameter {
         self.parameters
             .get(id.index())
             .filter(|parameter| parameter.id == id)

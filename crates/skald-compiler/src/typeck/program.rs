@@ -397,18 +397,18 @@ fn validate_parameters(
     for parameter in parameters {
         let ty = lower_type(&parameter.type_syntax);
         match parameter.binding_mode {
-            ResolvedParameterBindingMode::Value if !is_payload_primitive(ty) => {
+            ResolvedParameterBindingMode::Value if ty == Type::Unit => {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
                         format!(
-                            "{owner} parameter `{}` must have a primitive type",
+                            "{owner} parameter `{}` requires a stored value type",
                             parameter.name
                         ),
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "object and `unit` value parameters are unavailable",
+                        "`unit` value parameters are unavailable",
                     ),
                 );
                 valid = false;

@@ -263,15 +263,17 @@ call mutable methods; read-only methods may only read fields and call
 read-only methods. A local inline object permits either receiver mode. Dispatch
 is static and direct.
 
-The current object profile has primitive by-value parameters and results. The
+The original restricted object profile has primitive by-value parameters and
+results. OVS6 additionally accepts exact-class value parameters on internal
+callables and existing exact-class object places as their arguments. The
 compiler accepts class-typed field declarations, resolves them to nominal
 class identities, rejects recursive inline containment, records nested
 semantic place paths, and type-checks direct construction into class fields
 with precise initializer liveness. Nested primitive access, method receivers,
 and exact-class alias arguments are type-checked through those paths. Native
 lowering executes those operations through recursively laid-out inline
-storage. It does not include object values in arguments/results, copying,
-`assign`, inheritance,
+storage. It does not include object results, produced-object arguments,
+inheritance,
 interfaces, virtual calls, casts, `shared`, access modifiers, static members,
 `final`, or object FFI.
 
@@ -295,9 +297,9 @@ System V backend passes one integer-class pointer per alias without copying
 object bytes. The complete declaration, place, access, lifetime, IR, and ABI
 contract is in the
 [restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
-Ordinary by-value parameters remain primitive-only. Local aliases, primitive
-aliases, shared sources, borrow anchors, array elements, polymorphic conversion,
-and whole-object replacement through an alias are not implemented.
+Internal by-value parameters may also own exact-class copies. Local aliases,
+primitive aliases, shared sources, borrow anchors, array elements, polymorphic
+conversion, and whole-object replacement through an alias are not implemented.
 
 ## Frozen staged extension: class-typed inline fields
 
@@ -324,9 +326,11 @@ receiver-place   = place-root ("." identifier)*
 place-root       = identifier | "self" | "(" receiver-place ")"
 ```
 
-It does not admit named types for by-value parameters, results, external
-functions, primitive locals, or any other type position. A named local type
-continues to use the existing direct-construction-only object-local rules.
+By itself, IOF did not admit named types for by-value parameters, results,
+external functions, primitive locals, or any other type position. OVS6 now
+admits named exact-class value parameters for internal callables only. A named
+local type continues to use the existing object-local construction and copy
+rules.
 `unit` remains invalid as a field type. The projected receiver production
 selects an assignment-shaped statement from syntax already expressible by the
 postfix parser; it does not create general assignment expressions. No new
@@ -437,10 +441,11 @@ therefore executable within the restricted profile above.
 
 ## Frozen staged extension: object value semantics
 
-OVS0 freezes the parser-facing boundary for the next object-model roadmap, but
-does not enable these forms yet. Until their named slices are implemented, the
-current parser and type checker continue to reject them with the existing
-unsupported-object diagnostics.
+OVS0 froze the parser-facing boundary for this object-model roadmap. OVS1–OVS5
+implemented lifecycle declarations and local copy behavior; OVS6 implements
+internal exact-class value parameters from existing object-place arguments.
+Results, produced-object arguments, and general temporaries remain rejected
+until their named slices are implemented.
 
 The planned lifecycle shapes are:
 
@@ -509,7 +514,7 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
-- object value parameters/results and general temporaries;
+- object results, produced-object arguments, and general temporaries;
 - inheritance, interfaces, virtual dispatch, and access control;
 - local alias declarations and alias sources beyond inline locals, method
   `self`, and forwarded parameters;

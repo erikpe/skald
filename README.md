@@ -53,14 +53,17 @@ The current Linux x86-64 compiler supports:
   recursive class fields in reverse declaration order;
 - exact-class copy constructors and copy assignments, with user-defined or
   recursively synthesized field behavior for local and projected destinations;
+- internal exact-class value parameters whose caller-constructed copies are
+  owned and cleaned once by the callee;
 - deterministic left-to-right operand and argument evaluation;
 - textual x86-64 System V assembly, native linking, exact diagnostics, and a
   small C runtime with primitive output functions.
 
-Owning inline objects are deliberately local-only today. By-value object
-parameters, results and arguments, general object-producing temporaries,
-inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
-exceptions are not implemented yet.
+Owning inline objects may cross an internal call boundary as exact-class value
+arguments copied from existing object places. Object results, produced-object
+arguments, general object-producing temporaries, inheritance, interfaces,
+`shared`, arrays, optionals, loops, and checked exceptions are not implemented
+yet. Object-bearing external signatures remain unsupported.
 
 Restricted alias parameters compile through syntax, typed HIR, verified MIR,
 and the internal x86-64 pointer ABI without copying object bytes. Native and
@@ -116,7 +119,7 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. object value parameters/results, return storage, and permitted elision;
+1. object results, return storage, bounded temporaries, and permitted elision;
 2. inheritance, interfaces, virtual dispatch, and casts;
 3. `shared` ownership and borrow anchors;
 4. loops/iterators, arrays, optionals, and checked exceptions;

@@ -89,9 +89,8 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
         symbol: declaration.name.clone(),
     };
     external.definitions.remove_for_test(ids.observe);
-    assert!(messages(&external)
-        .iter()
-        .any(|message| message.contains("external function cannot declare alias parameters")));
+    assert!(messages(&external).iter().any(|message| message
+        .contains("external function cannot declare alias or object value parameters")));
 }
 
 #[test]

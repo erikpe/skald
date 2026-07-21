@@ -172,7 +172,7 @@ impl CallableChecker<'_, '_> {
         CheckedStatement::falls_through(valid.then_some(hir))
     }
 
-    pub(super) fn report_unavailable_copy_operation(
+    pub(in crate::typeck) fn report_unavailable_copy_operation(
         &mut self,
         class: crate::identity::ClassId,
         construction: bool,

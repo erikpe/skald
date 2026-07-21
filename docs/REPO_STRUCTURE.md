@@ -301,15 +301,16 @@ only `ClassId` and `MirPlace`. The verifier enforces body-before-fields and
 reverse-field order, validates cleanup through the shared place walker, and
 tracks definite object liveness across control-flow edges to reject non-owning,
 read-only, dead, overlapping, foreign, wrong-class, and scalar targets. A
-separate cleanup planner registers successfully initialized owning locals by
-lexical scope, emits reverse-order cleanup on fallthrough and `return`, and
-keeps return-value evaluation ahead of cleanup. Verification also carries
-outstanding local-cleanup obligations through joins. The backend lowers each
-verified cleanup mechanically: it calls the optional user body through the
-existing hidden-receiver ABI, then recursively follows the plan's semantic
-field steps. Return values remain in their existing scalar frame homes until
-the terminator reloads them after cleanup. No lexical lifetime or field-order
-policy is reconstructed below MIR.
+separate cleanup planner registers successfully initialized owning locals and
+owning class value parameters, emits reverse-order cleanup on fallthrough and
+`return`, and keeps return-value evaluation ahead of cleanup. Body locals are
+cleaned before parameters; parameters are then cleaned in reverse declaration
+order. Verification carries both cleanup obligations through joins. The
+backend lowers each verified cleanup mechanically: it calls the optional user
+body through the existing hidden-receiver ABI, then recursively follows the
+plan's semantic field steps. Return values remain in their existing scalar
+frame homes until the terminator reloads them after cleanup. No lexical
+lifetime or field-order policy is reconstructed below MIR.
 
 The x86-64 data-layout builder resolves class dependencies recursively,
 retains source field order, and rejects cycles or sizes beyond addressable

@@ -4,9 +4,9 @@ use crate::{identity::ClassId, source::Span};
 
 use super::{MirCleanup, MirPlace, StorageId};
 
-/// An owning local whose initializer completed on the current path.
+/// Owning storage whose initialization completed on the current path.
 #[derive(Clone, Copy)]
-struct InitializedLocal {
+struct InitializedStorage {
     storage: StorageId,
     class: ClassId,
 }
@@ -17,7 +17,7 @@ struct InitializedLocal {
 /// CFG edges, and each edge needs the same cleanup sequence. Leaving the source
 /// scope is the only operation that discards its registrations.
 pub(super) struct CleanupPlanner {
-    scopes: Vec<Vec<InitializedLocal>>,
+    scopes: Vec<Vec<InitializedStorage>>,
 }
 
 impl CleanupPlanner {
@@ -29,11 +29,11 @@ impl CleanupPlanner {
         self.scopes.push(Vec::new());
     }
 
-    pub(super) fn register_initialized_local(&mut self, storage: StorageId, class: ClassId) {
+    pub(super) fn register_owned(&mut self, storage: StorageId, class: ClassId) {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
-            .push(InitializedLocal { storage, class });
+            .push(InitializedStorage { storage, class });
     }
 
     pub(super) fn for_current_scope(&self, span: Span) -> Vec<MirCleanup> {
@@ -62,7 +62,7 @@ impl CleanupPlanner {
     }
 }
 
-impl InitializedLocal {
+impl InitializedStorage {
     fn cleanup(self, span: Span) -> MirCleanup {
         MirCleanup {
             destination: MirPlace::base(self.storage),
@@ -92,10 +92,10 @@ mod tests {
         let mut planner = CleanupPlanner::new();
 
         planner.enter_scope();
-        planner.register_initialized_local(outer, ClassId::new(0));
+        planner.register_owned(outer, ClassId::new(0));
         planner.enter_scope();
-        planner.register_initialized_local(first_inner, ClassId::new(1));
-        planner.register_initialized_local(second_inner, ClassId::new(2));
+        planner.register_owned(first_inner, ClassId::new(1));
+        planner.register_owned(second_inner, ClassId::new(2));
 
         let all = planner.for_all_scopes(span);
         assert_eq!(

@@ -5,7 +5,7 @@ use super::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TypeContext {
     Result,
-    PrimitiveValue,
+    ValueParameter,
     AliasParameter,
     LocalValue,
     Field,
@@ -17,7 +17,10 @@ impl TypeContext {
     }
 
     const fn accepts_named(self) -> bool {
-        matches!(self, Self::AliasParameter | Self::LocalValue | Self::Field)
+        matches!(
+            self,
+            Self::ValueParameter | Self::AliasParameter | Self::LocalValue | Self::Field
+        )
     }
 
     const fn accepts_primitive(self) -> bool {
@@ -27,8 +30,8 @@ impl TypeContext {
     fn expected_label(self) -> String {
         match self {
             Self::Result => format!("expected {}", format_type_list(RESULT_TYPE_NAMES)),
-            Self::PrimitiveValue => format!(
-                "value parameters must have type {}",
+            Self::ValueParameter => format!(
+                "value parameters must have type {} or a named class type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
             Self::AliasParameter => "alias parameters must name an inline class type".to_owned(),
@@ -162,7 +165,7 @@ impl Parser<'_> {
         let name = self.parse_name("expected a parameter name");
         self.expect(TokenKind::Colon, "`:` after the parameter name");
         let type_context = if binding_mode == ParameterBindingMode::Value {
-            TypeContext::PrimitiveValue
+            TypeContext::ValueParameter
         } else {
             TypeContext::AliasParameter
         };
@@ -172,7 +175,7 @@ impl Parser<'_> {
                 "expected a class name as the alias parameter type".to_owned()
             } else {
                 format!(
-                    "expected the parameter type {}",
+                    "expected the parameter type {} or a named class type",
                     format_type_list(STORED_TYPE_NAMES)
                 )
             },

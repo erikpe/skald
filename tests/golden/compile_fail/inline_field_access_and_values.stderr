@@ -37,11 +37,11 @@ error[TYP014]: class field `leaf` is not a value
 31 |     scalar(root.leaf);
     |                 ^^^^ use this object place as a receiver or alias argument
 
-error[TYP014]: object assignment through a parameter is not supported
+error[TYP014]: an alias-rooted object cannot be replaced
  --> tests/golden/compile_fail/inline_field_access_and_values.ska:33:5
     |
 33 |     root.leaf = replacement;
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^ alias-rooted replacement is outside the object-value profile
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^ assign an owning local, value parameter, or mutable `self` field
 
 error[TYP018]: cannot assign to a read-only object place
  --> tests/golden/compile_fail/inline_field_access_and_values.ska:33:5

@@ -223,6 +223,22 @@ impl InstructionSelector<'_, '_> {
                     unreachable!("alias descriptors are always integer-class")
                 }
             },
+            (MirArgument::OwnedPlace(place), MirParameterMode::Value)
+                if matches!(parameter.ty, MirType::Class(_)) =>
+            {
+                match location {
+                    ArgumentLocation::IntegerRegister(register) => {
+                        self.materialize_place_address(place, register)?;
+                    }
+                    ArgumentLocation::Stack(displacement) => {
+                        self.materialize_place_address(place, Register::Rax)?;
+                        value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+                    }
+                    ArgumentLocation::SseRegister(_) => {
+                        unreachable!("owned object addresses are integer-class")
+                    }
+                }
+            }
             _ => unreachable!("verified argument kind must match its parameter mode"),
         }
         Ok(())

@@ -3,8 +3,8 @@
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
-        HirAccess, HirBinaryOperation, HirCallArgument, HirExpression, HirExpressionKind,
-        HirUnaryOperation, Type,
+        HirAccess, HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression,
+        HirExpressionKind, HirUnaryOperation, Type,
     },
     identity::BindingId,
     resolve::{
@@ -366,6 +366,19 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirCallArgument> {
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value => {
+                if let Type::Class(class) = lower_type(&parameter.type_syntax) {
+                    let source = self.check_copy_source_place(source, class)?;
+                    let Some(operation) = self.copy_capabilities.constructor(class).selected()
+                    else {
+                        self.report_unavailable_copy_operation(class, true, source.span());
+                        return None;
+                    };
+                    return Some(HirCallArgument::Copy(HirCopyArgument {
+                        span: source.span(),
+                        source,
+                        operation,
+                    }));
+                }
                 let argument = self.check_expression(source)?;
                 require_type(
                     argument.ty,
