@@ -1,0 +1,35 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Resource {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Pair {
+    first: Resource;
+    second: Resource;
+
+    init(first: i64, second: i64) {
+        self.first = Resource(first);
+        self.second = Resource(second);
+    }
+
+    destroy {
+        ska_rt_println_i64(100);
+    }
+}
+
+fn main() -> i64 {
+    var outer: Pair = Pair(1, 2);
+    {
+        var inner: Resource = Resource(3);
+    }
+    return 0;
+}

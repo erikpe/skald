@@ -1,4 +1,4 @@
-//! Cross-process determinism coverage for the complete object/alias pipeline.
+//! Cross-process determinism coverage for the complete object lifetime pipeline.
 
 use std::{
     env, fs,
@@ -19,10 +19,10 @@ use skald_compiler::{
 };
 
 const HELPER_OUTPUT: &str = "SKALD_OBJECT_DETERMINISM_OUTPUT";
-const TEST_NAME: &str = "object_alias_phase_products_are_deterministic_across_processes";
+const TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic_across_processes";
 
 #[test]
-fn object_alias_phase_products_are_deterministic_across_processes() {
+fn object_lifetime_phase_products_are_deterministic_across_processes() {
     if let Some(output) = env::var_os(HELPER_OUTPUT) {
         fs::write(output, complete_phase_dump()).unwrap();
         return;
@@ -57,7 +57,8 @@ fn complete_phase_dump() -> String {
         "class Box { value: i64; init(value: i64) { self.value = value; } ",
         "mut fn set(value: i64) -> unit { self.value = value; } ",
         "fn get() -> i64 { return self.value; } }\n",
-        "class Snapshot { value: i64; init(ref source: Box) { self.value = read(source); } }\n",
+        "class Snapshot { value: i64; init(ref source: Box) { self.value = read(source); } ",
+        "destroy { self.value = self.value + 1; } }\n",
         "fn read(ref value: Box) -> i64 { return value.get(); }\n",
         "fn write(mut ref value: Box, amount: i64) -> unit { value.set(amount); }\n",
         "fn forward(mut ref value: Box) -> unit { write(value, read(value) + 1); }\n",

@@ -16,9 +16,9 @@ direction:
 
 Active implementation plans:
 
-- [Deterministic destruction roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md) —
-  explicit `destroy`, initialized-place state, reverse-order cleanup, and
-  cleanup-aware normal exits.
+- [Object value semantics roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md) — copy
+  construction, assignment, object parameters/results, return storage,
+  temporaries, and permitted elision.
 
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current

@@ -69,8 +69,9 @@ processes for `u64`, `u8`, `f64`, mixed integer/SSE signatures, malformed
 spellings, overflow, and exact-type failures.
 
 The `object_determinism` integration test runs the same representative
-object-and-alias source in two independent test processes and compares its AST,
-resolved, HIR, MIR, and assembly renderings. Native object/alias goldens
+object-lifetime source in two independent test processes and compares its AST,
+resolved, HIR, MIR, and assembly renderings. The source includes aliases,
+contained fields, a user destruction body, and automatic cleanup. Native object goldens
 independently compare public `skac` assembly and exact failure diagnostics
 across processes.
 
@@ -96,3 +97,11 @@ MIR verification runs:
 3. again at the backend trust boundary before target legality and instruction selection.
 
 The repetition is intentional. The first check identifies lowering defects near their source, the pass-pipeline check protects future transformations, and the backend check prevents invalid library-created MIR from being miscompiled.
+
+For destruction bugs, start with `mir::dump_mir`. Each class lists its
+body-before-fields destruction plan, and every owning normal exit lists cleanup
+instructions in execution order. A missing operation there is a lifetime-
+planning defect; a correct MIR order with incorrect native output instead
+points to projected-place addressing, hidden-receiver calls, or return-value
+preservation in the backend. The `deterministic_destruction` native goldens
+provide compact expected traces for recursive layout and control flow.

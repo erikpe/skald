@@ -1,0 +1,11 @@
+error[TYP015]: class fields can be constructed only in their owner's initializer
+ --> tests/golden/compile_fail/destructor_excluded_construction.ska:13:9
+    |
+13 |         self.leaf = Leaf();
+    |         ^^^^^^^^^^^^^^^^^^^ expected a direct uninitialized field of this initializer's `self`
+
+error[TYP014]: an object local must be initialized by direct construction
+ --> tests/golden/compile_fail/destructor_excluded_construction.ska:14:26
+    |
+14 |         var copy: Leaf = self.leaf;
+    |                          ^^^^^^^^^ expected an ungrouped `Class(...)` expression

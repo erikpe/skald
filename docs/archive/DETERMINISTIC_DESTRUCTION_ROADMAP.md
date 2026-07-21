@@ -1,6 +1,6 @@
 # Deterministic Destruction Roadmap
 
-Status: in progress; DD0–DD5 are complete and DD6 is next.
+Status: complete; DD0–DD6 are implemented and verified.
 
 This roadmap adds observable deterministic destruction to Skald's existing
 local-only inline-object model. It is deliberately limited to normal control
@@ -273,20 +273,20 @@ deterministic Linux x86-64 code with no backend-owned lifetime inference.
 **Purpose:** Make deterministic destruction a dependable public feature and
 prepare the object-value/copy roadmap.
 
-- [ ] Add native goldens for body/field/local order, nesting, conditionals,
+- [x] Add native goldens for body/field/local order, nesting, conditionals,
       fallthrough, early return, return-value evaluation, aliases, empty
       objects, padding, and classes without user bodies.
-- [ ] Add compile-failure goldens for malformed/duplicate declarations, invalid
+- [x] Add compile-failure goldens for malformed/duplicate declarations, invalid
       returns, excluded calls or construction, and access/type violations.
-- [ ] Assert exact stdout, exit status, empty runtime stderr, deterministic
+- [x] Assert exact stdout, exit status, empty runtime stderr, deterministic
       assembly, and deterministic diagnostics across compiler processes.
-- [ ] Audit source-reachable assertions and backend cleanup assumptions.
-- [ ] Update grammar, specification, architecture, README, debugging, golden
+- [x] Audit source-reachable assertions and backend cleanup assumptions.
+- [x] Update grammar, specification, architecture, README, debugging, golden
       documentation, samples where useful, and future boundaries.
-- [ ] Retain explicit exclusions for copying, values, exceptions, inheritance,
+- [x] Retain explicit exclusions for copying, values, exceptions, inheritance,
       shared ownership, arrays, and early destruction.
-- [ ] Run the complete quality gate and resolve warnings or nondeterminism.
-- [ ] Mark this roadmap complete, archive it, update the archive index, and make
+- [x] Run the complete quality gate and resolve warnings or nondeterminism.
+- [x] Mark this roadmap complete, archive it, update the archive index, and make
       object copy/value semantics the next active object-model roadmap.
 
 **Tests:** Full `make check`, including compiler tests, cross-process
@@ -319,7 +319,7 @@ and introduces none of the deferred ownership mechanisms.
 
 The slice is complete when:
 
-- [ ] all DD0–DD6 tasks and acceptance criteria are complete;
+- [x] all DD0–DD6 tasks and acceptance criteria are complete;
 - [x] destructor declarations have stable identities and typed mutable bodies;
 - [x] complete objects run their body then nested fields in frozen reverse order;
 - [x] owning locals are destroyed once in reverse initialization order;

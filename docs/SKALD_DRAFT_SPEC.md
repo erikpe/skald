@@ -1410,12 +1410,9 @@ liveness boundary frozen here.
 
 #### 5.4.5 Frozen Local Deterministic-Destruction Profile
 
-**Implementation status:** contract frozen by DD0 of the
-[Deterministic Destruction Roadmap](DETERMINISTIC_DESTRUCTION_ROADMAP.md);
-syntax and resolution are implemented by DD1, typed HIR by DD2, and verified
-target-independent cleanup MIR by DD3. DD4 plans lexical and return cleanup
-edges, and DD5 executes verified plans on x86-64. Final hardening and
-publication remain staged for DD6. The parser-facing extension is recorded in
+**Implementation status:** implemented and published by DD0–DD6 of the
+[archived Deterministic Destruction Roadmap](archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md).
+The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#restricted-extension-deterministic-destruction).
 
 This profile narrows the broader destruction rules in Section 5.7 to the
@@ -2643,10 +2640,10 @@ corresponding language area is considered complete:
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
-The local normal-flow destruction contract is frozen in Section 5.4.5 but not
-yet implemented. Temporary, loop, failed-construction, and exceptional cleanup
-remain broader ownership-model gaps that must be settled before their
-associated features are implemented.
+The local normal-flow destruction contract in Section 5.4.5 is implemented.
+Temporary, loop, failed-construction, and exceptional cleanup remain broader
+ownership-model gaps that must be settled before their associated features are
+implemented.
 
 ### 15.3 Open Design Questions
 

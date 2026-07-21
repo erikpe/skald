@@ -1,0 +1,17 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+class Resource {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        ska_rt_println_bool(self.value);
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

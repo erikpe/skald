@@ -1,7 +1,7 @@
 //! Mechanical lowering of verified complete-object destruction plans.
 
 use crate::{
-    backend::BackendError,
+    backend::{BackendError, Target},
     identity::ClassId,
     mir::{MirCleanup, MirDestructionStep, MirPlace, MirType},
 };
@@ -18,21 +18,17 @@ impl InstructionSelector<'_, '_> {
         class: ClassId,
         destination: MirPlace,
     ) -> Result<(), BackendError> {
-        let step_count = self
+        let steps = self
             .program
             .class(class)
-            .expect("verified cleanup target must name a declared class")
+            .ok_or_else(|| {
+                self.cleanup_error(format!("cleanup target names unknown class {class}"))
+            })?
             .destruction
             .steps
-            .len();
+            .clone();
 
-        for index in 0..step_count {
-            let step = self
-                .program
-                .class(class)
-                .expect("verified cleanup target must name a declared class")
-                .destruction
-                .steps[index];
+        for step in steps {
             match step {
                 MirDestructionStep::UserBody(destructor) => {
                     self.select_destructor_call(destructor, &destination)?;
@@ -41,11 +37,19 @@ impl InstructionSelector<'_, '_> {
                     let field_class = match self
                         .program
                         .field(field)
-                        .expect("verified destruction step must name a declared field")
+                        .ok_or_else(|| {
+                            self.cleanup_error(format!(
+                                "destruction plan for {class} names unknown field {field}"
+                            ))
+                        })?
                         .ty
                     {
                         MirType::Class(field_class) => field_class,
-                        _ => unreachable!("verified destruction plan contains only class fields"),
+                        _ => {
+                            return Err(self.cleanup_error(format!(
+                                "destruction plan for {class} contains non-class field {field}"
+                            )))
+                        }
                     };
                     self.select_destruction_plan(
                         field_class,
@@ -55,5 +59,9 @@ impl InstructionSelector<'_, '_> {
             }
         }
         Ok(())
+    }
+
+    fn cleanup_error(&self, message: impl Into<String>) -> BackendError {
+        BackendError::new(Target::X86_64SysV, Some(self.function.callable()), message)
     }
 }

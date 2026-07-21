@@ -1,0 +1,5 @@
+error[PAR006]: destruction members do not have a parameter list
+ --> tests/golden/compile_fail/destructor_malformed.ska:3:12
+   |
+3 |     destroy(value: i64) {}
+   |            ^ remove the parentheses and parameters

@@ -386,6 +386,8 @@ fn malformed_supported_sources_never_panic() {
         "extern fn",
         "extern fn missing(",
         "extern fn missing() -> unit fn main() -> i64 { return 0; }",
+        "class Broken { init() {} destroy(",
+        "class Broken { init() {} destroy -> unit {} } fn main() -> i64 { return 0; }",
     ]);
 
     for (index, source) in malformed.into_iter().enumerate() {
@@ -399,6 +401,34 @@ fn malformed_supported_sources_never_panic() {
         assert!(
             matches!(result.unwrap(), Err(CompilationError::Diagnostics(_))),
             "malformed input did not produce source diagnostics: {source:?}"
+        );
+    }
+}
+
+#[test]
+fn malformed_and_excluded_destructor_sources_fail_before_backend_lowering() {
+    let cases = [
+        "class Resource { init() {} destroy {} destroy {} } fn main() -> i64 { return 0; }",
+        "class Resource { init() {} destroy { return 1; } } fn main() -> i64 { return 0; }",
+        "class Resource { init() {} destroy { self.destroy(); } } fn main() -> i64 { return 0; }",
+        "class Leaf { init() {} } class Owner { leaf: Leaf; init() { self.leaf = Leaf(); } destroy { self.leaf = Leaf(); } } fn main() -> i64 { return 0; }",
+    ];
+
+    for (index, source) in cases.into_iter().enumerate() {
+        let result = std::panic::catch_unwind(|| {
+            compile_source_to_assembly(
+                format!("malformed-destructor-{index}.ska"),
+                source,
+                Target::X86_64SysV,
+            )
+        });
+        assert!(
+            result.is_ok(),
+            "compiler panicked for malformed destructor case {index}"
+        );
+        assert!(
+            matches!(result.unwrap(), Err(CompilationError::Diagnostics(_))),
+            "malformed destructor case {index} crossed the diagnostic boundary"
         );
     }
 }

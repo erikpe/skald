@@ -539,7 +539,7 @@ The slice is complete when:
 - [x] full quality gates pass and living documentation matches the compiler.
 
 The next object-model roadmap is
-[deterministic destruction](../DETERMINISTIC_DESTRUCTION_ROADMAP.md): `destroy`,
+[deterministic destruction](DETERMINISTIC_DESTRUCTION_ROADMAP.md): `destroy`,
 initialized-place state in executable control flow, reverse-order scope cleanup,
 and cleanup-aware exits. Copy/value semantics, polymorphism, shared ownership,
 and checked exceptions remain later dedicated slices.

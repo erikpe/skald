@@ -62,6 +62,16 @@ snapshot malformed modifiers, excluded local and primitive aliases,
 object-value misuse, exact nominal mismatches, read-only mutation, invalid
 mutable forwarding, external aliases, and wrong arity.
 
+The deterministic-destruction corpus observes user-body-before-field cleanup,
+reverse field and local order, nested storage and scopes, conditional
+fallthrough, early return, return-expression evaluation before cleanup,
+non-owning aliases, empty and padded classes, and absent user bodies. Failure
+snapshots cover malformed and duplicate declarations, invalid value returns,
+explicit calls of the special member, reconstruction of live fields, excluded
+object values, and body type mismatches. The runner's existing process
+isolation proves exact assembly and diagnostic determinism; native sidecars
+additionally require exact stdout, status, and empty stderr.
+
 Run it from the repository root with:
 
 ```text

@@ -1,0 +1,5 @@
+error[TYP007]: destructor for class `Resource` cannot return a value
+ --> tests/golden/compile_fail/destructor_invalid_return.ska:4:9
+   |
+4 |         return 1;
+   |         ^^^^^^^^^ use `return;` instead

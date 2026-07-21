@@ -384,9 +384,8 @@ future-lifecycle contract is in the
 
 ## Restricted extension: deterministic destruction
 
-The parser and resolver accept the dedicated class-member form implemented by
-DD1 of the
-[Deterministic Destruction Roadmap](../docs/DETERMINISTIC_DESTRUCTION_ROADMAP.md):
+The parser and resolver accept the dedicated class-member form recorded in the
+[archived Deterministic Destruction Roadmap](../docs/archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md):
 
 ```text
 destructor-declaration = "destroy" block

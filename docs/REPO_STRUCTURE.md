@@ -410,9 +410,12 @@ The repository uses four complementary layers:
 4. golden source programs for native behavior and exact diagnostics.
 
 Golden programs are compiled in independent processes to compare assembly or
-diagnostics byte-for-byte. Native cases separately check stdout, stderr, and
-process status. Inline-object integration additionally compares AST, resolved
-IR, HIR, MIR, and assembly across processes.
+diagnostics byte-for-byte. Native cases separately check stdout, empty stderr,
+and process status. Object-lifetime integration additionally compares AST,
+resolved IR, HIR, MIR, and assembly across processes. Destruction goldens cover
+recursive body/field/local order, both conditional exit shapes, return-value
+evaluation, non-owning aliases, empty and padded objects, and classes without a
+user body.
 
 The root commands are:
 

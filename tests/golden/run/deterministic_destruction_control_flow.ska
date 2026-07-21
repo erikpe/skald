@@ -1,0 +1,51 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Resource {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Wrapper {
+    resource: Resource;
+
+    init(marker: i64) {
+        self.resource = Resource(marker);
+    }
+}
+
+fn observe(ref resource: Resource) -> unit {
+    ska_rt_println_i64(resource.marker);
+}
+
+fn evaluate_return(value: i64) -> i64 {
+    ska_rt_println_i64(value);
+    return value;
+}
+
+fn choose(early: bool, ref observed: Resource) -> i64 {
+    var outer: Resource = Resource(10);
+    if (early) {
+        var branch: Resource = Resource(20);
+        observe(observed);
+        return evaluate_return(30);
+    } else {
+        var branch: Resource = Resource(40);
+    }
+    ska_rt_println_i64(50);
+    return 60;
+}
+
+fn main() -> i64 {
+    var anchor: Resource = Resource(1);
+    var no_user_body: Wrapper = Wrapper(70);
+    ska_rt_println_i64(choose(true, anchor));
+    ska_rt_println_i64(choose(false, anchor));
+    return 0;
+}

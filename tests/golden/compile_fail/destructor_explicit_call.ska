@@ -1,0 +1,10 @@
+class Resource {
+    init() {}
+    destroy {
+        self.destroy();
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}
