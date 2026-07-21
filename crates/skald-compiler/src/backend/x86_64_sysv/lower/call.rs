@@ -24,13 +24,44 @@ pub(super) fn spill_parameters(
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
-    let layout =
-        classify_call(signature.parameters, function.receiver().is_some()).ok_or_else(|| {
-            argument_area_error(
-                function,
-                "incoming argument area exceeds the x86-64 ABI encoding limits",
-            )
-        })?;
+    let layout = classify_call(
+        signature.parameters,
+        function.receiver().is_some(),
+        function.return_storage().is_some(),
+    )
+    .ok_or_else(|| {
+        argument_area_error(
+            function,
+            "incoming argument area exceeds the x86-64 ABI encoding limits",
+        )
+    })?;
+
+    if let Some(return_storage) = function.return_storage() {
+        let incoming = layout
+            .return_destination()
+            .expect("object-returning layout has a return destination")
+            .incoming()
+            .ok_or_else(|| {
+                argument_area_error(
+                    function,
+                    "incoming return destination exceeds x86-64 limits",
+                )
+            })?;
+        let destination = value::frame_storage(frame, return_storage);
+        match incoming {
+            ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
+                source: register.into(),
+                destination,
+            }),
+            ArgumentLocation::Stack(displacement) => {
+                value::load_rax(value::memory(Register::Rbp, displacement), output);
+                value::store_rax(destination, output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("return destination is always integer-class")
+            }
+        }
+    }
 
     if let Some(receiver) = function.receiver() {
         let incoming = layout
@@ -122,7 +153,13 @@ impl InstructionSelector<'_, '_> {
                 ),
             ),
         };
-        self.select_callable(target, receiver, &call.arguments, call.result)
+        self.select_callable(
+            target,
+            call.destination.as_ref(),
+            receiver,
+            &call.arguments,
+            call.result,
+        )
     }
 
     pub(super) fn select_initialize(
@@ -131,6 +168,7 @@ impl InstructionSelector<'_, '_> {
     ) -> Result<(), BackendError> {
         self.select_callable(
             CallableId::Initializer(initialize.target),
+            None,
             Some(&initialize.destination),
             &initialize.arguments,
             None,
@@ -142,12 +180,19 @@ impl InstructionSelector<'_, '_> {
         target: DestructorId,
         receiver: &MirPlace,
     ) -> Result<(), BackendError> {
-        self.select_callable(CallableId::Destructor(target), Some(receiver), &[], None)
+        self.select_callable(
+            CallableId::Destructor(target),
+            None,
+            Some(receiver),
+            &[],
+            None,
+        )
     }
 
     pub(super) fn select_callable(
         &mut self,
         target: CallableId,
+        return_destination: Option<&MirPlace>,
         receiver: Option<&MirPlace>,
         arguments: &[MirArgument],
         result: Option<ValueId>,
@@ -156,7 +201,12 @@ impl InstructionSelector<'_, '_> {
             .program
             .callable_signature(target)
             .expect("verified call target must be declared");
-        let layout = classify_call(signature.parameters, receiver.is_some()).ok_or_else(|| {
+        let layout = classify_call(
+            signature.parameters,
+            receiver.is_some(),
+            return_destination.is_some(),
+        )
+        .ok_or_else(|| {
             argument_area_error(
                 self.function,
                 "outgoing argument area exceeds the x86-64 ABI encoding limits",
@@ -167,12 +217,21 @@ impl InstructionSelector<'_, '_> {
             self.output
                 .push(Instruction::ReserveStack(layout.stack_size()));
         }
+        if let Some(return_destination) = return_destination {
+            let location = layout
+                .return_destination()
+                .expect("object-returning call layout has a return destination");
+            let ArgumentLocation::IntegerRegister(register) = location else {
+                unreachable!("return destination is the first integer-class argument")
+            };
+            self.materialize_place_address(return_destination, register)?;
+        }
         if let Some(receiver) = receiver {
             let location = layout
                 .receiver()
                 .expect("receiver-aware layout has a receiver location");
             let ArgumentLocation::IntegerRegister(register) = location else {
-                unreachable!("receiver is always the first integer-class argument")
+                unreachable!("receiver always has an integer-class register location")
             };
             self.materialize_place_address(receiver, register)?;
         }
@@ -309,12 +368,12 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn classify_call(parameters: &[MirParameter], has_receiver: bool) -> Option<CallLayout> {
-    if has_receiver {
-        CallLayout::classify_with_receiver(parameters)
-    } else {
-        CallLayout::classify(parameters)
-    }
+fn classify_call(
+    parameters: &[MirParameter],
+    has_receiver: bool,
+    has_return_destination: bool,
+) -> Option<CallLayout> {
+    CallLayout::classify_internal_call(parameters, has_receiver, has_return_destination)
 }
 
 fn argument_area_error(function: MirDefinitionRef<'_>, message: &'static str) -> BackendError {

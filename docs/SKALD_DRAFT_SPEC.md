@@ -1132,10 +1132,10 @@ The target-independent compiler contract for this profile is:
   and the exclusion of aliases from external declarations and scalar value
   operations before a backend is invoked.
 
-Local alias declarations, primitive alias parameters, object results, shared
-sources and borrow anchors, polymorphism, whole-object replacement, and alias-
-bearing function values remain deferred. Exact-class internal value parameters
-are implemented by the staged object-value profile in Section 5.4.6.
+Local alias declarations, primitive alias parameters, shared sources and borrow
+anchors, polymorphism, whole-object replacement, and alias-bearing function
+values remain deferred. Exact-class internal value parameters and results are
+implemented by the staged object-value profile in Section 5.4.6.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
@@ -1598,10 +1598,19 @@ implicit byte-copy path. OVS6 implements internal exact-class value parameters
 from existing object-place arguments. HIR selects their copy construction;
 MIR makes caller destination ownership, transfer, callee cleanup, and ordering
 explicit; and x86-64 passes an address without exposing that target choice to
-semantic IR. Class results, constructor- or result-produced value arguments,
-general object temporaries, alias-rooted replacement, external object
-signatures, and other object-producing expressions remain rejected until
-their later slices.
+semantic IR. Constructor- or result-produced value arguments, general object
+temporaries, alias-rooted replacement, external object signatures, and other
+object-producing expressions remain rejected until their later slices.
+
+OVS7 implements internal exact-class function and method results. A return of
+an existing place copy-constructs distinct caller-provided storage before
+callee cleanup. HIR records destination-oriented object-result calls; MIR has
+a dedicated return-storage slot and explicit call destination; and x86-64
+passes the destination as a hidden first integer-class address. Object-
+returning calls may initialize exact-class locals directly. Returning a
+constructor or another result expression, using produced results as arguments
+or assignment sources, and general object temporaries remain reserved for
+OVS8.
 
 This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,
 normal control flow, and the already implemented alias and destruction model.

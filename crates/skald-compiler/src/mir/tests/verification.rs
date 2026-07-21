@@ -556,7 +556,7 @@ fn verifier_rejects_return_operand_presence_mismatches() {
     let errors = verify_mir(&unit_with_value).unwrap_err();
     assert!(errors.iter().any(|error| error
         .message
-        .contains("unit function return must not have an operand")));
+        .contains("unit and object returns must not have a scalar operand")));
 
     let mut value_without_operand = lower_text("fn main() -> i64 { return 0; }");
     let main = value_without_operand

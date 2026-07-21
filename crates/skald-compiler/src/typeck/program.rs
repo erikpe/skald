@@ -208,19 +208,6 @@ fn lower_class_declaration(
         .map(|method| {
             valid &= validate_parameters(&method.parameters, diagnostics, "method");
             let return_type = lower_type(&method.return_type);
-            if !is_payload_primitive(return_type) && return_type != Type::Unit {
-                diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_OBJECT_DECLARATION,
-                        format!("method `{}` has an unavailable result type", method.name),
-                    )
-                    .with_primary_label(
-                        method.return_type.span,
-                        "expected a primitive type or `unit`",
-                    ),
-                );
-                valid = false;
-            }
             HirMethodDeclaration {
                 id: method.id,
                 name: method.name.clone(),
@@ -447,13 +434,6 @@ fn lower_parameter(parameter: &ResolvedParameter) -> HirParameter {
         ty: lower_type(&parameter.type_syntax),
         span: parameter.span,
     }
-}
-
-const fn is_payload_primitive(ty: Type) -> bool {
-    matches!(
-        ty,
-        Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
-    )
 }
 
 pub(super) const fn lower_parameter_mode(mode: ResolvedParameterBindingMode) -> HirParameterMode {

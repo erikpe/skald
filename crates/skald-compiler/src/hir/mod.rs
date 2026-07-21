@@ -16,8 +16,8 @@ pub use ir::{
     HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldDeclaration,
     HirFieldPlace, HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
     HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration, HirLocal,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectPath,
-    HirObjectPlace, HirParameter, HirParameterMode, HirProgram, HirReturn,
-    HirSelectedCopyOperation, HirStatement, HirSynthesizedCopy, HirSynthesizedFieldCopy,
-    HirUnaryOperation, Type,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectCall,
+    HirObjectCallTarget, HirObjectPath, HirObjectPlace, HirObjectReturn, HirParameter,
+    HirParameterMode, HirProgram, HirReturn, HirReturnValue, HirSelectedCopyOperation,
+    HirStatement, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUnaryOperation, Type,
 };

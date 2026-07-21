@@ -537,38 +537,32 @@ fn rejects_invalid_copy_body_liveness_access_and_returns() {
 }
 
 #[test]
-fn accepts_object_parameters_but_rejects_object_results_at_the_type_boundary() {
-    let mut resolved = resolve_text(concat!(
-        "class Other { init() {} }\n",
+fn accepts_object_parameters_and_results_at_the_type_boundary() {
+    let resolved = resolve_text(concat!(
         "class Value {\n",
         "  field: i64;\n",
         "  init(value: i64) { self.field = value; }\n",
-        "  fn get() -> i64 { return self.field; }\n",
+        "  fn copy() -> Value { return self; }\n",
         "}\n",
+        "fn copy(value: Value) -> Value { return value; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
-    let class = &mut resolved.classes.entries_mut_for_test()[1];
-    class.fields[0].type_syntax.kind = crate::resolve::ResolvedTypeKind::Class(ClassId::new(0));
-    class.initializer.as_mut().unwrap().parameters[0]
-        .type_syntax
-        .kind = crate::resolve::ResolvedTypeKind::Class(class.id);
-    class.methods[0].return_type.kind = crate::resolve::ResolvedTypeKind::Class(class.id);
 
     let output = type_check(&resolved);
 
-    assert!(output.hir.is_none());
+    assert!(output.diagnostics.is_empty());
+    let hir = output.hir.unwrap();
     assert_eq!(
-        output
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION)
-            .count(),
-        1
+        hir.class(ClassId::new(0)).unwrap().methods[0].return_type,
+        Type::Class(ClassId::new(0))
     );
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code != RECURSIVE_INLINE_CONTAINMENT));
+    assert_eq!(
+        hir.declarations
+            .get(FunctionId::new(0))
+            .unwrap()
+            .return_type,
+        Type::Class(ClassId::new(0))
+    );
 }
 
 #[test]
@@ -687,7 +681,10 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirStatement::Return(statement) = &member.body.statements[0] else {
         panic!("expected member return");
     };
-    let HirExpressionKind::FieldRead(field) = &statement.value.as_ref().unwrap().kind else {
+    let HirReturnValue::Scalar(value) = statement.value.as_ref().unwrap() else {
+        panic!("expected scalar return");
+    };
+    let HirExpressionKind::FieldRead(field) = &value.kind else {
         panic!("expected nested self field read");
     };
     assert_eq!(field.receiver.projections(), expected);

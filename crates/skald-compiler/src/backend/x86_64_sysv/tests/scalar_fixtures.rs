@@ -21,6 +21,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
 
     let compute = MirFunctionDefinition {
         function: compute_id,
+        return_storage: None,
         parameters: vec![],
         storage: vec![MirStorage {
             id: StorageId::new(compute_id, 0),
@@ -118,6 +119,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     };
     let main = MirFunctionDefinition {
         function: main_id,
+        return_storage: None,
         parameters: vec![],
         storage: vec![],
         values: vec![
@@ -134,6 +136,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                         receiver: None,
                         arguments: vec![],
                         result: Some(ValueId::new(main_id, 0)),
+                        destination: None,
                         span,
                     }),
                     MirInstruction::Call(MirCall {
@@ -141,6 +144,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                         receiver: None,
                         arguments: MirArgument::values([ValueId::new(main_id, 0)]),
                         result: Some(ValueId::new(main_id, 1)),
+                        destination: None,
                         span,
                     }),
                 ],
@@ -215,6 +219,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
         .collect();
     let mixed = MirFunctionDefinition {
         function: mixed_id,
+        return_storage: None,
         parameters: storage.iter().map(|storage| storage.id).collect(),
         storage,
         values: vec![MirValue {
@@ -276,6 +281,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
             (0..parameter_types.len()).map(|index| ValueId::new(main_id, index)),
         ),
         result: Some(call_result),
+        destination: None,
         span,
     }));
     let return_value = ValueId::new(main_id, values.len());
@@ -294,6 +300,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     }));
     let main = MirFunctionDefinition {
         function: main_id,
+        return_storage: None,
         parameters: vec![],
         storage: vec![],
         values,

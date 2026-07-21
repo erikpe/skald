@@ -7,7 +7,8 @@ use crate::{
     hir::{
         BlockFlow, HirAccess, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
         HirConstruction, HirFieldAssignment, HirFieldConstruction, HirFunctionDefinition, HirLocal,
-        HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirReturn, HirStatement, Type,
+        HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirObjectReturn, HirReturn,
+        HirReturnValue, HirStatement, Type,
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
     resolve::{
@@ -293,7 +294,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                             self.diagnostics,
                         )
                         .then_some(HirStatement::Return(HirReturn {
-                            value: Some(value),
+                            value: Some(HirReturnValue::Scalar(value)),
                             span: statement.span,
                         }))
                     }
@@ -329,20 +330,39 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                         span: statement.span,
                     })),
                     (Type::Class(_), value) => {
-                        if let Some(value) = value {
-                            let _ = self.check_expression(value);
-                        }
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_OBJECT_CONTEXT,
-                                "object-valued returns are unavailable in the stage-0 profile",
-                            )
-                            .with_primary_label(
-                                statement.span,
-                                "expected a primitive or `unit` result",
-                            ),
-                        );
-                        None
+                        let Type::Class(class) = self.return_type else {
+                            unreachable!()
+                        };
+                        let Some(value) = value else {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_RETURN,
+                                    format!("{} must return an object", self.callable_name),
+                                )
+                                .with_primary_label(
+                                    statement.span,
+                                    "expected `return object_place;`",
+                                ),
+                            );
+                            return CheckedStatement::terminates(None);
+                        };
+                        let Some(source) = self.check_copy_source_place(value, class) else {
+                            return CheckedStatement::terminates(None);
+                        };
+                        let Some(operation) = self.copy_capabilities.constructor(class).selected()
+                        else {
+                            self.report_unavailable_copy_operation(class, true, source.span());
+                            return CheckedStatement::terminates(None);
+                        };
+                        Some(HirStatement::Return(HirReturn {
+                            value: Some(HirReturnValue::Object(HirObjectReturn {
+                                source,
+                                operation,
+                                class,
+                                span: value.span(),
+                            })),
+                            span: statement.span,
+                        }))
                     }
                 };
                 CheckedStatement::terminates(hir)

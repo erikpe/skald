@@ -332,7 +332,7 @@ fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
 }
 
 #[test]
-fn named_types_are_accepted_for_fields_and_value_parameters_but_not_results() {
+fn named_types_are_accepted_for_fields_value_parameters_and_results() {
     let (_, output) = parse_text(concat!(
         "class Invalid {\n",
         "    child: Other;\n",
@@ -343,7 +343,7 @@ fn named_types_are_accepted_for_fields_and_value_parameters_but_not_results() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.has_errors());
+    assert!(output.diagnostics.is_empty());
     assert_eq!(output.ast.declarations.len(), 2);
     let invalid = class(&output.ast, 0);
     let child = invalid
@@ -368,6 +368,18 @@ fn named_types_are_accepted_for_fields_and_value_parameters_but_not_results() {
         .expect("initializer should remain in the AST");
     assert!(matches!(
         &initializer.parameters[0].type_syntax.kind,
+        TypeKind::Named(name) if name.text == "Other"
+    ));
+    let method = invalid
+        .members
+        .iter()
+        .find_map(|member| match member {
+            ClassMember::Method(method) => Some(method),
+            _ => None,
+        })
+        .expect("method should remain in the AST");
+    assert!(matches!(
+        &method.return_type.kind,
         TypeKind::Named(name) if name.text == "Other"
     ));
     assert!(invalid

@@ -55,13 +55,17 @@ The current Linux x86-64 compiler supports:
   recursively synthesized field behavior for local and projected destinations;
 - internal exact-class value parameters whose caller-constructed copies are
   owned and cleaned once by the callee;
+- internal exact-class function and method results through explicit
+  caller-owned return storage;
 - deterministic left-to-right operand and argument evaluation;
 - textual x86-64 System V assembly, native linking, exact diagnostics, and a
   small C runtime with primitive output functions.
 
 Owning inline objects may cross an internal call boundary as exact-class value
-arguments copied from existing object places. Object results, produced-object
-arguments, general object-producing temporaries, inheritance, interfaces,
+arguments copied from existing object places, and may return from internal
+functions or methods by copying an existing place. Object-returning calls may
+initialize an exact-class local directly. Produced-object arguments and
+returns, general object-producing temporaries, inheritance, interfaces,
 `shared`, arrays, optionals, loops, and checked exceptions are not implemented
 yet. Object-bearing external signatures remain unsupported.
 
@@ -119,7 +123,7 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. object results, return storage, bounded temporaries, and permitted elision;
+1. bounded object temporaries and permitted copy elision;
 2. inheritance, interfaces, virtual dispatch, and casts;
 3. `shared` ownership and borrow anchors;
 4. loops/iterators, arrays, optionals, and checked exceptions;

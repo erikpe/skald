@@ -545,6 +545,7 @@ impl MirFunctionDefinitionTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirFunctionDefinition {
     pub function: FunctionId,
+    pub return_storage: Option<StorageId>,
     pub parameters: Vec<StorageId>,
     pub storage: Vec<MirStorage>,
     pub values: Vec<MirValue>,
@@ -606,6 +607,7 @@ impl MirMemberDefinitionTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirMemberDefinition {
     pub callable: CallableId,
+    pub return_storage: Option<StorageId>,
     pub receiver: StorageId,
     pub parameters: Vec<StorageId>,
     pub storage: Vec<MirStorage>,
@@ -655,6 +657,13 @@ impl<'mir> MirDefinitionRef<'mir> {
         match self {
             Self::Function(_) => None,
             Self::Member(definition) => Some(definition.receiver),
+        }
+    }
+
+    pub const fn return_storage(self) -> Option<StorageId> {
+        match self {
+            Self::Function(definition) => definition.return_storage,
+            Self::Member(definition) => definition.return_storage,
         }
     }
 
@@ -756,6 +765,8 @@ impl MirFunctionDefinition {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirStorageKind {
+    /// Uninitialized caller-provided storage for an object result.
+    Return,
     Receiver,
     Parameter,
     AliasParameter(MirAliasAccess),
@@ -946,6 +957,8 @@ pub struct MirCall {
     pub receiver: Option<MirPlace>,
     pub arguments: Vec<MirArgument>,
     pub result: Option<ValueId>,
+    /// Caller-owned uninitialized storage for a class result.
+    pub destination: Option<MirPlace>,
     pub span: Span,
 }
 

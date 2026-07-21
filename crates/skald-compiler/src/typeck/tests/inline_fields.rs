@@ -55,12 +55,11 @@ fn supports_nested_places_across_every_live_root_kind() {
     let HirStatement::Return(statement) = &through_ref.body.statements[0] else {
         panic!("expected return statement");
     };
-    let HirExpressionKind::Binary { left, right, .. } = &statement
-        .value
-        .as_ref()
-        .expect("expected return value")
-        .kind
+    let HirReturnValue::Scalar(value) = statement.value.as_ref().expect("expected return value")
     else {
+        panic!("expected scalar return");
+    };
+    let HirExpressionKind::Binary { left, right, .. } = &value.kind else {
         panic!("expected nested read expression");
     };
     let HirExpressionKind::DirectCall { arguments, .. } = &left.kind else {

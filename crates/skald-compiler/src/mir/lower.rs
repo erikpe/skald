@@ -201,6 +201,7 @@ fn lower_function_definition(
     });
     MirFunctionDefinition {
         function: declaration.id,
+        return_storage: lowered.return_storage,
         parameters: lowered.parameters,
         storage: lowered.storage,
         values: lowered.values,
@@ -226,6 +227,7 @@ fn lower_member_definition(
     });
     MirMemberDefinition {
         callable: definition.callable,
+        return_storage: lowered.return_storage,
         receiver: lowered.receiver.expect("member body must lower a receiver"),
         parameters: lowered.parameters,
         storage: lowered.storage,
@@ -245,6 +247,7 @@ struct BodyLoweringInput<'hir> {
 }
 
 struct LoweredBody {
+    return_storage: Option<StorageId>,
     receiver: Option<StorageId>,
     parameters: Vec<StorageId>,
     storage: Vec<MirStorage>,
@@ -254,6 +257,7 @@ struct LoweredBody {
 
 struct BodyLowerer<'hir> {
     input: BodyLoweringInput<'hir>,
+    return_storage: Option<StorageId>,
     receiver_storage: Option<StorageId>,
     parameter_storage: Vec<StorageId>,
     local_storage: Vec<StorageId>,
@@ -276,6 +280,7 @@ impl<'hir> BodyLowerer<'hir> {
             values: Vec::new(),
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
+            return_storage: None,
             receiver_storage: None,
             input,
         };
@@ -309,6 +314,7 @@ impl<'hir> BodyLowerer<'hir> {
         );
         lowerer.cleanup.leave_scope();
         LoweredBody {
+            return_storage: lowerer.return_storage,
             receiver: lowerer.receiver_storage,
             parameters: lowerer.parameter_storage,
             storage: lowerer.storage,
@@ -318,6 +324,18 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     fn allocate_storage(&mut self) {
+        if let Type::Class(class) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: MirType::Class(class),
+                span: self.input.source_body.span,
+            });
+        }
         if let Some(class) = self.input.receiver_class {
             let id = StorageId::new(self.input.callable, self.storage.len());
             self.receiver_storage = Some(id);
@@ -406,13 +424,34 @@ impl<'hir> BodyLowerer<'hir> {
                             self.cleanup
                                 .register_owned(storage, copy.destination.class());
                         }
+                        crate::hir::HirLocalInitializer::Call(call) => {
+                            self.lower_object_call(call);
+                            self.cleanup.register_owned(storage, call.class);
+                        }
                     }
                 }
                 HirStatement::Return(statement) => {
-                    let value = statement.value.as_ref().map(|value| {
-                        self.lower_expression(value)
-                            .expect("typed return expression must produce a value")
-                    });
+                    let value = match &statement.value {
+                        Some(crate::hir::HirReturnValue::Scalar(value)) => Some(
+                            self.lower_expression(value)
+                                .expect("typed return expression must produce a scalar value"),
+                        ),
+                        Some(crate::hir::HirReturnValue::Object(result)) => {
+                            let destination = MirPlace::base(
+                                self.return_storage
+                                    .expect("object-returning body must have return storage"),
+                            );
+                            self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                                destination,
+                                source: self.lower_object_place(&result.source),
+                                class: result.class,
+                                operation: lower_selected_copy_operation(result.operation),
+                                span: result.span,
+                            }));
+                            None
+                        }
+                        None => None,
+                    };
                     self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
                     self.terminate(MirTerminator::Return {
                         value,
@@ -660,6 +699,7 @@ impl<'hir> BodyLowerer<'hir> {
                     receiver: None,
                     arguments,
                     result,
+                    destination: None,
                     span: expression.span,
                 }));
                 result
@@ -685,6 +725,7 @@ impl<'hir> BodyLowerer<'hir> {
                     receiver: Some(receiver),
                     arguments,
                     result,
+                    destination: None,
                     span: expression.span,
                 }));
                 result
@@ -695,6 +736,28 @@ impl<'hir> BodyLowerer<'hir> {
     fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
         self.lower_object_place(&place.receiver)
             .project_field(place.field)
+    }
+
+    fn lower_object_call(&mut self, call: &crate::hir::HirObjectCall) {
+        let destination = self.lower_object_place(&call.destination);
+        let (target, receiver) = match &call.target {
+            crate::hir::HirObjectCallTarget::Direct(function) => {
+                (MirCallTarget::Direct(*function), None)
+            }
+            crate::hir::HirObjectCallTarget::Method { receiver, method } => (
+                MirCallTarget::Method(*method),
+                Some(self.lower_object_place(receiver)),
+            ),
+        };
+        let arguments = self.lower_call_arguments(&call.arguments);
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            destination: Some(destination),
+            span: call.span,
+        }));
     }
 
     fn lower_call_arguments(&mut self, arguments: &[HirCallArgument]) -> Vec<MirArgument> {
@@ -738,9 +801,10 @@ impl<'hir> BodyLowerer<'hir> {
         let storage = self.storage_for_binding(place.root());
         let root = match self.storage[storage.index()].kind {
             MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
-            MirStorageKind::Receiver | MirStorageKind::Parameter | MirStorageKind::Local => {
-                MirPlace::base(storage)
-            }
+            MirStorageKind::Return
+            | MirStorageKind::Receiver
+            | MirStorageKind::Parameter
+            | MirStorageKind::Local => MirPlace::base(storage),
             MirStorageKind::Argument | MirStorageKind::Temporary => {
                 unreachable!("HIR object paths cannot use compiler-owned storage")
             }

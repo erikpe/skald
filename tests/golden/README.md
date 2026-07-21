@@ -72,6 +72,13 @@ object values, and body type mismatches. The runner's existing process
 isolation proves exact assembly and diagnostic determinism; native sidecars
 additionally require exact stdout, status, and empty stderr.
 
+The object-result corpus covers explicit caller-provided return storage,
+function and method results, conditional returns, recursive result calls,
+mixed register/stack arguments, padded and empty classes, alias sources, and
+return initialization before local cleanup. Failure snapshots cover wrong-
+class and missing returns, excluded produced-result returns, and external
+object results.
+
 Run it from the repository root with:
 
 ```text

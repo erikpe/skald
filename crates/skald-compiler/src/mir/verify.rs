@@ -151,11 +151,13 @@ impl Verifier<'_> {
                 &format!("function {}", declaration.id),
                 &declaration.parameters,
             );
-            if matches!(declaration.return_type, MirType::Class(_)) {
-                self.function_error(
-                    declaration.id,
-                    "function results cannot have class type in this MIR profile",
-                );
+            if let MirType::Class(class) = declaration.return_type {
+                if self.program.class(class).is_none() {
+                    self.function_error(
+                        declaration.id,
+                        format!("function result has undeclared class type {class}"),
+                    );
+                }
             }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
                 if declaration.parameters.iter().any(|parameter| {
@@ -165,6 +167,12 @@ impl Verifier<'_> {
                     self.function_error(
                         declaration.id,
                         "external function cannot declare alias or object value parameters",
+                    );
+                }
+                if matches!(declaration.return_type, MirType::Class(_)) {
+                    self.function_error(
+                        declaration.id,
+                        "external function cannot return an object value",
                     );
                 }
                 if symbol != &declaration.name || !is_source_identifier(symbol) {
@@ -352,11 +360,13 @@ impl Verifier<'_> {
                     ));
                 }
                 self.verify_member_parameters(&format!("method {}", method.id), &method.parameters);
-                if matches!(method.return_type, MirType::Class(_)) {
-                    self.program_error(format!(
-                        "method {} result cannot have class type in this MIR profile",
-                        method.id
-                    ));
+                if let MirType::Class(class) = method.return_type {
+                    if self.program.class(class).is_none() {
+                        self.program_error(format!(
+                            "method {} has undeclared result class {class}",
+                            method.id
+                        ));
+                    }
                 }
             }
         }
@@ -589,6 +599,7 @@ impl Verifier<'_> {
         self.verify_values(function);
         self.verify_receiver(function);
         self.verify_parameters(parameters, function);
+        self.verify_return_storage(return_type, function);
 
         if function.body().entry.callable() != function.callable() {
             self.function_error(
@@ -686,6 +697,7 @@ impl Verifier<'_> {
                         Some(BindingId::Parameter(_))
                     )
                     | (MirStorageKind::Local, Some(BindingId::Local(_)))
+                    | (MirStorageKind::Return, None)
                     | (MirStorageKind::Argument, None)
                     | (MirStorageKind::Temporary, None)
             );
@@ -709,7 +721,7 @@ impl Verifier<'_> {
             }
             if matches!(
                 storage.kind,
-                MirStorageKind::Argument | MirStorageKind::Temporary
+                MirStorageKind::Return | MirStorageKind::Argument | MirStorageKind::Temporary
             ) && !matches!(storage.ty, MirType::Class(_))
             {
                 self.function_error(
@@ -725,6 +737,39 @@ impl Verifier<'_> {
                     );
                 }
             }
+        }
+    }
+
+    fn verify_return_storage(&mut self, return_type: MirType, function: MirDefinitionRef<'_>) {
+        let slots: Vec<_> = function
+            .storage_entries()
+            .iter()
+            .filter(|storage| storage.kind == MirStorageKind::Return)
+            .collect();
+        match return_type {
+            MirType::Class(class) => {
+                let Some(return_storage) = function.return_storage() else {
+                    self.function_error(
+                        function.callable(),
+                        "object-returning definition has no return storage",
+                    );
+                    return;
+                };
+                let valid = slots.len() == 1
+                    && slots[0].id == return_storage
+                    && slots[0].ty == MirType::Class(class);
+                if !valid {
+                    self.function_error(
+                        function.callable(),
+                        "object-returning definition must identify exactly one matching return storage slot",
+                    );
+                }
+            }
+            _ if function.return_storage().is_some() || !slots.is_empty() => self.function_error(
+                function.callable(),
+                "non-object definition cannot declare return storage",
+            ),
+            _ => {}
         }
     }
 
@@ -933,14 +978,16 @@ impl Verifier<'_> {
                         .is_some_and(|storage| {
                             matches!(
                                 storage.kind,
-                                MirStorageKind::Argument | MirStorageKind::Temporary
+                                MirStorageKind::Return
+                                    | MirStorageKind::Argument
+                                    | MirStorageKind::Temporary
                             )
                         })
                     {
                         self.block_error(
                             function.callable(),
                             block.id,
-                            "caller argument and temporary storage require their dedicated lifetime boundary",
+                            "return, caller argument, and temporary storage require their dedicated lifetime boundary",
                         );
                     }
                     if self.program.class(cleanup.target).is_none() {
@@ -1120,11 +1167,11 @@ impl Verifier<'_> {
                     if let Some(ty) =
                         self.verify_value_use(function, block, *value, &defined_in_block)
                     {
-                        if return_type == MirType::Unit {
+                        if matches!(return_type, MirType::Unit | MirType::Class(_)) {
                             self.block_error(
                                 function.callable(),
                                 block.id,
-                                "unit function return must not have an operand",
+                                "unit and object returns must not have a scalar operand",
                             );
                         } else if ty != return_type {
                             self.block_error(
@@ -1134,7 +1181,8 @@ impl Verifier<'_> {
                             );
                         }
                     }
-                } else if return_type != MirType::Unit {
+                } else if return_type != MirType::Unit && !matches!(return_type, MirType::Class(_))
+                {
                     self.block_error(
                         function.callable(),
                         block.id,
@@ -1358,17 +1406,55 @@ impl Verifier<'_> {
             &arguments_defined,
         );
 
-        match (return_type, result_ty) {
-            (MirType::Unit, Some(_)) => self.block_error(
+        let destination = call
+            .destination
+            .as_ref()
+            .and_then(|place| self.verify_place(function, block, place));
+
+        match (return_type, result_ty, destination) {
+            (MirType::Unit, Some(_), _) => self.block_error(
                 function.callable(),
                 block.id,
                 "unit-returning call must not have a result",
             ),
-            (MirType::Unit, None) => {}
-            (_, Some(result_ty)) if result_ty != return_type => {
+            (MirType::Unit, None, Some(_)) => self.block_error(
+                function.callable(),
+                block.id,
+                "unit-returning call must not have a destination",
+            ),
+            (MirType::Unit, None, None) => {}
+            (MirType::Class(_), Some(_), _) => self.block_error(
+                function.callable(),
+                block.id,
+                "object-returning call must not have a scalar result",
+            ),
+            (MirType::Class(class), None, destination) => {
+                let complete_local = call.destination.as_ref().is_some_and(|place| {
+                    place.projections.is_empty()
+                        && matches!(place.base, MirPlaceBase::Storage(_))
+                        && function
+                            .storage(place.base.storage())
+                            .is_some_and(|storage| storage.kind == MirStorageKind::Local)
+                });
+                if destination.map(|place| place.ty) != Some(MirType::Class(class))
+                    || !complete_local
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "object-returning call requires complete exact-class local destination storage",
+                    );
+                }
+            }
+            (_, Some(_), Some(_)) => self.block_error(
+                function.callable(),
+                block.id,
+                "scalar-returning call must not have an object destination",
+            ),
+            (_, Some(result_ty), None) if result_ty != return_type => {
                 self.block_error(function.callable(), block.id, "call result type mismatch")
             }
-            (_, None) => self.block_error(
+            (_, None, _) => self.block_error(
                 function.callable(),
                 block.id,
                 "value-returning call has no result",

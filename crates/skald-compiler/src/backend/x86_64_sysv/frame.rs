@@ -24,6 +24,7 @@ pub(super) struct FramePlace {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FramePlaceBase {
     Direct,
+    Return { home: i32 },
     Receiver { home: i32 },
     OwnedParameter { home: i32 },
     AliasParameter { home: i32 },
@@ -33,7 +34,8 @@ impl FramePlaceBase {
     pub(super) const fn pointer_home(self) -> Option<i32> {
         match self {
             Self::Direct => None,
-            Self::Receiver { home }
+            Self::Return { home }
+            | Self::Receiver { home }
             | Self::OwnedParameter { home }
             | Self::AliasParameter { home } => Some(home),
         }
@@ -74,7 +76,12 @@ impl FrameLayout {
         let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
             let (size, alignment) = match (storage.kind, storage.ty) {
-                (MirStorageKind::Receiver | MirStorageKind::AliasParameter(_), _)
+                (
+                    MirStorageKind::Return
+                    | MirStorageKind::Receiver
+                    | MirStorageKind::AliasParameter(_),
+                    _,
+                )
                 | (MirStorageKind::Parameter, MirType::Class(_)) => {
                     (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)
                 }
@@ -125,6 +132,12 @@ impl FrameLayout {
             .storage(storage_id)
             .expect("verified place base must identify storage");
         let (base, mut displacement) = match place.base {
+            MirPlaceBase::Storage(_) if storage.kind == MirStorageKind::Return => (
+                FramePlaceBase::Return {
+                    home: self.storage(storage_id),
+                },
+                0,
+            ),
             MirPlaceBase::Storage(_) if storage.kind == MirStorageKind::Receiver => (
                 FramePlaceBase::Receiver {
                     home: self.storage(storage_id),

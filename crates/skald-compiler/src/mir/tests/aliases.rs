@@ -204,6 +204,7 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
                 MirArgument::Value(ValueId::new(ids.forward, 0)),
             ],
             result: None,
+            destination: None,
             span: function.span,
         }));
     assert!(messages(&receiver)
@@ -282,6 +283,7 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
                 MirArgument::Value(scalar),
             ],
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Call(MirCall {
@@ -291,6 +293,7 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
                 object_ids.object_storage,
             ))],
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Call(MirCall {
@@ -302,6 +305,7 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
                 MirArgument::Value(scalar),
             ],
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Initialize(MirInitialize {
@@ -321,6 +325,7 @@ fn alias_mir() -> (MirProgram, AliasFixtureIds) {
                 MirArgument::Value(scalar),
             ],
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Cleanup(MirCleanup {
@@ -522,6 +527,7 @@ fn forward_definition(
                     MirArgument::Value(value),
                 ],
                 result: None,
+                destination: None,
                 span,
             }),
             MirInstruction::Call(MirCall {
@@ -531,6 +537,7 @@ fn forward_definition(
                     StorageId::new(id, 1),
                 ))],
                 result: None,
+                destination: None,
                 span,
             }),
         ],
@@ -547,6 +554,7 @@ fn function_definition(
 ) -> MirFunctionDefinition {
     MirFunctionDefinition {
         function: id,
+        return_storage: None,
         parameters: storage.iter().map(|storage| storage.id).collect(),
         storage,
         values,
@@ -603,6 +611,7 @@ fn empty_member_definition(
     }
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
         storage,

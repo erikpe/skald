@@ -161,6 +161,7 @@ pub(super) fn call_and_store_block(
                 receiver: None,
                 arguments: Vec::new(),
                 result: Some(result),
+                destination: None,
                 span,
             }),
             MirInstruction::Store(MirStore {

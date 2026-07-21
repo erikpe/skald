@@ -1,5 +1,5 @@
-error[PAR002]: expected a return type after `->`
+error[RES007]: unknown type `string`
  --> tests/golden/compile_fail/unsupported_type.ska:1:14
    |
 1 | fn main() -> string {
-   |              ^^^^^^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
+   |              ^^^^^^ no class with this name is declared

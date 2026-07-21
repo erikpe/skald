@@ -147,7 +147,11 @@ impl<'ast> ProgramResolver<'ast> {
                         &self.top_levels,
                         &mut self.diagnostics,
                     ),
-                    return_type: resolve_scalar_type(&function.return_type),
+                    return_type: resolve_result_type(
+                        &function.return_type,
+                        &self.top_levels,
+                        &mut self.diagnostics,
+                    ),
                     linkage: ResolvedFunctionLinkage::Internal,
                     span: function.span,
                 },
@@ -162,7 +166,11 @@ impl<'ast> ProgramResolver<'ast> {
                             &self.top_levels,
                             &mut self.diagnostics,
                         ),
-                        return_type: resolve_scalar_type(&function.return_type),
+                        return_type: resolve_result_type(
+                            &function.return_type,
+                            &self.top_levels,
+                            &mut self.diagnostics,
+                        ),
                         linkage: ResolvedFunctionLinkage::External {
                             symbol: function.name.text.clone(),
                         },
@@ -373,7 +381,11 @@ impl<'ast> ProgramResolver<'ast> {
                             &self.top_levels,
                             &mut self.diagnostics,
                         ),
-                        return_type: resolve_scalar_type(&method.return_type),
+                        return_type: resolve_result_type(
+                            &method.return_type,
+                            &self.top_levels,
+                            &mut self.diagnostics,
+                        ),
                         span: method.span,
                     });
                     method_members.push(member_index);
@@ -767,22 +779,17 @@ const fn resolve_parameter_binding_mode(
     }
 }
 
-fn resolve_scalar_type(type_syntax: &syntax::TypeSyntax) -> ResolvedType {
-    let kind = match &type_syntax.kind {
-        syntax::TypeKind::I64 => ResolvedTypeKind::I64,
-        syntax::TypeKind::U64 => ResolvedTypeKind::U64,
-        syntax::TypeKind::U8 => ResolvedTypeKind::U8,
-        syntax::TypeKind::F64 => ResolvedTypeKind::F64,
-        syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
-        syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
-        syntax::TypeKind::Named(_) => {
-            unreachable!("this declaration context admits only scalar syntax")
-        }
-    };
-    ResolvedType {
-        kind,
+fn resolve_result_type(
+    type_syntax: &syntax::TypeSyntax,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> ResolvedType {
+    resolve_type(type_syntax, top_levels, diagnostics).unwrap_or(ResolvedType {
+        // Resolution diagnostics stop later phases. Retaining a payload-free
+        // placeholder keeps declaration collection total and panic-free.
+        kind: ResolvedTypeKind::Unit,
         span: type_syntax.span,
-    }
+    })
 }
 
 fn declare_ordinary_member(

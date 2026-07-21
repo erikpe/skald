@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS6 are complete and OVS7 is next.
+Status: in progress; OVS0–OVS7 are complete and OVS8 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -197,15 +197,15 @@ cleanup, while aliases retain their existing non-owning semantics.
 **Purpose:** Return owning objects without scalarizing or copying anonymous
 aggregate bytes.
 
-- [ ] Accept exact-class function and method results under the frozen copy
+- [x] Accept exact-class function and method results under the frozen copy
       capability rules.
-- [ ] Represent caller-provided uninitialized return storage in HIR/MIR and the
+- [x] Represent caller-provided uninitialized return storage in HIR/MIR and the
       internal ABI.
-- [ ] Initialize return storage before callee locals clean up and transfer
+- [x] Initialize return storage before callee locals clean up and transfer
       ownership exactly once to the caller.
-- [ ] Diagnose wrong-class returns, missing returns, alias escape, and invalid
+- [x] Diagnose wrong-class returns, missing returns, alias escape, and invalid
       external results.
-- [ ] Cover conditionals, nested calls, recursion, mixed scalar arguments,
+- [x] Cover conditionals, nested calls, recursion, mixed scalar arguments,
       return-value cleanup order, padding, and empty classes.
 
 **Acceptance criteria:** every normal object return constructs one caller-owned

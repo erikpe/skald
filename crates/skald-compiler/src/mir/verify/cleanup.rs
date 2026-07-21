@@ -66,6 +66,7 @@ impl Analyzer<'_> {
                 }
                 MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
                 MirStorageKind::Receiver
+                | MirStorageKind::Return
                 | MirStorageKind::Local
                 | MirStorageKind::Argument
                 | MirStorageKind::Temporary => continue,
@@ -124,6 +125,14 @@ impl Analyzer<'_> {
     }
 
     fn check_normal_return(&mut self, block: &MirBasicBlock, state: &ObjectState) {
+        if let Some(return_storage) = self.function.return_storage() {
+            if !self.place_is_live(state, &MirPlace::base(return_storage)) {
+                self.errors.push(CleanupLivenessError {
+                    block: block.id,
+                    message: "object return storage is not initialized on normal return",
+                });
+            }
+        }
         if !state.outstanding_local_cleanup.is_empty() {
             self.errors.push(CleanupLivenessError {
                 block: block.id,
@@ -246,6 +255,9 @@ impl Analyzer<'_> {
                 }
                 MirInstruction::Call(call) => {
                     self.consume_owned_arguments(block, state, &call.arguments);
+                    if let Some(destination) = &call.destination {
+                        self.initialize_place(block, state, destination);
+                    }
                 }
                 MirInstruction::Cleanup(cleanup)
                     if self.is_owning_class_place(&cleanup.destination, cleanup.target) =>

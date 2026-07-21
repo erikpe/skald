@@ -1,0 +1,69 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Value {
+    tag: u8;
+    field: i64;
+
+    init(field: i64, tag: u8) {
+        self.tag = tag;
+        self.field = field;
+    }
+
+    init(ref other: Value) {
+        self.tag = other.tag;
+        self.field = other.field + 100;
+    }
+
+    fn duplicate(a: i64, b: i64, c: i64, d: i64, e: i64) -> Value {
+        return self;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.field);
+    }
+}
+
+class Empty {
+    init() {}
+
+    init(ref other: Empty) {}
+
+    destroy {
+        ska_rt_println_i64(2);
+    }
+}
+
+fn choose(ref first: Value, ref second: Value, flag: bool) -> Value {
+    if (flag) {
+        return first;
+    }
+    return second;
+}
+
+fn recursive(ref source: Value, again: bool) -> Value {
+    if (again) {
+        var inner: Value = recursive(source, false);
+        return inner;
+    }
+    return source;
+}
+
+fn copy_empty(ref source: Empty) -> Empty {
+    return source;
+}
+
+fn main() -> i64 {
+    var source: Value = Value(10, 7u8);
+    var other: Value = Value(20, 8u8);
+    var chosen: Value = choose(source, other, true);
+    ska_rt_println_i64(chosen.field);
+    var alternative: Value = choose(source, other, false);
+    ska_rt_println_i64(alternative.field);
+    var nested: Value = recursive(source, true);
+    ska_rt_println_i64(nested.field);
+    var method: Value = chosen.duplicate(1, 2, 3, 4, 5);
+    ska_rt_println_i64(method.field);
+    var empty: Empty = Empty();
+    var empty_copy: Empty = copy_empty(empty);
+    return 0;
+}

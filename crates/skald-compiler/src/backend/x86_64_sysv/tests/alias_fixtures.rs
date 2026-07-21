@@ -99,6 +99,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
                     MirArgument::Value(amount),
                 ],
                 result: None,
+                destination: None,
                 span,
             }),
             MirInstruction::Call(MirCall {
@@ -110,6 +111,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
                     MirArgument::Value(amount),
                 ],
                 result: None,
+                destination: None,
                 span,
             }),
             MirInstruction::Initialize(MirInitialize {
@@ -134,6 +136,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
                     MirArgument::Value(amount),
                 ],
                 result: None,
+                destination: None,
                 span,
             }),
         ],
@@ -305,6 +308,7 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
             receiver: Some(MirPlace::base(ids.first)),
             arguments,
             result: None,
+            destination: None,
             span,
         }));
     program
@@ -362,6 +366,7 @@ fn alias_add_definition(
                 receiver: None,
                 arguments: MirArgument::values([ValueId::new(id, 0), ValueId::new(id, 1)]),
                 result: Some(ValueId::new(id, 2)),
+                destination: None,
                 span,
             }),
             store(alias_value, ValueId::new(id, 2), span),
@@ -489,6 +494,7 @@ fn function_definition(
 ) -> MirFunctionDefinition {
     MirFunctionDefinition {
         function: id,
+        return_storage: None,
         parameters: storage.iter().map(|storage| storage.id).collect(),
         storage,
         values,
@@ -507,6 +513,7 @@ fn member_definition(
 ) -> MirMemberDefinition {
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
         storage,
@@ -610,6 +617,7 @@ fn alias_call(
             MirArgument::Value(amount),
         ],
         result: None,
+        destination: None,
         span,
     })
 }

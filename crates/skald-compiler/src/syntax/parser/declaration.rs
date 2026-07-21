@@ -19,7 +19,11 @@ impl TypeContext {
     const fn accepts_named(self) -> bool {
         matches!(
             self,
-            Self::ValueParameter | Self::AliasParameter | Self::LocalValue | Self::Field
+            Self::Result
+                | Self::ValueParameter
+                | Self::AliasParameter
+                | Self::LocalValue
+                | Self::Field
         )
     }
 
@@ -29,7 +33,10 @@ impl TypeContext {
 
     fn expected_label(self) -> String {
         match self {
-            Self::Result => format!("expected {}", format_type_list(RESULT_TYPE_NAMES)),
+            Self::Result => format!(
+                "expected {} or a named class type",
+                format_type_list(RESULT_TYPE_NAMES)
+            ),
             Self::ValueParameter => format!(
                 "value parameters must have type {} or a named class type",
                 format_type_list(STORED_TYPE_NAMES)

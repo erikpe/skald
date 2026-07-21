@@ -1,0 +1,29 @@
+class Expected {
+    init() {}
+}
+
+class Actual {
+    init() {}
+}
+
+fn identity(ref value: Expected) -> Expected {
+    return value;
+}
+
+fn wrong(ref actual: Actual) -> Expected {
+    return actual;
+}
+
+fn missing() -> Expected {
+    return;
+}
+
+fn produced(ref value: Expected) -> Expected {
+    return identity(value);
+}
+
+extern fn external_result() -> Expected;
+
+fn main() -> i64 {
+    return 0;
+}

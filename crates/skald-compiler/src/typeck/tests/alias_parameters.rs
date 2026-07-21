@@ -56,8 +56,10 @@ fn checks_aliases_across_calls_owners_forwarding_grouping_and_overlap() {
     let HirStatement::Return(return_statement) = main.body.statements.last().unwrap() else {
         panic!("expected final return");
     };
-    let HirExpressionKind::Binary { left, .. } = &return_statement.value.as_ref().unwrap().kind
-    else {
+    let HirReturnValue::Scalar(value) = return_statement.value.as_ref().unwrap() else {
+        panic!("expected scalar return");
+    };
+    let HirExpressionKind::Binary { left, .. } = &value.kind else {
         panic!("expected final addition");
     };
     let HirExpressionKind::DirectCall { arguments, .. } = &left.kind else {

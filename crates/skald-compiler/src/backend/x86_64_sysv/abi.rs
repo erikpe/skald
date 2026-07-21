@@ -72,6 +72,7 @@ impl ArgumentLocation {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CallLayout {
+    return_destination: Option<ArgumentLocation>,
     receiver: Option<ArgumentLocation>,
     locations: Vec<ArgumentLocation>,
     stack_size: u32,
@@ -79,18 +80,34 @@ pub(super) struct CallLayout {
 
 impl CallLayout {
     pub(super) fn classify(parameters: &[MirParameter]) -> Option<Self> {
-        Self::classify_internal(parameters, false)
+        Self::classify_internal(parameters, false, false)
     }
 
     pub(super) fn classify_with_receiver(parameters: &[MirParameter]) -> Option<Self> {
-        Self::classify_internal(parameters, true)
+        Self::classify_internal(parameters, true, false)
     }
 
-    fn classify_internal(parameters: &[MirParameter], has_receiver: bool) -> Option<Self> {
+    pub(super) fn classify_internal_call(
+        parameters: &[MirParameter],
+        has_receiver: bool,
+        has_return_destination: bool,
+    ) -> Option<Self> {
+        Self::classify_internal(parameters, has_receiver, has_return_destination)
+    }
+
+    fn classify_internal(
+        parameters: &[MirParameter],
+        has_receiver: bool,
+        has_return_destination: bool,
+    ) -> Option<Self> {
+        let return_destination = has_return_destination.then_some(
+            ArgumentLocation::IntegerRegister(INTEGER_ARGUMENT_REGISTERS[0]),
+        );
+        let receiver_index = usize::from(has_return_destination);
         let receiver = has_receiver.then_some(ArgumentLocation::IntegerRegister(
-            INTEGER_ARGUMENT_REGISTERS[0],
+            INTEGER_ARGUMENT_REGISTERS[receiver_index],
         ));
-        let mut integer_index = usize::from(has_receiver);
+        let mut integer_index = receiver_index + usize::from(has_receiver);
         let mut sse_index = 0;
         let mut stack_count = 0usize;
         let mut locations = Vec::with_capacity(parameters.len());
@@ -120,10 +137,15 @@ impl CallLayout {
         let aligned = align_up(bytes, STACK_ALIGNMENT)?;
         let stack_size = u32::try_from(aligned).ok()?;
         (aligned <= i32::MAX as usize).then_some(Self {
+            return_destination,
             receiver,
             locations,
             stack_size,
         })
+    }
+
+    pub(super) const fn return_destination(&self) -> Option<ArgumentLocation> {
+        self.return_destination
     }
 
     pub(super) const fn receiver(&self) -> Option<ArgumentLocation> {

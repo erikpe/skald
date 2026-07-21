@@ -302,6 +302,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             receiver: Some(object.into()),
             arguments: MirArgument::values([ValueId::new(main_id, 2)]),
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Call(MirCall {
@@ -309,6 +310,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             receiver: Some(object.into()),
             arguments: vec![],
             result: Some(ValueId::new(main_id, 3)),
+            destination: None,
             span,
         }),
         MirInstruction::Call(MirCall {
@@ -316,6 +318,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             receiver: None,
             arguments: MirArgument::values([ValueId::new(main_id, 3)]),
             result: None,
+            destination: None,
             span,
         }),
         MirInstruction::Cleanup(MirCleanup {
@@ -361,6 +364,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
         .collect();
     program.member_definitions = MirMemberDefinitionTable::new(vec![MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: parameters.iter().map(|parameter| parameter.id).collect(),
         storage: std::iter::once(receiver_storage(
@@ -421,6 +425,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
             receiver: Some(ids.second.into()),
             arguments,
             result: None,
+            destination: None,
             span: program.span,
         }));
     program
@@ -437,6 +442,7 @@ fn initializer_definition(
     let value = ValueId::new(callable, 0);
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: vec![parameter],
         storage: vec![
@@ -494,6 +500,7 @@ fn add_definition(
     let receiver_value = MirPlace::base(receiver).project_field(value_field);
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: vec![parameter],
         storage: vec![
@@ -530,6 +537,7 @@ fn add_definition(
                             ValueId::new(callable, 1),
                         ]),
                         result: Some(ValueId::new(callable, 2)),
+                        destination: None,
                         span,
                     }),
                     store(receiver_value, ValueId::new(callable, 2), span),
@@ -552,6 +560,7 @@ fn get_definition(
     let result = ValueId::new(callable, 0);
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: vec![],
         storage: vec![receiver_storage(callable, receiver, id.class(), span)],
@@ -595,6 +604,7 @@ fn forwarding_get_definition(
     let result = ValueId::new(callable, 0);
     MirMemberDefinition {
         callable,
+        return_storage: None,
         receiver,
         parameters: vec![],
         storage: vec![receiver_storage(callable, receiver, id.class(), span)],
@@ -612,6 +622,7 @@ fn forwarding_get_definition(
                     receiver: Some(receiver.into()),
                     arguments: vec![],
                     result: Some(result),
+                    destination: None,
                     span,
                 })],
                 terminator: Some(MirTerminator::Return {

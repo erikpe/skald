@@ -265,15 +265,17 @@ is static and direct.
 
 The original restricted object profile has primitive by-value parameters and
 results. OVS6 additionally accepts exact-class value parameters on internal
-callables and existing exact-class object places as their arguments. The
+callables and existing exact-class object places as their arguments. OVS7
+accepts exact-class internal function and method results copied from existing
+places into explicit caller return storage. The
 compiler accepts class-typed field declarations, resolves them to nominal
 class identities, rejects recursive inline containment, records nested
 semantic place paths, and type-checks direct construction into class fields
 with precise initializer liveness. Nested primitive access, method receivers,
 and exact-class alias arguments are type-checked through those paths. Native
 lowering executes those operations through recursively laid-out inline
-storage. It does not include object results, produced-object arguments,
-inheritance,
+storage. It does not include produced-object arguments or returns, general
+object temporaries, inheritance,
 interfaces, virtual calls, casts, `shared`, access modifiers, static members,
 `final`, or object FFI.
 
@@ -443,9 +445,11 @@ therefore executable within the restricted profile above.
 
 OVS0 froze the parser-facing boundary for this object-model roadmap. OVS1–OVS5
 implemented lifecycle declarations and local copy behavior; OVS6 implements
-internal exact-class value parameters from existing object-place arguments.
-Results, produced-object arguments, and general temporaries remain rejected
-until their named slices are implemented.
+internal exact-class value parameters from existing object-place arguments;
+and OVS7 implements exact-class internal results from existing places plus
+direct initialization of locals by object-returning calls. Produced-object
+arguments and returns, assignment from results, and general temporaries remain
+rejected until their named slices are implemented.
 
 The planned lifecycle shapes are:
 
@@ -514,7 +518,8 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
-- object results, produced-object arguments, and general temporaries;
+- produced-object arguments and returns, assignment from object results, and
+  general temporaries;
 - inheritance, interfaces, virtual dispatch, and access control;
 - local alias declarations and alias sources beyond inline locals, method
   `self`, and forwarded parameters;

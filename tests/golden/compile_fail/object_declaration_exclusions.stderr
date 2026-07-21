@@ -1,11 +1,5 @@
-error[PAR002]: expected a method return type after `->`
- --> tests/golden/compile_fail/object_declaration_exclusions.ska:10:30
-    |
-10 |     fn copy(value: Inner) -> Inner {
-    |                              ^^^^^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
-
-error[PAR002]: expected a return type after `->`
- --> tests/golden/compile_fail/object_declaration_exclusions.ska:19:14
-    |
-19 | fn give() -> Inner {
-    |              ^^^^^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
+error[TYP017]: field `child` is not initialized
+ --> tests/golden/compile_fail/object_declaration_exclusions.ska:6:5
+   |
+6 |     child: Inner;
+   |     ^^^^^ this field needs one assignment in `init`

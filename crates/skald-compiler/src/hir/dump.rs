@@ -276,12 +276,22 @@ impl HirDumper {
                         dumper.construction(construction)
                     }
                     HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
+                    HirLocalInitializer::Call(call) => dumper.object_call(call),
                 });
             }
             HirStatement::Return(statement) => {
                 self.line("Return", statement.span);
                 if let Some(value) = &statement.value {
-                    self.indented(|dumper| dumper.expression(value));
+                    self.indented(|dumper| match value {
+                        HirReturnValue::Scalar(value) => dumper.expression(value),
+                        HirReturnValue::Object(value) => {
+                            dumper.line(&format!("ObjectResult {}", value.class), value.span);
+                            dumper.indented(|dumper| {
+                                dumper.object_place(&value.source);
+                                dumper.selected_copy_operation(value.operation);
+                            });
+                        }
+                    });
                 }
             }
             HirStatement::Call(statement) => {
@@ -465,6 +475,23 @@ impl HirDumper {
         );
         self.indented(|dumper| {
             for argument in &construction.arguments {
+                dumper.call_argument(argument);
+            }
+        });
+    }
+
+    fn object_call(&mut self, call: &HirObjectCall) {
+        let target = match call.target {
+            HirObjectCallTarget::Direct(function) => format!("function {function}"),
+            HirObjectCallTarget::Method { method, .. } => format!("method {method}"),
+        };
+        self.line(&format!("ObjectCall {target} -> {}", call.class), call.span);
+        self.indented(|dumper| {
+            dumper.object_place(&call.destination);
+            if let HirObjectCallTarget::Method { receiver, .. } = &call.target {
+                dumper.object_place(receiver);
+            }
+            for argument in &call.arguments {
                 dumper.call_argument(argument);
             }
         });

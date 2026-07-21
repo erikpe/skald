@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     hir::{
         dump_hir, BlockFlow, HirBinaryOperation, HirExpression, HirExpressionKind,
-        HirFunctionDefinition, HirLocalInitializer, HirStatement, Type,
+        HirFunctionDefinition, HirLocalInitializer, HirReturnValue, HirStatement, Type,
     },
     identity::FunctionId,
     test_support::{resolve_source, type_check_source},
@@ -25,7 +25,11 @@ fn returned_expression(function: &HirFunctionDefinition) -> &HirExpression {
     let HirStatement::Return(statement) = function.body.statements.last().unwrap() else {
         panic!("expected final return statement");
     };
-    statement.value.as_ref().expect("expected a return value")
+    let HirReturnValue::Scalar(value) = statement.value.as_ref().expect("expected a return value")
+    else {
+        panic!("expected a scalar return value");
+    };
+    value
 }
 
 fn assert_expression_is_fully_typed(expression: &HirExpression) {
@@ -88,5 +92,6 @@ mod dumps;
 mod expressions;
 mod inline_fields;
 mod literals;
+mod object_results;
 mod objects;
 mod value_parameters;

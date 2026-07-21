@@ -2,7 +2,10 @@
 
 use super::*;
 use crate::{
-    hir::{HirCopyAssignment, HirCopyConstruction, HirLocalInitializer, HirObjectPlace},
+    hir::{
+        HirCopyAssignment, HirCopyConstruction, HirExpression, HirExpressionKind,
+        HirLocalInitializer, HirObjectCall, HirObjectCallTarget, HirObjectPlace,
+    },
     object_path::ObjectPath,
     resolve::ResolvedObjectAssignment,
 };
@@ -23,27 +26,54 @@ impl CallableChecker<'_, '_> {
                 .map(HirLocalInitializer::Construct);
         }
 
+        let destination = self.object_local_destination(local, class);
+        if is_object_call_source(initializer) {
+            let expression = self.check_expression(initializer)?;
+            if !require_type(
+                expression.ty,
+                Type::Class(class),
+                expression.span,
+                "object result initializer",
+                self.diagnostics,
+            ) {
+                return None;
+            }
+            return Some(HirLocalInitializer::Call(lower_object_call(
+                expression,
+                destination,
+                class,
+            )));
+        }
+
         let source = self.check_copy_source_place(initializer, class)?;
         let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
             self.report_unavailable_copy_operation(class, true, initializer.span());
             return None;
         };
         let span = initializer.span();
-        let destination_span = self
-            .locals
-            .get(local.index())
-            .filter(|metadata| metadata.id == local)
-            .expect("copy destination local must reference local metadata")
-            .name_span;
         Some(HirLocalInitializer::Copy(HirCopyConstruction {
-            destination: HirObjectPlace {
-                path: ObjectPath::root(BindingId::Local(local), class, destination_span),
-                access: HirAccess::Mutable,
-            },
+            destination,
             source,
             operation,
             span,
         }))
+    }
+
+    fn object_local_destination(
+        &self,
+        local: crate::identity::LocalId,
+        class: ClassId,
+    ) -> HirObjectPlace {
+        let destination_span = self
+            .locals
+            .get(local.index())
+            .filter(|metadata| metadata.id == local)
+            .expect("object destination local must reference local metadata")
+            .name_span;
+        HirObjectPlace {
+            path: ObjectPath::root(BindingId::Local(local), class, destination_span),
+            access: HirAccess::Mutable,
+        }
     }
 
     pub(super) fn check_object_assignment(
@@ -137,5 +167,53 @@ impl CallableChecker<'_, '_> {
                 span,
             }),
         ))
+    }
+}
+
+fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> bool {
+    match expression {
+        crate::resolve::ResolvedExpression::DirectCall(_)
+        | crate::resolve::ResolvedExpression::MethodCall(_) => true,
+        crate::resolve::ResolvedExpression::Grouped(grouped) => {
+            is_object_call_source(&grouped.expression)
+        }
+        _ => false,
+    }
+}
+
+fn lower_object_call(
+    expression: HirExpression,
+    destination: HirObjectPlace,
+    class: ClassId,
+) -> HirObjectCall {
+    let span = expression.span;
+    match expression.kind {
+        HirExpressionKind::DirectCall {
+            function,
+            arguments,
+        } => HirObjectCall {
+            destination,
+            target: HirObjectCallTarget::Direct(function),
+            arguments,
+            class,
+            span,
+        },
+        HirExpressionKind::MethodCall {
+            receiver,
+            method,
+            arguments,
+        } => HirObjectCall {
+            destination,
+            target: HirObjectCallTarget::Method { receiver, method },
+            arguments,
+            class,
+            span,
+        },
+        HirExpressionKind::Grouped(inner) => {
+            let mut call = lower_object_call(*inner, destination, class);
+            call.span = span;
+            call
+        }
+        _ => unreachable!("syntactic object call must type-check as a call expression"),
     }
 }

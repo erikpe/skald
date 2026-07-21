@@ -295,6 +295,13 @@ Direct class-field initialization has its own HIR statement and lowers to MIR
 construction with an explicit projected destination; scalar field stores stay
 ordinary assignments.
 
+Internal object results use a dedicated uninitialized MIR return-storage slot.
+An object-returning call names its caller-owned local destination directly;
+the callee copy-constructs that storage before cleanup and never destroys it.
+Verification requires exactly one matching result destination on every normal
+path. The x86-64 backend maps this contract to a hidden first integer-class
+address before the receiver and explicit arguments.
+
 Each MIR class carries an explicit target-independent destruction plan. Plans
 reference only `DestructorId` and `FieldId`, and cleanup instructions reference
 only `ClassId` and `MirPlace`. The verifier enforces body-before-fields and

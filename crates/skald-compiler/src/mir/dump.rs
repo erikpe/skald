@@ -177,6 +177,9 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
     if let Some(receiver) = function.receiver() {
         let _ = writeln!(output, "      Receiver {receiver}");
     }
+    if let Some(storage) = function.return_storage() {
+        let _ = writeln!(output, "      ReturnStorage {storage}");
+    }
     output.push_str("      Parameters");
     for parameter in function.parameters() {
         let _ = write!(output, " {parameter}");
@@ -185,6 +188,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
     output.push_str("      Storage\n");
     for storage in function.storage_entries() {
         let kind = match storage.kind {
+            MirStorageKind::Return => "return",
             MirStorageKind::Receiver => "receiver",
             MirStorageKind::Parameter => "parameter",
             MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly) => "ref-parameter",
@@ -199,6 +203,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 let _ = write!(output, "{source} ");
             }
             None => match storage.kind {
+                MirStorageKind::Return => output.push_str("<return> "),
                 MirStorageKind::Argument => output.push_str("<argument> "),
                 MirStorageKind::Temporary => output.push_str("<temporary> "),
                 _ => unreachable!("verified language storage has a source binding"),
@@ -235,7 +240,10 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 write_span(output, assignment.span);
             }
             MirInstruction::Call(call) => {
-                if let Some(result) = call.result {
+                if let Some(destination) = &call.destination {
+                    dump_place(output, destination);
+                    output.push_str(" <- ");
+                } else if let Some(result) = call.result {
                     let _ = write!(output, "{result} = ");
                 }
                 match call.target {

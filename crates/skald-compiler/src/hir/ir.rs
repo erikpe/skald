@@ -646,6 +646,25 @@ pub enum HirLocalInitializer {
     Value(HirExpression),
     Construct(HirConstruction),
     Copy(HirCopyConstruction),
+    Call(HirObjectCall),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirObjectCall {
+    pub destination: HirObjectPlace,
+    pub target: HirObjectCallTarget,
+    pub arguments: Vec<HirCallArgument>,
+    pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirObjectCallTarget {
+    Direct(FunctionId),
+    Method {
+        receiver: HirObjectPlace,
+        method: MethodId,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -666,7 +685,21 @@ pub struct HirConstruction {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirReturn {
-    pub value: Option<HirExpression>,
+    pub value: Option<HirReturnValue>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirReturnValue {
+    Scalar(HirExpression),
+    Object(HirObjectReturn),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirObjectReturn {
+    pub source: HirObjectPlace,
+    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub class: ClassId,
     pub span: Span,
 }
 

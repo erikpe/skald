@@ -34,6 +34,9 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 }
                 HirStatement::Return(statement) => {
                     if let Some(value) = &statement.value {
+                        let HirReturnValue::Scalar(value) = value else {
+                            panic!("expected scalar return");
+                        };
                         assert_expression_is_fully_typed(value);
                     }
                 }

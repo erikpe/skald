@@ -9,6 +9,7 @@ mod alias_lowering;
 mod aliases;
 mod copy;
 mod object_fixtures;
+mod object_results;
 mod objects;
 mod value_parameters;
 
