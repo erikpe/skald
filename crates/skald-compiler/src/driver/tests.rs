@@ -355,8 +355,8 @@ fn composes_the_complete_object_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn ovs4_copy_source_reaches_mir_and_stops_cleanly_at_the_backend_boundary() {
-    let CompilationError::Backend(error) = compile_source_to_assembly(
+fn ovs5_copy_source_reaches_the_backend() {
+    let artifact = compile_source_to_assembly(
         "copy.ska",
         concat!(
             "class Value { init() {} }\n",
@@ -369,10 +369,9 @@ fn ovs4_copy_source_reaches_mir_and_stops_cleanly_at_the_backend_boundary() {
         ),
         Target::X86_64SysV,
     )
-    .unwrap_err() else {
-        panic!("expected the OVS4 MIR-to-backend boundary error");
-    };
-    assert!(error.message().contains("OVS5"));
+    .expect("OVS5 local copy operations must lower through the backend");
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(!artifact.assembly.contains("memcpy"));
 }
 
 #[test]

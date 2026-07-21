@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS4 are complete and OVS5 is next.
+Status: in progress; OVS0–OVS5 are complete and OVS6 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -161,14 +161,14 @@ corrupt or hand-built MIR fails before backend instruction selection.
 
 **Purpose:** Make local copy behavior observable before changing callable ABI.
 
-- [ ] Lower user lifecycle calls through the existing hidden-receiver and alias
+- [x] Lower user lifecycle calls through the existing hidden-receiver and alias
       address machinery.
-- [ ] Lower synthesized recursive field operations in MIR-defined order.
-- [ ] Extend frame planning for explicit destinations and bounded temporaries.
-- [ ] Preserve scalar intermediates and live aliases across lifecycle calls.
-- [ ] Retain checked layouts and structured malformed-MIR errors; add no
+- [x] Lower synthesized recursive field operations in MIR-defined order.
+- [x] Extend frame planning for explicit destinations and bounded temporaries.
+- [x] Preserve scalar intermediates and live aliases across lifecycle calls.
+- [x] Retain checked layouts and structured malformed-MIR errors; add no
       implicit `memcpy` path.
-- [ ] Add native traces for copy, assignment, self-assignment, nesting,
+- [x] Add native traces for copy, assignment, self-assignment, nesting,
       temporaries, cleanup, padding, and empty classes.
 
 **Acceptance criteria:** local copy construction and assignment execute with

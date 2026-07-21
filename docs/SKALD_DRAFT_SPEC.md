@@ -1590,9 +1590,10 @@ HIR. OVS3 accepts direct local copy initialization and live-object assignment
 between exact-class places, with explicit source, destination, and selected
 operation in HIR. OVS4 represents and verifies copy operations, selected
 capabilities, ordered synthesized field composition, and bounded
-full-expression temporary cleanup without class-valued MIR values. The x86-64
-backend reports the OVS5 boundary
-when reachable copy operations require instruction selection. Class value
+full-expression temporary cleanup without class-valued MIR values. OVS5 lowers
+user lifecycle calls and recursively synthesized field operations through
+checked x86-64 place addressing, with explicit temporary frame storage and no
+implicit byte-copy path. Class value
 parameters/results, constructor or result temporaries in copy contexts,
 alias-rooted replacement, external object signatures, and other
 object-producing expressions remain rejected until their later slices.

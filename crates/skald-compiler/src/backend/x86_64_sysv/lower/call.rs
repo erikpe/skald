@@ -145,7 +145,7 @@ impl InstructionSelector<'_, '_> {
         self.select_callable(CallableId::Destructor(target), Some(receiver), &[], None)
     }
 
-    fn select_callable(
+    pub(super) fn select_callable(
         &mut self,
         target: CallableId,
         receiver: Option<&MirPlace>,

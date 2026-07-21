@@ -1,0 +1,60 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Leaf {
+    prefix: u8;
+    value: i64;
+    suffix: bool;
+
+    init(value: i64) {
+        self.prefix = 1u8;
+        self.value = value;
+        self.suffix = true;
+    }
+
+    init(ref other: Leaf) {
+        self.prefix = other.prefix;
+        self.value = 100 + other.value;
+        self.suffix = other.suffix;
+    }
+
+    assign(ref other: Leaf) {
+        self.prefix = other.prefix;
+        self.value = 200 + other.value;
+        self.suffix = other.suffix;
+    }
+
+    destroy {
+        ska_rt_println_i64(300 + self.value);
+    }
+}
+
+class Empty {
+    init() {}
+}
+
+class Pair {
+    left: Leaf;
+    empty: Empty;
+    right: Leaf;
+
+    init(left: i64, right: i64) {
+        self.left = Leaf(left);
+        self.empty = Empty();
+        self.right = Leaf(right);
+    }
+}
+
+fn main() -> i64 {
+    var source: Pair = Pair(1, 2);
+    var destination: Pair = source;
+    ska_rt_println_i64(destination.left.value);
+    ska_rt_println_i64(destination.right.value);
+    destination.left = destination.left;
+    ska_rt_println_i64(destination.left.value);
+    destination.right = source.left;
+    ska_rt_println_i64(destination.right.value);
+    source = source;
+    ska_rt_println_i64(source.left.value);
+    ska_rt_println_i64(source.right.value);
+    return 0;
+}

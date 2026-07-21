@@ -16,6 +16,7 @@ use super::{
 mod assignment;
 mod call;
 mod cleanup;
+mod copy;
 mod terminator;
 mod value;
 
@@ -145,11 +146,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::Cleanup(cleanup) => self.select_cleanup(cleanup)?,
             MirInstruction::Initialize(initialize) => self.select_initialize(initialize)?,
             MirInstruction::Store(store) => self.select_store(store)?,
-            MirInstruction::CopyConstruct(_)
-            | MirInstruction::CopyAssign(_)
-            | MirInstruction::EndFullExpression(_) => {
-                unreachable!("target legality rejects OVS4 object operations")
-            }
+            MirInstruction::CopyConstruct(copy) => self.select_copy_construction(copy)?,
+            MirInstruction::CopyAssign(copy) => self.select_copy_assignment(copy)?,
+            MirInstruction::EndFullExpression(end) => self.select_end_full_expression(end)?,
         }
         Ok(())
     }

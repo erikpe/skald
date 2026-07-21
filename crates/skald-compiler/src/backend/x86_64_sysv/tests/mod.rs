@@ -11,13 +11,14 @@ use crate::{
     mir::{
         verify_mir, BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock,
         MirBinaryOperation, MirBody, MirCall, MirCallTarget, MirClassDeclaration,
-        MirClassDeclarationTable, MirCleanup, MirCopyCapability, MirDestructionPlan,
-        MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
-        MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize,
-        MirInitializerDeclaration, MirInstruction, MirMemberDefinition, MirMemberDefinitionTable,
-        MirMethodDeclaration, MirParameter, MirParameterMode, MirPlace, MirProgram,
-        MirReceiverAccess, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore,
-        MirTerminator, MirType, MirUnaryOperation, MirValue, StorageId, ValueId,
+        MirClassDeclarationTable, MirCleanup, MirCopyCapability, MirCopyConstruction,
+        MirDestructionPlan, MirEndFullExpression, MirFieldDeclaration, MirFunctionDeclaration,
+        MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
+        MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
+        MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,
+        MirParameterMode, MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
+        MirSelectedCopyOperation, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
+        MirUnaryOperation, MirValue, StorageId, ValueId,
     },
     source::SourceDatabase,
     test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
@@ -39,6 +40,7 @@ use native_support::*;
 mod assembler;
 mod calls;
 mod control_flow;
+mod copy;
 mod destruction;
 mod instruction_selection;
 mod legality;

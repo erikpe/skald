@@ -51,13 +51,16 @@ The current Linux x86-64 compiler supports:
 - optional contextual `destroy { ... }` members and automatic deterministic
   cleanup of owning inline locals on normal block and `return` exits, including
   recursive class fields in reverse declaration order;
+- exact-class copy constructors and copy assignments, with user-defined or
+  recursively synthesized field behavior for local and projected destinations;
 - deterministic left-to-right operand and argument evaluation;
 - textual x86-64 System V assembly, native linking, exact diagnostics, and a
   small C runtime with primitive output functions.
 
 Owning inline objects are deliberately local-only today. By-value object
-parameters, results and arguments, copying, inheritance, interfaces, `shared`,
-arrays, optionals, loops, and checked exceptions are not implemented yet.
+parameters, results and arguments, general object-producing temporaries,
+inheritance, interfaces, `shared`, arrays, optionals, loops, and checked
+exceptions are not implemented yet.
 
 Restricted alias parameters compile through syntax, typed HIR, verified MIR,
 and the internal x86-64 pointer ABI without copying object bytes. Native and
@@ -113,7 +116,7 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. copy construction/assignment and object value parameters/results;
+1. object value parameters/results, return storage, and permitted elision;
 2. inheritance, interfaces, virtual dispatch, and casts;
 3. `shared` ownership and borrow anchors;
 4. loops/iterators, arrays, optionals, and checked exceptions;
