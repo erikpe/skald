@@ -917,9 +917,10 @@ validation, direct construction, and initializer liveness from Section 5.4.4
 are implemented. Nested scalar access, receivers, and alias arguments are
 lowered through complete identity paths and execute against recursively laid
 out x86-64 storage. Base classes, interfaces, static members, `final`, access
-modifiers, virtual/override declarations, `assign`, and `destroy` remain
-rejected by the current compiler. Section 5.4.5 freezes the next restricted
-`destroy` extension. Empty classes are valid.
+modifiers, virtual/override declarations, and `assign` remain rejected by the
+current compiler. Section 5.4.5 defines the implemented restricted `destroy`
+extension, and Section 5.4.6 freezes the staged object-value extension. Empty
+classes are valid.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
 implicit mutable `self`, takes only by-value primitive parameters, and returns
@@ -1387,17 +1388,17 @@ on hash-map iteration or target layout.
 ##### Boundary with later object-model slices
 
 This profile establishes complete contained subobjects. The frozen destruction
-profile in Section 5.4.5 now represents `destroy` bodies, recursive field
-plans, initialized-place cleanup state, and cleanup-aware normal control-flow
-edges in MIR using the completion points preserved here. Backend execution,
-failed-construction cleanup, and exceptional cleanup remain later work.
+profile in Section 5.4.5 now represents and executes `destroy` bodies,
+recursive field plans, initialized-place cleanup state, and cleanup-aware
+normal control-flow edges using the completion points preserved here. Failed-
+construction and exceptional cleanup remain later work.
 
 There is no implicit or synthesized copy construction or assignment. A user
 may pass a field to an existing explicit alias parameter, including an
 initializer declared as `init(ref other: T)`, but copying the underlying field
-as a value remains unavailable. Later synthesized copy operations must compose
-the copy capabilities of class fields rather than treating their bytes as
-untyped storage.
+as a value remains unavailable. The staged profile in Section 5.4.6 freezes
+later synthesized copy operations as composition of field capabilities rather
+than untyped storage.
 
 Inheritance will later add base-subobject dependencies and projections without
 changing the rule that by-value containment must have finite layout. Shared
@@ -1578,7 +1579,284 @@ language must follow the order above. Later copy/value, inheritance, shared,
 loop, and exception roadmaps must extend this initialized-place model rather
 than redefining the normal local-object behavior frozen here.
 
+#### 5.4.6 Frozen Staged Object-Value Profile
+
+**Implementation status:** semantic contract frozen by OVS0 of the
+[Object Value Semantics Roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md). OVS0 does
+not enable copy or object-value source forms. Until their named implementation
+slices land, the compiler continues to reject `assign` members, object
+assignment, class value parameters/results, and general object-producing
+expressions at their existing boundaries.
+
+This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,
+normal control flow, and the already implemented alias and destruction model.
+An object value is always realized in owned storage. Source and destination
+places, construction state, and cleanup are explicit; no phase represents a
+class object as a scalar value or copies its bytes without selecting a language
+copy operation.
+
+##### Lifecycle declarations and identities
+
+The staged class model has three independent lifecycle slots:
+
+1. exactly one explicit ordinary initializer, as in the current profile;
+2. at most one copy constructor;
+3. at most one copy assignment member.
+
+The parser uses the existing initializer shape and the new assignment shape:
+
+```text
+initializer-declaration    = "init" "(" parameters? ")" block
+copy-assignment-declaration = "assign" "(" "ref" identifier ":" class-name ")" block
+```
+
+An initializer is the class's copy constructor precisely when it has one
+parameter, that parameter uses read-only `ref`, and its type is the exact
+enclosing class. The parameter name is immaterial. Every other valid
+initializer signature is ordinary. A class may therefore declare its one
+ordinary initializer and one copy constructor with the same contextual `init`
+spelling; they are not a general overload set. A copy constructor does not
+satisfy the requirement for an ordinary initializer.
+
+A copy assignment declaration has exactly one read-only alias parameter of the
+exact enclosing class, an implicit mutable `self`, and an implicit `unit`
+result. It has no `fn`, result annotation, receiver modifier, or semicolon.
+There is no overloaded ordinary `assign` lifecycle form. Fields and ordinary
+`fn` methods named `init` or `assign` remain in the ordinary member namespace
+and may coexist with the corresponding lifecycle declarations.
+
+A second declaration for the same lifecycle slot is diagnosed at the second
+declaration and identifies the first. A malformed copy signature is diagnosed
+as a malformed lifecycle declaration; it is not silently reclassified or used
+to trigger synthesis. User lifecycle declarations receive stable owner-
+qualified identities in source order. Synthesized operations receive a stable
+class-owned semantic identity distinct from every source declaration. Lower
+phases select those identities and never repeat selection from the spelling
+`init` or `assign`.
+
+The copy-constructor body follows the current straight-line initializer rules:
+its destination `self` is uninitialized, each direct field must be initialized
+exactly once, and the complete receiver becomes live only on normal completion.
+Its source parameter is an already-live read-only object place. The copy
+assignment body follows the statement surface of a mutable `unit` method. Both
+`self` and the source are complete and live for the whole call; `return;` and
+fallthrough complete the operation, while a value return is invalid. A custom
+assignment body may update any permitted subset of fields and is not required
+to resemble synthesized fieldwise assignment.
+
+##### Copy capabilities and synthesis
+
+Copy-construction and copy-assignment capability are computed independently:
+
+- a valid user declaration provides that operation and completely replaces
+  synthesis for it;
+- otherwise the compiler synthesizes the operation exactly when every direct
+  field supports the corresponding operation;
+- every primitive field supports both operations and preserves its exact typed
+  value, including the raw bits of `f64`;
+- a class-typed field supports an operation when its exact field class does;
+- an empty or primitive-only class therefore receives both synthesized
+  operations when they are absent;
+- a `destroy` declaration neither suppresses nor changes synthesis;
+- an absent operation whose field requirements are not met is unavailable, or
+  implicitly deleted, and every use receives a source diagnostic explaining
+  the first deterministic capability path that failed.
+
+The current acyclic primitive/inline-field profile has no syntax for explicitly
+deleting an operation and no field kind that is intrinsically non-copyable, so
+every otherwise valid current class can synthesize both operations. The
+unavailable state is nevertheless part of the semantic model for future field
+kinds and for structurally invalid IR; no backend may assume universal
+copyability.
+
+A synthesized copy constructor processes direct fields in declaration order.
+It initializes a primitive field from the corresponding source field and copy-
+constructs a class field into its destination storage. Each completed class
+field becomes live at its operation's normal completion. A synthesized copy
+assignment processes fields in the same declaration order, assigns primitives,
+and invokes class-field copy assignment. The complete destination and all its
+fields remain live throughout. These are ordered semantic operations, never a
+target `memcpy`. A user operation contributes only the body the user wrote;
+the compiler adds no implicit field copy before or after it.
+
+##### Local initialization, assignment, and aliases
+
+The first object source forms are:
+
+- an already-live exact-class place rooted at an owning local, value parameter,
+  method `self`, or `ref`/`mut ref` parameter, with any valid inline field
+  projections;
+- a fresh exact-class constructor expression `T(arguments)`;
+- an exact-class result from an internally defined function or method.
+
+Grouping preserves a place or produced object's meaning. An object-producing
+expression is otherwise valid only where this profile explicitly requests an
+object source: local initialization, object assignment, a matching value
+argument, or an object return. It is not a scalar expression, an effect-only
+statement, a primitive operand, a field value, a method receiver, or an alias
+argument. Externally declared functions remain primitive-only.
+
+Direct copy initialization has the source shape:
+
+```ska
+var copy: T = original;
+```
+
+The source must be readable, live, and exactly `T`. Storage for `copy` is
+reserved first. The selected copy constructor receives the source as a
+read-only alias and initializes that storage. `copy` becomes live and is
+registered for cleanup only after normal completion. Copying from a place does
+not create an intermediate object.
+
+Object assignment has the statement shape:
+
+```ska
+destination = source;
+```
+
+The destination is evaluated first and must be a mutable, already-live owning
+object local, owning value parameter, or class-typed field reached from a
+mutable owning local or live mutable `self`. Assigning the complete method
+receiver, rebinding an alias parameter, or replacing any object through an
+alias-rooted path remains invalid. The source is then evaluated and must
+produce or designate the exact destination class. The selected copy assignment
+operation runs once; assignment does not destroy, reconstruct, unregister, or
+reregister the destination.
+
+An existing source place is passed directly as the operation's read-only
+source alias. The language does not infer exclusive access: source and
+destination may be the same place, and ordinary call-scoped aliases may also
+reach either object. A user copy assignment is invoked even for self-assignment
+and is responsible for the behavior of its own body. Synthesized assignment
+runs its ordinary declaration-ordered field sequence even for self-assignment;
+primitive self-stores preserve their values, while selected user field-
+assignment members retain all their normal effects. The compiler inserts no
+implicit identity guard. It may remove an operation only through an ordinary
+proof that all observable behavior is unchanged, not merely because the two
+places are equal.
+
+##### Value parameters and arguments
+
+An internal value parameter `name: T` owns independent exact-class storage in
+the callee. It is mutable like an owning local and is distinct from `ref name:
+T` and `mut ref name: T`, which retain their non-owning behavior. Object value
+parameters remain forbidden on `extern fn` declarations.
+
+Call evaluation remains left to right. For each object value argument, the
+caller reserves the corresponding parameter destination and evaluates the
+argument at that source position. An existing place is copy-constructed
+directly into the parameter destination; a produced object follows the
+temporary rules below: it is materialized first, the parameter is copy-
+constructed from it, and it remains live through the call. Construction of
+that parameter completes before the next argument is evaluated. The callee
+body begins only after every argument and owned parameter has completed.
+
+On every supported normal callee exit, the return result is established first,
+then body temporaries and locals are cleaned according to their scopes, and
+then owning value parameters are destroyed in reverse parameter order. Alias
+parameters are never cleaned. The callee owns parameter cleanup even if the
+backend uses caller-reserved memory to implement the internal ABI.
+
+##### Object results and return storage
+
+An internally defined function or method may have an exact concrete class
+result. Every call supplies distinct uninitialized result storage. A return of
+an existing exact-class place copy-constructs that result before any exited
+scope is cleaned. A return of a produced exact-class object initializes the
+same result according to the temporary and elision rules below. Wrong-class,
+unreadable, dead, or missing returns are invalid. A `ref` or `mut ref` parameter
+may be the source place; the result owns a copy and the alias itself does not
+escape.
+
+The result becomes live only when its selected initializer or copy constructor
+completes. It is not an owning local or parameter of the callee and the callee
+does not destroy it. Once established, ownership belongs to the caller, which
+either uses the storage as a final destination or treats it as a materialized
+temporary. Callee local and parameter cleanup therefore cannot invalidate the
+result. HIR and MIR represent the destination and transfer explicitly; target
+aggregate registers, hidden pointers, offsets, and frame placement remain
+backend decisions.
+
+##### Temporaries and full expressions
+
+A fresh constructor expression and an internal object-returning call
+materialize an owning temporary whenever they are not constructed directly
+into an eligible final destination. Copying from an existing place does not.
+Each temporary becomes live only when its construction completes and is then
+destroyed exactly once in reverse completion order at the end of its full
+expression.
+
+The staged full-expression boundaries are:
+
+- the complete initializer of one local declaration;
+- the complete right side of one assignment statement;
+- one effect-only call statement, including the call's complete argument list;
+- one `return` expression.
+
+Temporaries created while evaluating call arguments remain live through the
+call and are destroyed after the call result has been secured. For `return`,
+the result is initialized first, expression temporaries are then destroyed,
+and lexical locals and value parameters are cleaned afterward using the
+destruction profile. A newly initialized local is live and registered before
+its initializer temporaries are destroyed. These rules extend the existing
+initialized-place stack; they do not introduce moves or an implicit ownership
+transfer between two places.
+
+##### Permitted copy elision and observable effects
+
+Copy elision is permitted in exactly two cases where the expression is an
+ungrouped fresh constructor of the exact destination class:
+
+1. `var value: T = T(arguments);`
+2. `return T(arguments);` from a callable returning `T`.
+
+In either case the non-elided abstract execution creates a temporary, copy-
+constructs the destination from it, and destroys the temporary. A program must
+have an accessible valid copy constructor for that execution even when the
+copy is elided. Elision makes the source temporary and destination one object:
+the constructor selected by `T(arguments)` runs once directly against
+destination storage, the selected copy-constructor operation is omitted in its
+entirety, and the omitted temporary's complete destruction sequence does not
+run. This permission includes side effects in a user copy constructor,
+recursively selected field copy operations, and the temporary's user/field
+destructors.
+No other user-visible operation is omitted by this permission.
+
+The initial compiler policy is to elide every eligible occurrence. That policy
+preserves the existing direct-to-destination construction behavior and must be
+deterministic across compiler processes. The language permission remains
+explicit so a later mode may choose non-elided execution without changing
+validity. Grouped construction, construction used as an argument, assignment
+to a live object, copy from an existing place, initialization from a function
+result, and named-return optimization are not eligible. In particular,
+assignment from `T(arguments)` constructs a temporary, invokes copy assignment,
+then destroys the temporary at the statement boundary.
+
+##### Diagnostics and extension boundary
+
+Source diagnostics must distinguish malformed/duplicate lifecycle
+declarations, unavailable copy capability, wrong-class or inaccessible
+sources, invalid or dead destinations, read-only or alias-rooted replacement,
+unsupported object contexts, missing object returns, and object-bearing
+external signatures. Capability diagnostics follow declaration order through
+class fields and identify both the use and the declaration path that makes an
+operation unavailable. Diagnostics and every phase dump remain deterministic.
+
+This profile adds no move or destructive transfer, relocation, slicing,
+inheritance, base subobject, dynamic dispatch, interface, cast, shared
+ownership, allocation, reference counting, borrow anchor, array, optional,
+static/global object, closure capture, cross-module value, external object ABI,
+exception edge, failed-copy cleanup, unwinding, or explicit early destruction.
+It does not permit replacement through aliases. Future profiles must extend the
+same explicit destination, initialized-place, result-storage, temporary, and
+cleanup model rather than treating aggregate bytes as ownership.
+
 ### 5.5 Initialization Members
+
+Section 5.4.6 is the implementation contract for the staged exact-class,
+normal-flow compiler. The broader rules in this section also describe later
+default initialization, inheritance, and constructor families that remain
+outside that profile.
 
 An `init` declaration defines a constructor that initializes object storage.
 
@@ -1598,6 +1876,11 @@ Rules:
 - if construction fails in a later exception-enabled language, only fully constructed subobjects are destroyed.
 
 ### 5.6 Copy Constructors and Copy Assignment
+
+Section 5.4.6 freezes the initial executable subset, including mandatory
+synthesis when field capabilities permit it and exact self-assignment behavior.
+The rules below retain the broader direction for future field kinds,
+inheritance, `final`, and `shared`.
 
 Copy construction initializes a new object from an existing object of the same type.
 
@@ -1624,12 +1907,20 @@ Rules:
 - copy constructors initialize uninitialized storage;
 - copy assignment operates on an already-initialized object;
 - copy construction initializes final fields like any other construction, but copy assignment cannot reassign a final field;
-- copy assignment should handle self-assignment correctly;
+- user and synthesized copy assignment both execute for self-assignment;
+  synthesized assignment runs its ordinary field sequence without an implicit
+  identity guard, and every selected user member retains its normal effects;
 - user-defined `init`, copy-construction `init`, `assign`, and `destroy` members may have side effects;
-- the compiler may synthesize copy construction when the base subobject and all fields support copy construction;
-- the compiler may synthesize copy assignment only when the base subobject and all fields support copy assignment and no final field would need to be reassigned;
+- the staged compiler synthesizes copy construction when every field supports
+  copy construction; later inheritance extends that requirement to the base
+  subobject;
+- the staged compiler synthesizes copy assignment when every field supports
+  copy assignment; later `final` and inheritance rules may make that operation
+  unavailable;
 - synthesized copy construction copies fields in declaration order;
-- synthesized copy assignment assigns fields in declaration order unless a more precise rule is needed for safety;
+- synthesized copy assignment assigns fields in declaration order; a future
+  ownership-bearing field's own assignment operation remains responsible for
+  its internal alias safety;
 - synthesized `shared T` field copy increments the shared handle reference count;
 - synthesized `shared T` field assignment must retain the new handle before releasing the old handle to handle self-assignment and aliasing safely.
 
@@ -1752,6 +2043,11 @@ Optional copy elision has the following rules:
 - when elision occurs, the source temporary and destination are treated as one object whose lifetime is the destination's lifetime;
 - the omitted copy-constructor and temporary-destructor calls do not occur, even if they would have had side effects;
 - copy elision does not apply to assignment to an already-initialized object.
+
+For the staged exact-class profile, Section 5.4.6 fixes the initial compiler's
+policy to elide every eligible occurrence. This keeps compiler artifacts and
+observable lifecycle effects deterministic while preserving the broader
+language permission described here.
 
 The permission to omit side-effectful copy construction and destruction is a specific language exception to the ordinary observable-behavior rule. Other constructor, assignment, and destructor calls may be removed only when the compiler proves that doing so does not change observable behavior.
 
@@ -2623,18 +2919,20 @@ corresponding language area is considered complete:
   construction order in [`grammar/README.md`](../grammar/README.md). The
   frozen local deterministic-destruction profile additionally defines cleanup
   for owning locals on implemented normal block, conditional, and return exits.
-  The complete language still needs full-expression boundaries, temporary
-  destruction, and cleanup sequencing for loops, exceptions, and later
-  control-flow forms.
+  The staged object-value profile freezes full-expression boundaries and
+  temporary cleanup for its normal-flow source contexts. Those rules are not
+  implemented yet, and the complete language still needs cleanup sequencing
+  for loops, exceptions, and later control-flow forms.
 - **Initialization rules:** the implemented inline-object profile defines
   straight-line definite initialization for primitive fields during direct
   local construction. The frozen class-typed inline-field profile additionally
   defines exact direct field construction, normal-return subobject liveness,
   nested access, and acyclic containment. Default initialization in other
   storage contexts, base-subobject ordering, branching or throwing
-  initializers, partial-construction cleanup, and exact rules for implicit
-  constructors, synthesized copying, assignment members, and destructors
-  remain open.
+  initializers and partial-construction cleanup remain open. The staged object-
+  value profile freezes exact-class copy/assignment synthesis and bodies for
+  the current no-inheritance field model, but those rules are not implemented
+  yet.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
@@ -2732,11 +3030,28 @@ Resolved decisions in this draft:
 - the local destruction profile does not add explicit early destruction,
   object values or copying, failed-construction or exceptional cleanup,
   inheritance, shared ownership, deallocation, arrays, or loop exits;
-- copy construction uses `init(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
-- copy assignment uses `assign(ref other: T)` and is recognized from the enclosing class and exact parameter signature;
+- the frozen staged object-value profile retains one required ordinary
+  initializer and adds independent optional user slots for exact-class copy
+  construction and copy assignment;
+- copy construction uses `init(ref other: T)` and is recognized from the
+  enclosing class and exact parameter signature;
+- copy assignment uses `assign(ref other: T)` and is recognized from the
+  enclosing class and exact parameter signature;
+- absent copy operations are synthesized in declaration order when all direct
+  fields support the corresponding operation; object bytes are never copied as
+  an unselected shortcut;
+- object parameters own caller-constructed copies, object results use explicit
+  caller-provided uninitialized storage, and class objects remain places rather
+  than scalar MIR values;
+- materialized object temporaries clean up in reverse completion order at the
+  frozen full-expression boundaries, before enclosing return cleanup;
 - constructors, copy constructors, copy assignment members, and destructors may have side effects;
-- direct initialization and returning freshly constructed values permit optional copy elision;
-- optional copy elision may omit side-effectful copy construction and temporary destruction, but never changes assignment into construction;
+- direct initialization and returning an ungrouped fresh exact-class
+  construction permit optional copy elision, and the initial compiler policy
+  is to elide every eligible occurrence deterministically;
+- permitted elision may omit the complete selected copy-constructor operation
+  and temporary destruction even when they have side effects, but never changes
+  assignment into construction;
 - ordinary instance `fn` methods have read-only receivers and mutable instance methods use `mut fn`;
 - receiver mutability is enforced statically, propagates through inline subobjects, and has no runtime representation;
 - read-only receiver access and `final` fields are shallow across `shared` ownership;

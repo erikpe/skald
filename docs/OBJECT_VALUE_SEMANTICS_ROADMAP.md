@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: planned; OVS0 is the next object-model slice.
+Status: in progress; OVS0 is complete and OVS1 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -70,17 +70,17 @@ facade or table refactorings needed to keep one canonical representation.
 **Purpose:** Turn the draft's broad copy rules into one implementation-ready
 normal-flow contract.
 
-- [ ] Freeze copy-constructor and copy-assignment syntax, signatures,
+- [x] Freeze copy-constructor and copy-assignment syntax, signatures,
       coexistence with ordinary initializers, duplicate behavior, and stable
       identities.
-- [ ] Freeze which operations are required, synthesized, deleted, or diagnosed
+- [x] Freeze which operations are required, synthesized, deleted, or diagnosed
       for primitive-only, nested, empty, and non-copyable classes.
-- [ ] Freeze local copy initialization, live-object assignment, self-assignment,
+- [x] Freeze local copy initialization, live-object assignment, self-assignment,
       evaluation order, and alias visibility.
-- [ ] Freeze object argument/parameter ownership, result storage, temporary
+- [x] Freeze object argument/parameter ownership, result storage, temporary
       boundaries, cleanup order, and permitted elision.
-- [ ] Define exactly which copy-member side effects elision may omit.
-- [ ] Reconcile the grammar, draft specification, destruction contract, and
+- [x] Define exactly which copy-member side effects elision may omit.
+- [x] Reconcile the grammar, draft specification, destruction contract, and
       exclusions; add consistency tests where useful.
 
 **Acceptance criteria:** every later slice can implement source behavior,

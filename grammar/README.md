@@ -271,7 +271,7 @@ with precise initializer liveness. Nested primitive access, method receivers,
 and exact-class alias arguments are type-checked through those paths. Native
 lowering executes those operations through recursively laid-out inline
 storage. It does not include object values in arguments/results, copying,
-`assign`, `destroy`, inheritance,
+`assign`, inheritance,
 interfaces, virtual calls, casts, `shared`, access modifiers, static members,
 `final`, or object FFI.
 
@@ -434,6 +434,62 @@ semantic object place; it contains no target offset or ABI detail. DD4 inserts
 those operations on lexical fallthrough and return edges, and DD5 lowers the
 verified plans through the x86-64 hidden-receiver ABI. Automatic destruction is
 therefore executable within the restricted profile above.
+
+## Frozen staged extension: object value semantics
+
+OVS0 freezes the parser-facing boundary for the next object-model roadmap, but
+does not enable these forms yet. Until their named slices are implemented, the
+current parser and type checker continue to reject them with the existing
+unsupported-object diagnostics.
+
+The planned lifecycle shapes are:
+
+```text
+copy-constructor-declaration = "init" "(" "ref" identifier ":" class-name ")" block
+copy-assignment-declaration  = "assign" "(" "ref" identifier ":" class-name ")" block
+```
+
+The copy-constructor production is a semantic specialization of the existing
+initializer grammar: the named type must be the exact enclosing class. A class
+continues to require one ordinary initializer and may additionally declare one
+copy constructor and one copy assignment member. The two `init` declarations
+are fixed lifecycle slots, not general constructor overloading. `assign` has an
+implicit mutable `self` and `unit` result; it has no `fn`, modifier, result
+annotation, or semicolon. Both spellings remain ordinary identifiers outside
+their direct class-member forms.
+
+The staged type positions and statements become:
+
+```text
+internal-value-parameter = identifier ":" (primitive-type | class-name)
+internal-result-type     = value-type | class-name
+
+object-copy-local = "var" identifier ":" class-name "=" object-source ";"
+object-assignment = object-destination "=" object-source ";"
+object-source     = object-place | construction | internal-object-call
+```
+
+These productions describe semantic categories selected from the existing
+postfix expression and assignment-shaped statement syntax; they do not add an
+object token, precedence level, or scalar object expression. Sources and
+destinations must have the same exact class. A copy source may be a readable
+live local, value parameter, `self`, alias, or projected inline field. An
+assignment destination must be a mutable live owning local/value parameter or
+a class field reached from a mutable owning local or mutable `self`. Rebinding
+an alias, assigning the complete `self`, and replacement through an alias-
+rooted path remain invalid.
+
+Object-producing construction and internal calls are accepted only as a local
+initializer, assignment source, matching internal value argument, or object
+return. They do not become primitive operands, alias arguments, receivers,
+discarded expressions, or external ABI values. Copying and results use
+explicit destination storage in semantic IR; a class object never becomes a
+scalar MIR value.
+
+The exact declaration classification, synthesis rules, ownership, evaluation
+order, full-expression temporary cleanup, result storage, always-elide initial
+compiler policy, diagnostics, and exclusions are frozen in the
+[staged object-value profile](../docs/SKALD_DRAFT_SPEC.md#546-frozen-staged-object-value-profile).
 
 ## Recovery and nesting
 

@@ -220,7 +220,7 @@ fn destructor_ast_dump_is_exact_and_source_shaped() {
 fn malformed_and_excluded_members_recover_to_later_members_and_declarations() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",
-        "    assign(other: i64) {}\n",
+        "    assign(ref other: Broken) {}\n",
         "    first: i64;\n",
         "    destroy(value: i64) {}\n",
         "    mut value: i64;\n",
