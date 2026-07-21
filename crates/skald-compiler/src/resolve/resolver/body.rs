@@ -6,6 +6,8 @@ use crate::{
     identity::{BindingId, CallableId, LocalId},
 };
 
+mod place;
+
 pub(super) struct ResolvedCallableBody {
     pub(super) locals: Vec<ResolvedLocal>,
     pub(super) body: ResolvedBlock,
@@ -565,71 +567,6 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             value,
             span: assignment.span,
         })
-    }
-
-    fn resolve_object_place(
-        &mut self,
-        expression: &syntax::Expression,
-    ) -> Option<ResolvedObjectPlace> {
-        match expression {
-            syntax::Expression::Identifier(identifier) => {
-                let Some(binding) = self.lookup_binding(&identifier.name.text) else {
-                    self.report_unknown(&identifier.name.text, identifier.span, "unknown object");
-                    return None;
-                };
-                let ResolvedTypeKind::Class(class) = binding.ty else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_MEMBER_SELECTION,
-                            format!("binding `{}` is not an object", identifier.name.text),
-                        )
-                        .with_primary_label(identifier.span, "member access requires an object")
-                        .with_secondary_label(binding.name_span, "binding declared here"),
-                    );
-                    return None;
-                };
-                Some(ResolvedObjectPlace {
-                    binding: binding.id,
-                    class,
-                    span: identifier.span,
-                })
-            }
-            syntax::Expression::SelfValue(self_value) => {
-                let class = self.receiver_class.or_else(|| {
-                    self.diagnostics.push(
-                        Diagnostic::error(SELF_OUTSIDE_MEMBER, "`self` is not available here")
-                            .with_primary_label(
-                                self_value.span,
-                                "only an initializer or instance method has `self`",
-                            ),
-                    );
-                    None
-                })?;
-                Some(ResolvedObjectPlace {
-                    binding: BindingId::Receiver(self.callable),
-                    class,
-                    span: self_value.span,
-                })
-            }
-            syntax::Expression::Grouped(grouped) => {
-                let mut place = self.resolve_object_place(&grouped.expression)?;
-                place.span = grouped.span;
-                Some(place)
-            }
-            _ => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_MEMBER_SELECTION,
-                        "member receiver must be an object place",
-                    )
-                    .with_primary_label(
-                        expression.span(),
-                        "expected an object local, `self`, or grouping around one",
-                    ),
-                );
-                None
-            }
-        }
     }
 
     fn select_member(

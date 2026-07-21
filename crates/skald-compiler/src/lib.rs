@@ -13,6 +13,7 @@ pub mod identity;
 pub mod lexer;
 pub mod literal;
 pub mod mir;
+mod object_path;
 pub mod passes;
 pub mod resolve;
 pub mod source;

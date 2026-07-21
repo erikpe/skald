@@ -1129,12 +1129,13 @@ replacement, and alias-bearing function values remain deferred.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** contract frozen; IOF1 of the
-[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) is
+**Implementation status:** contract frozen; IOF1–IOF2 of the
+[Class-Typed Inline Object Fields Roadmap](INLINE_OBJECT_FIELDS_ROADMAP.md) are
 implemented. The compiler accepts and resolves class-typed field declarations,
-records canonical HIR field types, and rejects recursive containment before
-target selection. Direct field construction and nested place use remain
-planned. The parser-facing extension is recorded in
+records canonical HIR field types, rejects recursive containment before target
+selection, and represents nested object places as root bindings plus ordered
+semantic field identities. Direct field construction and complete executable
+nested access remain planned. The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with

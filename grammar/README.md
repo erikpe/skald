@@ -260,9 +260,10 @@ is static and direct.
 
 The current executable native-code object profile has only primitive fields
 and primitive by-value parameters and results. The compiler accepts
-class-typed field declarations, resolves them to nominal class identities, and
-rejects recursive inline containment, but construction and use of those fields
-remain staged behind the roadmap below. It does not include object values in
+class-typed field declarations, resolves them to nominal class identities,
+rejects recursive inline containment, and records nested semantic place paths.
+Construction and executable use of those fields remain staged behind the
+roadmap below. It does not include object values in
 arguments/results, copying, `assign`, `destroy`, inheritance,
 interfaces, virtual calls, casts, `shared`, access
 modifiers, static members, `final`, or object FFI.
@@ -294,11 +295,12 @@ conversion, and whole-object replacement through an alias are not implemented.
 ## Frozen staged extension: class-typed inline fields
 
 This section freezes the complete parser-facing extension for the current
-object-model sequence. IOF1 of the
+object-model sequence. IOF1–IOF2 of the
 [Class-Typed Inline Object Fields Roadmap](../docs/INLINE_OBJECT_FIELDS_ROADMAP.md)
-implements field declarations, nominal type resolution, HIR metadata, and
-target-independent containment-cycle rejection. The projected-place and
-construction behavior below remains staged for later roadmap tasks.
+implement field declarations, nominal type resolution, HIR metadata, and
+target-independent containment-cycle rejection, plus resolved/HIR projection
+paths for nested receivers and alias endpoints. Construction and complete
+executable behavior below remain staged for later roadmap tasks.
 
 The extension changes the class field type and projected assignment-place
 productions:

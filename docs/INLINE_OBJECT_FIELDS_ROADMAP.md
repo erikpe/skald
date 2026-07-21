@@ -1,6 +1,6 @@
 # Class-Typed Inline Object Fields Roadmap
 
-Status: in progress; IOF0–IOF1 are complete and IOF2–IOF6 are planned.
+Status: in progress; IOF0–IOF2 are complete and IOF3–IOF6 are planned.
 
 This roadmap adds class-typed fields to Skald's existing inline-object model.
 The slice is deliberately about containment, construction into stable storage,
@@ -262,7 +262,7 @@ address.
 
 - [x] IOF0 — Freeze the class-typed-field contract
 - [x] IOF1 — Resolve field types and reject containment cycles
-- [ ] IOF2 — Generalize semantic object places to projection paths
+- [x] IOF2 — Generalize semantic object places to projection paths
 - [ ] IOF3 — Construct class fields and track initializer liveness
 - [ ] IOF4 — Type-check nested access, receivers, and alias arguments
 - [ ] IOF5 — Lower and execute projected subobjects through MIR and x86-64
@@ -338,20 +338,20 @@ an acyclic inline-containment graph, independent of target layout.
 **Purpose:** Represent an arbitrarily deep inline subobject once so every
 source feature consumes the same stable, identity-based path.
 
-- [ ] Generalize resolved object places from one binding to a root binding plus
+- [x] Generalize resolved object places from one binding to a root binding plus
       ordered `FieldId` projections and a terminal `ClassId`.
-- [ ] Resolve nested member receivers recursively through class-typed fields,
+- [x] Resolve nested member receivers recursively through class-typed fields,
       selecting every field or method exactly once during resolution.
-- [ ] Preserve grouping spans without losing the canonical projection path.
-- [ ] Generalize HIR object places to the same identity path and keep access as
+- [x] Preserve grouping spans without losing the canonical projection path.
+- [x] Generalize HIR object places to the same identity path and keep access as
       one capability on the complete path rather than per-step flags.
-- [ ] Retain an explicit terminal scalar-field selection where it keeps load
+- [x] Retain an explicit terminal scalar-field selection where it keeps load
       and store typing clear; do not create an object rvalue for class fields.
-- [ ] Centralize place-path construction, terminal-type lookup, and diagnostic
+- [x] Centralize place-path construction, terminal-type lookup, and diagnostic
       rendering so reads, writes, calls, aliases, and later construction do not
       rebuild paths independently.
-- [ ] Update resolved and HIR dumps to render complete paths deterministically.
-- [ ] Refactor oversized touched modules into descriptive private submodules
+- [x] Update resolved and HIR dumps to render complete paths deterministically.
+- [x] Refactor oversized touched modules into descriptive private submodules
       only where projection logic has become an independently coherent concern.
 
 **Tests:** Nested member resolution from locals, `self`, and both alias modes;

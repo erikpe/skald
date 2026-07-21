@@ -41,8 +41,9 @@ The current Linux x86-64 compiler supports:
 - inline classes with primitive executable fields, one explicit initializer,
   direct local construction, field reads/writes, and statically dispatched
   receiver methods;
-- class-typed field declarations with nominal resolution and source-level
-  rejection of recursive inline containment;
+- class-typed field declarations with nominal resolution, source-level
+  rejection of recursive inline containment, and target-independent nested
+  object-place paths;
 - read-only `fn` and mutable `mut fn` receiver access;
 - restricted call-scoped `ref` and `mut ref` class parameters over inline
   locals, method receivers, and forwarded aliases;

@@ -7,8 +7,11 @@ use crate::{
         ParameterId,
     },
     literal::NumericLiteralKind,
+    object_path::ObjectPath,
     source::Span,
 };
+
+pub type ResolvedObjectPlace = ObjectPath;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
@@ -484,13 +487,6 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ResolvedObjectPlace {
-    pub binding: BindingId,
-    pub class: ClassId,
-    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -245,6 +245,12 @@ locals, `self`, and alias parameters, permits mutable-to-read-only reduction,
 and enforces field, method, forwarding, and non-escaping rules. HIR therefore
 contains all source-level alias decisions needed by later phases.
 
+Resolved IR and HIR share one target-independent object-path shape: a root
+`BindingId`, ordered class-field `FieldId` projections, a terminal `ClassId`,
+and the complete source span. HIR wraps that identity path in one `HirAccess`
+capability. A final scalar field remains a separate typed selection, so a
+class-field endpoint is a place rather than an object rvalue.
+
 ### MIR
 
 MIR is executable in shape but target-independent. It separates:

@@ -364,7 +364,7 @@ impl HirDumper {
                 self.indented(|dumper| dumper.expression(expression));
             }
             HirCallArgument::Place(place) => {
-                self.line("PlaceArgument", place.span);
+                self.line("PlaceArgument", place.span());
                 self.indented(|dumper| dumper.object_place(place));
             }
         }
@@ -383,9 +383,10 @@ impl HirDumper {
         self.line(
             &format!(
                 "ObjectPlace {} : class {} {access}",
-                place.binding, place.class
+                place.path.render_identity(),
+                place.class()
             ),
-            place.span,
+            place.span(),
         );
     }
 
@@ -416,5 +417,38 @@ impl HirDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        identity::{BindingId, ClassId, FieldId, FunctionId, LocalId},
+        object_path::ObjectPath,
+        source::SourceDatabase,
+    };
+
+    #[test]
+    fn object_place_dump_renders_the_complete_identity_path_exactly() {
+        let mut sources = SourceDatabase::new();
+        let source = sources.add("place.ska", "root.link.leaf");
+        let span = sources.get(source).unwrap().span(0, 14).unwrap();
+        let root = BindingId::Local(LocalId::new(FunctionId::new(0), 0));
+        let path = ObjectPath::root(root, ClassId::new(2), span)
+            .project(FieldId::new(ClassId::new(2), 0), ClassId::new(1), span)
+            .project(FieldId::new(ClassId::new(1), 3), ClassId::new(0), span);
+        let place = HirObjectPlace {
+            path,
+            access: HirAccess::ReadOnly,
+        };
+        let mut dumper = HirDumper::default();
+
+        dumper.object_place(&place);
+
+        assert_eq!(
+            dumper.output,
+            "ObjectPlace f0:l0 -> c2:field0 -> c1:field3 : class c0 readonly @0..14\n"
+        );
     }
 }

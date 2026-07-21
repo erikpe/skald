@@ -14,6 +14,7 @@ pub use ir::{
     HirExpressionKind, HirFieldAssignment, HirFieldDeclaration, HirFieldPlace,
     HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
     HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration, HirLocal,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectPlace,
-    HirParameter, HirParameterMode, HirProgram, HirReturn, HirStatement, HirUnaryOperation, Type,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirMethodDeclaration, HirObjectPath,
+    HirObjectPlace, HirParameter, HirParameterMode, HirProgram, HirReturn, HirStatement,
+    HirUnaryOperation, Type,
 };

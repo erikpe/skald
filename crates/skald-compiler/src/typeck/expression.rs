@@ -7,9 +7,10 @@ use crate::{
         HirFieldPlace, HirObjectPlace, HirUnaryOperation, Type,
     },
     identity::{BindingId, FieldId},
+    object_path::ObjectPath,
     resolve::{
         ResolvedBinaryOperator, ResolvedExpression, ResolvedObjectPlace, ResolvedParameter,
-        ResolvedParameterBindingMode, ResolvedUnaryOperator,
+        ResolvedParameterBindingMode, ResolvedTypeKind, ResolvedUnaryOperator,
     },
     source::Span,
 };
@@ -196,10 +197,12 @@ impl CallableChecker<'_, '_> {
                 })
             }
             ResolvedExpression::FieldAccess(access) => {
-                let place = self.check_field_place(access.receiver, access.field, access.span)?;
+                let place = self.check_field_place(&access.receiver, access.field, access.span)?;
                 if self.receiver.is_some_and(|receiver| receiver.initializer)
-                    && place.receiver.binding == BindingId::Receiver(self.callable)
-                    && !self.initialized_fields.contains(&place.field)
+                    && place.receiver.root() == BindingId::Receiver(self.callable)
+                    && !self
+                        .initialized_fields
+                        .contains(&place.receiver.path.direct_field().unwrap_or(place.field))
                 {
                     let field = self
                         .program
@@ -218,6 +221,19 @@ impl CallableChecker<'_, '_> {
                     .program
                     .field(place.field)
                     .expect("selected field must exist");
+                if matches!(field.type_syntax.kind, ResolvedTypeKind::Class(_)) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            format!("class field `{}` is not a value", field.name),
+                        )
+                        .with_primary_label(
+                            access.member_span,
+                            "use this object place as a receiver or alias argument",
+                        ),
+                    );
+                    return None;
+                }
                 Some(HirExpression {
                     kind: HirExpressionKind::FieldRead(place),
                     ty: lower_type(&field.type_syntax),
@@ -245,7 +261,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         call: &crate::resolve::ResolvedMethodCallExpr,
     ) -> Option<HirExpression> {
-        let receiver = self.check_object_place(call.receiver)?;
+        let receiver = self.check_object_place(&call.receiver, true)?;
         let method = self
             .program
             .method(call.method)
@@ -366,10 +382,10 @@ impl CallableChecker<'_, '_> {
                 let Type::Class(expected_class) = lower_type(&parameter.type_syntax) else {
                     return None;
                 };
-                if place.class != expected_class {
+                if place.class() != expected_class {
                     let actual = &self
                         .program
-                        .class(place.class)
+                        .class(place.class())
                         .expect("resolved alias argument class must exist")
                         .name;
                     let expected = &self
@@ -382,7 +398,7 @@ impl CallableChecker<'_, '_> {
                             TYPE_MISMATCH,
                             format!("alias argument has type `{actual}`, expected `{expected}`"),
                         )
-                        .with_primary_label(place.span, "this place has the wrong class")
+                        .with_primary_label(place.span(), "this place has the wrong class")
                         .with_secondary_label(
                             parameter.type_syntax.span,
                             "alias parameter type declared here",
@@ -399,7 +415,7 @@ impl CallableChecker<'_, '_> {
                             INSUFFICIENT_ALIAS_ACCESS,
                             "read-only access cannot satisfy a mutable alias parameter",
                         )
-                        .with_primary_label(place.span, "this place provides read-only access")
+                        .with_primary_label(place.span(), "this place provides read-only access")
                         .with_secondary_label(parameter.span, "mutable alias declared here"),
                     );
                     return None;
@@ -411,23 +427,45 @@ impl CallableChecker<'_, '_> {
 
     pub(super) fn check_field_place(
         &mut self,
-        place: ResolvedObjectPlace,
+        place: &ResolvedObjectPlace,
         field: FieldId,
         span: Span,
     ) -> Option<HirFieldPlace> {
         Some(HirFieldPlace {
-            receiver: self.check_object_place(place)?,
+            receiver: self.check_object_place(place, true)?,
             field,
             span,
         })
     }
 
-    fn check_object_place(&mut self, place: ResolvedObjectPlace) -> Option<HirObjectPlace> {
-        let checked = self.check_binding_place(place.binding, place.span, true)?;
+    fn check_object_place(
+        &mut self,
+        place: &ResolvedObjectPlace,
+        allow_initializing_self: bool,
+    ) -> Option<HirObjectPlace> {
+        let mut checked =
+            self.check_binding_place(place.root, place.span, allow_initializing_self)?;
+        let mut class = checked.class();
+        for &field in &place.projections {
+            assert_eq!(
+                field.class(),
+                class,
+                "resolved object-place projection must belong to its receiver class"
+            );
+            let declaration = self
+                .program
+                .field(field)
+                .expect("resolved object-place projection must reference a field");
+            let ResolvedTypeKind::Class(target) = declaration.type_syntax.kind else {
+                panic!("resolved object-place projection must have a class type");
+            };
+            class = target;
+        }
         assert_eq!(
-            checked.class, place.class,
-            "resolved object-place class must match its binding"
+            class, place.class,
+            "resolved object-place terminal class must match its projections"
         );
+        checked.path = place.clone();
         Some(checked)
     }
 
@@ -441,8 +479,29 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::Grouped(grouped) => {
                 let mut place = self.check_alias_argument_place(&grouped.expression)?;
-                place.span = grouped.span;
+                place.path.span = grouped.span;
                 Some(place)
+            }
+            ResolvedExpression::FieldAccess(access) => {
+                let field = self
+                    .program
+                    .field(access.field)
+                    .expect("resolved field access must reference a field");
+                let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_ALIAS_ARGUMENT,
+                            "alias argument must designate an object",
+                        )
+                        .with_primary_label(access.member_span, "this field has a primitive type"),
+                    );
+                    return None;
+                };
+                let place = access
+                    .receiver
+                    .clone()
+                    .project(access.field, class, access.span);
+                self.check_object_place(&place, false)
             }
             _ => {
                 self.diagnostics.push(
@@ -511,10 +570,8 @@ impl CallableChecker<'_, '_> {
             }
         };
         Some(HirObjectPlace {
-            binding,
-            class,
+            path: ObjectPath::root(binding, class, span),
             access,
-            span,
         })
     }
 

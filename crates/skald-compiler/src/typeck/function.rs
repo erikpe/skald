@@ -436,7 +436,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         &mut self,
         assignment: &crate::resolve::ResolvedFieldAssignment,
     ) -> CheckedStatement {
-        let place = self.check_field_place(assignment.receiver, assignment.field, assignment.span);
+        let place = self.check_field_place(&assignment.receiver, assignment.field, assignment.span);
         let value = self.check_expression(&assignment.value);
         let Some(place) = place else {
             return CheckedStatement::falls_through(None);
@@ -456,7 +456,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             valid = false;
         }
         if self.receiver.is_some_and(|receiver| receiver.initializer) {
-            if place.receiver.binding != BindingId::Receiver(self.callable) {
+            if place.receiver.root() != BindingId::Receiver(self.callable)
+                || !place.receiver.path.is_root()
+            {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_INITIALIZER_BODY,

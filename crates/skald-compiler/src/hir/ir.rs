@@ -8,8 +8,11 @@ use crate::{
         BindingId, CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId,
         ParameterId,
     },
+    object_path::ObjectPath,
     source::Span,
 };
+
+pub type HirObjectPath = ObjectPath;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
@@ -587,20 +590,36 @@ impl HirCallArgument {
     pub const fn span(&self) -> Span {
         match self {
             Self::Value(expression) => expression.span,
-            Self::Place(place) => place.span,
+            Self::Place(place) => place.span(),
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirObjectPlace {
-    pub binding: BindingId,
-    pub class: ClassId,
+    pub path: HirObjectPath,
     pub access: HirAccess,
-    pub span: Span,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+impl HirObjectPlace {
+    pub const fn root(&self) -> BindingId {
+        self.path.root
+    }
+
+    pub const fn class(&self) -> ClassId {
+        self.path.class
+    }
+
+    pub fn projections(&self) -> &[FieldId] {
+        &self.path.projections
+    }
+
+    pub const fn span(&self) -> Span {
+        self.path.span
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldPlace {
     pub receiver: HirObjectPlace,
     pub field: FieldId,

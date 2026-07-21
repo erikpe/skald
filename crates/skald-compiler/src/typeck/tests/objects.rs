@@ -1,7 +1,9 @@
 use super::*;
 use crate::{
-    hir::{HirAccess, HirLocalInitializer},
-    identity::{BindingId, ClassId, FieldId, InitializerId, MethodId},
+    diagnostics::Diagnostics,
+    hir::{HirAccess, HirCallArgument, HirLocalInitializer},
+    identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    typeck::function::{CallableChecker, MemberCheckContext, ReceiverContext},
 };
 
 #[test]
@@ -31,7 +33,7 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     };
     assert_eq!(assignment.place.field, class.fields[0].id);
     assert_eq!(
-        assignment.place.receiver.binding,
+        assignment.place.receiver.root(),
         BindingId::Receiver(initializer.callable)
     );
 
@@ -148,6 +150,145 @@ fn rejects_object_bearing_value_parameters_and_results_at_the_type_boundary() {
         .diagnostics
         .iter()
         .all(|diagnostic| diagnostic.code != RECURSIVE_INLINE_CONTAINMENT));
+}
+
+#[test]
+fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
+    let resolved = resolve_text(concat!(
+        "class Leaf { value: i64; init(value: i64) { self.value = value; } fn read() -> i64 { return self.value; } }\n",
+        "class Link { leaf: Leaf; init() {} }\n",
+        "class Root { link: Link; init() {} fn nested() -> i64 { return self.link.leaf.value; } }\n",
+        "fn take(ref leaf: Leaf) -> i64 { return leaf.value; }\n",
+        "fn inspect(ref root: Root) -> i64 { return take(((root.link).leaf)); }\n",
+        "fn inspect_mut(mut ref root: Root) -> i64 { return root.link.leaf.read(); }\n",
+        "fn local() -> i64 { var root: Root = Root(); return root.link.leaf.read(); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let expected = [
+        FieldId::new(ClassId::new(2), 0),
+        FieldId::new(ClassId::new(1), 0),
+    ];
+
+    let inspect_declaration = resolved.declarations.get(FunctionId::new(1)).unwrap();
+    let inspect_definition = resolved.definitions.get(FunctionId::new(1)).unwrap();
+    let grouped_span = match &inspect_definition.body.statements[0] {
+        crate::resolve::ResolvedStatement::Return(statement) => match &statement.value {
+            Some(crate::resolve::ResolvedExpression::DirectCall(call)) => call.arguments[0].span(),
+            _ => panic!("expected forwarding call"),
+        },
+        _ => panic!("expected return statement"),
+    };
+    let mut diagnostics = Diagnostics::new();
+    let inspect = CallableChecker::new(
+        &resolved,
+        inspect_declaration,
+        inspect_definition,
+        &mut diagnostics,
+    )
+    .check();
+    assert!(diagnostics.is_empty());
+    let HirExpressionKind::DirectCall { arguments, .. } = &returned_expression(&inspect).kind
+    else {
+        panic!("expected typed forwarding call");
+    };
+    let HirCallArgument::Place(place) = &arguments[0] else {
+        panic!("expected projected alias place");
+    };
+    assert_eq!(
+        place.root(),
+        BindingId::Parameter(inspect_declaration.parameters[0].id)
+    );
+    assert_eq!(place.projections(), expected);
+    assert_eq!(place.class(), ClassId::new(0));
+    assert_eq!(place.access, HirAccess::ReadOnly);
+    assert_eq!(place.span(), grouped_span);
+
+    let mutable_declaration = resolved.declarations.get(FunctionId::new(2)).unwrap();
+    let mutable_definition = resolved.definitions.get(FunctionId::new(2)).unwrap();
+    let mut diagnostics = Diagnostics::new();
+    let mutable = CallableChecker::new(
+        &resolved,
+        mutable_declaration,
+        mutable_definition,
+        &mut diagnostics,
+    )
+    .check();
+    assert!(diagnostics.is_empty());
+    let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&mutable).kind else {
+        panic!("expected nested method receiver");
+    };
+    assert_eq!(receiver.projections(), expected);
+    assert_eq!(receiver.access, HirAccess::Mutable);
+
+    let local_declaration = resolved.declarations.get(FunctionId::new(3)).unwrap();
+    let local_definition = resolved.definitions.get(FunctionId::new(3)).unwrap();
+    let mut diagnostics = Diagnostics::new();
+    let local = CallableChecker::new(
+        &resolved,
+        local_declaration,
+        local_definition,
+        &mut diagnostics,
+    )
+    .check();
+    assert!(diagnostics.is_empty());
+    let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&local).kind else {
+        panic!("expected local nested method receiver");
+    };
+    assert_eq!(receiver.projections(), expected);
+    assert_eq!(receiver.root(), BindingId::Local(local.locals[0].id));
+    assert_eq!(receiver.access, HirAccess::Mutable);
+
+    let class = resolved.classes.get(ClassId::new(2)).unwrap();
+    let method = &class.methods[0];
+    let definition = &resolved.class_definitions.get(class.id).unwrap().methods[0];
+    let mut diagnostics = Diagnostics::new();
+    let member = CallableChecker::new_member(
+        &resolved,
+        MemberCheckContext {
+            callable: method.id.into(),
+            parameters: &method.parameters,
+            definition,
+            return_type: Type::I64,
+            receiver: ReceiverContext {
+                class: class.id,
+                access: HirAccess::ReadOnly,
+                initializer: false,
+            },
+            callable_name: "method `nested`".to_owned(),
+        },
+        &mut diagnostics,
+    )
+    .check_member();
+    assert!(diagnostics.is_empty());
+    let HirStatement::Return(statement) = &member.body.statements[0] else {
+        panic!("expected member return");
+    };
+    let HirExpressionKind::FieldRead(field) = &statement.value.as_ref().unwrap().kind else {
+        panic!("expected nested self field read");
+    };
+    assert_eq!(field.receiver.projections(), expected);
+    assert_eq!(field.receiver.root(), BindingId::Receiver(method.id.into()));
+    assert_eq!(field.receiver.access, HirAccess::ReadOnly);
+}
+
+#[test]
+fn class_field_selection_does_not_create_an_object_rvalue() {
+    let resolved = resolve_text(concat!(
+        "class Leaf { init() {} }\n",
+        "class Root { leaf: Leaf; init() {} }\n",
+        "fn invalid(ref root: Root) -> i64 { var value: i64 = root.leaf; return value; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let declaration = resolved.declarations.get(FunctionId::new(0)).unwrap();
+    let definition = resolved.definitions.get(FunctionId::new(0)).unwrap();
+    let mut diagnostics = Diagnostics::new();
+
+    let _ = CallableChecker::new(&resolved, declaration, definition, &mut diagnostics).check();
+
+    assert!(diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT
+            && diagnostic.message.contains("is not a value")));
 }
 
 #[test]

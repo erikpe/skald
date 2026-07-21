@@ -387,7 +387,7 @@ impl ResolvedDumper {
 
     fn object_place(&mut self, place: &ResolvedObjectPlace) {
         self.line(
-            &format!("Receiver {} class {}", place.binding, place.class),
+            &format!("Receiver {} class {}", place.render_identity(), place.class),
             place.span,
         );
     }

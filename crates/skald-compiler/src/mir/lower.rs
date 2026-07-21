@@ -554,13 +554,17 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
-        let storage = self.storage_for_binding(place.binding);
-        match self.storage[storage.index()].kind {
+        let storage = self.storage_for_binding(place.root());
+        let root = match self.storage[storage.index()].kind {
             MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
             MirStorageKind::Receiver | MirStorageKind::Parameter | MirStorageKind::Local => {
                 MirPlace::base(storage)
             }
-        }
+        };
+        place
+            .projections()
+            .iter()
+            .fold(root, |projected, &field| projected.project_field(field))
     }
 
     fn storage_for_binding(&self, binding: BindingId) -> StorageId {
