@@ -222,42 +222,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
     }
 
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
-        let kind = match &type_syntax.kind {
-            syntax::TypeKind::I64 => ResolvedTypeKind::I64,
-            syntax::TypeKind::U64 => ResolvedTypeKind::U64,
-            syntax::TypeKind::U8 => ResolvedTypeKind::U8,
-            syntax::TypeKind::F64 => ResolvedTypeKind::F64,
-            syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
-            syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
-            syntax::TypeKind::Named(name) => match self.environment.top_levels.get(&name.text) {
-                Some(TopLevelSymbol {
-                    kind: TopLevelSymbolKind::Class(class),
-                    ..
-                }) => ResolvedTypeKind::Class(*class),
-                Some(symbol) => {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            UNKNOWN_TYPE,
-                            format!("`{}` does not name a class", name.text),
-                        )
-                        .with_primary_label(name.span, "expected a class type")
-                        .with_secondary_label(symbol.name_span, "function declared here"),
-                    );
-                    return None;
-                }
-                None => {
-                    self.diagnostics.push(
-                        Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", name.text))
-                            .with_primary_label(name.span, "no class with this name is declared"),
-                    );
-                    return None;
-                }
-            },
-        };
-        Some(ResolvedType {
-            kind,
-            span: type_syntax.span,
-        })
+        super::resolve_type(type_syntax, self.environment.top_levels, self.diagnostics)
     }
 
     fn resolve_expression(

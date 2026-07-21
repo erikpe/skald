@@ -7,9 +7,9 @@ use std::{
 use crate::{
     backend::Target,
     diagnostics::render_diagnostics,
-    resolve::ALIAS_PARAMETER_NOT_RESOLVED,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
     test_support::TemporaryDirectory,
+    typeck::ALIAS_PARAMETER_NOT_TYPE_CHECKED,
 };
 
 use super::*;
@@ -333,7 +333,7 @@ fn stops_before_semantic_phases_after_a_source_error() {
 }
 
 #[test]
-fn parsed_alias_syntax_stops_at_the_resolution_capability_boundary() {
+fn resolved_alias_syntax_stops_at_the_type_checking_capability_boundary() {
     let CompilationError::Diagnostics(report) = compile_source_to_assembly(
         "alias-syntax.ska",
         concat!(
@@ -344,16 +344,17 @@ fn parsed_alias_syntax_stops_at_the_resolution_capability_boundary() {
         Target::X86_64SysV,
     )
     .unwrap_err() else {
-        panic!("expected resolution capability diagnostics");
+        panic!("expected type-checking capability diagnostics");
     };
 
     assert_eq!(report.diagnostics.len(), 1);
     assert_eq!(
         report.diagnostics.iter().next().unwrap().code,
-        ALIAS_PARAMETER_NOT_RESOLVED
+        ALIAS_PARAMETER_NOT_TYPE_CHECKED
     );
     let rendered = render_diagnostics(&report.sources, &report.diagnostics);
-    assert!(rendered.contains("error[RES012]"));
+    assert!(rendered.contains("error[TYP019]"));
+    assert!(!rendered.contains("error[RES"));
     assert!(!rendered.contains("error[PAR"));
 }
 

@@ -998,12 +998,16 @@ boundaries, or cleanup on non-local exits. Those remain prerequisites for
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
-**Implementation status:** the contract is frozen, and the lexer, parser, and
-source AST implement its parameter syntax. Resolution, typed IR, MIR, and
-backend behavior remain to be implemented. Well-formed alias syntax currently
-stops at a structured resolution capability diagnostic. This profile extends
-the restricted inline-object profile in Section 5.4.2. It does not implement
-every alias source described by the broader model in Section 4.5.
+**Implementation status:** the contract is frozen, and the lexer, parser,
+source AST, and resolver implement alias signatures. Resolved IR carries the
+binding mode separately from the nominal class identity; alias names have
+stable parameter identities and may form existing object-place bases for
+member selection. Resolution preserves source-shaped call arguments and does
+not decide place eligibility or access. Typed IR, MIR, and backend behavior
+remain to be implemented, so well-formed alias syntax currently stops at a
+structured type-checking capability diagnostic. This profile extends the
+restricted inline-object profile in Section 5.4.2. It does not implement every
+alias source described by the broader model in Section 4.5.
 
 The parameter grammar added by this profile is:
 

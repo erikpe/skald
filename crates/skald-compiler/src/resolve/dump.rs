@@ -179,9 +179,29 @@ impl ResolvedDumper {
                 write_quoted(&mut dumper.output, &parameter.name);
                 write_span(&mut dumper.output, parameter.span);
                 dumper.output.push('\n');
-                dumper.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
+                dumper.indented(|dumper| {
+                    dumper.parameter_binding_mode(parameter.binding_mode);
+                    dumper.type_syntax(&parameter.type_syntax);
+                });
             }
         });
+    }
+
+    fn parameter_binding_mode(&mut self, mode: ResolvedParameterBindingMode) {
+        match mode {
+            ResolvedParameterBindingMode::Value => self.heading("Binding Value"),
+            ResolvedParameterBindingMode::ReadOnlyAlias { ref_span } => {
+                self.heading("Binding ReadOnlyAlias");
+                self.indented(|dumper| dumper.line("Ref", ref_span));
+            }
+            ResolvedParameterBindingMode::MutableAlias { mut_span, ref_span } => {
+                self.heading("Binding MutableAlias");
+                self.indented(|dumper| {
+                    dumper.line("Mut", mut_span);
+                    dumper.line("Ref", ref_span);
+                });
+            }
+        }
     }
 
     fn locals(&mut self, locals: &[ResolvedLocal]) {

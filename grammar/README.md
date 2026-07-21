@@ -255,18 +255,21 @@ call mutable methods; read-only methods may only read fields and call
 read-only methods. A local inline object permits either receiver mode. Dispatch
 is static and direct.
 
-The current object profile has only primitive fields and primitive parameters
-and results. It does not include object fields, object arguments/results,
-copying, `assign`, `destroy`, inheritance, interfaces, virtual calls, casts,
-`shared`, alias bindings, access modifiers, static members, `final`, or object
-FFI.
+The current executable object profile has only primitive fields and primitive
+by-value parameters and results. It does not include object fields, object
+values in arguments/results, copying, `assign`, `destroy`, inheritance,
+interfaces, virtual calls, casts, `shared`, executable alias calls, access
+modifiers, static members, `final`, or object FFI.
 
-The lexer and parser implement the restricted alias-parameter syntax and
-preserve value/read-only/mutable binding mode separately from type syntax in
-the AST. Semantic resolution and code generation are not implemented yet;
-well-formed alias syntax currently stops at a structured resolution capability
-diagnostic. Its frozen declaration, place, access, lifetime, IR, and ABI
-contract is in the
+The lexer, parser, and resolver implement restricted alias-parameter
+signatures. Binding mode remains separate from nominal class type in both the
+source AST and resolved IR. Resolution assigns stable parameter and class
+identities, recognizes aliases as object-place bases for member selection, and
+preserves grouped call-argument shape without deciding access or argument
+kind. Typed alias semantics and code generation are not implemented yet;
+well-formed alias syntax currently stops at a structured type-checking
+capability diagnostic. The frozen declaration, place, access, lifetime, IR,
+and ABI contract is in the
 [restricted stage-0 alias-parameter profile](../docs/SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile).
 Ordinary by-value parameters remain primitive-only, and the planned slice does
 not include local aliases, primitive aliases, shared sources, or borrow

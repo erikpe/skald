@@ -13,6 +13,7 @@ fn resolved_dump_is_deterministic_and_exposes_only_ids_at_uses() {
             "    Declaration f0 \"main\" internal @0..44\n",
             "      Parameters\n",
             "        Parameter f0:p0 \"value\" @8..18\n",
+            "          Binding Value\n",
             "          Type I64 @15..18\n",
             "      ReturnType\n",
             "        Type I64 @23..26\n",

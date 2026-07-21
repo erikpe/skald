@@ -343,10 +343,18 @@ impl ResolvedFunctionDefinition {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedParameter {
     pub id: ParameterId,
+    pub binding_mode: ResolvedParameterBindingMode,
     pub name: String,
     pub name_span: Span,
     pub type_syntax: ResolvedType,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedParameterBindingMode {
+    Value,
+    ReadOnlyAlias { ref_span: Span },
+    MutableAlias { mut_span: Span, ref_span: Span },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

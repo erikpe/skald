@@ -18,15 +18,14 @@ pub use ir::{
     ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage,
     ResolvedGroupedExpr, ResolvedInitializerDeclaration, ResolvedLocal, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedMethodCallExpr, ResolvedMethodDeclaration,
-    ResolvedNumericLiteralExpr, ResolvedObjectPlace, ResolvedParameter, ResolvedProgram,
-    ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType, ResolvedTypeKind,
-    ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedNumericLiteralExpr, ResolvedObjectPlace, ResolvedParameter,
+    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
+    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use resolver::{
-    resolve, ResolveOutput, ALIAS_PARAMETER_NOT_RESOLVED, DUPLICATE_BINDING, DUPLICATE_MEMBER,
-    DUPLICATE_TOP_LEVEL, INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET,
-    INVALID_MEMBER_SELECTION, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER,
-    UNKNOWN_NAME, UNKNOWN_TYPE,
+    resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,
+    INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET, INVALID_MEMBER_SELECTION,
+    SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
 };
 
 #[cfg(test)]

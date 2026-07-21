@@ -1,6 +1,6 @@
 # Alias Parameters Roadmap
 
-Status: in progress; AL0–AL1 implemented.
+Status: in progress; AL0–AL2 implemented.
 
 This roadmap adds Skald's first non-owning bindings: `ref` and `mut ref`
 parameters over the inline class places the compiler already supports. The
@@ -320,7 +320,7 @@ declarations and promises no cross-module ABI stability.
 
 - [x] AL0 — Freeze the restricted alias-parameter contract
 - [x] AL1 — Add binding-mode syntax and parser diagnostics
-- [ ] AL2 — Resolve alias signatures and existing object places
+- [x] AL2 — Resolve alias signatures and existing object places
 - [ ] AL3 — Type-check alias access and build typed call arguments
 - [ ] AL4 — Add verified alias parameters and place arguments to MIR
 - [ ] AL5 — Lower the alias pointer ABI on Linux x86-64
@@ -390,19 +390,19 @@ infers a mode from tokens or spans.
 **Purpose:** Carry binding modes and stable nominal identities through name
 resolution without allowing object expressions by accident.
 
-- [ ] Add a resolved parameter binding mode separate from `ResolvedType`.
-- [ ] Resolve named class types for alias parameters on internal functions,
+- [x] Add a resolved parameter binding mode separate from `ResolvedType`.
+- [x] Resolve named class types for alias parameters on internal functions,
       methods, and initializers.
-- [ ] Keep ordinary class value parameters and class results rejected by the
+- [x] Keep ordinary class value parameters and class results rejected by the
       restricted object profile.
-- [ ] Resolve alias parameter names as normal stable `ParameterId` bindings.
-- [ ] Permit those bindings as object-place bases for field selection, method
+- [x] Resolve alias parameter names as normal stable `ParameterId` bindings.
+- [x] Permit those bindings as object-place bases for field selection, method
       selection, and context-dependent call arguments.
-- [ ] Preserve grouped place recognition and existing shadowing/name-space
+- [x] Preserve grouped place recognition and existing shadowing/name-space
       behavior.
-- [ ] Retain argument source shape until type checking decides whether each
+- [x] Retain argument source shape until type checking decides whether each
       expression is a value or a required place.
-- [ ] Extend resolved dumps with modes and identity-based alias-place uses.
+- [x] Extend resolved dumps with modes and identity-based alias-place uses.
 
 **Tests:** Resolution tests for forward calls/classes, all callable owners,
 alias parameter shadowing, same member names across classes, grouped places,

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     identity::{ClassId, FieldId, FunctionId, InitializerId, MethodId},
     source::Span,
     syntax,
@@ -25,9 +25,6 @@ pub const UNKNOWN_MEMBER: &str = "RES008";
 pub const INVALID_MEMBER_SELECTION: &str = "RES009";
 pub const SELF_OUTSIDE_MEMBER: &str = "RES010";
 pub const INVALID_CONSTRUCTION_TARGET: &str = "RES011";
-/// Temporary phase capability diagnostic removed when AL2 carries alias
-/// binding modes and nominal parameter types into resolved IR.
-pub const ALIAS_PARAMETER_NOT_RESOLVED: &str = "RES012";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -48,6 +45,49 @@ impl ResolveOutput {
 /// identities rather than source names.
 pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
     program::ProgramResolver::new(ast).resolve()
+}
+
+fn resolve_type(
+    type_syntax: &syntax::TypeSyntax,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> Option<ResolvedType> {
+    let kind = match &type_syntax.kind {
+        syntax::TypeKind::I64 => ResolvedTypeKind::I64,
+        syntax::TypeKind::U64 => ResolvedTypeKind::U64,
+        syntax::TypeKind::U8 => ResolvedTypeKind::U8,
+        syntax::TypeKind::F64 => ResolvedTypeKind::F64,
+        syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
+        syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
+        syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
+            Some(TopLevelSymbol {
+                kind: TopLevelSymbolKind::Class(class),
+                ..
+            }) => ResolvedTypeKind::Class(*class),
+            Some(symbol) => {
+                diagnostics.push(
+                    Diagnostic::error(
+                        UNKNOWN_TYPE,
+                        format!("`{}` does not name a class", name.text),
+                    )
+                    .with_primary_label(name.span, "expected a class type")
+                    .with_secondary_label(symbol.name_span, "function declared here"),
+                );
+                return None;
+            }
+            None => {
+                diagnostics.push(
+                    Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", name.text))
+                        .with_primary_label(name.span, "no class with this name is declared"),
+                );
+                return None;
+            }
+        },
+    };
+    Some(ResolvedType {
+        kind,
+        span: type_syntax.span,
+    })
 }
 
 #[derive(Clone, Copy, Debug)]

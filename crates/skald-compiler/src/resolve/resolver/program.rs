@@ -141,6 +141,7 @@ impl<'ast> ProgramResolver<'ast> {
                     parameters: resolve_parameters(
                         item.id.into(),
                         &function.parameters,
+                        &self.top_levels,
                         &mut self.diagnostics,
                     ),
                     return_type: resolve_scalar_type(&function.return_type),
@@ -155,6 +156,7 @@ impl<'ast> ProgramResolver<'ast> {
                         parameters: resolve_parameters(
                             item.id.into(),
                             &function.parameters,
+                            &self.top_levels,
                             &mut self.diagnostics,
                         ),
                         return_type: resolve_scalar_type(&function.return_type),
@@ -250,6 +252,7 @@ impl<'ast> ProgramResolver<'ast> {
                         parameters: resolve_parameters(
                             initializer_id.into(),
                             &source.parameters,
+                            &self.top_levels,
                             &mut self.diagnostics,
                         ),
                         span: source.span,
@@ -278,6 +281,7 @@ impl<'ast> ProgramResolver<'ast> {
                         parameters: resolve_parameters(
                             method_id.into(),
                             &method.parameters,
+                            &self.top_levels,
                             &mut self.diagnostics,
                         ),
                         return_type: resolve_scalar_type(&method.return_type),
@@ -430,6 +434,7 @@ impl<'ast> ProgramResolver<'ast> {
 fn resolve_parameters(
     callable: CallableId,
     parameters: &[syntax::Parameter],
+    top_levels: &HashMap<String, TopLevelSymbol>,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedParameter> {
     let mut names = HashMap::<String, Span>::new();
@@ -447,13 +452,19 @@ fn resolve_parameters(
             continue;
         }
         names.insert(parameter.name.text.clone(), parameter.name.span);
-        let type_syntax = if parameter.binding_mode == syntax::ParameterBindingMode::Value {
-            resolve_scalar_type(&parameter.type_syntax)
-        } else {
-            report_unresolved_alias_parameter(parameter, diagnostics)
+        let type_syntax = match parameter.binding_mode {
+            syntax::ParameterBindingMode::Value => resolve_scalar_type(&parameter.type_syntax),
+            syntax::ParameterBindingMode::ReadOnlyAlias { .. }
+            | syntax::ParameterBindingMode::MutableAlias { .. } => {
+                let Some(ty) = resolve_type(&parameter.type_syntax, top_levels, diagnostics) else {
+                    continue;
+                };
+                ty
+            }
         };
         resolved.push(ResolvedParameter {
             id: ParameterId::new(callable, resolved.len()),
+            binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
             name: parameter.name.text.clone(),
             name_span: parameter.name.span,
             type_syntax,
@@ -463,26 +474,17 @@ fn resolve_parameters(
     resolved
 }
 
-fn report_unresolved_alias_parameter(
-    parameter: &syntax::Parameter,
-    diagnostics: &mut Diagnostics,
-) -> ResolvedType {
-    let modifier_span = parameter.binding_mode.start_span(parameter.name.span);
-    diagnostics.push(
-        Diagnostic::error(
-            ALIAS_PARAMETER_NOT_RESOLVED,
-            "alias parameters are not available below syntax parsing yet",
-        )
-        .with_primary_label(modifier_span, "binding mode is parsed but not resolved")
-        .with_note("semantic alias support is implemented by the next compiler phase slice"),
-    );
-
-    // Keep the binding structurally present so body resolution can continue
-    // and collect independent name errors. Type checking never observes this
-    // placeholder because the capability diagnostic stops the pipeline.
-    ResolvedType {
-        kind: ResolvedTypeKind::Unit,
-        span: parameter.type_syntax.span,
+const fn resolve_parameter_binding_mode(
+    mode: syntax::ParameterBindingMode,
+) -> ResolvedParameterBindingMode {
+    match mode {
+        syntax::ParameterBindingMode::Value => ResolvedParameterBindingMode::Value,
+        syntax::ParameterBindingMode::ReadOnlyAlias { ref_span } => {
+            ResolvedParameterBindingMode::ReadOnlyAlias { ref_span }
+        }
+        syntax::ParameterBindingMode::MutableAlias { mut_span, ref_span } => {
+            ResolvedParameterBindingMode::MutableAlias { mut_span, ref_span }
+        }
     }
 }
 

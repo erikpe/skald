@@ -270,6 +270,26 @@ fn methods_reuse_structured_definite_return_analysis() {
 }
 
 #[test]
+fn resolved_alias_signatures_stop_before_hir_for_every_internal_owner() {
+    let output = check_text(concat!(
+        "class Thing {\n",
+        "  init(ref other: Thing) {}\n",
+        "  fn inspect(mut ref other: Thing) -> unit {}\n",
+        "}\n",
+        "fn take(ref thing: Thing) -> unit {}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(output.hir.is_none());
+    let codes: Vec<_> = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert_eq!(codes, vec![ALIAS_PARAMETER_NOT_TYPE_CHECKED; 3]);
+}
+
+#[test]
 fn object_hir_dump_is_exact_and_identity_based() {
     let output = check_text(concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } fn get() -> i64 { return self.value; } }\n",

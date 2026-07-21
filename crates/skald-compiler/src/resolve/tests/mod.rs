@@ -28,6 +28,7 @@ fn return_value(statement: &ResolvedStatement) -> &ResolvedExpression {
     statement.value.as_ref().expect("expected a return value")
 }
 
+mod alias_parameters;
 mod bindings;
 mod control_flow;
 mod declarations;

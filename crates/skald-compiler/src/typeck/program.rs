@@ -11,7 +11,8 @@ use crate::{
     identity::FunctionId,
     resolve::{
         ResolvedClassDeclaration, ResolvedFunctionDeclaration, ResolvedFunctionLinkage,
-        ResolvedParameter, ResolvedProgram, ResolvedReceiverAccess, ResolvedType, ResolvedTypeKind,
+        ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess,
+        ResolvedType, ResolvedTypeKind,
     },
     source::Span,
 };
@@ -39,6 +40,9 @@ pub const INVALID_CONSTRUCTION: &str = "TYP015";
 pub const INVALID_INITIALIZER_BODY: &str = "TYP016";
 pub const FIELD_INITIALIZATION: &str = "TYP017";
 pub const READ_ONLY_RECEIVER: &str = "TYP018";
+/// Temporary capability boundary removed when AL3 gives HIR explicit alias
+/// parameter and argument-place semantics.
+pub const ALIAS_PARAMETER_NOT_TYPE_CHECKED: &str = "TYP019";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -55,6 +59,7 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    report_unimplemented_alias_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     let classes = lower_class_declarations(program, &mut diagnostics);
@@ -84,6 +89,34 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     };
 
     TypeCheckOutput { hir, diagnostics }
+}
+
+fn report_unimplemented_alias_parameters(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
+    let function_parameters = program
+        .declarations
+        .iter()
+        .flat_map(|declaration| &declaration.parameters);
+    let member_parameters = program.classes.iter().flat_map(|class| {
+        class
+            .initializer
+            .iter()
+            .flat_map(|initializer| &initializer.parameters)
+            .chain(class.methods.iter().flat_map(|method| &method.parameters))
+    });
+
+    for parameter in function_parameters.chain(member_parameters) {
+        if parameter.binding_mode == ResolvedParameterBindingMode::Value {
+            continue;
+        }
+        diagnostics.push(
+            Diagnostic::error(
+                ALIAS_PARAMETER_NOT_TYPE_CHECKED,
+                "alias parameters are not available in typed HIR yet",
+            )
+            .with_primary_label(parameter.span, "the alias signature was resolved here")
+            .with_note("AL3 adds alias access checking and typed place arguments"),
+        );
+    }
 }
 
 fn lower_class_declarations(
@@ -258,6 +291,9 @@ fn validate_primitive_parameters(
 ) -> bool {
     let mut valid = true;
     for parameter in parameters {
+        if parameter.binding_mode != ResolvedParameterBindingMode::Value {
+            continue;
+        }
         if !is_payload_primitive(lower_type(&parameter.type_syntax)) {
             diagnostics.push(
                 Diagnostic::error(

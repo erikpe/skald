@@ -261,6 +261,7 @@ fn resolved_object_dump_is_exact_and_identity_based() {
             "        Initializer c0:init0 @24..64\n",
             "          Parameters\n",
             "            Parameter c0:init0:p0 \"value\" @29..39\n",
+            "              Binding Value\n",
             "              Type I64 @36..39\n",
             "      Methods\n",
             "        Method c0:method0 readonly \"get\" @65..103\n",

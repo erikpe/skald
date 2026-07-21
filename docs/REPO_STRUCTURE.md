@@ -189,9 +189,7 @@ named class type.
 The parser represents parameter binding mode separately from source type.
 Value, `ref`, and `mut ref` parameters share one parameter-list parser across
 functions, external declarations, methods, and initializers. Modifier and type
-spans remain source-shaped in the AST and deterministic dump. Until resolution
-implements alias signatures, a structured capability diagnostic prevents a
-parsed named alias parameter from reaching primitive-only resolver assumptions.
+spans remain source-shaped in the AST and deterministic dump.
 
 One shared nesting budget limits recursive blocks, groups, unary expressions,
 and postfix calls to 128 active levels. Excessive input produces a source
@@ -208,6 +206,14 @@ Resolution collects top-level declarations before resolving bodies. Functions
 and classes share one namespace; members remain class-owned. Resolved IR, HIR,
 MIR, and backends carry IDs directly. Public lower-phase tables intentionally
 offer no name-based selection API.
+
+Resolved parameters carry value/read-only-alias/mutable-alias mode separately
+from `ResolvedType`. Alias class names resolve through the same top-level class
+namespace as local object types, and alias names receive ordinary
+callable-owned `ParameterId` identities. Existing object-place resolution can
+therefore select fields and methods through an alias binding while grouped
+call arguments retain their source expression shape. Resolution deliberately
+does not decide alias access or whether a call argument is a value or place.
 
 Dense declaration tables and sparse optional-definition tables share private
 validated storage utilities while retaining phase-specific public wrappers.
@@ -228,12 +234,11 @@ Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw
 binary64 bits. No backend infers types from spelling.
 
-The next alias-parameter slice keeps parameter binding mode orthogonal to
-`Type`. Syntax, resolved IR, HIR, and MIR each own an explicit value/read-only-
-alias/mutable-alias mode. HIR type checking is the authority for converting an
-argument's source shape into either a scalar value argument or an exact class
-place with an access capability. Resolution continues to select identities
-without deciding type or mutability.
+The next alias-parameter slice adds a HIR binding mode orthogonal to `Type`.
+HIR type checking is the authority for converting an argument's source shape
+into either a scalar value argument or an exact class place with an access
+capability. Until that representation exists, a structured type-checking
+capability diagnostic prevents resolved alias signatures from reaching MIR.
 
 ### MIR
 

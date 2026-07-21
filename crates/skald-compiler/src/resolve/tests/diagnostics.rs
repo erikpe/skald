@@ -1,19 +1,16 @@
 use super::*;
 
 #[test]
-fn parsed_alias_parameters_stop_at_a_structured_resolution_capability_boundary() {
+fn diagnoses_an_unknown_alias_parameter_class() {
     let output = resolve_text(concat!(
-        "class Dog { init() {} }\n",
-        "fn inspect(ref dog: Dog) -> unit {}\n",
+        "fn inspect(ref dog: Missing) -> unit {}\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
     assert_eq!(output.diagnostics.len(), 1);
     let diagnostic = output.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, ALIAS_PARAMETER_NOT_RESOLVED);
-    assert!(diagnostic
-        .message
-        .contains("not available below syntax parsing yet"));
+    assert_eq!(diagnostic.code, UNKNOWN_TYPE);
+    assert!(diagnostic.message.contains("Missing"));
 }
 
 #[test]
