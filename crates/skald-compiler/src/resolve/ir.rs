@@ -1,7 +1,7 @@
 //! Name-resolved, but not yet type-checked, program representation.
 
 use crate::{
-    function_table::{DenseFunctionTable, SparseFunctionTable},
+    id_table::{DenseIdTable, SparseFunctionTable},
     identity::{
         BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
         InitializerId, LocalId, MethodId, ParameterId,
@@ -61,23 +61,18 @@ impl ResolvedProgram {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ResolvedClassDeclarationTable {
-    entries: Vec<ResolvedClassDeclaration>,
+    entries: DenseIdTable<ClassId, ResolvedClassDeclaration>,
 }
 
 impl ResolvedClassDeclarationTable {
     pub(crate) fn new(entries: Vec<ResolvedClassDeclaration>) -> Self {
-        assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, class)| class.id.index() == index),
-            "class declarations must be ordered by dense class ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseIdTable::new(entries, |class| class.id),
+        }
     }
 
     pub fn get(&self, id: ClassId) -> Option<&ResolvedClassDeclaration> {
-        self.entries.get(id.index()).filter(|class| class.id == id)
+        self.entries.get(id, |class| class.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassDeclaration> {
@@ -94,7 +89,7 @@ impl ResolvedClassDeclarationTable {
 
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [ResolvedClassDeclaration] {
-        &mut self.entries
+        self.entries.entries_mut_for_test()
     }
 }
 
@@ -222,25 +217,18 @@ pub struct ResolvedMethodDeclaration {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ResolvedClassDefinitionTable {
-    entries: Vec<ResolvedClassDefinition>,
+    entries: DenseIdTable<ClassId, ResolvedClassDefinition>,
 }
 
 impl ResolvedClassDefinitionTable {
     pub(crate) fn new(entries: Vec<ResolvedClassDefinition>) -> Self {
-        assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, class)| class.class.index() == index),
-            "class definitions must be ordered by dense class ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseIdTable::new(entries, |class| class.class),
+        }
     }
 
     pub fn get(&self, id: ClassId) -> Option<&ResolvedClassDefinition> {
-        self.entries
-            .get(id.index())
-            .filter(|definition| definition.class == id)
+        self.entries.get(id, |definition| definition.class)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedClassDefinition> {
@@ -315,13 +303,13 @@ impl ResolvedMemberDefinition {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ResolvedFunctionDeclarationTable {
-    entries: DenseFunctionTable<ResolvedFunctionDeclaration>,
+    entries: DenseIdTable<FunctionId, ResolvedFunctionDeclaration>,
 }
 
 impl ResolvedFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<ResolvedFunctionDeclaration>) -> Self {
         Self {
-            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+            entries: DenseIdTable::new(entries, |declaration| declaration.id),
         }
     }
 

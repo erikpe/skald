@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    function_table::{DenseFunctionTable, SparseFunctionTable},
+    id_table::{DenseIdTable, SparseFunctionTable},
     identity::{
         BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
         InitializerId, LocalId, MethodId, ParameterId,
@@ -137,23 +137,18 @@ pub struct HirCallableSignature<'hir> {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirClassDeclarationTable {
-    entries: Vec<HirClassDeclaration>,
+    entries: DenseIdTable<ClassId, HirClassDeclaration>,
 }
 
 impl HirClassDeclarationTable {
     pub(crate) fn new(entries: Vec<HirClassDeclaration>) -> Self {
-        assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, class)| class.id.index() == index),
-            "class declarations must be ordered by dense class ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseIdTable::new(entries, |class| class.id),
+        }
     }
 
     pub fn get(&self, id: ClassId) -> Option<&HirClassDeclaration> {
-        self.entries.get(id.index()).filter(|class| class.id == id)
+        self.entries.get(id, |class| class.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirClassDeclaration> {
@@ -345,25 +340,18 @@ pub struct HirMethodDeclaration {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirClassDefinitionTable {
-    entries: Vec<HirClassDefinition>,
+    entries: DenseIdTable<ClassId, HirClassDefinition>,
 }
 
 impl HirClassDefinitionTable {
     pub(crate) fn new(entries: Vec<HirClassDefinition>) -> Self {
-        assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, class)| class.class.index() == index),
-            "class definitions must be ordered by dense class ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseIdTable::new(entries, |class| class.class),
+        }
     }
 
     pub fn get(&self, id: ClassId) -> Option<&HirClassDefinition> {
-        self.entries
-            .get(id.index())
-            .filter(|definition| definition.class == id)
+        self.entries.get(id, |definition| definition.class)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirClassDefinition> {
@@ -441,13 +429,13 @@ impl HirMemberDefinition {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HirFunctionDeclarationTable {
-    entries: DenseFunctionTable<HirFunctionDeclaration>,
+    entries: DenseIdTable<FunctionId, HirFunctionDeclaration>,
 }
 
 impl HirFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<HirFunctionDeclaration>) -> Self {
         Self {
-            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+            entries: DenseIdTable::new(entries, |declaration| declaration.id),
         }
     }
 

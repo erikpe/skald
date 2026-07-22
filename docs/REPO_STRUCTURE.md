@@ -76,7 +76,7 @@ src/
 ├── lib.rs
 ├── source.rs
 ├── identity.rs
-├── function_table.rs
+├── id_table.rs
 ├── dump_format.rs
 ├── lexical_policy.rs
 ├── diagnostics/
@@ -92,6 +92,10 @@ src/
 │   └── x86_64_sysv/
 └── driver/
 ```
+
+`id_table.rs` privately owns the dense typed-ID invariant shared by class and
+function tables. Each compiler phase retains its own public table wrappers and
+record types.
 
 Large modules use directory-based private submodules with a concise `mod.rs`
 facade. Phase-specific tests live beside their implementation and are split by

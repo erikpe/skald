@@ -71,7 +71,7 @@ count.
 - [x] CQ8 — Decompose expression and initialization checking
 - [x] CQ9 — Decompose HIR-to-MIR body lowering
 - [x] CQ10 — Define the compiler library API policy
-- [ ] CQ11 — Complete shared typed ID-table storage
+- [x] CQ11 — Complete shared typed ID-table storage
 - [ ] CQ12 — Split the resolved IR model by responsibility
 - [ ] CQ13 — Split the HIR model by responsibility
 - [ ] CQ14 — Split the MIR model by responsibility
@@ -309,13 +309,13 @@ the API accidentally.
 **Purpose:** Give dense class-indexed tables the same single invariant owner as
 function-indexed tables without erasing phase ownership.
 
-- [ ] Generalize the private dense table utility over the typed ID/index
+- [x] Generalize the private dense table utility over the typed ID/index
       operation actually shared by functions and classes.
-- [ ] Migrate resolved, HIR, and MIR class declaration and definition wrappers.
-- [ ] Preserve phase-specific public wrapper types, deterministic iteration,
+- [x] Migrate resolved, HIR, and MIR class declaration and definition wrappers.
+- [x] Preserve phase-specific public wrapper types, deterministic iteration,
       lookup validation, and test-only mutation boundaries.
-- [ ] Avoid a general arena, dynamic registry, or public table abstraction.
-- [ ] Remove repeated dense-ID assertions only after equivalent shared tests
+- [x] Avoid a general arena, dynamic registry, or public table abstraction.
+- [x] Remove repeated dense-ID assertions only after equivalent shared tests
       exist.
 
 **Acceptance criteria:** Dense class/function storage has one implementation,

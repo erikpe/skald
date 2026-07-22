@@ -3,7 +3,7 @@
 use std::{collections::BTreeMap, fmt};
 
 use crate::{
-    function_table::{DenseFunctionTable, SparseFunctionTable},
+    id_table::{DenseIdTable, SparseFunctionTable},
     identity::{
         BindingId, CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId,
         InitializerId, MethodId,
@@ -213,25 +213,18 @@ pub enum MirParameterMode {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MirClassDeclarationTable {
-    entries: Vec<MirClassDeclaration>,
+    entries: DenseIdTable<ClassId, MirClassDeclaration>,
 }
 
 impl MirClassDeclarationTable {
     pub(crate) fn new(entries: Vec<MirClassDeclaration>) -> Self {
-        assert!(
-            entries
-                .iter()
-                .enumerate()
-                .all(|(index, class)| class.id.index() == index),
-            "class declarations must be ordered by dense class ID"
-        );
-        Self { entries }
+        Self {
+            entries: DenseIdTable::new(entries, |class| class.id),
+        }
     }
 
     pub fn get(&self, id: ClassId) -> Option<&MirClassDeclaration> {
-        self.entries
-            .get(id.index())
-            .filter(|declaration| declaration.id == id)
+        self.entries.get(id, |declaration| declaration.id)
     }
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirClassDeclaration> {
@@ -248,7 +241,7 @@ impl MirClassDeclarationTable {
 
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirClassDeclaration] {
-        &mut self.entries
+        self.entries.entries_mut_for_test()
     }
 }
 
@@ -446,13 +439,13 @@ pub struct MirMethodDeclaration {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MirFunctionDeclarationTable {
-    entries: DenseFunctionTable<MirFunctionDeclaration>,
+    entries: DenseIdTable<FunctionId, MirFunctionDeclaration>,
 }
 
 impl MirFunctionDeclarationTable {
     pub(crate) fn new(entries: Vec<MirFunctionDeclaration>) -> Self {
         Self {
-            entries: DenseFunctionTable::new(entries, |declaration| declaration.id),
+            entries: DenseIdTable::new(entries, |declaration| declaration.id),
         }
     }
 
