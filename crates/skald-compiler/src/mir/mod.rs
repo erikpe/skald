@@ -10,7 +10,6 @@ mod lower;
 mod model;
 mod verify;
 
-pub use build::{MirBodyBuilder, MirBuildError};
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{

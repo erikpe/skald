@@ -1,7 +1,9 @@
 //! Compiler library for the stage-0 Skald compiler.
 //!
 //! Modules correspond to explicit pipeline phases. Phase boundaries and their
-//! intended contracts are documented in `docs/REPO_STRUCTURE.md`.
+//! intended contracts are documented in `docs/REPO_STRUCTURE.md`. This is an
+//! unpublished repository-internal crate: its public paths support workspace
+//! tools, integration tests, and debugging, but are not a version-stable API.
 
 pub mod backend;
 pub mod diagnostics;

@@ -9,7 +9,7 @@ use super::{BlockId, MirBasicBlock, MirBody, MirInstruction, MirTerminator};
 /// A small stateful builder that keeps block allocation and termination
 /// invariants in one place. Blocks are allocated in stable ID order; changing
 /// the selected block never changes that order.
-pub struct MirBodyBuilder {
+pub(super) struct MirBodyBuilder {
     callable: CallableId,
     entry: BlockId,
     blocks: Vec<MirBasicBlock>,
@@ -17,7 +17,7 @@ pub struct MirBodyBuilder {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MirBuildError {
+pub(super) enum MirBuildError {
     UnknownBlock(BlockId),
     BlockAlreadyTerminated(BlockId),
 }
@@ -36,7 +36,7 @@ impl fmt::Display for MirBuildError {
 impl std::error::Error for MirBuildError {}
 
 impl MirBodyBuilder {
-    pub fn new(callable: impl Into<CallableId>, entry_span: Span) -> Self {
+    pub(super) fn new(callable: impl Into<CallableId>, entry_span: Span) -> Self {
         let callable = callable.into();
         let entry = BlockId::new(callable, 0);
         Self {
@@ -52,15 +52,16 @@ impl MirBodyBuilder {
         }
     }
 
-    pub const fn entry(&self) -> BlockId {
+    #[cfg(test)]
+    pub(super) const fn entry(&self) -> BlockId {
         self.entry
     }
 
-    pub const fn current(&self) -> BlockId {
+    pub(super) const fn current(&self) -> BlockId {
         self.current
     }
 
-    pub fn allocate_block(&mut self, span: Span) -> BlockId {
+    pub(super) fn allocate_block(&mut self, span: Span) -> BlockId {
         let id = BlockId::new(self.callable, self.blocks.len());
         self.blocks.push(MirBasicBlock {
             id,
@@ -71,17 +72,20 @@ impl MirBodyBuilder {
         id
     }
 
-    pub fn select_block(&mut self, block: BlockId) -> Result<(), MirBuildError> {
+    pub(super) fn select_block(&mut self, block: BlockId) -> Result<(), MirBuildError> {
         self.block(block)?;
         self.current = block;
         Ok(())
     }
 
-    pub fn is_current_terminated(&self) -> bool {
+    pub(super) fn is_current_terminated(&self) -> bool {
         self.current_block().terminator.is_some()
     }
 
-    pub fn push_instruction(&mut self, instruction: MirInstruction) -> Result<(), MirBuildError> {
+    pub(super) fn push_instruction(
+        &mut self,
+        instruction: MirInstruction,
+    ) -> Result<(), MirBuildError> {
         let block = self.current_block_mut();
         if block.terminator.is_some() {
             return Err(MirBuildError::BlockAlreadyTerminated(block.id));
@@ -90,7 +94,7 @@ impl MirBodyBuilder {
         Ok(())
     }
 
-    pub fn terminate(&mut self, terminator: MirTerminator) -> Result<(), MirBuildError> {
+    pub(super) fn terminate(&mut self, terminator: MirTerminator) -> Result<(), MirBuildError> {
         let block = self.current_block_mut();
         if block.terminator.is_some() {
             return Err(MirBuildError::BlockAlreadyTerminated(block.id));
@@ -99,7 +103,7 @@ impl MirBodyBuilder {
         Ok(())
     }
 
-    pub fn finish(self) -> MirBody {
+    pub(super) fn finish(self) -> MirBody {
         MirBody {
             entry: self.entry,
             blocks: self.blocks,

@@ -114,6 +114,27 @@ argument modes and ownership, and place bases and projections each have a
 dedicated owner. Cleanup instruction validation and its distinct definite-
 liveness dataflow analysis share the common structural place predicates.
 
+### Compiler crate API policy
+
+`skald-compiler` is an unpublished repository-internal crate. Its Rust API is
+not a compatibility promise across compiler revisions; workspace tools,
+repository integration tests, and debugging utilities must be updated with
+internal compiler changes.
+
+The intentional current surface consists of the driver and target selection,
+source and diagnostic support, phase entry points, phase products, diagnostic
+codes, deterministic dumps, MIR verification and the MIR pass pipeline. Public
+phase-product fields permit repository tools to inspect and render compiler
+state. They also permit mutation, but arbitrary mutated AST, resolved IR, HIR,
+or MIR does not satisfy the invariants established by its producer. Such data
+is trusted implementation data rather than a supported construction API.
+
+Implementation modules, state machines, table storage, CFG builders, lowering
+helpers, and test fixtures remain private. Mutation hooks used for invalid-IR
+tests are `cfg(test)` and crate-visible only. MIR verification remains
+unconditional in the pass pipeline and again at the backend trust boundary;
+debug builds additionally verify freshly lowered MIR at its producer boundary.
+
 ### `runtime/`
 
 The C11 runtime builds `libskald_runtime.a` and exposes a versioned ABI. Its

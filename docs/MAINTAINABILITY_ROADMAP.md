@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ10 is next.
+Status: in progress; CQ11 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -70,7 +70,7 @@ count.
 - [x] CQ7 — Decompose callable statement checking
 - [x] CQ8 — Decompose expression and initialization checking
 - [x] CQ9 — Decompose HIR-to-MIR body lowering
-- [ ] CQ10 — Define the compiler library API policy
+- [x] CQ10 — Define the compiler library API policy
 - [ ] CQ11 — Complete shared typed ID-table storage
 - [ ] CQ12 — Split the resolved IR model by responsibility
 - [ ] CQ13 — Split the HIR model by responsibility
@@ -285,19 +285,19 @@ flow is visible without reading object-value or cleanup implementation details.
 **Purpose:** Let internal representations evolve without implying an accidental
 stable external API.
 
-- [ ] Define `skald-compiler` as an unpublished internal compiler crate and set
+- [x] Define `skald-compiler` as an unpublished internal compiler crate and set
       `publish = false` in its manifest.
-- [ ] Document phase products and dumps as intentionally usable by repository
+- [x] Document phase products and dumps as intentionally usable by repository
       tools and integration tests but unstable across compiler revisions.
-- [ ] Retain public entry points required by `skac`, integration tests, and
+- [x] Retain public entry points required by `skac`, integration tests, and
       intended debugging tools; narrow implementation-only modules, helpers,
       and re-exports.
-- [ ] Document that mutating exposed phase products can violate trusted
+- [x] Document that mutating exposed phase products can violate trusted
       producer invariants; keep unconditional MIR verification at every
       current trust boundary.
-- [ ] Audit every `pub mod`, re-export, public field, and test-only mutation
+- [x] Audit every `pub mod`, re-export, public field, and test-only mutation
       hook against the selected policy.
-- [ ] Add compile-time API tests only for paths intentionally promised by the
+- [x] Add compile-time API tests only for paths intentionally promised by the
       policy.
 
 **Acceptance criteria:** Maintainers can distinguish stable interface from
