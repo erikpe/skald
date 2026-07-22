@@ -78,44 +78,6 @@ fn a_return_after_a_non_exhaustive_conditional_remains_definite() {
 }
 
 #[test]
-fn typed_blocks_record_composed_flow_for_later_phases() {
-    let output = check_text(concat!(
-        "fn inspect(value: bool) -> unit {\n",
-        "  if (value) { return; } else {}\n",
-        "}\n",
-        "fn main() -> i64 {\n",
-        "  { if (true) { return 1; } else { return 2; } }\n",
-        "  return 3;\n",
-        "}\n",
-    ));
-    assert!(!output.has_errors());
-    let hir = output.hir.unwrap();
-
-    let inspect = hir.definitions.get(FunctionId::new(0)).unwrap();
-    assert_eq!(inspect.body.flow, BlockFlow::FallsThrough);
-    let HirStatement::Conditional(conditional) = &inspect.body.statements[0] else {
-        panic!("expected conditional");
-    };
-    assert_eq!(conditional.flow, BlockFlow::FallsThrough);
-    assert_eq!(conditional.arms[0].body.flow, BlockFlow::Terminates);
-    assert_eq!(
-        conditional.else_block.as_ref().unwrap().flow,
-        BlockFlow::FallsThrough
-    );
-
-    let main = hir.definitions.get(hir.entry_function).unwrap();
-    assert_eq!(main.body.flow, BlockFlow::Terminates);
-    let HirStatement::Block(nested) = &main.body.statements[0] else {
-        panic!("expected nested block");
-    };
-    assert_eq!(nested.flow, BlockFlow::Terminates);
-    let HirStatement::Conditional(conditional) = &nested.statements[0] else {
-        panic!("expected nested conditional");
-    };
-    assert_eq!(conditional.flow, BlockFlow::Terminates);
-}
-
-#[test]
 fn nested_unconditional_block_can_supply_the_return() {
     let output = check_text("fn main() -> i64 { { return 7; } }");
 

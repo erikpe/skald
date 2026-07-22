@@ -268,7 +268,10 @@ construction. Failed type checking produces diagnostics but no executable HIR.
 Callable bodies share one checking engine with explicit context for functions,
 initializers, destructors, and methods. Type checking also computes `BlockFlow`,
 the authoritative structured fallthrough/termination summary consumed by
-return diagnostics and MIR lowering.
+return diagnostics and MIR lowering. One private statement owner contains the
+exhaustive resolved-statement dispatch, statement-family helpers, and block
+flow composition. Field initialization and object-copy assignment continue to
+delegate to their dedicated policy modules.
 
 Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw

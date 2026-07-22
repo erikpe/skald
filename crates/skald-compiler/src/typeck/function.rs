@@ -5,16 +5,13 @@ use std::collections::BTreeSet;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
-        BlockFlow, HirAccess, HirBlock, HirCallStatement, HirConditional, HirConditionalArm,
-        HirConstruction, HirFieldAssignment, HirFieldConstruction, HirFunctionDefinition, HirLocal,
-        HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirObjectReturn, HirReturn,
-        HirReturnValue, HirStatement, Type,
+        BlockFlow, HirAccess, HirConstruction, HirFieldAssignment, HirFieldConstruction,
+        HirFunctionDefinition, HirLocal, HirMemberDefinition, HirStatement, Type,
     },
     identity::{BindingId, CallableId, ClassId, FieldId},
     resolve::{
-        ResolvedBlock, ResolvedConditional, ResolvedFunctionDeclaration,
-        ResolvedFunctionDefinition, ResolvedLocal, ResolvedMemberDefinition, ResolvedParameter,
-        ResolvedProgram, ResolvedStatement,
+        ResolvedBlock, ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedLocal,
+        ResolvedMemberDefinition, ResolvedParameter, ResolvedProgram,
     },
 };
 
@@ -30,6 +27,9 @@ use super::{
 
 mod copy;
 mod initializer;
+mod statement;
+
+use statement::CheckedStatement;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum MemberBodyKind {
@@ -210,234 +210,6 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             .collect()
     }
 
-    fn check_block(&mut self, block: &ResolvedBlock) -> HirBlock {
-        let mut statements = Vec::with_capacity(block.statements.len());
-        let mut flow = BlockFlow::FallsThrough;
-        for statement in &block.statements {
-            let checked = self.check_statement(statement);
-            flow = flow.then(checked.flow);
-            if let Some(statement) = checked.hir {
-                statements.push(statement);
-            }
-        }
-
-        HirBlock {
-            statements,
-            flow,
-            span: block.span,
-        }
-    }
-
-    fn check_statement(&mut self, statement: &ResolvedStatement) -> CheckedStatement {
-        if self
-            .receiver
-            .is_some_and(|receiver| receiver.body_kind.initializes_receiver())
-            && !matches!(statement, ResolvedStatement::FieldAssignment(_))
-        {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_INITIALIZER_BODY,
-                    "initializer bodies contain only direct field assignments",
-                )
-                .with_primary_label(
-                    statement.span(),
-                    "expected direct initialization of a field of `self`",
-                ),
-            );
-            return CheckedStatement::falls_through(None);
-        }
-        match statement {
-            ResolvedStatement::Local(local) => {
-                let metadata = self
-                    .locals
-                    .get(local.local.index())
-                    .filter(|metadata| metadata.id == local.local)
-                    .expect("resolved local declaration must reference local metadata");
-                let expected = lower_type(&metadata.type_syntax);
-                let initializer = match expected {
-                    Type::Class(class) => {
-                        self.check_object_local_initializer(local.local, class, &local.initializer)
-                    }
-                    _ => self
-                        .check_expression(&local.initializer)
-                        .and_then(|initializer| {
-                            require_type(
-                                initializer.ty,
-                                expected,
-                                initializer.span,
-                                "local initializer",
-                                self.diagnostics,
-                            )
-                            .then_some(HirLocalInitializer::Value(initializer))
-                        }),
-                };
-                let hir = initializer.map(|initializer| {
-                    HirStatement::Local(HirLocalDecl {
-                        local: local.local,
-                        initializer,
-                        span: local.span,
-                    })
-                });
-                CheckedStatement::falls_through(hir)
-            }
-            ResolvedStatement::Return(statement) => {
-                let hir = match (self.return_type, &statement.value) {
-                    (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, Some(value)) => {
-                        let Some(value) = self.check_expression(value) else {
-                            return CheckedStatement::terminates(None);
-                        };
-                        require_type(
-                            value.ty,
-                            self.return_type,
-                            value.span,
-                            "return value",
-                            self.diagnostics,
-                        )
-                        .then_some(HirStatement::Return(HirReturn {
-                            value: Some(HirReturnValue::Scalar(value)),
-                            span: statement.span,
-                        }))
-                    }
-                    (Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool, None) => {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_RETURN,
-                                format!(
-                                    "{} `{}` function must return a value",
-                                    self.return_type.indefinite_article(),
-                                    self.return_type.name()
-                                ),
-                            )
-                            .with_primary_label(statement.span, "expected `return expression;`"),
-                        );
-                        None
-                    }
-                    (Type::Unit, Some(value)) => {
-                        // Preserve independent expression diagnostics even when
-                        // the return form itself is invalid.
-                        let _ = self.check_expression(value);
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_RETURN,
-                                format!("{} cannot return a value", self.callable_name),
-                            )
-                            .with_primary_label(statement.span, "use `return;` instead"),
-                        );
-                        None
-                    }
-                    (Type::Unit, None) => Some(HirStatement::Return(HirReturn {
-                        value: None,
-                        span: statement.span,
-                    })),
-                    (Type::Class(_), value) => {
-                        let Type::Class(class) = self.return_type else {
-                            unreachable!()
-                        };
-                        let Some(value) = value else {
-                            self.diagnostics.push(
-                                Diagnostic::error(
-                                    INVALID_RETURN,
-                                    format!("{} must return an object", self.callable_name),
-                                )
-                                .with_primary_label(
-                                    statement.span,
-                                    "expected `return object_place;`",
-                                ),
-                            );
-                            return CheckedStatement::terminates(None);
-                        };
-                        let Some(operation) = self.copy_capabilities.constructor(class).selected()
-                        else {
-                            self.report_unavailable_copy_operation(class, true, value.span());
-                            return CheckedStatement::terminates(None);
-                        };
-                        let object_return =
-                            if let crate::resolve::ResolvedExpression::Construct(construction) =
-                                value
-                            {
-                                let Some(construction) = self.check_object_construction(
-                                    class,
-                                    construction,
-                                    "return destination",
-                                ) else {
-                                    return CheckedStatement::terminates(None);
-                                };
-                                HirObjectReturn::Construct {
-                                    construction,
-                                    omitted_copy: operation,
-                                }
-                            } else {
-                                let Some(source) =
-                                    self.check_object_source(value, class, "object return")
-                                else {
-                                    return CheckedStatement::terminates(None);
-                                };
-                                HirObjectReturn::Copy {
-                                    source,
-                                    operation,
-                                    class,
-                                    span: value.span(),
-                                }
-                            };
-                        Some(HirStatement::Return(HirReturn {
-                            value: Some(HirReturnValue::Object(object_return)),
-                            span: statement.span,
-                        }))
-                    }
-                };
-                CheckedStatement::terminates(hir)
-            }
-            ResolvedStatement::Expression(statement) => {
-                let Some(expression) = self.check_expression(&statement.expression) else {
-                    return CheckedStatement::falls_through(None);
-                };
-                if !is_call_through_groups(&statement.expression) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_CALL_STATEMENT,
-                            "only function calls can be used as expression statements",
-                        )
-                        .with_primary_label(statement.span, "this expression is not a call"),
-                    );
-                    return CheckedStatement::falls_through(None);
-                }
-                if expression.ty != Type::Unit {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_CALL_STATEMENT,
-                            "a call statement must call a function returning `unit`",
-                        )
-                        .with_primary_label(
-                            statement.span,
-                            format!("this call returns `{}`", expression.ty.name()),
-                        )
-                        .with_note("use the returned value instead of discarding it"),
-                    );
-                    return CheckedStatement::falls_through(None);
-                }
-                CheckedStatement::falls_through(Some(HirStatement::Call(HirCallStatement {
-                    call: expression,
-                    span: statement.span,
-                })))
-            }
-            ResolvedStatement::Conditional(conditional) => self.check_conditional(conditional),
-            ResolvedStatement::Block(block) => {
-                let block = self.check_block(block);
-                let flow = block.flow;
-                CheckedStatement {
-                    hir: Some(HirStatement::Block(block)),
-                    flow,
-                }
-            }
-            ResolvedStatement::FieldAssignment(assignment) => {
-                self.check_field_assignment(assignment)
-            }
-            ResolvedStatement::ObjectAssignment(assignment) => {
-                self.check_object_assignment(assignment)
-            }
-        }
-    }
-
     fn check_construction_initializer(
         &mut self,
         expected_class: ClassId,
@@ -565,76 +337,5 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             arguments,
             span: construction.span,
         })
-    }
-
-    fn check_conditional(&mut self, conditional: &ResolvedConditional) -> CheckedStatement {
-        let mut arms = Vec::with_capacity(conditional.arms.len());
-        let mut valid = true;
-        let mut all_arms_terminate = true;
-        for arm in &conditional.arms {
-            let condition = self.check_expression(&arm.condition);
-            let body = self.check_block(&arm.body);
-            all_arms_terminate &= body.flow == BlockFlow::Terminates;
-            match condition {
-                Some(condition)
-                    if require_type(
-                        condition.ty,
-                        Type::Bool,
-                        condition.span,
-                        "conditional condition",
-                        self.diagnostics,
-                    ) =>
-                {
-                    arms.push(HirConditionalArm {
-                        condition,
-                        body,
-                        span: arm.span,
-                    })
-                }
-                _ => valid = false,
-            }
-        }
-        let else_block = conditional
-            .else_block
-            .as_ref()
-            .map(|block| self.check_block(block));
-        let flow = if all_arms_terminate
-            && else_block
-                .as_ref()
-                .is_some_and(|block| block.flow == BlockFlow::Terminates)
-        {
-            BlockFlow::Terminates
-        } else {
-            BlockFlow::FallsThrough
-        };
-
-        let hir = valid.then_some(HirStatement::Conditional(HirConditional {
-            arms,
-            else_block,
-            flow,
-            span: conditional.span,
-        }));
-        CheckedStatement { hir, flow }
-    }
-}
-
-struct CheckedStatement {
-    hir: Option<HirStatement>,
-    flow: BlockFlow,
-}
-
-impl CheckedStatement {
-    const fn falls_through(hir: Option<HirStatement>) -> Self {
-        Self {
-            hir,
-            flow: BlockFlow::FallsThrough,
-        }
-    }
-
-    const fn terminates(hir: Option<HirStatement>) -> Self {
-        Self {
-            hir,
-            flow: BlockFlow::Terminates,
-        }
     }
 }

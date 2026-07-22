@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ7 is next.
+Status: in progress; CQ8 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -67,7 +67,7 @@ count.
 - [x] CQ4 — Extract MIR callable-body and instruction verification
 - [x] CQ5 — Extract MIR call, argument, place, and cleanup verification
 - [x] CQ6 — Decompose class declaration collection in resolution
-- [ ] CQ7 — Decompose callable statement checking
+- [x] CQ7 — Decompose callable statement checking
 - [ ] CQ8 — Decompose expression and initialization checking
 - [ ] CQ9 — Decompose HIR-to-MIR body lowering
 - [ ] CQ10 — Define the compiler library API policy
@@ -229,13 +229,13 @@ while each member category owns its validation and output construction.
 **Purpose:** Make statement-level type rules local and reduce the size of the
 callable checker dispatch.
 
-- [ ] Keep one exhaustive `ResolvedStatement` match in the callable checker.
-- [ ] Extract local declaration, return, call statement, conditional, nested
+- [x] Keep one exhaustive `ResolvedStatement` match in the callable checker.
+- [x] Extract local declaration, return, call statement, conditional, nested
       block, field assignment, and object assignment helpers.
-- [ ] Keep structured `BlockFlow` composition in the statement/block owner.
-- [ ] Preserve diagnostic accumulation after independently invalid operands or
+- [x] Keep structured `BlockFlow` composition in the statement/block owner.
+- [x] Preserve diagnostic accumulation after independently invalid operands or
       statements.
-- [ ] Keep copy and initializer-specific policy in their existing cohesive
+- [x] Keep copy and initializer-specific policy in their existing cohesive
       submodules rather than moving it back into the dispatcher.
 
 **Acceptance criteria:** Statement dispatch is short, every statement family
