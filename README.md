@@ -122,39 +122,19 @@ expected backend after the language core grows further.
 
 ## Building and using `skac`
 
-Development requires Linux, rustup, stable Rust with rustfmt and Clippy, GNU
-Make, a C11 compiler, and an archiver. The Rust workspace has no third-party
-crate dependencies.
+The [development workflow](docs/development/README.md) defines prerequisites,
+supported toolchains, and repository validation. Run `make help` for the
+current Makefile command inventory.
 
 ```text
-make check          # formatting, checks, Clippy, Rust/golden tests, runtime tests
-make msrv-check     # compile every Rust target with the declared minimum version
-make golden-test    # source-to-native and compile-failure golden cases
-make runtime        # build build/runtime/libskald_runtime.a
-make runtime-test   # direct C runtime tests
-
+make runtime
 cargo run -p skac -- samples/inline_counter.ska -o build/inline_counter
 cargo run -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
 ```
 
-The shared workspace manifest declares Rust 1.82.0 as the minimum supported
-version. The repository toolchain selects stable Rust with rustfmt and Clippy
-for ordinary development. Install the MSRV toolchain once before running its
-local check:
-
-```text
-rustup toolchain install 1.82.0 --profile minimal
-make msrv-check
-```
-
-External infrastructure runs `make check` regularly from clean checkouts. CI
-orchestration is intentionally kept outside this repository; the Makefile is
-the shared local and automated validation interface.
-
-Executable output uses `cc` by default. `CC` selects another compatible compiler
-driver, and `SKALD_RUNTIME_ARCHIVE` selects another runtime archive. Output is
-published atomically; failed compilation or linking preserves an existing
-destination.
+`skac --help` is the exact command-line reference. Compiler entry points,
+target/toolchain selection, output modes, and publication guarantees are
+defined by [Driver and Artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md).
 
 ## Future work
 
@@ -194,7 +174,9 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Compiler phases and IR](docs/compiler/PHASES_AND_IR.md)
 - [Backend and target contract](docs/compiler/BACKEND.md)
 - [Runtime ABI](docs/compiler/RUNTIME_ABI.md)
-- [Driver and test migration guide](docs/REPO_STRUCTURE.md)
+- [Driver and artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md)
+- [Development workflow](docs/development/README.md)
+- [Test migration guide](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)
 - [Compiler debugging artifacts](docs/DEBUGGING.md)

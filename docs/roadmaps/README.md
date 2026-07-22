@@ -7,8 +7,8 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  driver, artifact, and contributor workflow documentation is next. The broad
-  language overview, support/maturity matrix, exact grammar, type/value/expression,
+  testing and debugging guidance is next. The broad language overview,
+  support/maturity matrix, exact grammar, type/value/expression,
   function/control-flow, and exact-class initialization/place semantics are
   established alongside exact-class copying, assignment, materialization, and
   deterministic lifetime. Exact-class alias parameters and their ownership
@@ -20,11 +20,12 @@ roadmaps move to [`../archive/`](../archive/README.md).
   a focused authority; premature optional, array, string, iteration, and
   exception sketches have been pruned. Durable compiler responsibilities,
   phase products, target-independent IR, verification, dumps, extension
-  policy, the repository-internal crate API, the backend/target contract, and
-  the public runtime ABI now have focused authorities.
+  policy, the repository-internal crate API, the backend/target contract, the
+  public runtime ABI, driver/artifact behavior, and contributor workflow now
+  have focused authorities.
   Documentation policy, the migration inventory, discrepancy ownership, and
-  local link/index checking support the remaining replacement of driver,
-  testing, and debugging migration prose.
+  local link/index checking support the remaining replacement of testing and
+  debugging migration prose.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; PM0 can now freeze the
   executable profile in the focused polymorphism design authority. The roadmap
   then extends the completed exact-class

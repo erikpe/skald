@@ -24,7 +24,8 @@ selection and backend emission. It stops after any source phase that produced
 an error. Successful type checking always produces HIR; failed type checking
 produces no executable HIR. The [backend and target contract](BACKEND.md)
 defines how verified MIR is checked and realized for a selected target; driver
-behavior is separate from the target-independent phase model.
+behavior is separate from the target-independent phase model and is defined by
+[Driver and Artifacts](DRIVER_AND_ARTIFACTS.md).
 
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.

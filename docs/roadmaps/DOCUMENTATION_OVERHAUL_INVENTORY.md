@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through the runtime ABI contract.
+Status: active; audited through driver, artifacts, and contributor workflows.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -28,13 +28,15 @@ step.
 | `docs/compiler/PHASES_AND_IR.md` | Retain as the authority for phase products, target-independent IR responsibilities, verification, deterministic dumps, and trust boundaries. |
 | `docs/compiler/BACKEND.md` | Retain as the authority for backend dispatch, target legality, x86-64 System V layout and ABI realization, frames, instruction selection, symbols, and assembly emission. |
 | `docs/compiler/RUNTIME_ABI.md` | Retain as the authority for the public C runtime surface, version and link guard, platform requirements, bootstrap output records, failure behavior, and current responsibility boundary. |
+| `docs/compiler/DRIVER_AND_ARTIFACTS.md` | Retain as the authority for compiler orchestration, CLI modes, target/toolchain/runtime selection, input protection, artifact publication, and driver failure boundaries. |
+| `docs/development/README.md` | Retain as the authority for contributor prerequisites, Makefile entry points, supported Rust toolchains, MSRV use, and external clean-checkout automation. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
-| `docs/REPO_STRUCTURE.md` | DOC11 moved durable compiler and phase contracts, DOC12 moved backend contracts, and DOC13 moved runtime contracts; DOC14-DOC15 move its remaining driver and testing contracts; DOC16 removes the superseded migration document. |
+| `docs/REPO_STRUCTURE.md` | DOC11-DOC14 moved compiler, backend, runtime, driver, and workflow contracts; DOC15 moves its remaining testing contract, and DOC16 removes the superseded migration document. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | DOC1 and DOC8-DOC11 move stable design maturity and extension policy; roadmap ordering remains in `docs/roadmaps/README.md`; DOC16 removes the duplicate. |
 | `docs/DEBUGGING.md` | DOC15 verifies and moves its workflow to `docs/development/DEBUGGING.md`; DOC16 removes the old path. |
 | `samples/README.md` | Retain as the concise sample catalog; link language behavior to focused authorities when those exist. |
-| `scripts/README.md` | Retain as concise ownership guidance; contributor commands remain Makefile-owned and move to `docs/development/README.md` in DOC14. |
+| `scripts/README.md` | Retain as concise script ownership guidance linking to the Makefile-owned development workflow. |
 | `std/README.md` | Retain as the current standard-library status note; later link runtime and language authorities without speculating about an unimplemented library. |
 | `tests/README.md` | DOC15 slims it to top-level test placement and links to `docs/development/TESTING.md`. |
 | `tests/compiler/README.md` and `tests/compiler/robustness/README.md` | Retain as concise corpus mechanics; DOC15 moves general testing policy to the development guide. |
@@ -134,7 +136,7 @@ this ledger stale.
 |---|---|
 | `docs/SKALD_DRAFT_SPEC.md` and its anchors | `README.md`, `docs/README.md`, `docs/REPO_STRUCTURE.md`, `grammar/README.md`, and `docs/archive/README.md`. |
 | `grammar/README.md` compatibility path | Historical roadmap prose and external links may still name it; all living repository authorities now link directly to `docs/language/GRAMMAR.md`. |
-| `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/SKALD_DRAFT_SPEC.md`, and `docs/archive/README.md` while driver and test replacements remain pending. |
+| `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/compiler/README.md`, and `docs/archive/README.md` while the test replacement remains pending. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | `README.md`, `docs/README.md`, and `docs/archive/README.md`. |
 | `docs/DEBUGGING.md` | `README.md` and `docs/README.md`. |
 
@@ -150,6 +152,7 @@ and repairs only navigation needed to reach living authorities.
 | `crates/skald-compiler/src/lexer/mod.rs` module documentation | `docs/language/GRAMMAR.md` | Focused destination established. |
 | `crates/skald-compiler/src/backend/mod.rs` and `backend/x86_64_sysv/mod.rs` module documentation | `docs/compiler/BACKEND.md` | Focused destination established. |
 | `runtime/include/skald_runtime.h` and the compiler runtime-marker comment | `docs/compiler/RUNTIME_ABI.md` | Focused destination established. |
+| `crates/skald-compiler/src/driver/mod.rs` module documentation | `docs/compiler/DRIVER_AND_ARTIFACTS.md` | Focused destination established. |
 
 ## Verification boundary
 

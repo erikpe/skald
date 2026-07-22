@@ -109,7 +109,8 @@ than copied from legacy prose:
   [runtime test guide](../../tests/runtime/README.md);
 - the backend registry and its focused test expose only `x86_64-sysv`.
 
-The corresponding supported commands are `make compiler-test`,
-`make golden-test`, `make runtime-test`, and the complete `make check` gate.
-Case counts and exhaustive test inventories are intentionally not duplicated
-here; repository discovery and focused test owners remain authoritative.
+The [development workflow](../development/README.md) defines the supported
+validation interface, and `make help` provides its current detailed command
+inventory. Case counts and exhaustive test inventories are intentionally not
+duplicated here; repository discovery and focused test owners remain
+authoritative.

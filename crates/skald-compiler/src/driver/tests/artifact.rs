@@ -36,6 +36,36 @@ fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
 }
 
 #[test]
+fn assembly_mode_uses_the_default_suffixed_output_path() {
+    let directory = TemporaryDirectory::new("driver-default-assembly").unwrap();
+    let input = directory.join("answer.ska");
+    let output = directory.join("answer.s");
+    fs::write(&input, "fn main() -> i64 { return 42; }").unwrap();
+    let args = [
+        OsString::from("skac"),
+        input.into_os_string(),
+        OsString::from("--emit"),
+        OsString::from("asm"),
+    ];
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+
+    let status = run_cli_with_context(
+        args,
+        &mut stdout,
+        &mut stderr,
+        &Toolchain::new("false", "missing-runtime.a"),
+    )
+    .unwrap();
+
+    assert_eq!(status, 0, "{}", String::from_utf8_lossy(&stderr));
+    assert!(stdout.is_empty());
+    assert!(stderr.is_empty());
+    assert!(fs::read_to_string(output).unwrap().contains(".globl main"));
+    assert!(temporary_artifacts(directory.path()).is_empty());
+}
+
+#[test]
 fn explicit_output_must_not_alias_the_input_source() {
     let directory = TemporaryDirectory::new("driver-input-alias").unwrap();
     let input = directory.join("source.ska");

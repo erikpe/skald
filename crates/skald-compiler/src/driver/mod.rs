@@ -2,6 +2,8 @@
 //!
 //! This module composes phases, artifact publication, and the host toolchain.
 //! Individual compiler phases do not depend on it.
+//! The repository contract is documented in
+//! `docs/compiler/DRIVER_AND_ARTIFACTS.md`.
 
 mod artifact;
 mod cli;

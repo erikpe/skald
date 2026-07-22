@@ -30,5 +30,5 @@ They do not block the current compiler contracts or polymorphism profile design.
 ## Completed
 
 - [x] Narrowed the duplicated Makefile command inventory in
-      `REPO_STRUCTURE.md`; `make help` is the detailed command reference and
-      the architecture document lists only validation interfaces.
+      the architecture migration guide; `make help` is the detailed command
+      reference and `docs/development/README.md` owns validation interfaces.

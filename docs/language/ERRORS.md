@@ -97,7 +97,8 @@ from a possible implementation strategy.
 ## Implementation boundary
 
 Diagnostic codes, rendering format, compiler exit codes, phase recovery,
-backend errors, and toolchain reporting belong to compiler and driver
-documentation. Runtime symbols, exact output-failure implementation, and the
+backend errors, and toolchain reporting belong to compiler documentation,
+including [driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md). Runtime
+symbols, exact output-failure implementation, and the
 runtime compatibility contract belong to the
 [runtime ABI](../compiler/RUNTIME_ABI.md).

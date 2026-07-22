@@ -23,4 +23,12 @@ fn invalid_arguments_are_usage_errors() {
     let (exit_code, _, stderr) = run(&["skac", "test.ska", "--emit", "object"]);
     assert_eq!(exit_code, EXIT_USAGE);
     assert!(stderr.contains("unsupported emission kind `object`; expected `asm`"));
+
+    let (exit_code, _, stderr) = run(&["skac", "test.txt"]);
+    assert_eq!(exit_code, EXIT_USAGE);
+    assert!(stderr.contains("input must use the canonical `.ska` suffix"));
+
+    let (exit_code, _, stderr) = run(&["skac", "test.ska", "--target", "unknown"]);
+    assert_eq!(exit_code, EXIT_USAGE);
+    assert!(stderr.contains("unsupported target `unknown`"));
 }

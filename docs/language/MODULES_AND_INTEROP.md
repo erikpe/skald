@@ -133,7 +133,5 @@ classification, C type widths, registers, stack placement, and
 compiler-generated symbol handling are implementation details owned by the
 [backend and target contract](../compiler/BACKEND.md). Runtime symbols and link
 markers are owned by the [runtime ABI](../compiler/RUNTIME_ABI.md). Tool
-invocation and artifact publication remain owned during the documentation
-migration by the existing
-[driver](../REPO_STRUCTURE.md#driver-and-artifacts) section until its focused
-document replaces that authority.
+invocation and artifact publication are owned by
+[driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md).

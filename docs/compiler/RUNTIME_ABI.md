@@ -143,7 +143,8 @@ failure behavior, ABI representation, version transition, and focused tests.
 - the failure harness closes child-process stdout and requires every output
   function to terminate unsuccessfully.
 
-Driver tests prove that an archive without the current marker fails linking
-without replacing an existing output artifact. Native golden programs then
-exercise the same public symbols through source declarations, backend call
-lowering, the real archive, and exact stdout expectations.
+[Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that an archive
+without the current marker fails linking without replacing an existing output
+artifact. Native golden programs then exercise the same public symbols through
+source declarations, backend call lowering, the real archive, and exact stdout
+expectations.

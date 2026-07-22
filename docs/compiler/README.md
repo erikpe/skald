@@ -51,10 +51,11 @@ optimization.
 Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
-[runtime ABI](RUNTIME_ABI.md). Driver, testing, and debugging details remain in
-the [legacy migration guide](../REPO_STRUCTURE.md) and
-[debugging guide](../DEBUGGING.md) until their focused replacements are
-created.
+[runtime ABI](RUNTIME_ABI.md). Driver behavior is defined by
+[driver and artifacts](DRIVER_AND_ARTIFACTS.md). Testing and debugging details
+remain in the [legacy test migration guide](../REPO_STRUCTURE.md) and
+[debugging guide](../DEBUGGING.md). Contributor prerequisites and validation
+are defined by the [development workflow](../development/README.md).
 
 ## Pipeline
 
@@ -76,7 +77,9 @@ tools. Source I/O, host tool invocation, runtime linkage, and artifact
 publication are driver responsibilities outside the phase pipeline.
 
 See [Phases and IR](PHASES_AND_IR.md) for inputs, outputs, invariants,
-verification, dumps, and trust boundaries.
+verification, dumps, and trust boundaries, and
+[Driver and Artifacts](DRIVER_AND_ARTIFACTS.md) for orchestration and output
+behavior.
 
 ## Compiler crate API policy
 

@@ -219,10 +219,11 @@ note. The generated text is accepted by the system assembler in focused tests.
 Determinism is tested both by repeated backend emission and independent
 compiler processes.
 
-Textual assembly is a supported compiler artifact, but exact internal symbol
-names, label spellings, frame offsets, and instruction sequences may change
-between compiler revisions. External symbols and behavior covered by the
-target ABI remain the compatibility boundary.
+Textual assembly is a supported compiler artifact published through the
+[driver](DRIVER_AND_ARTIFACTS.md), but exact internal symbol names, label
+spellings, frame offsets, and instruction sequences may change between
+compiler revisions. External symbols and behavior covered by the target ABI
+remain the compatibility boundary.
 
 Focused tests cover target registration, primitive and nested class layout,
 mixed register/stack classification, hidden destinations and receivers,

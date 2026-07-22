@@ -1,4 +1,4 @@
-# Driver and Test Migration Guide
+# Test Migration Guide
 
 Status: legacy migration input. Durable compiler architecture is authoritative
 in [Compiler Architecture](compiler/README.md), and target-independent phase
@@ -25,14 +25,11 @@ destination.
 
 ## Driver and artifacts
 
-`skac` supports executable output and `--emit asm`. Executable mode streams
-assembly to the configured C compiler driver and links the runtime archive. It
-does not construct a shell command.
-
-Assembly and executable publication use same-directory temporary files and one
-final rename. Failures preserve existing output and clean unpublished
-temporaries through RAII. Output paths that alias the input through the same
-path, a symbolic link, or a hard link are rejected.
+The focused [driver and artifacts](compiler/DRIVER_AND_ARTIFACTS.md) guide now
+owns compiler orchestration, CLI modes, toolchain and runtime selection, input
+protection, artifact publication, and structured failures. This compatibility
+heading remains only so links created before the documentation migration have
+a useful destination.
 
 ## Testing
 
@@ -54,9 +51,9 @@ diagnostics byte-for-byte. Native cases separately check stdout, empty stderr,
 and process status. The object-determinism integration test compares AST,
 resolved IR, HIR, MIR, and assembly across independent processes.
 
-`make help` is the authoritative command inventory. `make check` is the
-complete repository gate, and external infrastructure runs it regularly from
-clean checkouts.
+Contributor prerequisites, supported toolchains, Makefile entry points, and
+external clean-checkout automation are defined by the
+[development workflow](development/README.md).
 
 ## Debugging
 

@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC14 is next.
+Status: planned; DOC15 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -179,7 +179,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC11 — Rewrite compiler architecture and phase contracts
 - [x] DOC12 — Separate backend and target documentation
 - [x] DOC13 — Establish the runtime ABI authority
-- [ ] DOC14 — Rewrite driver, artifact, and workflow documentation
+- [x] DOC14 — Rewrite driver, artifact, and workflow documentation
 - [ ] DOC15 — Consolidate testing and debugging guidance
 - [ ] DOC16 — Update entry points and remove superseded monoliths
 - [ ] DOC17 — Verify, close, and archive the overhaul
@@ -548,16 +548,16 @@ runtime ABI; all other documents summarize and link.
 **Purpose:** Separate compiler orchestration and contributor commands from
 language and backend contracts.
 
-- [ ] Create `DRIVER_AND_ARTIFACTS.md` covering compiler entry points, target
+- [x] Create `DRIVER_AND_ARTIFACTS.md` covering compiler entry points, target
       selection, CLI modes, tool invocation, runtime selection, atomic
       publication, path alias rejection, and structured failures.
-- [ ] Verify claims against driver code and CLI, pipeline, artifact, and
+- [x] Verify claims against driver code and CLI, pipeline, artifact, and
       toolchain tests.
-- [ ] Create `docs/development/README.md` for prerequisites, authoritative
+- [x] Create `docs/development/README.md` for prerequisites, authoritative
       Makefile interfaces, MSRV use, and external clean-checkout automation.
-- [ ] Keep `make help` as the detailed command inventory and remove duplicated
+- [x] Keep `make help` as the detailed command inventory and remove duplicated
       command catalogs from architecture documents.
-- [ ] Add no CI job and no separate workflow whose behavior cannot be invoked
+- [x] Add no CI job and no separate workflow whose behavior cannot be invoked
       locally.
 
 **Tests:** Run driver/CLI/artifact/toolchain tests, `make docs-check`,

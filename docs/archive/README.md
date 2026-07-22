@@ -12,7 +12,9 @@ For current information, use:
 - [compiler phases and IR](../compiler/PHASES_AND_IR.md);
 - [the backend and target contract](../compiler/BACKEND.md);
 - [the runtime ABI](../compiler/RUNTIME_ABI.md);
-- [driver and test migration guidance](../REPO_STRUCTURE.md);
+- [driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md);
+- [the development workflow](../development/README.md);
+- [test migration guidance](../REPO_STRUCTURE.md);
 - [the implemented grammar](../language/GRAMMAR.md);
 - [future development boundaries](../NEXT_SLICE_BOUNDARIES.md);
 - [active and planned roadmaps](../roadmaps/README.md).
