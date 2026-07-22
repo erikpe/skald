@@ -271,7 +271,11 @@ the authoritative structured fallthrough/termination summary consumed by
 return diagnostics and MIR lowering. One private statement owner contains the
 exhaustive resolved-statement dispatch, statement-family helpers, and block
 flow composition. Field initialization and object-copy assignment continue to
-delegate to their dedicated policy modules.
+delegate to their dedicated policy modules. Expression checking likewise keeps
+one exhaustive facade dispatch while primitive operators and grouping, calls
+and arguments, and object places own their respective rules. Direct object
+construction, field-initialization transitions, and copy selection remain
+separate callable-policy responsibilities.
 
 Numeric spelling is converted exactly once during type checking. Integer
 families receive independent range checks; finite `f64` is converted to raw

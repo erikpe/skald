@@ -3,6 +3,14 @@
 use super::*;
 use crate::hir::{HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace, HirObjectPlace};
 
+struct FieldAssignmentTarget {
+    place: HirFieldPlace,
+    name: String,
+    ty: Type,
+    direct_self_field: bool,
+    valid: bool,
+}
+
 impl CallableChecker<'_, '_> {
     pub(super) fn check_field_assignment(
         &mut self,
@@ -12,6 +20,51 @@ impl CallableChecker<'_, '_> {
             .receiver
             .map(|receiver| receiver.body_kind)
             .unwrap_or(MemberBodyKind::MethodOrDestructor);
+        let Some(target) = self.check_field_assignment_target(assignment, body_kind) else {
+            return CheckedStatement::falls_through(None);
+        };
+
+        if let (Type::Class(class), MemberBodyKind::MethodOrDestructor) = (target.ty, body_kind) {
+            return self.check_method_field_copy_assignment(target.place, class, assignment);
+        }
+
+        let hir = match (target.ty, body_kind) {
+            (Type::Class(class), MemberBodyKind::OrdinaryInitializer) => self
+                .check_direct_field_construction(
+                    target.place.clone(),
+                    class,
+                    &target.name,
+                    assignment,
+                ),
+            (Type::Class(class), MemberBodyKind::CopyConstructor) => self
+                .check_copy_constructor_field_assignment(
+                    target.place.clone(),
+                    class,
+                    &target.name,
+                    assignment,
+                ),
+            (Type::Class(class), MemberBodyKind::CopyAssignment) => {
+                self.check_field_copy_assignment(target.place.clone(), class, assignment)
+            }
+            (Type::Bool | Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Unit, _) => self
+                .check_primitive_field_assignment(
+                    target.place.clone(),
+                    target.ty,
+                    &target.name,
+                    assignment,
+                ),
+            (Type::Class(_), MemberBodyKind::MethodOrDestructor) => {
+                unreachable!("method field copy assignment is handled before initializer policy")
+            }
+        };
+        self.finish_field_assignment(target, body_kind, hir)
+    }
+
+    fn check_field_assignment_target(
+        &mut self,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+        body_kind: MemberBodyKind,
+    ) -> Option<FieldAssignmentTarget> {
         let in_initializer = body_kind.initializes_receiver();
         let place = self.check_field_place(
             &assignment.receiver,
@@ -22,17 +75,13 @@ impl CallableChecker<'_, '_> {
             } else {
                 ObjectPlaceUse::Member
             },
-        );
-        let Some(place) = place else {
-            return CheckedStatement::falls_through(None);
-        };
+        )?;
         let field = self
             .program
             .field(place.field)
             .expect("selected field must exist");
         let field_name = field.name.clone();
         let field_type = lower_type(&field.type_syntax);
-        let field_id = place.field;
         let mut valid = true;
         if place.receiver.access == HirAccess::ReadOnly
             && !matches!(
@@ -76,150 +125,112 @@ impl CallableChecker<'_, '_> {
             }
         }
 
-        let hir = match field_type {
-            Type::Class(class) => match body_kind {
-                MemberBodyKind::OrdinaryInitializer => self
-                    .check_field_construction(class, &field_name, &assignment.value)
-                    .map(|construction| {
-                        HirStatement::FieldConstruction(HirFieldConstruction {
-                            place,
-                            construction,
-                            span: assignment.span,
-                        })
-                    }),
-                MemberBodyKind::CopyConstructor => {
-                    if matches!(
-                        &assignment.value,
-                        crate::resolve::ResolvedExpression::Construct(_)
-                    ) {
-                        self.check_field_construction(class, &field_name, &assignment.value)
-                            .map(|construction| {
-                                HirStatement::FieldConstruction(HirFieldConstruction {
-                                    place,
-                                    construction,
-                                    span: assignment.span,
-                                })
-                            })
-                    } else {
-                        let Some(source) = self.check_copy_source_place(&assignment.value, class)
-                        else {
-                            return CheckedStatement::falls_through(None);
-                        };
-                        let operation = self.copy_capabilities.constructor(class).selected();
-                        let Some(operation) = operation else {
-                            self.report_unavailable_copy_operation(
-                                class,
-                                true,
-                                assignment.value.span(),
-                            );
-                            return CheckedStatement::falls_through(None);
-                        };
-                        Some(HirStatement::FieldCopyConstruction(
-                            HirFieldCopyConstruction {
-                                place,
-                                source,
-                                operation,
-                                span: assignment.span,
-                            },
-                        ))
-                    }
-                }
-                MemberBodyKind::CopyAssignment => {
-                    let Some(source) = self.check_copy_source_place(&assignment.value, class)
-                    else {
-                        return CheckedStatement::falls_through(None);
-                    };
-                    let operation = self.copy_capabilities.assignment(class).selected();
-                    let Some(operation) = operation else {
-                        self.report_unavailable_copy_operation(
-                            class,
-                            false,
-                            assignment.value.span(),
-                        );
-                        return CheckedStatement::falls_through(None);
-                    };
-                    Some(HirStatement::FieldCopyAssignment(HirFieldCopyAssignment {
-                        place,
-                        source,
-                        operation,
-                        span: assignment.span,
-                    }))
-                }
-                MemberBodyKind::MethodOrDestructor => {
-                    let destination = HirObjectPlace {
-                        path: place.receiver.path.clone().project(
-                            place.field,
-                            class,
-                            assignment.span,
-                        ),
-                        access: place.receiver.access,
-                    };
-                    return self.finish_copy_assignment(
-                        destination,
-                        &assignment.value,
-                        assignment.span,
-                    );
-                }
-            },
-            _ => self.check_primitive_field_value(place, field_type, &field_name, assignment),
-        };
+        Some(FieldAssignmentTarget {
+            place,
+            name: field_name,
+            ty: field_type,
+            direct_self_field,
+            valid,
+        })
+    }
+
+    fn finish_field_assignment(
+        &mut self,
+        target: FieldAssignmentTarget,
+        body_kind: MemberBodyKind,
+        hir: Option<HirStatement>,
+    ) -> CheckedStatement {
         let Some(hir) = hir else {
             return CheckedStatement::falls_through(None);
         };
-        if valid && in_initializer && direct_self_field {
-            self.initialized_fields.insert(field_id);
+        if target.valid && body_kind.initializes_receiver() && target.direct_self_field {
+            self.initialized_fields.insert(target.place.field);
         }
-        CheckedStatement::falls_through(valid.then_some(hir))
+        CheckedStatement::falls_through(target.valid.then_some(hir))
     }
 
-    pub(in crate::typeck) fn report_unavailable_copy_operation(
+    fn check_direct_field_construction(
         &mut self,
-        class: crate::identity::ClassId,
-        construction: bool,
-        span: crate::source::Span,
-    ) {
-        let class_name = &self
-            .program
-            .class(class)
-            .expect("copy capability class must exist")
-            .name;
-        let operation = if construction {
-            "copy construction"
-        } else {
-            "copy assignment"
-        };
-        let failure = if construction {
-            self.copy_capabilities.constructor_failure(class)
-        } else {
-            self.copy_capabilities.assignment_failure(class)
-        };
-        let mut diagnostic = Diagnostic::error(
-            COPY_OPERATION_UNAVAILABLE,
-            format!("class `{class_name}` does not support {operation}"),
-        )
-        .with_primary_label(span, format!("{operation} is required here"));
-        if let Some(path) = failure.filter(|path| !path.is_empty()) {
-            let names = path
-                .iter()
-                .map(|field| {
-                    let declaration = self
-                        .program
-                        .field(*field)
-                        .expect("capability failure field must exist");
-                    let owner = self
-                        .program
-                        .class(field.class())
-                        .expect("capability failure owner must exist");
-                    format!("{}.{}", owner.name, declaration.name)
+        place: HirFieldPlace,
+        class: ClassId,
+        field_name: &str,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> Option<HirStatement> {
+        self.check_field_construction(class, field_name, &assignment.value)
+            .map(|construction| {
+                HirStatement::FieldConstruction(HirFieldConstruction {
+                    place,
+                    construction,
+                    span: assignment.span,
                 })
-                .collect::<Vec<_>>()
-                .join(" -> ");
-            diagnostic = diagnostic.with_note(format!("first unavailable field path: {names}"));
-        }
-        self.diagnostics.push(diagnostic);
+            })
     }
 
-    fn check_primitive_field_value(
+    fn check_copy_constructor_field_assignment(
+        &mut self,
+        place: HirFieldPlace,
+        class: ClassId,
+        field_name: &str,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> Option<HirStatement> {
+        if matches!(
+            &assignment.value,
+            crate::resolve::ResolvedExpression::Construct(_)
+        ) {
+            return self.check_direct_field_construction(place, class, field_name, assignment);
+        }
+        let source = self.check_copy_source_place(&assignment.value, class)?;
+        let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
+            self.report_unavailable_copy_operation(class, true, assignment.value.span());
+            return None;
+        };
+        Some(HirStatement::FieldCopyConstruction(
+            HirFieldCopyConstruction {
+                place,
+                source,
+                operation,
+                span: assignment.span,
+            },
+        ))
+    }
+
+    fn check_field_copy_assignment(
+        &mut self,
+        place: HirFieldPlace,
+        class: ClassId,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> Option<HirStatement> {
+        let source = self.check_copy_source_place(&assignment.value, class)?;
+        let Some(operation) = self.copy_capabilities.assignment(class).selected() else {
+            self.report_unavailable_copy_operation(class, false, assignment.value.span());
+            return None;
+        };
+        Some(HirStatement::FieldCopyAssignment(HirFieldCopyAssignment {
+            place,
+            source,
+            operation,
+            span: assignment.span,
+        }))
+    }
+
+    fn check_method_field_copy_assignment(
+        &mut self,
+        place: HirFieldPlace,
+        class: ClassId,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> CheckedStatement {
+        let destination = HirObjectPlace {
+            path: place
+                .receiver
+                .path
+                .clone()
+                .project(place.field, class, assignment.span),
+            access: place.receiver.access,
+        };
+        self.finish_copy_assignment(destination, &assignment.value, assignment.span)
+    }
+
+    fn check_primitive_field_assignment(
         &mut self,
         place: HirFieldPlace,
         field_type: Type,

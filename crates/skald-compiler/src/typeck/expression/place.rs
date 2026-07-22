@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::Diagnostic,
-    hir::{HirAccess, HirFieldPlace, HirObjectPlace, Type},
+    hir::{HirAccess, HirExpression, HirExpressionKind, HirFieldPlace, HirObjectPlace, Type},
     identity::{BindingId, FieldId, ParameterId},
     object_path::ObjectPath,
     resolve::{ResolvedExpression, ResolvedObjectPlace, ResolvedParameter, ResolvedTypeKind},
@@ -27,6 +27,46 @@ pub(in crate::typeck) enum ObjectPlaceUse {
 }
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_field_read(
+        &mut self,
+        access: &crate::resolve::ResolvedFieldAccessExpr,
+    ) -> Option<HirExpression> {
+        let place = self.check_field_place(
+            &access.receiver,
+            access.field,
+            access.span,
+            ObjectPlaceUse::Member,
+        )?;
+        if place.receiver.root() == BindingId::Receiver(self.callable)
+            && place.receiver.path.is_root()
+            && !self.check_initializer_field_liveness(place.field, access.member_span)
+        {
+            return None;
+        }
+        let field = self
+            .program
+            .field(place.field)
+            .expect("selected field must exist");
+        if matches!(field.type_syntax.kind, ResolvedTypeKind::Class(_)) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_OBJECT_CONTEXT,
+                    format!("class field `{}` is not a value", field.name),
+                )
+                .with_primary_label(
+                    access.member_span,
+                    "use this object place as a receiver or alias argument",
+                ),
+            );
+            return None;
+        }
+        Some(HirExpression {
+            kind: HirExpressionKind::FieldRead(place),
+            ty: lower_type(&field.type_syntax),
+            span: access.span,
+        })
+    }
+
     pub(in crate::typeck) fn check_field_place(
         &mut self,
         place: &ResolvedObjectPlace,

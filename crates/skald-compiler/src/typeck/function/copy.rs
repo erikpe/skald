@@ -12,6 +12,53 @@ use crate::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(in crate::typeck) fn report_unavailable_copy_operation(
+        &mut self,
+        class: ClassId,
+        construction: bool,
+        span: crate::source::Span,
+    ) {
+        let class_name = &self
+            .program
+            .class(class)
+            .expect("copy capability class must exist")
+            .name;
+        let operation = if construction {
+            "copy construction"
+        } else {
+            "copy assignment"
+        };
+        let failure = if construction {
+            self.copy_capabilities.constructor_failure(class)
+        } else {
+            self.copy_capabilities.assignment_failure(class)
+        };
+        let mut diagnostic = Diagnostic::error(
+            COPY_OPERATION_UNAVAILABLE,
+            format!("class `{class_name}` does not support {operation}"),
+        )
+        .with_primary_label(span, format!("{operation} is required here"));
+        if let Some(path) = failure.filter(|path| !path.is_empty()) {
+            let names = path
+                .iter()
+                .map(|field| {
+                    let declaration = self
+                        .program
+                        .field(*field)
+                        .expect("capability failure field must exist");
+                    let owner = self
+                        .program
+                        .class(field.class())
+                        .expect("capability failure owner must exist");
+                    format!("{}.{}", owner.name, declaration.name)
+                })
+                .collect::<Vec<_>>()
+                .join(" -> ");
+            diagnostic = diagnostic.with_note(format!("first unavailable field path: {names}"));
+        }
+        self.diagnostics.push(diagnostic);
+    }
+
     pub(super) fn check_object_local_initializer(
         &mut self,
         local: crate::identity::LocalId,

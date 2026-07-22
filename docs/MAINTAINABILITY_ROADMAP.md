@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ8 is next.
+Status: in progress; CQ9 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -68,7 +68,7 @@ count.
 - [x] CQ5 — Extract MIR call, argument, place, and cleanup verification
 - [x] CQ6 — Decompose class declaration collection in resolution
 - [x] CQ7 — Decompose callable statement checking
-- [ ] CQ8 — Decompose expression and initialization checking
+- [x] CQ8 — Decompose expression and initialization checking
 - [ ] CQ9 — Decompose HIR-to-MIR body lowering
 - [ ] CQ10 — Define the compiler library API policy
 - [ ] CQ11 — Complete shared typed ID-table storage
@@ -246,15 +246,15 @@ has one clear implementation owner, and HIR plus diagnostics remain unchanged.
 **Purpose:** Separate primitive expression typing, calls, places, and object
 initialization policy.
 
-- [ ] Keep one exhaustive `ResolvedExpression` dispatch entry point.
-- [ ] Extract binding/literal, unary/binary, direct-call, method-call, field
+- [x] Keep one exhaustive `ResolvedExpression` dispatch entry point.
+- [x] Extract binding/literal, unary/binary, direct-call, method-call, field
       read, grouping, and excluded construction-expression helpers.
-- [ ] Split field assignment checking into primitive assignment, direct field
+- [x] Split field assignment checking into primitive assignment, direct field
       construction, copy construction, copy assignment, and liveness
       transitions.
-- [ ] Keep object-place capability checks in the existing place submodule and
+- [x] Keep object-place capability checks in the existing place submodule and
       copy selection in the copy submodule.
-- [ ] Preserve source evaluation order and exact diagnostic labels and notes.
+- [x] Preserve source evaluation order and exact diagnostic labels and notes.
 
 **Acceptance criteria:** Expression and initialization rules can evolve without
 editing one broad matcher, while exhaustive dispatch still exposes new syntax

@@ -99,6 +99,26 @@ fn diagnoses_missing_duplicate_and_premature_field_initialization() {
 }
 
 #[test]
+fn transitions_field_liveness_only_after_a_valid_assignment() {
+    let output = check_text(concat!(
+        "class Broken {\n",
+        "  value: i64; copy: i64;\n",
+        "  init() { self.value = true; self.copy = self.value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+
+    assert!(diagnostics.len() >= 2);
+    assert_eq!(diagnostics[0].code, TYPE_MISMATCH);
+    assert_eq!(diagnostics[1].code, FIELD_INITIALIZATION);
+    assert_eq!(
+        diagnostics[1].message,
+        "field `value` is used before initialization"
+    );
+}
+
+#[test]
 fn enforces_initializer_shape_and_field_types() {
     let output = check_text(concat!(
         "class Broken {\n",

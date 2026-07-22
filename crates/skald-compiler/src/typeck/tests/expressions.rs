@@ -117,3 +117,53 @@ fn checks_unit_functions_returns_and_call_statements() {
     assert!(dump.contains("CallStatement"));
     assert!(dump.contains("DirectCall f0 : unit"));
 }
+
+#[test]
+fn checks_invalid_binary_operands_in_source_order() {
+    let source = concat!(
+        "class Left { init() {} }\n",
+        "class Right { init() {} }\n",
+        "fn main() -> i64 { return Left() + Right(); }\n",
+    );
+    let output = check_text(source);
+    let diagnostics: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION)
+        .collect();
+
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(
+        diagnostics[0].labels[0].span.range().start(),
+        source.find("Left() +").unwrap()
+    );
+    assert_eq!(
+        diagnostics[1].labels[0].span.range().start(),
+        source.find("Right();").unwrap()
+    );
+}
+
+#[test]
+fn checks_excluded_construction_arguments_before_their_owner() {
+    let source = concat!(
+        "class Inner { init() {} }\n",
+        "class Outer { init(value: i64) {} }\n",
+        "fn main() -> i64 { return Outer(Inner()); }\n",
+    );
+    let output = check_text(source);
+    let diagnostics: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION)
+        .collect();
+
+    assert_eq!(diagnostics.len(), 2);
+    assert_eq!(
+        diagnostics[0].labels[0].span.range().start(),
+        source.find("Inner());").unwrap()
+    );
+    assert_eq!(
+        diagnostics[1].labels[0].span.range().start(),
+        source.find("Outer(Inner())").unwrap()
+    );
+}
