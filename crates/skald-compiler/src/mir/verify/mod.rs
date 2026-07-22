@@ -12,6 +12,7 @@ use super::model::{BlockId, MirProgram};
 
 mod cleanup;
 mod context;
+mod declarations;
 mod place;
 mod sink;
 
@@ -69,7 +70,7 @@ impl std::error::Error for MirVerificationErrors {}
 
 pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
     let mut verifier = Verifier::new(program);
-    verifier.verify();
+    verifier.verify_program();
     let errors = verifier.into_errors();
     if errors.is_empty() {
         Ok(())

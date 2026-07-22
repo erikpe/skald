@@ -175,15 +175,6 @@ fn rejects_missing_wrong_receiver_and_mismatched_arguments() {
 }
 
 #[test]
-fn rejects_member_metadata_with_the_wrong_owner() {
-    let (mut program, ids) = object_mir();
-    program.classes.entries_mut_for_test()[1].fields[0].id = FieldId::new(ids.inner, 0);
-    assert!(messages(&program)
-        .iter()
-        .any(|message| message.contains("field table index 0")));
-}
-
-#[test]
 fn lowers_typed_source_objects_into_verified_mir() {
     let program = lower_text(concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } ",

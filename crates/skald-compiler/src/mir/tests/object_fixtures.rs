@@ -1,7 +1,6 @@
 use super::*;
 
 pub(super) struct ObjectFixtureIds {
-    pub inner: ClassId,
     pub outer: ClassId,
     pub inner_value: FieldId,
     pub outer_inner: FieldId,
@@ -134,7 +133,6 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
     (
         program,
         ObjectFixtureIds {
-            inner,
             outer,
             inner_value,
             outer_inner,

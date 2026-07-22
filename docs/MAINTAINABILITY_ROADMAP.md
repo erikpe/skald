@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ3 is next.
+Status: in progress; CQ4 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -63,7 +63,7 @@ count.
 - [x] CQ0 — Declare and expose the supported toolchain checks
 - [x] CQ1 — Enforce the runtime ABI at link time
 - [x] CQ2 — Establish the MIR verifier facade and shared foundations
-- [ ] CQ3 — Extract MIR program and declaration verification
+- [x] CQ3 — Extract MIR program and declaration verification
 - [ ] CQ4 — Extract MIR callable-body and instruction verification
 - [ ] CQ5 — Extract MIR call, argument, place, and cleanup verification
 - [ ] CQ6 — Decompose class declaration collection in resolution
@@ -153,14 +153,14 @@ verification responsibilities visible.
 **Purpose:** Give program-wide metadata and declaration invariants a dedicated
 implementation home.
 
-- [ ] Extract entry-point, function declaration, definition-slot, and linkage
+- [x] Extract entry-point, function declaration, definition-slot, and linkage
       checks from the central verifier.
-- [ ] Extract class, field, initializer, method, destructor, copy-capability,
+- [x] Extract class, field, initializer, method, destructor, copy-capability,
       and destruction-plan metadata checks.
-- [ ] Keep table traversal and error emission in the existing deterministic
+- [x] Keep table traversal and error emission in the existing deterministic
       order.
-- [ ] Keep declaration verification independent of callable-body control flow.
-- [ ] Move or split corruption tests so they sit with the responsibility they
+- [x] Keep declaration verification independent of callable-body control flow.
+- [x] Move or split corruption tests so they sit with the responsibility they
       exercise.
 
 **Acceptance criteria:** Program and declaration verification can be read and

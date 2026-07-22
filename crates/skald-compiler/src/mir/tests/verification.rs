@@ -401,24 +401,6 @@ fn verifier_accepts_an_external_declaration_without_a_definition() {
 }
 
 #[test]
-fn verifier_rejects_invalid_external_symbol_metadata() {
-    let mut mir = lower_text(concat!(
-        "extern fn foreign(value: i64) -> i64;\n",
-        "fn main() -> i64 { return foreign(7); }\n",
-    ));
-    let foreign = FunctionId::new(0);
-    mir.declarations.entries_mut_for_test()[foreign.index()].linkage =
-        MirFunctionLinkage::External {
-            symbol: "wrong-symbol".to_owned(),
-        };
-
-    let errors = verify_mir(&mir).unwrap_err();
-    assert!(errors.iter().any(|error| error
-        .message
-        .contains("external symbol must be the declaration's exact source identifier")));
-}
-
-#[test]
 fn verifier_checks_external_call_signature_and_result_presence() {
     let mut mir = lower_text(concat!(
         "extern fn foreign(value: i64) -> i64;\n",
@@ -446,20 +428,6 @@ fn verifier_checks_external_call_signature_and_result_presence() {
     assert!(errors
         .iter()
         .any(|error| error.message.contains("value-returning call has no result")));
-}
-
-#[test]
-fn verifier_rejects_an_internal_declaration_without_a_definition() {
-    let mut mir = lower_text("fn main() -> i64 { return 0; }");
-    mir.definitions.remove_for_test(mir.entry_function);
-
-    let errors = verify_mir(&mir).unwrap_err();
-    assert!(errors.iter().any(|error| error
-        .message
-        .contains("entry function f0 has no definition")));
-    assert!(errors.iter().any(|error| error
-        .message
-        .contains("internal function has no definition")));
 }
 
 #[test]

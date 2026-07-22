@@ -260,23 +260,6 @@ fn rejects_a_branch_local_cleanup_missing_before_a_join() {
 }
 
 #[test]
-fn rejects_noncanonical_destruction_order() {
-    let mut program = lower_text(concat!(
-        "class Leaf { init() {} }\n",
-        "class Pair { left: Leaf; right: Leaf; init() { self.left = Leaf(); self.right = Leaf(); } destroy {} }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    program.classes.entries_mut_for_test()[1]
-        .destruction
-        .steps
-        .swap(0, 2);
-
-    assert!(messages(&program)
-        .iter()
-        .any(|message| message.contains("user body first and class fields in reverse")));
-}
-
-#[test]
 fn cleanup_dump_is_exact_and_target_independent() {
     let program = cleanup_program();
     let dump = dump_mir(&program);

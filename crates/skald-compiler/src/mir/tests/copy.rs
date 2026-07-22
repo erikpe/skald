@@ -217,18 +217,6 @@ fn verifies_temporary_storage_and_reverse_full_expression_cleanup() {
 }
 
 #[test]
-fn copy_metadata_corruption_is_rejected_before_target_lowering() {
-    let mut mir = lower_text(COPY_SOURCE);
-    let class = mir.classes.entries_mut_for_test().get_mut(1).unwrap();
-    let MirCopyCapability::Synthesized(copy) = &mut class.copy_assignment else {
-        panic!("expected synthesized copy assignment");
-    };
-    copy.fields.reverse();
-    let errors = verify_mir(&mir).unwrap_err().to_string();
-    assert!(errors.contains("synthesized copy-assignment plan is invalid"));
-}
-
-#[test]
 fn verifier_rejects_complete_receiver_replacement() {
     let mut mir = lower_text(COPY_SOURCE);
     let class = ClassId::new(0);

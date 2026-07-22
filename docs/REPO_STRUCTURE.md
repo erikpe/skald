@@ -104,7 +104,11 @@ phase owns the vocabulary and structure of its own deterministic dump.
 the lexer and later validation phases agree without depending on scanner
 state. MIR verification exposes a concise facade over one private verifier
 context and ordered error sink; structural place relationships and cleanup
-liveness analysis remain private responsibilities behind it.
+liveness analysis remain private responsibilities behind it. Program-wide
+entry-point, declaration-table, class-lifecycle, and definition-slot metadata
+checks live together and delegate executable bodies through one narrow context
+method, preserving deterministic error order without depending on block or
+instruction details.
 
 ### `runtime/`
 
