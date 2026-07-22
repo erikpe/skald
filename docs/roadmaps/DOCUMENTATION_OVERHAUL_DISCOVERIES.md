@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: active; two pending documentation cleanups.
+Status: active; one pending documentation cleanup.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.
@@ -21,19 +21,6 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Pending
 
-### Implemented grammar introduction and production cleanup
-
-- **Problem:** `grammar/README.md` still says a “frozen next-slice extension”
-  appears near its end even though the class-field, destruction, and
-  object-value sections are implemented. Its `class-member` production also
-  lists `initializer-declaration` twice.
-- **Evidence:** the document introduction and the `Inline classes` production;
-  current syntax, phase, and golden tests cover those extensions as implemented.
-- **Owner and priority:** focused grammar rewrite; medium documentation
-  correctness priority.
-- **Boundary:** remove the stale rollout description and duplicate alternative
-  while verifying and moving the grammar to its focused authority.
-
 ### Duplicate polymorphism roadmap test line
 
 - **Problem:** the resolver class-orchestration task repeats its `Tests:` line,
@@ -46,5 +33,9 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Completed
 
-Move resolved entries here with a concise link or description of the change
-that established the authoritative result.
+### Implemented grammar source cleanup
+
+The focused implemented grammar replaced the stale rollout introduction,
+removed the duplicated initializer alternative, and separated syntax from
+semantic and backend narration. The old grammar path is now only a compatibility
+link.

@@ -77,9 +77,9 @@ and the internal x86-64 pointer ABI without copying object bytes. Native and
 compile-failure goldens cover access, forwarding, overlap, `self`, initializer
 aliases, evaluation order, and mixed register/stack signatures.
 
-See [the grammar notes](grammar/README.md) for the exact accepted source subset
-and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the broader language
-design.
+See [the implemented grammar](docs/language/GRAMMAR.md) for the exact accepted
+source subset and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the
+broader language design.
 
 ## Compiler design
 
@@ -166,7 +166,7 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 
 - [Documentation index](docs/README.md)
 - [Draft language specification](docs/SKALD_DRAFT_SPEC.md)
-- [Implemented grammar and semantic subset](grammar/README.md)
+- [Implemented grammar](docs/language/GRAMMAR.md)
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)

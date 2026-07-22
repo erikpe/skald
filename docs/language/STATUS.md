@@ -47,10 +47,10 @@ have focused implementation plans.
 | Evaluation order | **Implemented contract** | Operands and arguments evaluate left to right; receivers precede explicit arguments; construction, object production, and normal cleanup preserve the specified order. |
 | Runtime scalar observation | **Implemented contract** | Repository runtime support for line-oriented `i64`, `u64`, `u8`, and `bool` output plus raw-bit `f64` observation, reached through ordinary restricted external declarations rather than language built-ins. |
 
-The [implemented grammar](../../grammar/README.md) remains the precise accepted
-syntax during the documentation migration. Focused semantic documents will
-replace its non-grammar explanations without changing the matrix above unless
-compiler behavior changes.
+The [implemented grammar](GRAMMAR.md) is the precise accepted syntax authority.
+Focused semantic documents will replace the remaining explanations in the
+draft specification without changing the matrix above unless compiler behavior
+changes.
 
 ## Compiler availability
 

@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC2 is next.
+Status: planned; DOC3 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -167,7 +167,7 @@ does not repeat the complete feature-status matrix.
 
 - [x] DOC0 — Establish documentation authority and verification tooling
 - [x] DOC1 — Create the language overview and status authority
-- [ ] DOC2 — Rewrite the implemented grammar
+- [x] DOC2 — Rewrite the implemented grammar
 - [ ] DOC3 — Rewrite types, values, and expressions
 - [ ] DOC4 — Rewrite functions and control flow
 - [ ] DOC5 — Rewrite classes, initialization, and object places
@@ -243,17 +243,17 @@ roadmaps.
 **Purpose:** Make accepted source syntax precise without mixing in typing,
 ownership, IR, ABI, or implementation history.
 
-- [ ] Create `docs/language/GRAMMAR.md` from verified lexical rules, keywords,
+- [x] Create `docs/language/GRAMMAR.md` from verified lexical rules, keywords,
       contextual words, EBNF, precedence, associativity, source-observable
       recovery, and nesting limits.
-- [ ] Check every token and production against lexer/parser dispatch and exact
+- [x] Check every token and production against lexer/parser dispatch and exact
       syntax tests, including lifecycle classification and assignment-shaped
       semantic forms.
-- [ ] Move semantic restrictions to their focused language owners and compiler
+- [x] Move semantic restrictions to their focused language owners and compiler
       recovery strategy to the compiler phase document.
-- [ ] Update lexer/parser code comments, syntax tests, and living links to the
+- [x] Update lexer/parser code comments, syntax tests, and living links to the
       new grammar authority.
-- [ ] Keep `grammar/README.md` temporarily only if unmigrated links still need
+- [x] Keep `grammar/README.md` temporarily only if unmigrated links still need
       it; do not maintain two grammar authorities.
 
 **Tests:** Run lexer and syntax tests, exact AST dump tests, representative

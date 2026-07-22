@@ -1,4 +1,4 @@
-//! Restricted class and instance-member declarations.
+//! Class and instance-member declaration grammar.
 
 use super::{declaration::TypeContext, *};
 

@@ -1,3 +1,5 @@
+//! Source-shape tests for the contract in `docs/language/GRAMMAR.md`.
+
 use super::*;
 use crate::{
     lexer::lex, literal::NumericLiteralKind, source::SourceDatabase, syntax::dump_ast,

@@ -890,7 +890,7 @@ current compiler; it does not remove features from the eventual language.
 The first implemented object profile contains nominal top-level classes,
 primitive fields, one explicit initializer, local inline storage, direct field
 access, and statically dispatched instance methods. Its canonical parser-facing
-grammar is in [`grammar/README.md`](../grammar/README.md).
+grammar is in [the implemented grammar](language/GRAMMAR.md).
 
 The profile has these declaration and name rules:
 
@@ -1152,7 +1152,7 @@ arguments with one root-derived access capability. Verified MIR retains those
 paths as semantic field identities, and the x86-64 backend resolves them with
 checked target offsets for deterministic native execution. The parser-facing
 extension is recorded in
-[`grammar/README.md`](../grammar/README.md#implemented-extension-class-typed-inline-fields).
+[the implemented grammar](language/GRAMMAR.md#class-declarations).
 
 This profile extends the restricted stage-0 object and alias profiles with
 class-typed fields, direct construction into those fields, recursively
@@ -1417,7 +1417,7 @@ liveness boundary frozen here.
 [Deterministic Destruction Roadmap](archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md)
 is archived.
 The parser-facing extension is recorded in
-[`grammar/README.md`](../grammar/README.md#restricted-extension-deterministic-destruction).
+[the implemented grammar](language/GRAMMAR.md#class-declarations).
 
 This profile narrows the broader destruction rules in Section 5.7 to the
 compiler's current local-only inline-object model and normal control flow. It
@@ -2942,16 +2942,15 @@ corresponding language area is considered complete:
 
 - **Lexical and grammatical definition:** the implemented primitive and
   restricted inline-object profile has an explicit lexical and grammatical
-  contract in [`grammar/README.md`](../grammar/README.md), but the complete
+  contract in [the implemented grammar](language/GRAMMAR.md), but the complete
   language still needs token and comment rules, additional literal families,
   later operator precedence and associativity, and rules for resolving
   syntactic ambiguities.
 - **Name, type, and call resolution:** the implemented subset defines
-  single-file function/class and lexical-local resolution in
-  [`grammar/README.md`](../grammar/README.md), without overloading or implicit
-  conversions. The complete language still needs cross-module references,
-  declaration cycles, overload availability or prohibition, candidate
-  selection, conversion ranking, and ambiguity diagnostics.
+  single-file function/class and lexical-local resolution without overloading
+  or implicit conversions. The complete language still needs cross-module
+  references, declaration cycles, overload availability or prohibition,
+  candidate selection, conversion ranking, and ambiguity diagnostics.
 - **Primitive edge-case semantics:** the implemented subset defines literal
   ranges, `u64`/`u8` modular `+`, `-`, and `*`, and binary64 `f64` behavior for
   the same operator surface. Signed `i64` overflow, division or remainder by
@@ -2961,9 +2960,9 @@ corresponding language area is considered complete:
   floating environment, and mixed-class argument placement.
 - **Evaluation and cleanup ordering:** the implemented subset defines
   left-to-right operands/arguments plus receiver, field, and direct-
-  construction order in [`grammar/README.md`](../grammar/README.md). The
-  frozen local deterministic-destruction profile additionally defines cleanup
-  for owning locals on implemented normal block, conditional, and return exits.
+  construction order. The frozen local deterministic-destruction profile
+  additionally defines cleanup for owning locals on implemented normal block,
+  conditional, and return exits.
   The exact-class object-value profile implements full-expression boundaries and
   temporary cleanup for its normal-flow source contexts. The complete language
   still needs cleanup sequencing for loops, exceptions, and later control-flow

@@ -1,5 +1,7 @@
 //! Parser and source-oriented abstract syntax tree.
 //!
+//! `docs/language/GRAMMAR.md` defines the accepted source shape.
+//!
 //! Syntax nodes preserve source spans and source spellings, but do not contain
 //! resolved symbols or inferred semantic types. Name lookup belongs to the
 //! resolution phase.

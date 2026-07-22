@@ -10,9 +10,8 @@ pub(super) struct NumericScan {
 
 /// Scans one complete numeric-looking token from the start of `source`.
 ///
-/// Recognition includes literal forms planned by the language contract even
-/// when their compiler path is not enabled yet. The caller owns that feature
-/// gate. A `None` kind means that the complete recovered spelling is malformed.
+/// A recognized kind is accepted by the current lexer. A `None` kind means
+/// that the complete recovered spelling is malformed.
 pub(super) fn scan_numeric_literal(source: &str) -> NumericScan {
     let bytes = source.as_bytes();
     assert!(bytes.first().is_some_and(u8::is_ascii_digit));

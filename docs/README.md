@@ -13,7 +13,8 @@ Use the authority closest to the behavior:
   focused language documents;
 - current support and design maturity belong only in the
   [language status matrix](language/STATUS.md);
-- exact accepted syntax belongs in the implemented grammar;
+- exact accepted syntax belongs in the
+  [implemented grammar](language/GRAMMAR.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;
@@ -26,8 +27,6 @@ is moved only after it has been checked against implementation and tests:
 
 - [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
   implemented-profile annotations, and open questions;
-- [Implemented grammar](../grammar/README.md) — exact source subset accepted by
-  the current compiler;
 - [Repository structure and compiler architecture](REPO_STRUCTURE.md) — phase,
   backend, runtime, driver, and test boundaries;
 - [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — stable extension

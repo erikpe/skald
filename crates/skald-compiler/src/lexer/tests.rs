@@ -1,3 +1,5 @@
+//! Token-surface tests for the contract in `docs/language/GRAMMAR.md`.
+
 use super::*;
 use crate::{
     diagnostics::render_diagnostics,

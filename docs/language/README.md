@@ -95,8 +95,7 @@ makes a result source-observable.
 
 - [Feature status](STATUS.md) is the sole matrix for language maturity and
   current compiler support.
-- The [implemented grammar](../../grammar/README.md) remains the exact syntax
-  authority until the focused grammar rewrite replaces it.
+- The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.
