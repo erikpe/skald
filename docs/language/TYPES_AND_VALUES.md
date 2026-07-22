@@ -45,9 +45,9 @@ initialization, assignment, argument, and return contexts.
 
 Initialization begins the lifetime of storage. Assignment updates an already
 live value without beginning a new lifetime. Operation selection, copying,
-destruction, and object materialization are class and lifecycle concerns; the
-distinction here explains why object places are not interchangeable with
-primitive values.
+destruction, and object materialization are
+[class and lifecycle](CLASSES_AND_LIFECYCLE.md) concerns; the distinction here
+explains why object places are not interchangeable with primitive values.
 
 ## Literal types and ranges
 

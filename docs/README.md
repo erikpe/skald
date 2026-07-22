@@ -19,6 +19,8 @@ Use the authority closest to the behavior:
   [types and values](language/TYPES_AND_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
+- exact classes, inline containment, receivers, initialization, and object
+  places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

@@ -100,12 +100,15 @@ makes a result source-observable.
   type model, literals, exact-type rules, and operator availability.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, and evaluation order.
+- [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
+  classes, inline containment, receivers, ordinary initialization, and object
+  places; later migration steps will complete its lifecycle rules.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.
 
-Focused documents for classes and lifecycle, aliases and ownership,
-polymorphism, modules and interoperation, and errors will be linked here as
-their verified authorities are established.
+Focused documents for aliases and ownership, polymorphism, modules and
+interoperation, and errors will be linked here as their verified authorities
+are established.

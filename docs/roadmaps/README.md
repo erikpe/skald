@@ -7,13 +7,13 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  the classes and initialization rewrite is next. The broad language overview,
-  support/maturity matrix, exact grammar, type/value/expression semantics, and
-  function/control-flow semantics are established alongside the documentation
-  authority, migration inventory, discrepancy ownership, and local link/index
-  checking. The roadmap replaces the remaining draft and architecture
-  monoliths with verified, focused language, compiler, runtime, and development
-  documentation.
+  the copying and deterministic-lifetime rewrite is next. The broad language
+  overview, support/maturity matrix, exact grammar, type/value/expression,
+  function/control-flow, and exact-class initialization/place semantics are
+  established alongside the documentation authority, migration inventory,
+  discrepancy ownership, and local link/index checking. The roadmap replaces
+  the remaining draft and architecture monoliths with verified, focused
+  language, compiler, runtime, and development documentation.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; executable profile design
   follows the documentation overhaul's language foundation and focused
   polymorphism design destination. It then extends the completed exact-class

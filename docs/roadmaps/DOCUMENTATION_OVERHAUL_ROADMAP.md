@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC5 is next.
+Status: planned; DOC6 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -170,7 +170,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC2 — Rewrite the implemented grammar
 - [x] DOC3 — Rewrite types, values, and expressions
 - [x] DOC4 — Rewrite functions and control flow
-- [ ] DOC5 — Rewrite classes, initialization, and object places
+- [x] DOC5 — Rewrite classes, initialization, and object places
 - [ ] DOC6 — Rewrite copying, destruction, and object lifetimes
 - [ ] DOC7 — Rewrite aliases and ownership
 - [ ] DOC8 — Establish the polymorphism design document
@@ -318,17 +318,17 @@ implemented subset and do not prescribe compiler control-flow representation.
 **Purpose:** Replace chronological object-profile prose with one conceptual
 class and subobject model.
 
-- [ ] Begin `CLASSES_AND_LIFECYCLE.md` with nominal class declarations, member
+- [x] Begin `CLASSES_AND_LIFECYCLE.md` with nominal class declarations, member
       namespaces, receiver access, inline fields, containment, construction,
       initialization liveness, object places, and nested projections.
-- [ ] Reconcile the old restricted object and class-typed-field profiles into
+- [x] Reconcile the old restricted object and class-typed-field profiles into
       current semantic rules without stage names or implementation history.
-- [ ] Verify member classification, exact initializer requirements,
+- [x] Verify member classification, exact initializer requirements,
       containment-cycle behavior, field initialization, nested access, receiver
       mutability, and diagnostic precedence against source and phase tests.
-- [ ] Keep field offsets, empty-object target size, hidden receivers, stable
+- [x] Keep field offsets, empty-object target size, hidden receivers, stable
       compiler identities, and phase-node shapes out of the language document.
-- [ ] Retain explicit exclusions and links for inheritance, shared sources,
+- [x] Retain explicit exclusions and links for inheritance, shared sources,
       exceptional initialization, and other unimplemented extensions.
 
 **Tests:** Run syntax/resolution/type-check object declaration, construction,

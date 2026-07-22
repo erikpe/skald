@@ -20,8 +20,8 @@ first-class values.
 
 The callable rules in this document also apply to instance methods where their
 class-owned receiver rules permit. Initializers, copy assignment, and
-destructors use more specialized body and result contracts owned by class and
-lifecycle semantics.
+destructors use more specialized body and result contracts owned by
+[class and lifecycle semantics](CLASSES_AND_LIFECYCLE.md).
 
 ## Function and external declarations
 
@@ -114,8 +114,9 @@ The implemented general body forms are:
 - call statements;
 - assignment-shaped class and field operations.
 
-Assignment operation selection and initializer-body restrictions are class
-semantics. Arbitrary expression statements are not supported. An expression
+Assignment operation selection and initializer-body restrictions are
+[class semantics](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-contract).
+Arbitrary expression statements are not supported. An expression
 statement is valid only when its outer operation, through any grouping, is a
 function or method call returning `unit`. A value-returning call cannot be
 discarded.

@@ -80,7 +80,9 @@ aliases, evaluation order, and mixed register/stack signatures.
 See [the implemented grammar](docs/language/GRAMMAR.md) for the exact accepted
 source subset, [types and values](docs/language/TYPES_AND_VALUES.md) for core
 expression semantics, [functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
-for callable and statement semantics, and the
+for callable and statement semantics,
+[classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md) for the exact
+inline object model, and the
 [draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
 migrated.
 
@@ -172,6 +174,7 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Implemented grammar](docs/language/GRAMMAR.md)
 - [Types, values, and expressions](docs/language/TYPES_AND_VALUES.md)
 - [Functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
+- [Classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md)
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)
