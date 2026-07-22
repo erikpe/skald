@@ -4,7 +4,11 @@ use std::collections::HashSet;
 
 use crate::identity::CallableId;
 
-use super::{super::model::*, sink::ErrorSink, MirVerificationError};
+use super::{
+    super::model::{BlockId, MirBasicBlock, MirDefinitionRef, MirProgram, MirType, ValueId},
+    sink::ErrorSink,
+    MirVerificationError,
+};
 
 pub(super) struct Verifier<'mir> {
     pub(super) program: &'mir MirProgram,

@@ -74,7 +74,7 @@ count.
 - [x] CQ11 — Complete shared typed ID-table storage
 - [x] CQ12 — Split the resolved IR model by responsibility
 - [x] CQ13 — Split the HIR model by responsibility
-- [ ] CQ14 — Split the MIR model by responsibility
+- [x] CQ14 — Split the MIR model by responsibility
 - [ ] CQ15 — Introduce a small test-only MIR fixture vocabulary
 - [ ] CQ16 — Migrate and divide oversized test suites
 - [ ] CQ17 — Add generative frontend and MIR robustness tests
@@ -361,13 +361,13 @@ with no public path or semantic change.
 **Purpose:** Make MIR declarations, executable bodies, places, instructions,
 and control flow independently navigable.
 
-- [ ] Divide declarations/tables, callable definitions/storage, values/places,
+- [x] Divide declarations/tables, callable definitions/storage, values/places,
       instructions/calls, and blocks/terminators into cohesive private modules.
-- [ ] Keep `mir/mod.rs` as the explicit public facade consumed by passes and
+- [x] Keep `mir/mod.rs` as the explicit public facade consumed by passes and
       backends.
-- [ ] Preserve all derives, constructors, identity ownership, iteration order,
+- [x] Preserve all derives, constructors, identity ownership, iteration order,
       and public paths.
-- [ ] Keep verifier and backend imports selective; do not replace them with
+- [x] Keep verifier and backend imports selective; do not replace them with
       wildcard re-exports inside implementation modules.
 
 **Acceptance criteria:** The MIR schema is organized by responsibility without

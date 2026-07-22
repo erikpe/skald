@@ -2,7 +2,15 @@
 
 use std::collections::HashSet;
 
-use super::{super::model::*, context::Verifier, place::places_overlap};
+use super::{
+    super::model::{
+        MirAliasAccess, MirAssignment, MirBasicBlock, MirCopyAssignment, MirCopyConstruction,
+        MirDefinitionRef, MirEndFullExpression, MirInstruction, MirPlace, MirPlaceBase, MirRvalue,
+        MirRvalueKind, MirStorageKind, MirStore, MirType, ValueId,
+    },
+    context::Verifier,
+    place::places_overlap,
+};
 
 #[derive(Clone, Copy)]
 enum CopyOperationKind {

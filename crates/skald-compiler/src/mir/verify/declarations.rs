@@ -8,7 +8,14 @@ use std::collections::HashSet;
 
 use crate::{identity::CallableId, lexical_policy::is_source_identifier};
 
-use super::{super::model::*, context::Verifier};
+use super::{
+    super::model::{
+        MirClassDeclaration, MirCopyCapability, MirDestructionPlan, MirFunctionLinkage,
+        MirParameter, MirParameterMode, MirReceiverAccess, MirSynthesizedCopy,
+        MirSynthesizedFieldCopy, MirType,
+    },
+    context::Verifier,
+};
 
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {

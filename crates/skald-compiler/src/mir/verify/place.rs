@@ -2,7 +2,13 @@
 
 use crate::identity::CallableId;
 
-use super::{super::model::*, context::Verifier};
+use super::{
+    super::model::{
+        MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirPlace, MirPlaceBase,
+        MirPlaceProjection, MirReceiverAccess, MirStorage, MirStorageKind, MirType,
+    },
+    context::Verifier,
+};
 
 #[derive(Clone, Copy)]
 pub(super) struct VerifiedPlace {

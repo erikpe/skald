@@ -2,7 +2,13 @@
 
 use std::collections::HashSet;
 
-use super::{super::model::*, context::Verifier};
+use super::{
+    super::model::{
+        MirAliasAccess, MirArgument, MirBasicBlock, MirDefinitionRef, MirParameter,
+        MirParameterMode, MirPlace, MirPlaceBase, MirStorageKind, MirType, ValueId,
+    },
+    context::Verifier,
+};
 
 #[derive(Clone, Copy)]
 struct ArgumentSite<'a> {

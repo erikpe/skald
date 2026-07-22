@@ -4,7 +4,13 @@ use std::collections::HashSet;
 
 use crate::identity::BindingId;
 
-use super::{super::model::*, context::Verifier};
+use super::{
+    super::model::{
+        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirParameter, MirParameterMode,
+        MirStorageKind, MirTerminator, MirType, ValueId,
+    },
+    context::Verifier,
+};
 
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_definition(

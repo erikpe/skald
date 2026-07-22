@@ -2,7 +2,14 @@
 
 use std::collections::HashSet;
 
-use super::{super::model::*, context::Verifier};
+use super::{
+    super::model::{
+        MirAliasAccess, MirBasicBlock, MirCall, MirCallTarget, MirDefinitionRef, MirInitialize,
+        MirMethodDeclaration, MirParameter, MirPlace, MirPlaceBase, MirReceiverAccess,
+        MirStorageKind, MirType, ValueId,
+    },
+    context::Verifier,
+};
 
 struct CallSignature<'mir> {
     parameters: &'mir [MirParameter],

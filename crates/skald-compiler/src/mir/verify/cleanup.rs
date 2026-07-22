@@ -5,7 +5,11 @@ use std::collections::{HashSet, VecDeque};
 use crate::identity::{CallableId, ClassId};
 
 use super::{
-    super::model::*,
+    super::model::{
+        BlockId, MirAliasAccess, MirArgument, MirBasicBlock, MirCleanup, MirDefinitionRef,
+        MirInstruction, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirStorageKind,
+        MirTerminator, MirType,
+    },
     context::Verifier,
     place::{is_ancestor, places_overlap},
     sink::ErrorSink,

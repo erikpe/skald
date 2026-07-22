@@ -112,6 +112,11 @@ scalar expressions and calls, and object ownership operations in separate
 private responsibilities. Cross-cutting `Type` and access semantics remain at
 the internal HIR facade, which preserves the public `hir` paths.
 
+MIR separates program declarations, callable definitions and storage, values
+and places, instructions and calls, and explicit control flow behind its
+private model facade. Verifier and backend consumers import only the schema
+types they use, while the public `mir` facade keeps phase paths stable.
+
 `dump_format` deliberately shares only low-level formatting primitives. Every
 phase owns the vocabulary and structure of its own deterministic dump.
 `lexical_policy` similarly owns only source-identifier character policy, so
