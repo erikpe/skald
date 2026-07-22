@@ -4,12 +4,12 @@ use std::collections::{HashSet, VecDeque};
 
 use crate::identity::{CallableId, ClassId};
 
-use super::super::model::*;
-
-pub(super) struct CleanupLivenessError {
-    pub(super) block: BlockId,
-    pub(super) message: &'static str,
-}
+use super::{
+    super::model::*,
+    context::Verifier,
+    place::{is_ancestor, places_overlap},
+    sink::ErrorSink,
+};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct ObjectState {
@@ -21,26 +21,24 @@ struct ObjectState {
     live_temporaries: Vec<MirPlace>,
 }
 
-pub(super) fn analyze(
-    program: &MirProgram,
-    function: MirDefinitionRef<'_>,
-) -> Vec<CleanupLivenessError> {
-    let mut analyzer = Analyzer {
-        program,
-        function,
-        errors: Vec::new(),
-    };
-    analyzer.analyze();
-    analyzer.errors
+impl<'mir> Verifier<'mir> {
+    pub(super) fn verify_cleanup_liveness(&mut self, function: MirDefinitionRef<'mir>) {
+        let mut analysis = CleanupLivenessAnalysis {
+            program: self.program,
+            function,
+            errors: &mut self.errors,
+        };
+        analysis.analyze();
+    }
 }
 
-struct Analyzer<'mir> {
+struct CleanupLivenessAnalysis<'mir, 'errors> {
     program: &'mir MirProgram,
     function: MirDefinitionRef<'mir>,
-    errors: Vec<CleanupLivenessError>,
+    errors: &'errors mut ErrorSink,
 }
 
-impl Analyzer<'_> {
+impl CleanupLivenessAnalysis<'_, '_> {
     fn analyze(&mut self) {
         let mut initial = ObjectState::default();
         if !matches!(self.function.callable(), CallableId::Initializer(_)) {
@@ -127,35 +125,29 @@ impl Analyzer<'_> {
     fn check_normal_return(&mut self, block: &MirBasicBlock, state: &ObjectState) {
         if let Some(return_storage) = self.function.return_storage() {
             if !self.place_is_live(state, &MirPlace::base(return_storage)) {
-                self.errors.push(CleanupLivenessError {
-                    block: block.id,
-                    message: "object return storage is not initialized on normal return",
-                });
+                self.block_error(
+                    block.id,
+                    "object return storage is not initialized on normal return",
+                );
             }
         }
         if !state.outstanding_local_cleanup.is_empty() {
-            self.errors.push(CleanupLivenessError {
-                block: block.id,
-                message: "owning local remains live on normal return",
-            });
+            self.block_error(block.id, "owning local remains live on normal return");
         }
         if !state.outstanding_parameter_cleanup.is_empty() {
-            self.errors.push(CleanupLivenessError {
-                block: block.id,
-                message: "owning value parameter remains live on normal return",
-            });
+            self.block_error(
+                block.id,
+                "owning value parameter remains live on normal return",
+            );
         }
         if !state.live_arguments.is_empty() {
-            self.errors.push(CleanupLivenessError {
-                block: block.id,
-                message: "caller argument storage remains live without ownership transfer",
-            });
+            self.block_error(
+                block.id,
+                "caller argument storage remains live without ownership transfer",
+            );
         }
         if !state.live_temporaries.is_empty() {
-            self.errors.push(CleanupLivenessError {
-                block: block.id,
-                message: "owning temporary remains live on normal return",
-            });
+            self.block_error(block.id, "owning temporary remains live on normal return");
         }
     }
 
@@ -196,10 +188,10 @@ impl Analyzer<'_> {
                     live_temporaries: if existing.live_temporaries == state.live_temporaries {
                         existing.live_temporaries.clone()
                     } else {
-                        self.errors.push(CleanupLivenessError {
-                            block: target,
-                            message: "owning temporary liveness differs across control-flow paths",
-                        });
+                        self.block_error(
+                            target,
+                            "owning temporary liveness differs across control-flow paths",
+                        );
                         // Keep one concrete ordering so later checks remain
                         // conservative instead of silently forgetting live
                         // temporaries at the join.
@@ -230,10 +222,7 @@ impl Analyzer<'_> {
                     if self.is_owning_class_place(&copy.destination, copy.class) =>
                 {
                     if !self.place_is_live(state, &copy.source) {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "copy-construction source is not live",
-                        });
+                        self.block_error(block.id, "copy-construction source is not live");
                     }
                     self.initialize_place(block, state, &copy.destination);
                 }
@@ -241,16 +230,10 @@ impl Analyzer<'_> {
                     if self.is_owning_class_place(&copy.destination, copy.class) =>
                 {
                     if !self.place_is_live(state, &copy.destination) {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "copy-assignment destination is not live",
-                        });
+                        self.block_error(block.id, "copy-assignment destination is not live");
                     }
                     if !self.place_is_live(state, &copy.source) {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "copy-assignment source is not live",
-                        });
+                        self.block_error(block.id, "copy-assignment source is not live");
                     }
                 }
                 MirInstruction::Call(call) => {
@@ -267,30 +250,27 @@ impl Analyzer<'_> {
                         .iter()
                         .any(|place| places_overlap(place, &cleanup.destination))
                     {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "cleanup destination is destroyed more than once",
-                        });
+                        self.block_error(
+                            block.id,
+                            "cleanup destination is destroyed more than once",
+                        );
                     } else if !state
                         .live
                         .iter()
-                        .any(|place| place_is_ancestor(place, &cleanup.destination))
+                        .any(|place| is_ancestor(place, &cleanup.destination))
                     {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "cleanup destination is not live",
-                        });
+                        self.block_error(block.id, "cleanup destination is not live");
                     } else {
                         state.cleaned.insert(cleanup.destination.clone());
                         state
                             .live
-                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
+                            .retain(|place| !is_ancestor(&cleanup.destination, place));
                         state
                             .outstanding_local_cleanup
-                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
+                            .retain(|place| !is_ancestor(&cleanup.destination, place));
                         state
                             .outstanding_parameter_cleanup
-                            .retain(|place| !place_is_ancestor(&cleanup.destination, place));
+                            .retain(|place| !is_ancestor(&cleanup.destination, place));
                     }
                 }
                 MirInstruction::EndFullExpression(end) => {
@@ -301,20 +281,20 @@ impl Analyzer<'_> {
                         .map(|cleanup| cleanup.destination.clone())
                         .collect();
                     if actual != expected {
-                        self.errors.push(CleanupLivenessError {
-                            block: block.id,
-                            message: "full-expression temporaries must be cleaned in reverse completion order",
-                        });
+                        self.block_error(
+                            block.id,
+                            "full-expression temporaries must be cleaned in reverse completion order",
+                        );
                     }
                     for place in &actual {
                         if self.place_is_live(state, place) {
-                            state.live.retain(|live| !place_is_ancestor(place, live));
+                            state.live.retain(|live| !is_ancestor(place, live));
                             state.cleaned.insert(place.clone());
                         } else {
-                            self.errors.push(CleanupLivenessError {
-                                block: block.id,
-                                message: "full-expression cleanup destination is not live",
-                            });
+                            self.block_error(
+                                block.id,
+                                "full-expression cleanup destination is not live",
+                            );
                         }
                     }
                     state
@@ -333,10 +313,7 @@ impl Analyzer<'_> {
         destination: &MirPlace,
     ) {
         if self.place_is_live(state, destination) {
-            self.errors.push(CleanupLivenessError {
-                block: block.id,
-                message: "initialization destination is already live",
-            });
+            self.block_error(block.id, "initialization destination is already live");
             return;
         }
         state.live.insert(destination.clone());
@@ -365,18 +342,18 @@ impl Analyzer<'_> {
                 continue;
             };
             if !state.live_arguments.remove(place) || !self.place_is_live(state, place) {
-                self.errors.push(CleanupLivenessError {
-                    block: block.id,
-                    message: "owned call argument is not a live caller argument",
-                });
+                self.block_error(
+                    block.id,
+                    "owned call argument is not a live caller argument",
+                );
             } else {
-                state.live.retain(|live| !place_is_ancestor(place, live));
+                state.live.retain(|live| !is_ancestor(place, live));
             }
         }
     }
 
     fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
-        state.live.iter().any(|live| place_is_ancestor(live, place))
+        state.live.iter().any(|live| is_ancestor(live, place))
     }
 
     fn is_owning_class_place(&self, place: &MirPlace, expected_class: ClassId) -> bool {
@@ -431,12 +408,8 @@ impl Analyzer<'_> {
                 .storage(place.base.storage())
                 .is_some_and(|storage| storage.kind == MirStorageKind::Argument)
     }
-}
 
-fn place_is_ancestor(ancestor: &MirPlace, place: &MirPlace) -> bool {
-    ancestor.base == place.base && place.projections.starts_with(&ancestor.projections)
-}
-
-fn places_overlap(left: &MirPlace, right: &MirPlace) -> bool {
-    place_is_ancestor(left, right) || place_is_ancestor(right, left)
+    fn block_error(&mut self, block: BlockId, message: impl Into<String>) {
+        self.errors.block(self.function.callable(), block, message);
+    }
 }

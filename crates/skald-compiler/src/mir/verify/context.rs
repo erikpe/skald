@@ -1,89 +1,17 @@
-//! Structural and type verifier for MIR.
+//! Shared MIR verifier context.
 
-use std::{collections::HashSet, fmt};
+use std::collections::HashSet;
 
-use crate::identity::{BindingId, CallableId};
+use crate::{
+    identity::{BindingId, CallableId},
+    lexical_policy::is_source_identifier,
+};
 
-use super::model::*;
+use super::{super::model::*, place::places_overlap, sink::ErrorSink, MirVerificationError};
 
-mod cleanup;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirVerificationError {
-    pub callable: Option<CallableId>,
-    pub block: Option<BlockId>,
-    pub message: String,
-}
-
-impl fmt::Display for MirVerificationError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match (self.callable, self.block) {
-            (_, Some(block)) => write!(formatter, "MIR {block}: {}", self.message),
-            (Some(callable), None) => write!(formatter, "MIR {callable}: {}", self.message),
-            (None, None) => write!(formatter, "MIR program: {}", self.message),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MirVerificationErrors {
-    errors: Vec<MirVerificationError>,
-}
-
-impl MirVerificationErrors {
-    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirVerificationError> {
-        self.errors.iter()
-    }
-
-    pub fn len(&self) -> usize {
-        self.errors.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.errors.is_empty()
-    }
-}
-
-impl fmt::Display for MirVerificationErrors {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (index, error) in self.errors.iter().enumerate() {
-            if index != 0 {
-                formatter.write_str("\n")?;
-            }
-            error.fmt(formatter)?;
-        }
-        Ok(())
-    }
-}
-
-impl std::error::Error for MirVerificationErrors {}
-
-fn place_is_ancestor(ancestor: &MirPlace, place: &MirPlace) -> bool {
-    ancestor.base == place.base && place.projections.starts_with(&ancestor.projections)
-}
-
-fn places_overlap(left: &MirPlace, right: &MirPlace) -> bool {
-    place_is_ancestor(left, right) || place_is_ancestor(right, left)
-}
-
-pub fn verify_mir(program: &MirProgram) -> Result<(), MirVerificationErrors> {
-    let mut verifier = Verifier {
-        program,
-        errors: Vec::new(),
-    };
-    verifier.verify();
-    if verifier.errors.is_empty() {
-        Ok(())
-    } else {
-        Err(MirVerificationErrors {
-            errors: verifier.errors,
-        })
-    }
-}
-
-struct Verifier<'mir> {
-    program: &'mir MirProgram,
-    errors: Vec<MirVerificationError>,
+pub(super) struct Verifier<'mir> {
+    pub(super) program: &'mir MirProgram,
+    pub(super) errors: ErrorSink,
 }
 
 #[derive(Clone, Copy)]
@@ -98,8 +26,15 @@ enum CopyOperationKind {
     Assignment,
 }
 
-impl Verifier<'_> {
-    fn verify(&mut self) {
+impl<'mir> Verifier<'mir> {
+    pub(super) fn new(program: &'mir MirProgram) -> Self {
+        Self {
+            program,
+            errors: ErrorSink::new(),
+        }
+    }
+
+    pub(super) fn verify(&mut self) {
         self.verify_classes();
         let entry_declaration = self.program.declarations.get(self.program.entry_function);
         if entry_declaration.is_none() {
@@ -270,6 +205,10 @@ impl Verifier<'_> {
             };
             self.verify_definition(parameters, return_type, definition.into());
         }
+    }
+
+    pub(super) fn into_errors(self) -> Vec<MirVerificationError> {
+        self.errors.into_errors()
     }
 
     fn verify_classes(&mut self) {
@@ -593,7 +532,7 @@ impl Verifier<'_> {
         &mut self,
         parameters: &[MirParameter],
         return_type: MirType,
-        function: MirDefinitionRef<'_>,
+        function: MirDefinitionRef<'mir>,
     ) {
         self.verify_storage(function);
         self.verify_values(function);
@@ -638,9 +577,7 @@ impl Verifier<'_> {
             }
             self.verify_block(return_type, function, block, &mut defined_values);
         }
-        for error in cleanup::analyze(self.program, function) {
-            self.block_error(function.callable(), error.block, error.message);
-        }
+        self.verify_cleanup_liveness(function);
 
         for value in function.values() {
             if !defined_values.contains(&value.id) {
@@ -1820,19 +1757,11 @@ impl Verifier<'_> {
     }
 
     fn program_error(&mut self, message: impl Into<String>) {
-        self.errors.push(MirVerificationError {
-            callable: None,
-            block: None,
-            message: message.into(),
-        });
+        self.errors.program(message);
     }
 
     fn function_error(&mut self, callable: impl Into<CallableId>, message: impl Into<String>) {
-        self.errors.push(MirVerificationError {
-            callable: Some(callable.into()),
-            block: None,
-            message: message.into(),
-        });
+        self.errors.callable(callable, message);
     }
 
     fn block_error(
@@ -1841,19 +1770,6 @@ impl Verifier<'_> {
         block: BlockId,
         message: impl Into<String>,
     ) {
-        self.errors.push(MirVerificationError {
-            callable: Some(callable.into()),
-            block: Some(block),
-            message: message.into(),
-        });
+        self.errors.block(callable, block, message);
     }
-}
-
-fn is_source_identifier(symbol: &str) -> bool {
-    let mut bytes = symbol.bytes();
-    let Some(first) = bytes.next() else {
-        return false;
-    };
-    (first.is_ascii_alphabetic() || first == b'_')
-        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }

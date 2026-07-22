@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ2 is next.
+Status: in progress; CQ3 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -62,7 +62,7 @@ count.
 
 - [x] CQ0 — Declare and expose the supported toolchain checks
 - [x] CQ1 — Enforce the runtime ABI at link time
-- [ ] CQ2 — Establish the MIR verifier facade and shared foundations
+- [x] CQ2 — Establish the MIR verifier facade and shared foundations
 - [ ] CQ3 — Extract MIR program and declaration verification
 - [ ] CQ4 — Extract MIR callable-body and instruction verification
 - [ ] CQ5 — Extract MIR call, argument, place, and cleanup verification
@@ -132,16 +132,16 @@ observations remain unchanged.
 **Purpose:** Prepare the verifier for incremental extraction while removing
 duplicated low-level invariants.
 
-- [ ] Turn `mir::verify` into a concise facade owning the public verification
+- [x] Turn `mir::verify` into a concise facade owning the public verification
       entry point and error types.
-- [ ] Introduce one private verifier context and one ordered error sink shared
+- [x] Introduce one private verifier context and one ordered error sink shared
       by all verifier submodules.
-- [ ] Move MIR place ancestry and overlap predicates to one private owner used
+- [x] Move MIR place ancestry and overlap predicates to one private owner used
       by structural and cleanup verification.
-- [ ] Move source-identifier validation to a neutral lexical-policy utility
+- [x] Move source-identifier validation to a neutral lexical-policy utility
       shared by the lexer and verifier without making MIR depend on lexer
       implementation state.
-- [ ] Add focused unit tests for the shared predicates before deleting their
+- [x] Add focused unit tests for the shared predicates before deleting their
       duplicate implementations.
 
 **Acceptance criteria:** Public verifier paths and error rendering are

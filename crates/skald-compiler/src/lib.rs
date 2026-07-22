@@ -11,6 +11,7 @@ mod function_table;
 pub mod hir;
 pub mod identity;
 pub mod lexer;
+mod lexical_policy;
 pub mod literal;
 pub mod mir;
 mod object_path;

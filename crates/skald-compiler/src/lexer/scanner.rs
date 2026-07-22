@@ -1,5 +1,6 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
+    lexical_policy::{is_identifier_continue, is_identifier_start},
     literal::NumericLiteralKind,
     source::{SourceFile, Span},
 };
@@ -262,12 +263,4 @@ impl<'source> Lexer<'source> {
 
 const fn is_ascii_whitespace(character: char) -> bool {
     matches!(character, ' ' | '\t' | '\r' | '\n')
-}
-
-const fn is_identifier_start(character: char) -> bool {
-    character.is_ascii_alphabetic() || character == '_'
-}
-
-const fn is_identifier_continue(character: char) -> bool {
-    character.is_ascii_alphanumeric() || character == '_'
 }

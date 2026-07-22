@@ -78,6 +78,7 @@ src/
 ├── identity.rs
 ├── function_table.rs
 ├── dump_format.rs
+├── lexical_policy.rs
 ├── diagnostics/
 ├── lexer/
 ├── syntax/
@@ -85,6 +86,7 @@ src/
 ├── hir/
 ├── typeck/
 ├── mir/
+│   └── verify/
 ├── passes/
 ├── backend/
 │   └── x86_64_sysv/
@@ -98,6 +100,11 @@ helpers are compiled only under `cfg(test)`.
 
 `dump_format` deliberately shares only low-level formatting primitives. Every
 phase owns the vocabulary and structure of its own deterministic dump.
+`lexical_policy` similarly owns only source-identifier character policy, so
+the lexer and later validation phases agree without depending on scanner
+state. MIR verification exposes a concise facade over one private verifier
+context and ordered error sink; structural place relationships and cleanup
+liveness analysis remain private responsibilities behind it.
 
 ### `runtime/`
 
