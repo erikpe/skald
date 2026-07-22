@@ -118,5 +118,5 @@ fn rejects_missing_result_initialization_and_malformed_call_destinations() {
             .project_field(FieldId::new(ClassId::new(0), 0)),
     );
     let errors = verify_mir(&scalar_destination).unwrap_err().to_string();
-    assert!(errors.contains("complete exact-class local destination storage"));
+    assert!(errors.contains("complete exact-class local or temporary destination storage"));
 }

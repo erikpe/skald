@@ -43,17 +43,28 @@ fn selects_explicit_copy_arguments_and_owning_parameter_places() {
 }
 
 #[test]
-fn rejects_non_place_object_arguments_and_external_object_signatures() {
+fn accepts_produced_object_arguments_and_rejects_invalid_signatures() {
     let produced = check_text(concat!(
         "class Value { init() {} }\n",
         "fn consume(value: Value) -> unit {}\n",
         "fn main() -> i64 { consume(Value()); return 0; }\n",
     ));
-    assert!(produced.hir.is_none());
-    assert!(produced
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
+    assert!(!produced.has_errors(), "{:?}", produced.diagnostics);
+    let hir = produced.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Call(call) = &main.body.statements[0] else {
+        panic!("expected call statement");
+    };
+    let HirExpressionKind::DirectCall { arguments, .. } = &call.call.kind else {
+        panic!("expected direct call");
+    };
+    let HirCallArgument::Copy(copy) = &arguments[0] else {
+        panic!("expected owned object argument");
+    };
+    assert!(matches!(
+        copy.source,
+        crate::hir::HirObjectSource::Produced(_)
+    ));
 
     let wrong_class = check_text(concat!(
         "class Expected { init() {} }\n",

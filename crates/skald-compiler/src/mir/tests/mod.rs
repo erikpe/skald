@@ -10,6 +10,7 @@ mod aliases;
 mod copy;
 mod object_fixtures;
 mod object_results;
+mod object_temporaries;
 mod objects;
 mod value_parameters;
 

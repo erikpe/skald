@@ -644,14 +644,44 @@ pub struct HirLocalDecl {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirLocalInitializer {
     Value(HirExpression),
-    Construct(HirConstruction),
+    Object(HirObjectInitialization),
     Copy(HirCopyConstruction),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirObjectInitialization {
+    pub destination: HirObjectPlace,
+    pub producer: HirObjectProducer,
+    /// The validated copy operation omitted by permitted constructor elision.
+    /// Calls initialize their result destination directly and leave this empty.
+    pub elided_copy: Option<HirSelectedCopyOperation<InitializerId>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirObjectProducer {
+    Construct(HirConstruction),
     Call(HirObjectCall),
+}
+
+impl HirObjectProducer {
+    pub const fn class(&self) -> ClassId {
+        match self {
+            Self::Construct(construction) => construction.class,
+            Self::Call(call) => call.class,
+        }
+    }
+
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Construct(construction) => construction.span,
+            Self::Call(call) => call.span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirObjectCall {
-    pub destination: HirObjectPlace,
     pub target: HirObjectCallTarget,
     pub arguments: Vec<HirCallArgument>,
     pub class: ClassId,
@@ -670,9 +700,31 @@ pub enum HirObjectCallTarget {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCopyConstruction {
     pub destination: HirObjectPlace,
-    pub source: HirObjectPlace,
+    pub source: HirObjectSource,
     pub operation: HirSelectedCopyOperation<InitializerId>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirObjectSource {
+    Place(HirObjectPlace),
+    Produced(HirObjectProducer),
+}
+
+impl HirObjectSource {
+    pub const fn class(&self) -> ClassId {
+        match self {
+            Self::Place(place) => place.class(),
+            Self::Produced(producer) => producer.class(),
+        }
+    }
+
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Place(place) => place.span(),
+            Self::Produced(producer) => producer.span(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -696,11 +748,18 @@ pub enum HirReturnValue {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirObjectReturn {
-    pub source: HirObjectPlace,
-    pub operation: HirSelectedCopyOperation<InitializerId>,
-    pub class: ClassId,
-    pub span: Span,
+pub enum HirObjectReturn {
+    Copy {
+        source: HirObjectSource,
+        operation: HirSelectedCopyOperation<InitializerId>,
+        class: ClassId,
+        span: Span,
+    },
+    /// The frozen return-elision case: construct directly in return storage.
+    Construct {
+        construction: HirConstruction,
+        omitted_copy: HirSelectedCopyOperation<InitializerId>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -742,7 +801,7 @@ pub struct HirFieldCopyAssignment {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCopyAssignment {
     pub destination: HirObjectPlace,
-    pub source: HirObjectPlace,
+    pub source: HirObjectSource,
     pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
     pub span: Span,
 }
@@ -809,7 +868,7 @@ pub enum HirCallArgument {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCopyArgument {
-    pub source: HirObjectPlace,
+    pub source: HirObjectSource,
     pub operation: HirSelectedCopyOperation<InitializerId>,
     pub span: Span,
 }

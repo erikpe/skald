@@ -49,8 +49,11 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     let HirStatement::Local(local) = &main.body.statements[0] else {
         panic!("expected object local");
     };
-    let HirLocalInitializer::Construct(construction) = &local.initializer else {
+    let HirLocalInitializer::Object(initialization) = &local.initializer else {
         panic!("expected destination construction");
+    };
+    let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer else {
+        panic!("expected constructor producer");
     };
     assert_eq!(construction.class, class.id);
     assert_eq!(construction.initializer, class.initializer.id);
@@ -365,7 +368,10 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
         panic!("expected explicit copy construction");
     };
     assert_eq!(copy.destination.root(), BindingId::Local(second.local));
-    assert_eq!(copy.source.root(), BindingId::Local(main.locals[0].id));
+    assert_eq!(
+        source_place(&copy.source).root(),
+        BindingId::Local(main.locals[0].id)
+    );
     assert_eq!(
         copy.operation,
         HirSelectedCopyOperation::User(InitializerId::new(value.id, 1))
@@ -379,7 +385,7 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
         BindingId::Local(second.local)
     );
     assert_eq!(
-        assignment.source.root(),
+        source_place(&assignment.source).root(),
         BindingId::Local(main.locals[0].id)
     );
     assert_eq!(
@@ -392,11 +398,11 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
     };
     assert_eq!(
         self_assignment.destination.root(),
-        self_assignment.source.root()
+        source_place(&self_assignment.source).root()
     );
     assert_eq!(
         self_assignment.destination.projections(),
-        self_assignment.source.projections()
+        source_place(&self_assignment.source).projections()
     );
 
     let exercise = hir
@@ -408,7 +414,10 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
     let HirLocalInitializer::Copy(whole) = &whole.initializer else {
         panic!("expected receiver copy construction");
     };
-    assert_eq!(whole.source.root(), BindingId::Receiver(exercise.callable));
+    assert_eq!(
+        source_place(&whole.source).root(),
+        BindingId::Receiver(exercise.callable)
+    );
     assert_eq!(
         whole.operation,
         HirSelectedCopyOperation::Synthesized(holder.id)
@@ -420,7 +429,7 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
     let HirLocalInitializer::Copy(alias_copy) = &alias_copy.initializer else {
         panic!("expected alias copy construction");
     };
-    assert_eq!(alias_copy.source.access, HirAccess::ReadOnly);
+    assert_eq!(source_place(&alias_copy.source).access, HirAccess::ReadOnly);
 
     for statement in &exercise.body.statements[3..] {
         let HirStatement::CopyAssignment(assignment) = statement else {
@@ -484,10 +493,6 @@ fn diagnoses_object_assignment_outside_the_frozen_destination_and_source_boundar
             .count(),
         2
     );
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OBJECT_CONTEXT
-            && diagnostic.message.contains("existing object place")
-    }));
     assert!(output.diagnostics.iter().any(|diagnostic| {
         diagnostic.code == INVALID_OBJECT_CONTEXT && diagnostic.message.contains("same class")
     }));
@@ -900,10 +905,6 @@ fn rejects_premature_subobject_use_duplicate_construction_and_invalid_destinatio
             .count(),
         2
     );
-    assert!(destinations.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OBJECT_CONTEXT
-            && diagnostic.message.contains("existing object place")
-    }));
 }
 
 #[test]
@@ -950,10 +951,6 @@ fn validates_exact_direct_construction_and_constructor_arguments() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION));
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT));
     assert!(output
         .diagnostics
         .iter()
@@ -1133,9 +1130,13 @@ fn object_hir_dump_is_exact_and_identity_based() {
             "        Local f0:l0 \"value\" : class c0 @125..149\n",
             "      Block @123..171\n",
             "        LocalDeclaration f0:l0 @125..149\n",
-            "          Construct c0 via c0:init0 @142..148\n",
-            "            ValueArgument @146..147\n",
-            "              Integer 1 : i64 @146..147\n",
+            "          ObjectInitialization @142..148\n",
+            "            ObjectPlace f0:l0 : class c0 mutable @129..134\n",
+            "            Construct c0 via c0:init0 @142..148\n",
+            "              ValueArgument @146..147\n",
+            "                Integer 1 : i64 @146..147\n",
+            "            ElidedCopy\n",
+            "              Operation Synthesized c0\n",
             "        Return @150..169\n",
             "          MethodCall c0:method0 : i64 @157..168\n",
             "            ObjectPlace f0:l0 : class c0 mutable @157..162\n",

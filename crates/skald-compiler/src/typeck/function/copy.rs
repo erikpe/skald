@@ -4,7 +4,8 @@ use super::*;
 use crate::{
     hir::{
         HirCopyAssignment, HirCopyConstruction, HirExpression, HirExpressionKind,
-        HirLocalInitializer, HirObjectCall, HirObjectCallTarget, HirObjectPlace,
+        HirLocalInitializer, HirObjectCall, HirObjectCallTarget, HirObjectInitialization,
+        HirObjectPlace, HirObjectProducer, HirObjectSource,
     },
     object_path::ObjectPath,
     resolve::ResolvedObjectAssignment,
@@ -17,16 +18,26 @@ impl CallableChecker<'_, '_> {
         class: ClassId,
         initializer: &crate::resolve::ResolvedExpression,
     ) -> Option<HirLocalInitializer> {
+        let destination = self.object_local_destination(local, class);
         if matches!(
             initializer,
             crate::resolve::ResolvedExpression::Construct(_)
         ) {
-            return self
-                .check_construction_initializer(class, initializer)
-                .map(HirLocalInitializer::Construct);
+            let construction = self.check_construction_initializer(class, initializer)?;
+            // Elision does not change validity: the corresponding non-elided
+            // execution must still have a selected copy constructor.
+            let Some(elided_copy) = self.copy_capabilities.constructor(class).selected() else {
+                self.report_unavailable_copy_operation(class, true, initializer.span());
+                return None;
+            };
+            return Some(HirLocalInitializer::Object(HirObjectInitialization {
+                destination,
+                span: construction.span,
+                producer: HirObjectProducer::Construct(construction),
+                elided_copy: Some(elided_copy),
+            }));
         }
 
-        let destination = self.object_local_destination(local, class);
         if is_object_call_source(initializer) {
             let expression = self.check_expression(initializer)?;
             if !require_type(
@@ -38,14 +49,16 @@ impl CallableChecker<'_, '_> {
             ) {
                 return None;
             }
-            return Some(HirLocalInitializer::Call(lower_object_call(
-                expression,
+            let call = lower_object_call(expression, class);
+            return Some(HirLocalInitializer::Object(HirObjectInitialization {
                 destination,
-                class,
-            )));
+                span: call.span,
+                producer: HirObjectProducer::Call(call),
+                elided_copy: None,
+            }));
         }
 
-        let source = self.check_copy_source_place(initializer, class)?;
+        let source = self.check_object_source(initializer, class, "object initializer")?;
         let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
             self.report_unavailable_copy_operation(class, true, initializer.span());
             return None;
@@ -57,6 +70,39 @@ impl CallableChecker<'_, '_> {
             operation,
             span,
         }))
+    }
+
+    pub(crate) fn check_object_source(
+        &mut self,
+        expression: &crate::resolve::ResolvedExpression,
+        class: ClassId,
+        context: &'static str,
+    ) -> Option<HirObjectSource> {
+        if let Some(construction) = construction_through_groups(expression) {
+            let mut construction =
+                self.check_object_construction(class, construction, "object destination")?;
+            construction.span = expression.span();
+            return Some(HirObjectSource::Produced(HirObjectProducer::Construct(
+                construction,
+            )));
+        }
+        if is_object_call_source(expression) {
+            let checked = self.check_expression(expression)?;
+            if !require_type(
+                checked.ty,
+                Type::Class(class),
+                checked.span,
+                context,
+                self.diagnostics,
+            ) {
+                return None;
+            }
+            return Some(HirObjectSource::Produced(HirObjectProducer::Call(
+                lower_object_call(checked, class),
+            )));
+        }
+        self.check_copy_source_place(expression, class)
+            .map(HirObjectSource::Place)
     }
 
     fn object_local_destination(
@@ -147,7 +193,9 @@ impl CallableChecker<'_, '_> {
         // Destination selection is complete before source checking, matching
         // the language's left-to-right assignment order. Stable places do not
         // require a temporary and may overlap, including exact self-assignment.
-        let Some(source) = self.check_copy_source_place(source, destination.class()) else {
+        let Some(source) =
+            self.check_object_source(source, destination.class(), "object assignment source")
+        else {
             return CheckedStatement::falls_through(None);
         };
         let Some(operation) = self
@@ -181,18 +229,25 @@ fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> boo
     }
 }
 
-fn lower_object_call(
-    expression: HirExpression,
-    destination: HirObjectPlace,
-    class: ClassId,
-) -> HirObjectCall {
+fn construction_through_groups(
+    expression: &crate::resolve::ResolvedExpression,
+) -> Option<&crate::resolve::ResolvedConstructExpr> {
+    match expression {
+        crate::resolve::ResolvedExpression::Construct(construction) => Some(construction),
+        crate::resolve::ResolvedExpression::Grouped(grouped) => {
+            construction_through_groups(&grouped.expression)
+        }
+        _ => None,
+    }
+}
+
+fn lower_object_call(expression: HirExpression, class: ClassId) -> HirObjectCall {
     let span = expression.span;
     match expression.kind {
         HirExpressionKind::DirectCall {
             function,
             arguments,
         } => HirObjectCall {
-            destination,
             target: HirObjectCallTarget::Direct(function),
             arguments,
             class,
@@ -203,14 +258,13 @@ fn lower_object_call(
             method,
             arguments,
         } => HirObjectCall {
-            destination,
             target: HirObjectCallTarget::Method { receiver, method },
             arguments,
             class,
             span,
         },
         HirExpressionKind::Grouped(inner) => {
-            let mut call = lower_object_call(*inner, destination, class);
+            let mut call = lower_object_call(*inner, class);
             call.span = span;
             call
         }

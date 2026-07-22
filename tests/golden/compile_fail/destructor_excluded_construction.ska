@@ -10,7 +10,7 @@ class Owner {
     }
 
     destroy {
-        self.leaf = Leaf();
+        Leaf();
         var copy: Leaf = self.leaf;
     }
 }

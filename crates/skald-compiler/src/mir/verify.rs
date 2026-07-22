@@ -1429,20 +1429,25 @@ impl Verifier<'_> {
                 "object-returning call must not have a scalar result",
             ),
             (MirType::Class(class), None, destination) => {
-                let complete_local = call.destination.as_ref().is_some_and(|place| {
+                let complete_destination = call.destination.as_ref().is_some_and(|place| {
                     place.projections.is_empty()
                         && matches!(place.base, MirPlaceBase::Storage(_))
                         && function
                             .storage(place.base.storage())
-                            .is_some_and(|storage| storage.kind == MirStorageKind::Local)
+                            .is_some_and(|storage| {
+                                matches!(
+                                    storage.kind,
+                                    MirStorageKind::Local | MirStorageKind::Temporary
+                                )
+                            })
                 });
                 if destination.map(|place| place.ty) != Some(MirType::Class(class))
-                    || !complete_local
+                    || !complete_destination
                 {
                     self.block_error(
                         function.callable(),
                         block.id,
-                        "object-returning call requires complete exact-class local destination storage",
+                        "object-returning call requires complete exact-class local or temporary destination storage",
                     );
                 }
             }

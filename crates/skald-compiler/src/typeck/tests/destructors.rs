@@ -97,7 +97,7 @@ fn rejects_value_returns_from_implicit_unit_destructors() {
 }
 
 #[test]
-fn permits_copying_but_rejects_constructor_temporaries_in_destructor_bodies() {
+fn permits_copying_and_bounded_constructor_temporaries_in_destructor_bodies() {
     let output = check_text(concat!(
         "class Leaf { init() {} }\n",
         "class Owner {\n",
@@ -108,11 +108,7 @@ fn permits_copying_but_rejects_constructor_temporaries_in_destructor_bodies() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.hir.is_none());
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OBJECT_CONTEXT
-            && diagnostic.message.contains("existing object place")
-    }));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
 }
 
 #[test]

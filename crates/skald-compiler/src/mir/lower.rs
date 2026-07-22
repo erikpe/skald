@@ -265,6 +265,7 @@ struct BodyLowerer<'hir> {
     values: Vec<MirValue>,
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
+    full_expression_temporaries: Vec<MirCleanup>,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -280,6 +281,7 @@ impl<'hir> BodyLowerer<'hir> {
             values: Vec::new(),
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
+            full_expression_temporaries: Vec::new(),
             return_storage: None,
             receiver_storage: None,
             input,
@@ -388,6 +390,10 @@ impl<'hir> BodyLowerer<'hir> {
             if self.body.is_current_terminated() {
                 break;
             }
+            debug_assert!(
+                self.full_expression_temporaries.is_empty(),
+                "a source statement must begin outside any previous full expression"
+            );
             match statement {
                 HirStatement::Local(local) => {
                     let storage = self.local_storage[local.local.index()];
@@ -401,32 +407,27 @@ impl<'hir> BodyLowerer<'hir> {
                                 value,
                                 span: local.span,
                             }));
+                            self.finish_full_expression(local.span);
                         }
-                        crate::hir::HirLocalInitializer::Construct(construction) => {
-                            let arguments = self.lower_call_arguments(&construction.arguments);
-                            self.emit(MirInstruction::Initialize(MirInitialize {
-                                destination: storage.into(),
-                                target: construction.initializer,
-                                arguments,
-                                span: construction.span,
-                            }));
+                        crate::hir::HirLocalInitializer::Object(initialization) => {
+                            let destination = self.lower_object_place(&initialization.destination);
+                            self.lower_object_producer(&initialization.producer, destination);
                             self.cleanup
-                                .register_owned(storage, construction.initializer.class());
+                                .register_owned(storage, initialization.producer.class());
+                            self.finish_full_expression(local.span);
                         }
                         crate::hir::HirLocalInitializer::Copy(copy) => {
+                            let source = self.lower_object_source(&copy.source);
                             self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                                 destination: self.lower_object_place(&copy.destination),
-                                source: self.lower_object_place(&copy.source),
+                                source,
                                 class: copy.destination.class(),
                                 operation: lower_selected_copy_operation(copy.operation),
                                 span: copy.span,
                             }));
                             self.cleanup
                                 .register_owned(storage, copy.destination.class());
-                        }
-                        crate::hir::HirLocalInitializer::Call(call) => {
-                            self.lower_object_call(call);
-                            self.cleanup.register_owned(storage, call.class);
+                            self.finish_full_expression(local.span);
                         }
                     }
                 }
@@ -436,22 +437,41 @@ impl<'hir> BodyLowerer<'hir> {
                             self.lower_expression(value)
                                 .expect("typed return expression must produce a scalar value"),
                         ),
-                        Some(crate::hir::HirReturnValue::Object(result)) => {
+                        Some(crate::hir::HirReturnValue::Object(
+                            crate::hir::HirObjectReturn::Copy {
+                                source,
+                                operation,
+                                class,
+                                span,
+                            },
+                        )) => {
                             let destination = MirPlace::base(
                                 self.return_storage
                                     .expect("object-returning body must have return storage"),
                             );
+                            let source = self.lower_object_source(source);
                             self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                                 destination,
-                                source: self.lower_object_place(&result.source),
-                                class: result.class,
-                                operation: lower_selected_copy_operation(result.operation),
-                                span: result.span,
+                                source,
+                                class: *class,
+                                operation: lower_selected_copy_operation(*operation),
+                                span: *span,
                             }));
+                            None
+                        }
+                        Some(crate::hir::HirReturnValue::Object(
+                            crate::hir::HirObjectReturn::Construct { construction, .. },
+                        )) => {
+                            let destination = MirPlace::base(
+                                self.return_storage
+                                    .expect("object-returning body must have return storage"),
+                            );
+                            self.lower_construction(construction, destination);
                             None
                         }
                         None => None,
                     };
+                    self.finish_full_expression(statement.span);
                     self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
                     self.terminate(MirTerminator::Return {
                         value,
@@ -461,6 +481,7 @@ impl<'hir> BodyLowerer<'hir> {
                 HirStatement::Call(statement) => {
                     let result = self.lower_expression(&statement.call);
                     assert!(result.is_none(), "typed call statement must return unit");
+                    self.finish_full_expression(statement.span);
                 }
                 HirStatement::Conditional(conditional) => {
                     self.lower_conditional(conditional);
@@ -478,6 +499,7 @@ impl<'hir> BodyLowerer<'hir> {
                         value,
                         span: assignment.span,
                     }));
+                    self.finish_full_expression(assignment.span);
                 }
                 HirStatement::FieldConstruction(statement) => {
                     let destination = self.lower_field_place(&statement.place);
@@ -488,6 +510,7 @@ impl<'hir> BodyLowerer<'hir> {
                         arguments,
                         span: statement.span,
                     }));
+                    self.finish_full_expression(statement.span);
                 }
                 HirStatement::FieldCopyConstruction(statement) => {
                     self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
@@ -508,13 +531,15 @@ impl<'hir> BodyLowerer<'hir> {
                     }));
                 }
                 HirStatement::CopyAssignment(statement) => {
+                    let source = self.lower_object_source(&statement.source);
                     self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
                         destination: self.lower_object_place(&statement.destination),
-                        source: self.lower_object_place(&statement.source),
+                        source,
                         class: statement.destination.class(),
                         operation: lower_selected_copy_operation(statement.operation),
                         span: statement.span,
                     }));
+                    self.finish_full_expression(statement.span);
                 }
             }
         }
@@ -555,6 +580,7 @@ impl<'hir> BodyLowerer<'hir> {
             let condition = self
                 .lower_expression(&arm.condition)
                 .expect("typed conditional condition must produce a value");
+            self.finish_full_expression(arm.condition.span);
             let false_target = condition_blocks
                 .get(index + 1)
                 .copied()
@@ -738,8 +764,36 @@ impl<'hir> BodyLowerer<'hir> {
             .project_field(place.field)
     }
 
-    fn lower_object_call(&mut self, call: &crate::hir::HirObjectCall) {
-        let destination = self.lower_object_place(&call.destination);
+    fn lower_object_producer(
+        &mut self,
+        producer: &crate::hir::HirObjectProducer,
+        destination: MirPlace,
+    ) {
+        match producer {
+            crate::hir::HirObjectProducer::Construct(construction) => {
+                self.lower_construction(construction, destination);
+            }
+            crate::hir::HirObjectProducer::Call(call) => {
+                self.lower_object_call(call, destination);
+            }
+        }
+    }
+
+    fn lower_construction(
+        &mut self,
+        construction: &crate::hir::HirConstruction,
+        destination: MirPlace,
+    ) {
+        let arguments = self.lower_call_arguments(&construction.arguments);
+        self.emit(MirInstruction::Initialize(MirInitialize {
+            destination,
+            target: construction.initializer,
+            arguments,
+            span: construction.span,
+        }));
+    }
+
+    fn lower_object_call(&mut self, call: &crate::hir::HirObjectCall, destination: MirPlace) {
         let (target, receiver) = match &call.target {
             crate::hir::HirObjectCallTarget::Direct(function) => {
                 (MirCallTarget::Direct(*function), None)
@@ -760,6 +814,23 @@ impl<'hir> BodyLowerer<'hir> {
         }));
     }
 
+    fn lower_object_source(&mut self, source: &crate::hir::HirObjectSource) -> MirPlace {
+        match source {
+            crate::hir::HirObjectSource::Place(place) => self.lower_object_place(place),
+            crate::hir::HirObjectSource::Produced(producer) => {
+                let storage = self.new_temporary_storage(producer.class(), producer.span());
+                let destination = MirPlace::base(storage);
+                self.lower_object_producer(producer, destination.clone());
+                self.full_expression_temporaries.push(MirCleanup {
+                    destination: destination.clone(),
+                    target: producer.class(),
+                    span: producer.span(),
+                });
+                destination
+            }
+        }
+    }
+
     fn lower_call_arguments(&mut self, arguments: &[HirCallArgument]) -> Vec<MirArgument> {
         arguments
             .iter()
@@ -770,10 +841,11 @@ impl<'hir> BodyLowerer<'hir> {
                 ),
                 HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
                 HirCallArgument::Copy(copy) => {
+                    let source = self.lower_object_source(&copy.source);
                     let destination = self.new_argument_storage(copy.source.class(), copy.span);
                     self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                         destination: MirPlace::base(destination),
-                        source: self.lower_object_place(&copy.source),
+                        source,
                         class: copy.source.class(),
                         operation: lower_selected_copy_operation(copy.operation),
                         span: copy.span,
@@ -795,6 +867,38 @@ impl<'hir> BodyLowerer<'hir> {
             span,
         });
         id
+    }
+
+    fn new_temporary_storage(&mut self, class: ClassId, span: crate::source::Span) -> StorageId {
+        let id = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id,
+            source: None,
+            name: format!("temporary{}", id.index()),
+            kind: MirStorageKind::Temporary,
+            ty: MirType::Class(class),
+            span,
+        });
+        id
+    }
+
+    fn finish_full_expression(&mut self, span: crate::source::Span) {
+        if self.full_expression_temporaries.is_empty() {
+            return;
+        }
+        let temporaries = self
+            .full_expression_temporaries
+            .drain(..)
+            .rev()
+            .map(|mut cleanup| {
+                cleanup.span = span;
+                cleanup
+            })
+            .collect();
+        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+            temporaries,
+            span,
+        }));
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {

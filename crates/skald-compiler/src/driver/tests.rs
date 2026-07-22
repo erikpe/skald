@@ -454,7 +454,6 @@ fn malformed_and_excluded_destructor_sources_fail_before_backend_lowering() {
         "class Resource { init() {} destroy {} destroy {} } fn main() -> i64 { return 0; }",
         "class Resource { init() {} destroy { return 1; } } fn main() -> i64 { return 0; }",
         "class Resource { init() {} destroy { self.destroy(); } } fn main() -> i64 { return 0; }",
-        "class Leaf { init() {} } class Owner { leaf: Leaf; init() { self.leaf = Leaf(); } destroy { self.leaf = Leaf(); } } fn main() -> i64 { return 0; }",
     ];
 
     for (index, source) in cases.into_iter().enumerate() {

@@ -16,9 +16,3 @@ error[TYP007]: function `missing` must return an object
     |
 18 |     return;
     |     ^^^^^^^ expected `return object_place;`
-
-error[TYP014]: copy source must be an existing object place
- --> tests/golden/compile_fail/object_value_results.ska:22:12
-    |
-22 |     return identity(value);
-    |            ^^^^^^^^^^^^^^^ expected an object binding, field, or grouping

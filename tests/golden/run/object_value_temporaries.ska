@@ -1,0 +1,45 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    init(ref other: Trace) {
+        self.value = 100 + other.value;
+    }
+
+    assign(ref other: Trace) {
+        self.value = 200 + other.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(400 + self.value);
+    }
+}
+
+fn produce(value: i64) -> Trace {
+    return Trace(value);
+}
+
+fn grouped(value: i64) -> Trace {
+    return (Trace(value));
+}
+
+fn consume(value: Trace) -> unit {
+    ska_rt_println_i64(500 + value.value);
+}
+
+fn main() -> i64 {
+    var direct: Trace = Trace(1);
+    var grouped_local: Trace = (Trace(2));
+    direct = Trace(3);
+    consume(Trace(4));
+    var result: Trace = produce(5);
+    var grouped_result: Trace = grouped(6);
+    direct = produce(7);
+    consume(produce(8));
+    return 0;
+}

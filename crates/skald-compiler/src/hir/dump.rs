@@ -272,11 +272,18 @@ impl HirDumper {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| match &local.initializer {
                     HirLocalInitializer::Value(expression) => dumper.expression(expression),
-                    HirLocalInitializer::Construct(construction) => {
-                        dumper.construction(construction)
+                    HirLocalInitializer::Object(initialization) => {
+                        dumper.line("ObjectInitialization", initialization.span);
+                        dumper.indented(|dumper| {
+                            dumper.object_place(&initialization.destination);
+                            dumper.object_producer(&initialization.producer);
+                            if let Some(operation) = initialization.elided_copy {
+                                dumper.raw_line("ElidedCopy");
+                                dumper.indented(|dumper| dumper.selected_copy_operation(operation));
+                            }
+                        });
                     }
                     HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
-                    HirLocalInitializer::Call(call) => dumper.object_call(call),
                 });
             }
             HirStatement::Return(statement) => {
@@ -284,11 +291,29 @@ impl HirDumper {
                 if let Some(value) = &statement.value {
                     self.indented(|dumper| match value {
                         HirReturnValue::Scalar(value) => dumper.expression(value),
-                        HirReturnValue::Object(value) => {
-                            dumper.line(&format!("ObjectResult {}", value.class), value.span);
+                        HirReturnValue::Object(HirObjectReturn::Copy {
+                            source,
+                            operation,
+                            class,
+                            span,
+                        }) => {
+                            dumper.line(&format!("ObjectResult {class}"), *span);
                             dumper.indented(|dumper| {
-                                dumper.object_place(&value.source);
-                                dumper.selected_copy_operation(value.operation);
+                                dumper.object_source(source);
+                                dumper.selected_copy_operation(*operation);
+                            });
+                        }
+                        HirReturnValue::Object(HirObjectReturn::Construct {
+                            construction,
+                            omitted_copy,
+                        }) => {
+                            dumper.line("ElidedObjectResult", construction.span);
+                            dumper.indented(|dumper| {
+                                dumper.construction(construction);
+                                dumper.raw_line("ElidedCopy");
+                                dumper.indented(|dumper| {
+                                    dumper.selected_copy_operation(*omitted_copy)
+                                });
                             });
                         }
                     });
@@ -334,7 +359,7 @@ impl HirDumper {
                 self.line("CopyAssignmentStatement", statement.span);
                 self.indented(|dumper| {
                     dumper.object_place(&statement.destination);
-                    dumper.object_place(&statement.source);
+                    dumper.object_source(&statement.source);
                     dumper.selected_copy_operation(statement.operation);
                 });
             }
@@ -345,7 +370,7 @@ impl HirDumper {
         self.line("CopyConstruction", copy.span);
         self.indented(|dumper| {
             dumper.object_place(&copy.destination);
-            dumper.object_place(&copy.source);
+            dumper.object_source(&copy.source);
             dumper.selected_copy_operation(copy.operation);
         });
     }
@@ -487,7 +512,6 @@ impl HirDumper {
         };
         self.line(&format!("ObjectCall {target} -> {}", call.class), call.span);
         self.indented(|dumper| {
-            dumper.object_place(&call.destination);
             if let HirObjectCallTarget::Method { receiver, .. } = &call.target {
                 dumper.object_place(receiver);
             }
@@ -510,10 +534,29 @@ impl HirDumper {
             HirCallArgument::Copy(copy) => {
                 self.line("CopyArgument", copy.span);
                 self.indented(|dumper| {
-                    dumper.object_place(&copy.source);
+                    dumper.object_source(&copy.source);
                     dumper.selected_copy_operation(copy.operation);
                 });
             }
+        }
+    }
+
+    fn object_source(&mut self, source: &crate::hir::HirObjectSource) {
+        match source {
+            crate::hir::HirObjectSource::Place(place) => self.object_place(place),
+            crate::hir::HirObjectSource::Produced(producer) => {
+                self.line("MaterializedSource", producer.span());
+                self.indented(|dumper| dumper.object_producer(producer));
+            }
+        }
+    }
+
+    fn object_producer(&mut self, producer: &crate::hir::HirObjectProducer) {
+        match producer {
+            crate::hir::HirObjectProducer::Construct(construction) => {
+                self.construction(construction)
+            }
+            crate::hir::HirObjectProducer::Call(call) => self.object_call(call),
         }
     }
 

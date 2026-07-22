@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS7 are complete and OVS8 is next.
+Status: in progress; OVS0–OVS8 are complete and OVS9 is next.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -216,14 +216,14 @@ result in explicit storage with verified lifetime and cleanup.
 **Purpose:** Complete the frozen expression profile while keeping optimization
 separate from correctness.
 
-- [ ] Materialize every required object temporary in explicit owning storage
+- [x] Materialize every required object temporary in explicit owning storage
       with a full-expression cleanup boundary.
-- [ ] Implement only the frozen direct-initialization and return elision cases.
-- [ ] Represent elision as destination selection or a target-independent pass,
+- [x] Implement only the frozen direct-initialization and return elision cases.
+- [x] Represent elision as destination selection or a target-independent pass,
       never as a backend guess.
-- [ ] Preserve evaluation order and document the permitted omission of
+- [x] Preserve evaluation order and document the permitted omission of
       side-effectful copy/destruction calls.
-- [ ] Compare elided and non-elided ownership graphs and verify each destination
+- [x] Compare elided and non-elided ownership graphs and verify each destination
       is initialized and cleaned exactly once.
 
 **Acceptance criteria:** materialization and permitted elision both follow the

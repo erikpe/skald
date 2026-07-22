@@ -1,5 +1,5 @@
-error[TYP014]: copy source must be an existing object place
- --> tests/golden/compile_fail/destructor_excluded_construction.ska:13:21
+error[TYP015]: construction is not allowed in this expression context
+ --> tests/golden/compile_fail/destructor_excluded_construction.ska:13:9
     |
-13 |         self.leaf = Leaf();
-    |                     ^^^^^^ expected an object binding, field, or grouping
+13 |         Leaf();
+    |         ^^^^^^ use this object source in initialization, assignment, an object argument, or an object return

@@ -1,6 +1,7 @@
 use super::*;
 use crate::hir::{
-    HirLocalInitializer, HirObjectCallTarget, HirReturnValue, HirSelectedCopyOperation,
+    HirLocalInitializer, HirObjectCallTarget, HirObjectProducer, HirObjectReturn, HirObjectSource,
+    HirReturnValue, HirSelectedCopyOperation,
 };
 use crate::identity::ClassId;
 
@@ -30,9 +31,15 @@ fn selects_copy_returns_and_destination_oriented_object_calls() {
     let Some(HirReturnValue::Object(result)) = &result.value else {
         panic!("expected explicit object return value");
     };
-    assert_eq!(result.class, ClassId::new(0));
+    let HirObjectReturn::Copy {
+        operation, class, ..
+    } = result
+    else {
+        panic!("expected copy return");
+    };
+    assert_eq!(*class, ClassId::new(0));
     assert_eq!(
-        result.operation,
+        *operation,
         HirSelectedCopyOperation::Synthesized(ClassId::new(0))
     );
 
@@ -40,8 +47,11 @@ fn selects_copy_returns_and_destination_oriented_object_calls() {
     let HirStatement::Local(first) = &main.body.statements[1] else {
         panic!("expected first result local");
     };
-    let HirLocalInitializer::Call(first) = &first.initializer else {
+    let HirLocalInitializer::Object(first) = &first.initializer else {
         panic!("expected destination-oriented call");
+    };
+    let HirObjectProducer::Call(first) = &first.producer else {
+        panic!("expected call producer");
     };
     assert!(matches!(
         first.target,
@@ -51,8 +61,11 @@ fn selects_copy_returns_and_destination_oriented_object_calls() {
     let HirStatement::Local(second) = &main.body.statements[2] else {
         panic!("expected method result local");
     };
-    let HirLocalInitializer::Call(second) = &second.initializer else {
+    let HirLocalInitializer::Object(second) = &second.initializer else {
         panic!("expected destination-oriented method call");
+    };
+    let HirObjectProducer::Call(second) = &second.producer else {
+        panic!("expected method-call producer");
     };
     assert!(matches!(second.target, HirObjectCallTarget::Method { .. }));
 
@@ -61,6 +74,56 @@ fn selects_copy_returns_and_destination_oriented_object_calls() {
     assert!(dump.contains("ObjectCall function f0 -> c0"));
     assert!(dump.contains("ObjectCall method c0:method0 -> c0"));
     assert_eq!(dump, dump_hir(&hir));
+}
+
+#[test]
+fn records_constructor_elision_as_typed_destination_selection() {
+    let output = check_text(concat!(
+        "class Value { init() {} }\n",
+        "fn direct() -> Value { return Value(); }\n",
+        "fn grouped() -> Value { return (Value()); }\n",
+        "fn main() -> i64 {\n",
+        "  var direct: Value = Value();\n",
+        "  var grouped: Value = (Value());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+
+    let direct = hir.definitions.get(FunctionId::new(0)).unwrap();
+    let HirStatement::Return(result) = &direct.body.statements[0] else {
+        panic!("expected direct return");
+    };
+    assert!(matches!(
+        &result.value,
+        Some(HirReturnValue::Object(HirObjectReturn::Construct { .. }))
+    ));
+
+    let grouped = hir.definitions.get(FunctionId::new(1)).unwrap();
+    let HirStatement::Return(result) = &grouped.body.statements[0] else {
+        panic!("expected grouped return");
+    };
+    assert!(matches!(
+        &result.value,
+        Some(HirReturnValue::Object(HirObjectReturn::Copy {
+            source: HirObjectSource::Produced(HirObjectProducer::Construct(_)),
+            ..
+        }))
+    ));
+
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Local(direct) = &main.body.statements[0] else {
+        panic!("expected direct local");
+    };
+    assert!(matches!(
+        &direct.initializer,
+        HirLocalInitializer::Object(_)
+    ));
+    let HirStatement::Local(grouped) = &main.body.statements[1] else {
+        panic!("expected grouped local");
+    };
+    assert!(matches!(&grouped.initializer, HirLocalInitializer::Copy(_)));
 }
 
 #[test]
@@ -86,18 +149,6 @@ fn diagnoses_invalid_object_result_sources_and_external_results() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == INVALID_RETURN));
-    assert!(output.diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == INVALID_OBJECT_CONTEXT
-            && diagnostic.message.contains("existing object place")
-    }));
-    assert!(
-        output
-            .diagnostics
-            .iter()
-            .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT)
-            .count()
-            >= 3
-    );
     assert!(output
         .diagnostics
         .iter()

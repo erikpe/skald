@@ -1598,19 +1598,26 @@ implicit byte-copy path. OVS6 implements internal exact-class value parameters
 from existing object-place arguments. HIR selects their copy construction;
 MIR makes caller destination ownership, transfer, callee cleanup, and ordering
 explicit; and x86-64 passes an address without exposing that target choice to
-semantic IR. Constructor- or result-produced value arguments, general object
-temporaries, alias-rooted replacement, external object signatures, and other
-object-producing expressions remain rejected until their later slices.
+semantic IR.
 
 OVS7 implements internal exact-class function and method results. A return of
 an existing place copy-constructs distinct caller-provided storage before
 callee cleanup. HIR records destination-oriented object-result calls; MIR has
 a dedicated return-storage slot and explicit call destination; and x86-64
 passes the destination as a hidden first integer-class address. Object-
-returning calls may initialize exact-class locals directly. Returning a
-constructor or another result expression, using produced results as arguments
-or assignment sources, and general object temporaries remain reserved for
-OVS8.
+returning calls may initialize exact-class locals directly.
+
+OVS8 completes the frozen expression profile. Produced exact-class sources may
+initialize locals, feed assignment, initialize value parameters, and provide
+object returns. HIR distinguishes a final-destination producer from a source
+that requires materialization; MIR owns every required temporary and its
+reverse-completion full-expression cleanup. The deterministic initial policy
+elides every eligible ungrouped exact-class constructor used for direct local
+initialization or return by selecting the final destination before lowering.
+Grouping prevents constructor elision. Copy-constructor and temporary-
+destructor effects are therefore omitted only in the two cases permitted
+below; the backend performs no elision inference. Alias-rooted replacement,
+external object signatures, and other excluded contexts remain rejected.
 
 This profile narrows Sections 5.5, 5.6, and 6 to exact concrete inline classes,
 normal control flow, and the already implemented alias and destruction model.
@@ -1775,9 +1782,9 @@ constructed from it, and it remains live through the call. Construction of
 that parameter completes before the next argument is evaluated. The callee
 body begins only after every argument and owned parameter has completed.
 
-The implemented OVS6 boundary accepts only the existing-place branch above.
-Constructor- and result-produced arguments remain reserved for the temporary
-and result slices.
+The implemented OVS8 profile accepts both branches above. Produced arguments
+are materialized before their parameter copy and remain live through the
+complete call.
 
 On every supported normal callee exit, the return result is established first,
 then body temporaries and locals are cleaned according to their scopes, and

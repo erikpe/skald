@@ -3,13 +3,7 @@ error[TYP015]: constructor type does not match the object local
     |
 10 |     var wrong: Left = Right();
     |                       ^^^^^ constructs `Right`
-  = note: the local requires `Left`
-
-error[TYP014]: copy source must be an existing object place
- --> tests/golden/compile_fail/object_construction.ska:11:26
-    |
-11 |     var grouped: Left = (Left(1));
-    |                          ^^^^^^^ expected an object binding, field, or grouping
+  = note: the object local requires `Left`
 
 error[TYP004]: initializer expects 1 argument but received 0
  --> tests/golden/compile_fail/object_construction.ska:12:23

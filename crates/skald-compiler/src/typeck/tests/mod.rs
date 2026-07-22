@@ -74,12 +74,21 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
             ));
         }
         crate::hir::HirCallArgument::Copy(copy) => {
-            assert!(matches!(
-                copy.source.access,
-                crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
-            ));
+            if let crate::hir::HirObjectSource::Place(place) = &copy.source {
+                assert!(matches!(
+                    place.access,
+                    crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
+                ));
+            }
         }
     }
+}
+
+fn source_place(source: &crate::hir::HirObjectSource) -> &crate::hir::HirObjectPlace {
+    let crate::hir::HirObjectSource::Place(place) = source else {
+        panic!("expected an existing-place object source");
+    };
+    place
 }
 
 mod alias_parameters;

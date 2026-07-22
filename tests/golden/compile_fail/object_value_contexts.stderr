@@ -1,8 +1,8 @@
-error[TYP015]: construction is allowed only as an object local initializer
+error[TYP015]: construction is not allowed in this expression context
  --> tests/golden/compile_fail/object_value_contexts.ska:8:23
    |
 8 |     var scalar: i64 = Value();
-   |                       ^^^^^^^ use `var name: Class = Class(...);`
+   |                       ^^^^^^^ use this object source in initialization, assignment, an object argument, or an object return
 
 error[TYP014]: an inline object cannot be used as an ordinary value
  --> tests/golden/compile_fail/object_value_contexts.ska:9:12

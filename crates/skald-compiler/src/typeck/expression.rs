@@ -243,9 +243,12 @@ impl CallableChecker<'_, '_> {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_CONSTRUCTION,
-                        "construction is allowed only as an object local initializer",
+                        "construction is not allowed in this expression context",
                     )
-                    .with_primary_label(construction.span, "use `var name: Class = Class(...);`"),
+                    .with_primary_label(
+                        construction.span,
+                        "use this object source in initialization, assignment, an object argument, or an object return",
+                    ),
                 );
                 None
             }
@@ -367,7 +370,8 @@ impl CallableChecker<'_, '_> {
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value => {
                 if let Type::Class(class) = lower_type(&parameter.type_syntax) {
-                    let source = self.check_copy_source_place(source, class)?;
+                    let source =
+                        self.check_object_source(source, class, "object value argument")?;
                     let Some(operation) = self.copy_capabilities.constructor(class).selected()
                     else {
                         self.report_unavailable_copy_operation(class, true, source.span());

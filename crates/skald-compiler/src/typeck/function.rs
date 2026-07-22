@@ -346,21 +346,41 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                             );
                             return CheckedStatement::terminates(None);
                         };
-                        let Some(source) = self.check_copy_source_place(value, class) else {
-                            return CheckedStatement::terminates(None);
-                        };
                         let Some(operation) = self.copy_capabilities.constructor(class).selected()
                         else {
-                            self.report_unavailable_copy_operation(class, true, source.span());
+                            self.report_unavailable_copy_operation(class, true, value.span());
                             return CheckedStatement::terminates(None);
                         };
+                        let object_return =
+                            if let crate::resolve::ResolvedExpression::Construct(construction) =
+                                value
+                            {
+                                let Some(construction) = self.check_object_construction(
+                                    class,
+                                    construction,
+                                    "return destination",
+                                ) else {
+                                    return CheckedStatement::terminates(None);
+                                };
+                                HirObjectReturn::Construct {
+                                    construction,
+                                    omitted_copy: operation,
+                                }
+                            } else {
+                                let Some(source) =
+                                    self.check_object_source(value, class, "object return")
+                                else {
+                                    return CheckedStatement::terminates(None);
+                                };
+                                HirObjectReturn::Copy {
+                                    source,
+                                    operation,
+                                    class,
+                                    span: value.span(),
+                                }
+                            };
                         Some(HirStatement::Return(HirReturn {
-                            value: Some(HirReturnValue::Object(HirObjectReturn {
-                                source,
-                                operation,
-                                class,
-                                span: value.span(),
-                            })),
+                            value: Some(HirReturnValue::Object(object_return)),
                             span: statement.span,
                         }))
                     }
@@ -436,6 +456,15 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             );
             return None;
         };
+        self.check_object_construction(expected_class, construction, "object local")
+    }
+
+    pub(super) fn check_object_construction(
+        &mut self,
+        expected_class: ClassId,
+        construction: &crate::resolve::ResolvedConstructExpr,
+        destination: &str,
+    ) -> Option<HirConstruction> {
         if construction.class != expected_class {
             let actual_name = &self
                 .program
@@ -450,13 +479,13 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             self.diagnostics.push(
                 Diagnostic::error(
                     INVALID_CONSTRUCTION,
-                    "constructor type does not match the object local",
+                    format!("constructor type does not match the {destination}"),
                 )
                 .with_primary_label(
                     construction.callee_span,
                     format!("constructs `{actual_name}`"),
                 )
-                .with_note(format!("the local requires `{expected_name}`")),
+                .with_note(format!("the {destination} requires `{expected_name}`")),
             );
             return None;
         }
