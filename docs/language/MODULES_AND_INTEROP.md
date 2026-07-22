@@ -131,9 +131,9 @@ The exact external source symbol is part of the implemented language contract
 because it is the only available link-name selection. Target ABI
 classification, C type widths, registers, stack placement, and
 compiler-generated symbol handling are implementation details owned by the
-[backend and target contract](../compiler/BACKEND.md). Runtime link markers,
-tool invocation, and artifact publication remain owned during the
-documentation migration by the existing
-[runtime](../REPO_STRUCTURE.md#runtime), and
-[driver](../REPO_STRUCTURE.md#driver-and-artifacts) sections until their
-focused documents replace those authorities.
+[backend and target contract](../compiler/BACKEND.md). Runtime symbols and link
+markers are owned by the [runtime ABI](../compiler/RUNTIME_ABI.md). Tool
+invocation and artifact publication remain owned during the documentation
+migration by the existing
+[driver](../REPO_STRUCTURE.md#driver-and-artifacts) section until its focused
+document replaces that authority.

@@ -49,9 +49,11 @@ optimization.
   there instead of restating language rules.
 
 Target legality, layout, calling conventions, and code generation are defined
-by the [backend and target contract](BACKEND.md). Runtime, driver, testing, and
-debugging details remain in the [legacy migration guide](../REPO_STRUCTURE.md)
-and [debugging guide](../DEBUGGING.md) until their focused replacements are
+by the [backend and target contract](BACKEND.md). The public runtime C surface
+and compiler/runtime compatibility mechanism are defined by the
+[runtime ABI](RUNTIME_ABI.md). Driver, testing, and debugging details remain in
+the [legacy migration guide](../REPO_STRUCTURE.md) and
+[debugging guide](../DEBUGGING.md) until their focused replacements are
 created.
 
 ## Pipeline

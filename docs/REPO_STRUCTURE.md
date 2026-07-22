@@ -1,4 +1,4 @@
-# Runtime, Driver, and Test Migration Guide
+# Driver and Test Migration Guide
 
 Status: legacy migration input. Durable compiler architecture is authoritative
 in [Compiler Architecture](compiler/README.md), and target-independent phase
@@ -9,32 +9,11 @@ focused compiler and development guides.
 
 ## Runtime
 
-The C11 runtime builds `libskald_runtime.a` and exposes a versioned ABI. Its
-version-4 archive defines the no-op link marker `ska_rt_abi_v4`. Every backend
-must reference the current marker from its generated process entry wrapper;
-the linker therefore rejects an archive for a different ABI before producing
-an executable. Incompatible runtime revisions must change both the marker
-symbol and the compiler reference. The separate `ska_rt_abi_version()` query
-is retained for inspection and direct runtime tests, not link compatibility.
-
-The current bootstrap output operations are:
-
-```text
-ska_rt_println_i64
-ska_rt_println_u64
-ska_rt_println_u8
-ska_rt_println_f64_bits
-ska_rt_println_bool
-```
-
-Integer operations print locale-independent decimal records; boolean output is
-lowercase; floating output exposes exact binary64 bits. Every successful
-record ends with LF and is flushed. A detected write or flush failure
-terminates the process unsuccessfully.
-
-Future runtime responsibilities may include allocation, reference counting,
-panic support, and dynamic type metadata. Garbage collection, tracing roots,
-safepoints, and write barriers do not belong here.
+The focused [runtime ABI](compiler/RUNTIME_ABI.md) now owns the public C
+surface, version and link guard, platform requirements, output records,
+failure behavior, and responsibility boundary. This compatibility heading
+remains only so links created before the documentation migration have a useful
+destination.
 
 ## x86-64 System V backend
 

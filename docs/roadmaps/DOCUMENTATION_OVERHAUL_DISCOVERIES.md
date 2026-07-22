@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: active; no pending discoveries.
+Status: active; one pending documentation cleanup.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.
@@ -21,7 +21,25 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Pending
 
-None.
+### Legacy draft retains duplicated target ABI details
+
+**Problem:** The legacy draft's inline-object layout and receiver-ABI section
+still repeats primitive sizes, class layout, target errors, register classes,
+and hidden-receiver placement after those claims gained one authoritative home.
+Keeping both copies increases drift risk and leaves the migration document
+looking normative.
+
+**Evidence:** `docs/SKALD_DRAFT_SPEC.md` section 13.4 contains the detailed
+target contract, while `docs/compiler/BACKEND.md` already owns and verifies the
+same layout and calling-convention facts.
+
+**Owner and priority:** Documentation overhaul cleanup; low priority because
+the legacy monolith is already scheduled for removal and the focused backend
+document is explicitly authoritative.
+
+**Boundary:** During removal of superseded monoliths, ensure all incoming links
+target `docs/compiler/BACKEND.md`, then remove the duplicated legacy section
+with the rest of the draft rather than migrating any of its prose again.
 
 ## Completed
 

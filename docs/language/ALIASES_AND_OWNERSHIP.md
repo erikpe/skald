@@ -188,5 +188,6 @@ frame home, register class, field offset, or calling convention.
 
 The current target realization is an implementation concern recorded in the
 [backend and target contract](../compiler/BACKEND.md). Future
-allocation, reference counting, and ownership-runtime mechanisms belong in the
-planned runtime ABI authority once their language design is frozen.
+allocation, reference counting, and ownership-runtime mechanisms are outside
+the current [runtime ABI](../compiler/RUNTIME_ABI.md#responsibility-boundary)
+until their language design is frozen.

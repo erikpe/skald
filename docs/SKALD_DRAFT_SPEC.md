@@ -354,7 +354,8 @@ shared ownership are not implemented or frozen. Their exploratory direction
 and unresolved semantic constraints are summarized in
 [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary).
 Runtime allocation and ownership mechanisms are outside the language contract
-and move to the focused runtime ABI authority when designed.
+and would require an explicit extension of the current
+[runtime ABI](compiler/RUNTIME_ABI.md#responsibility-boundary) when designed.
 
 ---
 
@@ -476,132 +477,29 @@ existing deterministic lifetime model, as described in
 
 ## 13. Runtime Model
 
-Skald is designed around a small runtime with no garbage collector.
-
-The version marker and executable link-compatibility mechanism are
-implementation contracts owned by the
-[runtime documentation](REPO_STRUCTURE.md#runtime) until DOC13 creates its
-focused replacement. They are not language semantics.
-
-The current runtime has no allocation, shared-ownership, reference-counting,
-borrow-anchor, dynamic object-metadata, or garbage-collection responsibility.
-Those mechanisms are future runtime design and do not become part of the ABI
-until their source semantics are frozen and the focused runtime ABI authority
-specifies them.
+The current public C surface, version/link guard, platform requirements,
+bootstrap output records, detected-failure behavior, and responsibility
+boundary are authoritative in the [runtime ABI](compiler/RUNTIME_ABI.md).
+They are implementation contracts rather than language semantics.
 
 ### 13.1 Bootstrap `i64` Output
 
-**Implementation status:** implemented by the stage-0 x86-64 compiler under
-runtime ABI version 4, with exact source-to-stdout golden coverage.
-
-Until strings and the standard I/O library exist, the runtime exposes one
-low-level output operation:
-
-```c
-void ska_rt_println_i64(int64_t value);
-```
-
-Skald source accesses it through the ordinary external declaration mechanism:
-
-```ska
-extern fn ska_rt_println_i64(value: i64) -> unit;
-```
-
-One successful call writes the shortest ASCII decimal representation of
-`value` to stdout followed by exactly one line-feed byte (`0x0a`). Zero is
-written as `0`; negative values have one leading ASCII `-`; positive values
-have no sign; and there is no padding, grouping, locale-specific digit or
-separator, carriage return, or extra whitespace. The operation is defined for
-every `i64`, including `-9223372036854775808` and
-`9223372036854775807`.
-
-The operation completes and checks the entire record before returning. A
-detected formatting, write, or flush failure is an unrecoverable runtime error:
-the process terminates unsuccessfully rather than returning normally or
-exposing a partial-success result to Skald. The exact diagnostic text, exit
-status, or terminating signal is not part of this ABI contract.
-
-This function exists to bootstrap observable tests. It is not the final
-user-facing I/O API; a future Skald standard library may wrap lower-level
-runtime facilities with ordinary functions and richer error handling.
+The version-4 signed-integer output contract has moved to
+[runtime output records](compiler/RUNTIME_ABI.md#output-records). Skald source
+uses it through the ordinary external declaration mechanism described in
+[modules and foreign interoperation](language/MODULES_AND_INTEROP.md).
 
 ### 13.2 Bootstrap `bool` Output
 
-**Implementation status:** implemented end to end. The compiler accepts the
-declaration below as an ordinary restricted external function.
-
-The runtime ABI exposes:
-
-```c
-#include <stdbool.h>
-
-void ska_rt_println_bool(bool value);
-```
-
-Skald source accesses it through the same ordinary restricted external
-declaration mechanism as integer output:
-
-```ska
-extern fn ska_rt_println_bool(value: bool) -> unit;
-```
-
-One successful call with `true` writes the four ASCII bytes `true` followed by
-one line-feed byte (`0x0a`). One successful call with `false` writes the five
-ASCII bytes `false` followed by one line-feed byte. It writes no sign,
-capitalization, padding, carriage return, locale-dependent text, or other
-whitespace. Consecutive calls produce consecutive complete records in call
-order.
-
-The function completes and checks the entire record before returning. A
-detected write or flush failure is an unrecoverable runtime error and
-terminates the process unsuccessfully under the same policy as
-`ska_rt_println_i64`. The exact diagnostic, status, or terminating signal is
-not guaranteed. The symbol is part of the current runtime ABI version 4.
-
-This operation exists only for bootstrap observability. It does not introduce
-formatting, recoverable I/O, or a final standard-library printing API, and no
-compiler phase recognizes its name specially.
+The version-4 boolean output contract has moved to
+[runtime output records](compiler/RUNTIME_ABI.md#output-records). It remains an
+ordinary restricted external function rather than a compiler intrinsic.
 
 ### 13.3 Bootstrap Remaining-Primitive Output
 
-**Implementation status:** implemented end to end. All three symbols below are
-part of runtime ABI version 4.
-
-```c
-#include <stdint.h>
-
-void ska_rt_println_u64(uint64_t value);
-void ska_rt_println_u8(uint8_t value);
-void ska_rt_println_f64_bits(double value);
-```
-
-The corresponding ordinary restricted external declarations are:
-
-```ska
-extern fn ska_rt_println_u64(value: u64) -> unit;
-extern fn ska_rt_println_u8(value: u8) -> unit;
-extern fn ska_rt_println_f64_bits(value: f64) -> unit;
-```
-
-`ska_rt_println_u64` writes the shortest unsigned ASCII decimal representation
-of the complete `u64` range followed by one LF. `ska_rt_println_u8` does the
-same for the canonical value in `0..=255`. Neither writes a sign, leading
-zeroes except for the single value `0`, padding, grouping, locale-dependent
-characters, carriage return, or other whitespace.
-
-`ska_rt_println_f64_bits` observes representation rather than formatting a
-decimal number. It writes lowercase ASCII `0x`, exactly 16 lowercase
-hexadecimal digits containing the received IEEE-754 binary64 bit pattern from
-most-significant nibble to least-significant nibble, and one LF. Examples are
-`0x0000000000000000` for positive zero, `0x8000000000000000` for negative
-zero, and `0x3ff8000000000000` for `1.5`. The operation preserves and exposes
-the received representation of infinities and NaNs; it does not canonicalize
-them or promise how prior arithmetic chose a NaN payload.
-
-Each call produces one complete record and uses the existing unrecoverable
-detected-output-failure policy. The functions are locale-independent bootstrap
-test facilities, are not final user-facing formatting APIs, and receive no
-special recognition from the compiler.
+The version-4 unsigned-integer and exact-binary64 output contracts have moved
+to [runtime output records](compiler/RUNTIME_ABI.md#output-records). Their
+source declarations use the same ordinary foreign-interoperation boundary.
 
 ### 13.4 Stage-0 Inline-Object Layout and Receiver ABI
 

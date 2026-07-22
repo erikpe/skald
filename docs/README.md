@@ -37,8 +37,10 @@ Use the authority closest to the behavior:
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
 - target legality, layout, ABI realization, and code generation belong in the
   [backend and target contract](compiler/BACKEND.md);
-- runtime ABI, driver behavior, and contributor workflows belong in their
-  respective implementation or development guides;
+- the public C runtime surface and compiler/runtime compatibility mechanism
+  belong in the [runtime ABI](compiler/RUNTIME_ABI.md);
+- driver behavior and contributor workflows belong in their respective
+  implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
@@ -50,7 +52,7 @@ is moved only after it has been checked against implementation and tests:
 - [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
   implemented-profile annotations, and open questions;
 - [Repository structure and compiler architecture](REPO_STRUCTURE.md) —
-  runtime, driver, and test boundaries awaiting focused replacements;
+  driver and test boundaries awaiting focused replacements;
 - [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — planned
   sequencing awaiting final distribution;
 - [Compiler debugging artifacts](DEBUGGING.md) — dumps, verification points,

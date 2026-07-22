@@ -126,9 +126,8 @@ Object values, alias parameters, receivers, and object results are not
 supported in external signatures.
 
 External symbol selection and C compatibility are stable within this target
-contract. The runtime's exported symbols, ABI version, and platform assertions
-remain in the [runtime migration authority](../REPO_STRUCTURE.md#runtime) until
-their focused runtime document is created.
+contract. The runtime's exported symbols, ABI version, and platform
+requirements are defined by the [runtime ABI](RUNTIME_ABI.md).
 
 ## Internal calling convention
 
@@ -209,7 +208,8 @@ External calls preserve the exact declared symbol. The backend also emits one
 exported C-compatible `main` wrapper, which checks runtime ABI compatibility
 through the current marker, calls the identity-selected Skald entry function,
 and returns its low C `int` result. Runtime marker ownership belongs to the
-runtime ABI contract rather than the internal symbol scheme.
+[runtime ABI](RUNTIME_ABI.md#version-and-link-compatibility) rather than the
+internal symbol scheme.
 
 ## Assembly emission and verification
 

@@ -1,6 +1,8 @@
 #ifndef SKALD_RUNTIME_H
 #define SKALD_RUNTIME_H
 
+/* Public C surface documented in docs/compiler/RUNTIME_ABI.md. */
+
 #include <stdbool.h>
 #include <stdint.h>
 

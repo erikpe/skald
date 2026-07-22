@@ -99,6 +99,5 @@ from a possible implementation strategy.
 Diagnostic codes, rendering format, compiler exit codes, phase recovery,
 backend errors, and toolchain reporting belong to compiler and driver
 documentation. Runtime symbols, exact output-failure implementation, and the
-runtime ABI belong to the existing
-[runtime documentation](../REPO_STRUCTURE.md#runtime) until its focused
-replacement is created.
+runtime compatibility contract belong to the
+[runtime ABI](../compiler/RUNTIME_ABI.md).

@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC13 is next.
+Status: planned; DOC14 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -178,7 +178,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC10 — Rewrite errors and prune premature feature sketches
 - [x] DOC11 — Rewrite compiler architecture and phase contracts
 - [x] DOC12 — Separate backend and target documentation
-- [ ] DOC13 — Establish the runtime ABI authority
+- [x] DOC13 — Establish the runtime ABI authority
 - [ ] DOC14 — Rewrite driver, artifact, and workflow documentation
 - [ ] DOC15 — Consolidate testing and debugging guidance
 - [ ] DOC16 — Update entry points and remove superseded monoliths
@@ -523,17 +523,17 @@ backend document and no longer appear as language rules.
 **Purpose:** Make the versioned C runtime contract precise and remove its
 duplication across language, architecture, README, grammar, and test prose.
 
-- [ ] Create `RUNTIME_ABI.md` covering the current marker/version mechanism,
+- [x] Create `RUNTIME_ABI.md` covering the current marker/version mechanism,
       public header types and functions, platform requirements, exact output
       records, failure behavior, and current runtime responsibility boundary.
-- [ ] Verify symbols, signatures, version, platform assertions, output bytes,
+- [x] Verify symbols, signatures, version, platform assertions, output bytes,
       flushing, and failure behavior against the header, C implementation,
       Makefiles, link tests, and direct runtime harnesses.
-- [ ] Distinguish the current ABI from future allocation, reference counting,
+- [x] Distinguish the current ABI from future allocation, reference counting,
       metadata, panic, strings, and exception support.
-- [ ] Keep source-level FFI use as a link to language interoperation and target
+- [x] Keep source-level FFI use as a link to language interoperation and target
       call lowering as a link to backend documentation.
-- [ ] Slim `tests/runtime/README.md` to harness mechanics and links rather than
+- [x] Slim `tests/runtime/README.md` to harness mechanics and links rather than
       another ABI specification.
 
 **Tests:** Run `make runtime-test`, runtime ABI marker/toolchain tests, relevant
