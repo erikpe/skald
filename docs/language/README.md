@@ -111,11 +111,11 @@ makes a result source-observable.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.
+- [Errors and exceptional control flow](ERRORS.md) defines compile-time
+  rejection, the current fatal runtime boundary, normal-flow cleanup limits,
+  and the open checked-exception design.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.
-
-A focused errors document will be linked here when its verified authority is
-established.

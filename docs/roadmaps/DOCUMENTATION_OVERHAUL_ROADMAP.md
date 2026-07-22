@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC10 is next.
+Status: planned; DOC11 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -175,7 +175,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC7 — Rewrite aliases and ownership
 - [x] DOC8 — Establish the polymorphism design document
 - [x] DOC9 — Rewrite modules and foreign interoperation
-- [ ] DOC10 — Rewrite errors and prune premature feature sketches
+- [x] DOC10 — Rewrite errors and prune premature feature sketches
 - [ ] DOC11 — Rewrite compiler architecture and phase contracts
 - [ ] DOC12 — Separate backend and target documentation
 - [ ] DOC13 — Establish the runtime ABI authority
@@ -446,18 +446,18 @@ non-implemented, and no language document owns target linkage mechanics.
 **Purpose:** Make current failure semantics clear while replacing pseudo-specs
 for unresolved features with concise design boundaries.
 
-- [ ] Create `ERRORS.md` covering compile-time diagnostics at a language level,
+- [x] Create `ERRORS.md` covering compile-time diagnostics at a language level,
       unrecoverable runtime failures, deterministic cleanup obligations, and
       the current absence of recoverable exceptions.
-- [ ] Retain only the checked-exception constraints already required by object
+- [x] Retain only the checked-exception constraints already required by object
       lifetime; move lowering options out and mark syntax/type rules open.
-- [ ] Audit optionals, arrays, strings, loops, iteration, statics, closures,
+- [x] Audit optionals, arrays, strings, loops, iteration, statics, closures,
       generics, and standard-library sketches; keep only settled language
       direction and actionable open questions in the appropriate owner/status
       entry.
-- [ ] Verify current runtime-failure claims against native/runtime tests and
+- [x] Verify current runtime-failure claims against native/runtime tests and
       avoid promising exact status or diagnostics not enforced by tests.
-- [ ] Remove the legacy resolved-decisions appendix after each retained
+- [x] Remove the legacy resolved-decisions appendix after each retained
       decision is verified and moved to its semantic owner.
 
 **Tests:** Run diagnostic rendering, fatal runtime, relevant compile-failure,

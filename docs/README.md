@@ -28,6 +28,9 @@ Use the authority closest to the behavior:
 - the current compilation unit, top-level namespace, entry point, external
   declarations, and future module boundary belong in
   [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
+- compile-time rejection, current runtime-failure boundaries, and future
+  exceptional cleanup belong in
+  [errors and exceptional control flow](language/ERRORS.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

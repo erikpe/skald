@@ -140,7 +140,9 @@ temporaries are then destroyed in reverse completion order, followed by live
 owning locals from inner scopes to outer scopes and owning value parameters in
 reverse parameter order. The preserved result is transferred only after those
 cleanups. Cleanup for exceptions and loop exits is not part of the implemented
-control-flow model.
+control-flow model. The current abrupt-termination boundary and constraints on
+future exceptional cleanup are owned by
+[errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
 ## Evaluation order
 

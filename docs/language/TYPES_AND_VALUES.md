@@ -152,12 +152,27 @@ primitive casts or user-defined conversions. Conversion behavior—including
 integer width changes, numeric/boolean conversion, and checked conversion
 failure—is not frozen.
 
-Optionals, arrays, strings, function values, and the value aspects of
-shared ownership are also not implemented or frozen. Their current maturity is
-recorded only in the [status matrix](STATUS.md#not-implemented). Exploratory
-polymorphic values, slicing, tests, and narrowing are separated into the
-[polymorphism design](POLYMORPHISM.md).
-Legacy examples are design input, not usable syntax or settled semantics.
+Optional values are an exploratory direction for representing absence without
+making every value nullable. Their type syntax, empty value, presence checks,
+extraction, conversions, payload lifetime, and lifecycle behavior are open;
+older `T?` and `none` examples are not reserved syntax.
+
+Arrays are an open design area. Element lifetime, size and mutability, storage,
+construction, indexing, slicing, bounds failure, borrowing, and iteration must
+be designed together. No legacy bracket form or structural protocol is a
+current contract.
+
+An immutable language-facing string value remains an exploratory direction,
+but its type name, literal syntax and encoding, byte/text semantics, copying,
+slicing, storage, and library boundary are not frozen. No representation or
+literal-lowering strategy is a language guarantee.
+
+Function values and the value aspects of shared ownership are also not
+implemented or frozen. Their current maturity is recorded in the
+[status matrix](STATUS.md#not-implemented). Exploratory polymorphic values,
+slicing, tests, and narrowing are separated into the
+[polymorphism design](POLYMORPHISM.md). Legacy examples are not usable syntax
+or settled semantics.
 
 ## Implementation boundary
 

@@ -19,7 +19,8 @@ collection:
   lifetime rule for future shared sources remains open;
 - assignment updates an existing value without ending its lifetime;
 - `init`, `assign`, and `destroy` are contextual lifecycle declarations;
-- optionality is explicit with `T?`; ordinary non-optional values are not null.
+- optional absence is intended to remain explicit rather than making every
+  value nullable; its source syntax and semantics are still open.
 
 The broader design includes classes, single inheritance, interfaces, explicit
 virtual dispatch, receiver mutability, and deterministic destruction. The
@@ -87,7 +88,9 @@ inline object model, [aliases and ownership](docs/language/ALIASES_AND_OWNERSHIP
 for call-scoped aliases and future ownership boundaries,
 [polymorphism](docs/language/POLYMORPHISM.md) for the exploratory object-model
 extension, [modules and foreign interoperation](docs/language/MODULES_AND_INTEROP.md)
-for the single-file and external-function contracts, and the
+for the single-file and external-function contracts,
+[errors and exceptional control flow](docs/language/ERRORS.md) for current
+failure boundaries and future exception constraints, and the
 [draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
 migrated.
 

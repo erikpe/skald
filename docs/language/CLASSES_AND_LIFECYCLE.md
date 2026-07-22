@@ -207,6 +207,8 @@ argument, and return contexts below.
 Skald has no recoverable construction failure. Exceptional initialization,
 partially completed object cleanup, delegation between ordinary initializers,
 and construction of base subobjects are not defined by the implemented model.
+The constraints on any future exceptional construction path are owned by
+[errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
 ## Lifecycle declarations
 
@@ -412,7 +414,8 @@ the same cleanup rule without a result.
 
 These rules cover normal exits only. The current language has no exceptions,
 recoverable failed construction or copying, loop exits, or explicit early
-destruction.
+destruction. Process termination and future exceptional cleanup are separated
+in [errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
 ## Complete-object destruction
 

@@ -44,7 +44,9 @@ Non-goals for the initial language:
 - standard library specification;
 - unchecked undefined behavior in safe code.
 
-Checked exceptions are part of the intended language design because they affect deterministic cleanup and code generation. A first compiler may still implement them after the non-exception core is working.
+Recoverable exceptions remain exploratory because they must extend
+deterministic cleanup. Their retained constraints and open decisions are owned
+by [errors and exceptional control flow](language/ERRORS.md).
 
 ---
 
@@ -95,8 +97,9 @@ Key memory-model decisions:
   borrow anchor; anchors for future ownership forms are not frozen.
 - ordinary instance `fn` methods have read-only receivers, while `mut fn` methods have mutable receivers;
 - `mut ref` is mutable but not exclusive. Two mutable alias parameters may refer to the same object.
-- Optional values are explicit using postfix `?`, for example `Dog?` or `shared Dog?`.
-- Plain `Dog` and `shared Dog` are never null, and an alias binding must always designate a live `Dog` place.
+- The implemented type set has no null value. Future optional syntax and
+  semantics remain open in
+  [types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
 
 ---
 
@@ -190,154 +193,28 @@ owns those open constraints.
 
 ### 4.6 Optional Types
 
-**Specification status:** provisional and intentionally incomplete. Optionals are deferred until after the first vertical compiler slice. This section reserves the `T?` and `none` design direction, but it does not yet define a usable optional feature.
-
-Before optionals are implementation-ready, the specification must define presence testing and binding, extraction by copy or borrow, conversion from `T` to `T?`, type inference for `none`, copy/assignment/destruction behavior, nested optionals, subtype conversions, and the interaction between optional payload lifetime and borrowing. Examples in this section are design sketches rather than a complete normative contract.
-
-Optionality is explicit and part of the type.
-
-```ska
-var dog: Dog? = maybe_get_dog();
-var heap_dog: shared Dog? = maybe_get_shared_dog();
-```
-
-`T?` means either a `T` value or no value.
-
-Plain non-optional values are never null:
-
-```ska
-var dog: Dog;             // always contains a Dog after definite initialization
-var heap_dog: shared Dog; // always contains a valid shared handle
-```
-
-Optionality applies to the complete preceding type:
-
-```ska
-Dog?              // optional inline Dog
-shared Dog?       // optional shared Dog handle
-```
-
-Optional alias parameters and aliases into optional payloads are not
-implemented or frozen. A future design must distinguish access to a container
-from a scoped view of a present payload and guarantee that a payload cannot
-disappear while aliased; the current exact-class parameter contract does not
-settle the syntax or lifetime rule.
-
-The draft spelling for the empty optional value is:
-
-```ska
-none
-```
-
-Using a value of type `T?` requires explicit presence handling. The exact pattern-matching or unwrap syntax is deferred.
+Optional values are not implemented or frozen. The retained direction and open
+syntax, presence, conversion, payload-lifetime, and lifecycle questions are
+owned by [types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
+Legacy `T?` and `none` examples are not reserved syntax.
 
 ### 4.7 Array Types
 
-**Specification status:** provisional and intentionally incomplete. Arrays, indexing, slicing, and array iteration are deferred until after the first vertical compiler slice. The syntax and properties below record the current design direction, not a complete implementation contract.
-
-Before arrays are implementation-ready, the specification must finalize construction forms, copy and assignment semantics, element and slice mutation, destruction and partial-construction cleanup, nested-array behavior, element borrowing, iteration behavior, and the observable consequences of the chosen storage model.
-
-Skald uses a built-in fixed-size array type constructor:
-
-```ska
-u8[]
-i64[]
-Dog[]
-shared Dog[]
-Dog[][]
-```
-
-Array construction:
-
-```ska
-var bytes: u8[] = u8[](1024);
-var dogs: Dog[] = Dog[](8);
-var heap_dogs: shared Dog?[] = shared Dog?[](8);
-```
-
-Default array construction is valid only when the element type has a default value:
-
-```ska
-var bytes: u8[] = u8[](1024);              // ok: u8 defaults to 0u8
-var dogs: Dog[] = Dog[](8);                // ok if Dog is default-constructible
-var maybe_dogs: Dog?[] = Dog?[](8);        // ok: elements default to none
-var heap_dogs: shared Dog?[] = shared Dog?[](8); // ok: elements default to none
-var required: shared Dog[] = shared Dog[](8);    // illegal: shared Dog has no default value
-```
-
-Array properties:
-
-- size is fixed after construction;
-- indexing is bounds-checked;
-- slicing copies into a new array;
-- nested arrays are jagged arrays;
-- `T[]` is a built-in type constructor, not user-defined generics.
-- array storage placement is an implementation detail.
-- element aliasing, storage stability, and any anchoring requirement remain
-  open with the array design.
-
-The language does not require arrays to be physically stack-allocated or heap-allocated. An implementation may choose direct inline storage, stack storage, heap-backed storage, or specialized variants based on element type, size, escape behavior, and whether the length is statically known. Observable construction, destruction, copying, indexing, and bounds-checking semantics must remain the same.
-
-Default element initialization:
-
-- primitive elements use primitive default values;
-- inline object elements are default-constructed;
-- non-optional `shared T` elements have no default value and therefore cannot be default array-constructed;
-- optional elements default to no value.
-
-Later versions may add explicit initialization forms for non-defaultable element types, such as initializer lists, fill constructors, or per-element generator syntax. For a later array-focused MVP slice, the current direction is that `shared Dog[](8)` is illegal and `shared Dog?[](8)` is legal.
+Arrays, indexing, slicing, and element borrowing are not implemented or
+frozen. Their coupled size, construction, lifetime, mutation, access, bounds-
+failure, and iteration questions are owned by
+[types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
+No bracket syntax, defaulting rule, or storage model from this legacy draft is
+a language contract.
 
 ### 4.8 Str
 
-**Specification status:** exploratory and not implemented. The
-[status matrix](language/STATUS.md#not-implemented) is authoritative; the
-details below are migration input rather than a frozen string contract.
-
-`Str` is the built-in immutable string type.
-
-`Str` is a small inline value, not a garbage-collected reference. It is backed by immutable byte storage containing `u8` bytes. The language assigns no Unicode or text-normalization semantics initially; string contents are raw bytes.
-
-Conceptual shape:
-
-```ska
-class Str {
-    private storage: shared StrStorage;
-    private start: u64;
-    private length: u64;
-}
-```
-
-`StrStorage` is a compiler/runtime-recognized storage object or equivalent internal representation. It is not required to be exposed as an ordinary public standard-library type.
-
-Properties:
-
-- `Str` is immutable.
-- String bytes cannot be mutated through a `Str`.
-- Copying a `Str` copies only the small descriptor/handle, not the bytes.
-- Slicing a `Str` may share the same immutable backing storage.
-- String manipulation should be implementable mostly in Skald code using `Str` methods and separate mutable builder/buffer types.
-- A future `StrBuf` or byte-buffer type should provide mutable construction and editing, then produce an immutable `Str`.
-
-String literals have type `Str`.
-
-```ska
-var greeting: Str = "hello";
-```
-
-A string literal evaluates to a `Str` value whose bytes are stored in compiler-emitted immutable static storage. The compiler must not lower each literal use by allocating and copying a fresh `u8[]` and running an ordinary `Str` constructor.
-
-Acceptable implementation strategies include:
-
-- emit static immutable bytes and create a small `Str` descriptor at each use;
-- emit a static canonical `Str` descriptor and copy that descriptor at each use;
-- use an internal immortal/static storage kind whose release operation is a no-op.
-
-All strategies must preserve the same observable semantics:
-
-- no per-use byte copy for literals;
-- no per-use heap allocation for literal bytes;
-- literal bytes are immutable;
-- copying a literal `Str` has the same behavior as copying any other `Str`.
+Strings and string literals are not implemented or frozen. The retained
+immutable-value direction and open type, literal, encoding, byte-semantics,
+ownership, storage, and library questions are owned by
+[types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
+`Str`, its conceptual layout, and its literal-lowering strategies in this
+legacy draft are not language contracts.
 
 ---
 
@@ -557,50 +434,13 @@ Maturity for additional primitive operations remains in the
 
 ### 10.4 Indexing, Slicing, and For-In
 
-This subsection is a provisional sketch. Indexing and slicing depend on the deferred array design, and the structural iteration protocol is not yet normative.
-
-Arrays support:
-
-```ska
-arr.len()
-arr[index]
-arr[index] = value
-arr[start:end]
-arr[start:end] = value
-```
-
-Indexing and slicing syntax may also be structural sugar over methods:
-
-```ska
-x[i]       // x.index_get(i)
-x[i] = v   // x.index_set(i, v)
-x[a:b]     // x.slice_get(a, b)
-x[a:b] = v // x.slice_set(a, b, v)
-```
-
-Structural read operations require read-only receiver methods, while structural write operations require mutable receiver methods:
-
-- `fn index_get(K) -> R`;
-- `mut fn index_set(K, W) -> unit`;
-- `fn slice_get(i64, i64) -> U`;
-- `mut fn slice_set(i64, i64, U) -> unit`.
-
-Consequently, indexing and slicing reads are available through both read-only and mutable receiver access. Index and slice assignment require mutable receiver access. For built-in arrays, the same rule means that an array reached as an inline subobject through a read-only alias cannot be modified.
-
-`for ... in` uses the following structural iteration shape:
-
-```ska
-for item in collection {
-    ...
-}
-```
-
-Eligibility requires:
-
-- `fn iter_len() -> u64`;
-- `fn iter_get(i64) -> T`.
-
-The collection expression is evaluated once, and the iteration length is snapshotted before the loop.
+Indexing, slicing, iteration, and loops are not implemented or frozen. Array
+access questions are owned by
+[types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families),
+while loop scope, evaluation, cleanup, and iterator questions are owned by
+[functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability).
+No bracket, `for ... in`, or structural-protocol example from this legacy
+draft is accepted or reserved syntax.
 
 ---
 
@@ -618,66 +458,19 @@ source form, conversion boundary, and failure rule remains unfrozen.
 
 ## 12. Error Model
 
-The initial language keeps unrecoverable runtime failures:
-
-- failed checked casts;
-- out-of-bounds array access;
-- invalid primitive casts such as out-of-range `f64 -> i64`;
-- explicit panic;
-- out-of-memory;
-- failure to complete a bootstrap runtime stdout write.
-
-These failures are unrecoverable and terminate the process unsuccessfully,
-normally through runtime panic/abort machinery, unless a future rule explicitly
-maps an operation into checked exception handling. Unless an individual
-operation says otherwise, the exact exit status or terminating signal is not a
-language guarantee.
+Current compile-time rejection, the one verified bootstrap runtime-failure
+boundary, and future exceptional-cleanup constraints are authoritative in
+[errors and exceptional control flow](language/ERRORS.md). Cast, array,
+allocation, and explicit-panic failures named by this legacy draft do not
+describe implemented operations.
 
 ### 12.1 Checked Exceptions
 
-**Specification status:** provisional and intentionally incomplete. Checked exceptions are part of the intended Skald design, but are deferred until after the first vertical compiler slice. The syntax and rules below constrain the eventual design; they do not yet define a usable exception feature.
-
-Before checked exceptions are implementation-ready, the specification must define `throw` and rethrow syntax, exception-set typing and subtyping, catch-clause ordering and binding ownership, compatibility rules for functions, overrides, interfaces, and function values, cleanup after partially completed construction or copying, and the propagation ABI or lowering. `try`, `catch`, `throw`, and `throws` should therefore be treated as reserved design syntax for now.
-
-Draft syntax:
-
-```ska
-class IoError extends Exception {
-    message: Str;
-}
-
-fn read_file(ref path: Str) -> Str throws IoError {
-    ...
-}
-
-fn main() -> i64 {
-    try {
-        var text: Str = read_file("input.txt");
-        return 0;
-    } catch err: IoError {
-        return 1;
-    }
-}
-```
-
-Rules:
-
-- functions that may throw checked exceptions must declare them with `throws`;
-- callers must catch checked exceptions or declare that they also throw them;
-- unchecked panic/abort conditions remain outside checked exception handling unless later redesigned;
-- exception objects should be heap-owned, most likely as `shared Exception`-like values, so caught exceptions cannot dangle;
-- catch clauses match by exception type, with ordinary subtype rules;
-- `finally` is deferred unless a later design needs it.
-
-Design constraints already implied by Skald:
-
-- unwinding must run destructors for all fully constructed inline locals, fields, arrays, and shared handles;
-- `destroy` members must not throw initially;
-- throwing during destruction terminates the program;
-- an `init` member that throws must destroy fully constructed subobjects but must not run `destroy` for the incomplete whole object;
-- all compiler IR that can branch to exceptional control flow must preserve cleanup ordering.
-
-Implementation may initially lower exceptions to an explicit hidden result/exception channel rather than native platform unwinding. This keeps the runtime smaller and makes destructor cleanup paths visible in the compiler.
+Recoverable exceptions are exploratory and have no reserved syntax, type rules,
+ownership model, failure behavior, or lowering contract. The only retained
+constraint is that any future exceptional control flow must extend the
+existing deterministic lifetime model, as described in
+[recoverable and checked exceptions](language/ERRORS.md#recoverable-and-checked-exceptions).
 
 ---
 
@@ -887,32 +680,12 @@ or external object ABI.
 
 Skald originated in an exploratory draft called Niflheim2, which used the earlier Niflheim language and compiler as a design starting point. The memory model and several related semantics diverged enough that the project became a distinct language with a new name, compiler, source suffix, and repository. Niflheim remains historical context rather than a compatibility target or normative dependency of this specification.
 
-Skald intentionally retains several ideas explored in Niflheim:
-
-- statically typed compiled language;
-- the primitive types `i64`, `u64`, `u8`, `bool`, `f64`, and `unit`;
-- fixed-size arrays;
-- a possible future module system, without inheriting Niflheim's source forms;
-- classes;
-- single inheritance;
-- interfaces;
-- universal root type `Obj`;
-- virtual dispatch support;
-- static methods and static variables;
-- structural indexing/slicing/iteration sugar;
-- immutable byte-backed `Str`;
-- function values without captures.
-
-Skald intentionally changes or removes:
-
-- garbage-collected references;
-- nullable reference values by default;
-- implicit virtual dispatch by default;
-- implicit mutable receiver access for every instance method; ordinary `fn` receivers are read-only and mutation requires `mut fn`;
-- ordinary reference-typed locals/fields/returns;
-- GC root/safepoint semantics;
-- null as the default value for reference-like types;
-- absence of recoverable exceptions; Skald adds checked exceptions to the design.
+Skald retains lessons from Niflheim but does not inherit its feature contracts.
+Implemented behavior is owned by the focused Skald language documents;
+unimplemented maturity is owned by the
+[status matrix](language/STATUS.md#not-implemented). Niflheim syntax,
+containers, strings, statics, callability, runtime failures, and exception
+behavior must not be treated as Skald defaults.
 
 Niflheim code should not be expected to compile as Skald code without substantial changes. The Niflheim repository may be consulted for historical implementation context, but Skald behavior is defined by Skald's own specification and documentation.
 
@@ -920,113 +693,8 @@ Niflheim code should not be expected to compile as Skald code without substantia
 
 ## 15. Specification Status and Open Design Questions
 
-### 15.1 Deferred Language Areas
-
-The following intended features are deliberately not specified well enough to implement yet:
-
-- optionals, including presence binding, extraction, conversions, payload lifetime, and ownership behavior;
-- arrays, including construction, element lifetime, copying, mutation, indexing, and slicing;
-- loops and iteration, including `while`, `for ... in`, `break`, `continue`, and the iterator contract;
-- checked exceptions, including throwing, catching, exception-set checking, cleanup, and lowering;
-- locally declared alias bindings and scoped narrowing aliases; restricted
-  call-scoped parameter aliases are implemented as described in
-  [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md).
-
-Their existing sections preserve design direction and reserve likely syntax,
-but are non-normative where they do not give a complete rule. These features
-are outside the currently implemented language subset.
-
-### 15.2 Other Major Underspecified Areas
-
-The following are also substantial gaps. Each must be settled before the
-corresponding language area is considered complete:
-
-- **Lexical and grammatical definition:** the implemented primitive and
-  restricted inline-object profile has an explicit lexical and grammatical
-  contract in [the implemented grammar](language/GRAMMAR.md), but the complete
-  language still needs token and comment rules, additional literal families,
-  later operator precedence and associativity, and rules for resolving
-  syntactic ambiguities.
-- **Name, type, and call resolution:** the implemented subset defines
-  single-file function/class and lexical-local resolution without overloading
-  or implicit conversions. Future cross-module identity, lookup, visibility,
-  and ambiguity choices are owned by
-  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md); later
-  conversion ranking remains a separate open type-system question.
-- **Primitive edge-case semantics:** the implemented boundary and open signed
-  `i64` overflow behavior are owned by
-  [Types, Values, and Expressions](language/TYPES_AND_VALUES.md#operators).
-  Division, remainder, shifts, explicit casts, comparisons, decimal floating
-  formatting, and future constant evaluation remain open. Every additional
-  backend must separately validate its target realization.
-- **Evaluation and cleanup ordering:** the implemented subset defines
-  left-to-right operands/arguments plus receiver, field, and direct-
-  construction order. The current normal-flow cleanup, full-expression, and
-  temporary rules are authoritative in
-  [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md#temporaries-and-full-expressions).
-  The complete language still needs cleanup sequencing for loops, exceptions,
-  and later control-flow forms.
-- **Initialization rules:** the implemented inline-object profile defines
-  straight-line definite initialization, exact direct field construction,
-  normal-return subobject liveness, nested access, acyclic containment, and
-  exact-class copy capabilities in the current no-inheritance model. Default
-  initialization in other storage contexts, base-subobject ordering, branching
-  or throwing initializers, and partial-construction cleanup remain open.
-- **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
-- **Polymorphism:** the intended inheritance, view, dispatch, interface,
-  type-test, and narrowing constraints—and every choice still required before
-  implementation—are collected in
-  [polymorphism](language/POLYMORPHISM.md). This legacy draft does not freeze
-  their syntax or failure behavior.
-- **Modules and foreign interoperation:** current behavior and the unresolved
-  multiple-file, visibility, build, coalescing, and broader FFI choices are
-  owned by [modules and foreign interoperation](language/MODULES_AND_INTEROP.md).
-- **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
-
-The implemented normal-flow lifecycle contract is authoritative in
-[classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md). Loop,
-failed-construction, and exceptional cleanup remain broader ownership-model
-gaps that must be settled before their associated features are implemented.
-
-### 15.3 Open Design Questions
-
-The following decisions are intentionally not finalized by this draft:
-
-1. Should whole-object replacement through `mut ref` exist with explicit syntax?
-2. Which explicit array initialization forms should be added for non-defaultable element types?
-3. How much of the old Niflheim unsafe systems-layer proposal should exist in Skald, if any?
-4. What is the exact checked-exception syntax and lowering strategy?
-
-### 15.4 Resolved Decisions
-
-Resolved decisions in this draft:
-
-- the language is named Skald, its compiler is named `skac`, and source files use the `.ska` suffix;
-- lifecycle declarations use the contextual special-member introducers `init`, `assign`, and `destroy` without `fn`;
-- those contextual words remain available as ordinary identifiers and special members do not occupy the ordinary method namespace;
-- instance methods and special members use `self`, not `__self`, for the current object;
-- the exploratory polymorphism direction and its unresolved profile choices
-  are owned by [polymorphism](language/POLYMORPHISM.md), not by this resolved-
-  decision list;
-- default array construction is valid only for element types with default values;
-- array physical storage placement is an implementation detail;
-- `Str` is an immutable small inline value backed by immutable byte storage;
-- string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the implemented single-file, entry-point, namespace, and primitive external-
-  function contracts follow
-  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
-- `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
-- the current runtime ABI implements `ska_rt_println_bool`, which writes
-  lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable
-  detected-output-failure policy, and remains an ordinary external function;
-- runtime ABI version 4 implements `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;
-- exact-class initialization, copy capabilities, assignment, object parameters
-  and results, temporaries, permitted elision, and deterministic destruction
-  follow the implemented
-  [class lifecycle contract](language/CLASSES_AND_LIFECYCLE.md);
-- implemented exact-class alias parameters follow the focused
-  [aliases and ownership contract](language/ALIASES_AND_OWNERSHIP.md); shared,
-  local, anchored, and polymorphic alias extensions remain non-implemented
-  design areas at the maturity recorded in the status matrix.
-
-The remaining open questions do not invalidate the core memory-model direction, but some must be resolved before their associated features become normative.
+Current support and maturity are authoritative in the
+[status matrix](language/STATUS.md). Implemented rules and actionable open
+questions now live with their focused language owners. This legacy document no
+longer maintains a second deferred-feature inventory, open-question list, or
+chronological resolved-decisions appendix.

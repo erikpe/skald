@@ -121,7 +121,9 @@ A future module design must settle at least:
 Broader foreign interoperation must separately settle foreign type mappings,
 ownership, callbacks, variadics, alternate symbols and calling conventions,
 failure behavior, and which guarantees can cross the trust boundary. None of
-those choices should be inferred from the current primitive-only profile.
+those choices should be inferred from the current primitive-only profile. The
+current foreign-failure boundary is defined in
+[errors and exceptional control flow](ERRORS.md#current-runtime-failures).
 
 ## Implementation boundary
 
