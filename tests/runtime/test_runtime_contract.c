@@ -19,6 +19,7 @@ _Static_assert(DBL_MIN_EXP == -1021, "runtime test requires the binary64 exponen
 _Static_assert(DBL_MAX_EXP == 1024, "runtime test requires the binary64 exponent range");
 
 int main(void) {
+    SKALD_RUNTIME_ABI_MARKER();
     const uint64_t reported_version = ska_rt_abi_version();
 
     if (reported_version != SKALD_RUNTIME_ABI_VERSION) {

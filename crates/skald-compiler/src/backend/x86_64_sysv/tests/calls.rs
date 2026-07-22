@@ -155,7 +155,13 @@ fn emits_a_c_compatible_entry_boundary() {
     let output = assembly("fn helper() -> i64 { return 1; } fn main() -> i64 { return 2; }");
 
     assert!(output.contains(".globl main\n.type main, @function\nmain:"));
-    assert!(output.contains("main:\n    pushq %rbp\n    movq %rsp, %rbp\n    call .Lska_fn_1"));
+    assert!(output.contains(concat!(
+        "main:\n",
+        "    pushq %rbp\n",
+        "    movq %rsp, %rbp\n",
+        "    call ska_rt_abi_v4\n",
+        "    call .Lska_fn_1",
+    )));
     assert!(!output.contains(".globl .Lska_fn_"));
 }
 

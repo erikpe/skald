@@ -2630,6 +2630,15 @@ Implementation may initially lower exceptions to an explicit hidden result/excep
 
 Skald is designed around a small runtime with no garbage collector.
 
+The implemented runtime ABI is version 4. Every compiler-generated process
+entry wrapper calls the no-op marker `ska_rt_abi_v4` before entering Skald
+code. The marker's version is part of its linker symbol, so an archive built
+for another ABI cannot satisfy the reference and executable linking fails.
+Every incompatible ABI revision must introduce a new marker name and update
+the compiler reference in the same change. `ska_rt_abi_version()` remains
+available for runtime inspection and direct contract tests; querying it is not
+the executable compatibility check.
+
 Runtime responsibilities:
 
 - heap allocation and deallocation;

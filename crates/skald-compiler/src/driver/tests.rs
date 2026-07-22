@@ -322,6 +322,43 @@ fn unresolved_source_external_is_reported_as_a_toolchain_failure() {
 }
 
 #[test]
+fn runtime_archive_without_current_abi_marker_is_a_toolchain_failure() {
+    let directory = TemporaryDirectory::new("driver-runtime-abi-mismatch").unwrap();
+    let output = directory.join("program");
+    fs::write(&output, "previous executable").unwrap();
+    let incompatible_archive = directory.join("libskald_runtime.a");
+    fs::write(&incompatible_archive, b"!<arch>\n").unwrap();
+    let assembly = compile_source_to_assembly(
+        "compatible-source.ska",
+        "fn main() -> i64 { return 0; }",
+        Target::X86_64SysV,
+    )
+    .unwrap()
+    .assembly;
+
+    let error = Toolchain::new("cc", incompatible_archive)
+        .link_assembly(&assembly, &output)
+        .unwrap_err();
+
+    let ToolchainError::Failed {
+        tool,
+        exit_code,
+        details,
+    } = error
+    else {
+        panic!("expected a structured linker failure, got {error:?}");
+    };
+    assert_eq!(tool, OsString::from("cc"));
+    assert!(exit_code.is_some());
+    assert!(
+        details.contains("ska_rt_abi_v4"),
+        "linker did not identify the missing ABI marker: {details}"
+    );
+    assert_eq!(fs::read_to_string(output).unwrap(), "previous executable");
+    assert!(temporary_artifacts(directory.path()).is_empty());
+}
+
+#[test]
 fn composes_the_complete_frontend_and_backend_pipeline() {
     let artifact = compile_source_to_assembly(
         "complete.ska",

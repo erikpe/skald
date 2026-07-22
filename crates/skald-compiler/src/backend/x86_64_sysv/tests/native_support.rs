@@ -35,6 +35,13 @@ pub(super) fn run_native_assembly_output(output: &str) -> std::process::Output {
 
 fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
     let executable = TemporaryFile::new("native-executable").unwrap();
+    // Backend execution tests deliberately avoid depending on a prebuilt C
+    // runtime. Supply only the link guard; driver and golden tests exercise
+    // the real archive boundary.
+    let linkable_output = format!(
+        ".text\n.globl {0}\n.type {0}, @function\n{0}:\n    ret\n.size {0}, .-{0}\n\n{output}",
+        RUNTIME_ABI_MARKER_SYMBOL,
+    );
     let mut child = Command::new("cc")
         .args(["-x", "assembler", "-o"])
         .arg(executable.path())
@@ -48,7 +55,7 @@ fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
         .stdin
         .take()
         .unwrap()
-        .write_all(output.as_bytes())
+        .write_all(linkable_output.as_bytes())
         .unwrap();
     let linked = child.wait_with_output().unwrap();
     assert!(

@@ -5,7 +5,12 @@
 #include <stdint.h>
 
 #define SKALD_RUNTIME_ABI_VERSION UINT64_C(4)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v4
 
+/* Version-specific link guard required by compiler-generated executables. */
+void SKALD_RUNTIME_ABI_MARKER(void);
+
+/* Runtime inspection hook; link compatibility uses SKALD_RUNTIME_ABI_MARKER. */
 uint64_t ska_rt_abi_version(void);
 
 /* Writes the shortest ASCII decimal representation and one LF to stdout.

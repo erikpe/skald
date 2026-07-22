@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    backend::{emit_assembly, Target},
+    backend::{emit_assembly, Target, RUNTIME_ABI_MARKER_SYMBOL},
     identity::{
         BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId, ParameterId,
     },

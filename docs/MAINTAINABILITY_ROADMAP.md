@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ1 is next.
+Status: in progress; CQ2 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -61,7 +61,7 @@ count.
 ## 2. Progress summary
 
 - [x] CQ0 — Declare and expose the supported toolchain checks
-- [ ] CQ1 — Enforce the runtime ABI at link time
+- [x] CQ1 — Enforce the runtime ABI at link time
 - [ ] CQ2 — Establish the MIR verifier facade and shared foundations
 - [ ] CQ3 — Extract MIR program and declaration verification
 - [ ] CQ4 — Extract MIR callable-body and instruction verification
@@ -113,13 +113,13 @@ from clean checkouts, and the repository contains no CI job configuration.
 **Purpose:** Make a stale or incompatible runtime archive fail deterministically
 instead of relying on a version value that the compiler never checks.
 
-- [ ] Add a version-specific runtime marker symbol for the current ABI.
-- [ ] Make every generated executable reference that marker without changing
+- [x] Add a version-specific runtime marker symbol for the current ABI.
+- [x] Make every generated executable reference that marker without changing
       Skald source semantics or successful program output.
-- [ ] Keep `ska_rt_abi_version` only if runtime inspection remains useful.
-- [ ] Add a driver/toolchain test using an archive with the marker missing or
+- [x] Keep `ska_rt_abi_version` only if runtime inspection remains useful.
+- [x] Add a driver/toolchain test using an archive with the marker missing or
       deliberately mismatched.
-- [ ] Update the runtime ABI and repository-architecture documentation with the
+- [x] Update the runtime ABI and repository-architecture documentation with the
       exact compatibility mechanism.
 
 **Acceptance criteria:** The current runtime links normally, an incompatible

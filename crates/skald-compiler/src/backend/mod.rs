@@ -9,6 +9,10 @@ use crate::{identity::CallableId, mir::MirProgram};
 
 mod x86_64_sysv;
 
+// Keep this link guard synchronized with runtime/include/skald_runtime.h.
+// Every incompatible runtime ABI revision must use a new symbol name.
+const RUNTIME_ABI_MARKER_SYMBOL: &str = "ska_rt_abi_v4";
+
 pub const DEFAULT_TARGET_NAME: &str = "x86_64-sysv";
 pub const SUPPORTED_TARGET_NAMES: &[&str] = &[DEFAULT_TARGET_NAME];
 

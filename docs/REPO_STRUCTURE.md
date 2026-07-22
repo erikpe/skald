@@ -102,7 +102,14 @@ phase owns the vocabulary and structure of its own deterministic dump.
 ### `runtime/`
 
 The C11 runtime builds `libskald_runtime.a` and exposes a versioned ABI. Its
-current bootstrap output operations are:
+version-4 archive defines the no-op link marker `ska_rt_abi_v4`. Every backend
+must reference the current marker from its generated process entry wrapper;
+the linker therefore rejects an archive for a different ABI before producing
+an executable. Incompatible runtime revisions must change both the marker
+symbol and the compiler reference. The separate `ska_rt_abi_version()` query
+is retained for inspection and direct runtime tests, not link compatibility.
+
+The current bootstrap output operations are:
 
 ```text
 ska_rt_println_i64

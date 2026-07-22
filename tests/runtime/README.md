@@ -12,8 +12,9 @@ make runtime-test
 
 The suite contains three focused executables:
 
-- `test_runtime_contract.c` verifies the public ABI version and the C platform
-  properties required by Skald's primitive representations;
+- `test_runtime_contract.c` links and calls the version-4 marker, verifies the
+  inspectable ABI version, and checks the C platform properties required by
+  Skald's primitive representations;
 - `test_runtime_output.c` captures stdout and compares successful output
   records byte for byte;
 - `test_runtime_output_failure.c` uses child processes to verify that every
@@ -43,6 +44,13 @@ consecutive records mixed with the older output operations. C11 compile-time
 checks require IEC 60559 semantics, eight-bit bytes, and the binary radix,
 significand width, exponent range, and storage size needed for IEEE-754
 binary64.
+
+The public header names the version-specific no-op marker `ska_rt_abi_v4`
+through `SKALD_RUNTIME_ABI_MARKER`. Compiler-generated entry wrappers call it
+before Skald code. A stale archive therefore leaves a normal undefined symbol
+and fails during linking. An incompatible ABI change must rename the marker;
+the numeric `ska_rt_abi_version()` query remains useful for inspection but is
+not the link guard.
 
 Native compiler goldens reuse these directly tested symbols to cover locals,
 internal calls, mixed integer/SSE register and stack placement, and consecutive

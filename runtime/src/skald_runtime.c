@@ -99,6 +99,9 @@ static void ska_rt_println_unsigned(uint64_t value) {
     ska_rt_write_stdout_record(output, output_length);
 }
 
+void SKALD_RUNTIME_ABI_MARKER(void) {
+}
+
 uint64_t ska_rt_abi_version(void) {
     return SKALD_RUNTIME_ABI_VERSION;
 }

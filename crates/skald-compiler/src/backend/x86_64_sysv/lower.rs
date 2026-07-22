@@ -1,7 +1,7 @@
 //! Instruction selection and ABI lowering into the target assembly model.
 
 use crate::{
-    backend::BackendError,
+    backend::{BackendError, RUNTIME_ABI_MARKER_SYMBOL},
     identity::CallableId,
     mir::{BlockId, MirCallableSignature, MirDefinitionRef, MirInstruction, MirProgram},
 };
@@ -105,6 +105,7 @@ fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
                 source: Register::Rsp.into(),
                 destination: Register::Rbp.into(),
             },
+            Instruction::Call(RUNTIME_ABI_MARKER_SYMBOL.to_owned()),
             Instruction::Call(symbol::callable(program, entry)),
             Instruction::Leave,
             Instruction::Return,
