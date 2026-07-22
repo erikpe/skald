@@ -102,7 +102,7 @@ fn function_name_without_a_call_is_not_a_value() {
 }
 
 #[test]
-fn object_declarations_cross_the_obj6_resolution_boundary() {
+fn object_declarations_cross_the_resolution_boundary() {
     let output = resolve_text(concat!(
         "class Counter { value: i64; init(value: i64) { self.value = value; } }\n",
         "fn main() -> i64 { return 0; }\n",

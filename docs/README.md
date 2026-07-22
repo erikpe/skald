@@ -16,11 +16,8 @@ direction:
 
 Active implementation plans:
 
-- [Compiler maintainability roadmap](MAINTAINABILITY_ROADMAP.md) — reproducible
-  quality gates, enforced contracts, focused compiler modules, and sustainable
-  test infrastructure.
 - [Maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md) — follow-up
-  findings kept outside the active roadmap's reviewed scope.
+  findings kept outside the completed cleanup roadmap's reviewed scope.
 - [Polymorphism roadmap](POLYMORPHISM_ROADMAP.md) — single inheritance, base
   lifecycle composition, virtual dispatch, interfaces, and checked narrowing.
 

@@ -1,7 +1,8 @@
 # Polymorphism Roadmap
 
-Status: planned; PM0 design work may proceed, but implementation waits for
-CQ0-CQ16 in the [compiler maintainability roadmap](MAINTAINABILITY_ROADMAP.md).
+Status: planned; the compiler-maintainability prerequisite is complete and PM0
+is next. The completed cleanup plan is preserved in the
+[archived compiler maintainability roadmap](archive/MAINTAINABILITY_ROADMAP.md).
 
 This roadmap extends Skald's completed exact-class object-value model with
 single inheritance, base subobjects, opt-in virtual dispatch, interfaces, and

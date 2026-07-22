@@ -919,7 +919,7 @@ lowered through complete identity paths and execute against recursively laid
 out x86-64 storage. Base classes, interfaces, static members, `final`, access
 modifiers, virtual/override declarations, and `assign` remain rejected by the
 current compiler. Section 5.4.5 defines the implemented restricted `destroy`
-extension, and Section 5.4.6 freezes the staged object-value extension. Empty
+extension, and Section 5.4.6 freezes the exact-class object-value extension. Empty
 classes are valid.
 
 Every class declares exactly one explicit, non-overloaded `init`. It has an
@@ -1040,8 +1040,9 @@ static, element, or capture position are invalid.
 
 Alias parameters are accepted on internally defined top-level functions,
 instance methods, and initializers. An external declaration cannot contain an
-alias parameter. OVS6 extends ordinary internal by-value parameters with exact
-concrete class names; the resulting parameter owns a copy and is not an alias.
+alias parameter. The exact-class object-value profile extends ordinary internal
+by-value parameters with concrete class names; the resulting parameter owns a
+copy and is not an alias.
 External value parameters remain primitive-only. This alias profile accepts
 only an exact concrete class as the designated type. Primitive, `unit`,
 optional, array, `shared`, interface, and function alias types, along with
@@ -1135,13 +1136,13 @@ The target-independent compiler contract for this profile is:
 Local alias declarations, primitive alias parameters, shared sources and borrow
 anchors, polymorphism, whole-object replacement, and alias-bearing function
 values remain deferred. Exact-class internal value parameters and results are
-implemented by the staged object-value profile in Section 5.4.6.
+implemented by the exact-class object-value profile in Section 5.4.6.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
-**Implementation status:** implemented; IOF0–IOF6 of the
-[archived Class-Typed Inline Object Fields Roadmap](archive/INLINE_OBJECT_FIELDS_ROADMAP.md)
-are complete. The compiler accepts and resolves class-typed field declarations,
+**Implementation status:** implemented. The completed
+[Class-Typed Inline Object Fields Roadmap](archive/INLINE_OBJECT_FIELDS_ROADMAP.md)
+is archived. The compiler accepts and resolves class-typed field declarations,
 records canonical HIR field types, rejects recursive containment before target
 selection, represents nested object places as root bindings plus ordered
 semantic field identities, and distinguishes direct subobject construction
@@ -1151,7 +1152,7 @@ arguments with one root-derived access capability. Verified MIR retains those
 paths as semantic field identities, and the x86-64 backend resolves them with
 checked target offsets for deterministic native execution. The parser-facing
 extension is recorded in
-[`grammar/README.md`](../grammar/README.md#frozen-staged-extension-class-typed-inline-fields).
+[`grammar/README.md`](../grammar/README.md#implemented-extension-class-typed-inline-fields).
 
 This profile extends the restricted stage-0 object and alias profiles with
 class-typed fields, direct construction into those fields, recursively
@@ -1397,7 +1398,7 @@ construction and exceptional cleanup remain later work.
 There is no implicit or synthesized copy construction or assignment. A user
 may pass a field to an existing explicit alias parameter, including an
 initializer declared as `init(ref other: T)`, but copying the underlying field
-as a value remains unavailable. The staged profile in Section 5.4.6 freezes
+as a value remains unavailable. The exact-class profile in Section 5.4.6 freezes
 later synthesized copy operations as composition of field capabilities rather
 than untyped storage.
 
@@ -1412,8 +1413,9 @@ liveness boundary frozen here.
 
 #### 5.4.5 Frozen Local Deterministic-Destruction Profile
 
-**Implementation status:** implemented and published by DD0–DD6 of the
-[archived Deterministic Destruction Roadmap](archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md).
+**Implementation status:** implemented. The completed
+[Deterministic Destruction Roadmap](archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md)
+is archived.
 The parser-facing extension is recorded in
 [`grammar/README.md`](../grammar/README.md#restricted-extension-deterministic-destruction).
 
@@ -1580,34 +1582,33 @@ language must follow the order above. Later copy/value, inheritance, shared,
 loop, and exception roadmaps must extend this initialized-place model rather
 than redefining the normal local-object behavior frozen here.
 
-#### 5.4.6 Frozen Staged Object-Value Profile
+#### 5.4.6 Frozen Exact-Class Object-Value Profile
 
-**Implementation status:** semantic contract frozen by OVS0 of the
-[archived Object Value Semantics Roadmap](archive/OBJECT_VALUE_SEMANTICS_ROADMAP.md).
-OVS0 does not enable copy or object-value source forms. OVS1 parses and resolves
-copy lifecycle declarations to stable identities. OVS2 type-checks their bodies and
-records canonical user, ordered synthesized, or unavailable capabilities in
-HIR. OVS3 accepts direct local copy initialization and live-object assignment
-between exact-class places, with explicit source, destination, and selected
-operation in HIR. OVS4 represents and verifies copy operations, selected
+**Implementation status:** implemented. The semantic contract and implementation
+history are preserved in the archived
+[Object Value Semantics Roadmap](archive/OBJECT_VALUE_SEMANTICS_ROADMAP.md).
+The compiler parses and resolves copy lifecycle declarations to stable
+identities, type-checks their bodies, and records canonical user, ordered
+synthesized, or unavailable capabilities in HIR. Direct local copy
+initialization and live-object assignment retain explicit source, destination,
+and selected operations. MIR represents and verifies copy operations,
 capabilities, ordered synthesized field composition, and bounded
-full-expression temporary cleanup without class-valued MIR values. OVS5 lowers
-user lifecycle calls and recursively synthesized field operations through
+full-expression temporary cleanup without class-valued MIR values. The backend
+lowers user lifecycle calls and recursively synthesized field operations through
 checked x86-64 place addressing, with explicit temporary frame storage and no
-implicit byte-copy path. OVS6 implements internal exact-class value parameters
-from existing object-place arguments. HIR selects their copy construction;
-MIR makes caller destination ownership, transfer, callee cleanup, and ordering
-explicit; and x86-64 passes an address without exposing that target choice to
-semantic IR.
+implicit byte-copy path. Internal exact-class value parameters accept existing
+object-place arguments: HIR selects their copy construction; MIR makes caller
+destination ownership, transfer, callee cleanup, and ordering explicit; and
+x86-64 passes an address without exposing that target choice to semantic IR.
 
-OVS7 implements internal exact-class function and method results. A return of
+Internal exact-class function and method results use caller-provided storage. A return of
 an existing place copy-constructs distinct caller-provided storage before
 callee cleanup. HIR records destination-oriented object-result calls; MIR has
 a dedicated return-storage slot and explicit call destination; and x86-64
 passes the destination as a hidden first integer-class address. Object-
 returning calls may initialize exact-class locals directly.
 
-OVS8 completes the frozen expression profile. Produced exact-class sources may
+The implemented expression profile allows produced exact-class sources to
 initialize locals, feed assignment, initialize value parameters, and provide
 object returns. HIR distinguishes a final-destination producer from a source
 that requires materialization; MIR owns every required temporary and its
@@ -1628,7 +1629,7 @@ copy operation.
 
 ##### Lifecycle declarations and identities
 
-The staged class model has three independent lifecycle slots:
+The implemented exact-class model has three independent lifecycle slots:
 
 1. exactly one explicit ordinary initializer, as in the current profile;
 2. at most one copy constructor;
@@ -1782,9 +1783,9 @@ constructed from it, and it remains live through the call. Construction of
 that parameter completes before the next argument is evaluated. The callee
 body begins only after every argument and owned parameter has completed.
 
-The implemented OVS8 profile accepts both branches above. Produced arguments
-are materialized before their parameter copy and remain live through the
-complete call.
+The implemented profile accepts both branches above. Produced arguments are
+materialized before their parameter copy and remain live through the complete
+call.
 
 On every supported normal callee exit, the return result is established first,
 then body temporaries and locals are cleaned according to their scopes, and
@@ -1821,7 +1822,7 @@ Each temporary becomes live only when its construction completes and is then
 destroyed exactly once in reverse completion order at the end of its full
 expression.
 
-The staged full-expression boundaries are:
+The implemented full-expression boundaries are:
 
 - the complete initializer of one local declaration;
 - the complete right side of one assignment statement;
@@ -1888,7 +1889,7 @@ cleanup model rather than treating aggregate bytes as ownership.
 
 ### 5.5 Initialization Members
 
-Section 5.4.6 is the implementation contract for the staged exact-class,
+Section 5.4.6 is the implementation contract for the exact-class,
 normal-flow compiler. The broader rules in this section also describe later
 default initialization, inheritance, and constructor families that remain
 outside that profile.
@@ -1946,10 +1947,10 @@ Rules:
   synthesized assignment runs its ordinary field sequence without an implicit
   identity guard, and every selected user member retains its normal effects;
 - user-defined `init`, copy-construction `init`, `assign`, and `destroy` members may have side effects;
-- the staged compiler synthesizes copy construction when every field supports
+- the current compiler synthesizes copy construction when every field supports
   copy construction; later inheritance extends that requirement to the base
   subobject;
-- the staged compiler synthesizes copy assignment when every field supports
+- the current compiler synthesizes copy assignment when every field supports
   copy assignment; later `final` and inheritance rules may make that operation
   unavailable;
 - synthesized copy construction copies fields in declaration order;
@@ -2079,7 +2080,7 @@ Optional copy elision has the following rules:
 - the omitted copy-constructor and temporary-destructor calls do not occur, even if they would have had side effects;
 - copy elision does not apply to assignment to an already-initialized object.
 
-For the staged exact-class profile, Section 5.4.6 fixes the initial compiler's
+For the exact-class profile, Section 5.4.6 fixes the current compiler's
 policy to elide every eligible occurrence. This keeps compiler artifacts and
 observable lifecycle effects deterministic while preserving the broader
 language permission described here.
@@ -2963,7 +2964,7 @@ corresponding language area is considered complete:
   construction order in [`grammar/README.md`](../grammar/README.md). The
   frozen local deterministic-destruction profile additionally defines cleanup
   for owning locals on implemented normal block, conditional, and return exits.
-  The staged object-value profile implements full-expression boundaries and
+  The exact-class object-value profile implements full-expression boundaries and
   temporary cleanup for its normal-flow source contexts. The complete language
   still needs cleanup sequencing for loops, exceptions, and later control-flow
   forms.
@@ -2973,7 +2974,7 @@ corresponding language area is considered complete:
   defines exact direct field construction, normal-return subobject liveness,
   nested access, and acyclic containment. Default initialization in other
   storage contexts, base-subobject ordering, branching or throwing
-  initializers and partial-construction cleanup remain open. The staged object-
+  initializers and partial-construction cleanup remain open. The exact-class object-
   value profile implements exact-class copy/assignment synthesis and bodies for
   the current no-inheritance field model.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
@@ -3073,7 +3074,7 @@ Resolved decisions in this draft:
 - the local destruction profile does not add explicit early destruction,
   object values or copying, failed-construction or exceptional cleanup,
   inheritance, shared ownership, deallocation, arrays, or loop exits;
-- the frozen staged object-value profile retains one required ordinary
+- the frozen exact-class object-value profile retains one required ordinary
   initializer and adds independent optional user slots for exact-class copy
   construction and copy assignment;
 - copy construction uses `init(ref other: T)` and is recognized from the

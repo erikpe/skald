@@ -10,7 +10,7 @@ fn unused_destructor_bodies_lower_through_the_backend() {
         ),
         Target::X86_64SysV,
     )
-    .expect("DD5 must lower valid destructor definitions deterministically");
+    .expect("valid destructor definitions must lower deterministically");
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_destroy_0"));
@@ -31,7 +31,7 @@ fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
         ),
         Target::X86_64SysV,
     )
-    .expect("OVS4 copy lifecycle bodies must lower as MIR member definitions");
+    .expect("copy lifecycle bodies must lower as MIR member definitions");
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_init_0"));
@@ -101,7 +101,7 @@ fn composes_the_complete_object_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn ovs5_copy_source_reaches_the_backend() {
+fn local_copy_operations_reach_the_backend() {
     let artifact = compile_source_to_assembly(
         "copy.ska",
         concat!(
@@ -115,7 +115,7 @@ fn ovs5_copy_source_reaches_the_backend() {
         ),
         Target::X86_64SysV,
     )
-    .expect("OVS5 local copy operations must lower through the backend");
+    .expect("local copy operations must lower through the backend");
     assert!(artifact.report.diagnostics.is_empty());
     assert!(!artifact.assembly.contains("memcpy"));
 }

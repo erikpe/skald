@@ -102,6 +102,10 @@ facade. Phase-specific tests live beside their implementation and are split by
 behavior when they become substantial. Shared test pipelines and mutation
 helpers are compiled only under `cfg(test)`.
 
+Rust tests that consume only the intentional public compiler API live under
+`crates/skald-compiler/tests/`. Top-level `tests/compiler/` owns reusable
+non-Rust corpus data; it is not a second Rust integration-test root.
+
 Resolution keeps source-name-bearing declarations and typed-ID tables separate
 from executable bodies and statements, expression trees, and selected object
 paths. Its public `resolve` facade explicitly re-exports the phase products so
@@ -298,11 +302,11 @@ Dense declaration tables and sparse optional-definition tables share private
 validated storage utilities while retaining phase-specific public wrappers.
 Member definitions use stable callable keys and deterministic ordering.
 
-DD2 represents a destructor through its owner-qualified `DestructorId`, a
-dedicated HIR declaration, and the shared typed member-body representation.
-Its implicit mutable `self`, `unit` result, locals, fields, calls, aliases, and
-control flow use the same access and checking vocabulary as ordinary methods.
-DD3 lowers those bodies into ordinary MIR member definitions and records one
+A destructor is represented by its owner-qualified `DestructorId`, a dedicated
+HIR declaration, and the shared typed member-body representation. Its implicit
+mutable `self`, `unit` result, locals, fields, calls, aliases, and control flow
+use the same access and checking vocabulary as ordinary methods. Lowering
+carries destructor bodies into ordinary MIR member definitions and records one
 canonical class destruction plan: the optional user body followed by
 class-typed fields in reverse declaration order.
 
@@ -514,12 +518,18 @@ path, a symbolic link, or a hard link are rejected.
 
 ## Testing
 
-The repository uses four complementary layers:
+The repository uses five complementary layers:
 
 1. colocated Rust unit tests for phase behavior and invariants;
-2. exact AST/resolved/HIR/MIR/assembly dumps;
-3. C runtime contract, successful-output, and fatal-output tests;
-4. golden source programs for native behavior and exact diagnostics.
+2. crate integration tests for public API and cross-phase behavior;
+3. exact AST/resolved/HIR/MIR/assembly dumps;
+4. C runtime contract, successful-output, and fatal-output tests;
+5. golden source programs for native behavior and exact diagnostics.
+
+Deterministic hostile frontend inputs and MIR mutations supplement these
+layers. Retained non-Rust inputs live under `tests/compiler/robustness/`; the
+Rust harnesses remain beside their owning phase or in the compiler crate's
+integration-test directory.
 
 Golden programs are compiled in independent processes to compare assembly or
 diagnostics byte-for-byte. Native cases separately check stdout, empty stderr,
@@ -532,21 +542,15 @@ destruction, copies, assignment, parameter ownership, result transfer,
 full-expression cleanup, empty and padded layouts, and both elided and
 materialized construction.
 
-The root commands are:
+`make help` is the authoritative command inventory. The architecture-relevant
+validation interfaces are:
 
 | Command | Purpose |
 |---|---|
-| `make fmt` | format Rust source |
-| `make fmt-check` | verify formatting |
-| `make build-check` | check all Rust targets |
-| `make lint` | run Clippy with warnings denied |
-| `make compiler-test` | run workspace tests |
-| `make golden-test` | run native and compile-failure goldens |
-| `make robustness-smoke` | run bounded deterministic frontend and MIR robustness cases |
-| `make robustness-long` | run the longer deterministic frontend corpus |
-| `make runtime` | build the runtime archive |
-| `make runtime-test` | run direct runtime tests |
 | `make check` | run the complete validation suite |
+| `make msrv-check` | compile all targets with the declared minimum Rust version |
+| `make robustness-smoke` | run the bounded deterministic robustness corpus |
+| `make robustness-long` | run the longer deterministic robustness corpus |
 
 ## Extension policy
 

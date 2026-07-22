@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ11 is next.
+Status: complete; CQ0-CQ18 are implemented and verified.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -78,7 +78,7 @@ count.
 - [x] CQ15 — Introduce a small test-only MIR fixture vocabulary
 - [x] CQ16 — Migrate and divide oversized test suites
 - [x] CQ17 — Add generative frontend and MIR robustness tests
-- [ ] CQ18 — Align living documentation and close the cleanup
+- [x] CQ18 — Align living documentation and close the cleanup
 
 ## 3. PR-sized tasks
 
@@ -439,17 +439,17 @@ test.
 **Purpose:** Leave current documentation concise, internally consistent, and
 free of historical implementation shorthand.
 
-- [ ] Replace milestone codes such as OBJ, DD, IOF, and OVS in active test names,
+- [x] Replace milestone codes such as OBJ, DD, IOF, and OVS in active test names,
       comments, grammar notes, and architecture documentation with semantic
       descriptions.
-- [ ] Keep milestone vocabulary unchanged in archived roadmaps.
-- [ ] Resolve the competing `tests/compiler/` and crate integration-test
+- [x] Keep milestone vocabulary unchanged in archived roadmaps.
+- [x] Resolve the competing `tests/compiler/` and crate integration-test
       guidance; remove an empty reserved location if it is no longer canonical.
-- [ ] Verify that module, API, toolchain, runtime ABI, test, and debugging
+- [x] Verify that module, API, toolchain, runtime ABI, test, and debugging
       documentation describes the completed implementation.
-- [ ] Run the complete quality gate from a clean checkout and review remaining
+- [x] Run the complete quality gate from a clean checkout and review remaining
       large files/functions for cohesive responsibility rather than size alone.
-- [ ] Mark CQ0-CQ18 complete, move this roadmap to `docs/archive/`, update the
+- [x] Mark CQ0-CQ18 complete, move this roadmap to `docs/archive/`, update the
       archive index, and remove it from active plans.
 
 **Acceptance criteria:** Living documentation describes only current behavior

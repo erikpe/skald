@@ -110,7 +110,7 @@ fn direct_call_arity_is_checked_against_the_resolved_target() {
 }
 
 #[test]
-fn resolved_objects_cross_the_obj7_type_check_boundary() {
+fn resolved_object_declarations_cross_the_type_check_boundary() {
     let resolved = resolve_text(concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } }\n",
         "fn main() -> i64 { var value: Box = Box(1); return value.value; }\n",

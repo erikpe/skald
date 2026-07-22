@@ -255,7 +255,7 @@ supported top-level function calls. A class field requires an ungrouped
 constructor of its exact class and becomes available only after its
 constructor arguments check successfully. Initializers cannot contain locals,
 blocks, conditionals, call statements, returns, or general object-valued
-expressions. The staged inline-field profile below defines the restricted
+expressions. The implemented inline-field profile below defines the restricted
 receiver and alias uses available after a class field is initialized.
 
 An ungrouped exact-class construction directly initializes a new local:
@@ -316,11 +316,10 @@ Internal by-value parameters may also own exact-class copies. Local aliases,
 primitive aliases, shared sources, borrow anchors, array elements, polymorphic
 conversion, and whole-object replacement through an alias are not implemented.
 
-## Frozen staged extension: class-typed inline fields
+## Implemented extension: class-typed inline fields
 
-This section records the complete parser-facing extension implemented by
-IOF0–IOF6 of the
-[archived Class-Typed Inline Object Fields Roadmap](../docs/archive/INLINE_OBJECT_FIELDS_ROADMAP.md).
+This section records the complete implemented parser-facing extension for
+[class-typed inline object fields](../docs/archive/INLINE_OBJECT_FIELDS_ROADMAP.md).
 The compiler implements field declarations, nominal type resolution, HIR
 metadata, and target-independent containment-cycle rejection, plus resolved/HIR
 projection paths for nested receivers and alias endpoints, direct class-field
@@ -341,11 +340,11 @@ receiver-place   = place-root ("." identifier)*
 place-root       = identifier | "self" | "(" receiver-place ")"
 ```
 
-By itself, IOF did not admit named types for by-value parameters, results,
-external functions, primitive locals, or any other type position. OVS6 now
-admits named exact-class value parameters for internal callables only. A named
-local type continues to use the existing object-local construction and copy
-rules.
+Class-typed fields do not by themselves admit named types for results, external
+functions, primitive locals, or any other type position. The implemented
+object-value profile additionally admits named exact-class value parameters for
+internal callables only. A named local type continues to use the existing
+object-local construction and copy rules.
 `unit` remains invalid as a field type. The projected receiver production
 selects an assignment-shaped statement from syntax already expressible by the
 postfix parser; it does not create general assignment expressions. No new
@@ -450,16 +449,16 @@ destruction, or cleanup for failed construction. The complete frozen semantic
 and diagnostic contract is in the
 [local deterministic-destruction profile](../docs/SKALD_DRAFT_SPEC.md#545-frozen-local-deterministic-destruction-profile).
 
-DD3 carries destructor bodies and canonical body-before-fields destruction
+Lowering carries destructor bodies and canonical body-before-fields destruction
 plans into target-independent MIR. Cleanup is a verified operation over a
-semantic object place; it contains no target offset or ABI detail. DD4 inserts
-those operations on lexical fallthrough and return edges, and DD5 lowers the
+semantic object place; it contains no target offset or ABI detail. MIR lowering
+inserts cleanup on lexical fallthrough and return edges, and the backend lowers
 verified plans through the x86-64 hidden-receiver ABI. Automatic destruction is
 therefore executable within the restricted profile above.
 
 ## Implemented extension: object value semantics
 
-OVS0–OVS9 implement the restricted exact-class object-value profile: lifecycle
+The restricted exact-class object-value profile implements lifecycle
 declarations and synthesized capabilities, local copy behavior, internal value
 parameters and results, caller return storage, bounded owning temporaries, and
 the two permitted constructor-elision cases.
@@ -480,7 +479,7 @@ implicit mutable `self` and `unit` result; it has no `fn`, modifier, result
 annotation, or semicolon. Both spellings remain ordinary identifiers outside
 their direct class-member forms.
 
-The staged type positions and statements become:
+The implemented object-value type positions and statements are:
 
 ```text
 internal-value-parameter = identifier ":" (primitive-type | class-name)
@@ -511,7 +510,7 @@ scalar MIR value.
 The exact declaration classification, synthesis rules, ownership, evaluation
 order, full-expression temporary cleanup, result storage, always-elide initial
 compiler policy, diagnostics, and exclusions are frozen in the
-[staged object-value profile](../docs/SKALD_DRAFT_SPEC.md#546-frozen-staged-object-value-profile).
+[exact-class object-value profile](../docs/SKALD_DRAFT_SPEC.md#546-frozen-exact-class-object-value-profile).
 
 ## Recovery and nesting
 

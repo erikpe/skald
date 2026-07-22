@@ -53,7 +53,7 @@ fn malformed_control_flow_is_a_structured_backend_error() {
 }
 
 #[test]
-fn unused_object_metadata_is_accepted_after_obj3() {
+fn unused_valid_object_metadata_is_accepted() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: ClassId::new(0),
@@ -74,7 +74,7 @@ fn unused_object_metadata_is_accepted_after_obj3() {
 }
 
 #[test]
-fn recursively_non_trivial_source_cleanup_is_accepted_after_dd5() {
+fn recursively_non_trivial_source_cleanup_reaches_the_backend() {
     let mir = lower_source_to_mir(concat!(
         "class Resource { init() {} destroy {} }\n",
         "class Owner { resource: Resource; init() { self.resource = Resource(); } }\n",
