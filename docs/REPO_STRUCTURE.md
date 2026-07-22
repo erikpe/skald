@@ -233,7 +233,11 @@ that body's local MIR identities.
 Resolution collects top-level declarations before resolving bodies. Functions
 and classes share one namespace; members remain class-owned. Resolved IR, HIR,
 MIR, and backends carry IDs directly. Public lower-phase tables intentionally
-offer no name-based selection API.
+offer no name-based selection API. Class declarations use one source-ordered
+member traversal backed by explicit collection state; field, initializer, copy
+lifecycle, destructor, and method helpers own their validation and output.
+Only accepted declaration metadata creates later callable-body work, which
+remains a separate second pass.
 
 Resolved parameters carry value/read-only-alias/mutable-alias mode separately
 from `ResolvedType`. Alias class names resolve through the same top-level class

@@ -9,21 +9,14 @@ use crate::{
     identity::{CallableId, ParameterId},
 };
 
+mod class;
+
+use class::{collect_class, ClassWorkItem};
+
 #[derive(Clone, Copy)]
 struct FunctionWorkItem {
     id: FunctionId,
     ast_index: usize,
-}
-
-#[derive(Clone)]
-struct ClassWorkItem {
-    id: ClassId,
-    ast_index: usize,
-    initializer_member: Option<usize>,
-    copy_constructor_member: Option<usize>,
-    copy_assignment_member: Option<usize>,
-    destructor_member: Option<usize>,
-    method_members: Vec<usize>,
 }
 
 pub(super) struct ProgramResolver<'ast> {
@@ -201,236 +194,19 @@ impl<'ast> ProgramResolver<'ast> {
             else {
                 unreachable!("class work item must reference a class")
             };
-            let (declaration, class_symbols, item) = self.collect_class(id, ast_index, class);
+            let (declaration, class_symbols, item) = collect_class(
+                id,
+                ast_index,
+                class,
+                &self.top_levels,
+                &mut self.diagnostics,
+            );
             declarations.push(declaration);
             symbols.push(class_symbols);
             body_work.push(item);
         }
 
         (declarations, symbols, body_work)
-    }
-
-    fn collect_class(
-        &mut self,
-        id: ClassId,
-        ast_index: usize,
-        class: &syntax::ClassDecl,
-    ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
-        let mut fields = Vec::new();
-        let mut initializer = None;
-        let mut copy_constructor_declaration = None;
-        let mut copy_assignment_declaration = None;
-        let mut destructor = None;
-        let mut methods = Vec::new();
-        let mut symbols = ClassSymbols::default();
-        let mut initializer_member = None;
-        let mut copy_constructor_member = None;
-        let mut copy_assignment_member = None;
-        let mut destructor_member = None;
-        let mut method_members = Vec::new();
-        let mut next_initializer_index = 0;
-        let mut copy_assignment_invalid = false;
-
-        for (member_index, member) in class.members.iter().enumerate() {
-            match member {
-                syntax::ClassMember::Field(field) => {
-                    let Some(type_syntax) =
-                        resolve_type(&field.type_syntax, &self.top_levels, &mut self.diagnostics)
-                    else {
-                        continue;
-                    };
-                    if !declare_ordinary_member(
-                        &mut symbols,
-                        &field.name,
-                        OrdinaryMemberSymbolKind::Field(FieldId::new(id, fields.len())),
-                        &mut self.diagnostics,
-                    ) {
-                        continue;
-                    }
-                    let field_id = FieldId::new(id, fields.len());
-                    fields.push(ResolvedFieldDeclaration {
-                        id: field_id,
-                        name: field.name.text.clone(),
-                        name_span: field.name.span,
-                        type_syntax,
-                        span: field.span,
-                    });
-                }
-                syntax::ClassMember::Initializer(source) => {
-                    let is_copy = is_copy_constructor(source, id, &self.top_levels);
-                    let previous_span = if is_copy {
-                        symbols.copy_constructor_span
-                    } else {
-                        symbols.initializer_span
-                    };
-                    if let Some(previous_span) = previous_span {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                DUPLICATE_MEMBER,
-                                format!(
-                                    "duplicate {} in class `{}`",
-                                    if is_copy {
-                                        "copy constructor"
-                                    } else {
-                                        "ordinary initializer"
-                                    },
-                                    class.name.text
-                                ),
-                            )
-                            .with_primary_label(source.introducer_span, "redeclared here")
-                            .with_secondary_label(previous_span, "first declared here"),
-                        );
-                        continue;
-                    }
-                    let initializer_id = InitializerId::new(id, next_initializer_index);
-                    next_initializer_index += 1;
-                    let declaration = ResolvedInitializerDeclaration {
-                        id: initializer_id,
-                        parameters: resolve_parameters(
-                            initializer_id.into(),
-                            &source.parameters,
-                            &self.top_levels,
-                            &mut self.diagnostics,
-                        ),
-                        span: source.span,
-                    };
-                    if is_copy {
-                        symbols.copy_constructor_span = Some(source.introducer_span);
-                        copy_constructor_declaration = Some(declaration);
-                        copy_constructor_member = Some(member_index);
-                    } else {
-                        symbols.initializer = Some(initializer_id);
-                        symbols.initializer_span = Some(source.introducer_span);
-                        initializer = Some(declaration);
-                        initializer_member = Some(member_index);
-                    }
-                }
-                syntax::ClassMember::CopyAssignment(source) => {
-                    if let Some(previous_span) = symbols.copy_assignment_span {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                DUPLICATE_MEMBER,
-                                format!("duplicate copy assignment in class `{}`", class.name.text),
-                            )
-                            .with_primary_label(source.introducer_span, "redeclared here")
-                            .with_secondary_label(previous_span, "first declared here"),
-                        );
-                        continue;
-                    }
-                    symbols.copy_assignment_span = Some(source.introducer_span);
-                    let assignment_id = CopyAssignmentId::new(id, 0);
-                    if let Some(parameter) = resolve_copy_assignment_parameter(
-                        assignment_id,
-                        id,
-                        source,
-                        &self.top_levels,
-                        &mut self.diagnostics,
-                    ) {
-                        copy_assignment_declaration = Some(ResolvedCopyAssignmentDeclaration {
-                            id: assignment_id,
-                            parameter,
-                            span: source.span,
-                        });
-                        copy_assignment_member = Some(member_index);
-                    } else {
-                        copy_assignment_invalid = true;
-                    }
-                }
-                syntax::ClassMember::Destructor(source) => {
-                    if let Some(previous_span) = symbols.destructor_span {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                DUPLICATE_MEMBER,
-                                format!("duplicate destructor in class `{}`", class.name.text),
-                            )
-                            .with_primary_label(source.introducer_span, "redeclared here")
-                            .with_secondary_label(previous_span, "first declared here"),
-                        );
-                        continue;
-                    }
-                    let destructor_id = DestructorId::new(id, 0);
-                    symbols.destructor_span = Some(source.introducer_span);
-                    destructor = Some(ResolvedDestructorDeclaration {
-                        id: destructor_id,
-                        span: source.span,
-                    });
-                    destructor_member = Some(member_index);
-                }
-                syntax::ClassMember::Method(method) => {
-                    let method_id = MethodId::new(id, methods.len());
-                    if !declare_ordinary_member(
-                        &mut symbols,
-                        &method.name,
-                        OrdinaryMemberSymbolKind::Method(method_id),
-                        &mut self.diagnostics,
-                    ) {
-                        continue;
-                    }
-                    methods.push(ResolvedMethodDeclaration {
-                        id: method_id,
-                        name: method.name.text.clone(),
-                        name_span: method.name.span,
-                        receiver_access: if method.mut_span.is_some() {
-                            ResolvedReceiverAccess::Mutable
-                        } else {
-                            ResolvedReceiverAccess::ReadOnly
-                        },
-                        parameters: resolve_parameters(
-                            method_id.into(),
-                            &method.parameters,
-                            &self.top_levels,
-                            &mut self.diagnostics,
-                        ),
-                        return_type: resolve_result_type(
-                            &method.return_type,
-                            &self.top_levels,
-                            &mut self.diagnostics,
-                        ),
-                        span: method.span,
-                    });
-                    method_members.push(member_index);
-                }
-            }
-        }
-
-        (
-            ResolvedClassDeclaration {
-                id,
-                name: class.name.text.clone(),
-                name_span: class.name.span,
-                fields,
-                initializer,
-                copy_constructor: copy_constructor_declaration
-                    .as_ref()
-                    .map_or(ResolvedCopyOperation::Synthesized(id), |declaration| {
-                        ResolvedCopyOperation::User(declaration.id)
-                    }),
-                copy_constructor_declaration,
-                copy_assignment: if copy_assignment_invalid {
-                    ResolvedCopyOperation::Unavailable
-                } else {
-                    copy_assignment_declaration
-                        .as_ref()
-                        .map_or(ResolvedCopyOperation::Synthesized(id), |declaration| {
-                            ResolvedCopyOperation::User(declaration.id)
-                        })
-                },
-                copy_assignment_declaration,
-                destructor,
-                methods,
-                span: class.span,
-            },
-            symbols,
-            ClassWorkItem {
-                id,
-                ast_index,
-                initializer_member,
-                copy_constructor_member,
-                copy_assignment_member,
-                destructor_member,
-                method_members,
-            },
-        )
     }
 
     fn resolve_function_bodies(
@@ -620,89 +396,6 @@ impl<'ast> ProgramResolver<'ast> {
     }
 }
 
-fn is_copy_constructor(
-    initializer: &syntax::InitializerDecl,
-    owner: ClassId,
-    top_levels: &HashMap<String, TopLevelSymbol>,
-) -> bool {
-    let [parameter] = initializer.parameters.as_slice() else {
-        return false;
-    };
-    if !matches!(
-        parameter.binding_mode,
-        syntax::ParameterBindingMode::ReadOnlyAlias { .. }
-    ) {
-        return false;
-    }
-    let syntax::TypeKind::Named(name) = &parameter.type_syntax.kind else {
-        return false;
-    };
-    matches!(
-        top_levels.get(&name.text),
-        Some(TopLevelSymbol {
-            kind: TopLevelSymbolKind::Class(class),
-            ..
-        }) if *class == owner
-    )
-}
-
-fn resolve_copy_assignment_parameter(
-    callable: CopyAssignmentId,
-    owner: ClassId,
-    assignment: &syntax::CopyAssignmentDecl,
-    top_levels: &HashMap<String, TopLevelSymbol>,
-    diagnostics: &mut Diagnostics,
-) -> Option<ResolvedParameter> {
-    let [parameter] = assignment.parameters.as_slice() else {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_LIFECYCLE_SIGNATURE,
-                "copy assignment requires exactly one source parameter",
-            )
-            .with_primary_label(
-                assignment.span,
-                "use `assign(ref name: EnclosingClass) { ... }`",
-            ),
-        );
-        return None;
-    };
-
-    if !matches!(
-        parameter.binding_mode,
-        syntax::ParameterBindingMode::ReadOnlyAlias { .. }
-    ) {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_LIFECYCLE_SIGNATURE,
-                "copy-assignment source must be a read-only alias",
-            )
-            .with_primary_label(parameter.span, "use `ref name: EnclosingClass`"),
-        );
-        return None;
-    }
-
-    let ty = resolve_type(&parameter.type_syntax, top_levels, diagnostics)?;
-    if ty.kind != ResolvedTypeKind::Class(owner) {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_LIFECYCLE_SIGNATURE,
-                "copy-assignment source must have the exact enclosing class type",
-            )
-            .with_primary_label(parameter.type_syntax.span, "expected the enclosing class"),
-        );
-        return None;
-    }
-
-    Some(ResolvedParameter {
-        id: ParameterId::new(callable, 0),
-        binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
-        name: parameter.name.text.clone(),
-        name_span: parameter.name.span,
-        type_syntax: ty,
-        span: parameter.span,
-    })
-}
-
 fn resolve_member_definition(
     environment: BodyResolutionEnvironment<'_>,
     callable: CallableId,
@@ -790,31 +483,4 @@ fn resolve_result_type(
         kind: ResolvedTypeKind::Unit,
         span: type_syntax.span,
     })
-}
-
-fn declare_ordinary_member(
-    symbols: &mut ClassSymbols,
-    name: &syntax::Name,
-    kind: OrdinaryMemberSymbolKind,
-    diagnostics: &mut Diagnostics,
-) -> bool {
-    if let Some(previous) = symbols.ordinary.get(&name.text) {
-        diagnostics.push(
-            Diagnostic::error(
-                DUPLICATE_MEMBER,
-                format!("duplicate class member `{}`", name.text),
-            )
-            .with_primary_label(name.span, "redeclared here")
-            .with_secondary_label(previous.name_span, "first declared here"),
-        );
-        return false;
-    }
-    symbols.ordinary.insert(
-        name.text.clone(),
-        OrdinaryMemberSymbol {
-            kind,
-            name_span: name.span,
-        },
-    );
-    true
 }

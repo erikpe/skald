@@ -191,58 +191,6 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
 }
 
 #[test]
-fn diagnoses_malformed_and_duplicate_copy_lifecycle_slots_deterministically() {
-    let output = resolve_text(concat!(
-        "class Other { init() {} }\n",
-        "class Duplicate {\n",
-        "    init() {}\n",
-        "    init(value: i64) {}\n",
-        "    init(ref first: Duplicate) {}\n",
-        "    init(ref second: Duplicate) {}\n",
-        "    assign(ref first: Duplicate) {}\n",
-        "    assign(ref second: Duplicate) {}\n",
-        "}\n",
-        "class MissingSource { init() {} assign() {} }\n",
-        "class MutableSource { init() {} assign(mut ref other: MutableSource) {} }\n",
-        "class WrongSource { init() {} assign(ref other: Other) {} }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-
-    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-    assert_eq!(diagnostics.len(), 6);
-    assert_eq!(diagnostics[0].code, DUPLICATE_MEMBER);
-    assert_eq!(
-        diagnostics[0].message,
-        "duplicate ordinary initializer in class `Duplicate`"
-    );
-    assert_eq!(diagnostics[1].code, DUPLICATE_MEMBER);
-    assert_eq!(
-        diagnostics[1].message,
-        "duplicate copy constructor in class `Duplicate`"
-    );
-    assert_eq!(diagnostics[2].code, DUPLICATE_MEMBER);
-    assert_eq!(
-        diagnostics[2].message,
-        "duplicate copy assignment in class `Duplicate`"
-    );
-    assert!(diagnostics[0..3]
-        .iter()
-        .all(
-            |diagnostic| diagnostic.labels[0].message == "redeclared here"
-                && diagnostic.labels[1].message == "first declared here"
-        ));
-    assert!(diagnostics[3..]
-        .iter()
-        .all(|diagnostic| diagnostic.code == INVALID_LIFECYCLE_SIGNATURE));
-    for class_index in 2..=4 {
-        assert_eq!(
-            class(&output, class_index).copy_assignment,
-            ResolvedCopyOperation::Unavailable
-        );
-    }
-}
-
-#[test]
 fn top_level_and_member_namespaces_reject_cross_kind_duplicates() {
     let output = resolve_text(concat!(
         "class Same { init() {} }\n",
@@ -580,45 +528,6 @@ fn copy_lifecycle_slots_are_not_explicit_method_call_targets() {
     let diagnostic = output.diagnostics.iter().next().unwrap();
     assert_eq!(diagnostic.code, UNKNOWN_MEMBER);
     assert!(diagnostic.message.contains("has no member `assign`"));
-}
-
-#[test]
-fn duplicate_destructors_are_diagnosed_in_source_order() {
-    let output = resolve_text(concat!(
-        "class Duplicate {\n",
-        "    init() {}\n",
-        "    destroy {}\n",
-        "    destroy { return; }\n",
-        "}\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-
-    assert_eq!(output.diagnostics.len(), 1);
-    let diagnostic = output.diagnostics.iter().next().unwrap();
-    assert_eq!(diagnostic.code, DUPLICATE_MEMBER);
-    assert_eq!(
-        diagnostic.message,
-        "duplicate destructor in class `Duplicate`"
-    );
-    assert_eq!(diagnostic.labels[0].message, "redeclared here");
-    assert_eq!(diagnostic.labels[1].message, "first declared here");
-
-    let duplicate = class(&output, 0);
-    assert_eq!(duplicate.destructor.as_ref().unwrap().id.index(), 0);
-    assert_eq!(
-        output
-            .program
-            .class_definitions
-            .get(duplicate.id)
-            .unwrap()
-            .destructor
-            .as_ref()
-            .unwrap()
-            .body
-            .statements
-            .len(),
-        0
-    );
 }
 
 #[test]

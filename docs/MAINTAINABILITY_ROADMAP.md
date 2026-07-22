@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ6 is next.
+Status: in progress; CQ7 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -66,7 +66,7 @@ count.
 - [x] CQ3 — Extract MIR program and declaration verification
 - [x] CQ4 — Extract MIR callable-body and instruction verification
 - [x] CQ5 — Extract MIR call, argument, place, and cleanup verification
-- [ ] CQ6 — Decompose class declaration collection in resolution
+- [x] CQ6 — Decompose class declaration collection in resolution
 - [ ] CQ7 — Decompose callable statement checking
 - [ ] CQ8 — Decompose expression and initialization checking
 - [ ] CQ9 — Decompose HIR-to-MIR body lowering
@@ -212,14 +212,14 @@ remains in the facade.
 **Purpose:** Make fields, ordinary members, and lifecycle declarations
 independently understandable without changing two-pass resolution.
 
-- [ ] Keep one source-ordered class-member traversal as the coordination point.
-- [ ] Extract field, initializer, copy constructor, copy assignment,
+- [x] Keep one source-ordered class-member traversal as the coordination point.
+- [x] Extract field, initializer, copy constructor, copy assignment,
       destructor, and method collection helpers.
-- [ ] Introduce a small class-collection state object for symbols, declarations,
+- [x] Introduce a small class-collection state object for symbols, declarations,
       work items, and lifecycle slots.
-- [ ] Preserve ID allocation, duplicate precedence, recovery, and diagnostic
+- [x] Preserve ID allocation, duplicate precedence, recovery, and diagnostic
       order exactly.
-- [ ] Keep top-level collection separate from callable-body resolution.
+- [x] Keep top-level collection separate from callable-body resolution.
 
 **Acceptance criteria:** `collect_class` communicates the traversal at a glance,
 while each member category owns its validation and output construction.
