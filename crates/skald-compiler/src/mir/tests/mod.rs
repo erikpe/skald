@@ -8,6 +8,7 @@ use crate::{
     test_support::lower_source_to_mir,
 };
 
+mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
 mod copy;

@@ -76,7 +76,7 @@ count.
 - [x] CQ13 — Split the HIR model by responsibility
 - [x] CQ14 — Split the MIR model by responsibility
 - [x] CQ15 — Introduce a small test-only MIR fixture vocabulary
-- [ ] CQ16 — Migrate and divide oversized test suites
+- [x] CQ16 — Migrate and divide oversized test suites
 - [ ] CQ17 — Add generative frontend and MIR robustness tests
 - [ ] CQ18 — Align living documentation and close the cleanup
 
@@ -398,15 +398,15 @@ to construct deliberately.
 **Purpose:** Make test ownership and failures easier to locate without reducing
 coverage.
 
-- [ ] Migrate backend object, alias, and scalar fixtures to the CQ15 vocabulary
+- [x] Migrate backend object, alias, and scalar fixtures to the CQ15 vocabulary
       one fixture family at a time.
-- [ ] Move the large MIR alias fixture out of the assertion-focused test file.
-- [ ] Split type-checker object tests into construction, lifecycle/copy,
+- [x] Move the large MIR alias fixture out of the assertion-focused test file.
+- [x] Split type-checker object tests into construction, lifecycle/copy,
       receiver/access, object-place, and dump responsibilities.
-- [ ] Split resolver object tests into declarations/lifecycle, member lookup,
+- [x] Split resolver object tests into declarations/lifecycle, member lookup,
       object places, diagnostics, and dumps.
-- [ ] Split driver tests into CLI, pipeline, artifact, and toolchain behavior.
-- [ ] Keep public-API integration tests under `crates/skald-compiler/tests/` and
+- [x] Split driver tests into CLI, pipeline, artifact, and toolchain behavior.
+- [x] Keep public-API integration tests under `crates/skald-compiler/tests/` and
       phase tests beside their owning implementation.
 
 **Acceptance criteria:** No large test module mixes unrelated compiler

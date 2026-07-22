@@ -320,14 +320,14 @@ fn unit_declaration(
     parameters: Vec<MirParameter>,
     span: crate::source::Span,
 ) -> MirFunctionDeclaration {
-    MirFunctionDeclaration {
+    fixture_function_declaration(
         id,
-        name: name.to_owned(),
+        name,
         parameters,
-        return_type: MirType::Unit,
-        linkage: MirFunctionLinkage::Internal,
+        MirType::Unit,
+        MirFunctionLinkage::Internal,
         span,
-    }
+    )
 }
 
 fn alias_add_definition(
@@ -492,15 +492,19 @@ fn function_definition(
     instructions: Vec<MirInstruction>,
     span: crate::source::Span,
 ) -> MirFunctionDefinition {
-    MirFunctionDefinition {
-        function: id,
-        return_storage: None,
-        parameters: storage.iter().map(|storage| storage.id).collect(),
-        storage,
-        values,
-        body: body(id.into(), instructions, span),
-        span,
-    }
+    let parameters = storage.iter().map(|storage| storage.id).collect();
+    fixture_function_definition(
+        id,
+        OneBlockDefinition {
+            return_storage: None,
+            parameters,
+            storage,
+            values,
+            instructions,
+            terminator: Some(MirTerminator::Return { value: None, span }),
+            span,
+        },
+    )
 }
 
 fn member_definition(
@@ -511,32 +515,20 @@ fn member_definition(
     instructions: Vec<MirInstruction>,
     span: crate::source::Span,
 ) -> MirMemberDefinition {
-    MirMemberDefinition {
+    let parameters = storage.iter().skip(1).map(|storage| storage.id).collect();
+    fixture_member_definition(
         callable,
-        return_storage: None,
         receiver,
-        parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
-        storage,
-        values,
-        body: body(callable, instructions, span),
-        span,
-    }
-}
-
-fn body(
-    callable: CallableId,
-    instructions: Vec<MirInstruction>,
-    span: crate::source::Span,
-) -> MirBody {
-    MirBody {
-        entry: BlockId::new(callable, 0),
-        blocks: vec![MirBasicBlock {
-            id: BlockId::new(callable, 0),
+        OneBlockDefinition {
+            return_storage: None,
+            parameters,
+            storage,
+            values,
             instructions,
             terminator: Some(MirTerminator::Return { value: None, span }),
             span,
-        }],
-    }
+        },
+    )
 }
 
 fn alias_storage(
@@ -547,14 +539,14 @@ fn alias_storage(
     access: MirAliasAccess,
     span: crate::source::Span,
 ) -> MirStorage {
-    MirStorage {
+    fixture_storage(
         id,
-        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
-        name: format!("alias{index}"),
-        kind: MirStorageKind::AliasParameter(access),
-        ty: MirType::Class(class),
+        Some(BindingId::Parameter(ParameterId::new(callable, index))),
+        format!("alias{index}"),
+        MirStorageKind::AliasParameter(access),
+        MirType::Class(class),
         span,
-    }
+    )
 }
 
 fn value_parameter_storage(
@@ -564,14 +556,14 @@ fn value_parameter_storage(
     ty: MirType,
     span: crate::source::Span,
 ) -> MirStorage {
-    MirStorage {
+    fixture_storage(
         id,
-        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
-        name: format!("value{index}"),
-        kind: MirStorageKind::Parameter,
+        Some(BindingId::Parameter(ParameterId::new(callable, index))),
+        format!("value{index}"),
+        MirStorageKind::Parameter,
         ty,
         span,
-    }
+    )
 }
 
 fn receiver_storage(
@@ -580,14 +572,8 @@ fn receiver_storage(
     class: ClassId,
     span: crate::source::Span,
 ) -> MirStorage {
-    MirStorage {
-        id,
-        source: Some(BindingId::Receiver(callable)),
-        name: "self".to_owned(),
-        kind: MirStorageKind::Receiver,
-        ty: MirType::Class(class),
-        span,
-    }
+    assert_eq!(id.callable(), callable);
+    fixture_receiver_storage(id, class, span)
 }
 
 fn values(callable: CallableId, types: &[MirType], span: crate::source::Span) -> Vec<MirValue> {
@@ -595,11 +581,7 @@ fn values(callable: CallableId, types: &[MirType], span: crate::source::Span) ->
         .iter()
         .copied()
         .enumerate()
-        .map(|(index, ty)| MirValue {
-            id: ValueId::new(callable, index),
-            ty,
-            span,
-        })
+        .map(|(index, ty)| fixture_value(ValueId::new(callable, index), ty, span))
         .collect()
 }
 
@@ -609,17 +591,17 @@ fn alias_call(
     amount: ValueId,
     span: crate::source::Span,
 ) -> MirInstruction {
-    MirInstruction::Call(MirCall {
-        target: MirCallTarget::Direct(target),
-        receiver: None,
-        arguments: vec![
+    fixture_call(
+        MirCallTarget::Direct(target),
+        None,
+        vec![
             MirArgument::Place(MirPlace::alias_parameter(alias)),
             MirArgument::Value(amount),
         ],
-        result: None,
-        destination: None,
+        None,
+        None,
         span,
-    })
+    )
 }
 
 fn assign(
@@ -628,9 +610,5 @@ fn assign(
     ty: MirType,
     span: crate::source::Span,
 ) -> MirInstruction {
-    MirInstruction::Assign(MirAssignment {
-        result,
-        rvalue: MirRvalue { kind, ty },
-        span,
-    })
+    fixture_assign(result, kind, ty, span)
 }

@@ -440,45 +440,34 @@ fn initializer_definition(
     let receiver = StorageId::new(callable, 0);
     let parameter = StorageId::new(callable, 1);
     let value = ValueId::new(callable, 0);
-    MirMemberDefinition {
+    fixture_member_definition(
         callable,
-        return_storage: None,
         receiver,
-        parameters: vec![parameter],
-        storage: vec![
-            receiver_storage(callable, receiver, id.class(), span),
-            parameter_storage(callable, parameter, 0, MirType::I64, span),
-        ],
-        values: vec![MirValue {
-            id: value,
-            ty: MirType::I64,
+        OneBlockDefinition {
+            return_storage: None,
+            parameters: vec![parameter],
+            storage: vec![
+                receiver_storage(callable, receiver, id.class(), span),
+                parameter_storage(callable, parameter, 0, MirType::I64, span),
+            ],
+            values: vec![fixture_value(value, MirType::I64, span)],
+            instructions: vec![
+                fixture_assign(
+                    value,
+                    MirRvalueKind::Load(parameter.into()),
+                    MirType::I64,
+                    span,
+                ),
+                store(
+                    MirPlace::base(receiver).project_field(value_field),
+                    value,
+                    span,
+                ),
+            ],
+            terminator: Some(MirTerminator::Return { value: None, span }),
             span,
-        }],
-        body: MirBody {
-            entry: BlockId::new(callable, 0),
-            blocks: vec![MirBasicBlock {
-                id: BlockId::new(callable, 0),
-                instructions: vec![
-                    MirInstruction::Assign(MirAssignment {
-                        result: value,
-                        rvalue: MirRvalue {
-                            kind: MirRvalueKind::Load(parameter.into()),
-                            ty: MirType::I64,
-                        },
-                        span,
-                    }),
-                    store(
-                        MirPlace::base(receiver).project_field(value_field),
-                        value,
-                        span,
-                    ),
-                ],
-                terminator: Some(MirTerminator::Return { value: None, span }),
-                span,
-            }],
         },
-        span,
-    }
+    )
 }
 
 fn add_definition(
@@ -491,63 +480,47 @@ fn add_definition(
     let receiver = StorageId::new(callable, 0);
     let parameter = StorageId::new(callable, 1);
     let values: Vec<_> = (0..3)
-        .map(|index| MirValue {
-            id: ValueId::new(callable, index),
-            ty: MirType::I64,
-            span,
-        })
+        .map(|index| fixture_value(ValueId::new(callable, index), MirType::I64, span))
         .collect();
     let receiver_value = MirPlace::base(receiver).project_field(value_field);
-    MirMemberDefinition {
+    fixture_member_definition(
         callable,
-        return_storage: None,
         receiver,
-        parameters: vec![parameter],
-        storage: vec![
-            receiver_storage(callable, receiver, id.class(), span),
-            parameter_storage(callable, parameter, 0, MirType::I64, span),
-        ],
-        values,
-        body: MirBody {
-            entry: BlockId::new(callable, 0),
-            blocks: vec![MirBasicBlock {
-                id: BlockId::new(callable, 0),
-                instructions: vec![
-                    MirInstruction::Assign(MirAssignment {
-                        result: ValueId::new(callable, 0),
-                        rvalue: MirRvalue {
-                            kind: MirRvalueKind::Load(receiver_value.clone()),
-                            ty: MirType::I64,
-                        },
-                        span,
-                    }),
-                    MirInstruction::Assign(MirAssignment {
-                        result: ValueId::new(callable, 1),
-                        rvalue: MirRvalue {
-                            kind: MirRvalueKind::Load(parameter.into()),
-                            ty: MirType::I64,
-                        },
-                        span,
-                    }),
-                    MirInstruction::Call(MirCall {
-                        target: MirCallTarget::Direct(sum),
-                        receiver: None,
-                        arguments: MirArgument::values([
-                            ValueId::new(callable, 0),
-                            ValueId::new(callable, 1),
-                        ]),
-                        result: Some(ValueId::new(callable, 2)),
-                        destination: None,
-                        span,
-                    }),
-                    store(receiver_value, ValueId::new(callable, 2), span),
-                ],
-                terminator: Some(MirTerminator::Return { value: None, span }),
-                span,
-            }],
+        OneBlockDefinition {
+            return_storage: None,
+            parameters: vec![parameter],
+            storage: vec![
+                receiver_storage(callable, receiver, id.class(), span),
+                parameter_storage(callable, parameter, 0, MirType::I64, span),
+            ],
+            values,
+            instructions: vec![
+                fixture_assign(
+                    ValueId::new(callable, 0),
+                    MirRvalueKind::Load(receiver_value.clone()),
+                    MirType::I64,
+                    span,
+                ),
+                fixture_assign(
+                    ValueId::new(callable, 1),
+                    MirRvalueKind::Load(parameter.into()),
+                    MirType::I64,
+                    span,
+                ),
+                fixture_call(
+                    MirCallTarget::Direct(sum),
+                    None,
+                    MirArgument::values([ValueId::new(callable, 0), ValueId::new(callable, 1)]),
+                    Some(ValueId::new(callable, 2)),
+                    None,
+                    span,
+                ),
+                store(receiver_value, ValueId::new(callable, 2), span),
+            ],
+            terminator: Some(MirTerminator::Return { value: None, span }),
+            span,
         },
-        span,
-    }
+    )
 }
 
 fn get_definition(
@@ -558,40 +531,27 @@ fn get_definition(
     let callable = id.into();
     let receiver = StorageId::new(callable, 0);
     let result = ValueId::new(callable, 0);
-    MirMemberDefinition {
+    fixture_member_definition(
         callable,
-        return_storage: None,
         receiver,
-        parameters: vec![],
-        storage: vec![receiver_storage(callable, receiver, id.class(), span)],
-        values: vec![MirValue {
-            id: result,
-            ty: MirType::I64,
-            span,
-        }],
-        body: MirBody {
-            entry: BlockId::new(callable, 0),
-            blocks: vec![MirBasicBlock {
-                id: BlockId::new(callable, 0),
-                instructions: vec![MirInstruction::Assign(MirAssignment {
-                    result,
-                    rvalue: MirRvalue {
-                        kind: MirRvalueKind::Load(
-                            MirPlace::base(receiver).project_field(value_field),
-                        ),
-                        ty: MirType::I64,
-                    },
-                    span,
-                })],
-                terminator: Some(MirTerminator::Return {
-                    value: Some(result),
-                    span,
-                }),
+        OneBlockDefinition {
+            return_storage: None,
+            parameters: vec![],
+            storage: vec![receiver_storage(callable, receiver, id.class(), span)],
+            values: vec![fixture_value(result, MirType::I64, span)],
+            instructions: vec![fixture_assign(
+                result,
+                MirRvalueKind::Load(MirPlace::base(receiver).project_field(value_field)),
+                MirType::I64,
                 span,
-            }],
+            )],
+            terminator: Some(MirTerminator::Return {
+                value: Some(result),
+                span,
+            }),
+            span,
         },
-        span,
-    }
+    )
 }
 
 fn forwarding_get_definition(
@@ -602,38 +562,29 @@ fn forwarding_get_definition(
     let callable = id.into();
     let receiver = StorageId::new(callable, 0);
     let result = ValueId::new(callable, 0);
-    MirMemberDefinition {
+    fixture_member_definition(
         callable,
-        return_storage: None,
         receiver,
-        parameters: vec![],
-        storage: vec![receiver_storage(callable, receiver, id.class(), span)],
-        values: vec![MirValue {
-            id: result,
-            ty: MirType::I64,
-            span,
-        }],
-        body: MirBody {
-            entry: BlockId::new(callable, 0),
-            blocks: vec![MirBasicBlock {
-                id: BlockId::new(callable, 0),
-                instructions: vec![MirInstruction::Call(MirCall {
-                    target: MirCallTarget::Method(target),
-                    receiver: Some(receiver.into()),
-                    arguments: vec![],
-                    result: Some(result),
-                    destination: None,
-                    span,
-                })],
-                terminator: Some(MirTerminator::Return {
-                    value: Some(result),
-                    span,
-                }),
+        OneBlockDefinition {
+            return_storage: None,
+            parameters: vec![],
+            storage: vec![receiver_storage(callable, receiver, id.class(), span)],
+            values: vec![fixture_value(result, MirType::I64, span)],
+            instructions: vec![fixture_call(
+                MirCallTarget::Method(target),
+                Some(receiver.into()),
+                vec![],
+                Some(result),
+                None,
                 span,
-            }],
+            )],
+            terminator: Some(MirTerminator::Return {
+                value: Some(result),
+                span,
+            }),
+            span,
         },
-        span,
-    }
+    )
 }
 
 fn receiver_storage(
@@ -642,14 +593,8 @@ fn receiver_storage(
     class: ClassId,
     span: crate::source::Span,
 ) -> MirStorage {
-    MirStorage {
-        id,
-        source: Some(BindingId::Receiver(callable)),
-        name: "self".to_owned(),
-        kind: MirStorageKind::Receiver,
-        ty: MirType::Class(class),
-        span,
-    }
+    assert_eq!(id.callable(), callable);
+    fixture_receiver_storage(id, class, span)
 }
 
 fn parameter_storage(
@@ -659,14 +604,14 @@ fn parameter_storage(
     ty: MirType,
     span: crate::source::Span,
 ) -> MirStorage {
-    MirStorage {
+    fixture_storage(
         id,
-        source: Some(BindingId::Parameter(ParameterId::new(callable, index))),
-        name: format!("p{index}"),
-        kind: MirStorageKind::Parameter,
+        Some(BindingId::Parameter(ParameterId::new(callable, index))),
+        format!("p{index}"),
+        MirStorageKind::Parameter,
         ty,
         span,
-    }
+    )
 }
 
 pub(super) fn field(
@@ -690,17 +635,9 @@ pub(super) fn assignment(
     ty: MirType,
     span: crate::source::Span,
 ) -> MirInstruction {
-    MirInstruction::Assign(MirAssignment {
-        result: ValueId::new(function, index),
-        rvalue: MirRvalue { kind, ty },
-        span,
-    })
+    fixture_assign(ValueId::new(function, index), kind, ty, span)
 }
 
 pub(super) fn store(place: MirPlace, value: ValueId, span: crate::source::Span) -> MirInstruction {
-    MirInstruction::Store(MirStore {
-        destination: place,
-        value,
-        span,
-    })
+    fixture_store(place, value, span)
 }

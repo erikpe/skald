@@ -4,8 +4,12 @@ use std::{
 };
 
 use crate::mir::test_fixtures::{
-    assign as fixture_assign, block as fixture_block, call as fixture_call, store as fixture_store,
-    value as fixture_value,
+    assign as fixture_assign, block as fixture_block, call as fixture_call,
+    function_declaration as fixture_function_declaration,
+    function_definition as fixture_function_definition,
+    member_definition as fixture_member_definition, parameter as fixture_parameter,
+    receiver_storage as fixture_receiver_storage, storage as fixture_storage,
+    store as fixture_store, value as fixture_value, OneBlockDefinition,
 };
 use crate::{
     backend::{emit_assembly, Target, RUNTIME_ABI_MARKER_SYMBOL},
@@ -21,7 +25,7 @@ use crate::{
         MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
         MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration, MirParameter,
         MirParameterMode, MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
-        MirSelectedCopyOperation, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType,
+        MirSelectedCopyOperation, MirStorage, MirStorageKind, MirTerminator, MirType,
         MirUnaryOperation, MirValue, StorageId, ValueId,
     },
     source::SourceDatabase,
