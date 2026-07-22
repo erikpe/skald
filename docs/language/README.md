@@ -102,7 +102,7 @@ makes a result source-observable.
   declarations, bindings and scopes, statements, returns, and evaluation order.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initialization, and object
-  places; later migration steps will complete its lifecycle rules.
+  places, plus copying, assignment, temporaries, and deterministic lifetime.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.

@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC6 is next.
+Status: planned; DOC7 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -171,7 +171,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC3 — Rewrite types, values, and expressions
 - [x] DOC4 — Rewrite functions and control flow
 - [x] DOC5 — Rewrite classes, initialization, and object places
-- [ ] DOC6 — Rewrite copying, destruction, and object lifetimes
+- [x] DOC6 — Rewrite copying, destruction, and object lifetimes
 - [ ] DOC7 — Rewrite aliases and ownership
 - [ ] DOC8 — Establish the polymorphism design document
 - [ ] DOC9 — Rewrite modules and foreign interoperation
@@ -343,19 +343,19 @@ initialization state without consulting any historical object-profile section.
 **Purpose:** Give exact-class value and lifetime behavior one source-oriented
 semantic narrative.
 
-- [ ] Complete `CLASSES_AND_LIFECYCLE.md` with lifecycle declaration slots,
+- [x] Complete `CLASSES_AND_LIFECYCLE.md` with lifecycle declaration slots,
       synthesis capability, copy construction, assignment, destruction,
       value parameters/results, return storage semantics, temporaries,
       full-expression boundaries, and permitted elision.
-- [ ] Verify operation selection, self-assignment, field order, registration,
+- [x] Verify operation selection, self-assignment, field order, registration,
       cleanup order, normal exits, result transfer, grouping-sensitive
       materialization, and exactly-once behavior against HIR/MIR and native
       lifecycle coverage.
-- [ ] Separate language-required destination and cleanup behavior from MIR
+- [x] Separate language-required destination and cleanup behavior from MIR
       instructions, frame homes, hidden pointers, and backend recursion.
-- [ ] Resolve plainly incorrect old prose and record any semantic ambiguity or
+- [x] Resolve plainly incorrect old prose and record any semantic ambiguity or
       implementation discrepancy in the documentation discoveries backlog.
-- [ ] Replace broad repeated exclusion lists with focused boundary links.
+- [x] Replace broad repeated exclusion lists with focused boundary links.
 
 **Tests:** Run lifecycle/capability, destruction, value-parameter/result,
 temporary, cleanup-verifier, determinism, and object-value golden tests; run

@@ -78,9 +78,8 @@ Exact-class value arguments are distinct callee-owned objects. Each is
 copy-constructed before the call, transferred to its value parameter, and
 destroyed by the callee after its body-owned locals. Exact-class results are
 completed as caller-owned objects. Detailed copy selection, result-object
-lifetime, temporaries, and permitted elision remain authoritative in the
-legacy [exact-class object-value section](../SKALD_DRAFT_SPEC.md#546-frozen-exact-class-object-value-profile)
-until the focused class-lifecycle document replaces it.
+lifetime, temporaries, and permitted elision are defined by
+[class lifecycle semantics](CLASSES_AND_LIFECYCLE.md#owning-value-parameters).
 
 ## Lexical scopes and locals
 

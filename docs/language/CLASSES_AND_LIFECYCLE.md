@@ -1,11 +1,8 @@
 # Skald Classes and Lifecycle
 
 Status: authoritative for implemented exact-class declarations, inline
-containment, receiver access, ordinary initialization, and object-place
-semantics. Copying, assignment, destruction, and object materialization remain
-authoritative in the legacy
-[exact-class object-value section](../SKALD_DRAFT_SPEC.md#546-frozen-exact-class-object-value-profile)
-until those rules are migrated into this document.
+containment, receiver access, initialization, copying, assignment,
+materialization, destruction, and normal-flow object lifetimes.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -38,7 +35,7 @@ The implemented class member categories are:
 | Field | Named inline storage with a primitive or exact-class type. |
 | Ordinary initializer | The one required operation that establishes a new complete object. |
 | Method | A statically selected instance operation with a read-only or mutable receiver. |
-| Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations whose detailed semantics are defined separately. |
+| Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
 Top-level classes, functions, and external functions share one non-overloaded
 namespace. Within each class, fields and ordinary methods share one
@@ -204,14 +201,237 @@ the initializer begins only after every argument is ready. The destination
 becomes live only on normal initializer completion.
 
 A fresh object may directly initialize an exact-class local or a direct class
-field as described above. Current object-source contexts also permit fresh
-objects in selected calls, assignments, and returns; their copy,
-materialization, cleanup, and elision behavior belongs to the lifecycle
-contract that will be consolidated separately.
+field as described above. It is also an object source in the copy, assignment,
+argument, and return contexts below.
 
 Skald has no recoverable construction failure. Exceptional initialization,
 partially completed object cleanup, delegation between ordinary initializers,
 and construction of base subobjects are not defined by the implemented model.
+
+## Lifecycle declarations
+
+Copy construction, copy assignment, and destruction occupy independent
+class-owned slots. Each slot may have at most one explicit declaration. These
+members have an implicit `unit` result and are not ordinary callable methods.
+
+| Operation | Declaration | Receiver state | Body contract |
+|---|---|---|---|
+| Copy construction | `init(ref source: T) { ... }` inside `T` | Mutable, incomplete `self` | Straight-line initialization of every direct field exactly once. |
+| Copy assignment | `assign(ref source: T) { ... }` inside `T` | Mutable, live `self` | General mutable `unit`-method statements; may update any supported subset of fields. |
+| Destruction | `destroy { ... }` | Mutable, live `self` | General mutable `unit`-method statements; `return;` and fallthrough complete the body. |
+
+The source parameter name is arbitrary, but its read-only binding mode and
+exact enclosing class are required. These declarations take no modifiers,
+explicit result, semicolon, or additional parameters. A malformed declaration
+does not become an overload or a different lifecycle operation.
+
+A copy-constructor body follows the ordinary initializer's definite-field
+rules. A primitive field is initialized from an exact primitive expression. A
+class field may be freshly constructed in place or copied from a live place of
+its exact class. The source parameter is complete and read-only; `self` is not
+complete until every direct field has been initialized.
+
+A destruction body runs while the complete object and all its fields are
+live. It may create and copy object locals, use fresh-object temporaries, and
+perform supported assignments. It cannot explicitly invoke a special
+destructor, end a lifetime early, or return a value. An ordinary method named
+`destroy` is a separate callable with no lifecycle effect.
+
+## Copy capabilities
+
+Copy construction and copy assignment are separate capabilities. An explicit
+declaration supplies that operation's complete user body. It neither requests
+nor receives an implicit field-wise prefix or suffix.
+
+When a declaration is absent, the compiler synthesizes the operation exactly
+when every direct field supports the same operation. Primitive fields support
+both capabilities. An exact-class field recursively uses its class's selected
+operation. Empty and primitive-only classes therefore support both operations;
+one unavailable field capability makes only the corresponding containing
+capability unavailable.
+
+A synthesized copy constructor initializes direct fields in source declaration
+order. It copies primitive payloads exactly and copy-constructs class fields.
+A synthesized assignment uses the same declaration order, assigning primitive
+payloads and invoking class-field assignment. Floating-point payload copying
+preserves the stored bits. User lifecycle effects selected anywhere in these
+sequences remain observable.
+
+Declaring a destructor does not suppress either synthesized copy capability.
+Capability selection is determined before lowering and does not depend on a
+target representation.
+
+## Copy construction and object sources
+
+Copy construction establishes a distinct new object from one exact-class
+source. A source may be:
+
+- an existing live object place, including an owning local, value parameter,
+  receiver, alias, or supported field projection;
+- a fresh construction of the exact class; or
+- the exact-class result of an internal function or method.
+
+For an existing place, the destination is reserved first and the selected copy
+constructor runs once with a read-only view of that source. The destination
+becomes live and acquires cleanup responsibility only after the operation
+completes. Reserving storage alone does not begin a lifetime or register
+cleanup.
+
+Fresh and returned sources may instead require the temporary or direct-result
+rules below. Skald has no moves: producing one object does not implicitly end
+another object's lifetime or transfer its cleanup registration.
+
+## Assignment to a live object
+
+Whole-object assignment updates an already-live object without beginning or
+ending its lifetime. The destination is selected before the source is
+evaluated. It must be mutable and rooted at an owning local, owning value
+parameter, or a class field reached through a mutable owning root or live
+mutable `self`.
+
+The complete `self` object cannot be replaced from within its member body.
+An alias parameter cannot be rebound, and whole-object replacement through an
+alias-rooted path is unsupported even when the alias is mutable. These rules
+do not prevent mutation of primitive fields or supported nested operations
+through `mut ref`.
+
+The source must be a live or produced object of the exact destination class.
+The selected assignment operation runs once. Assignment does not destroy,
+reconstruct, unregister, or reregister the destination.
+
+Source and destination may designate the same object. The compiler inserts no
+identity test: user assignment runs normally, and synthesized assignment runs
+its declaration-ordered field sequence. This preserves user effects in both
+the enclosing operation and recursively selected field operations.
+
+Assignment from a fresh construction first materializes a temporary, assigns
+from it, then destroys it at the statement boundary. It is not copy elision.
+
+## Owning value parameters
+
+An internal exact-class value parameter owns a distinct callee object. For
+each call argument, from left to right, its parameter destination is selected
+and initialized before evaluation proceeds to the next argument. An existing
+place is copy-constructed directly into that destination. A produced source is
+materialized, copied into the parameter, and remains live through the call.
+The callee begins only after all arguments and owning parameters are complete.
+
+On a normal exit, the callee destroys body temporaries and lexical locals
+first, then owning class value parameters in reverse parameter order. Alias
+parameters are non-owning and are never cleaned. Exact-class value parameters
+are not supported in external declarations.
+
+## Object results
+
+An exact-class result from an internal function or method is initialized in a
+distinct semantic result destination supplied by the caller. Returning an
+existing place copy-constructs the result before callee cleanup. A produced
+object follows the materialization and elision rules below. The result becomes
+live only after its selected operation completes.
+
+The callee does not destroy a completed result. Ownership passes to the caller,
+which either uses it as a final initialization destination or owns it as a
+temporary. Callee cleanup therefore cannot invalidate the result. A read-only
+or mutable alias may be a copy source, but the alias itself is never returned.
+
+An object-returning call directly initializes an exact-class local when that
+local is its final destination. In other source contexts it materializes a
+temporary. These are source-visible destination and lifetime rules; they do
+not prescribe an implementation calling convention.
+
+## Temporaries and full expressions
+
+A fresh construction or object-returning call materializes an owning temporary
+when it cannot use an eligible final destination directly. Copying from an
+existing place does not create an intermediate temporary. A temporary becomes
+live only after successful completion and is destroyed exactly once, in reverse
+completion order, at the end of its full expression.
+
+The implemented full-expression boundaries are:
+
+- one complete local initializer;
+- the complete right side of an assignment statement;
+- one effect-only call statement, including its arguments; and
+- one return expression.
+
+Argument temporaries remain live through the call and are cleaned after its
+result has been secured. A newly initialized local becomes live and registered
+before its initializer temporaries are cleaned. On return, the result is
+completed first, then expression temporaries are destroyed, followed by
+lexical locals and owning value parameters.
+
+Grouping does not change an existing place, but it does change whether a fresh
+construction matches the narrow elision forms below. The current language has
+no path-dependent temporary ownership at a conditional join.
+
+## Permitted copy elision
+
+The compiler elides the copy for an ungrouped fresh construction of the exact
+destination class in exactly these forms:
+
+```ska
+var value: T = T(arguments);
+
+fn make() -> T {
+    return T(arguments);
+}
+```
+
+The non-elided abstract execution would construct a temporary, copy-construct
+the destination, and destroy the temporary. A valid copy constructor is still
+required. With elision, the ordinary initializer runs once in the final
+destination; the copy-constructor operation and the omitted temporary's
+destruction are absent, including their possible user effects. The current
+compiler makes this choice for every eligible occurrence, deterministically.
+
+Grouping the construction prevents elision. Assignment, call arguments,
+copying from an existing place, initialization from a function result, and a
+named-return optimization are not eligible. Direct construction of a class
+field is its initialization rule, and direct placement of an object-returning
+call into a local is result placement; neither is an additional elision case.
+
+## Lifetime registration and normal cleanup
+
+The owning roots are completed class locals, class value parameters, and
+materialized class temporaries. A completed object result becomes caller-owned.
+Receivers and aliases are non-owning. An inline class field is destroyed with
+its containing object rather than registered as a separate lexical owner.
+
+An owning place is registered only after its complete initialization or copy
+construction finishes. On normal fallthrough, each scope destroys registered
+objects in reverse completion order. Only the executed conditional arm
+registers objects, and its child scope is cleaned before control reaches the
+join.
+
+On `return`, the result is completed first. Return-expression temporaries are
+then destroyed in reverse completion order, followed by lexical locals from
+innermost scope to outermost and in reverse completion order within each
+scope. Owning value parameters are destroyed last, in reverse parameter order,
+before the completed result transfers to the caller. A `unit` fallthrough uses
+the same cleanup rule without a result.
+
+These rules cover normal exits only. The current language has no exceptions,
+recoverable failed construction or copying, loop exits, or explicit early
+destruction.
+
+## Complete-object destruction
+
+Destroying one complete object performs the following sequence exactly once:
+
+1. run its user `destroy` body, if declared;
+2. clean all objects owned by that body before the body completes;
+3. destroy exact-class fields recursively in reverse source declaration order;
+4. end the complete object's lifetime.
+
+Primitive fields require no destruction step. An absent user declaration is
+an empty first step and does not suppress field cleanup. Field order is based
+on declaration order, independent of initializer statement order. Finite
+containment makes recursive destruction finite.
+
+The receiver remains complete and live throughout the user body. Once field
+cleanup begins, no source code can observe a partially destroyed receiver.
+Destruction ends the inline object's lifetime but does not require heap
+deallocation or any particular storage operation.
 
 ## Unsupported extensions
 

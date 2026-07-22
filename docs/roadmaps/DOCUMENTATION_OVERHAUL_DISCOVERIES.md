@@ -33,6 +33,14 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Completed
 
+### Legacy lifecycle profile drift
+
+The old local-destruction profile prohibited object copies, assignment, and
+fresh-object temporaries in destructor bodies even after the implemented
+object-value profile and its regression coverage allowed them. DOC6 replaced
+the layered profiles with the verified current destructor-body and lifetime
+contract instead of preserving the obsolete restriction.
+
 ### Legacy draft authority correction
 
 The legacy draft now identifies itself as migration input and defers to each
