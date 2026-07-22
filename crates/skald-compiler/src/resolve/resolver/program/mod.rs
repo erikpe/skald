@@ -10,8 +10,10 @@ use crate::{
 };
 
 mod class;
+mod class_body;
 
 use class::{collect_class, ClassWorkItem};
+use class_body::resolve_class_bodies;
 
 #[derive(Clone, Copy)]
 struct FunctionWorkItem {
@@ -51,8 +53,14 @@ impl<'ast> ProgramResolver<'ast> {
             &class_declarations,
             &class_symbols,
         );
-        let class_definitions =
-            self.resolve_class_bodies(&class_work, &class_declarations, &class_symbols);
+        let class_definitions = resolve_class_bodies(
+            self.ast,
+            &self.top_levels,
+            &class_work,
+            &class_declarations,
+            &class_symbols,
+            &mut self.diagnostics,
+        );
         let entry_function = self
             .top_levels
             .get("main")
@@ -242,182 +250,6 @@ impl<'ast> ProgramResolver<'ast> {
                 })
             })
             .collect()
-    }
-
-    fn resolve_class_bodies(
-        &mut self,
-        work: &[ClassWorkItem],
-        classes: &ResolvedClassDeclarationTable,
-        class_symbols: &[ClassSymbols],
-    ) -> Vec<ResolvedClassDefinition> {
-        work.iter()
-            .map(|item| {
-                let declaration = classes
-                    .get(item.id)
-                    .expect("class work and declaration table must agree");
-                let syntax::TopLevelDeclaration::Class(class) =
-                    &self.ast.declarations[item.ast_index]
-                else {
-                    unreachable!("class work item must reference a class")
-                };
-
-                let initializer = item.initializer_member.map(|member_index| {
-                    let syntax::ClassMember::Initializer(source) = &class.members[member_index]
-                    else {
-                        unreachable!("initializer work must reference an initializer")
-                    };
-                    let metadata = declaration
-                        .initializer
-                        .as_ref()
-                        .expect("accepted initializer must have declaration metadata");
-                    let body = resolve_callable_body(
-                        metadata.id.into(),
-                        Some(item.id),
-                        &metadata.parameters,
-                        &source.body,
-                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
-                        &mut self.diagnostics,
-                    );
-                    ResolvedMemberDefinition {
-                        callable: metadata.id.into(),
-                        locals: body.locals,
-                        body: body.body,
-                        span: source.span,
-                    }
-                });
-
-                let copy_constructor = item.copy_constructor_member.map(|member_index| {
-                    let syntax::ClassMember::Initializer(source) = &class.members[member_index]
-                    else {
-                        unreachable!("copy-constructor work must reference an initializer")
-                    };
-                    let metadata = declaration
-                        .copy_constructor_declaration
-                        .as_ref()
-                        .expect("accepted copy constructor must have declaration metadata");
-                    resolve_member_definition(
-                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
-                        metadata.id.into(),
-                        item.id,
-                        &metadata.parameters,
-                        &source.body,
-                        source.span,
-                        &mut self.diagnostics,
-                    )
-                });
-
-                let copy_assignment = item.copy_assignment_member.map(|member_index| {
-                    let syntax::ClassMember::CopyAssignment(source) = &class.members[member_index]
-                    else {
-                        unreachable!("copy-assignment work must reference copy assignment")
-                    };
-                    let metadata = declaration
-                        .copy_assignment_declaration
-                        .as_ref()
-                        .expect("accepted copy assignment must have declaration metadata");
-                    resolve_member_definition(
-                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
-                        metadata.id.into(),
-                        item.id,
-                        std::slice::from_ref(&metadata.parameter),
-                        &source.body,
-                        source.span,
-                        &mut self.diagnostics,
-                    )
-                });
-
-                let destructor = item.destructor_member.map(|member_index| {
-                    let syntax::ClassMember::Destructor(source) = &class.members[member_index]
-                    else {
-                        unreachable!("destructor work must reference a destructor")
-                    };
-                    let metadata = declaration
-                        .destructor
-                        .as_ref()
-                        .expect("accepted destructor must have declaration metadata");
-                    let body = resolve_callable_body(
-                        metadata.id.into(),
-                        Some(item.id),
-                        &[],
-                        &source.body,
-                        BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
-                        &mut self.diagnostics,
-                    );
-                    ResolvedMemberDefinition {
-                        callable: metadata.id.into(),
-                        locals: body.locals,
-                        body: body.body,
-                        span: source.span,
-                    }
-                });
-
-                let methods = item
-                    .method_members
-                    .iter()
-                    .enumerate()
-                    .map(|(method_index, member_index)| {
-                        let syntax::ClassMember::Method(source) = &class.members[*member_index]
-                        else {
-                            unreachable!("method work must reference a method")
-                        };
-                        let metadata = &declaration.methods[method_index];
-                        let body = resolve_callable_body(
-                            metadata.id.into(),
-                            Some(item.id),
-                            &metadata.parameters,
-                            &source.body,
-                            BodyResolutionEnvironment::new(
-                                &self.top_levels,
-                                classes,
-                                class_symbols,
-                            ),
-                            &mut self.diagnostics,
-                        );
-                        ResolvedMemberDefinition {
-                            callable: metadata.id.into(),
-                            locals: body.locals,
-                            body: body.body,
-                            span: source.span,
-                        }
-                    })
-                    .collect();
-
-                ResolvedClassDefinition {
-                    class: item.id,
-                    initializer,
-                    copy_constructor,
-                    copy_assignment,
-                    destructor,
-                    methods,
-                    span: class.span,
-                }
-            })
-            .collect()
-    }
-}
-
-fn resolve_member_definition(
-    environment: BodyResolutionEnvironment<'_>,
-    callable: CallableId,
-    owner: ClassId,
-    parameters: &[ResolvedParameter],
-    body: &syntax::Block,
-    span: Span,
-    diagnostics: &mut Diagnostics,
-) -> ResolvedMemberDefinition {
-    let body = resolve_callable_body(
-        callable,
-        Some(owner),
-        parameters,
-        body,
-        environment,
-        diagnostics,
-    );
-    ResolvedMemberDefinition {
-        callable,
-        locals: body.locals,
-        body: body.body,
-        span,
     }
 }
 

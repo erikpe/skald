@@ -39,3 +39,7 @@ Supporting records for the documentation overhaul:
 
 - [migration inventory](DOCUMENTATION_OVERHAUL_INVENTORY.md)
 - [resolved discoveries](DOCUMENTATION_OVERHAUL_DISCOVERIES.md)
+
+Resolved compiler-maintainability follow-ups:
+
+- [maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md)

@@ -16,9 +16,8 @@ The compiler-maintainability cleanup is now the implementation baseline. In
 particular, new work should extend the private phase-model modules, concise
 facades, shared typed-ID tables, responsibility-oriented verifier and lowering
 modules, test-only MIR fixtures, and deterministic robustness harnesses already
-present in the repository. Two remaining class-program orchestration hotspots
-are scheduled before hierarchy implementation so polymorphism does not enlarge
-their duplication.
+present in the repository. The preparatory class-program orchestration work in
+PM1 and PM2 is complete, so hierarchy implementation can extend focused owners.
 
 ## 1. Scope and invariants
 
@@ -85,8 +84,8 @@ Unless PM0 deliberately revises the restricted profile, it excludes:
 ## 2. Progress
 
 - [ ] PM0 — Freeze the executable polymorphism profile
-- [ ] PM1 — Extract resolver class-body orchestration
-- [ ] PM2 — Extract type-checker class-program orchestration
+- [x] PM1 — Extract resolver class-body orchestration
+- [x] PM2 — Extract type-checker class-program orchestration
 - [ ] PM3 — Parse and resolve class inheritance
 - [ ] PM4 — Build the canonical class hierarchy and inherited lookup
 - [ ] PM5 — Compose base initialization and lifecycle semantics
@@ -141,14 +140,14 @@ profile-level choice.
 **Purpose:** Give all resolved class member bodies one reusable coordination
 path before inheritance adds `super(...)` and more member metadata.
 
-- [ ] Replace repeated initializer, copy-constructor, copy-assignment,
+- [x] Replace repeated initializer, copy-constructor, copy-assignment,
       destructor, and method body setup with a cohesive private class-body
       owner.
-- [ ] Preserve source-member lookup, declaration lookup, callable IDs, body
+- [x] Preserve source-member lookup, declaration lookup, callable IDs, body
       environments, definition ordering, recovery, and diagnostics exactly.
-- [ ] Keep class declaration collection and body resolution as separate
+- [x] Keep class declaration collection and body resolution as separate
       responsibilities behind the existing resolver facade.
-- [ ] Move or add focused tests beside the new owner; update architecture prose
+- [x] Move or add focused tests beside the new owner; update architecture prose
       only if the stable responsibility boundary changes.
 
 **Tests:** Run resolver class/lifecycle unit tests, resolver dump and diagnostic
@@ -163,13 +162,13 @@ setup.
 **Purpose:** Give class declaration lowering and member-body checking a clear
 program-level owner before base lifecycle and dispatch expand their context.
 
-- [ ] Move class declaration and definition orchestration out of the broad
+- [x] Move class declaration and definition orchestration out of the broad
       type-check program entry module behind a narrow private interface.
-- [ ] Centralize construction of shared member-check context while keeping
+- [x] Centralize construction of shared member-check context while keeping
       lifecycle-specific body kinds and receiver access explicit.
-- [ ] Preserve HIR declaration/definition table order, optional member slots,
+- [x] Preserve HIR declaration/definition table order, optional member slots,
       diagnostics, and the public type-check facade.
-- [ ] Keep callable body rules in their existing responsibility modules and add
+- [x] Keep callable body rules in their existing responsibility modules and add
       focused orchestration tests.
 
 **Tests:** Run type-check class, lifecycle/copy, receiver, dump, and diagnostic
