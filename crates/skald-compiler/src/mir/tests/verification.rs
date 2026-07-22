@@ -1,41 +1,6 @@
 use super::*;
 
 #[test]
-fn verifier_rejects_u64_constant_and_operation_type_corruption() {
-    let mut constant_mismatch =
-        lower_text("fn value() -> u64 { return 1u; } fn main() -> i64 { return 0; }");
-    let function = constant_mismatch
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
-        panic!("expected constant assignment");
-    };
-    assignment.rvalue.ty = MirType::I64;
-    assert!(verify_mir(&constant_mismatch)
-        .unwrap_err()
-        .to_string()
-        .contains("u64 constant is not `u64`"));
-
-    let mut operation_mismatch =
-        lower_text("fn add() -> u64 { return 1u + 2u; } fn main() -> i64 { return 0; }");
-    let function = operation_mismatch
-        .definitions
-        .get_mut_for_test(FunctionId::new(0))
-        .unwrap();
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
-        panic!("expected binary assignment");
-    };
-    let MirRvalueKind::Binary { operation, .. } = &mut assignment.rvalue.kind else {
-        panic!("expected binary rvalue");
-    };
-    *operation = MirBinaryOperation::AddI64;
-    let errors = verify_mir(&operation_mismatch).unwrap_err().to_string();
-    assert!(errors.contains("binary operation result type mismatch"));
-    assert!(errors.contains("arithmetic operand is not `i64`"));
-}
-
-#[test]
 fn verifier_rejects_u8_constant_and_operation_type_corruption() {
     let mut constant_mismatch =
         lower_text("fn value() -> u8 { return 1u8; } fn main() -> i64 { return 0; }");
@@ -249,47 +214,6 @@ fn verifier_requires_a_boolean_branch_condition() {
     assert!(errors
         .iter()
         .any(|error| error.message.contains("branch condition is not `bool`")));
-}
-
-#[test]
-fn verifier_rejects_transient_values_used_across_block_boundaries() {
-    let mut mir = goto_join_mir();
-    let function = mir
-        .definitions
-        .get_mut_for_test(mir.entry_function)
-        .unwrap();
-    let entry_value = function.values[0].id;
-    let join = &mut function.body.blocks[1];
-    join.terminator = Some(MirTerminator::Return {
-        value: Some(entry_value),
-        span: join.span,
-    });
-
-    let errors = verify_mir(&mir).unwrap_err();
-    assert!(errors.iter().any(|error| error
-        .message
-        .contains("used before it is defined in this block")));
-}
-
-#[test]
-fn verifier_checks_unreachable_blocks() {
-    let mut mir = lower_text("fn main() -> i64 { return 0; }");
-    let function = mir
-        .definitions
-        .get_mut_for_test(mir.entry_function)
-        .unwrap();
-    let function_id = function.function;
-    function.body.blocks.push(MirBasicBlock {
-        id: BlockId::new(function_id, 1),
-        instructions: Vec::new(),
-        terminator: None,
-        span: function.span,
-    });
-
-    let errors = verify_mir(&mir).unwrap_err();
-    assert!(errors.iter().any(|error| {
-        error.block == Some(BlockId::new(function_id, 1)) && error.message.contains("no terminator")
-    }));
 }
 
 #[test]

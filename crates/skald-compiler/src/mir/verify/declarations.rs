@@ -1,7 +1,7 @@
 //! Program-wide MIR declaration and definition-table verification.
 //!
 //! This module owns deterministic metadata traversal. It delegates executable
-//! bodies through one narrow context method and contains no block or
+//! bodies through one narrow verifier method and contains no block or
 //! instruction verification.
 
 use std::collections::HashSet;

@@ -106,9 +106,12 @@ state. MIR verification exposes a concise facade over one private verifier
 context and ordered error sink; structural place relationships and cleanup
 liveness analysis remain private responsibilities behind it. Program-wide
 entry-point, declaration-table, class-lifecycle, and definition-slot metadata
-checks live together and delegate executable bodies through one narrow context
+checks live together and delegate executable bodies through one narrow verifier
 method, preserving deterministic error order without depending on block or
-instruction details.
+instruction details. Callable signature, storage, block, and terminator checks
+have a separate body owner. Ordinary MIR instructions use an exhaustive short
+dispatcher with responsibility-specific helpers; call, argument, and place
+verification remain grouped for their dedicated extraction.
 
 ### `runtime/`
 

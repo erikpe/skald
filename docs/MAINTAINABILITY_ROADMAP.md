@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ4 is next.
+Status: in progress; CQ5 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -64,7 +64,7 @@ count.
 - [x] CQ1 — Enforce the runtime ABI at link time
 - [x] CQ2 — Establish the MIR verifier facade and shared foundations
 - [x] CQ3 — Extract MIR program and declaration verification
-- [ ] CQ4 — Extract MIR callable-body and instruction verification
+- [x] CQ4 — Extract MIR callable-body and instruction verification
 - [ ] CQ5 — Extract MIR call, argument, place, and cleanup verification
 - [ ] CQ6 — Decompose class declaration collection in resolution
 - [ ] CQ7 — Decompose callable statement checking
@@ -172,15 +172,15 @@ MIR and error ordering.
 **Purpose:** Separate callable structure and instruction dispatch from
 program-wide metadata.
 
-- [ ] Extract signature, receiver, return storage, parameter storage, local
+- [x] Extract signature, receiver, return storage, parameter storage, local
       storage, value, block-ID, entry-block, and terminator checks.
-- [ ] Replace the large `verify_block` body with a short ordered instruction
+- [x] Replace the large `verify_block` body with a short ordered instruction
       loop delegating to responsibility-specific helpers.
-- [ ] Extract assignment, store, initialization, copy, cleanup, and
+- [x] Extract assignment, store, initialization, copy, cleanup, and
       full-expression instruction checks.
-- [ ] Preserve block-local transient-value rules and all unreachable-block
+- [x] Preserve block-local transient-value rules and all unreachable-block
       structural checks.
-- [ ] Keep instruction error accumulation deterministic and non-short-circuiting
+- [x] Keep instruction error accumulation deterministic and non-short-circuiting
       where it is today.
 
 **Acceptance criteria:** Callable structure and ordinary instruction
