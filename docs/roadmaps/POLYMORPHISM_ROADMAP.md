@@ -1,279 +1,605 @@
 # Polymorphism Roadmap
 
-Status: planned; the compiler-maintainability prerequisite is complete and PM0
-is next. The completed cleanup plan is preserved in the
-[archived compiler maintainability roadmap](../archive/MAINTAINABILITY_ROADMAP.md).
+Status: planned; PM0 is next.
 
 This roadmap extends Skald's completed exact-class object-value model with
-single inheritance, base subobjects, opt-in virtual dispatch, interfaces, and
-checked narrowing. It preserves the same place, initialization, copy,
-destruction, return-storage, temporary, and cleanup contracts rather than
-introducing a parallel polymorphic object representation.
+single inheritance, base subobjects, opt-in virtual dispatch, interfaces,
+`Obj` views, type tests, and checked narrowing. The implementation must extend
+the existing place, lifecycle, return-storage, temporary, and cleanup models;
+it must not create a second object-value pipeline.
 
-The sequence deliberately composes base lifecycle behavior before enabling
-dynamic dispatch. Interface and cast work follows verified class inheritance
-so each later PR has one established dynamic-type and object-view model.
+The compiler-maintainability cleanup is now the implementation baseline. In
+particular, new work should extend the private phase-model modules, concise
+facades, shared typed-ID tables, responsibility-oriented verifier and lowering
+modules, test-only MIR fixtures, and deterministic robustness harnesses already
+present in the repository. Two remaining class-program orchestration hotspots
+are scheduled before hierarchy implementation so polymorphism does not enlarge
+their duplication.
 
 ## 1. Scope and invariants
 
-The completed profile should include:
+The completed profile includes:
 
-- one direct base class through contextual `extends`, with acyclic hierarchies;
-- explicit base-subobject initialization and stable base projections;
+- one direct class base through contextual `extends`, with acyclic hierarchies;
+- explicit base-subobject initialization and stable semantic base projections;
 - inherited fields and methods with deterministic lookup and diagnostics;
 - lifecycle capability composition across the base subobject and direct fields;
-- derived-before-base destruction under the existing exactly-once cleanup model;
-- opt-in `virtual` methods and explicit compatible `override` declarations;
-- interface declarations, explicit `implements`, and exact conformance checks;
-- read-only and mutable polymorphic alias arguments without slicing;
-- statically known upcasts and explicitly checked narrowing;
-- deterministic dynamic metadata, dispatch tables, dumps, assembly, and native
-  behavior.
+- derived-body, derived-fields, then base-chain destruction under the existing
+  exactly-once cleanup model;
+- opt-in `virtual` methods and explicit, exactly compatible `override`
+  declarations;
+- interface signatures, explicit `implements`, and exact conformance checks;
+- non-owning read-only and mutable class, `Obj`, and interface alias views;
+- inline slicing, implicit non-slicing upcasts, `is` type tests, and explicit
+  checked narrowing as distinct operations;
+- deterministic dynamic-class metadata, dispatch tables, dumps, diagnostics,
+  assembly, and native behavior.
 
-The profile must preserve these invariants:
+The profile preserves these invariants:
 
-1. Resolution remains the only source-name selection phase. Inherited members,
-   overrides, interface requirements, and conversions receive stable semantic
-   identities before HIR.
-2. HIR owns static type, selected conversion, receiver access, dispatch kind,
-   and selected lifecycle operations. It contains no vtable offsets, registers,
-   or target layout.
-3. MIR represents base and interface views as verified semantic places or
-   explicit polymorphic operands. A class object never becomes a scalar
-   `MirValue` and no aggregate bytes imply ownership.
-4. Every derived object has one complete-object lifetime. Base construction,
-   copy, assignment, return storage, temporary cleanup, and destruction extend
-   the existing initialized-place state machine.
-5. Backends consume verified dispatch and conversion operations. They do not
-   repeat override selection, infer dynamic type, choose elision, or reconstruct
-   cleanup order.
-6. Receiver mutability remains part of exact override and interface
-   compatibility. A conversion never increases access.
-7. Static inline slicing, alias upcasts, interface views, and checked narrowing
-   are distinct operations; no implicit conversion silently changes ownership.
-8. The implementation remains deterministic across hierarchy traversal,
-   metadata layout, diagnostics, phase dumps, assembly, and native execution.
+1. Resolution is the only source-name selection phase. Base classes, inherited
+   members, overrides, interface requirements, and conversions have stable
+   typed identities before HIR.
+2. HIR owns static types, selected declarations and conversions, receiver
+   access, dispatch kinds, and lifecycle operations. It contains no target
+   offsets, registers, symbols, or calling-convention locations.
+3. MIR represents base, `Obj`, and interface views explicitly and verifies all
+   metadata needed by a backend. A class object never becomes a scalar
+   `MirValue`, and aggregate bytes never imply ownership.
+4. Every inline derived object has one complete-object lifetime. Base
+   construction, copying, assignment, return storage, temporary cleanup, and
+   destruction extend the existing initialized-place state machine.
+5. Backends consume verified hierarchy, dispatch, and conversion operations.
+   They do not repeat name lookup, override selection, conformance checking,
+   copy selection, or cleanup planning.
+6. Receiver mutability is part of exact override and interface compatibility.
+   Upcasts, interface conversions, and narrowing preserve or reduce access;
+   they never grant mutable access.
+7. Dynamic receiver information survives forwarding and calls made through
+   `self`, so deep inherited overrides remain effective until an operation
+   deliberately slices to an exact inline base value.
+8. Hierarchy traversal, ID allocation, diagnostic precedence, metadata layout,
+   phase dumps, assembly, and native observations are deterministic.
+9. Phase implementation remains behind the established facades. New schema,
+   verifier, lowering, and backend responsibilities receive cohesive private
+   owners and focused tests rather than returning to broad central modules.
 
-Still excluded unless PM0 explicitly narrows otherwise:
+Unless PM0 deliberately revises the restricted profile, it excludes:
 
-- multiple class inheritance or interface inheritance;
-- virtual or interface fields, default interface bodies, and overload sets;
-- `shared`, allocation, reference counting, borrow anchors, or dynamic shared
+- multiple class inheritance and interface inheritance;
+- access modifiers, `final`, abstract methods/classes, default interface
+  bodies, interface fields, overload sets, and covariant overrides;
+- standalone inline `Obj` or interface values;
+- `shared`, allocation, reference counting, borrow anchors, and dynamic shared
   destruction;
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, optionals, closures, generics, statics/globals, and reflection;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
-- unsafe pointer casts, user-visible vtable access, and user-defined conversion
-  operators.
+- unsafe pointer casts, user-visible dispatch tables, and user-defined
+  conversion operators.
 
-## 2. PR-sized implementation sequence
+## 2. Progress
+
+- [ ] PM0 — Freeze the executable polymorphism profile
+- [ ] PM1 — Extract resolver class-body orchestration
+- [ ] PM2 — Extract type-checker class-program orchestration
+- [ ] PM3 — Parse and resolve class inheritance
+- [ ] PM4 — Build the canonical class hierarchy and inherited lookup
+- [ ] PM5 — Compose base initialization and lifecycle semantics
+- [ ] PM6 — Add typed static base views and slicing in HIR
+- [ ] PM7 — Represent and verify static inheritance in MIR
+- [ ] PM8 — Lower static inheritance on x86-64
+- [ ] PM9 — Resolve virtual declarations and override families
+- [ ] PM10 — Select virtual calls and receiver views in HIR
+- [ ] PM11 — Represent and verify virtual dispatch in MIR
+- [ ] PM12 — Lower virtual dispatch on x86-64
+- [ ] PM13 — Parse and resolve interfaces and conformance declarations
+- [ ] PM14 — Validate conformance and select interface views in HIR
+- [ ] PM15 — Represent and verify interface dispatch in MIR
+- [ ] PM16 — Lower interface dispatch on x86-64
+- [ ] PM17 — Type-check type tests and checked narrowing
+- [ ] PM18 — Represent and verify tests and narrowing in MIR
+- [ ] PM19 — Lower tests and checked narrowing on x86-64
+- [ ] PM20 — Harden, document, and publish polymorphism
+
+## 3. PR-sized implementation sequence
 
 ### PM0 — Freeze the executable polymorphism profile
 
-**Purpose:** Resolve the remaining language and representation decisions before
-adding syntax.
+**Purpose:** Resolve source and representation choices before code depends on
+them.
 
-- [ ] Freeze `extends`, `virtual`, `override`, `interface`, `implements`, base
-      initialization, upcast, slicing, and checked-narrowing source forms.
-- [ ] Freeze inherited lookup, shadowing, override compatibility, interface
-      conformance, receiver access, and deterministic diagnostic precedence.
-- [ ] Freeze complete-object/base addresses and the target-independent dynamic
-      type and interface-view model for inline aliases.
-- [ ] Freeze base construction/copy/assignment/destruction order and interaction
-      with return storage, temporaries, and permitted elision.
-- [ ] Reconcile the grammar, draft specification, object-value contract, and
-      exclusions; add design-consistency tests where useful.
+- [ ] Freeze the contextual forms for `extends`, `super(...)`, `virtual`,
+      `override`, `interface`, `implements`, `Obj`, `is`, and checked narrowing,
+      including the scoped non-owning result of a successful narrowing.
+- [ ] Freeze inherited lookup, redeclaration and shadowing rules, virtual-root
+      and override compatibility, interface conformance, receiver access, and
+      deterministic diagnostic precedence.
+- [ ] Freeze whether `Obj` is a semantic root or a physical base, the
+      target-independent complete-object/view model, dynamic-class metadata,
+      and how polymorphic receiver information crosses the internal alias ABI.
+- [ ] Freeze base construction, copy, assignment, destruction, slicing,
+      temporary, return-storage, and permitted-elision behavior.
+- [ ] Reconcile the grammar, draft specification, future boundaries, and the
+      exclusions above so later tasks do not rely on provisional prose.
 
-**Acceptance criteria:** every later slice can implement syntax, ownership,
-dispatch, and diagnostics without another representation-level language choice.
+**Tests:** Add focused grammar/spec consistency cases where executable rules can
+already be asserted; run `make check` and `git diff --check`.
 
-### PM1 — Parse and resolve hierarchy declarations
+**Exit criteria:** Every later task can implement its source form, semantic
+identity, ownership behavior, metadata, and failure mode without another
+profile-level choice.
 
-**Purpose:** Establish stable hierarchy identities without enabling polymorphic
-use.
+### PM1 — Extract resolver class-body orchestration
 
-- [ ] Parse contextual class inheritance and virtual/override method modifiers.
-- [ ] Parse interface signatures and explicit class conformance declarations.
-- [ ] Resolve base classes, interface identities, requirements, and member
-      modifiers in deterministic source order.
-- [ ] Reject unknown, duplicate, malformed, and wrong-kind declarations with
-      focused recovery.
-- [ ] Extend exact AST and resolved dumps and grammar snapshots.
+**Purpose:** Give all resolved class member bodies one reusable coordination
+path before inheritance adds `super(...)` and more member metadata.
 
-**Acceptance criteria:** valid hierarchy structure crosses resolution by stable
-identity while inherited access and dispatch remain disabled.
+- [ ] Replace repeated initializer, copy-constructor, copy-assignment,
+      destructor, and method body setup with a cohesive private class-body
+      owner.
+- [ ] Preserve source-member lookup, declaration lookup, callable IDs, body
+      environments, definition ordering, recovery, and diagnostics exactly.
+- [ ] Keep class declaration collection and body resolution as separate
+      responsibilities behind the existing resolver facade.
+- [ ] Move or add focused tests beside the new owner; update architecture prose
+      only if the stable responsibility boundary changes.
 
-### PM2 — Validate hierarchies, lookup, and compatibility
+**Tests:** Run resolver class/lifecycle unit tests, resolver dump and diagnostic
+tests, `make check`, and `git diff --check`.
 
-**Purpose:** Build the canonical semantic class graph used by every later phase.
+**Exit criteria:** Adding another class callable or initializer-only statement
+requires one explicit orchestration path rather than copying member-resolution
+setup.
 
-- [ ] Reject direct and indirect inheritance cycles before HIR or layout.
-- [ ] Compute deterministic inherited field/method visibility and collision
-      rules without lower-phase name lookup.
-- [ ] Validate virtual roots, explicit overrides, exact signatures, receiver
-      mutability, result compatibility, and final/non-virtual exclusions.
-- [ ] Validate interface requirement uniqueness and exact class conformance.
-- [ ] Cover forward declarations, deep chains, diamonds through interfaces,
-      and deterministic first-error paths.
+### PM2 — Extract type-checker class-program orchestration
 
-**Acceptance criteria:** HIR receives one canonical hierarchy, override map, and
-interface-conformance map for every valid class.
+**Purpose:** Give class declaration lowering and member-body checking a clear
+program-level owner before base lifecycle and dispatch expand their context.
 
-### PM3 — Compose base initialization and lifecycle capabilities
+- [ ] Move class declaration and definition orchestration out of the broad
+      type-check program entry module behind a narrow private interface.
+- [ ] Centralize construction of shared member-check context while keeping
+      lifecycle-specific body kinds and receiver access explicit.
+- [ ] Preserve HIR declaration/definition table order, optional member slots,
+      diagnostics, and the public type-check facade.
+- [ ] Keep callable body rules in their existing responsibility modules and add
+      focused orchestration tests.
 
-**Purpose:** Extend ownership to base subobjects before introducing dispatch.
+**Tests:** Run type-check class, lifecycle/copy, receiver, dump, and diagnostic
+tests, `make check`, and `git diff --check`.
 
-- [ ] Type-check the frozen explicit base-initialization form before derived
-      fields and track base liveness separately during initialization.
-- [ ] Include the base subobject first in synthesized copy construction and
-      assignment capability computation.
-- [ ] Extend user lifecycle body rules and unavailable-capability diagnostics
-      through deterministic base paths.
-- [ ] Extend destruction plans to derived body, derived fields in reverse, then
-      the complete base destruction sequence.
-- [ ] Cover empty bases, nested fields, user/synthesized combinations, returns,
-      temporaries, and exactly-once cleanup.
+**Exit criteria:** New class member categories can be wired into one readable
+class-program owner without duplicating `MemberCheckContext` assembly.
 
-**Acceptance criteria:** derived objects use the existing verified ownership
-model with one ordered base lifecycle contribution.
+### PM3 — Parse and resolve class inheritance
 
-### PM4 — Add semantic base places and static access
+**Purpose:** Establish stable direct-base identity without yet enabling
+inherited access or polymorphic conversions.
 
-**Purpose:** Make inherited access and exact base views explicit above the
-backend.
+- [ ] Parse contextual `extends` on classes with focused malformed-input
+      recovery and no global keyword regressions.
+- [ ] Resolve the base name to `ClassId`, rejecting unknown, duplicate,
+      self-referential, and wrong-kind bases in deterministic order.
+- [ ] Extend class declaration models and typed tables through resolved IR
+      while keeping the source spelling only where dumps and diagnostics need
+      it.
+- [ ] Extend AST and resolved dumps, grammar snapshots, and hostile frontend
+      mutation coverage.
 
-- [ ] Add HIR base projections with selected declarations and preserved access.
-- [ ] Type-check inherited field access, direct non-virtual calls, alias upcasts,
-      and the frozen inline slicing form.
-- [ ] Add MIR base projections and verifier rules for owner chains, terminal
-      types, overlap, liveness, and mutation.
-- [ ] Keep slicing as selected base copy construction, never raw prefix bytes.
-- [ ] Extend HIR/MIR dumps and malformed-IR tests.
+**Tests:** Add parser recovery, resolution identity/diagnostic, exact-dump, and
+generative frontend cases; run `make check` and `git diff --check`.
 
-**Acceptance criteria:** all static inheritance behavior is target-independent,
-identity-based, and executable without dynamic dispatch.
+**Exit criteria:** Every accepted class has zero or one resolved direct base;
+inherited member use and cyclic hierarchies still fail before HIR.
 
-### PM5 — Lower base layout and lifecycle behavior on x86-64
+### PM4 — Build the canonical class hierarchy and inherited lookup
 
-**Purpose:** Execute verified single inheritance without leaking target layout
-into MIR.
+**Purpose:** Create the one target-independent hierarchy service used by all
+later lifecycle, typing, verification, and layout work.
 
-- [ ] Lay out the direct base subobject according to the frozen ABI with checked
-      derived-field offsets and complete-object alignment.
-- [ ] Lower base projections for local, receiver, parameter, return, argument,
-      temporary, and alias storage bases.
-- [ ] Lower base construction, copying, assignment, slicing, and destruction
-      through selected semantic operations.
-- [ ] Retain structured errors for corrupt hierarchy metadata and displacement
-      overflow; add no implicit aggregate-copy path.
-- [ ] Add native traces for deep chains, padding, empty bases, cleanup, and
-      mixed scalar/object call pressure.
+- [ ] Reject direct and indirect cycles before HIR or layout with stable
+      source-order diagnostics.
+- [ ] Define deterministic base-chain traversal, subtype queries, inherited
+      field/method lookup, collision handling, and declaration-owner recovery.
+- [ ] Keep the hierarchy keyed by typed IDs and prevent later phases from
+      reconstructing relationships from names or declaration order.
+- [ ] Cover forward references, deep chains, inherited redeclarations,
+      containment interaction, and deterministic first-error paths.
 
-**Acceptance criteria:** static inheritance and complete lifecycle composition
-execute deterministically on x86-64.
+**Tests:** Add hierarchy service unit tests plus resolver/type-check diagnostics
+for cycles, wrong kinds, deep lookup, and collisions; run `make check` and
+`git diff --check`.
 
-### PM6 — Represent and verify virtual dispatch
+**Exit criteria:** All consumers can answer ancestry and inherited-member
+questions through one canonical identity-based model.
 
-**Purpose:** Introduce dynamic method selection without backend-owned semantics.
+### PM5 — Compose base initialization and lifecycle semantics
 
-- [ ] Assign stable virtual slots from canonical override families.
-- [ ] Represent direct versus virtual calls explicitly in HIR and MIR.
-- [ ] Carry the frozen dynamic class/view metadata through permitted alias
-      bindings without changing ownership.
-- [ ] Verify slot ownership, signature/access agreement, receiver liveness, and
-      complete-object adjustment requirements.
-- [ ] Extend dumps and corruption tests for virtual metadata and calls.
+**Purpose:** Extend complete-object ownership through base subobjects before any
+dynamic dispatch is executable.
 
-**Acceptance criteria:** MIR identifies exactly one verified virtual family and
-receiver view for every dynamic call.
+- [ ] Parse and resolve the frozen `super(...)` form only in the permitted
+      initializer position and select the base initializer by stable identity.
+- [ ] Type-check base initialization before derived fields and track base
+      liveness explicitly during construction.
+- [ ] Include the base first in copy-construction and copy-assignment capability
+      computation; retain exact selected operations in HIR.
+- [ ] Extend destruction planning to derived body, derived fields in reverse,
+      then the complete base sequence, with no implicit failed-construction
+      cleanup.
+- [ ] Keep diagnostics source-ordered through base and field paths and document
+      the executable lifecycle contract.
 
-### PM7 — Lower virtual dispatch on x86-64
+**Tests:** Add lifecycle/capability unit tests and exact diagnostics for missing,
+duplicate, misplaced, or unavailable base operations, including empty bases,
+deep chains, user/synthesized combinations, returns, and temporaries; run
+`make check` and `git diff --check`.
 
-**Purpose:** Make opt-in virtual calls executable under a checked internal ABI.
+**Exit criteria:** HIR describes one complete derived-object lifecycle with an
+explicit, ordered base contribution and no backend-owned lifecycle choice.
 
-- [ ] Emit deterministic per-class dispatch metadata from stable identities.
-- [ ] Map polymorphic alias views to the frozen internal register/stack layout.
-- [ ] Lower virtual calls while preserving receiver-before-argument evaluation,
-      scalar/object arguments, result storage, and temporary cleanup.
-- [ ] Reject malformed metadata or unsupported external signatures before
+### PM6 — Add typed static base views and slicing in HIR
+
+**Purpose:** Make static inherited access and exact base-object production
+explicit at the typed semantic boundary.
+
+- [ ] Add HIR base projections carrying selected declarations, terminal class,
+      and preserved receiver access.
+- [ ] Type-check inherited fields, direct non-virtual methods, read-only and
+      mutable alias upcasts, and `Obj` upcasts without slicing.
+- [ ] Represent inline derived-to-base value conversion as selected base copy
+      construction into exact base storage, never as raw prefix bytes.
+- [ ] Preserve receiver-before-argument evaluation, exact object-value
+      ownership, return-storage, temporary, and elision rules.
+- [ ] Extend HIR dumps and place/access diagnostics without leaking target
+      layout.
+
+**Tests:** Add focused HIR/type-check tests for deep projections, access
+restriction, static calls, alias forwarding, slicing, grouping, object results,
+and invalid conversions; run `make check` and `git diff --check`.
+
+**Exit criteria:** Every static inheritance operation is identity-selected in
+HIR and distinguishable as projection, alias view, or sliced value.
+
+### PM7 — Represent and verify static inheritance in MIR
+
+**Purpose:** Extend target-independent places and lifecycle instructions with
+verified base semantics.
+
+- [ ] Add MIR base projections and explicit selected base copy/lifecycle
+      operations using the existing model facades and responsibility modules.
+- [ ] Lower HIR base views for locals, receivers, parameters, return storage,
+      arguments, temporaries, aliases, and nested inline fields.
+- [ ] Verify ancestry, projection owner/terminal types, access, overlap,
+      liveness, selected copy capabilities, and destruction-plan consistency.
+- [ ] Extend deterministic MIR dumps, test-only fixtures, and structured MIR
+      mutations for corrupt hierarchy and base-place metadata.
+
+**Tests:** Run focused MIR lowering, dump, place, call, cleanup, and mutation
+tests for static inheritance, then `make check` and `git diff --check`.
+
+**Exit criteria:** Invalid base metadata is rejected before the backend, and
+valid MIR contains everything required to execute static inheritance.
+
+### PM8 — Lower static inheritance on x86-64
+
+**Purpose:** Execute verified base layout and lifecycle behavior without
+exposing target layout above the backend.
+
+- [ ] Lay out the direct base according to the frozen ABI, then derived fields,
+      with checked offsets, padding, alignment, and total-size arithmetic.
+- [ ] Lower every verified base projection and selected construction, copy,
+      assignment, slicing, and destruction operation.
+- [ ] Preserve scalar/object argument classes, hidden results, aliases,
+      temporaries, cleanup, and mixed register/stack pressure.
+- [ ] Return structured backend errors for corrupt metadata or displacement
+      overflow; do not add an implicit aggregate-copy path.
+
+**Tests:** Add layout and legality unit tests plus native traces for empty and
+padded bases, deep chains, slicing, returns, temporaries, cleanup, and mixed
+call pressure; run `make check` and `git diff --check`.
+
+**Exit criteria:** Static single inheritance and its complete lifecycle execute
+deterministically on x86-64 with target choices confined to the backend.
+
+### PM9 — Resolve virtual declarations and override families
+
+**Purpose:** Establish stable virtual identities and compatibility before
+representing dynamic calls.
+
+- [ ] Parse contextual `virtual` and `override` method modifiers in the frozen
+      order with focused recovery.
+- [ ] Resolve virtual roots and explicit overrides from canonical inherited
+      lookup; reject missing roots, non-virtual redeclarations, and invalid
+      modifier combinations.
+- [ ] Validate exact parameters, result, receiver mutability, and all other
+      frozen signature rules.
+- [ ] Assign deterministic override-family and slot identities without target
+      offsets or symbols; extend AST, resolved, and HIR declaration dumps.
+
+**Tests:** Add parser, resolution, type-check, and exact-dump tests for deep
+families, inherited non-overrides, signature/access mismatches, forward
+declarations, and stable diagnostic precedence; run `make check` and
+`git diff --check`.
+
+**Exit criteria:** Every virtual declaration belongs to one canonical family,
+and every override is fully validated before executable call selection.
+
+### PM10 — Select virtual calls and receiver views in HIR
+
+**Purpose:** Make dynamic versus direct dispatch and receiver metadata explicit
+in typed executable semantics.
+
+- [ ] Distinguish direct and virtual method targets in HIR using selected method
+      and override-family identities.
+- [ ] Represent the frozen complete-object pointer/view and dynamic-class
+      metadata carried by polymorphic alias receivers.
+- [ ] Preserve dynamic receiver information through parameter forwarding,
+      nested calls, and base methods calling virtual methods through `self`.
+- [ ] Enforce receiver access before dispatch selection and keep calls on sliced
+      inline bases exact and static.
+- [ ] Extend HIR dumps and diagnostics without introducing ABI fields.
+
+**Tests:** Add HIR/type-check tests for base/derived receivers, deep overrides,
+`self` redispatch, forwarding, mutable calls, recursion, and sliced bases; run
+`make check` and `git diff --check`.
+
+**Exit criteria:** HIR identifies the exact static family and dynamic receiver
+view for every call, with no backend inference required.
+
+### PM11 — Represent and verify virtual dispatch in MIR
+
+**Purpose:** Define a target-independent, corruption-resistant virtual call
+contract.
+
+- [ ] Add explicit virtual call targets and polymorphic receiver operands to
+      the MIR model behind the existing facades.
+- [ ] Lower HIR virtual calls while retaining source evaluation order, argument
+      modes, result destinations, and full-expression cleanup.
+- [ ] Verify family/slot ownership, signature and access agreement, receiver
+      view compatibility and liveness, and dynamic metadata provenance.
+- [ ] Extend dumps, shared fixtures, and structured mutations for invalid
+      families, receivers, signatures, and metadata.
+
+**Tests:** Run focused MIR call, argument, place, cleanup, dump, and robustness
+tests for virtual dispatch, then `make check` and `git diff --check`.
+
+**Exit criteria:** Every virtual MIR call names one verified family and carries
+one valid complete-object receiver view.
+
+### PM12 — Lower virtual dispatch on x86-64
+
+**Purpose:** Execute opt-in virtual methods through a checked internal ABI.
+
+- [ ] Compute deterministic per-class virtual tables from stable identities in
+      a backend analysis rather than embedding target slots in MIR.
+- [ ] Map polymorphic receiver views to the frozen internal register/stack ABI
+      and forward their dynamic metadata through nested calls.
+- [ ] Lower virtual calls with existing scalar/object arguments, hidden results,
+      temporaries, cleanup, recursion, and stack alignment.
+- [ ] Reject malformed metadata and unsupported external signatures before
       instruction selection.
-- [ ] Add native tests for base/derived calls, mutable access, deep overrides,
-      recursion, stack pressure, and sliced inline bases.
 
-**Acceptance criteria:** calls through base aliases select the dynamic override,
-while direct and sliced calls retain their specified static behavior.
+**Tests:** Add backend metadata/legality tests and native cases for deep
+overrides, `self` redispatch, inherited non-overrides, mutable access, recursion,
+mixed arguments, stack pressure, and sliced bases; run `make check` and
+`git diff --check`.
 
-### PM8 — Add interfaces and interface dispatch
+**Exit criteria:** Calls through base aliases select the dynamic override while
+direct and sliced calls retain exact static behavior.
 
-**Purpose:** Generalize verified polymorphic views without adding interface
-objects.
+### PM13 — Parse and resolve interfaces and conformance declarations
 
-- [ ] Type-check class-to-interface and frozen interface-to-root alias
-      conversions from canonical conformance metadata.
-- [ ] Represent interface view and requirement identities explicitly in HIR/MIR.
-- [ ] Verify access, signature, view adjustment, lifetime, and non-ownership.
-- [ ] Emit deterministic interface tables and lower interface calls on x86-64.
-- [ ] Cover multiple implemented interfaces, reordered requirements, mutable
-      methods, forwarding, overlap, and wrong-conformance diagnostics.
+**Purpose:** Establish stable interface and requirement identities independently
+of executable interface dispatch.
 
-**Acceptance criteria:** interface aliases dispatch to the conforming complete
-object without permitting standalone inline interface storage.
+- [ ] Parse top-level interface signatures and contextual class `implements`
+      lists with focused recovery and no standalone interface values.
+- [ ] Add `InterfaceId` and interface-member identities using the shared typed
+      identity/table patterns; resolve nominal type positions by declaration
+      kind.
+- [ ] Resolve class conformance lists in source order and reject unknown,
+      duplicate, malformed, and wrong-kind entries deterministically.
+- [ ] Extend AST and resolved models/dumps, grammar snapshots, public phase API
+      tests, and frontend robustness mutations through cohesive private owners.
 
-### PM9 — Add checked narrowing and casts
+**Tests:** Add parser recovery, identity/table, resolution diagnostic, exact
+dump, public API, and generative cases; run `make check` and `git diff --check`.
 
-**Purpose:** Complete the frozen conversion profile over the same metadata.
+**Exit criteria:** Valid interface signatures and class conformance claims cross
+resolution by typed identity while interface-typed calls remain disabled.
 
-- [ ] Type-check explicit base/interface narrowing and its scoped success form.
-- [ ] Preserve source access and lifetime; reject escaping or access-increasing
-      narrowed aliases.
-- [ ] Represent static success, runtime check, failure behavior, and view
-      adjustment explicitly in MIR.
-- [ ] Lower checks against deterministic dynamic metadata without object-graph
-      search or ownership transfer.
-- [ ] Cover success/failure, deep bases, interfaces, grouping, nested calls, and
-      invalid cast diagnostics.
+### PM14 — Validate conformance and select interface views in HIR
 
-**Acceptance criteria:** every cast is explicit, checked when required, and
-produces only a bounded non-owning view.
+**Purpose:** Make interface compatibility and non-owning conversions explicit
+before lowering them.
 
-### PM10 — Harden, document, and publish polymorphism
+- [ ] Validate requirement uniqueness and exact class conformance, including
+      inherited implementations, receiver mutability, parameters, and results.
+- [ ] Define deterministic requirement-to-method maps for every valid
+      class/interface pair and retain both identities in HIR.
+- [ ] Type-check class-to-interface and interface-to-`Obj` alias conversions,
+      forwarding, and interface method calls while preserving access and
+      lifetime.
+- [ ] Reject standalone interface/`Obj` inline storage and all unimplemented
+      shared or external forms with focused diagnostics.
+- [ ] Extend HIR dumps and architecture/spec documentation for the stable
+      conformance boundary.
 
-**Purpose:** Make the restricted polymorphism profile dependable and prepare
-shared ownership.
+**Tests:** Add conformance/type-check and HIR dump tests for inherited methods,
+multiple interfaces, reordered requirements, mutable methods, forwarding,
+wrong signatures, missing methods, and invalid storage; run `make check` and
+`git diff --check`.
 
-- [ ] Complete native and compile-failure goldens across hierarchy declarations,
-      lifecycle composition, layout, static access, virtual/interface dispatch,
-      conversions, casts, aliases, object values, and cleanup.
-- [ ] Assert exact output/status/stderr and cross-process determinism for every
-      phase product, metadata artifact, assembly, and diagnostic.
-- [ ] Audit source-reachable assertions, dispatch-table assumptions, complete-
-      object adjustments, initialized-place transitions, and backend legality.
+**Exit criteria:** HIR contains one verified conformance map and selected
+non-owning view for every interface conversion and call.
+
+### PM15 — Represent and verify interface dispatch in MIR
+
+**Purpose:** Define interface views and calls without introducing interface
+objects or target table layouts.
+
+- [ ] Add explicit interface view operands, conversions, and call targets to
+      MIR using interface and requirement identities.
+- [ ] Lower HIR interface calls and forwarding with complete-object pointer,
+      dynamic-class metadata, access, and lifetime intact.
+- [ ] Verify conformance, requirement/method agreement, view provenance,
+      liveness, access, call signatures, and non-ownership.
+- [ ] Extend deterministic dumps, shared fixtures, and structured mutations for
+      wrong conformance, requirements, views, and calls.
+
+**Tests:** Run focused MIR call, argument, place, dump, verification, cleanup,
+and mutation tests for interface views, then `make check` and
+`git diff --check`.
+
+**Exit criteria:** Valid MIR describes interface dispatch completely and all
+source-reachable corruptions stop at verification.
+
+### PM16 — Lower interface dispatch on x86-64
+
+**Purpose:** Execute verified interface calls through deterministic backend-owned
+tables.
+
+- [ ] Compute stable interface requirement tables and class witnesses from
+      typed identities without source-name ordering.
+- [ ] Lower class/interface/`Obj` views under the frozen internal ABI and route
+      calls to the selected implementing method.
+- [ ] Preserve dynamic metadata through multiple interface conversions and
+      inherited overrides, including calls made through `self`.
+- [ ] Retain structured legality and overflow errors and reject external
+      interface signatures before instruction selection.
+
+**Tests:** Add backend table/legality tests and native cases for multiple
+interfaces, deep inherited implementations and overrides, reordered
+requirements, mutable access, forwarding, recursion, and mixed stack
+arguments; run `make check` and `git diff --check`.
+
+**Exit criteria:** Interface aliases dispatch to the conforming complete inline
+object without standalone interface storage or ownership transfer.
+
+### PM17 — Type-check type tests and checked narrowing
+
+**Purpose:** Complete the source and HIR conversion model over the established
+dynamic metadata.
+
+- [ ] Parse the frozen `is` and explicit checked-narrowing forms with clear
+      precedence, grouping, and recovery.
+- [ ] Type-check class, base, `Obj`, and interface source/target combinations;
+      distinguish static success, static impossibility, and runtime checks.
+- [ ] Bind successful narrowing only through the frozen scoped alias form,
+      preserving source access and lifetime and rejecting escape or access
+      increase.
+- [ ] Represent test/narrowing kind, target identity, selected view, and
+      failure behavior explicitly in HIR.
+- [ ] Extend grammar, specification, HIR dumps, diagnostics, and frontend
+      robustness mutations.
+
+**Tests:** Add parser/type-check/HIR tests for deep bases, interfaces, static and
+dynamic outcomes, access, scope escape, grouping, nested calls, and invalid
+casts; run `make check` and `git diff --check`.
+
+**Exit criteria:** Every accepted type test or narrowing has one explicit HIR
+semantic kind and can produce only a bounded non-owning view.
+
+### PM18 — Represent and verify tests and narrowing in MIR
+
+**Purpose:** Make runtime metadata checks and their control flow explicit before
+target lowering.
+
+- [ ] Add MIR type-test and checked-narrowing operations carrying source view,
+      target identities, result view, and explicit failure behavior.
+- [ ] Lower static outcomes without unnecessary runtime metadata work and lower
+      dynamic success/failure control flow deterministically.
+- [ ] Verify legal type relations, metadata provenance, target conformance,
+      scoped result liveness/access, and failure edges.
+- [ ] Extend dumps, shared fixtures, and mutations for invalid targets,
+      metadata, views, and check results.
+
+**Tests:** Run focused MIR lowering, CFG, place, cleanup, dump, verification, and
+robustness tests for tests/narrowing, then `make check` and
+`git diff --check`.
+
+**Exit criteria:** MIR fully describes every static or dynamic result and
+rejects malformed checks before backend selection.
+
+### PM19 — Lower tests and checked narrowing on x86-64
+
+**Purpose:** Execute verified checks against deterministic class/interface
+metadata without ownership or object-graph search.
+
+- [ ] Lower static and runtime class/interface membership checks against the
+      backend metadata established for dispatch.
+- [ ] Materialize successful scoped views under the existing polymorphic alias
+      ABI and implement the frozen unrecoverable failure behavior.
+- [ ] Preserve complete-object address, receiver access, evaluation order,
+      temporary cleanup, and stack alignment across success and failure paths.
+- [ ] Reject corrupt metadata and unsupported forms through structured backend
+      errors.
+
+**Tests:** Add backend legality and native cases for success, failure, deep
+bases, multiple interfaces, round trips through `Obj`, nested calls, and stack
+pressure; assert stdout, stderr, and process status; run `make check` and
+`git diff --check`.
+
+**Exit criteria:** Type tests and checked narrowing execute deterministically
+and produce only verified non-owning views.
+
+### PM20 — Harden, document, and publish polymorphism
+
+**Purpose:** Make the restricted profile dependable and leave a stable boundary
+for shared ownership.
+
+- [ ] Complete compile-failure and native goldens across hierarchy declarations,
+      lifecycle, layout, static access, slicing, virtual/interface dispatch,
+      `Obj`, conversions, tests, narrowing, aliases, object values, and cleanup.
+- [ ] Add cross-process determinism coverage for every phase dump, dynamic
+      metadata artifact, assembly, diagnostic, and native observation.
+- [ ] Audit source-reachable assertions, hierarchy/table assumptions,
+      complete-object views, initialized-place transitions, verifier mutations,
+      and backend legality; retain every discovered regression as a focused
+      test.
+- [ ] Audit touched files and functions by responsibility, split any enlarged
+      owner or test module, and record unrelated follow-ups in the indexed
+      discoveries document.
 - [ ] Update grammar, specification, architecture, README, debugging, samples,
-      golden documentation, and future boundaries.
-- [ ] Run the complete quality gate, archive this roadmap, update the archive
-      index, and publish shared ownership as the next object-model roadmap.
+      test guidance, and future boundaries with only current behavior.
+- [ ] Complete all quality gates, mark this roadmap complete, archive it, repair
+      links and indexes, and publish shared ownership as the next object-model
+      direction.
 
-**Acceptance criteria:** restricted polymorphism is explicit, deterministic,
-exactly owned, structurally verified, and fully documented.
+**Tests:** Run focused golden/determinism/robustness tests, `make check`,
+`make robustness-smoke`, `make msrv-check`, and `git diff --check` from an
+artifact-free snapshot or clean checkout.
 
-## 3. Quality and completion gates
+**Exit criteria:** Restricted polymorphism is explicit, deterministic, exactly
+owned, structurally verified, maintainably organized, fully documented, and
+the roadmap is archived.
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test`
-- [ ] `make golden-test`
-- [ ] `make check`
-- [ ] No source-name lookup below resolution
-- [ ] No class object represented as a scalar MIR value
-- [ ] Explicit base initialization, lifecycle, view, dispatch, and cast state
-- [ ] No target layout, vtable offset, or ABI location in HIR/MIR
-- [ ] No accidental shared, allocation, exception, or external-object ABI
-- [ ] Exact deterministic artifacts, metadata, diagnostics, and observations
-- [ ] Touched Rust modules retain concise facades and cohesive ownership
-- [ ] Living documentation and roadmap checkboxes match behavior
+## 4. Ordering and dependencies
 
-The slice is complete only when all PM0–PM10 acceptance criteria and quality
-gates pass. Shared ownership must reuse the complete-object metadata, dynamic
-dispatch, lifecycle, and alias-view contracts established here.
+The order is deliberate:
+
+- PM0 freezes contracts before representations. The resolver and type-checker
+  orchestration cleanups then remove the two known growth hazards before any
+  hierarchy member category is added.
+- Static inheritance proceeds declaration graph, lifecycle, HIR, MIR, then
+  backend. Dynamic dispatch cannot obscure an incomplete base-object model.
+- Virtual dispatch establishes the dynamic receiver and metadata contract used
+  by interfaces. Interfaces establish the conformance metadata reused by type
+  tests and narrowing.
+- Each target-independent task precedes its backend consumer so x86-64 never
+  becomes the semantic authority.
+- PM20 is the only broad hardening PR. Every earlier task still updates the
+  living documentation it changes and must pass its focused tests,
+  `make check`, and `git diff --check`.
+
+The repository contains no CI job for this roadmap. Existing external
+infrastructure regularly runs `make check` on clean checkouts; the Makefile is
+the common local and external automation interface. Run `make msrv-check` in a
+task that changes manifests, the supported toolchain contract, or Rust syntax
+compatibility, and always run it for final closeout.
+
+The slice is complete only when PM0-PM20 and their exit criteria are complete,
+the final quality gates pass, and shared ownership can reuse the resulting
+complete-object metadata, dispatch, lifecycle, and alias-view contracts.

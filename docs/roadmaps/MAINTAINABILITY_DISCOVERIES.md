@@ -1,6 +1,7 @@
 # Maintainability Roadmap Discoveries
 
-Status: active follow-up backlog; resolver class-body orchestration is next.
+Status: active follow-up backlog; the two pending class-orchestration items are
+scheduled before polymorphism implementation.
 
 This document records follow-up findings discovered while implementing the
 compiler maintainability cleanup. They remain separate from that roadmap so
@@ -8,8 +9,10 @@ its reviewed scope and ordering stay stable.
 
 ## Pending
 
-These are medium-priority follow-ups. Revisit them before adding more class
-lifecycle categories, but they do not block the current compiler contracts.
+These are medium-priority follow-ups. The
+[polymorphism roadmap](POLYMORPHISM_ROADMAP.md) now orders both before hierarchy
+implementation so new member and lifecycle categories build on concise owners.
+They do not block the current compiler contracts or polymorphism profile design.
 
 - [ ] Decompose `ProgramResolver::resolve_class_bodies` in a focused follow-up.
       Initializers, copy lifecycle members, destructors, and methods
