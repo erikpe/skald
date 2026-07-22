@@ -451,8 +451,8 @@ kind, place ownership and projection, access sufficiency, read-only writes and
 mutable receiver calls, and the external-alias exclusion before backend
 lowering. Dumps expose modes, indirect bases, and argument kinds without
 target offsets or registers. These contracts are defined in the
-[alias-parameter implementation profile](SKALD_DRAFT_SPEC.md#543-restricted-stage-0-alias-parameter-profile),
-and are covered by hand-built and source-driven MIR tests. HIR-to-MIR lowering
+[alias source contract](language/ALIASES_AND_OWNERSHIP.md), and are covered by
+hand-built and source-driven MIR tests. HIR-to-MIR lowering
 maps typed alias bindings directly to indirect MIR places, retains the single
 source-ordered argument sequence, and introduces no access inference or ABI
 logic. Restricted alias source programs now continue through the backend.

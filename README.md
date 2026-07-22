@@ -15,8 +15,8 @@ collection:
 - class types are inline values by default;
 - `shared T` is planned as a non-null reference-counted owning handle;
 - `ref name: T` and `mut ref name: T` are call-scoped alias bindings; the
-  current restricted profile supports exact inline class places, while later
-  shared sources will require caller-owned anchors;
+  current implementation supports exact live inline class places, while the
+  lifetime rule for future shared sources remains open;
 - assignment updates an existing value without ending its lifetime;
 - `init`, `assign`, and `destroy` are contextual lifecycle declarations;
 - optionality is explicit with `T?`; ordinary non-optional values are not null.
@@ -46,8 +46,9 @@ The current Linux x86-64 compiler supports:
   object-place paths, direct field construction, initializer liveness, and
   executable projected reads, writes, method receivers, and alias arguments;
 - read-only `fn` and mutable `mut fn` receiver access;
-- restricted call-scoped `ref` and `mut ref` class parameters over inline
-  locals, method receivers, and forwarded aliases;
+- call-scoped `ref` and `mut ref` class parameters over exact live inline
+  locals, value parameters, receivers, forwarded aliases, and their class
+  subobjects;
 - optional contextual `destroy { ... }` members and automatic deterministic
   cleanup of owning inline locals on normal block and `return` exits, including
   recursive class fields in reverse declaration order;
@@ -82,7 +83,8 @@ source subset, [types and values](docs/language/TYPES_AND_VALUES.md) for core
 expression semantics, [functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
 for callable and statement semantics,
 [classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md) for the exact
-inline object model, and the
+inline object model, [aliases and ownership](docs/language/ALIASES_AND_OWNERSHIP.md)
+for call-scoped aliases and future ownership boundaries, and the
 [draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
 migrated.
 

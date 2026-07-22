@@ -99,9 +99,8 @@ The root binding determines access for an entire inline path:
 
 Every class-field projection preserves that access. Projection does not create
 a new const-qualified type or perform a runtime conversion. Detailed alias
-forwarding and overlap rules remain in the legacy
-[alias-binding section](../SKALD_DRAFT_SPEC.md#45-alias-binding-modes) until the
-focused ownership document replaces it.
+forwarding, overlap, and non-escape rules are defined by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md).
 
 ## Object places and projections
 

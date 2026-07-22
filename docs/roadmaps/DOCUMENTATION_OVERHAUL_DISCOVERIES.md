@@ -33,6 +33,14 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Completed
 
+### Alias and ownership maturity drift
+
+The legacy draft mixed implemented inline alias parameters with unimplemented
+shared sources, mandatory caller anchors, optional and array aliases, and
+reference-count/runtime-layout algorithms. DOC7 retained only the verified
+exact-class parameter contract and reduced every broader ownership form to its
+actual exploratory or open maturity.
+
 ### Legacy lifecycle profile drift
 
 The old local-destruction profile prohibited object copies, assignment, and

@@ -278,5 +278,6 @@ semantics of literals, exact types, expression values, and operators.
 [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) owns callable,
 scope, statement, return, and evaluation-order semantics.
 [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) owns class declarations,
-member rules, containment, receivers, initialization, and object places. Other
-focused semantic documents become authoritative as they are verified.
+member rules, containment, receivers, initialization, and object places.
+[Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
+access, forwarding, overlap, and lifetime.

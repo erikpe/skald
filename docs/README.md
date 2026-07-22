@@ -21,6 +21,8 @@ Use the authority closest to the behavior:
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
 - exact classes, inline containment, receivers, initialization, and object
   places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
+- call-scoped alias access, lifetime, and future ownership boundaries belong in
+  [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

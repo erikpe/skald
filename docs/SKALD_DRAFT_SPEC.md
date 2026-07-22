@@ -78,13 +78,21 @@ takes_shared(s);      // copies shared handle; increments reference count
 takes_shared(d);      // illegal; inline Dog is not heap/shared
 ```
 
+Only the exact-class inline value and call-scoped alias cases above are current
+compiler behavior. Every `shared` example is exploratory and subject to the
+[future ownership boundary](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary).
+
 Key memory-model decisions:
 
 - `Dog` is an inline value type.
-- `shared Dog` is a non-null owning reference-counted heap handle.
-- `ref name: Dog` and `mut ref name: Dog` are alias-binding forms; `Dog` remains the bound name's type.
-- In the first implementation, alias bindings exist only for parameters and cannot be stored, returned, captured, assigned, or converted to `shared`.
-- every alias-bound argument has a caller-owned anchor that keeps its storage alive for the complete call;
+- `shared Dog` is an exploratory non-null shared-ownership direction, not an
+  implemented or frozen type.
+- `ref name: Dog` and `mut ref name: Dog` are implemented alias-binding forms;
+  `Dog` remains the bound name's type.
+- Alias bindings currently exist only for exact-class parameters and cannot be
+  stored, returned, captured, assigned, or converted to `shared`.
+- Current eligible inline places remain live for the call without a separate
+  borrow anchor; anchors for future ownership forms are not frozen.
 - ordinary instance `fn` methods have read-only receivers, while `mut fn` methods have mutable receivers;
 - `mut ref` is mutable but not exclusive. Two mutable alias parameters may refer to the same object.
 - Optional values are explicit using postfix `?`, for example `Dog?` or `shared Dog?`.
@@ -249,26 +257,11 @@ The word "inline" describes language semantics, not a required physical stack la
 
 ### 4.3 Shared Types
 
-`shared T` is a built-in owning heap handle:
-
-```ska
-var dog: shared Dog = new Dog();
-```
-
-Properties:
-
-- `shared T` is non-null.
-- `shared T` always points to a heap allocation owned by reference counting.
-- the static target `T` may be a concrete class, a base class, `Obj`, or an interface; `new T(...)` still requires a concrete constructible class;
-- Copying a `shared T` handle increments the reference count.
-- Destroying or overwriting a `shared T` handle decrements the reference count.
-- Every shared allocation records the complete dynamic class type with which it was constructed.
-- Upcasts and interface conversions preserve the allocation identity, complete-object address, reference count, and dynamic type metadata.
-- When the count reaches zero, the complete most-derived object is destroyed according to the recorded dynamic type, regardless of the static type of the releasing handle, and the original heap allocation is then freed exactly once.
-- `shared T` is a fundamental language type, not an ordinary user-defined class.
-- There are no raw pointer operations on `shared T`.
-
-Reference cycles are allowed to leak in the initial language. A later version may introduce `weak T` or another cycle-breaking mechanism.
+Shared ownership is not implemented or frozen. Its retained direction and the
+open borrow-anchor boundary are recorded in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary);
+feature maturity remains authoritative in the
+[status matrix](language/STATUS.md#not-implemented).
 
 ### 4.4 Universal Root Type
 
@@ -291,179 +284,24 @@ This avoids slicing arbitrary object values down to an empty or partial root obj
 
 ### 4.5 Alias Binding Modes
 
-Every variable or parameter name denotes a typed storage place. Skald separates the place's object type from the way the name is bound. A value parameter `name: T` owns local parameter storage initialized by copying the argument. A read-only alias parameter `ref name: T` and a mutable alias parameter `mut ref name: T` instead name an existing `T` place owned elsewhere.
-
-The source place may be inline storage or the pointee of a `shared T` handle. This distinction is not observable through the alias: member access, virtual dispatch, and further calls operate on the same `T` object in either case. Inline versus shared ownership is a caller-side concern, not a parameter-type distinction. The callee receives no ownership-provenance tag and cannot test whether an alias originated from inline or shared storage.
-
-Within the callee, an alias name otherwise participates as a `T` place. Supplying it to a value parameter copies the underlying `T`; supplying it to another compatible alias parameter forwards access to the same place. Neither operation creates a storable reference value.
-
-`ref` and `mut ref` are binding modes, not type constructors or general reference value types. In the first implementation, explicit alias bindings are valid only on function, method, `init`, and interface-method parameters. The compiler must reject these modifiers in every local, field, element, static, return, or capture position. Locally declared alias bindings are reserved for a later stage and are described in Section 4.5.2.
-
-Alias fields and alias returns are not permitted:
-
-```ska
-fn get_dog() -> ref Dog; // illegal: alias returns are not a language feature
-class Kennel {
-    ref dog: Dog;         // illegal: alias fields are not a language feature
-}
-```
-
-`ref name: T`:
-
-- provides read-only access to an existing object for the duration of the call;
-- may bind to an inline `T`;
-- may bind to the pointee of a `shared T`;
-- may call read-only instance methods but not `mut fn` methods on the aliased object or its inline subobjects;
-- cannot assign fields of the aliased object or pass the object or its inline subobjects as mutable alias arguments;
-- cannot be assigned or rebound;
-- cannot escape the call.
-
-`mut ref name: T`:
-
-- provides mutable access to an existing object for the duration of the call;
-- may bind to a mutable inline `T`, including a `final` inline field reached through mutable containing-object access, because a mutable alias cannot replace the whole aliased object;
-- may bind to the pointee of a `shared T` handle even when the handle is stored in a `final` field, because finality of the handle is shallow;
-- may call both read-only `fn` methods and mutable `mut fn` methods;
-- cannot be assigned or rebound;
-- cannot escape the call;
-- does not imply exclusive access.
-
-All alias bindings, including the future local form, obey these invariants:
-
-- an alias is initialized once and its identity cannot be rebound;
-- an alias never owns the referenced object and cannot itself be copied as an ordinary value; the underlying `T` may still be copied when a value context requests it;
-- an alias cannot be stored in a field, array element, static variable, heap object, or closure, and cannot be returned;
-- an alias is confined to a statically apparent lexical or call scope and cannot escape that scope;
-- the source place must remain alive and at a stable address for the entire alias scope, using a compiler-managed anchor when ownership alone does not guarantee this;
-- mutable access cannot be obtained from a read-only source binding;
-- mutable aliases are non-exclusive and may overlap other read-only or mutable aliases;
-- conditionally alive storage, such as an optional payload, requires a dedicated scoped binding rule that prevents the payload from disappearing while aliased.
-
-These restrictions make alias validity syntax-directed. They apply to parameter aliases in the first implementation and constrain the design of local aliases when those are added. Skald does not require general lifetime inference or an exclusivity-based borrow checker.
-
-Example:
-
-```ska
-fn rename(mut ref dog: Dog, name: Str) -> unit {
-    dog.name = name;
-}
-
-var d: Dog = Dog();
-var s: shared Dog = new Dog();
-
-rename(d, "Ada");
-rename(s, "Turing");
-```
-
-Aliasing is allowed:
-
-```ska
-fn swap_names(mut ref a: Dog, mut ref b: Dog) -> unit {
-    var tmp: Str = a.name;
-    a.name = b.name;
-    b.name = tmp;
-}
-
-var dog: Dog = Dog();
-swap_names(dog, dog); // allowed; both parameters refer to the same object
-```
-
-This may produce surprising program behavior. It remains memory-safe because alias parameters cannot outlive the call and because the caller keeps the storage behind every alias alive until the call returns.
-
-Read-only access is an access restriction, not a guarantee that the object remains observably unchanged. Another mutable alias parameter may mutate the same object during the call. Code using `ref name: T` simply cannot perform that mutation through that name.
+The implemented exact-class parameter modes, eligible places, access
+propagation, forwarding, overlap, copy interaction, and non-escape rules are
+authoritative in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md).
 
 #### 4.5.1 Borrow Anchors
 
-Every argument bound to a `ref` or `mut ref` parameter has a **borrow anchor** owned by the caller. The anchor guarantees that the storage containing the aliased object remains alive for the complete dynamic execution of the call, including nested calls and exceptional cleanup. An alias parameter is still passed as a non-owning address; the anchor is caller-side state and is not part of the callee-visible binding.
-
-Anchor selection is based on the source expression and its storage provenance:
-
-- an inline local, inline value parameter, or inline static object is anchored by its existing storage;
-- a pointee borrowed through a direct `shared T` local or `shared T` value parameter is anchored by that existing shared handle;
-- a pointee borrowed from a replaceable shared place, such as a shared field, shared array element, or mutable shared static variable, is anchored by copying that handle into a hidden caller temporary;
-- an inline field or base subobject reached through a shared object is anchored by a shared handle to the allocation that physically contains it;
-- an inline array element is anchored by the array storage that physically contains it;
-- an inline or shared temporary used as a borrowed argument has its lifetime extended until the call completes;
-- forwarding an existing alias parameter to a nested call reuses the outer call's lifetime guarantee and does not create ownership from the alias.
-
-A stable shared local is the common zero-overhead heap-object case:
-
-```ska
-var dog: shared Dog = new Dog();
-inspect(dog); // dog itself keeps the pointee alive; no shared copy is required
-```
-
-The callee cannot rebind a shared local belonging to its caller. Rebinding some other shared handle to the same allocation cannot destroy the pointee while the caller's local handle remains alive.
-
-A replaceable shared place requires a hidden shared copy because code executed by the call may reach and overwrite the original place through another alias:
-
-```ska
-inspect(owner.dog); // owner.dog has type shared Dog
-```
-
-Conceptually, but not as user-visible source syntax, the caller lowers this as:
-
-```ska
-var __borrow_guard: shared Dog = owner.dog;
-inspect_raw_address_of_pointee(__borrow_guard);
-// __borrow_guard is released after normal or exceptional call completion
-```
-
-The hidden copy performs an ordinary `shared` retain and release. It does not allocate another pointee.
-
-If the aliased value is an inline field inside a shared object, the containing allocation is anchored instead:
-
-```ska
-class Owner {
-    dog: Dog;
-}
-
-inspect(registry.current_owner.dog);
-```
-
-If `registry.current_owner` is a replaceable `shared Owner` place, the conceptual lowering is:
-
-```ska
-var __owner_guard: shared Owner = registry.current_owner;
-inspect_raw_address_of_inline_field(__owner_guard, dog);
-// __owner_guard is released after the call
-```
-
-The guard is a hidden `shared Owner` handle held in the caller's activation record or a register. It is not inserted into `registry`, stored beside `dog`, or found by walking the object graph. The compiler knows from the expression path that `dog` is physically contained in the `Owner` allocation. Even when the `shared Owner` handle is loaded from deep within a global structure, the compiler evaluates that lookup, copies or lifetime-extends the resulting handle, and then calculates the inline field address from the guarded allocation.
-
-If a function or indexing operation returns a `shared Owner` value, the returned shared temporary itself may serve as the anchor:
-
-```ska
-inspect(registry.find_owner(id).dog);
-```
-
-Here the result of `find_owner` remains alive until `inspect` returns. No additional shared copy is required solely for borrowing if the returned temporary already owns the allocation.
-
-The compiler establishes each required anchor as part of evaluating the corresponding argument, before later evaluation or user code can invalidate the source place. Hidden anchors are destroyed after the call in the ordinary cleanup order. Multiple borrows may use the same anchor; implementations may coalesce redundant hidden guards when doing so preserves observable retain, release, and destruction behavior.
-
-Anchor selection is syntax-directed and local to expression lowering. It does not require a runtime ownership search, object-graph traversal, interprocedural lifetime inference, or general borrow checking. Safe code can maintain this property because aliases cannot be stored or returned and raw pointer construction is unavailable.
-
-The initial language does not allow an alias to target a conditionally alive payload, such as the contained `T` inside a `T?`, if another alias could remove that payload during the call. A later presence-binding design may add such aliases together with rules that preserve the payload lifetime.
+Current alias sources are stable inline places and require no borrow anchor.
+Anchoring for future shared-owned, replaceable, temporary, optional, or array
+storage is an open ownership-design boundary, summarized in
+[future ownership](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary).
 
 #### 4.5.2 Deferred Local Alias Bindings
 
-Locally declared aliases are expected in a later language stage, but are not accepted by the first implementation. The reserved design direction is:
-
-```ska
-ref local_dog: Dog = existing_dog;
-mut ref mutable_dog: Dog = existing_dog;
-```
-
-A local alias would use the same binding semantics as an alias parameter, except that its lifetime would be its statically apparent lexical scope rather than one call. In addition to the common invariants in Section 4.5, it must obey these restrictions:
-
-- the declaration has exactly one initializer, and neither ordinary assignment nor control-flow merging can rebind the alias;
-- an inline source place must have a storage scope that encloses the complete alias scope, and no operation may end or relocate that place while the alias exists;
-- a source reached through shared ownership is protected by a compiler-managed shared anchor for the complete alias scope when the original handle is not itself guaranteed to remain available;
-- a temporary source has its lifetime extended through the complete alias scope;
-- optional payloads and any other conditionally alive subobjects cannot be directly aliased without a dedicated scoped binding construct;
-- the alias remains unusable in fields, elements, statics, returns, captures, heap storage, and every other escaping position.
-
-These rules permit an inline local alias to lower to an ordinary address with no allocation or reference-count operation. A local alias reached through shared ownership may additionally require a hidden retained handle, just as a call argument may require a borrow anchor. The compiler chooses the anchor from the initializer expression; it does not infer arbitrary lifetimes or search an object graph.
+Local aliases are not implemented and their syntax, sources, lexical lifetime,
+control-flow behavior, and anchoring rules are not frozen. The focused
+[future ownership boundary](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary)
+owns those open constraints.
 
 ### 4.6 Optional Types
 
@@ -494,16 +332,11 @@ Dog?              // optional inline Dog
 shared Dog?       // optional shared Dog handle
 ```
 
-Because `ref` and `mut ref` are binding modes rather than type constructors, alias parameters whose object type is optional are written as:
-
-```ska
-fn inspect(ref dog: Dog?) -> unit;
-fn rename_if_present(mut ref dog: Dog?) -> unit;
-```
-
-Here the parameter aliases a `Dog?` place: the optional container, rather than only its conditionally alive payload, is the object type of the binding. The alias itself is not optional and always designates that place. Since aliases are bindings rather than values, optional alias values are not part of the model.
-
-Later optional presence-binding syntax may introduce a scoped alias to the contained `Dog`. Such an alias must obey the stability rules in Section 4.5 so that the payload cannot disappear during its scope.
+Optional alias parameters and aliases into optional payloads are not
+implemented or frozen. A future design must distinguish access to a container
+from a scoped view of a present payload and guarantee that a payload cannot
+disappear while aliased; the current exact-class parameter contract does not
+settle the syntax or lifetime rule.
 
 The draft spelling for the empty optional value is:
 
@@ -555,9 +388,8 @@ Array properties:
 - nested arrays are jagged arrays;
 - `T[]` is a built-in type constructor, not user-defined generics.
 - array storage placement is an implementation detail.
-- fixed-size array elements do not relocate during the array's lifetime;
-- borrowing an inline element anchors the array storage for the call;
-- borrowing the pointee of a replaceable `shared T` element copies that element handle into a hidden borrow anchor.
+- element aliasing, storage stability, and any anchoring requirement remain
+  open with the array design.
 
 The language does not require arrays to be physically stack-allocated or heap-allocated. An implementation may choose direct inline storage, stack storage, heap-backed storage, or specialized variants based on element type, size, escape behavior, and whether the length is statically known. Observable construction, destruction, copying, indexing, and bounds-checking semantics must remain the same.
 
@@ -717,133 +549,11 @@ stage-independent class, initialization, and object-place contract in
 
 #### 5.4.3 Restricted Stage-0 Alias-Parameter Profile
 
-**Implementation status:** this restricted profile is implemented end to end
-on Linux x86-64. Resolved IR carries binding mode separately from nominal
-class identity; alias names have stable parameter identities and may form
-existing object-place bases. HIR carries explicit
-value/read-only-alias/mutable-alias parameter modes and one source-ordered
-sequence of value or place arguments. Type checking enforces exact class
-identity, place eligibility, access capability, forwarding, and non-escaping
-restrictions. Verified MIR uses indirect alias-parameter places, and the
-backend passes one pointer per alias using the internal ABI described below.
-This profile extends the restricted inline-object profile in Section 5.4.2. It
-does not implement every alias source described by the broader model in
-Section 4.5.
-
-The parameter grammar added by this profile is:
-
-```text
-parameter       = value-parameter | alias-parameter
-value-parameter = identifier ":" (primitive-type | class-name)
-alias-parameter = ["mut"] "ref" identifier ":" class-name
-```
-
-`ref` and `mut ref` are parameter binding modes, not type constructors. The
-bound name's type is the named class, and the mode is represented separately
-from that type. `ref` is a keyword; `mut ref` is the only mutable spelling.
-`ref mut`, repeated modifiers, and a binding mode in a local, field, result,
-static, element, or capture position are invalid.
-
-Alias parameters are accepted on internally defined top-level functions,
-instance methods, and initializers. An external declaration cannot contain an
-alias parameter. Ordinary internal by-value parameters may use concrete class
-names; the resulting parameter follows the focused
-[owning value-parameter contract](language/CLASSES_AND_LIFECYCLE.md#owning-value-parameters)
-and is not an alias.
-External value parameters remain primitive-only. This alias profile accepts
-only an exact concrete class as the designated type. Primitive, `unit`,
-optional, array, `shared`, interface, and function alias types, along with
-inheritance and implicit conversions, remain outside the profile.
-
-An argument for an alias parameter must be an existing, already-live inline
-class place of the exact designated class. The supported place sources are:
-
-- a directly constructed inline local;
-- `self` in an instance method, subject to that method's receiver access;
-- an existing alias parameter forwarded to another call;
-- grouping around one of those places.
-
-No other source expression is converted to an alias place. In particular,
-construction does not create a borrowable temporary, and object fields, array
-elements, static objects, optional payloads, and shared pointees are not yet
-available alias sources. An initializer's destination is not live while its
-body executes and its `self` cannot be passed as an alias. An initializer may
-receive an alias parameter and may read its primitive fields while initializing
-the new object's fields, subject to the existing straight-line initializer-body
-rules.
-
-Section 5.4.4 freezes the next profile's extension from object fields to alias
-sources. Until that profile is implemented, the source forms in this section
-remain the complete accepted alias-source set.
-
-An initializer of the enclosing class with the broader copy-constructor
-signature `init(ref other: T)` may therefore be written in this profile. It is
-invoked only by the existing explicit direct-local construction form
-`var copy: T = T(source);`. This does not enable implicit copy construction,
-ordinary object value arguments, synthesized copying, assignment, or any other
-general copy context.
-
-Place access has two capabilities, mutable and read-only. Mutable access may be
-restricted to read-only access without a runtime conversion; read-only access
-cannot be promoted to mutable access.
-
-- An inline local provides mutable access.
-- A method's `self` provides its declared receiver access.
-- A `ref` parameter provides read-only access: fields may be read, read-only
-  methods may be called, and the place may be forwarded only to another `ref`
-  parameter.
-- A `mut ref` parameter provides mutable access: fields may be read or written,
-  either receiver mode may be called, and the place may be forwarded to either
-  alias mode.
-
-The access restriction belongs to the binding, not to a different const class
-type or runtime representation. It is shallow in the same way as receiver
-mutability. This profile still has only primitive fields, so access does not
-yet propagate through an inline object-field chain.
-
-Aliases are deliberately non-exclusive. Multiple read-only or mutable alias
-arguments may designate the same object, and the compiler performs no overlap
-analysis. A read-only alias prevents mutation only through that binding; it
-does not guarantee that another alias cannot mutate the object during the
-call.
-
-Alias arguments participate in the existing source evaluation order. A method
-receiver is evaluated first and explicit arguments are then processed from
-left to right in one sequence. Selecting one of the supported alias places has
-no user-visible effect, but the compiler representation must not split value
-and alias arguments into reorderable lists. Forwarding preserves the same
-object address and does not create an alias value.
-
-Every supported place is stable for the complete call: a local remains in its
-declaring activation, `self` is kept alive by its caller, and a forwarded alias
-inherits the enclosing call's guarantee. Consequently this profile needs no
-allocation, ownership-provenance tag, retain/release operation, hidden borrow
-anchor, graph search, lifetime inference, or exclusivity-based borrow checker.
-The alias cannot escape because it is not a value and cannot be stored,
-returned, captured, assigned, rebound, or converted to `shared`.
-
-The target-independent compiler contract for this profile is:
-
-- syntax, resolved IR, HIR, and MIR carry parameter binding mode explicitly and
-  separately from the underlying nominal type;
-- resolution assigns ordinary stable `ParameterId` identities and selects
-  names, while type checking alone decides place eligibility, exact type, and
-  access sufficiency;
-- HIR and MIR keep value and alias arguments in one ordered sequence, with an
-  alias argument represented as a typed place rather than an object value;
-- a MIR alias parameter is an indirect place base whose incoming payload is an
-  address, distinct from owning local object storage;
-- field projection remains semantic through `FieldId`; no target offset or
-  register enters MIR;
-- MIR verification checks declaration/definition agreement, argument kind and
-  type, place ownership and liveness, projection validity, access sufficiency,
-  and the exclusion of aliases from external declarations and scalar value
-  operations before a backend is invoked.
-
-Local alias declarations, primitive alias parameters, shared sources and borrow
-anchors, polymorphism, whole-object replacement, and alias-bearing function
-values remain deferred. Exact-class internal value parameters and results are
-specified by [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md).
+The historical implementation profile has been replaced by the verified,
+stage-independent source contract in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md). Target-specific
+parameter realization remains an implementation concern in Section 13.5 and
+the living backend architecture until its focused migration.
 
 #### 5.4.4 Frozen Class-Typed Inline-Field Profile
 
@@ -867,7 +577,8 @@ duplicates its earlier, narrower destructor-body restrictions.
 The implemented copy capabilities, object assignment, owning parameters,
 results, temporaries, elision, and exactly-once cleanup rules now live in
 [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md#copy-capabilities).
-Alias binding remains in Section 4.5 until its focused migration.
+Alias binding is authoritative in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md).
 
 ### 5.5 Initialization Members
 
@@ -900,7 +611,8 @@ remain future design rather than current lifetime semantics.
 The complete implemented exact-class contract is now authoritative in
 [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md), including the
 distinction between construction, assignment, and destruction. Alias-rooted
-access and replacement restrictions remain in Section 4.5 until DOC7.
+access and replacement restrictions are authoritative in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md#access-propagation).
 
 ### 6.1 Optional Copy Elision
 
@@ -912,37 +624,19 @@ their grouping-sensitive boundary are specified in
 
 Owning exact-class value parameters and their cleanup are specified in
 [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md#owning-value-parameters).
-Alias mutation and non-rebinding rules remain in Section 4.5 until their
-focused ownership migration.
+Alias mutation and non-rebinding rules are specified in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md).
 
 ---
 
 ## 7. Heap Allocation and Shared Ownership
 
-Heap allocation is explicit:
-
-```ska
-var dog: shared Dog = new Dog("Rex");
-```
-
-`new T(args...)`:
-
-- allocates storage for `T`;
-- constructs a `T` in that storage;
-- returns `shared T`;
-- never returns null;
-- panics or aborts on out-of-memory in the initial language.
-
-Reassigning a `shared T` variable releases the old handle:
-
-```ska
-var dog: shared Dog = new Dog("A");
-dog = new Dog("B");
-```
-
-If the old handle was the last owner, the old heap object is destroyed immediately unless a caller-side borrow anchor still owns it. In that case, replacement releases the original handle, while the anchor delays destruction until the anchored call completes.
-
-Borrow anchors also prevent replacement through another alias during a call from leaving a dangling alias parameter. Reassigning a `shared` variable after the anchored call has returned cannot leave a dangling alias in user code because parameter aliases cannot escape the call.
+Heap allocation, `shared`, `new`, reference counting, and alias sources through
+shared ownership are not implemented or frozen. Their exploratory direction
+and unresolved semantic constraints are summarized in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md#future-ownership-boundary).
+Runtime allocation and ownership mechanisms are outside the language contract
+and move to the focused runtime ABI authority when designed.
 
 ---
 
@@ -1290,42 +984,11 @@ the compiler reference in the same change. `ska_rt_abi_version()` remains
 available for runtime inspection and direct contract tests; querying it is not
 the executable compatibility check.
 
-Runtime responsibilities:
-
-- heap allocation and deallocation;
-- reference-count header management for `shared`;
-- runtime type metadata for casts, virtual dispatch, interface dispatch, and complete-object destruction;
-- panic/abort reporting;
-- minimal support for arrays and immutable string literal storage;
-- exception propagation support.
-
-There is no garbage collector.
-
-No root stack, tracing metadata for GC, safepoints, or write barriers are required for ordinary memory management.
-
-Heap object layout must support:
-
-- reference count;
-- dynamic type metadata pointer or equivalent;
-- complete object payload;
-- alignment suitable for the target platform.
-
-The initial single-inheritance ABI places the direct base subobject at offset zero. A shared class, `Obj`, or interface handle stores the address of the complete object payload, or an equivalent representation from which both the complete payload and reference-count header are recovered without consulting the handle's static type. Shared upcasts, interface conversions, and checked shared casts do not adjust or replace this ownership pointer.
-
-Each concrete class's dynamic type metadata contains a compiler-generated complete-object destruction entry or equivalent operation. Given the complete object payload, this entry runs the most-derived `destroy` body, destroys fields and base subobjects in the language-defined order, and returns without freeing an adjusted base or interface view address. The shared runtime frees the original allocation only after this entry completes.
-
-Reference-count operations:
-
-- retain on `shared` copy;
-- release on `shared` destruction/overwrite;
-- when release reaches zero, load the allocation's dynamic type metadata and invoke its complete-object destruction entry;
-- after complete-object destruction, free the original allocation exactly once.
-
-The static type of the releasing handle is not an input to destruction. A release through `shared Derived`, `shared Base`, `shared Obj`, or `shared Interface` follows the same allocation header and therefore selects the same most-derived destruction entry. This dynamic destruction is mandatory for all shared allocations; `destroy` does not use `virtual`, and safe shared destruction does not depend on an opt-in declaration.
-
-Borrow anchors do not require a runtime ownership search or a separate runtime ownership structure. A hidden shared anchor uses the same retain and release operations as any other shared copy. Direct inline storage, stable shared locals and parameters, forwarded alias parameters, and already-owning temporaries require no additional reference-count operation solely for the alias. Hidden anchors are compiler-managed caller temporaries and must participate in normal and exceptional cleanup.
-
-Thread-safe reference counting is out of scope unless concurrency is added later.
+The current runtime has no allocation, shared-ownership, reference-counting,
+borrow-anchor, dynamic object-metadata, or garbage-collection responsibility.
+Those mechanisms are future runtime design and do not become part of the ABI
+until their source semantics are frozen and the focused runtime ABI authority
+specifies them.
 
 ### 13.1 Bootstrap `i64` Output
 
@@ -1505,31 +1168,13 @@ never recovered from source names below resolution.
 
 ### 13.5 Stage-0 Alias-Parameter ABI
 
-**Implementation status:** implemented by the Linux x86-64 System V backend
-for the restricted profile in Section 5.4.3.
-
-An internal `ref` or `mut ref` parameter is passed as one pointer to the
-complete inline object storage. The pointer is integer-class, has the target's
-machine-pointer size and alignment, and never copies the object's bytes. Both
-alias modes have the same machine representation; their difference is enforced
-statically through place access.
-
-Alias parameters participate in the ordinary source-ordered System V argument
-layout. The hidden receiver, when present, remains the first integer-class
-argument. Each alias consumes the next integer register or shared stack
-argument slot, while primitive integer and SSE arguments retain their
-independent register counters and existing stack order.
-
-The callee stores an incoming alias address in a pointer-sized frame home.
-Access through that parameter loads the address and applies target-computed
-field offsets. The caller materializes the address of the verified source
-place directly into the assigned argument location. Forwarding an alias passes
-the same object address.
-
-This ABI is internal to the stage-0 compiler. Alias parameters remain forbidden
-in external declarations and no cross-module object ABI stability is promised.
-The restricted profile has no shared sources, so calls perform no retain,
-release, hidden anchoring, or runtime ownership search.
+Implemented source behavior is authoritative in
+[aliases and ownership](language/ALIASES_AND_OWNERSHIP.md). The current pointer
+parameter, argument-classification, frame, and projection realization belongs
+to the [x86-64 System V backend](REPO_STRUCTURE.md#x86-64-system-v-backend)
+until DOC12 replaces that architecture section with the focused backend
+authority. It is an internal convention, not a source-visible reference type
+or external object ABI.
 
 ---
 
@@ -1579,7 +1224,8 @@ The following intended features are deliberately not specified well enough to im
 - loops and iteration, including `while`, `for ... in`, `break`, `continue`, and the iterator contract;
 - checked exceptions, including throwing, catching, exception-set checking, cleanup, and lowering;
 - locally declared alias bindings and scoped narrowing aliases; restricted
-  call-scoped parameter aliases are implemented as described in Section 5.4.3.
+  call-scoped parameter aliases are implemented as described in
+  [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md).
 
 Their existing sections preserve design direction and reserve likely syntax,
 but are non-normative where they do not give a complete rule. These features
@@ -1666,28 +1312,9 @@ Resolved decisions in this draft:
   and results, temporaries, permitted elision, and deterministic destruction
   follow the implemented
   [class lifecycle contract](language/CLASSES_AND_LIFECYCLE.md);
-- read-only receiver access and `final` fields are shallow across `shared` ownership;
-- receiver mutability is part of exact virtual-override and interface-method compatibility;
-- `ref name: T` and `mut ref name: T` are non-owning alias-binding modes, not reference value types;
-- parameter aliases are the only alias bindings in the first implementation, while restricted lexical local aliases are reserved for a later stage;
-- alias parameters accept both inline places and matching shared pointees without separate function variants;
-- all aliases are non-rebindable and non-escaping, and future local aliases remain subject to the same syntax-directed lifetime restrictions;
-- the frozen restricted alias-parameter profile initially accepts exact
-  concrete class aliases over inline locals, method `self`, and forwarded alias
-  parameters; primitive aliases, shared sources, polymorphism, and local alias
-  declarations remain outside that profile;
-- restricted alias calls keep value and place arguments in one source-ordered
-  sequence, represent an alias parameter as an indirect MIR place base, and
-  pass one integer-class object pointer for either access mode;
-- the restricted profile permits explicit direct-local construction through
-  `init(ref other: T)` but does not thereby enable implicit or synthesized copy
-  contexts;
-- every shared allocation retains its complete dynamic type metadata across base, `Obj`, and interface conversions;
-- final shared release invokes the most-derived complete-object destruction entry and frees the original allocation exactly once;
-- shared destruction is automatically dynamic and does not require `destroy` to be declared virtual;
-- every alias-bound argument has a caller-owned anchor for the complete call;
-- stable locals and parameters can serve as zero-overhead anchors, while replaceable shared places use hidden shared copies;
-- borrowing an inline subobject reached through shared storage anchors the containing shared allocation;
-- borrow-anchor selection is syntax-directed and never performs a runtime object-graph search.
+- implemented exact-class alias parameters follow the focused
+  [aliases and ownership contract](language/ALIASES_AND_OWNERSHIP.md); shared,
+  local, anchored, and polymorphic alias extensions remain non-implemented
+  design areas at the maturity recorded in the status matrix.
 
 The remaining open questions do not invalidate the core memory-model direction, but some must be resolved before their associated features become normative.

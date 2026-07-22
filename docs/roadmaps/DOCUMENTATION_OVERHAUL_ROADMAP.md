@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC7 is next.
+Status: planned; DOC8 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -172,7 +172,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC4 — Rewrite functions and control flow
 - [x] DOC5 — Rewrite classes, initialization, and object places
 - [x] DOC6 — Rewrite copying, destruction, and object lifetimes
-- [ ] DOC7 — Rewrite aliases and ownership
+- [x] DOC7 — Rewrite aliases and ownership
 - [ ] DOC8 — Establish the polymorphism design document
 - [ ] DOC9 — Rewrite modules and foreign interoperation
 - [ ] DOC10 — Rewrite errors and prune premature feature sketches
@@ -369,17 +369,17 @@ is backed by current tests, and contains no rollout or target-lowering prose.
 **Purpose:** Separate source-level access and lifetime guarantees from their
 current and future storage implementations.
 
-- [ ] Create `ALIASES_AND_OWNERSHIP.md` covering binding modes, access,
+- [x] Create `ALIASES_AND_OWNERSHIP.md` covering binding modes, access,
       non-exclusivity, non-escape, forwarding, supported exact-class sources,
       and their interaction with object places.
-- [ ] Verify the implemented alias subset against syntax, resolution, type
+- [x] Verify the implemented alias subset against syntax, resolution, type
       checking, MIR verification, mixed-ABI native tests, and exclusions.
-- [ ] Describe shared ownership and borrow anchors only at their present design
+- [x] Describe shared ownership and borrow anchors only at their present design
       maturity, separating semantic guarantees from headers, allocation
       layout, reference-count algorithms, and internal calling conventions.
-- [ ] Reduce local aliases, optionals, arrays, and shared-source aliases to
+- [x] Reduce local aliases, optionals, arrays, and shared-source aliases to
       explicit open constraints until focused designs freeze them.
-- [ ] Move pointer ABI details to backend documentation and runtime ownership
+- [x] Move pointer ABI details to backend documentation and runtime ownership
       mechanics to the runtime ABI document.
 
 **Tests:** Run alias phase tests, access/overlap/forwarding diagnostics, MIR

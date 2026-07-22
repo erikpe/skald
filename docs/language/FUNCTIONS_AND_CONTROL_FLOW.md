@@ -54,9 +54,8 @@ binding category is separate from the declared type:
 Value parameters may use implemented primitive or exact-class types. Alias
 parameters use exact class types and are supported only on internal callables.
 Aliases do not own or copy their object. Their access, source-place, forwarding,
-overlap, and non-escape rules remain authoritative in the legacy
-[alias-binding section](../SKALD_DRAFT_SPEC.md#45-alias-binding-modes) until the
-focused ownership document replaces it.
+overlap, and non-escape rules are defined by
+[aliases and ownership](ALIASES_AND_OWNERSHIP.md).
 
 Parameter names must be unique within one callable. Parameters and the
 callable body's outermost block occupy the same lexical scope, so an outermost
