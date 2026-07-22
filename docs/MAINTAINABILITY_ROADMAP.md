@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ5 is next.
+Status: in progress; CQ6 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -65,7 +65,7 @@ count.
 - [x] CQ2 — Establish the MIR verifier facade and shared foundations
 - [x] CQ3 — Extract MIR program and declaration verification
 - [x] CQ4 — Extract MIR callable-body and instruction verification
-- [ ] CQ5 — Extract MIR call, argument, place, and cleanup verification
+- [x] CQ5 — Extract MIR call, argument, place, and cleanup verification
 - [ ] CQ6 — Decompose class declaration collection in resolution
 - [ ] CQ7 — Decompose callable statement checking
 - [ ] CQ8 — Decompose expression and initialization checking
@@ -192,15 +192,15 @@ mixes every instruction category.
 **Purpose:** Isolate the verifier's most coupled semantic checks behind narrow
 interfaces.
 
-- [ ] Extract direct call, method call, initializer, hidden receiver, result,
+- [x] Extract direct call, method call, initializer, hidden receiver, result,
       and return-destination verification.
-- [ ] Extract value, alias-place, and owned-place argument checking, including
+- [x] Extract value, alias-place, and owned-place argument checking, including
       access, ownership, overlap, and exact type rules.
-- [ ] Extract place-base and projection validation with one returned verified
+- [x] Extract place-base and projection validation with one returned verified
       place descriptor.
-- [ ] Keep cleanup liveness as a distinct dataflow analysis using the shared
+- [x] Keep cleanup liveness as a distinct dataflow analysis using the shared
       place predicates from CQ2.
-- [ ] Divide call/place/cleanup corruption tests by contract and retain exact
+- [x] Divide call/place/cleanup corruption tests by contract and retain exact
       error messages.
 
 **Acceptance criteria:** The verifier facade coordinates small declaration,

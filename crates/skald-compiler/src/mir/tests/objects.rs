@@ -61,41 +61,6 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
 }
 
 #[test]
-fn rejects_foreign_and_non_class_field_projections() {
-    let (mut foreign, ids) = object_mir();
-    let function = foreign
-        .definitions
-        .get_mut_for_test(foreign.entry_function)
-        .unwrap();
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
-        panic!("expected projected load");
-    };
-    assignment.rvalue.kind =
-        MirRvalueKind::Load(MirPlace::base(ids.object_storage).project_field(ids.inner_value));
-    assert!(messages(&foreign)
-        .iter()
-        .any(|message| message.contains("belongs to the wrong class")));
-
-    let (mut scalar, ids) = object_mir();
-    let function = scalar
-        .definitions
-        .get_mut_for_test(scalar.entry_function)
-        .unwrap();
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[2] else {
-        panic!("expected projected load");
-    };
-    assignment.rvalue.kind = MirRvalueKind::Load(
-        MirPlace::base(ids.object_storage)
-            .project_field(ids.outer_inner)
-            .project_field(ids.inner_value)
-            .project_field(ids.inner_value),
-    );
-    assert!(messages(&scalar)
-        .iter()
-        .any(|message| message.contains("has a non-class base")));
-}
-
-#[test]
 fn rejects_object_rvalues_and_bad_initialization_targets() {
     let (mut object_value, ids) = object_mir();
     let function = object_value
@@ -129,49 +94,6 @@ fn rejects_object_rvalues_and_bad_initialization_targets() {
     assert!(messages(&bad_target)
         .iter()
         .any(|message| message.contains("wrong class type")));
-}
-
-#[test]
-fn rejects_missing_wrong_receiver_and_mismatched_arguments() {
-    let (mut missing, _) = object_mir();
-    let function = missing
-        .definitions
-        .get_mut_for_test(missing.entry_function)
-        .unwrap();
-    let MirInstruction::Call(call) = &mut function.body.blocks[0].instructions[3] else {
-        panic!("expected method call");
-    };
-    call.receiver = None;
-    assert!(messages(&missing)
-        .iter()
-        .any(|message| message.contains("requires a receiver")));
-
-    let (mut wrong, ids) = object_mir();
-    let function = wrong
-        .definitions
-        .get_mut_for_test(wrong.entry_function)
-        .unwrap();
-    let MirInstruction::Call(call) = &mut function.body.blocks[0].instructions[3] else {
-        panic!("expected method call");
-    };
-    call.receiver = Some(MirPlace::base(ids.object_storage).project_field(ids.outer_inner));
-    assert!(messages(&wrong)
-        .iter()
-        .any(|message| message.contains("receiver has the wrong class type")));
-
-    let (mut arguments, _) = object_mir();
-    let function = arguments
-        .definitions
-        .get_mut_for_test(arguments.entry_function)
-        .unwrap();
-    let MirInstruction::Initialize(initialize) = &mut function.body.blocks[0].instructions[1]
-    else {
-        panic!("expected initializer");
-    };
-    initialize.arguments.clear();
-    assert!(messages(&arguments)
-        .iter()
-        .any(|message| message.contains("initializer has 0 arguments but requires 1")));
 }
 
 #[test]

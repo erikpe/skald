@@ -10,7 +10,9 @@ use crate::identity::CallableId;
 
 use super::model::{BlockId, MirProgram};
 
+mod arguments;
 mod body;
+mod call;
 mod cleanup;
 mod context;
 mod declarations;

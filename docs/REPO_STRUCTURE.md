@@ -102,16 +102,17 @@ helpers are compiled only under `cfg(test)`.
 phase owns the vocabulary and structure of its own deterministic dump.
 `lexical_policy` similarly owns only source-identifier character policy, so
 the lexer and later validation phases agree without depending on scanner
-state. MIR verification exposes a concise facade over one private verifier
-context and ordered error sink; structural place relationships and cleanup
-liveness analysis remain private responsibilities behind it. Program-wide
+state. MIR verification exposes a concise facade over shared verifier state
+and an ordered error sink. Program-wide
 entry-point, declaration-table, class-lifecycle, and definition-slot metadata
 checks live together and delegate executable bodies through one narrow verifier
 method, preserving deterministic error order without depending on block or
 instruction details. Callable signature, storage, block, and terminator checks
 have a separate body owner. Ordinary MIR instructions use an exhaustive short
-dispatcher with responsibility-specific helpers; call, argument, and place
-verification remain grouped for their dedicated extraction.
+dispatcher with responsibility-specific helpers. Calls and initializers,
+argument modes and ownership, and place bases and projections each have a
+dedicated owner. Cleanup instruction validation and its distinct definite-
+liveness dataflow analysis share the common structural place predicates.
 
 ### `runtime/`
 

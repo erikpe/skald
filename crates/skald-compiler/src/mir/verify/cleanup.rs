@@ -22,6 +22,65 @@ struct ObjectState {
 }
 
 impl<'mir> Verifier<'mir> {
+    pub(super) fn verify_cleanup_instruction(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        cleanup: &MirCleanup,
+    ) {
+        let destination = self.verify_place(function, block, &cleanup.destination);
+        if matches!(cleanup.destination.base, MirPlaceBase::AliasParameter(_)) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "cleanup destination must be owning storage",
+            );
+        }
+        if function
+            .storage(cleanup.destination.base.storage())
+            .is_some_and(|storage| {
+                matches!(
+                    storage.kind,
+                    MirStorageKind::Return | MirStorageKind::Argument | MirStorageKind::Temporary
+                )
+            })
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "return, caller argument, and temporary storage require their dedicated lifetime boundary",
+            );
+        }
+        if self.program.class(cleanup.target).is_none() {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!("cleanup target {} is not declared", cleanup.target),
+            );
+        }
+        match destination.map(|place| place.ty) {
+            Some(MirType::Class(class)) if class != cleanup.target => self.block_error(
+                function.callable(),
+                block.id,
+                "cleanup destination has the wrong class type",
+            ),
+            Some(MirType::Class(_)) => {}
+            Some(_) => self.block_error(
+                function.callable(),
+                block.id,
+                "cleanup destination must have class type",
+            ),
+            None => {}
+        }
+        if destination.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "cleanup destination requires mutable access",
+            );
+        }
+    }
+
     pub(super) fn verify_cleanup_liveness(&mut self, function: MirDefinitionRef<'mir>) {
         let mut analysis = CleanupLivenessAnalysis {
             program: self.program,
@@ -31,6 +90,9 @@ impl<'mir> Verifier<'mir> {
         analysis.analyze();
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 struct CleanupLivenessAnalysis<'mir, 'errors> {
     program: &'mir MirProgram,
