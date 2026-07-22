@@ -72,7 +72,7 @@ count.
 - [x] CQ9 — Decompose HIR-to-MIR body lowering
 - [x] CQ10 — Define the compiler library API policy
 - [x] CQ11 — Complete shared typed ID-table storage
-- [ ] CQ12 — Split the resolved IR model by responsibility
+- [x] CQ12 — Split the resolved IR model by responsibility
 - [ ] CQ13 — Split the HIR model by responsibility
 - [ ] CQ14 — Split the MIR model by responsibility
 - [ ] CQ15 — Introduce a small test-only MIR fixture vocabulary
@@ -326,13 +326,13 @@ while callers still see phase-specific tables and unchanged public paths.
 **Purpose:** Make the resolved representation navigable before polymorphism
 adds more declarations and selected identities.
 
-- [ ] Divide declarations/tables, callable bodies/statements, expressions, and
+- [x] Divide declarations/tables, callable bodies/statements, expressions, and
       object places into cohesive private modules.
-- [ ] Keep `resolve/mod.rs` as the documented public facade with explicit
+- [x] Keep `resolve/mod.rs` as the documented public facade with explicit
       re-exports.
-- [ ] Preserve type names, public paths, derives, field order, and dump output.
-- [ ] Keep source-name-bearing resolved data separate from HIR semantic types.
-- [ ] Update architecture documentation only with stable module
+- [x] Preserve type names, public paths, derives, field order, and dump output.
+- [x] Keep source-name-bearing resolved data separate from HIR semantic types.
+- [x] Update architecture documentation only with stable module
       responsibilities, not a transient file inventory.
 
 **Acceptance criteria:** No resolved model file mixes the complete declaration,

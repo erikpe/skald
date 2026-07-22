@@ -102,6 +102,11 @@ facade. Phase-specific tests live beside their implementation and are split by
 behavior when they become substantial. Shared test pipelines and mutation
 helpers are compiled only under `cfg(test)`.
 
+Resolution keeps source-name-bearing declarations and typed-ID tables separate
+from executable bodies and statements, expression trees, and selected object
+paths. Its public `resolve` facade explicitly re-exports the phase products so
+these private responsibilities can evolve without downstream path changes.
+
 `dump_format` deliberately shares only low-level formatting primitives. Every
 phase owns the vocabulary and structure of its own deterministic dump.
 `lexical_policy` similarly owns only source-identifier character policy, so
