@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC0 is next.
+Status: planned; DOC1 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -165,7 +165,7 @@ does not repeat the complete feature-status matrix.
 
 ## 4. Progress
 
-- [ ] DOC0 — Establish documentation authority and verification tooling
+- [x] DOC0 — Establish documentation authority and verification tooling
 - [ ] DOC1 — Create the language overview and status authority
 - [ ] DOC2 — Rewrite the implemented grammar
 - [ ] DOC3 — Rewrite types, values, and expressions
@@ -191,18 +191,18 @@ does not repeat the complete feature-status matrix.
 **Purpose:** Create the rules and checks that make every later migration
 consistent and reviewable.
 
-- [ ] Inventory every living-document heading, incoming repository link, and
+- [x] Inventory every living-document heading, incoming repository link, and
       source-code documentation reference; map each retained claim to its
       intended authoritative destination.
-- [ ] Rewrite `docs/README.md` with the authority, maturity, linking, and
+- [x] Rewrite `docs/README.md` with the authority, maturity, linking, and
       historical-document rules from this roadmap.
-- [ ] Create `DOCUMENTATION_OVERHAUL_DISCOVERIES.md` for contradictions,
+- [x] Create `DOCUMENTATION_OVERHAUL_DISCOVERIES.md` for contradictions,
       behavior defects, unresolved choices, and unrelated cleanup discovered
       during migration.
-- [ ] Add a dependency-free repository documentation check for relative files,
+- [x] Add a dependency-free repository documentation check for relative files,
       local anchors, and required index entries; expose it as `make docs-check`
       and include it in `make check`.
-- [ ] Document that existing external infrastructure picks up the check through
+- [x] Document that existing external infrastructure picks up the check through
       clean-checkout `make check`; add no CI configuration.
 
 **Tests:** Unit-test the documentation checker with valid, missing-file,

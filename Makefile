@@ -1,6 +1,6 @@
 MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
 
-.PHONY: help fmt fmt-check build-check msrv-check lint compiler-test golden-test robustness-smoke robustness-long runtime runtime-test check
+.PHONY: help fmt fmt-check build-check msrv-check lint compiler-test golden-test robustness-smoke robustness-long runtime runtime-test docs-check check
 
 help:
 	@echo "Skald repository commands:"
@@ -15,6 +15,7 @@ help:
 	@echo "  make robustness-long  Run the longer deterministic frontend robustness corpus"
 	@echo "  make runtime          Build the C runtime archive"
 	@echo "  make runtime-test     Build and run C runtime tests"
+	@echo "  make docs-check       Check repository-local documentation links and indexes"
 	@echo "  make check            Run the complete repository validation suite"
 
 fmt:
@@ -52,4 +53,7 @@ runtime:
 runtime-test:
 	$(MAKE) -C runtime test
 
-check: fmt-check build-check lint compiler-test runtime-test
+docs-check:
+	cargo run --quiet --locked -p skald-docs-check -- .
+
+check: fmt-check build-check lint compiler-test runtime-test docs-check

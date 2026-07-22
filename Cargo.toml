@@ -2,6 +2,7 @@
 members = [
     "crates/skac",
     "crates/skald-compiler",
+    "crates/skald-docs-check",
 ]
 resolver = "2"
 
