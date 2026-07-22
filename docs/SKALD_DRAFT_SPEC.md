@@ -102,122 +102,19 @@ Key memory-model decisions:
 
 ## 3. Source Files, Modules, and Visibility
 
-Skald uses a module-oriented source organization.
-
-Skald source files use the canonical `.ska` suffix. The `skac` compiler accepts `.ska` source files as compilation inputs.
-
-Supported declaration kinds:
-
-- imports;
-- classes;
-- interfaces;
-- top-level functions;
-- external functions.
-
-Module import forms:
-
-```ska
-import a.b;
-import a.b as b;
-import a.b as x.y;
-import a.b as .;
-
-export import a.b;
-export import a.b as b;
-export import a.b as x.y;
-export import a.b as .;
-```
-
-Symbols are private to the defining module by default. `export` makes declarations or imported bindings visible to downstream modules.
-
-Qualified names are explicit:
-
-```ska
-util.Counter
-util.make_counter()
-```
-
-Unqualified names resolve local-first. If multiple imports provide the same unqualified name and there is no local declaration shadowing them, unqualified use is a compile-time ambiguity error.
+The verified single-file compilation unit, top-level namespace, entry point,
+and future module-design boundary have moved to
+[modules and foreign interoperation](language/MODULES_AND_INTEROP.md). The old
+import, export, qualification, and visibility examples were never frozen Skald
+syntax and have been removed.
 
 ### 3.1 Restricted Bootstrap External Functions
 
-The compiler implements this deliberately narrow external declaration form:
-
-```ska
-extern fn external_name(value: i64) -> unit;
-extern fn external_value(value: i64) -> i64;
-```
-
-It is a top-level declaration terminated by a semicolon and has no Skald body.
-Parameter names are mandatory. The implemented profile permits by-value
-`i64`, `u64`, `u8`, `f64`, and `bool` parameters and an `i64`, `u64`, `u8`,
-`f64`, `bool`, or `unit` result.
-
-The same restricted profile supports by-value `bool` parameters and results:
-
-```ska
-extern fn external_predicate(value: i64) -> bool;
-extern fn external_bool_sink(value: bool) -> unit;
-```
-
-It does not permit alias parameters, `shared`, objects, arrays, optionals,
-function values, variadic arguments, alternate link names, or user-selected
-calling conventions. Supporting `bool` does not otherwise generalize the
-foreign-function interface.
-
-On Linux x86-64 System V, `u64`, `u8`, and `f64` correspond to C `uint64_t`,
-`uint8_t`, and `double`. A supported target must represent C `double` as
-IEEE-754 binary64 before it can implement Skald `f64`.
-
-Defined and external functions share one non-overloaded top-level function
-namespace. Any repeated name is a compile-time error, including two identical
-external declarations or an external declaration and a Skald definition. An
-external declaration named `main` is illegal and cannot satisfy the entry-point
-requirement; the entry point remains a source-defined `fn main() -> i64`.
-
-The external function's source identifier is its exact linker symbol. The
-compiler does not add a module prefix or other mangling and this profile has no
-source-level symbol override. Below resolution, the compiler represents the
-selected declaration with a stable callable identity; later phases must not
-repeat name lookup or recognize individual runtime functions by spelling.
-Compiler-generated symbols for Skald definitions must use a target-private
-spelling that cannot equal any valid external source identifier. This keeps
-exact external symbols collision-free without reserving an ordinary Skald
-identifier prefix for compiler use.
-
-Calls use the selected target's C ABI. For the initial Linux x86-64 System V
-target, Skald `i64` corresponds to C `int64_t`, Skald `bool` corresponds to C
-`bool` (`_Bool`), Skald `u64` and `u8` correspond to C `uint64_t` and `uint8_t`,
-Skald `f64` corresponds to compatible C `double`, and a Skald `unit` result
-corresponds to C `void`. `unit` has no runtime payload.
-
-`i64`, `u64`, `u8`, and `bool` use the System V integer class. `f64` uses the
-SSE class. Scalar argument layout allocates the six integer registers and eight
-SSE registers with independent counters; a mixed signature does not select an
-XMM register from the argument's overall source position. An argument whose
-class has exhausted its registers is passed in an eight-byte stack slot while
-later arguments of the other class may still use registers. Stack placement
-and call-site padding follow System V and preserve 16-byte call alignment.
-
-`i64` and `u64` results use `%rax`, `u8` and `bool` results use their ABI result
-byte, and `f64` results use `%xmm0`. Boolean arguments leave Skald as canonical
-C false or true values. Incoming `u8` and boolean values are zero-extended or
-normalized before general Skald use; unspecified upper result-register bits
-are never part of a Skald value. Argument evaluation remains left to right and
-is independent of ABI placement. The stage-0 compiler uses the same scalar
-placement for Skald-defined and restricted external calls.
-
-An external declaration is a trusted assertion about the definition supplied
-at link time. `skac` checks Skald uses against the declared signature, and the
-linker diagnoses a missing symbol, but the compiler cannot verify that a
-supplied foreign definition has a compatible ABI type. An incompatible linked
-definition is outside the language's safety and behavior guarantees.
-
-This profile is sufficient to declare the bootstrap output functions in
-Sections 13.1 through 13.3 as their value types become implemented. It does not
-settle imports, export and visibility behavior, cross-module coalescing of ABI
-declarations, separate compilation, ownership transfer, or the complete
-foreign-function interface. Those remain specification gaps.
+The implemented primitive external-function contract is authoritative in
+[modules and foreign interoperation](language/MODULES_AND_INTEROP.md). Target
+classification, C type mappings, compiler-generated symbols, runtime version
+markers, and linker invocation are implementation details owned by the
+backend, runtime, and driver documentation.
 
 ---
 
@@ -788,14 +685,10 @@ Implementation may initially lower exceptions to an explicit hidden result/excep
 
 Skald is designed around a small runtime with no garbage collector.
 
-The implemented runtime ABI is version 4. Every compiler-generated process
-entry wrapper calls the no-op marker `ska_rt_abi_v4` before entering Skald
-code. The marker's version is part of its linker symbol, so an archive built
-for another ABI cannot satisfy the reference and executable linking fails.
-Every incompatible ABI revision must introduce a new marker name and update
-the compiler reference in the same change. `ska_rt_abi_version()` remains
-available for runtime inspection and direct contract tests; querying it is not
-the executable compatibility check.
+The version marker and executable link-compatibility mechanism are
+implementation contracts owned by the
+[runtime documentation](REPO_STRUCTURE.md#runtime) until DOC13 creates its
+focused replacement. They are not language semantics.
 
 The current runtime has no allocation, shared-ownership, reference-counting,
 borrow-anchor, dynamic object-metadata, or garbage-collection responsibility.
@@ -973,11 +866,10 @@ counters and stack-placement rules. A primitive result uses its existing ABI
 location; `unit` has no result payload. `init` has an implicit `unit` result.
 
 The hidden receiver is not a source parameter, cannot be accessed as a pointer
-value, and does not make object types externally linkable. Internal initializer
-and method symbols are formed deterministically from stable compiler-assigned
-identities through the same collision-proof symbol authority used for Skald
-definitions. Their exact textual spelling is not a language guarantee and is
-never recovered from source names below resolution.
+value, and does not make object types externally linkable. Compiler-generated
+symbol spelling belongs to the
+[backend documentation](REPO_STRUCTURE.md#x86-64-system-v-backend), not to the
+language contract.
 
 ### 13.5 Stage-0 Alias-Parameter ABI
 
@@ -1000,7 +892,7 @@ Skald intentionally retains several ideas explored in Niflheim:
 - statically typed compiled language;
 - the primitive types `i64`, `u64`, `u8`, `bool`, `f64`, and `unit`;
 - fixed-size arrays;
-- modules/imports/exports;
+- a possible future module system, without inheriting Niflheim's source forms;
 - classes;
 - single inheritance;
 - interfaces;
@@ -1057,9 +949,10 @@ corresponding language area is considered complete:
   syntactic ambiguities.
 - **Name, type, and call resolution:** the implemented subset defines
   single-file function/class and lexical-local resolution without overloading
-  or implicit conversions. The complete language still needs cross-module
-  references, declaration cycles, overload availability or prohibition,
-  candidate selection, conversion ranking, and ambiguity diagnostics.
+  or implicit conversions. Future cross-module identity, lookup, visibility,
+  and ambiguity choices are owned by
+  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md); later
+  conversion ranking remains a separate open type-system question.
 - **Primitive edge-case semantics:** the implemented boundary and open signed
   `i64` overflow behavior are owned by
   [Types, Values, and Expressions](language/TYPES_AND_VALUES.md#operators).
@@ -1085,7 +978,9 @@ corresponding language area is considered complete:
   implementation—are collected in
   [polymorphism](language/POLYMORPHISM.md). This legacy draft does not freeze
   their syntax or failure behavior.
-- **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
+- **Modules and foreign interoperation:** current behavior and the unresolved
+  multiple-file, visibility, build, coalescing, and broader FFI choices are
+  owned by [modules and foreign interoperation](language/MODULES_AND_INTEROP.md).
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
 The implemented normal-flow lifecycle contract is authoritative in
@@ -1117,9 +1012,9 @@ Resolved decisions in this draft:
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;
 - string literals lower to `Str` values backed by compiler-emitted static immutable bytes.
-- the implemented bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64`, `u64`, `u8`, `f64`, and `bool` parameters and `i64`, `u64`, `u8`, `f64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions;
-- on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
-- compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
+- the implemented single-file, entry-point, namespace, and primitive external-
+  function contracts follow
+  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - the current runtime ABI implements `ska_rt_println_bool`, which writes
   lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable

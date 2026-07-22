@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC9 is next.
+Status: planned; DOC10 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -174,7 +174,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC6 — Rewrite copying, destruction, and object lifetimes
 - [x] DOC7 — Rewrite aliases and ownership
 - [x] DOC8 — Establish the polymorphism design document
-- [ ] DOC9 — Rewrite modules and foreign interoperation
+- [x] DOC9 — Rewrite modules and foreign interoperation
 - [ ] DOC10 — Rewrite errors and prune premature feature sketches
 - [ ] DOC11 — Rewrite compiler architecture and phase contracts
 - [ ] DOC12 — Separate backend and target documentation
@@ -420,18 +420,18 @@ freeze.
 **Purpose:** Separate planned module semantics, current single-file behavior,
 and source-visible FFI rules from linkage implementation.
 
-- [ ] Create `MODULES_AND_INTEROP.md` covering the current compilation-unit
+- [x] Create `MODULES_AND_INTEROP.md` covering the current compilation-unit
       boundary, declaration namespaces, entry point, exact-symbol external
       declarations, trusted-ABI behavior, and explicit unsupported forms.
-- [ ] Mark imports, exports, multiple files, visibility, separate compilation,
+- [x] Mark imports, exports, multiple files, visibility, separate compilation,
       coalescing, packages, and broader FFI as exploratory or open rather than
       current syntax.
-- [ ] Verify entry-point, duplicate declaration, external signature, linker
+- [x] Verify entry-point, duplicate declaration, external signature, linker
       symbol, and source diagnostic claims against resolver/type-checker/driver
       tests and goldens.
-- [ ] Move System V classification, C widths, internal symbol spelling, link
+- [x] Move System V classification, C widths, internal symbol spelling, link
       marker, and tool invocation to backend/runtime/driver documents.
-- [ ] Remove module syntax sketches that have no frozen parser or semantic
+- [x] Remove module syntax sketches that have no frozen parser or semantic
       contract, retaining only constraints useful to future design.
 
 **Tests:** Run declaration, external-call, entry-point, toolchain, symbol, and

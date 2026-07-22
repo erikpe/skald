@@ -470,6 +470,11 @@ The backend separates:
 - GNU assembly emission;
 - identity-derived symbols.
 
+At the supported external C boundary, Skald `i64`, `u64`, `u8`, `f64`,
+`bool`, and `unit` are realized as compatible C `int64_t`, `uint64_t`,
+`uint8_t`, `double`, `bool` (`_Bool`), and `void` respectively. The runtime
+requires eight-bit bytes and IEEE-754 binary64-compatible C `double`.
+
 Class fields are laid out in declaration order with checked size/alignment
 arithmetic. `i64`, `u64`, and `f64` use 8-byte size/alignment; `u8` and `bool`
 use 1 byte. Empty classes remain addressable with size/alignment one. Object

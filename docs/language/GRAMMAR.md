@@ -132,6 +132,8 @@ Parameter and argument lists do not accept trailing commas. Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
 named types are legal. `unit` is syntactically restricted to result positions.
+Compilation-unit, namespace, entry-point, and external-signature semantics are
+defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
 ## Class declarations
 

@@ -103,10 +103,14 @@ rules. They should not be added as isolated parser features.
 - Replace the stack-heavy x86-64 location strategy with register allocation
   without changing MIR semantics.
 - Add multiple source files, modules, and incremental compilation only after
-  ownership of declarations and compilation sessions is specified.
+  the open source and build choices in
+  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md) and the
+  ownership of declarations and compilation sessions are specified.
 - Keep deterministic artifacts and structured verifier errors as these systems
   become more sophisticated.
 
 Alternate link names, variadic calls, object-bearing FFI, cross-module
-declaration coalescing, concurrency, captured closures, user-defined generics,
-and package management remain outside the current plan.
+declaration coalescing, and package management remain open in
+[modules and foreign interoperation](language/MODULES_AND_INTEROP.md).
+Concurrency, captured closures, and user-defined generics also remain outside
+the current plan.

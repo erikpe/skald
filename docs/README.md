@@ -25,6 +25,9 @@ Use the authority closest to the behavior:
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
 - exploratory inheritance, polymorphic views, dispatch, interfaces, type tests,
   and narrowing belong in [polymorphism](language/POLYMORPHISM.md);
+- the current compilation unit, top-level namespace, entry point, external
+  declarations, and future module boundary belong in
+  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

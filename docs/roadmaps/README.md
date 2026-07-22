@@ -7,16 +7,19 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  modules and foreign interoperation are next. The broad language
+  current errors and premature feature sketches are next. The broad language
   overview, support/maturity matrix, exact grammar, type/value/expression,
   function/control-flow, and exact-class initialization/place semantics are
   established alongside exact-class copying, assignment, materialization, and
   deterministic lifetime. Exact-class alias parameters and their ownership
   boundary now also have a focused authority. Exploratory polymorphism now has
-  one focused design authority with explicit open profile choices. The documentation authority,
-  migration inventory, discrepancy ownership, and local link/index checking
-  support the remaining replacement of draft and architecture monoliths with
-  verified language, compiler, runtime, and development documentation.
+  one focused design authority with explicit open profile choices. The
+  single-file namespace, entry point, primitive foreign interoperation, and
+  open module boundary now have one focused authority. Documentation policy,
+  the migration inventory, discrepancy ownership, and local link/index
+  checking support the remaining replacement of draft and architecture
+  monoliths with verified language, compiler, runtime, and development
+  documentation.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; PM0 can now freeze the
   executable profile in the focused polymorphism design authority. The roadmap
   then extends the completed exact-class

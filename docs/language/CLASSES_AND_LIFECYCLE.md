@@ -37,8 +37,9 @@ The implemented class member categories are:
 | Method | A statically selected instance operation with a read-only or mutable receiver. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
-Top-level classes, functions, and external functions share one non-overloaded
-namespace. Within each class, fields and ordinary methods share one
+The shared top-level namespace is defined by
+[modules and foreign interoperation](MODULES_AND_INTEROP.md#top-level-namespace).
+Within each class, fields and ordinary methods share one
 non-overloaded member namespace. A field and method in the same class cannot
 have the same name, and methods cannot be overloaded. The same member name may
 be declared independently by unrelated classes.

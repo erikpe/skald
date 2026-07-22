@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through the exploratory polymorphism design boundary.
+Status: active; audited through modules and primitive foreign interoperation.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -22,6 +22,7 @@ step.
 | `docs/language/CLASSES_AND_LIFECYCLE.md` | Retain as the authority for exact classes, member namespaces, inline containment, receivers, initialization, object places, copying, assignment, materialization, and deterministic lifecycle behavior. |
 | `docs/language/ALIASES_AND_OWNERSHIP.md` | Retain as the authority for implemented exact-class alias parameters, access, forwarding, overlap, non-escape, and the explicit maturity boundary around future ownership forms. |
 | `docs/language/POLYMORPHISM.md` | Retain as the exploratory language-design authority for inheritance, lifecycle composition, polymorphic views, dispatch, interfaces, type tests, and checked narrowing; PM0 freezes its open profile choices there. |
+| `docs/language/MODULES_AND_INTEROP.md` | Retain as the authority for the implemented compilation unit, top-level namespace, entry point, primitive external declarations, trust boundary, unsupported external forms, and open future module design. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
 | `docs/REPO_STRUCTURE.md` | DOC11-DOC15 move durable compiler, backend, runtime, driver, testing, and debugging contracts; DOC16 removes the exhaustive monolith. |

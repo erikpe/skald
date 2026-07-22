@@ -86,7 +86,8 @@ for callable and statement semantics,
 inline object model, [aliases and ownership](docs/language/ALIASES_AND_OWNERSHIP.md)
 for call-scoped aliases and future ownership boundaries,
 [polymorphism](docs/language/POLYMORPHISM.md) for the exploratory object-model
-extension, and the
+extension, [modules and foreign interoperation](docs/language/MODULES_AND_INTEROP.md)
+for the single-file and external-function contracts, and the
 [draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
 migrated.
 

@@ -8,13 +8,10 @@ control-flow, return, and evaluation-order semantics. The
 
 ## Callable boundary
 
-The current compilation unit is one source file. It may contain top-level
-function definitions, bodyless external function declarations, and classes.
-All top-level declarations are known before any body is resolved, so a function
-may call a later function and direct recursion is supported.
-
-Top-level functions, external functions, and classes share one non-overloaded
-namespace. A name denotes at most one such declaration. Calls select a named
+The [modules and interoperation contract](MODULES_AND_INTEROP.md) defines the
+current single-file compilation unit and top-level namespace. All top-level
+declarations are known before any body is resolved, so a function may call a
+later function and direct recursion is supported. Calls select a named
 function or a named instance method directly; functions and methods are not
 first-class values.
 
@@ -23,22 +20,13 @@ class-owned receiver rules permit. Initializers, copy assignment, and
 destructors use more specialized body and result contracts owned by
 [class and lifecycle semantics](CLASSES_AND_LIFECYCLE.md).
 
-## Function and external declarations
+## Function declarations
 
 A function definition has a name, an ordered parameter list, an explicit
-result type, and a body. An external declaration has the same source-level
-signature shape but no body. Calls to either form use the same arity and type
-checking.
-
-The implemented external boundary accepts only by-value primitive parameters
-and a primitive or `unit` result. Class values and aliases are not supported in
-external signatures. External declarations are trusted interoperability
-assertions; symbol spelling, target ABI, and toolchain behavior are outside
-this document.
-
-Program execution requires a defined `fn main() -> i64`. An external
-declaration cannot supply the entry point. Broader module and interoperation
-rules remain outside the current single-file callable model.
+result type, and a body. Calls to internal and external functions use the same
+arity and exact-type checking. The bodyless external form, entry point, and
+interoperation trust boundary are defined by
+[modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
 ## Parameters
 
