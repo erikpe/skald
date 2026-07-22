@@ -116,6 +116,10 @@ cargo run -p skac -- samples/inline_counter.ska -o build/inline_counter
 cargo run -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
 ```
 
+External infrastructure runs `make check` regularly from clean checkouts. CI
+orchestration is intentionally kept outside this repository; the Makefile is
+the shared local and automated validation interface.
+
 Executable output uses `cc` by default. `CC` selects another compatible compiler
 driver, and `SKALD_RUNTIME_ARCHIVE` selects another runtime archive. Output is
 published atomically; failed compilation or linking preserves an existing
