@@ -23,3 +23,4 @@ Archived plans:
 - [Alias parameters](ALIAS_PARAMETERS_ROADMAP.md)
 - [Class-typed inline object fields](INLINE_OBJECT_FIELDS_ROADMAP.md)
 - [Deterministic destruction](DETERMINISTIC_DESTRUCTION_ROADMAP.md)
+- [Object value semantics](OBJECT_VALUE_SEMANTICS_ROADMAP.md)

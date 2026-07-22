@@ -1583,9 +1583,9 @@ than redefining the normal local-object behavior frozen here.
 #### 5.4.6 Frozen Staged Object-Value Profile
 
 **Implementation status:** semantic contract frozen by OVS0 of the
-[Object Value Semantics Roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md). OVS0 does
-not enable copy or object-value source forms. OVS1 parses and resolves copy
-lifecycle declarations to stable identities. OVS2 type-checks their bodies and
+[archived Object Value Semantics Roadmap](archive/OBJECT_VALUE_SEMANTICS_ROADMAP.md).
+OVS0 does not enable copy or object-value source forms. OVS1 parses and resolves
+copy lifecycle declarations to stable identities. OVS2 type-checks their bodies and
 records canonical user, ordered synthesized, or unavailable capabilities in
 HIR. OVS3 accepts direct local copy initialization and live-object assignment
 between exact-class places, with explicit source, destination, and selected
@@ -2954,10 +2954,10 @@ corresponding language area is considered complete:
   construction order in [`grammar/README.md`](../grammar/README.md). The
   frozen local deterministic-destruction profile additionally defines cleanup
   for owning locals on implemented normal block, conditional, and return exits.
-  The staged object-value profile freezes full-expression boundaries and
-  temporary cleanup for its normal-flow source contexts. Those rules are not
-  implemented yet, and the complete language still needs cleanup sequencing
-  for loops, exceptions, and later control-flow forms.
+  The staged object-value profile implements full-expression boundaries and
+  temporary cleanup for its normal-flow source contexts. The complete language
+  still needs cleanup sequencing for loops, exceptions, and later control-flow
+  forms.
 - **Initialization rules:** the implemented inline-object profile defines
   straight-line definite initialization for primitive fields during direct
   local construction. The frozen class-typed inline-field profile additionally
@@ -2965,18 +2965,17 @@ corresponding language area is considered complete:
   nested access, and acyclic containment. Default initialization in other
   storage contexts, base-subobject ordering, branching or throwing
   initializers and partial-construction cleanup remain open. The staged object-
-  value profile freezes exact-class copy/assignment synthesis and bodies for
-  the current no-inheritance field model, but those rules are not implemented
-  yet.
+  value profile implements exact-class copy/assignment synthesis and bodies for
+  the current no-inheritance field model.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
 - **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
-The local normal-flow destruction contract in Section 5.4.5 is implemented.
-Temporary, loop, failed-construction, and exceptional cleanup remain broader
-ownership-model gaps that must be settled before their associated features are
-implemented.
+The local normal-flow destruction contract in Section 5.4.5 and the bounded
+temporary contract in Section 5.4.6 are implemented. Loop,
+failed-construction, and exceptional cleanup remain broader ownership-model
+gaps that must be settled before their associated features are implemented.
 
 ### 15.3 Open Design Questions
 

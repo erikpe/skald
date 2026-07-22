@@ -71,7 +71,9 @@ spellings, overflow, and exact-type failures.
 The `object_determinism` integration test runs the same representative
 object-lifetime source in two independent test processes and compares its AST,
 resolved, HIR, MIR, and assembly renderings. The source includes aliases,
-contained fields, a user destruction body, and automatic cleanup. Native object goldens
+contained fields, user and synthesized lifecycle selection, value parameters
+and results, return storage, produced temporaries, grouping-sensitive elision,
+assignment, control flow, and automatic cleanup. Native object goldens
 independently compare public `skac` assembly and exact failure diagnostics
 across processes.
 
@@ -105,3 +107,14 @@ planning defect; a correct MIR order with incorrect native output instead
 points to projected-place addressing, hidden-receiver calls, or return-value
 preservation in the backend. The `deterministic_destruction` native goldens
 provide compact expected traces for recursive layout and control flow.
+
+For object-value bugs, inspect HIR before MIR. `ObjectInitialization` names the
+chosen final destination; `MaterializedSource` means the source must receive
+separate owning storage; and `ElidedCopy` records the already-validated copy
+operation omitted by the two permitted constructor-elision cases. In MIR,
+`argument` and `temporary` storage must remain class-typed places, object calls
+must use an explicit destination, and `EndFullExpression` must list completed
+temporaries in reverse order. If those artifacts are correct, an incorrect
+native trace points to internal address passing or frame-place lowering rather
+than semantic ownership selection. The `object_value_temporaries` golden is the
+compact executable comparison for elided and materialized ownership graphs.

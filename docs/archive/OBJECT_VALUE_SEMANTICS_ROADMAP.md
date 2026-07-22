@@ -1,6 +1,6 @@
 # Object Value Semantics Roadmap
 
-Status: in progress; OVS0–OVS8 are complete and OVS9 is next.
+Status: complete; OVS0–OVS9 are implemented and verified.
 
 This roadmap extends Skald's place-only inline-object core with explicit copy
 construction, copy assignment, and carefully bounded object values. It builds
@@ -234,16 +234,16 @@ same verified ownership model and produce the specified observable behavior.
 **Purpose:** Make the full restricted profile dependable and prepare the
 polymorphism roadmap.
 
-- [ ] Add complete native and compile-failure goldens across declarations,
+- [x] Add complete native and compile-failure goldens across declarations,
       capabilities, local operations, parameters, results, temporaries,
       elision, aliases, nesting, control flow, layout, and cleanup.
-- [ ] Assert exact output/status/stderr and cross-process determinism for every
+- [x] Assert exact output/status/stderr and cross-process determinism for every
       phase product, assembly, and diagnostics.
-- [ ] Audit source-reachable assertions, aggregate ABI assumptions, and all
+- [x] Audit source-reachable assertions, aggregate ABI assumptions, and all
       initialized-place transitions.
-- [ ] Update grammar, specification, architecture, README, debugging, samples,
+- [x] Update grammar, specification, architecture, README, debugging, samples,
       golden documentation, and future boundaries.
-- [ ] Run the complete quality gate, archive this roadmap, update the archive
+- [x] Run the complete quality gate, archive this roadmap, update the archive
       index, and publish polymorphism as the next object-model roadmap.
 
 **Acceptance criteria:** restricted object values are explicit, deterministic,
@@ -251,21 +251,21 @@ exactly owned and cleaned, structurally verified, and fully documented.
 
 ## 3. Quality and completion gates
 
-- [ ] `cargo fmt --all -- --check`
-- [ ] `cargo check --workspace --all-targets`
-- [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo test --workspace`
-- [ ] `make runtime-test`
-- [ ] `make golden-test`
-- [ ] `make check`
-- [ ] Stable lifecycle identities and no source-name lookup below resolution
-- [ ] No class object represented as a scalar MIR value
-- [ ] Explicit initialization, ownership transfer, temporary, and cleanup state
-- [ ] No target layout or ABI location in HIR/MIR
-- [ ] No accidental move, inheritance, shared, exception, or external-object ABI
-- [ ] Exact deterministic artifacts, diagnostics, and native observations
-- [ ] Touched Rust modules retain concise facades and cohesive ownership
-- [ ] Living documentation and roadmap checkboxes match behavior
+- [x] `cargo fmt --all -- --check`
+- [x] `cargo check --workspace --all-targets`
+- [x] `cargo clippy --workspace --all-targets -- -D warnings`
+- [x] `cargo test --workspace`
+- [x] `make runtime-test`
+- [x] `make golden-test`
+- [x] `make check`
+- [x] Stable lifecycle identities and no source-name lookup below resolution
+- [x] No class object represented as a scalar MIR value
+- [x] Explicit initialization, ownership transfer, temporary, and cleanup state
+- [x] No target layout or ABI location in HIR/MIR
+- [x] No accidental move, inheritance, shared, exception, or external-object ABI
+- [x] Exact deterministic artifacts, diagnostics, and native observations
+- [x] Touched Rust modules retain concise facades and cohesive ownership
+- [x] Living documentation and roadmap checkboxes match behavior
 
 The slice is complete only when all OVS0–OVS9 acceptance criteria and quality
 gates pass. Later polymorphism must build on these copy, destination, and

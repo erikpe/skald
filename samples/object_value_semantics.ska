@@ -1,0 +1,43 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Value {
+    number: i64;
+
+    init(number: i64) {
+        self.number = number;
+    }
+
+    init(ref other: Value) {
+        self.number = 100 + other.number;
+    }
+
+    assign(ref other: Value) {
+        self.number = 200 + other.number;
+    }
+
+    destroy {
+        ska_rt_println_i64(300 + self.number);
+    }
+}
+
+fn produce(number: i64) -> Value {
+    return Value(number);
+}
+
+fn observe(value: Value) -> unit {
+    ska_rt_println_i64(value.number);
+}
+
+fn main() -> i64 {
+    var direct: Value = Value(1);
+    var copied: Value = direct;
+    var grouped: Value = (Value(2));
+
+    direct = produce(3);
+    observe(Value(4));
+
+    ska_rt_println_i64(direct.number);
+    ska_rt_println_i64(copied.number);
+    ska_rt_println_i64(grouped.number);
+    return 0;
+}

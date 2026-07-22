@@ -16,9 +16,8 @@ direction:
 
 Active implementation plans:
 
-- [Object value semantics roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md) — copy
-  construction, assignment, object parameters/results, return storage,
-  temporaries, and permitted elision.
+- [Polymorphism roadmap](POLYMORPHISM_ROADMAP.md) — single inheritance, base
+  lifecycle composition, virtual dispatch, interfaces, and checked narrowing.
 
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current

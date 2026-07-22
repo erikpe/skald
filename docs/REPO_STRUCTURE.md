@@ -251,7 +251,11 @@ binary64 bits. No backend infers types from spelling.
 HIR parameter descriptors carry value/read-only-alias/mutable-alias mode
 orthogonally to `Type`, and every callable signature query returns those same
 descriptors. Calls and constructions retain one source-ordered argument list
-whose entries are either typed scalar values or exact-class object places.
+whose entries distinguish typed scalar values, alias places, and owned
+exact-class copies. `HirObjectSource` distinguishes an existing place from a
+constructor or internal result that requires materialization. Direct object
+initialization records its final destination and any validated copy operation
+omitted by permitted constructor elision, so no lower phase infers eligibility.
 
 One `HirAccess` vocabulary describes read-only or mutable capability for
 method receivers and alias places. Type checking derives it centrally for
@@ -296,11 +300,19 @@ construction with an explicit projected destination; scalar field stores stay
 ordinary assignments.
 
 Internal object results use a dedicated uninitialized MIR return-storage slot.
-An object-returning call names its caller-owned local destination directly;
-the callee copy-constructs that storage before cleanup and never destroys it.
-Verification requires exactly one matching result destination on every normal
-path. The x86-64 backend maps this contract to a hidden first integer-class
-address before the receiver and explicit arguments.
+An object-returning call names complete caller-owned local or temporary
+destination storage; the callee initializes that storage before cleanup and
+never destroys it. Verification requires exactly one matching result
+destination on every normal path. The x86-64 backend maps this contract to a
+hidden first integer-class address before the receiver and explicit arguments.
+
+Compiler-owned `Argument` storage makes caller copy-construction and callee
+ownership explicit. Compiler-owned `Temporary` storage materializes produced
+object sources without creating class-valued `MirValue`s. Each construction or
+object-result call is the only initialization transition for its destination;
+`EndFullExpression` lists every completed temporary in reverse completion
+order. Cleanup liveness verifies those boundaries, argument transfer, return
+initialization, and exactly-once destruction before target lowering.
 
 Each MIR class carries an explicit target-independent destruction plan. Plans
 reference only `DestructorId` and `FieldId`, and cleanup instructions reference
@@ -389,8 +401,13 @@ dereferenced before field projection. Outgoing place addresses use the
 assigned integer register or source-ordered stack slot, independently of SSE
 value arguments.
 `ref` and `mut ref` have identical machine representations. Layout and checked
-offset arithmetic remain target-owned. The slice adds no object copy,
-allocation, retain/release, borrow anchor, or external object ABI.
+offset arithmetic remain target-owned. Internal value arguments are
+caller-reserved object homes passed as one integer-class address, and object
+results use one hidden destination address. These are Skald-internal
+conventions, not System V aggregate-by-value classification and not a public
+object ABI. The backend consumes verified copy operations, result destinations,
+and cleanup boundaries without selecting ownership or elision. The profile
+adds no allocation, retain/release, borrow anchor, or external object ABI.
 
 Internal symbols derive from stable identities. External declarations retain
 their exact source symbol. The generated C-compatible `main` wrapper calls the
@@ -420,10 +437,13 @@ The repository uses four complementary layers:
 Golden programs are compiled in independent processes to compare assembly or
 diagnostics byte-for-byte. Native cases separately check stdout, empty stderr,
 and process status. Object-lifetime integration additionally compares AST,
-resolved IR, HIR, MIR, and assembly across processes. Destruction goldens cover
-recursive body/field/local order, both conditional exit shapes, return-value
-evaluation, non-owning aliases, empty and padded objects, and classes without a
-user body.
+resolved IR, HIR, MIR, and assembly across processes. Its representative source
+includes lifecycle selection, nesting, aliases, value parameters/results,
+return storage, produced-source temporaries, grouping-sensitive elision,
+assignment, and control flow. Native object goldens cover recursive
+destruction, copies, assignment, parameter ownership, result transfer,
+full-expression cleanup, empty and padded layouts, and both elided and
+materialized construction.
 
 The root commands are:
 

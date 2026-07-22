@@ -51,21 +51,19 @@ Every substantial feature should:
 
 ## Object-model sequence
 
-The implemented object core includes direct local inline objects, restricted
-call-scoped alias parameters, acyclic class-typed inline fields, and
-deterministic normal-exit destruction. Construction, nested access, aliases,
-and recursive cleanup all continue through verified MIR and native x86-64
-execution. The remaining progression is:
+The implemented object core includes direct and nested inline objects,
+restricted call-scoped aliases, deterministic destruction, copy construction
+and assignment, internal exact-class value parameters/results, explicit return
+storage, bounded temporaries, and permitted constructor elision. These
+contracts continue through verified MIR and native x86-64 execution. The
+remaining progression is:
 
-1. **Object value semantics.** Add copy construction and assignment before
-   object parameters/results, return storage, temporaries, and permitted
-   elision. The focused implementation plan is the
-   [Object Value Semantics Roadmap](OBJECT_VALUE_SEMANTICS_ROADMAP.md).
-2. **Polymorphism.** Add inheritance, base projections, virtual dispatch,
-   interfaces, casts, and dynamic type metadata.
-3. **Shared ownership.** Add allocation, reference counting, complete dynamic
+1. **Polymorphism.** Add inheritance, base projections, lifecycle composition,
+   virtual dispatch, interfaces, casts, and dynamic type metadata. The focused
+   implementation plan is the [Polymorphism Roadmap](POLYMORPHISM_ROADMAP.md).
+2. **Shared ownership.** Add allocation, reference counting, complete dynamic
    destruction, and syntax-directed borrow anchors.
-4. **Checked exceptions.** Integrate partial construction and cleanup with
+3. **Checked exceptions.** Integrate partial construction and cleanup with
    exceptional control flow rather than retrofitting it afterward.
 
 The completed implementation history and acceptance criteria for class-typed
@@ -73,10 +71,12 @@ fields are preserved in the
 [archived inline-field roadmap](archive/INLINE_OBJECT_FIELDS_ROADMAP.md).
 The local cleanup contract and its implementation record are preserved in the
 [archived deterministic-destruction roadmap](archive/DETERMINISTIC_DESTRUCTION_ROADMAP.md).
+The exact-class copy/value contract is preserved in the
+[archived object-value roadmap](archive/OBJECT_VALUE_SEMANTICS_ROADMAP.md).
 
-Each step needs a dedicated roadmap. In particular, object parameters or
-results should not precede their copy, destruction, ABI, and return-storage
-contracts.
+Each step needs a dedicated roadmap. Polymorphism must extend the established
+copy, destruction, ABI, return-storage, temporary, and cleanup contracts rather
+than introducing a second object-value model.
 
 ## Other planned language work
 

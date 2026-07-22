@@ -72,12 +72,20 @@ object values, and body type mismatches. The runner's existing process
 isolation proves exact assembly and diagnostic determinism; native sidecars
 additionally require exact stdout, status, and empty stderr.
 
-The object-result corpus covers explicit caller-provided return storage,
-function and method results, conditional returns, recursive result calls,
-mixed register/stack arguments, padded and empty classes, alias sources, and
-return initialization before local cleanup. Failure snapshots cover wrong-
-class and missing returns, excluded produced-result returns, and external
-object results.
+The object-value corpus spans `object_value_copy`, `object_value_parameters`,
+`object_value_results`, and `object_value_temporaries`. Together they cover
+user and synthesized lifecycle operations, self-assignment, nested and padded
+layout, empty classes, caller-owned parameter copies, mixed register/stack
+arguments, function and method results, conditional and recursive returns,
+explicit return storage, alias sources, constructor- and result-produced
+sources, full-expression cleanup, and both permitted elision cases. Lifecycle
+traces distinguish grouped materialization from direct local/return
+construction and require every owning destination to be cleaned exactly once.
+Failure snapshots cover malformed lifecycle declarations, illegal bodies and
+contexts, exact-class mismatches, missing returns, alias-rooted replacement,
+and external object signatures. Capability-unavailable states are not
+source-reachable with the current acyclic primitive/inline field kinds; focused
+HIR/MIR tests cover their deterministic diagnostic and verifier paths.
 
 Run it from the repository root with:
 

@@ -126,11 +126,10 @@ destination.
 The next language slices should deepen object semantics rather than broaden the
 syntax indiscriminately. Likely directions are:
 
-1. hardening and publishing the restricted object-value profile;
-2. inheritance, interfaces, virtual dispatch, and casts;
-3. `shared` ownership and borrow anchors;
-4. loops/iterators, arrays, optionals, and checked exceptions;
-5. an AArch64 backend and, when useful, SSA conversion and optimization.
+1. inheritance, interfaces, virtual dispatch, and casts;
+2. `shared` ownership and borrow anchors;
+3. loops/iterators, arrays, optionals, and checked exceptions;
+4. an AArch64 backend and, when useful, SSA conversion and optimization.
 
 These are directions, not promises of syntax or ordering. Each substantial
 feature should receive a focused design and implementation plan before work

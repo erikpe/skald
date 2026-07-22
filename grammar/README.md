@@ -87,12 +87,13 @@ external-function-declaration = "extern" "fn" identifier parameter-list
 
 parameter-list  = "(" [parameter ("," parameter)*] ")"
 parameter       = value-parameter | alias-parameter
-value-parameter = identifier ":" primitive-type
+value-parameter = identifier ":" value-type
 alias-parameter = ["mut"] "ref" identifier ":" class-name
 class-name      = identifier
 
 primitive-type = "i64" | "u64" | "u8" | "f64" | "bool"
-result-type    = primitive-type | "unit"
+value-type     = primitive-type | class-name
+result-type    = value-type | "unit"
 ```
 
 Trailing commas are not accepted. `unit` is a result type only; it is not a
@@ -106,9 +107,10 @@ declarations are collected before bodies are resolved, so forward calls and
 recursion are valid. A duplicate declaration is an error. The entry point must
 be a defined, non-external `fn main() -> i64`.
 
-External declarations use their source identifier as an exact linker symbol.
-Their parameters and results are restricted to implemented primitive values or
-`unit`; object-bearing and alternate-name FFI are not supported.
+Internal functions and methods may use exact concrete classes as value
+parameter and result types. External declarations use their source identifier
+as an exact linker symbol and remain restricted to primitive values or `unit`;
+object-bearing and alternate-name FFI are not supported.
 
 ## Statements and blocks
 
@@ -120,6 +122,7 @@ statement = local-declaration
           | call-statement
           | conditional-statement
           | field-assignment
+          | object-assignment
           | block
 
 local-declaration = "var" identifier ":" local-type "=" expression ";"
@@ -134,6 +137,8 @@ conditional-statement = "if" "(" expression ")" block
 
 field-assignment = receiver-place "." identifier "=" expression ";"
 receiver-place   = identifier | "self" | "(" receiver-place ")"
+object-assignment = object-place "=" expression ";"
+object-place      = receiver-place ("." identifier)*
 ```
 
 A call statement must be a call returning `unit`; arbitrary expressions and
@@ -151,8 +156,10 @@ local becomes visible only after its initializer. Nested blocks may shadow
 outer bindings; duplicate names in one scope are errors. A local also shadows a
 top-level callable at a call site.
 
-General local assignment, compound assignment, chained assignment, and
-assignment expressions are not implemented.
+Exact-class assignment to a live owning local, value parameter, or permitted
+projected field uses `object-assignment`. Primitive local assignment, compound
+assignment, chained assignment, and assignment expressions are not
+implemented.
 
 ## Expressions
 
@@ -211,6 +218,8 @@ class-declaration = "class" identifier "{" class-member* "}"
 
 class-member = field-declaration
              | initializer-declaration
+             | copy-assignment-declaration
+             | destructor-declaration
              | method-declaration
 
 field-declaration = identifier ":" field-type ";"
@@ -218,6 +227,8 @@ field-type        = primitive-type | class-name
 class-name        = identifier
 
 initializer-declaration = "init" parameter-list block
+copy-assignment-declaration = "assign" "(" "ref" identifier ":" class-name ")" block
+destructor-declaration = "destroy" block
 
 method-declaration = ["mut"] "fn" identifier parameter-list
                      "->" result-type block
@@ -225,8 +236,9 @@ method-declaration = ["mut"] "fn" identifier parameter-list
 
 Classes are nominal. Fields and ordinary methods share one non-overloaded
 member namespace. Each class, including an empty class, must declare exactly
-one explicit `init`; initializer overloading and synthesized initializers are
-not available.
+one ordinary `init`; it may additionally declare the exact-class copy
+constructor `init(ref other: T)`, copy assignment `assign(ref other: T)`, and
+one `destroy` body. These are fixed lifecycle slots, not general overloads.
 
 Initializer bodies are straight-line sequences of direct field
 initializations. Primitive and class fields use these respective forms:
@@ -246,16 +258,21 @@ blocks, conditionals, call statements, returns, or general object-valued
 expressions. The staged inline-field profile below defines the restricted
 receiver and alias uses available after a class field is initialized.
 
-Construction is legal only as the complete initializer of a new exact-type
-local:
+An ungrouped exact-class construction directly initializes a new local:
 
 ```ska
 var counter: Counter = Counter(40);
 ```
 
-It is not a general object expression and cannot be grouped for another use,
-passed, returned, copied, assigned to existing storage, or used as a receiver.
-Constructor arguments evaluate left to right before `init` begins.
+Construction is also an object source for copy initialization, assignment,
+matching internal value arguments, and object returns. It is materialized in
+owning temporary storage in those contexts unless it is the ungrouped complete
+initializer of an exact-class local or the ungrouped exact-class return
+expression. The compiler deterministically elides those two cases by selecting
+the final destination before MIR lowering. Grouping prevents constructor
+elision. A produced object still cannot be a primitive operand, alias argument,
+receiver, discarded expression, or external ABI value. Constructor arguments
+evaluate left to right before `init` begins.
 
 Fields may be read or assigned through an inline local or `self`. Ordinary
 `fn` methods have read-only receivers. `mut fn` methods may assign fields and
@@ -263,21 +280,17 @@ call mutable methods; read-only methods may only read fields and call
 read-only methods. A local inline object permits either receiver mode. Dispatch
 is static and direct.
 
-The original restricted object profile has primitive by-value parameters and
-results. OVS6 additionally accepts exact-class value parameters on internal
-callables and existing exact-class object places as their arguments. OVS7
-accepts exact-class internal function and method results copied from existing
-places into explicit caller return storage. The
-compiler accepts class-typed field declarations, resolves them to nominal
+Internal callables accept exact-class value parameters and results. Value
+arguments may be existing exact-class places or produced constructor/call
+results; results initialize explicit caller-provided storage. The compiler
+accepts class-typed field declarations, resolves them to nominal
 class identities, rejects recursive inline containment, records nested
 semantic place paths, and type-checks direct construction into class fields
 with precise initializer liveness. Nested primitive access, method receivers,
 and exact-class alias arguments are type-checked through those paths. Native
 lowering executes those operations through recursively laid-out inline
-storage. It does not include produced-object arguments or returns, general
-object temporaries, inheritance,
-interfaces, virtual calls, casts, `shared`, access modifiers, static members,
-`final`, or object FFI.
+storage. It does not include inheritance, interfaces, virtual calls, casts,
+`shared`, access modifiers, static members, `final`, or object FFI.
 
 Restricted alias parameters are implemented end to end. Binding mode remains
 separate from nominal class type in every semantic IR. A `ref` parameter may
@@ -363,10 +376,12 @@ inspect(outer.inner)
 ```
 
 A path starts at an inline local, live method `self`, or alias parameter and
-may cross class-typed fields. A class endpoint is valid only as a method
-receiver or exact-class alias argument; it is not an ordinary object value. A
-primitive endpoint may be read, and may be assigned when the path has mutable
-access. Grouping around a place is transparent.
+may cross class-typed fields. A class endpoint is a place: it may be a method
+receiver, exact-class alias argument, or exact-class copy source. When rooted
+at owning mutable storage or mutable live `self`, a projected class endpoint
+may also be a copy-assignment destination. A primitive endpoint may be read,
+and may be assigned when the path has mutable access. Grouping around a place
+is transparent.
 
 The root binding's access applies to the complete path. A read-only method
 receiver or `ref` root permits reads, read-only calls, and `ref` arguments. A
@@ -423,13 +438,14 @@ named `destroy`; a second special declaration is a duplicate.
 The body uses the same statement grammar as an implemented `unit` method. It
 has an implicit mutable `self`, permits `return;` or fallthrough, and rejects a
 value return. The complete receiver and all its fields remain live throughout
-the body. Direct construction into an already-live field, an explicit call of
-the special member, and a standalone early-destruction statement remain
-invalid.
+the body. Assignment from a constructed or returned object is ordinary copy
+assignment into that live destination; it is never reclassified as direct
+field construction. An explicit call of the special member and a standalone
+early-destruction statement remain invalid.
 
-Automatic cleanup is limited to successfully constructed owning object locals
-on normal block fallthrough and `return`. It does not add object values,
-copying, exceptions, inheritance, shared ownership, arrays, explicit early
+Automatic cleanup covers successfully initialized owning object locals, value
+parameters, and full-expression temporaries on supported normal exits. It does
+not add exceptions, inheritance, shared ownership, arrays, explicit early
 destruction, or cleanup for failed construction. The complete frozen semantic
 and diagnostic contract is in the
 [local deterministic-destruction profile](../docs/SKALD_DRAFT_SPEC.md#545-frozen-local-deterministic-destruction-profile).
@@ -441,17 +457,14 @@ those operations on lexical fallthrough and return edges, and DD5 lowers the
 verified plans through the x86-64 hidden-receiver ABI. Automatic destruction is
 therefore executable within the restricted profile above.
 
-## Frozen staged extension: object value semantics
+## Implemented extension: object value semantics
 
-OVS0 froze the parser-facing boundary for this object-model roadmap. OVS1–OVS5
-implemented lifecycle declarations and local copy behavior; OVS6 implements
-internal exact-class value parameters from existing object-place arguments;
-and OVS7 implements exact-class internal results from existing places plus
-direct initialization of locals by object-returning calls. Produced-object
-arguments and returns, assignment from results, and general temporaries remain
-rejected until their named slices are implemented.
+OVS0–OVS9 implement the restricted exact-class object-value profile: lifecycle
+declarations and synthesized capabilities, local copy behavior, internal value
+parameters and results, caller return storage, bounded owning temporaries, and
+the two permitted constructor-elision cases.
 
-The planned lifecycle shapes are:
+The lifecycle shapes are:
 
 ```text
 copy-constructor-declaration = "init" "(" "ref" identifier ":" class-name ")" block
@@ -518,8 +531,6 @@ The following broader-language features remain design or implementation work:
 - loops and iterators;
 - arrays and optionals;
 - strings and standard-library containers;
-- produced-object arguments and returns, assignment from object results, and
-  general temporaries;
 - inheritance, interfaces, virtual dispatch, and access control;
 - local alias declarations and alias sources beyond inline locals, method
   `self`, and forwarded parameters;

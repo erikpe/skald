@@ -55,15 +55,25 @@ fn run_helper_process(output: &Path) {
 fn complete_phase_dump() -> String {
     let text = concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } ",
+        "init(ref other: Box) { self.value = other.value; } ",
+        "assign(ref other: Box) { self.value = other.value; } ",
         "mut fn set(value: i64) -> unit { self.value = value; } ",
-        "fn get() -> i64 { return self.value; } }\n",
-        "class Snapshot { value: i64; init(ref source: Box) { self.value = read(source); } ",
-        "destroy { self.value = self.value + 1; } }\n",
+        "fn get() -> i64 { return self.value; } destroy {} }\n",
+        "class Snapshot { box: Box; init(ref source: Box) { self.box = Box(read(source)); } ",
+        "destroy {} }\n",
         "fn read(ref value: Box) -> i64 { return value.get(); }\n",
         "fn write(mut ref value: Box, amount: i64) -> unit { value.set(amount); }\n",
         "fn forward(mut ref value: Box) -> unit { write(value, read(value) + 1); }\n",
+        "fn produce(value: i64) -> Box { return Box(value); }\n",
+        "fn choose(ref source: Box, first: bool) -> Box { ",
+        "if (first) { return source; } else { return (Box(source.get())); } }\n",
+        "fn consume(value: Box, ref alias: Box) -> i64 { ",
+        "value = produce(alias.get()); return value.get(); }\n",
         "fn main() -> i64 { var value: Box = Box(1); forward(value); ",
-        "var snapshot: Snapshot = Snapshot(value); return snapshot.value; }\n",
+        "var grouped: Box = (Box(2)); grouped = produce(read(value)); ",
+        "var copied: Box = value; var result: Box = choose(copied, false); ",
+        "var snapshot: Snapshot = Snapshot(result); ",
+        "return consume(produce(snapshot.box.get()), grouped); }\n",
     );
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("determinism.ska", text);

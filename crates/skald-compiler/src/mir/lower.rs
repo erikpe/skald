@@ -2,11 +2,11 @@
 
 use crate::{
     hir::{
-        BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirCallArgument, HirClassDeclaration,
-        HirConditional, HirCopyCapability, HirExpression, HirExpressionKind,
-        HirFunctionDeclaration, HirFunctionDefinition, HirFunctionLinkage, HirLocal,
-        HirMemberDefinition, HirParameter, HirParameterMode, HirProgram, HirSelectedCopyOperation,
-        HirStatement, HirSynthesizedFieldCopy, HirUnaryOperation, Type,
+        BlockFlow, HirAccess, HirBinaryOperation, HirBlock, HirClassDeclaration, HirConditional,
+        HirCopyCapability, HirExpression, HirExpressionKind, HirFunctionDeclaration,
+        HirFunctionDefinition, HirFunctionLinkage, HirLocal, HirMemberDefinition, HirParameter,
+        HirParameterMode, HirProgram, HirSelectedCopyOperation, HirStatement,
+        HirSynthesizedFieldCopy, HirUnaryOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId},
 };
@@ -14,6 +14,7 @@ use crate::{
 use super::{build::MirBodyBuilder, model::*};
 
 mod cleanup;
+mod object_values;
 
 use cleanup::CleanupPlanner;
 
@@ -762,143 +763,6 @@ impl<'hir> BodyLowerer<'hir> {
     fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
         self.lower_object_place(&place.receiver)
             .project_field(place.field)
-    }
-
-    fn lower_object_producer(
-        &mut self,
-        producer: &crate::hir::HirObjectProducer,
-        destination: MirPlace,
-    ) {
-        match producer {
-            crate::hir::HirObjectProducer::Construct(construction) => {
-                self.lower_construction(construction, destination);
-            }
-            crate::hir::HirObjectProducer::Call(call) => {
-                self.lower_object_call(call, destination);
-            }
-        }
-    }
-
-    fn lower_construction(
-        &mut self,
-        construction: &crate::hir::HirConstruction,
-        destination: MirPlace,
-    ) {
-        let arguments = self.lower_call_arguments(&construction.arguments);
-        self.emit(MirInstruction::Initialize(MirInitialize {
-            destination,
-            target: construction.initializer,
-            arguments,
-            span: construction.span,
-        }));
-    }
-
-    fn lower_object_call(&mut self, call: &crate::hir::HirObjectCall, destination: MirPlace) {
-        let (target, receiver) = match &call.target {
-            crate::hir::HirObjectCallTarget::Direct(function) => {
-                (MirCallTarget::Direct(*function), None)
-            }
-            crate::hir::HirObjectCallTarget::Method { receiver, method } => (
-                MirCallTarget::Method(*method),
-                Some(self.lower_object_place(receiver)),
-            ),
-        };
-        let arguments = self.lower_call_arguments(&call.arguments);
-        self.emit(MirInstruction::Call(MirCall {
-            target,
-            receiver,
-            arguments,
-            result: None,
-            destination: Some(destination),
-            span: call.span,
-        }));
-    }
-
-    fn lower_object_source(&mut self, source: &crate::hir::HirObjectSource) -> MirPlace {
-        match source {
-            crate::hir::HirObjectSource::Place(place) => self.lower_object_place(place),
-            crate::hir::HirObjectSource::Produced(producer) => {
-                let storage = self.new_temporary_storage(producer.class(), producer.span());
-                let destination = MirPlace::base(storage);
-                self.lower_object_producer(producer, destination.clone());
-                self.full_expression_temporaries.push(MirCleanup {
-                    destination: destination.clone(),
-                    target: producer.class(),
-                    span: producer.span(),
-                });
-                destination
-            }
-        }
-    }
-
-    fn lower_call_arguments(&mut self, arguments: &[HirCallArgument]) -> Vec<MirArgument> {
-        arguments
-            .iter()
-            .map(|argument| match argument {
-                HirCallArgument::Value(expression) => MirArgument::Value(
-                    self.lower_expression(expression)
-                        .expect("typed value argument must produce a scalar value"),
-                ),
-                HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
-                HirCallArgument::Copy(copy) => {
-                    let source = self.lower_object_source(&copy.source);
-                    let destination = self.new_argument_storage(copy.source.class(), copy.span);
-                    self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
-                        destination: MirPlace::base(destination),
-                        source,
-                        class: copy.source.class(),
-                        operation: lower_selected_copy_operation(copy.operation),
-                        span: copy.span,
-                    }));
-                    MirArgument::OwnedPlace(MirPlace::base(destination))
-                }
-            })
-            .collect()
-    }
-
-    fn new_argument_storage(&mut self, class: ClassId, span: crate::source::Span) -> StorageId {
-        let id = StorageId::new(self.input.callable, self.storage.len());
-        self.storage.push(MirStorage {
-            id,
-            source: None,
-            name: format!("argument{}", id.index()),
-            kind: MirStorageKind::Argument,
-            ty: MirType::Class(class),
-            span,
-        });
-        id
-    }
-
-    fn new_temporary_storage(&mut self, class: ClassId, span: crate::source::Span) -> StorageId {
-        let id = StorageId::new(self.input.callable, self.storage.len());
-        self.storage.push(MirStorage {
-            id,
-            source: None,
-            name: format!("temporary{}", id.index()),
-            kind: MirStorageKind::Temporary,
-            ty: MirType::Class(class),
-            span,
-        });
-        id
-    }
-
-    fn finish_full_expression(&mut self, span: crate::source::Span) {
-        if self.full_expression_temporaries.is_empty() {
-            return;
-        }
-        let temporaries = self
-            .full_expression_temporaries
-            .drain(..)
-            .rev()
-            .map(|mut cleanup| {
-                cleanup.span = span;
-                cleanup
-            })
-            .collect();
-        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-            temporaries,
-            span,
-        }));
     }
 
     fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
