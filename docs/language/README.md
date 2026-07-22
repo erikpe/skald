@@ -96,13 +96,14 @@ makes a result source-observable.
 - [Feature status](STATUS.md) is the sole matrix for language maturity and
   current compiler support.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
+- [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
+  type model, literals, exact-type rules, and operator availability.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.
 
-Focused documents for grammar, types and values, functions and control flow,
-classes and lifecycle, aliases and ownership, polymorphism, modules and
-interoperation, and errors will be linked here as their verified authorities
-are established.
+Focused documents for functions and control flow, classes and lifecycle,
+aliases and ownership, polymorphism, modules and interoperation, and errors will
+be linked here as their verified authorities are established.

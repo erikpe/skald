@@ -15,6 +15,8 @@ Use the authority closest to the behavior:
   [language status matrix](language/STATUS.md);
 - exact accepted syntax belongs in the
   [implemented grammar](language/GRAMMAR.md);
+- type, value, literal, and expression semantics belong in
+  [types and values](language/TYPES_AND_VALUES.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

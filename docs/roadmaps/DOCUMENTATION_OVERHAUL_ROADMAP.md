@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC3 is next.
+Status: planned; DOC4 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -168,7 +168,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC0 — Establish documentation authority and verification tooling
 - [x] DOC1 — Create the language overview and status authority
 - [x] DOC2 — Rewrite the implemented grammar
-- [ ] DOC3 — Rewrite types, values, and expressions
+- [x] DOC3 — Rewrite types, values, and expressions
 - [ ] DOC4 — Rewrite functions and control flow
 - [ ] DOC5 — Rewrite classes, initialization, and object places
 - [ ] DOC6 — Rewrite copying, destruction, and object lifetimes
@@ -267,18 +267,18 @@ and no grammar section explains HIR, MIR, backend lowering, or feature rollout.
 
 **Purpose:** Give core value semantics one concise language-owned home.
 
-- [ ] Create `TYPES_AND_VALUES.md` covering implemented primitive and exact
+- [x] Create `TYPES_AND_VALUES.md` covering implemented primitive and exact
       nominal types, `unit`, literal typing/ranges, expressions, operators,
       equality availability, conversions, and value-versus-place terminology.
-- [ ] Separate implemented exact-type rules from future optional, array,
+- [x] Separate implemented exact-type rules from future optional, array,
       string, function-value, and conversion directions through explicit
       maturity links rather than interleaved profiles.
-- [ ] Verify literal, numeric, boolean, field-value, grouping, operator, and
+- [x] Verify literal, numeric, boolean, field-value, grouping, operator, and
       unsupported-context claims against type checking, raw-bit dumps, and
       goldens.
-- [ ] Move target representations, C mappings, register classes, and parsing
+- [x] Move target representations, C mappings, register classes, and parsing
       algorithms to compiler/backend documentation.
-- [ ] Remove duplicated type summaries from the old draft as each fact gains
+- [x] Remove duplicated type summaries from the old draft as each fact gains
       its new owner.
 
 **Tests:** Run literal, primitive-expression, field-expression, diagnostic, HIR

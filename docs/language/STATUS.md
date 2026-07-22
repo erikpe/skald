@@ -33,8 +33,8 @@ have focused implementation plans.
 | Area | Maturity | Current compiler boundary |
 |---|---|---|
 | Source and declarations | **Implemented contract** | One UTF-8 source file; ASCII identifiers; line comments; top-level functions, exact-symbol external functions, and nominal classes. |
-| Primitive types and literals | **Implemented contract** | `i64`, `u64`, `u8`, `f64`, and `bool`; payload-free `unit` results; spelling-selected numeric types with checked literal ranges. |
-| Primitive expressions | **Implemented contract** | Exact-type `+`, `-`, and `*`; unary `-` for `i64` and `f64`; grouping, direct calls, and field selection; no implicit conversions or truthiness. |
+| [Primitive types and literals](TYPES_AND_VALUES.md#literal-types-and-ranges) | **Implemented contract** | `i64`, `u64`, `u8`, `f64`, and `bool`; payload-free `unit` results; spelling-selected numeric types with checked literal ranges. |
+| [Primitive expressions](TYPES_AND_VALUES.md#expressions) | **Implemented contract** | Exact-type `+`, `-`, and `*`; unary `-` for `i64` and `f64`; grouping, direct calls, and field selection; no implicit conversions or truthiness. |
 | Bindings and scopes | **Implemented contract** | Typed `var` locals, value parameters, lexical blocks, declaration-before-use for locals, nested shadowing, and duplicate rejection within one scope. Primitive local reassignment is not implemented. |
 | Functions and control flow | **Implemented contract** | Forward calls, recursion, direct calls, `unit` call statements, `return`, and mandatory-block `if`/`elif`/`else` with exact `bool` conditions and definite-return checking. |
 | Entry point and primitive interoperation | **Implemented contract** | A defined `fn main() -> i64`; trusted external declarations using their source name as the linker symbol and by-value primitive parameters/results, with `unit` also allowed as a result. |
@@ -76,8 +76,8 @@ language guarantees.
 | Recoverable and checked exceptions | **Exploratory direction** | Deterministic cleanup is a constraint, but throw/catch syntax, exception sets, failed-construction behavior, and lowering remain open. |
 | Multiple files and modules | **Open question** | Imports, exports, visibility, source-to-module mapping, separate compilation, packages, and cross-module linkage are unspecified. |
 | Loops and iteration | **Open question** | `while`, `for`, `break`, `continue`, iterator protocols, and their cleanup boundaries are unspecified. |
-| Remaining primitive operations | **Open question** | Comparisons, division, remainder, bitwise operations, shifts, explicit casts, signed-overflow behavior, and broader floating operations are not implemented as a settled group. |
-| Function values, closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
+| [Remaining primitive operations](TYPES_AND_VALUES.md#operators) | **Open question** | Comparisons, division, remainder, bitwise operations, shifts, explicit casts, signed-overflow behavior, and broader floating operations are not implemented as a settled group. |
+| [Function values](TYPES_AND_VALUES.md#conversions-and-future-value-families), closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
 | Static state and broader class features | **Open question** | Static members, access control, abstract/final forms, overloads, reflection, and user-defined conversions are not current language contracts. |
 | Standard library | **Open question** | No Skald-written standard library is implemented; current scalar output is bootstrap runtime interoperation. |
 

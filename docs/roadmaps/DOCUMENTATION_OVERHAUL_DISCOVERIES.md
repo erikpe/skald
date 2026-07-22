@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: active; one pending documentation cleanup.
+Status: active; two pending documentation cleanups.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.
@@ -20,6 +20,21 @@ discovery that belongs to another active roadmap should link to that roadmap;
 one that requires a new behavior decision remains here until it has an owner.
 
 ## Pending
+
+### Legacy draft overstates its authority
+
+- **Problem:** the draft specification still opens by saying it defines the
+  Skald language, which conflicts with the focused authority model now used for
+  overview, status, grammar, and type/value semantics.
+- **Evidence:** the introductory paragraph of `docs/SKALD_DRAFT_SPEC.md`
+  follows its “exploratory draft” status with an unqualified authority claim;
+  `docs/README.md` instead classifies it as migration input where no focused
+  owner exists.
+- **Owner and priority:** documentation migration and final monolith removal;
+  medium documentation-correctness priority.
+- **Boundary:** replace the opening claim with a concise migration-input notice
+  during the next broad draft edit; DOC16 ultimately removes the superseded
+  document after all content has an owner.
 
 ### Duplicate polymorphism roadmap test line
 

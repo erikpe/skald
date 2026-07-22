@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through the focused implemented grammar.
+Status: active; audited through types, values, and expressions.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -17,6 +17,7 @@ step.
 | `docs/language/README.md` | Retain as the broad language specification and navigation entry point; later language tasks add focused semantic links without turning it into another feature inventory. |
 | `docs/language/STATUS.md` | Retain as the sole feature-maturity and compiler-support matrix; update it whenever source behavior, target availability, or a future design state changes. |
 | `docs/language/GRAMMAR.md` | Retain as the sole exact accepted-syntax authority; update it with lexer/parser and source-shape tests whenever syntax changes. |
+| `docs/language/TYPES_AND_VALUES.md` | Retain as the authority for implemented types, literals, value/place distinctions, expressions, operators, conversion availability, and future value-family maturity links. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
 | `docs/REPO_STRUCTURE.md` | DOC11-DOC15 move durable compiler, backend, runtime, driver, testing, and debugging contracts; DOC16 removes the exhaustive monolith. |
@@ -59,7 +60,7 @@ step.
 | “4.3 Shared Types” | `docs/language/ALIASES_AND_OWNERSHIP.md`; status in `docs/language/STATUS.md`. |
 | “4.4 Universal Root Type” | `docs/language/POLYMORPHISM.md`; status in `docs/language/STATUS.md`. |
 | “4.5 Alias Binding Modes”; “4.5.1 Borrow Anchors”; “4.5.2 Deferred Local Alias Bindings” | `docs/language/ALIASES_AND_OWNERSHIP.md`. |
-| “4.6 Optional Types”; “4.7 Array Types”; “4.8 Str” | Settled value semantics in `docs/language/TYPES_AND_VALUES.md`; unresolved support and design maturity in `docs/language/STATUS.md`. |
+| “4.6 Optional Types”; “4.7 Array Types”; “4.8 Str” | Non-implementation and unresolved maturity link through `docs/language/TYPES_AND_VALUES.md` to `docs/language/STATUS.md`; DOC10 prunes the premature sketches. |
 | “5. Declarations”; “5.1 Local Variables”; “5.2 Functions”; “5.3 Function Values” | `docs/language/FUNCTIONS_AND_CONTROL_FLOW.md`; function-value maturity in `docs/language/STATUS.md`. |
 | “5.4 Classes”; “5.4.1 Instance-Method Receiver Mutability”; “5.4.2 Restricted Stage-0 Inline-Object Profile” | `docs/language/CLASSES_AND_LIFECYCLE.md`; historical profile names are removed. |
 | “5.4.3 Restricted Stage-0 Alias-Parameter Profile” | Source semantics move to `docs/language/ALIASES_AND_OWNERSHIP.md`; call ABI moves to `docs/compiler/BACKEND.md`. |
@@ -71,7 +72,7 @@ step.
 | “8. Classes, Inheritance, and Polymorphism”; “8.1 Inline Values and Slicing”; “8.2 Shared Upcasts”; “8.3 Alias-Parameter Upcasts”; “8.4 Virtual Dispatch”; “9. Interfaces” | `docs/language/POLYMORPHISM.md`, with ownership links to `ALIASES_AND_OWNERSHIP.md`. |
 | “10. Expressions and Statements”; “10.3 Operators” | Expression/value rules move to `docs/language/TYPES_AND_VALUES.md`; statement and order rules move to `FUNCTIONS_AND_CONTROL_FLOW.md`. |
 | “10.1 Conditional Statements”; “10.2 Returns and Call Statements” | `docs/language/FUNCTIONS_AND_CONTROL_FLOW.md`. |
-| “10.4 Indexing, Slicing, and For-In” | Value/container semantics move to `docs/language/TYPES_AND_VALUES.md`; control flow moves to `FUNCTIONS_AND_CONTROL_FLOW.md`; maturity remains in `STATUS.md`. |
+| “10.4 Indexing, Slicing, and For-In” | Unsupported value/container status links through `docs/language/TYPES_AND_VALUES.md`; control flow moves to `FUNCTIONS_AND_CONTROL_FLOW.md`; DOC10 prunes unresolved syntax and protocol sketches. |
 | “11. Casts, Type Tests, and Equality” | Conversions and equality move to `docs/language/TYPES_AND_VALUES.md`; hierarchy tests/narrowing move to `POLYMORPHISM.md`. |
 | “12. Error Model”; “12.1 Checked Exceptions” | `docs/language/ERRORS.md`, with unresolved maturity in `STATUS.md`. |
 | “13. Runtime Model”; “13.1 Bootstrap i64 Output”; “13.2 Bootstrap bool Output”; “13.3 Bootstrap Remaining-Primitive Output” | C contract moves to `docs/compiler/RUNTIME_ABI.md`; source declarations move to `MODULES_AND_INTEROP.md`. |

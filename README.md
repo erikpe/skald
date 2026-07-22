@@ -167,6 +167,7 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Documentation index](docs/README.md)
 - [Draft language specification](docs/SKALD_DRAFT_SPEC.md)
 - [Implemented grammar](docs/language/GRAMMAR.md)
+- [Types, values, and expressions](docs/language/TYPES_AND_VALUES.md)
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)
