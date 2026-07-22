@@ -4,6 +4,8 @@ Status: workflow guidance pending its focused development replacement. Current
 phase products, renderer paths, determinism, and verifier boundaries are
 authoritative in
 [Compiler Phases and Intermediate Representations](compiler/PHASES_AND_IR.md).
+Target-specific legality, lowering, and assembly contracts are authoritative
+in the [Backend and Target Contract](compiler/BACKEND.md).
 
 Every major compiler product is inspectable and deterministic. These renderers
 are public Rust APIs so phase tests, temporary debugging tools, and future CLI
@@ -51,10 +53,11 @@ true target, and false target. Blocks remain in dense `BlockId` order rather
 than traversal order, so loops, joins, and unreachable blocks have stable,
 inspectable output before backend lowering exists.
 
-Assembly uses matching deterministic function-and-block labels of the form
-`.Lska_fn_N_block_M`, plus one `.Lska_fn_N_epilogue` label. Blocks are emitted
-in `BlockId` order, not traversal order. This makes forward jumps, back edges,
-diamonds, joins, and all return paths directly comparable with the MIR dump.
+Assembly uses deterministic identity-derived private function and block labels.
+Blocks are emitted in `BlockId` order, not traversal order, which makes forward
+jumps, back edges, diamonds, joins, and return paths directly comparable with
+the MIR dump. Exact internal label spelling is a debugging detail rather than
+an ABI promise; see [symbols and process entry](compiler/BACKEND.md#symbols-and-process-entry).
 
 Conditional lowering preserves `IfArm`, ordered `ElifArm` entries, and an
 optional `ElseArm` in the AST, resolved, and HIR dumps. Its MIR dump exposes the

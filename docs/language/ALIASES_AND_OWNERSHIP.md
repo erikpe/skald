@@ -186,8 +186,7 @@ evaluation order, and source lifetime. It does not require a raw-pointer type,
 object address to be source-visible, a particular parameter representation,
 frame home, register class, field offset, or calling convention.
 
-The current target realization is an implementation concern recorded with the
-[x86-64 System V backend](../REPO_STRUCTURE.md#x86-64-system-v-backend) until
-the focused backend document replaces that architecture section. Future
+The current target realization is an implementation concern recorded in the
+[backend and target contract](../compiler/BACKEND.md). Future
 allocation, reference counting, and ownership-runtime mechanisms belong in the
 planned runtime ABI authority once their language design is frozen.

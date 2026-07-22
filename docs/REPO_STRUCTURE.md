@@ -1,4 +1,4 @@
-# Backend, Runtime, Driver, and Test Migration Guide
+# Runtime, Driver, and Test Migration Guide
 
 Status: legacy migration input. Durable compiler architecture is authoritative
 in [Compiler Architecture](compiler/README.md), and target-independent phase
@@ -38,44 +38,11 @@ safepoints, and write barriers do not belong here.
 
 ## x86-64 System V backend
 
-The backend separates target legality, primitive and class data layout, System
-V argument/result classification, frame layout, MIR-to-machine lowering, typed
-assembly representation, GNU assembly emission, and identity-derived symbols.
-
-At the supported external C boundary, Skald `i64`, `u64`, `u8`, `f64`, `bool`,
-and `unit` are realized as compatible C `int64_t`, `uint64_t`, `uint8_t`,
-`double`, `bool` (`_Bool`), and `void` respectively. The runtime requires
-eight-bit bytes and IEEE-754 binary64-compatible C `double`.
-
-Class fields are laid out in declaration order with checked size/alignment
-arithmetic. `i64`, `u64`, and `f64` use 8-byte size/alignment; `u8` and `bool`
-use 1 byte. Empty classes remain addressable with size/alignment one. Object
-locals receive aligned contiguous frame storage, and projected places are
-resolved to addresses only in the backend.
-
-Initializers and methods receive the object address as a hidden first integer-
-class argument. Integer and SSE arguments use independent register sequences;
-overflow arguments share source-ordered stack slots. The current lowering is
-intentionally stack-heavy and can later be replaced by register allocation
-without changing MIR.
-
-Destructors use the same hidden-receiver call path. Recursive cleanup projects
-the existing object place through target-owned field offsets and emits no
-aggregate copies, allocation, or deallocation. Empty destruction plans produce
-no instructions; user bodies and nested class fields execute in the exact
-order already verified in MIR.
-
-The internal alias ABI represents each alias as one integer-class pointer in
-source parameter order. `ref` and `mut ref` have identical machine
-representations. Internal class value arguments are caller-reserved object
-homes passed as one integer-class address, and object results use one hidden
-destination address. These are Skald-internal conventions, not a public object
-ABI.
-
-Internal symbols derive from stable identities. External declarations retain
-their exact source symbol. The generated C-compatible `main` wrapper calls the
-ID-selected Skald entry function and exposes its low result bits as the Linux
-process status.
+The focused [backend and target contract](compiler/BACKEND.md) now owns target
+selection, legality, data layout, calling conventions, frames, instruction
+selection, symbols, and assembly emission. This compatibility heading remains
+only so links created before the documentation migration have a useful
+destination.
 
 ## Driver and artifacts
 
@@ -115,5 +82,5 @@ clean checkouts.
 ## Debugging
 
 The current [debugging artifacts guide](DEBUGGING.md) owns detailed renderer,
-dump, verifier, and assembly-inspection workflows until DOC15 creates its
-focused development replacement.
+dump, verifier, and assembly-inspection workflows until its focused
+development replacement is created.

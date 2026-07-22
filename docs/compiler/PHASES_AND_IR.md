@@ -22,8 +22,9 @@ The target-independent compiler path is:
 `driver::compile_source_to_assembly` composes these phases with target
 selection and backend emission. It stops after any source phase that produced
 an error. Successful type checking always produces HIR; failed type checking
-produces no executable HIR. Backend and driver contracts are separate from the
-target-independent phase model.
+produces no executable HIR. The [backend and target contract](BACKEND.md)
+defines how verified MIR is checked and realized for a selected target; driver
+behavior is separate from the target-independent phase model.
 
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
@@ -140,6 +141,9 @@ boundaries:
    output of target-independent transformations; and
 3. again inside backend emission, preventing malformed library-created or
    mutated MIR from reaching target legality and instruction selection.
+
+Target-specific legality and structured backend failures are defined by the
+[backend and target contract](BACKEND.md#input-and-legality-boundary).
 
 The MIR pass pipeline currently verifies without transforming. Future
 analyses and transformations must have explicit ordering and must return MIR

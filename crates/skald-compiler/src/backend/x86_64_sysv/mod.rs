@@ -4,6 +4,8 @@
 //! and value a stack home. Instruction selection uses only caller-saved
 //! scratch registers, keeping register allocation an internal optimization
 //! that can be replaced later.
+//! Target legality, layout, ABI, and emission are documented in
+//! `docs/compiler/BACKEND.md`.
 
 mod abi;
 mod emit;

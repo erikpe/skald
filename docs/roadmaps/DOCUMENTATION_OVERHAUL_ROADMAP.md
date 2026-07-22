@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC12 is next.
+Status: planned; DOC13 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -177,7 +177,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC9 — Rewrite modules and foreign interoperation
 - [x] DOC10 — Rewrite errors and prune premature feature sketches
 - [x] DOC11 — Rewrite compiler architecture and phase contracts
-- [ ] DOC12 — Separate backend and target documentation
+- [x] DOC12 — Separate backend and target documentation
 - [ ] DOC13 — Establish the runtime ABI authority
 - [ ] DOC14 — Rewrite driver, artifact, and workflow documentation
 - [ ] DOC15 — Consolidate testing and debugging guidance
@@ -497,18 +497,18 @@ duplicating language semantics or freezing replaceable private organization.
 **Purpose:** Give target legality, layout, ABI, and code generation one
 implementation-owned authority.
 
-- [ ] Create `BACKEND.md` describing the backend interface, supported target
+- [x] Create `BACKEND.md` describing the backend interface, supported target
       registry, x86-64 System V legality, primitive/class layout, argument and
       result classification, frames, symbols, instruction selection, and
       assembly emission.
-- [ ] Verify every size, alignment, register-class, hidden-argument, stack,
+- [x] Verify every size, alignment, register-class, hidden-argument, stack,
       symbol, overflow, and structured-error claim against backend code and
       focused tests.
-- [ ] Keep language evaluation, ownership, copy, and cleanup selection as links
+- [x] Keep language evaluation, ownership, copy, and cleanup selection as links
       to semantic authorities; document only how verified MIR is realized.
-- [ ] State internal versus external ABI stability explicitly and avoid
+- [x] State internal versus external ABI stability explicitly and avoid
       promising exact compiler-generated textual symbols.
-- [ ] Update architecture, debugging, and source comments to link to the target
+- [x] Update architecture, debugging, and source comments to link to the target
       authority.
 
 **Tests:** Run backend layout, ABI, legality, instruction-selection, assembler,

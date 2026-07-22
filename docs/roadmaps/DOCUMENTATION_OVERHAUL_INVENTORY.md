@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through compiler architecture and phase contracts.
+Status: active; audited through the backend and target contract.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -26,9 +26,10 @@ step.
 | `docs/language/ERRORS.md` | Retain as the authority for language-level compile-time rejection, current runtime-failure boundaries, normal-flow cleanup limits, and future exceptional-control-flow constraints. |
 | `docs/compiler/README.md` | Retain as the authority for durable compiler architecture, repository roles, compiler crate API policy, and extension policy. |
 | `docs/compiler/PHASES_AND_IR.md` | Retain as the authority for phase products, target-independent IR responsibilities, verification, deterministic dumps, and trust boundaries. |
+| `docs/compiler/BACKEND.md` | Retain as the authority for backend dispatch, target legality, x86-64 System V layout and ABI realization, frames, instruction selection, symbols, and assembly emission. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
-| `docs/REPO_STRUCTURE.md` | DOC11 moved durable compiler and phase contracts; DOC12-DOC15 move its remaining backend, runtime, driver, and testing contracts; DOC16 removes the superseded migration document. |
+| `docs/REPO_STRUCTURE.md` | DOC11 moved durable compiler and phase contracts, and DOC12 moved backend contracts; DOC13-DOC15 move its remaining runtime, driver, and testing contracts; DOC16 removes the superseded migration document. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | DOC1 and DOC8-DOC11 move stable design maturity and extension policy; roadmap ordering remains in `docs/roadmaps/README.md`; DOC16 removes the duplicate. |
 | `docs/DEBUGGING.md` | DOC15 verifies and moves its workflow to `docs/development/DEBUGGING.md`; DOC16 removes the old path. |
 | `samples/README.md` | Retain as the concise sample catalog; link language behavior to focused authorities when those exist. |
@@ -132,7 +133,7 @@ this ledger stale.
 |---|---|
 | `docs/SKALD_DRAFT_SPEC.md` and its anchors | `README.md`, `docs/README.md`, `docs/REPO_STRUCTURE.md`, `grammar/README.md`, and `docs/archive/README.md`. |
 | `grammar/README.md` compatibility path | Historical roadmap prose and external links may still name it; all living repository authorities now link directly to `docs/language/GRAMMAR.md`. |
-| `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/SKALD_DRAFT_SPEC.md`, focused language documents awaiting backend/runtime replacements, and `docs/archive/README.md`. |
+| `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/SKALD_DRAFT_SPEC.md`, focused language documents awaiting the runtime replacement, and `docs/archive/README.md`. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | `README.md`, `docs/README.md`, and `docs/archive/README.md`. |
 | `docs/DEBUGGING.md` | `README.md` and `docs/README.md`. |
 
@@ -146,6 +147,7 @@ and repairs only navigation needed to reach living authorities.
 |---|---|---|
 | `crates/skald-compiler/src/lib.rs` crate documentation | `docs/compiler/README.md` and `docs/compiler/PHASES_AND_IR.md` | Focused destinations established. |
 | `crates/skald-compiler/src/lexer/mod.rs` module documentation | `docs/language/GRAMMAR.md` | Focused destination established. |
+| `crates/skald-compiler/src/backend/mod.rs` and `backend/x86_64_sysv/mod.rs` module documentation | `docs/compiler/BACKEND.md` | Focused destination established. |
 
 ## Verification boundary
 

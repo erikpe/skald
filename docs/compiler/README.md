@@ -48,9 +48,10 @@ optimization.
 - `docs/language/` owns source-visible semantics. Compiler documentation links
   there instead of restating language rules.
 
-Target, runtime, driver, testing, and debugging details remain in the
-[legacy architecture guide](../REPO_STRUCTURE.md) and
-[debugging guide](../DEBUGGING.md) until their focused replacements are
+Target legality, layout, calling conventions, and code generation are defined
+by the [backend and target contract](BACKEND.md). Runtime, driver, testing, and
+debugging details remain in the [legacy migration guide](../REPO_STRUCTURE.md)
+and [debugging guide](../DEBUGGING.md) until their focused replacements are
 created.
 
 ## Pipeline

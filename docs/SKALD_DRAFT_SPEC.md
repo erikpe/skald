@@ -661,7 +661,7 @@ location; `unit` has no result payload. `init` has an implicit `unit` result.
 The hidden receiver is not a source parameter, cannot be accessed as a pointer
 value, and does not make object types externally linkable. Compiler-generated
 symbol spelling belongs to the
-[backend documentation](REPO_STRUCTURE.md#x86-64-system-v-backend), not to the
+[backend and target contract](compiler/BACKEND.md), not to the
 language contract.
 
 ### 13.5 Stage-0 Alias-Parameter ABI
@@ -669,10 +669,8 @@ language contract.
 Implemented source behavior is authoritative in
 [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md). The current pointer
 parameter, argument-classification, frame, and projection realization belongs
-to the [x86-64 System V backend](REPO_STRUCTURE.md#x86-64-system-v-backend)
-until DOC12 replaces that architecture section with the focused backend
-authority. It is an internal convention, not a source-visible reference type
-or external object ABI.
+to the [backend and target contract](compiler/BACKEND.md). It is an internal
+convention, not a source-visible reference type or external object ABI.
 
 ---
 

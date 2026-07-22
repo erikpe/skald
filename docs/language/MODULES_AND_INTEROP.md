@@ -129,11 +129,11 @@ current foreign-failure boundary is defined in
 
 The exact external source symbol is part of the implemented language contract
 because it is the only available link-name selection. Target ABI
-classification, C type widths, registers, stack placement, compiler-generated
-symbol spelling, runtime link markers, tool invocation, and artifact
-publication are implementation details. During the documentation migration,
-they remain owned by the existing
-[backend](../REPO_STRUCTURE.md#x86-64-system-v-backend),
+classification, C type widths, registers, stack placement, and
+compiler-generated symbol handling are implementation details owned by the
+[backend and target contract](../compiler/BACKEND.md). Runtime link markers,
+tool invocation, and artifact publication remain owned during the
+documentation migration by the existing
 [runtime](../REPO_STRUCTURE.md#runtime), and
 [driver](../REPO_STRUCTURE.md#driver-and-artifacts) sections until their
 focused documents replace those authorities.

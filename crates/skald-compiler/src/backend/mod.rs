@@ -2,6 +2,7 @@
 //!
 //! Backends consume verified target-independent MIR and target options. They
 //! must not inspect parser AST or type-checker state.
+//! The repository contract is documented in `docs/compiler/BACKEND.md`.
 
 use std::fmt;
 

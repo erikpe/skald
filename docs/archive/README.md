@@ -10,7 +10,8 @@ For current information, use:
 - [the draft language specification](../SKALD_DRAFT_SPEC.md);
 - [the compiler architecture](../compiler/README.md);
 - [compiler phases and IR](../compiler/PHASES_AND_IR.md);
-- [backend, runtime, driver, and test migration guidance](../REPO_STRUCTURE.md);
+- [the backend and target contract](../compiler/BACKEND.md);
+- [runtime, driver, and test migration guidance](../REPO_STRUCTURE.md);
 - [the implemented grammar](../language/GRAMMAR.md);
 - [future development boundaries](../NEXT_SLICE_BOUNDARIES.md);
 - [active and planned roadmaps](../roadmaps/README.md).

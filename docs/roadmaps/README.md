@@ -7,7 +7,7 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  backend and target documentation are next. The broad language
+  runtime ABI documentation is next. The broad language
   overview, support/maturity matrix, exact grammar, type/value/expression,
   function/control-flow, and exact-class initialization/place semantics are
   established alongside exact-class copying, assignment, materialization, and
@@ -20,10 +20,11 @@ roadmaps move to [`../archive/`](../archive/README.md).
   a focused authority; premature optional, array, string, iteration, and
   exception sketches have been pruned. Durable compiler responsibilities,
   phase products, target-independent IR, verification, dumps, extension
-  policy, and the repository-internal crate API now have focused authorities.
+  policy, the repository-internal crate API, and the backend/target contract
+  now have focused authorities.
   Documentation policy, the migration inventory, discrepancy ownership, and
-  local link/index checking support the remaining replacement of backend,
-  runtime, driver, testing, and debugging migration prose.
+  local link/index checking support the remaining replacement of runtime,
+  driver, testing, and debugging migration prose.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; PM0 can now freeze the
   executable profile in the focused polymorphism design authority. The roadmap
   then extends the completed exact-class

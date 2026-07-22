@@ -243,3 +243,46 @@ fn place_address_error(callable: crate::identity::CallableId) -> BackendError {
         "projected place exceeds x86-64 displacement limits",
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::identity::{CallableId, FunctionId};
+
+    use super::*;
+
+    #[test]
+    fn frame_allocator_rejects_displacements_beyond_signed_32_bits() {
+        let callable = CallableId::Function(FunctionId::new(0));
+        let mut allocator = FrameAllocator {
+            callable,
+            used: i32::MAX as usize,
+        };
+
+        let error = allocator.allocate(1, 1).unwrap_err();
+
+        assert_eq!(error.target(), Target::X86_64SysV);
+        assert_eq!(error.callable(), Some(callable));
+        assert_eq!(
+            error.message(),
+            "stack frame is too large for x86-64 frame-relative addressing"
+        );
+    }
+
+    #[test]
+    fn frame_allocator_rejects_alignment_overflow() {
+        let callable = CallableId::Function(FunctionId::new(0));
+        let mut allocator = FrameAllocator {
+            callable,
+            used: usize::MAX,
+        };
+
+        let error = allocator.allocate(1, SCALAR_HOME_ALIGNMENT).unwrap_err();
+
+        assert_eq!(error.target(), Target::X86_64SysV);
+        assert_eq!(error.callable(), Some(callable));
+        assert_eq!(
+            error.message(),
+            "stack frame is too large for x86-64 frame-relative addressing"
+        );
+    }
+}
