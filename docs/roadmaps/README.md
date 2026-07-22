@@ -7,7 +7,7 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  legacy entry-point removal is next. The broad language overview,
+  independent closeout verification is next. The broad language overview,
   support/maturity matrix, exact grammar, type/value/expression,
   function/control-flow, and exact-class initialization/place semantics are
   established alongside exact-class copying, assignment, materialization, and
@@ -24,8 +24,7 @@ roadmaps move to [`../archive/`](../archive/README.md).
   public runtime ABI, driver/artifact behavior, contributor workflow, testing,
   and debugging now have focused authorities.
   Documentation policy, the migration inventory, discrepancy ownership, and
-  local link/index checking support removal of the superseded monoliths and
-  compatibility entry points.
+  local link/index checking support final accuracy and duplication review.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; PM0 can now freeze the
   executable profile in the focused polymorphism design authority. The roadmap
   then extends the completed exact-class
@@ -34,13 +33,17 @@ roadmaps move to [`../archive/`](../archive/README.md).
   resolver and type-checker class orchestration follow-ups precede hierarchy
   implementation.
 
+The current object-model dependency order is polymorphism before focused
+shared-ownership work, followed by checked exceptions that extend cleanup to
+exceptional control flow. Shared ownership and exceptions remain exploratory:
+neither is scheduled until a focused design and roadmap make its contracts
+reviewable. Other unscheduled language directions and their maturity are owned
+by the [status matrix](../language/STATUS.md#not-implemented).
+
 ## Follow-up backlogs
 
 - [Documentation overhaul discoveries](DOCUMENTATION_OVERHAUL_DISCOVERIES.md) —
-  active; the superseded draft still duplicates backend layout and receiver
-  ABI details scheduled for removal with the monolith. The grammar,
-  legacy-draft authority, stale lifecycle, alias/ownership maturity, and
-  polymorphism-roadmap cleanup findings have been resolved.
+  retained through overhaul closeout; no pending discoveries remain.
 - [Maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md) — active;
   resolver class-body orchestration is followed by the corresponding
   type-checker program boundary. Both are scheduled by the polymorphism

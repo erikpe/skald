@@ -1,8 +1,8 @@
 # Skald Documentation
 
 Skald documentation is organized by the kind and maturity of the fact being
-described. This index is the reader entry point while the focused language,
-compiler, and development guides are being created.
+described. This index is the reader entry point for the focused language,
+compiler, and development guides.
 
 ## Authority
 
@@ -51,21 +51,8 @@ Use the authority closest to the behavior:
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
 
-During the documentation overhaul, the existing broad documents remain
-migration authorities for areas without a focused replacement. Their content
-is moved only after it has been checked against implementation and tests:
-
-- [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
-  implemented-profile annotations, and open questions;
-- [Repository structure and compiler architecture](REPO_STRUCTURE.md) —
-  compatibility and migration prose awaiting removal;
-- [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — planned
-  sequencing awaiting final distribution;
-- [Compiler debugging compatibility path](DEBUGGING.md) — retained until old
-  entry points are removed.
-
 The [migration inventory](roadmaps/DOCUMENTATION_OVERHAUL_INVENTORY.md) maps
-every current heading and incoming reference to its intended focused owner.
+the removed legacy headings and references to their focused owners.
 The [documentation overhaul roadmap](roadmaps/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 defines the ordered migration.
 

@@ -1,186 +1,76 @@
 # Skald
 
 Skald is an exploratory, statically typed, compiled language for learning,
-small personal projects, and compiler experimentation. It aims to keep both the
-language and its implementation understandable without giving up deterministic
-resource management or an object-oriented programming model.
+small personal projects, and compiler experimentation. It combines an
+object-oriented source model with inline values and deterministic resource
+management while keeping the compiler and runtime understandable.
 
-The compiler is named **`skac`**. Skald source files use the **`.ska`** suffix.
+The compiler is named `skac`, and Skald source files use the `.ska` suffix.
 
-## Language direction
+## Current compiler
 
-Skald is designed around deterministic lifetimes rather than garbage
-collection:
+The current implementation accepts one UTF-8 source file and supports
+primitive values, functions, lexical control flow, exact nominal inline
+classes, deterministic copying and destruction, owning class parameters and
+results, and call-scoped class aliases. The
+[language status matrix](docs/language/STATUS.md) is the authoritative support
+summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
+accepted syntax.
 
-- class types are inline values by default;
-- `shared T` is planned as a non-null reference-counted owning handle;
-- `ref name: T` and `mut ref name: T` are call-scoped alias bindings; the
-  current implementation supports exact live inline class places, while the
-  lifetime rule for future shared sources remains open;
-- assignment updates an existing value without ending its lifetime;
-- `init`, `assign`, and `destroy` are contextual lifecycle declarations;
-- optional absence is intended to remain explicit rather than making every
-  value nullable; its source syntax and semantics are still open.
+Skald currently targets Linux x86-64 using the System V ABI. The compiler can
+emit GNU assembly or link a native executable against the repository's small C
+runtime. `x86_64-sysv` is the only registered target; additional targets are
+future work rather than current compatibility promises.
 
-The broader design includes classes, single inheritance, interfaces, explicit
-virtual dispatch, receiver mutability, and deterministic destruction. The
-current implementation intentionally supports a smaller subset described
-below. The focused [polymorphism design](docs/language/POLYMORPHISM.md) records
-that exploratory direction and its open profile choices.
+## Build and use
 
-## Implemented language
-
-The current Linux x86-64 compiler supports:
-
-- one UTF-8 source file with ASCII identifiers and `//` comments;
-- `i64`, `u64`, `u8`, `f64`, `bool`, and payload-free `unit` results;
-- literals, unary numeric negation, and exact-type `+`, `-`, and `*`;
-- local variables, nested lexical blocks, functions, recursion, and direct
-  calls;
-- `if` / `elif` / `else` with exact boolean conditions;
-- restricted exact-symbol `extern fn` declarations over primitive values;
-- inline classes with primitive executable fields, one explicit initializer,
-  direct local construction, field reads/writes, and statically dispatched
-  receiver methods;
-- class-typed field declarations with nominal resolution, source-level
-  rejection of recursive inline containment, target-independent nested
-  object-place paths, direct field construction, initializer liveness, and
-  executable projected reads, writes, method receivers, and alias arguments;
-- read-only `fn` and mutable `mut fn` receiver access;
-- call-scoped `ref` and `mut ref` class parameters over exact live inline
-  locals, value parameters, receivers, forwarded aliases, and their class
-  subobjects;
-- optional contextual `destroy { ... }` members and automatic deterministic
-  cleanup of owning inline locals on normal block and `return` exits, including
-  recursive class fields in reverse declaration order;
-- exact-class copy constructors and copy assignments, with user-defined or
-  recursively synthesized field behavior for local and projected destinations;
-- internal exact-class value parameters whose caller-constructed copies are
-  owned and cleaned once by the callee;
-- internal exact-class function and method results through explicit
-  caller-owned return storage;
-- bounded owning object temporaries with reverse full-expression cleanup and
-  deterministic direct-initialization/return constructor elision;
-- deterministic left-to-right operand and argument evaluation;
-- textual x86-64 System V assembly, native linking, exact diagnostics, and a
-  small C runtime with primitive output functions.
-
-Owning inline objects may cross an internal call boundary as exact-class value
-arguments copied from existing or produced sources, and may return from
-internal functions or methods through explicit caller-owned storage. Produced
-sources are materialized and cleaned at their full-expression boundary unless
-an ungrouped exact-class constructor is eligible for direct local or return
-construction. Inheritance, interfaces, `shared`, arrays, optionals, loops, and
-checked exceptions are not implemented yet. Object-bearing external
-signatures remain unsupported.
-
-Restricted alias parameters compile through syntax, typed HIR, verified MIR,
-and the internal x86-64 pointer ABI without copying object bytes. Native and
-compile-failure goldens cover access, forwarding, overlap, `self`, initializer
-aliases, evaluation order, and mixed register/stack signatures.
-
-See [the implemented grammar](docs/language/GRAMMAR.md) for the exact accepted
-source subset, [types and values](docs/language/TYPES_AND_VALUES.md) for core
-expression semantics, [functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
-for callable and statement semantics,
-[classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md) for the exact
-inline object model, [aliases and ownership](docs/language/ALIASES_AND_OWNERSHIP.md)
-for call-scoped aliases and future ownership boundaries,
-[polymorphism](docs/language/POLYMORPHISM.md) for the exploratory object-model
-extension, [modules and foreign interoperation](docs/language/MODULES_AND_INTEROP.md)
-for the single-file and external-function contracts,
-[errors and exceptional control flow](docs/language/ERRORS.md) for current
-failure boundaries and future exception constraints, and the
-[draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
-migrated.
-
-## Compiler design
-
-The stage-0 compiler is written in Rust and follows an explicit pipeline:
-
-```text
-source → tokens → AST → resolved IR → typed HIR → verified MIR
-       → x86-64 backend → GNU assembly → system linker + C runtime
-```
-
-Semantic phases use stable identities rather than repeating source-name lookup.
-MIR is target-independent and verified before backend lowering. Target layout,
-ABI classification, frame planning, instruction selection, and assembly syntax
-remain inside the backend. The compiler is structured to admit additional
-backends and a later SSA-based optimization layer without changing the source
-or semantic phases.
-
-The [compiler architecture](docs/compiler/README.md) defines the durable
-responsibility and extension boundaries. [Compiler phases and
-IR](docs/compiler/PHASES_AND_IR.md) defines the current products, verification,
-dumps, and trust boundaries. The [backend and target
-contract](docs/compiler/BACKEND.md) defines target selection, legality, layout,
-calling conventions, and code generation.
-
-Skald currently targets Linux x86-64 System V. Linux AArch64 is the next
-expected backend after the language core grows further.
-
-## Building and using `skac`
-
-The [development workflow](docs/development/README.md) defines prerequisites,
-supported toolchains, and repository validation. Run `make help` for the
-current Makefile command inventory.
+Install the prerequisites in the [development workflow](docs/development/README.md),
+then from the repository root run:
 
 ```text
 make runtime
-cargo run -p skac -- samples/inline_counter.ska -o build/inline_counter
-cargo run -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
+cargo run --locked -p skac -- samples/inline_counter.ska -o build/inline_counter
 ```
 
-`skac --help` is the exact command-line reference. Compiler entry points,
-target/toolchain selection, output modes, and publication guarantees are
-defined by [Driver and Artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md).
+Emit assembly without linking:
 
-## Future work
+```text
+cargo run --locked -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
+```
 
-The next language slices should deepen object semantics rather than broaden the
-syntax indiscriminately. Likely directions are:
+`skac --help` is the exact command-line reference. Run `make help` for the
+repository command inventory and `make check` for the ordinary validation
+gate. CLI, toolchain, runtime selection, and artifact guarantees are defined
+by [Driver and Artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md).
 
-1. inheritance, interfaces, virtual dispatch, and casts;
-2. `shared` ownership and borrow anchors;
-3. loops/iterators, arrays, optionals, and checked exceptions;
-4. an AArch64 backend and, when useful, SSA conversion and optimization.
+## Documentation
 
-These are directions, not promises of syntax or ordering. Each substantial
-feature should receive a focused design and implementation plan before work
-begins. Current extension constraints are collected in
-[Future Development Boundaries](docs/NEXT_SLICE_BOUNDARIES.md).
+Start at the [documentation index](docs/README.md). Principal references are:
+
+- [language overview](docs/language/README.md),
+  [status](docs/language/STATUS.md), and
+  [grammar](docs/language/GRAMMAR.md);
+- [compiler architecture](docs/compiler/README.md),
+  [phases and IR](docs/compiler/PHASES_AND_IR.md),
+  [backend](docs/compiler/BACKEND.md), and
+  [runtime ABI](docs/compiler/RUNTIME_ABI.md);
+- [development workflow](docs/development/README.md),
+  [testing](docs/development/TESTING.md), and
+  [debugging](docs/development/DEBUGGING.md); and
+- [active roadmaps](docs/roadmaps/README.md) and
+  [archived implementation roadmaps](docs/archive/README.md).
+
+Current feature direction and unresolved design belong in the status matrix
+and focused language documents. Implementation order and dependencies belong
+in active roadmaps.
 
 ## History
 
-Skald began as a draft called **Niflheim2**, derived from the earlier Niflheim
-language. Moving from garbage-collected reference objects to inline values,
-deterministic destruction, shared ownership, and call-scoped aliases changed
-the design enough to make it a separate language and repository.
+Skald began as a draft called Niflheim2, derived from the earlier Niflheim
+language. Its shift from garbage-collected reference objects to inline values,
+deterministic destruction, explicit ownership, and call-scoped aliases made it
+a distinct language and repository.
 
 Niflheim remains useful historical context and a source of compiler-design
 lessons, but it is neither Skald's implementation base nor its normative
 specification. In this checkout it is available at [`../niflheim`](../niflheim).
-
-## Documentation
-
-- [Documentation index](docs/README.md)
-- [Draft language specification](docs/SKALD_DRAFT_SPEC.md)
-- [Implemented grammar](docs/language/GRAMMAR.md)
-- [Types, values, and expressions](docs/language/TYPES_AND_VALUES.md)
-- [Functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
-- [Classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md)
-- [Compiler architecture](docs/compiler/README.md)
-- [Compiler phases and IR](docs/compiler/PHASES_AND_IR.md)
-- [Backend and target contract](docs/compiler/BACKEND.md)
-- [Runtime ABI](docs/compiler/RUNTIME_ABI.md)
-- [Driver and artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md)
-- [Development workflow](docs/development/README.md)
-- [Testing](docs/development/TESTING.md)
-- [Debugging the compiler](docs/development/DEBUGGING.md)
-- [Test migration guide](docs/REPO_STRUCTURE.md)
-- [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
-- [Active and planned roadmaps](docs/roadmaps/README.md)
-- [Archived implementation roadmaps](docs/archive/README.md)
-
-Skald documentation takes precedence wherever it differs from Niflheim.

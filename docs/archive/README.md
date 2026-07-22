@@ -7,7 +7,9 @@ the current architecture or language surface.
 
 For current information, use:
 
-- [the draft language specification](../SKALD_DRAFT_SPEC.md);
+- [the language overview](../language/README.md);
+- [language and compiler status](../language/STATUS.md);
+- [the implemented grammar](../language/GRAMMAR.md);
 - [the compiler architecture](../compiler/README.md);
 - [compiler phases and IR](../compiler/PHASES_AND_IR.md);
 - [the backend and target contract](../compiler/BACKEND.md);
@@ -16,8 +18,6 @@ For current information, use:
 - [the development workflow](../development/README.md);
 - [testing](../development/TESTING.md);
 - [debugging the compiler](../development/DEBUGGING.md);
-- [the implemented grammar](../language/GRAMMAR.md);
-- [future development boundaries](../NEXT_SLICE_BOUNDARIES.md);
 - [active and planned roadmaps](../roadmaps/README.md).
 
 Archived plans:

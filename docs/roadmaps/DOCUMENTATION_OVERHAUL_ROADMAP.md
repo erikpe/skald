@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC16 is next.
+Status: planned; DOC17 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -181,7 +181,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC13 — Establish the runtime ABI authority
 - [x] DOC14 — Rewrite driver, artifact, and workflow documentation
 - [x] DOC15 — Consolidate testing and debugging guidance
-- [ ] DOC16 — Update entry points and remove superseded monoliths
+- [x] DOC16 — Update entry points and remove superseded monoliths
 - [ ] DOC17 — Verify, close, and archive the overhaul
 
 ## 5. PR-sized implementation sequence
@@ -599,19 +599,19 @@ guidance whose factual paths and commands are verified and non-duplicative.
 **Purpose:** Make the new structure the only living documentation surface once
 all content has a verified owner.
 
-- [ ] Rewrite the root README as project identity, short capability summary,
+- [x] Rewrite the root README as project identity, short capability summary,
       quickstart, target statement, history note, and links to status and
       focused documentation.
-- [ ] Distribute stable extension rules, object-model sequencing, and future
+- [x] Distribute stable extension rules, object-model sequencing, and future
       status from `NEXT_SLICE_BOUNDARIES.md` to compiler policy, status, and the
       roadmap index; remove the duplicate document.
-- [ ] Remove `SKALD_DRAFT_SPEC.md`, `REPO_STRUCTURE.md`, `DEBUGGING.md`, and
+- [x] Remove `SKALD_DRAFT_SPEC.md`, `REPO_STRUCTURE.md`, `DEBUGGING.md`, and
       `grammar/README.md` only after every retained claim and incoming link has
       a new owner; remove an empty `grammar/` directory.
-- [ ] Repair links in Rust documentation comments, samples, tests, living docs,
+- [x] Repair links in Rust documentation comments, samples, tests, living docs,
       roadmap indexes, and archived roadmaps without rewriting archived
       historical prose.
-- [ ] Search living documentation for stage/profile codes, implementation
+- [x] Search living documentation for stage/profile codes, implementation
       diary language, stale filenames, duplicate command lists, and repeated
       ABI authorities.
 

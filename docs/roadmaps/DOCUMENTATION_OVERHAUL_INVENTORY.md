@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through testing and debugging workflows.
+Status: active; legacy entry points removed and audited through DOC16.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -12,7 +12,7 @@ step.
 
 | Current document | Disposition |
 |---|---|
-| `README.md` | DOC16 reduces it to project identity, quickstart, a short capability summary, and links to focused authorities. |
+| `README.md` | Retain as project identity, quickstart, a short capability and target summary, history, and links to focused authorities. |
 | `docs/README.md` | DOC0 makes it the durable authority, maturity, navigation, linking, history, and verification policy. Later tasks replace its temporary legacy-authority list with the focused structure. |
 | `docs/language/README.md` | Retain as the broad language specification and navigation entry point; later language tasks add focused semantic links without turning it into another feature inventory. |
 | `docs/language/STATUS.md` | Retain as the sole feature-maturity and compiler-support matrix; update it whenever source behavior, target availability, or a future design state changes. |
@@ -32,11 +32,11 @@ step.
 | `docs/development/README.md` | Retain as the authority for contributor prerequisites, Makefile entry points, supported Rust toolchains, MSRV use, and external clean-checkout automation. |
 | `docs/development/TESTING.md` | Retain as the authority for test layers, ownership, placement, selection, fixtures, determinism, and robustness. |
 | `docs/development/DEBUGGING.md` | Retain as the authority for phase inspection, public renderers, verifier boundaries, assembly inspection, and symptom-to-owner guidance. |
-| `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
-| `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
-| `docs/REPO_STRUCTURE.md` | Its compiler, workflow, testing, and debugging contracts have moved; DOC16 removes the superseded migration document. |
-| `docs/NEXT_SLICE_BOUNDARIES.md` | DOC1 and DOC8-DOC11 move stable design maturity and extension policy; roadmap ordering remains in `docs/roadmaps/README.md`; DOC16 removes the duplicate. |
-| `docs/DEBUGGING.md` | Retain only as a compatibility pointer to `docs/development/DEBUGGING.md`; DOC16 removes the old path. |
+| `docs/SKALD_DRAFT_SPEC.md` | Removed after its verified language and runtime claims moved to focused authorities. |
+| `grammar/README.md` | Removed after living grammar links moved to `docs/language/GRAMMAR.md`; Git retains historical content. |
+| `docs/REPO_STRUCTURE.md` | Removed after compiler, workflow, testing, and debugging contracts moved to focused authorities. |
+| `docs/NEXT_SLICE_BOUNDARIES.md` | Removed after extension policy, maturity, and object-model dependencies moved to compiler policy, status, and the roadmap index. |
+| `docs/DEBUGGING.md` | Removed after inspection workflows moved to `docs/development/DEBUGGING.md`. |
 | `samples/README.md` | Retain as the concise sample catalog; link language behavior to focused authorities when those exist. |
 | `scripts/README.md` | Retain as concise script ownership guidance linking to the Makefile-owned development workflow. |
 | `std/README.md` | Retain as the current standard-library status note; later link runtime and language authorities without speculating about an unimplemented library. |
@@ -128,23 +128,20 @@ step.
 | `tests/golden/README.md` — “Golden Tests” | Retain golden fixture and expectation mechanics. |
 | `tests/runtime/README.md` — “Runtime Tests” | Retain harness mechanics; ABI statements move to `docs/compiler/RUNTIME_ABI.md`. |
 
-## Incoming links to superseded authorities
+## Removed legacy paths
 
-These repository links must be redirected before DOC16 removes their targets.
-Line numbers are intentionally omitted so ordinary prose editing does not make
-this ledger stale.
+All repository Markdown links to the removed paths were redirected before the
+files were deleted. Archived roadmap prose still names some of them in code
+formatting because those task descriptions are historical records, not current
+navigation.
 
-| Current target | Incoming Markdown sources |
+| Removed path | Current authority |
 |---|---|
-| `docs/SKALD_DRAFT_SPEC.md` and its anchors | `README.md`, `docs/README.md`, `docs/REPO_STRUCTURE.md`, `grammar/README.md`, and `docs/archive/README.md`. |
-| `grammar/README.md` compatibility path | Historical roadmap prose and external links may still name it; all living repository authorities now link directly to `docs/language/GRAMMAR.md`. |
-| `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/compiler/README.md`, and `docs/archive/README.md` while the test replacement remains pending. |
-| `docs/NEXT_SLICE_BOUNDARIES.md` | `README.md`, `docs/README.md`, and `docs/archive/README.md`. |
-| `docs/DEBUGGING.md` | `docs/README.md` and `docs/REPO_STRUCTURE.md` retain compatibility links until the legacy entry point is removed. |
-
-Archived roadmap prose also names several legacy paths in code formatting.
-Those are historical references rather than links; DOC16 preserves the prose
-and repairs only navigation needed to reach living authorities.
+| `docs/SKALD_DRAFT_SPEC.md` | `docs/language/README.md`, its focused semantic documents, and `docs/language/STATUS.md` |
+| `grammar/README.md` | `docs/language/GRAMMAR.md` |
+| `docs/REPO_STRUCTURE.md` | `docs/compiler/`, `docs/development/`, and concise test-local guides |
+| `docs/NEXT_SLICE_BOUNDARIES.md` | `docs/compiler/README.md`, `docs/language/STATUS.md`, and `docs/roadmaps/README.md` |
+| `docs/DEBUGGING.md` | `docs/development/DEBUGGING.md` |
 
 ## Source-code documentation references
 

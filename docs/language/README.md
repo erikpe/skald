@@ -114,8 +114,5 @@ makes a result source-observable.
 - [Errors and exceptional control flow](ERRORS.md) defines compile-time
   rejection, the current fatal runtime boundary, normal-flow cleanup limits,
   and the open checked-exception design.
-- The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
-  detailed semantic areas that do not yet have focused documents. Its future
-  sketches are not evidence of implementation or frozen design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.

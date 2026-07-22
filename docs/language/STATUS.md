@@ -48,9 +48,8 @@ have focused implementation plans.
 | Runtime scalar observation | **Implemented contract** | Repository runtime support for line-oriented `i64`, `u64`, `u8`, and `bool` output plus raw-bit `f64` observation, reached through ordinary restricted external declarations rather than language built-ins. |
 
 The [implemented grammar](GRAMMAR.md) is the precise accepted syntax authority.
-Focused semantic documents will replace the remaining explanations in the
-draft specification without changing the matrix above unless compiler behavior
-changes.
+Focused semantic documents own the corresponding language rules; this matrix
+changes only when feature maturity or compiler support changes.
 
 ## Compiler availability
 
@@ -62,9 +61,10 @@ changes.
 | Artifacts | **Implemented contract** | Textual assembly with `--emit asm`, or a linked executable by default. |
 | Linux AArch64 backend | **Exploratory direction** | Named as a future backend direction; no target entry or active backend implementation roadmap exists. |
 
-Target ABI and runtime mechanics are implementation details. Their later
-focused documents will own those contracts without turning them into portable
-language guarantees.
+Target ABI and runtime mechanics are implementation details owned by the
+[backend](../compiler/BACKEND.md) and
+[runtime ABI](../compiler/RUNTIME_ABI.md) documents, not portable language
+guarantees.
 
 ## Not implemented
 

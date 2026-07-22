@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: active; one pending documentation cleanup.
+Status: no pending discoveries; retained through overhaul closeout.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.
@@ -19,29 +19,15 @@ Documentation-only migration must not silently change compiler behavior. A
 discovery that belongs to another active roadmap should link to that roadmap;
 one that requires a new behavior decision remains here until it has an owner.
 
-## Pending
-
-### Legacy draft retains duplicated target ABI details
-
-**Problem:** The legacy draft's inline-object layout and receiver-ABI section
-still repeats primitive sizes, class layout, target errors, register classes,
-and hidden-receiver placement after those claims gained one authoritative home.
-Keeping both copies increases drift risk and leaves the migration document
-looking normative.
-
-**Evidence:** `docs/SKALD_DRAFT_SPEC.md` section 13.4 contains the detailed
-target contract, while `docs/compiler/BACKEND.md` already owns and verifies the
-same layout and calling-convention facts.
-
-**Owner and priority:** Documentation overhaul cleanup; low priority because
-the legacy monolith is already scheduled for removal and the focused backend
-document is explicitly authoritative.
-
-**Boundary:** During removal of superseded monoliths, ensure all incoming links
-target `docs/compiler/BACKEND.md`, then remove the duplicated legacy section
-with the rest of the draft rather than migrating any of its prose again.
-
 ## Completed
+
+### Legacy draft target ABI duplication
+
+The superseded draft repeated primitive sizes, class layout, target errors,
+register classes, and hidden-receiver placement after those claims gained one
+authoritative home in the backend contract. The legacy document and its
+duplicate target section were removed together after incoming links moved to
+focused authorities.
 
 ### Duplicate polymorphism roadmap test line
 
