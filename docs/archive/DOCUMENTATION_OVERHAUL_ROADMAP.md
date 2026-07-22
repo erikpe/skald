@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC17 is next.
+Status: complete; archived.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -182,7 +182,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC14 — Rewrite driver, artifact, and workflow documentation
 - [x] DOC15 — Consolidate testing and debugging guidance
 - [x] DOC16 — Update entry points and remove superseded monoliths
-- [ ] DOC17 — Verify, close, and archive the overhaul
+- [x] DOC17 — Verify, close, and archive the overhaul
 
 ## 5. PR-sized implementation sequence
 
@@ -626,16 +626,16 @@ superseded monolith remains, and all repository-local links resolve.
 **Purpose:** Prove that the new documentation is accurate, maintainable, and
 complete before treating the migration as finished.
 
-- [ ] Re-audit every implemented status row against current code and tests and
+- [x] Re-audit every implemented status row against current code and tests and
       every focused document against the authority table.
-- [ ] Review remaining duplication, document size, cross-links, maturity
+- [x] Review remaining duplication, document size, cross-links, maturity
       labels, open questions, and public command/path references.
-- [ ] Resolve all high-priority documentation discoveries; retain lower-priority
+- [x] Resolve all high-priority documentation discoveries; retain lower-priority
       actionable items in the indexed discoveries backlog with evidence and a
       useful implementation boundary.
-- [ ] Verify that active roadmaps target the new semantic/architecture
+- [x] Verify that active roadmaps target the new semantic/architecture
       documents and that archived roadmaps are used only for history.
-- [ ] Mark DOC0-DOC17 complete, move this roadmap to `docs/archive/`, update
+- [x] Mark DOC0-DOC17 complete, move this roadmap to `docs/archive/`, update
       active and archive indexes, and repair all links.
 
 **Tests:** From an artifact-free snapshot or clean checkout, run

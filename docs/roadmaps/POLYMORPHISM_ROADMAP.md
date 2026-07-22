@@ -1,9 +1,9 @@
 # Polymorphism Roadmap
 
 Status: planned; PM0 is next. The
-[documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) established the
-focused [polymorphism design authority](../language/POLYMORPHISM.md) through
-DOC8.
+[archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
+established the focused
+[polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
 
 This roadmap freezes and extends Skald's completed exact-class object-value
 model with
@@ -124,8 +124,10 @@ them.
       and how polymorphic receiver information crosses the internal alias ABI.
 - [ ] Freeze base construction, copy, assignment, destruction, slicing,
       temporary, return-storage, and permitted-elision behavior.
-- [ ] Reconcile the grammar, focused polymorphism document, future boundaries,
-      and the exclusions above so later tasks do not rely on provisional prose.
+- [ ] Reconcile the [grammar](../language/GRAMMAR.md), focused
+      [polymorphism document](../language/POLYMORPHISM.md),
+      [status matrix](../language/STATUS.md), and the exclusions above so later
+      tasks do not rely on provisional prose.
 
 **Tests:** Add focused grammar/spec consistency cases where executable rules can
 already be asserted; run `make check` and `git diff --check`.
@@ -428,8 +430,8 @@ before lowering them.
       lifetime.
 - [ ] Reject standalone interface/`Obj` inline storage and all unimplemented
       shared or external forms with focused diagnostics.
-- [ ] Extend HIR dumps and architecture/spec documentation for the stable
-      conformance boundary.
+- [ ] Extend HIR dumps and the focused polymorphism and compiler phase
+      documentation for the stable conformance boundary.
 
 **Tests:** Add conformance/type-check and HIR dump tests for inherited methods,
 multiple interfaces, reordered requirements, mutable methods, forwarding,
@@ -496,8 +498,8 @@ dynamic metadata.
       increase.
 - [ ] Represent test/narrowing kind, target identity, selected view, and
       failure behavior explicitly in HIR.
-- [ ] Extend grammar, specification, HIR dumps, diagnostics, and frontend
-      robustness mutations.
+- [ ] Extend the implemented grammar, focused polymorphism semantics, HIR
+      dumps, diagnostics, and frontend robustness mutations.
 
 **Tests:** Add parser/type-check/HIR tests for deep bases, interfaces, static and
 dynamic outcomes, access, scope escape, grouping, nested calls, and invalid
@@ -566,8 +568,9 @@ for shared ownership.
 - [ ] Audit touched files and functions by responsibility, split any enlarged
       owner or test module, and record unrelated follow-ups in the indexed
       discoveries document.
-- [ ] Update grammar, specification, architecture, README, debugging, samples,
-      test guidance, and future boundaries with only current behavior.
+- [ ] Update the focused grammar, status, polymorphism, class, alias, compiler
+      phase, backend, README, debugging, sample, testing, and roadmap-index
+      authorities with only current behavior.
 - [ ] Complete all quality gates, mark this roadmap complete, archive it, repair
       links and indexes, and publish shared ownership as the next object-model
       direction.
@@ -584,9 +587,8 @@ the roadmap is archived.
 
 The order is deliberate:
 
-- The documentation overhaul first establishes the language authority and a
-  focused polymorphism document. PM0 freezes its decisions there instead of
-  adding more mixed-purpose material to the legacy draft specification.
+- The completed documentation overhaul established the language authority and
+  focused polymorphism document. PM0 freezes its decisions there.
 - PM0 freezes contracts before representations. The resolver and type-checker
   orchestration cleanups then remove the two known growth hazards before any
   hierarchy member category is added.

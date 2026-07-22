@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; legacy entry points removed and audited through DOC16.
+Status: complete; archived after legacy entry-point removal and closeout.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the

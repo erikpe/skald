@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: no pending discoveries; retained through overhaul closeout.
+Status: archived; no actionable discoveries remain.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.

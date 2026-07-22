@@ -33,3 +33,9 @@ Archived plans:
 - [Deterministic destruction](DETERMINISTIC_DESTRUCTION_ROADMAP.md)
 - [Object value semantics](OBJECT_VALUE_SEMANTICS_ROADMAP.md)
 - [Compiler maintainability cleanup](MAINTAINABILITY_ROADMAP.md)
+- [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md)
+
+Supporting records for the documentation overhaul:
+
+- [migration inventory](DOCUMENTATION_OVERHAUL_INVENTORY.md)
+- [resolved discoveries](DOCUMENTATION_OVERHAUL_DISCOVERIES.md)

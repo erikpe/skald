@@ -51,10 +51,10 @@ Use the authority closest to the behavior:
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
 
-The [migration inventory](roadmaps/DOCUMENTATION_OVERHAUL_INVENTORY.md) maps
+The archived [migration inventory](archive/DOCUMENTATION_OVERHAUL_INVENTORY.md) maps
 the removed legacy headings and references to their focused owners.
-The [documentation overhaul roadmap](roadmaps/DOCUMENTATION_OVERHAUL_ROADMAP.md)
-defines the ordered migration.
+The [documentation overhaul roadmap](archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
+records the completed migration.
 
 ## Maturity
 
@@ -64,8 +64,8 @@ authority and maturity, then link to the matrix rather than repeating it.
 
 If prose disagrees with implementation evidence, do not silently choose a new
 language behavior. Correct plainly stale prose, strengthen tests for intended
-current guarantees, or record the discrepancy in the
-[documentation discoveries backlog](roadmaps/DOCUMENTATION_OVERHAUL_DISCOVERIES.md).
+current guarantees, or record the discrepancy in the relevant active roadmap
+or a clearly named, indexed discovery backlog under `docs/roadmaps/`.
 
 ## Linking and maintenance
 
