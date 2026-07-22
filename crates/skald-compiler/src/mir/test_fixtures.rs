@@ -1,0 +1,306 @@
+//! Small, explicit constructors for hand-built MIR in unit tests.
+//!
+//! These helpers remove structural boilerplate without supplying semantic
+//! defaults. Tests still name every identity, type, ownership mode, and span
+//! that participates in the contract under examination.
+
+use crate::{
+    identity::{BindingId, CallableId, ClassId, FunctionId},
+    source::Span,
+};
+
+use super::{
+    BlockId, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall, MirCallTarget,
+    MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage, MirInstruction,
+    MirMemberDefinition, MirParameter, MirParameterMode, MirPlace, MirRvalue, MirRvalueKind,
+    MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirValue, StorageId, ValueId,
+};
+
+pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
+    MirParameter { mode, ty }
+}
+
+pub(crate) fn function_declaration(
+    id: FunctionId,
+    name: impl Into<String>,
+    parameters: Vec<MirParameter>,
+    return_type: MirType,
+    linkage: MirFunctionLinkage,
+    span: Span,
+) -> MirFunctionDeclaration {
+    MirFunctionDeclaration {
+        id,
+        name: name.into(),
+        parameters,
+        return_type,
+        linkage,
+        span,
+    }
+}
+
+pub(crate) fn storage(
+    id: StorageId,
+    source: Option<BindingId>,
+    name: impl Into<String>,
+    kind: MirStorageKind,
+    ty: MirType,
+    span: Span,
+) -> MirStorage {
+    MirStorage {
+        id,
+        source,
+        name: name.into(),
+        kind,
+        ty,
+        span,
+    }
+}
+
+pub(crate) fn receiver_storage(id: StorageId, class: ClassId, span: Span) -> MirStorage {
+    storage(
+        id,
+        Some(BindingId::Receiver(id.callable())),
+        "self",
+        MirStorageKind::Receiver,
+        MirType::Class(class),
+        span,
+    )
+}
+
+pub(crate) const fn value(id: ValueId, ty: MirType, span: Span) -> MirValue {
+    MirValue { id, ty, span }
+}
+
+pub(crate) fn assign(
+    result: ValueId,
+    kind: MirRvalueKind,
+    ty: MirType,
+    span: Span,
+) -> MirInstruction {
+    MirInstruction::Assign(MirAssignment {
+        result,
+        rvalue: MirRvalue { kind, ty },
+        span,
+    })
+}
+
+pub(crate) fn call(
+    target: MirCallTarget,
+    receiver: Option<MirPlace>,
+    arguments: Vec<MirArgument>,
+    result: Option<ValueId>,
+    destination: Option<MirPlace>,
+    span: Span,
+) -> MirInstruction {
+    MirInstruction::Call(MirCall {
+        target,
+        receiver,
+        arguments,
+        result,
+        destination,
+        span,
+    })
+}
+
+pub(crate) fn store(destination: MirPlace, value: ValueId, span: Span) -> MirInstruction {
+    MirInstruction::Store(MirStore {
+        destination,
+        value,
+        span,
+    })
+}
+
+pub(crate) fn block(
+    id: BlockId,
+    instructions: Vec<MirInstruction>,
+    terminator: Option<MirTerminator>,
+    span: Span,
+) -> MirBasicBlock {
+    MirBasicBlock {
+        id,
+        instructions,
+        terminator,
+        span,
+    }
+}
+
+pub(crate) fn one_block_body(
+    callable: CallableId,
+    instructions: Vec<MirInstruction>,
+    terminator: Option<MirTerminator>,
+    span: Span,
+) -> MirBody {
+    let entry = BlockId::new(callable, 0);
+    MirBody {
+        entry,
+        blocks: vec![block(entry, instructions, terminator, span)],
+    }
+}
+
+pub(crate) struct OneBlockDefinition {
+    pub(crate) return_storage: Option<StorageId>,
+    pub(crate) parameters: Vec<StorageId>,
+    pub(crate) storage: Vec<MirStorage>,
+    pub(crate) values: Vec<MirValue>,
+    pub(crate) instructions: Vec<MirInstruction>,
+    pub(crate) terminator: Option<MirTerminator>,
+    pub(crate) span: Span,
+}
+
+pub(crate) fn function_definition(
+    function: FunctionId,
+    definition: OneBlockDefinition,
+) -> MirFunctionDefinition {
+    MirFunctionDefinition {
+        function,
+        return_storage: definition.return_storage,
+        parameters: definition.parameters,
+        storage: definition.storage,
+        values: definition.values,
+        body: one_block_body(
+            function.into(),
+            definition.instructions,
+            definition.terminator,
+            definition.span,
+        ),
+        span: definition.span,
+    }
+}
+
+pub(crate) fn member_definition(
+    callable: CallableId,
+    receiver: StorageId,
+    definition: OneBlockDefinition,
+) -> MirMemberDefinition {
+    MirMemberDefinition {
+        callable,
+        return_storage: definition.return_storage,
+        receiver,
+        parameters: definition.parameters,
+        storage: definition.storage,
+        values: definition.values,
+        body: one_block_body(
+            callable,
+            definition.instructions,
+            definition.terminator,
+            definition.span,
+        ),
+        span: definition.span,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        identity::{ClassId, MethodId},
+        source::SourceDatabase,
+    };
+
+    use super::*;
+
+    #[test]
+    fn fixtures_preserve_explicit_identity_type_ownership_and_span_inputs() {
+        let mut sources = SourceDatabase::new();
+        let source = sources.add("mir-fixtures.ska", "");
+        let span = Span::empty(source, 0);
+        let function = FunctionId::new(0);
+        let result = ValueId::new(function, 0);
+        let home = StorageId::new(function, 0);
+        let parameter_metadata = parameter(MirParameterMode::MutableAlias, MirType::I64);
+        let declaration = function_declaration(
+            function,
+            "fixture",
+            vec![parameter_metadata],
+            MirType::I64,
+            MirFunctionLinkage::Internal,
+            span,
+        );
+        let storage_metadata = storage(
+            home,
+            None,
+            "home",
+            MirStorageKind::Local,
+            MirType::I64,
+            span,
+        );
+        let assignment = assign(result, MirRvalueKind::ConstantI64(7), MirType::I64, span);
+        let store = store(home.into(), result, span);
+        let call = call(
+            MirCallTarget::Direct(function),
+            None,
+            vec![MirArgument::Value(result)],
+            Some(result),
+            None,
+            span,
+        );
+        let definition = function_definition(
+            function,
+            OneBlockDefinition {
+                return_storage: None,
+                parameters: vec![home],
+                storage: vec![storage_metadata.clone()],
+                values: vec![value(result, MirType::I64, span)],
+                instructions: vec![assignment, store, call],
+                terminator: Some(MirTerminator::Return {
+                    value: Some(result),
+                    span,
+                }),
+                span,
+            },
+        );
+
+        assert_eq!(declaration.parameters, [parameter_metadata]);
+        assert_eq!(definition.storage, [storage_metadata]);
+        assert_eq!(definition.body.entry, BlockId::new(function, 0));
+        assert_eq!(definition.body.blocks[0].instructions.len(), 3);
+        assert_eq!(definition.span, span);
+
+        let class = ClassId::new(0);
+        let method = MethodId::new(class, 0);
+        let receiver = StorageId::new(method, 0);
+        let receiver_metadata = receiver_storage(receiver, class, span);
+        let member = member_definition(
+            method.into(),
+            receiver,
+            OneBlockDefinition {
+                return_storage: None,
+                parameters: Vec::new(),
+                storage: vec![receiver_metadata.clone()],
+                values: Vec::new(),
+                instructions: Vec::new(),
+                terminator: Some(MirTerminator::Return { value: None, span }),
+                span,
+            },
+        );
+
+        assert_eq!(member.receiver, receiver);
+        assert_eq!(member.storage, [receiver_metadata]);
+        assert_eq!(member.body.entry.callable(), method.into());
+    }
+
+    #[test]
+    fn fixtures_keep_deliberately_malformed_mir_representable() {
+        let mut sources = SourceDatabase::new();
+        let source = sources.add("malformed-mir-fixture.ska", "");
+        let span = Span::empty(source, 0);
+        let function = FunctionId::new(0);
+        let result = ValueId::new(function, 0);
+        let mismatched = assign(
+            result,
+            MirRvalueKind::ConstantBool(true),
+            MirType::I64,
+            span,
+        );
+        let unfinished = one_block_body(function.into(), vec![mismatched], None, span);
+
+        assert!(unfinished.blocks[0].terminator.is_none());
+        let MirInstruction::Assign(assignment) = &unfinished.blocks[0].instructions[0] else {
+            panic!("expected assignment fixture");
+        };
+        assert_eq!(assignment.rvalue.ty, MirType::I64);
+        assert!(matches!(
+            assignment.rvalue.kind,
+            MirRvalueKind::ConstantBool(true)
+        ));
+    }
+}

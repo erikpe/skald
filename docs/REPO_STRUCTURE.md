@@ -117,6 +117,11 @@ and places, instructions and calls, and explicit control flow behind its
 private model facade. Verifier and backend consumers import only the schema
 types they use, while the public `mir` facade keeps phase paths stable.
 
+MIR and backend unit tests share a `cfg(test)`-only fixture vocabulary for
+one-block definitions and common metadata. The helpers require explicit IDs,
+types, ownership modes, and spans, and deliberately permit malformed MIR for
+verifier tests.
+
 `dump_format` deliberately shares only low-level formatting primitives. Every
 phase owns the vocabulary and structure of its own deterministic dump.
 `lexical_policy` similarly owns only source-identifier character policy, so

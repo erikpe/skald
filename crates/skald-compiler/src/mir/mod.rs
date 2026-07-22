@@ -10,6 +10,9 @@ mod lower;
 mod model;
 mod verify;
 
+#[cfg(test)]
+pub(crate) mod test_fixtures;
+
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{

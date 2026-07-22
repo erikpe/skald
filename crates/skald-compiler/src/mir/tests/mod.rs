@@ -1,4 +1,7 @@
 use super::build::{MirBodyBuilder, MirBuildError};
+use super::test_fixtures::{
+    assign as fixture_assign, block as fixture_block, value as fixture_value,
+};
 use super::*;
 use crate::{
     identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId},
@@ -50,61 +53,48 @@ fn diamond_mir() -> MirProgram {
     let span = function.span;
     let original = function.body.blocks.pop().unwrap();
     let condition = ValueId::new(function.function, function.values.len());
-    function.values.push(MirValue {
-        id: condition,
-        ty: MirType::Bool,
-        span,
-    });
+    function
+        .values
+        .push(fixture_value(condition, MirType::Bool, span));
     let false_value = ValueId::new(function.function, function.values.len());
-    function.values.push(MirValue {
-        id: false_value,
-        ty: MirType::I64,
-        span,
-    });
+    function
+        .values
+        .push(fixture_value(false_value, MirType::I64, span));
     let entry = BlockId::new(function.function, 0);
     let true_block = BlockId::new(function.function, 1);
     let false_block = BlockId::new(function.function, 2);
     function.body.blocks = vec![
-        MirBasicBlock {
-            id: entry,
-            instructions: vec![MirInstruction::Assign(MirAssignment {
-                result: condition,
-                rvalue: MirRvalue {
-                    kind: MirRvalueKind::ConstantBool(true),
-                    ty: MirType::Bool,
-                },
+        fixture_block(
+            entry,
+            vec![fixture_assign(
+                condition,
+                MirRvalueKind::ConstantBool(true),
+                MirType::Bool,
                 span,
-            })],
-            terminator: Some(MirTerminator::Branch {
+            )],
+            Some(MirTerminator::Branch {
                 condition,
                 true_target: true_block,
                 false_target: false_block,
                 span,
             }),
             span,
-        },
-        MirBasicBlock {
-            id: true_block,
-            instructions: original.instructions,
-            terminator: original.terminator,
-            span,
-        },
-        MirBasicBlock {
-            id: false_block,
-            instructions: vec![MirInstruction::Assign(MirAssignment {
-                result: false_value,
-                rvalue: MirRvalue {
-                    kind: MirRvalueKind::ConstantI64(1),
-                    ty: MirType::I64,
-                },
+        ),
+        fixture_block(true_block, original.instructions, original.terminator, span),
+        fixture_block(
+            false_block,
+            vec![fixture_assign(
+                false_value,
+                MirRvalueKind::ConstantI64(1),
+                MirType::I64,
                 span,
-            })],
-            terminator: Some(MirTerminator::Return {
+            )],
+            Some(MirTerminator::Return {
                 value: Some(false_value),
                 span,
             }),
             span,
-        },
+        ),
     ];
     mir
 }

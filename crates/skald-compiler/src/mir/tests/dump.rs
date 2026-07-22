@@ -35,15 +35,15 @@ fn control_flow_dump_is_exact_and_deterministic() {
         .definitions
         .get_mut_for_test(mir.entry_function)
         .unwrap();
-    function.values[0].ty = MirType::Bool;
-    let MirInstruction::Assign(assignment) = &mut function.body.blocks[0].instructions[0] else {
-        panic!("expected constant assignment");
-    };
-    assignment.rvalue = MirRvalue {
-        kind: MirRvalueKind::ConstantBool(true),
-        ty: MirType::Bool,
-    };
-    let condition = assignment.result;
+    let condition = function.values[0].id;
+    let value_span = function.values[0].span;
+    function.values[0] = fixture_value(condition, MirType::Bool, value_span);
+    function.body.blocks[0].instructions[0] = fixture_assign(
+        condition,
+        MirRvalueKind::ConstantBool(true),
+        MirType::Bool,
+        value_span,
+    );
     let block = function.body.blocks[0].id;
     function.body.blocks[0].terminator = Some(MirTerminator::Branch {
         condition,

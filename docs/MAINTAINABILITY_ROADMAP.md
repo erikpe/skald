@@ -75,7 +75,7 @@ count.
 - [x] CQ12 — Split the resolved IR model by responsibility
 - [x] CQ13 — Split the HIR model by responsibility
 - [x] CQ14 — Split the MIR model by responsibility
-- [ ] CQ15 — Introduce a small test-only MIR fixture vocabulary
+- [x] CQ15 — Introduce a small test-only MIR fixture vocabulary
 - [ ] CQ16 — Migrate and divide oversized test suites
 - [ ] CQ17 — Add generative frontend and MIR robustness tests
 - [ ] CQ18 — Align living documentation and close the cleanup
@@ -379,14 +379,14 @@ changing its representation or making tiny one-type files.
 from verifier and backend tests while keeping semantically important details
 visible.
 
-- [ ] Inventory repeated hand-built MIR helpers across MIR and x86-64 tests.
-- [ ] Add test-only builders for common one-block bodies, declarations,
+- [x] Inventory repeated hand-built MIR helpers across MIR and x86-64 tests.
+- [x] Add test-only builders for common one-block bodies, declarations,
       receivers, parameters, storage, values, and instructions.
-- [ ] Require explicit callable IDs, types, ownership modes, and spans where
+- [x] Require explicit callable IDs, types, ownership modes, and spans where
       they affect the tested contract.
-- [ ] Do not expose the fixture vocabulary in production or turn it into a
+- [x] Do not expose the fixture vocabulary in production or turn it into a
       second MIR construction API.
-- [ ] Prove that representative fixture dumps are unchanged before broad
+- [x] Prove that representative fixture dumps are unchanged before broad
       migration.
 
 **Acceptance criteria:** Tests can express the invariant under examination

@@ -3,6 +3,10 @@ use std::{
     process::{Command, Stdio},
 };
 
+use crate::mir::test_fixtures::{
+    assign as fixture_assign, block as fixture_block, call as fixture_call, store as fixture_store,
+    value as fixture_value,
+};
 use crate::{
     backend::{emit_assembly, Target, RUNTIME_ABI_MARKER_SYMBOL},
     identity::{
