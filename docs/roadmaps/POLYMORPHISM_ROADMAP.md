@@ -1,6 +1,8 @@
 # Polymorphism Roadmap
 
-Status: planned; PM0 is next.
+Status: planned; the
+[documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) through DOC8
+precedes PM0.
 
 This roadmap extends Skald's completed exact-class object-value model with
 single inheritance, base subobjects, opt-in virtual dispatch, interfaces,
@@ -580,6 +582,9 @@ the roadmap is archived.
 
 The order is deliberate:
 
+- The documentation overhaul first establishes the language authority and a
+  focused polymorphism document. PM0 freezes its decisions there instead of
+  adding more mixed-purpose material to the legacy draft specification.
 - PM0 freezes contracts before representations. The resolver and type-checker
   orchestration cleanups then remove the two known growth hazards before any
   hierarchy member category is added.

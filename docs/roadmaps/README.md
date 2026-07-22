@@ -6,12 +6,17 @@ roadmaps move to [`../archive/`](../archive/README.md).
 
 ## Planned
 
+- [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
+  documentation authority, verification rules, and local link checking are
+  next. It replaces the draft/grammar/architecture monoliths with verified,
+  focused language, compiler, runtime, and development documentation.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; executable profile design
-  is next. It extends the completed exact-class object model with inheritance,
-  lifecycle composition, virtual dispatch, interfaces, `Obj` views, type tests,
-  and checked narrowing. The compiler-maintainability cleanup is its baseline;
-  the remaining resolver and type-checker class orchestration follow-ups are
-  ordered prerequisites to hierarchy implementation.
+  follows the documentation overhaul's language foundation and focused
+  polymorphism design destination. It then extends the completed exact-class
+  object model with inheritance, lifecycle composition, virtual dispatch,
+  interfaces, `Obj` views, type tests, and checked narrowing. The remaining
+  resolver and type-checker class orchestration follow-ups precede hierarchy
+  implementation.
 
 ## Follow-up backlogs
 
