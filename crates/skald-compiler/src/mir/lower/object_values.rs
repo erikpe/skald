@@ -2,8 +2,7 @@
 
 use crate::{
     hir::{
-        HirCallArgument, HirConstruction, HirObjectCall, HirObjectCallTarget, HirObjectProducer,
-        HirObjectSource,
+        HirConstruction, HirObjectCall, HirObjectCallTarget, HirObjectProducer, HirObjectSource,
     },
     identity::ClassId,
     source::Span,
@@ -80,40 +79,7 @@ impl BodyLowerer<'_> {
         }
     }
 
-    pub(super) fn lower_call_arguments(
-        &mut self,
-        arguments: &[HirCallArgument],
-    ) -> Vec<MirArgument> {
-        arguments
-            .iter()
-            .map(|argument| match argument {
-                HirCallArgument::Value(expression) => MirArgument::Value(
-                    self.lower_expression(expression)
-                        .expect("typed value argument must produce a scalar value"),
-                ),
-                HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
-                HirCallArgument::Copy(copy) => {
-                    let source = self.lower_object_source(&copy.source);
-                    let destination = self.new_object_storage(
-                        MirStorageKind::Argument,
-                        "argument",
-                        copy.source.class(),
-                        copy.span,
-                    );
-                    self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
-                        destination: MirPlace::base(destination),
-                        source,
-                        class: copy.source.class(),
-                        operation: lower_selected_copy_operation(copy.operation),
-                        span: copy.span,
-                    }));
-                    MirArgument::OwnedPlace(MirPlace::base(destination))
-                }
-            })
-            .collect()
-    }
-
-    fn new_object_storage(
+    pub(super) fn new_object_storage(
         &mut self,
         kind: MirStorageKind,
         name: &str,
@@ -134,24 +100,5 @@ impl BodyLowerer<'_> {
             span,
         });
         id
-    }
-
-    pub(super) fn finish_full_expression(&mut self, span: Span) {
-        if self.full_expression_temporaries.is_empty() {
-            return;
-        }
-        let temporaries = self
-            .full_expression_temporaries
-            .drain(..)
-            .rev()
-            .map(|mut cleanup| {
-                cleanup.span = span;
-                cleanup
-            })
-            .collect();
-        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-            temporaries,
-            span,
-        }));
     }
 }

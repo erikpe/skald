@@ -1,0 +1,44 @@
+//! HIR binding and object-place translation.
+
+use super::*;
+use crate::identity::BindingId;
+
+impl BodyLowerer<'_> {
+    pub(super) fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
+        self.lower_object_place(&place.receiver)
+            .project_field(place.field)
+    }
+
+    pub(super) fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
+        let storage = self.storage_for_binding(place.root());
+        let root = match self.storage[storage.index()].kind {
+            MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
+            MirStorageKind::Return
+            | MirStorageKind::Receiver
+            | MirStorageKind::Parameter
+            | MirStorageKind::Local => MirPlace::base(storage),
+            MirStorageKind::Argument | MirStorageKind::Temporary => {
+                unreachable!("HIR object paths cannot use compiler-owned storage")
+            }
+        };
+        place
+            .projections()
+            .iter()
+            .fold(root, |projected, &field| projected.project_field(field))
+    }
+
+    pub(super) fn storage_for_binding(&self, binding: BindingId) -> StorageId {
+        assert_eq!(
+            binding.callable(),
+            self.input.callable,
+            "typed binding must belong to the current callable"
+        );
+        match binding {
+            BindingId::Receiver(_) => self
+                .receiver_storage
+                .expect("receiver binding requires member receiver storage"),
+            BindingId::Parameter(id) => self.parameter_storage[id.index()],
+            BindingId::Local(id) => self.local_storage[id.index()],
+        }
+    }
+}

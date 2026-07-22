@@ -2,7 +2,28 @@
 
 use crate::{identity::ClassId, source::Span};
 
-use super::{MirCleanup, MirPlace, StorageId};
+use super::{BodyLowerer, MirCleanup, MirEndFullExpression, MirInstruction, MirPlace, StorageId};
+
+impl BodyLowerer<'_> {
+    pub(super) fn finish_full_expression(&mut self, span: Span) {
+        if self.full_expression_temporaries.is_empty() {
+            return;
+        }
+        let temporaries = self
+            .full_expression_temporaries
+            .drain(..)
+            .rev()
+            .map(|mut cleanup| {
+                cleanup.span = span;
+                cleanup
+            })
+            .collect();
+        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+            temporaries,
+            span,
+        }));
+    }
+}
 
 /// Owning storage whose initialization completed on the current path.
 #[derive(Clone, Copy)]

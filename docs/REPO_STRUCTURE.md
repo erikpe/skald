@@ -332,6 +332,13 @@ Direct class-field initialization has its own HIR statement and lowers to MIR
 construction with an explicit projected destination; scalar field stores stay
 ordinary assignments.
 
+HIR-to-MIR lowering keeps one `BodyLowerer` as the owner of storage, value,
+block, cleanup, and temporary state. Private modules separately own program
+metadata, exhaustive statement dispatch, conditional CFG construction, scalar
+expressions, calls, place translation, object materialization, and cleanup.
+This keeps allocation and emission order centralized without coupling control
+flow to object-lifetime mechanics.
+
 Internal object results use a dedicated uninitialized MIR return-storage slot.
 An object-returning call names complete caller-owned local or temporary
 destination storage; the callee initializes that storage before cleanup and

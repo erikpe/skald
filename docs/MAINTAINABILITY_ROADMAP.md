@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: in progress; CQ9 is next.
+Status: in progress; CQ10 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -69,7 +69,7 @@ count.
 - [x] CQ6 — Decompose class declaration collection in resolution
 - [x] CQ7 — Decompose callable statement checking
 - [x] CQ8 — Decompose expression and initialization checking
-- [ ] CQ9 — Decompose HIR-to-MIR body lowering
+- [x] CQ9 — Decompose HIR-to-MIR body lowering
 - [ ] CQ10 — Define the compiler library API policy
 - [ ] CQ11 — Complete shared typed ID-table storage
 - [ ] CQ12 — Split the resolved IR model by responsibility
@@ -265,16 +265,16 @@ variants at compile time.
 **Purpose:** Make statement, expression, control-flow, object-value, and cleanup
 lowering independently readable.
 
-- [ ] Keep `BodyLowerer` as the shared state owner for storage, values, blocks,
+- [x] Keep `BodyLowerer` as the shared state owner for storage, values, blocks,
       and cleanup state.
-- [ ] Replace the large block statement match with helpers for locals, returns,
+- [x] Replace the large block statement match with helpers for locals, returns,
       calls, assignments, construction, copying, nested blocks, and
       conditionals.
-- [ ] Split scalar expression lowering from call lowering and object-value
+- [x] Split scalar expression lowering from call lowering and object-value
       materialization.
-- [ ] Preserve left-to-right evaluation, block allocation order, value IDs,
+- [x] Preserve left-to-right evaluation, block allocation order, value IDs,
       cleanup order, and exact MIR dumps.
-- [ ] Keep `lower.rs` or `lower/mod.rs` as a concise facade over private
+- [x] Keep `lower.rs` or `lower/mod.rs` as a concise facade over private
       responsibility modules.
 
 **Acceptance criteria:** MIR output remains byte-identical and lowering control
