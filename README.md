@@ -169,6 +169,7 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Implemented grammar and semantic subset](grammar/README.md)
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
+- [Active and planned roadmaps](docs/roadmaps/README.md)
 - [Compiler debugging artifacts](docs/DEBUGGING.md)
 - [Archived implementation roadmaps](docs/archive/README.md)
 

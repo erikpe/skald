@@ -1,5 +1,7 @@
 # Maintainability Roadmap Discoveries
 
+Status: active follow-up backlog; resolver class-body orchestration is next.
+
 This document records follow-up findings discovered while implementing the
 compiler maintainability cleanup. They remain separate from that roadmap so
 its reviewed scope and ordering stay stable.

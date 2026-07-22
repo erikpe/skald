@@ -60,7 +60,8 @@ remaining progression is:
 
 1. **Polymorphism.** Add inheritance, base projections, lifecycle composition,
    virtual dispatch, interfaces, casts, and dynamic type metadata. The focused
-   implementation plan is the [Polymorphism Roadmap](POLYMORPHISM_ROADMAP.md).
+   implementation plan is the
+   [Polymorphism Roadmap](roadmaps/POLYMORPHISM_ROADMAP.md).
 2. **Shared ownership.** Add allocation, reference counting, complete dynamic
    destruction, and syntax-directed borrow anchors.
 3. **Checked exceptions.** Integrate partial construction and cleanup with

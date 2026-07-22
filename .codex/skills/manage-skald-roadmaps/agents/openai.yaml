@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Skald Roadmaps"
+  short_description: "Create and implement maintainable Skald roadmaps"
+  default_prompt: "Use $manage-skald-roadmaps to create or implement an ordered Skald roadmap with PR-sized tasks."

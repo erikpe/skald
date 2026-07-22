@@ -10,7 +10,8 @@ For current information, use:
 - [the draft language specification](../SKALD_DRAFT_SPEC.md);
 - [the repository architecture](../REPO_STRUCTURE.md);
 - [the implemented grammar](../../grammar/README.md);
-- [future development boundaries](../NEXT_SLICE_BOUNDARIES.md).
+- [future development boundaries](../NEXT_SLICE_BOUNDARIES.md);
+- [active and planned roadmaps](../roadmaps/README.md).
 
 Archived plans:
 

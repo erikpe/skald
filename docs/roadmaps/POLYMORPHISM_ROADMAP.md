@@ -2,7 +2,7 @@
 
 Status: planned; the compiler-maintainability prerequisite is complete and PM0
 is next. The completed cleanup plan is preserved in the
-[archived compiler maintainability roadmap](archive/MAINTAINABILITY_ROADMAP.md).
+[archived compiler maintainability roadmap](../archive/MAINTAINABILITY_ROADMAP.md).
 
 This roadmap extends Skald's completed exact-class object-value model with
 single inheritance, base subobjects, opt-in virtual dispatch, interfaces, and

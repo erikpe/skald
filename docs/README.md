@@ -14,12 +14,9 @@ direction:
 - [Implemented grammar](../grammar/README.md) — exact source subset accepted by
   the current compiler.
 
-Active implementation plans:
-
-- [Maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md) — follow-up
-  findings kept outside the completed cleanup roadmap's reviewed scope.
-- [Polymorphism roadmap](POLYMORPHISM_ROADMAP.md) — single inheritance, base
-  lifecycle composition, virtual dispatch, interfaces, and checked narrowing.
+Planned and active implementation work is summarized in the
+[roadmap index](roadmaps/README.md), including dependencies between roadmaps
+and follow-up backlogs.
 
 Completed implementation plans are historical records under
 [`archive/`](archive/README.md). They should not be used to determine current

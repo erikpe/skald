@@ -49,7 +49,8 @@ skald/
 │   ├── skac/
 │   └── skald-compiler/
 ├── docs/
-│   └── archive/
+│   ├── archive/
+│   └── roadmaps/
 ├── grammar/
 ├── runtime/
 ├── samples/
@@ -204,6 +205,8 @@ safepoints, and write barriers do not belong here.
   operating notes for deterministic frontend and MIR mutation tests.
 - `tests/golden/` tests complete source-to-native and source-to-diagnostic
   behavior.
+- `docs/roadmaps/` contains planned and active implementation roadmaps plus
+  actionable follow-up backlogs and their dependency index.
 - `docs/archive/` contains completed implementation roadmaps for historical
   reference.
 
