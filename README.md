@@ -110,6 +110,11 @@ remain inside the backend. The compiler is structured to admit additional
 backends and a later SSA-based optimization layer without changing the source
 or semantic phases.
 
+The [compiler architecture](docs/compiler/README.md) defines the durable
+responsibility and extension boundaries. [Compiler phases and
+IR](docs/compiler/PHASES_AND_IR.md) defines the current products, verification,
+dumps, and trust boundaries.
+
 Skald currently targets Linux x86-64 System V. Linux AArch64 is the next
 expected backend after the language core grows further.
 
@@ -183,7 +188,9 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Types, values, and expressions](docs/language/TYPES_AND_VALUES.md)
 - [Functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
 - [Classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md)
-- [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
+- [Compiler architecture](docs/compiler/README.md)
+- [Compiler phases and IR](docs/compiler/PHASES_AND_IR.md)
+- [Backend, runtime, driver, and test migration guide](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)
 - [Compiler debugging artifacts](docs/DEBUGGING.md)

@@ -31,8 +31,12 @@ Use the authority closest to the behavior:
 - compile-time rejection, current runtime-failure boundaries, and future
   exceptional cleanup belong in
   [errors and exceptional control flow](language/ERRORS.md);
-- compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
-  workflows belong in their respective implementation or development guides;
+- durable compiler structure, repository roles, crate API policy, and extension
+  policy belong in the [compiler architecture](compiler/README.md);
+- phase products, IR responsibilities, verification, dumps, and trust
+  boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- targets, runtime ABI, driver behavior, and contributor workflows belong in
+  their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
@@ -43,10 +47,10 @@ is moved only after it has been checked against implementation and tests:
 
 - [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
   implemented-profile annotations, and open questions;
-- [Repository structure and compiler architecture](REPO_STRUCTURE.md) — phase,
-  backend, runtime, driver, and test boundaries;
-- [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — stable extension
-  constraints and planned sequencing;
+- [Repository structure and compiler architecture](REPO_STRUCTURE.md) —
+  backend, runtime, driver, and test boundaries awaiting focused replacements;
+- [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — planned
+  sequencing awaiting final distribution;
 - [Compiler debugging artifacts](DEBUGGING.md) — dumps, verification points,
   and assembly inspection.
 

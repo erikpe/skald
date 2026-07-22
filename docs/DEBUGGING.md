@@ -1,5 +1,10 @@
 # Compiler Debugging Artifacts
 
+Status: workflow guidance pending its focused development replacement. Current
+phase products, renderer paths, determinism, and verifier boundaries are
+authoritative in
+[Compiler Phases and Intermediate Representations](compiler/PHASES_AND_IR.md).
+
 Every major compiler product is inspectable and deterministic. These renderers
 are public Rust APIs so phase tests, temporary debugging tools, and future CLI
 inspection options all use the same representation:
@@ -92,13 +97,11 @@ cargo run -p skac -- input.ska --emit asm -o build/input.s
 
 The golden runner compiles every successful program to assembly twice in separate `skac` processes and compares the bytes. It likewise compiles every failure twice and compares exact stderr snapshots. This catches nondeterminism in IDs, ordering, paths, labels, formatting, and diagnostics at the externally visible boundary. Native cases then compare stdout bytes and process status independently. In particular, `tests/golden/run/println_i64.ska` exercises exact-symbol external call lowering and the runtime output ABI while its `.stdout` and nonzero `.exit` sidecars keep the two observations separate. `tests/golden/run/conditionals.ska` uses output-producing condition functions to expose left-to-right testing, skipped later conditions, selected-arm-only execution, `else`, and fallthrough without `else`.
 
-MIR verification runs:
-
-1. as a debug assertion immediately after HIR-to-MIR lowering;
-2. unconditionally in the explicit target-independent MIR pass pipeline;
-3. again at the backend trust boundary before target legality and instruction selection.
-
-The repetition is intentional. The first check identifies lowering defects near their source, the pass-pipeline check protects future transformations, and the backend check prevents invalid library-created MIR from being miscompiled.
+MIR verification runs at the producer, pass-pipeline, and backend trust
+boundaries described in the
+[phase authority](compiler/PHASES_AND_IR.md#verification-and-passes). Use the
+nearest failing boundary to distinguish a lowering defect, an invalid
+transformation, or malformed backend input.
 
 For destruction bugs, start with `mir::dump_mir`. Each class lists its
 body-before-fields destruction plan, and every owning normal exit lists cleanup

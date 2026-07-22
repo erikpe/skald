@@ -4,16 +4,18 @@ use std::ffi::OsString;
 
 use skald_compiler::{
     backend::{emit_assembly, target_by_name, Target},
-    diagnostics::render_diagnostics,
+    diagnostics::{render_diagnostics, Diagnostics},
     driver::{compile_source_to_assembly, run_cli, Toolchain},
     hir::{dump_hir, HirProgram},
-    lexer::{dump_tokens, lex},
+    identity::CallableId,
+    lexer::{dump_tokens, lex, LexOutput},
+    literal::NumericLiteralKind,
     mir::{dump_mir, lower_hir, verify_mir, MirProgram},
     passes::run_mir_pipeline,
-    resolve::{dump_resolved, resolve, ResolvedProgram},
+    resolve::{dump_resolved, resolve, ResolveOutput, ResolvedProgram},
     source::SourceDatabase,
-    syntax::{dump_ast, parse, CompilationUnit},
-    typeck::type_check,
+    syntax::{dump_ast, parse, CompilationUnit, ParseOutput},
+    typeck::{type_check, TypeCheckOutput},
 };
 
 #[test]
@@ -22,15 +24,15 @@ fn intentional_phase_and_dump_paths_compose() {
     let source_id = sources.add("api.ska", "fn main() -> i64 { return 0; }");
     let source = sources.get(source_id).unwrap();
 
-    let lexed = lex(source);
+    let lexed: LexOutput = lex(source);
     let _tokens = dump_tokens(source, &lexed.tokens);
-    let parsed = parse(source, &lexed.tokens);
+    let parsed: ParseOutput = parse(source, &lexed.tokens);
     let ast: &CompilationUnit = &parsed.ast;
     let _ast_dump = dump_ast(ast);
-    let resolved = resolve(ast);
+    let resolved: ResolveOutput = resolve(ast);
     let resolved_program: &ResolvedProgram = &resolved.program;
     let _resolved_dump = dump_resolved(resolved_program);
-    let checked = type_check(resolved_program);
+    let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
     let _hir_dump = dump_hir(hir);
     let mir: MirProgram = lower_hir(hir);
@@ -39,7 +41,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_dump = dump_mir(&mir);
     let target = target_by_name("x86_64-sysv").unwrap();
     let _assembly = emit_assembly(target, &mir).unwrap();
-    let _diagnostics = render_diagnostics(&sources, &checked.diagnostics);
+    let diagnostics: &Diagnostics = &checked.diagnostics;
+    let _diagnostics = render_diagnostics(&sources, diagnostics);
+    let _identity_path: Option<CallableId> = None;
+    let _literal_path: Option<NumericLiteralKind> = None;
 }
 
 #[test]

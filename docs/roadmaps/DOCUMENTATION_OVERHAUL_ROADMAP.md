@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC11 is next.
+Status: planned; DOC12 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -176,7 +176,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC8 — Establish the polymorphism design document
 - [x] DOC9 — Rewrite modules and foreign interoperation
 - [x] DOC10 — Rewrite errors and prune premature feature sketches
-- [ ] DOC11 — Rewrite compiler architecture and phase contracts
+- [x] DOC11 — Rewrite compiler architecture and phase contracts
 - [ ] DOC12 — Separate backend and target documentation
 - [ ] DOC13 — Establish the runtime ABI authority
 - [ ] DOC14 — Rewrite driver, artifact, and workflow documentation
@@ -472,17 +472,17 @@ current failure guarantee is precise, tested, and owned once.
 **Purpose:** Preserve durable compiler boundaries while removing feature-level
 semantic duplication and fragile module inventories.
 
-- [ ] Create `docs/compiler/README.md` with architecture principles, repository
+- [x] Create `docs/compiler/README.md` with architecture principles, repository
       roles, pipeline, extension policy, and compiler crate API policy.
-- [ ] Create `PHASES_AND_IR.md` for source/diagnostics, lexer, syntax,
+- [x] Create `PHASES_AND_IR.md` for source/diagnostics, lexer, syntax,
       resolution/identities, HIR, MIR, verification, passes, deterministic
       dumps, and trust boundaries.
-- [ ] Verify every public path, phase product, facade, verifier boundary, and
+- [x] Verify every public path, phase product, facade, verifier boundary, and
       test-only hook claim against the current Rust modules and public API
       tests.
-- [ ] Describe responsibilities and invariants rather than feature rollout,
+- [x] Describe responsibilities and invariants rather than feature rollout,
       object semantics, exhaustive file trees, or exact private helper names.
-- [ ] Move target, runtime, driver, testing, and debugging detail to their new
+- [x] Move target, runtime, driver, testing, and debugging detail to their new
       owners and update source-level architecture links.
 
 **Tests:** Run public API, phase dump, MIR verification, determinism, and

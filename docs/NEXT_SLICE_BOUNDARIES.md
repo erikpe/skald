@@ -4,50 +4,13 @@ This document records the architectural constraints and unresolved design work
 that future Skald slices should preserve. It describes the current extension
 surface; completed implementation history lives in [`archive/`](archive/README.md).
 
-## Stable compiler responsibilities
+## Compiler architecture and extension policy
 
-1. **Source and diagnostics** own files, UTF-8 byte spans, line maps,
-   structured diagnostics, and stable rendering.
-2. **Lexing** owns token formation and source spelling, not names or types.
-3. **Syntax** owns grammatical source shape and recovery. AST nodes remain
-   unresolved.
-4. **Resolution** is the only source-name selection phase. Later phases use
-   stable typed identities.
-5. **Typed HIR** owns language types, receiver access, selected operations, and
-   selected callable/member identities.
-6. **MIR** owns executable evaluation order, addressable places, transient
-   values, construction, calls, basic blocks, and terminators without target
-   registers or byte offsets.
-7. **The MIR pass pipeline** owns target-independent verification and future
-   transformations. Correctness must not depend on optimization.
-8. **Backends** own target legality, data layout, ABI classification, frames,
-   registers, symbols, instruction selection, and assembly formatting.
-9. **The driver** owns phase orchestration, file I/O, tool invocation, artifact
-   publication, and process exit codes.
-10. **The C runtime** exposes a small versioned ABI. Language facilities that
-    can live safely in generated code or the future standard library should not
-    migrate into it.
-
-These are responsibility boundaries, not promises that individual Rust data
-structures are frozen.
-
-## Rules for extending the language
-
-Every substantial feature should:
-
-1. state its source and runtime semantics before implementation;
-2. update the grammar or explicitly record that no syntax changes;
-3. assign stable identities during resolution rather than performing name
-   lookup below it;
-4. make types, access modes, and selected operations explicit in HIR;
-5. express evaluation and control flow explicitly in MIR;
-6. extend MIR verification before relying on a new representation;
-7. keep ABI, layout, and register decisions out of target-independent IR;
-8. make each backend either support the new MIR or reject it structurally;
-9. add focused phase tests, deterministic dumps, failure diagnostics, and
-   native goldens where behavior is observable;
-10. update living documentation and place the completed implementation plan in
-    `docs/archive/`.
+Durable phase responsibilities and the rules for extending them have moved to
+the [compiler architecture](compiler/README.md) and
+[compiler phases and IR](compiler/PHASES_AND_IR.md). This document temporarily
+retains only feature-sequencing material until the documentation overhaul
+distributes it to focused status and roadmap owners.
 
 ## Object-model sequence
 
@@ -97,20 +60,8 @@ rules. They should not be added as isolated parser features.
 
 ## Compiler evolution
 
-- Add Linux AArch64 behind the existing backend boundary.
-- Introduce SSA only when concrete optimization work justifies it; conversion
-  should be an explicit pass or a replaceable IR boundary.
-- Replace the stack-heavy x86-64 location strategy with register allocation
-  without changing MIR semantics.
-- Add multiple source files, modules, and incremental compilation only after
-  the open source and build choices in
-  [modules and foreign interoperation](language/MODULES_AND_INTEROP.md) and the
-  ownership of declarations and compilation sessions are specified.
-- Keep deterministic artifacts and structured verifier errors as these systems
-  become more sophisticated.
-
-Alternate link names, variadic calls, object-bearing FFI, cross-module
-declaration coalescing, and package management remain open in
+Compiler extension constraints now live in the
+[compiler architecture](compiler/README.md). Target availability and language
+maturity live in the [status matrix](language/STATUS.md); module and broader
+interoperation choices remain in
 [modules and foreign interoperation](language/MODULES_AND_INTEROP.md).
-Concurrency, captured closures, and user-defined generics also remain outside
-the current plan.
