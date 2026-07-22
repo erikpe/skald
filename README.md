@@ -24,8 +24,8 @@ collection:
 The broader design includes classes, single inheritance, interfaces, explicit
 virtual dispatch, receiver mutability, and deterministic destruction. The
 current implementation intentionally supports a smaller subset described
-below. The language specification remains a draft and may change as future
-slices exercise the design.
+below. The focused [polymorphism design](docs/language/POLYMORPHISM.md) records
+that exploratory direction and its open profile choices.
 
 ## Implemented language
 
@@ -84,7 +84,9 @@ expression semantics, [functions and control flow](docs/language/FUNCTIONS_AND_C
 for callable and statement semantics,
 [classes and lifecycle](docs/language/CLASSES_AND_LIFECYCLE.md) for the exact
 inline object model, [aliases and ownership](docs/language/ALIASES_AND_OWNERSHIP.md)
-for call-scoped aliases and future ownership boundaries, and the
+for call-scoped aliases and future ownership boundaries,
+[polymorphism](docs/language/POLYMORPHISM.md) for the exploratory object-model
+extension, and the
 [draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
 migrated.
 

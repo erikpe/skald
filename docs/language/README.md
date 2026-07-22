@@ -105,11 +105,14 @@ makes a result source-observable.
   places, plus copying, assignment, temporaries, and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases and the maturity boundary around future ownership forms.
+- [Polymorphism](POLYMORPHISM.md) records the exploratory hierarchy, view,
+  dispatch, interface, type-test, and narrowing direction plus every decision
+  required before its profile can be frozen.
 - The [draft specification](../SKALD_DRAFT_SPEC.md) remains migration input for
   detailed semantic areas that do not yet have focused documents. Its future
   sketches are not evidence of implementation or frozen design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.
 
-Focused documents for polymorphism, modules and interoperation, and errors will
-be linked here as their verified authorities are established.
+Focused documents for modules and interoperation and for errors will be linked
+here as their verified authorities are established.

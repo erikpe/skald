@@ -281,3 +281,5 @@ scope, statement, return, and evaluation-order semantics.
 member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
+[Polymorphism](POLYMORPHISM.md) records exploratory future design only; none of
+its candidate source forms extend the implemented grammar on this page.

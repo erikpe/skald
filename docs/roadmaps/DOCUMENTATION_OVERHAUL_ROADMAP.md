@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC8 is next.
+Status: planned; DOC9 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -173,7 +173,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC5 — Rewrite classes, initialization, and object places
 - [x] DOC6 — Rewrite copying, destruction, and object lifetimes
 - [x] DOC7 — Rewrite aliases and ownership
-- [ ] DOC8 — Establish the polymorphism design document
+- [x] DOC8 — Establish the polymorphism design document
 - [ ] DOC9 — Rewrite modules and foreign interoperation
 - [ ] DOC10 — Rewrite errors and prune premature feature sketches
 - [ ] DOC11 — Rewrite compiler architecture and phase contracts
@@ -394,17 +394,17 @@ shared behavior cannot be mistaken for current compiler support.
 **Purpose:** Give the active polymorphism roadmap a durable language-design
 destination without prematurely deciding its open profile choices.
 
-- [ ] Create `POLYMORPHISM.md` covering currently agreed single-inheritance,
+- [x] Create `POLYMORPHISM.md` covering currently agreed single-inheritance,
       base, lifecycle-composition, virtual, interface, `Obj`, slicing, upcast,
       type-test, and narrowing direction.
-- [ ] Classify every migrated rule as frozen or open against the active
+- [x] Classify every migrated rule as frozen or open against the active
       polymorphism roadmap; do not infer missing syntax, representation, or
       failure behavior from Niflheim.
-- [ ] Remove compiler metadata, dispatch-table layout, complete-object pointer
+- [x] Remove compiler metadata, dispatch-table layout, complete-object pointer
       ABI, target offsets, and runtime allocation details from language prose.
-- [ ] Preserve source-visible access, ownership, slicing, lifecycle, and
+- [x] Preserve source-visible access, ownership, slicing, lifecycle, and
       dispatch constraints needed by the later profile-design task.
-- [ ] Update the status matrix and roadmap links so polymorphism profile design
+- [x] Update the status matrix and roadmap links so polymorphism profile design
       edits this document rather than the legacy draft.
 
 **Tests:** Review each implemented-baseline claim against current object and

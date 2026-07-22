@@ -1,6 +1,6 @@
 # Documentation Overhaul Discoveries
 
-Status: active; one pending documentation cleanup.
+Status: active; no pending discoveries.
 
 This backlog owns contradictions, behavior defects, unresolved choices, and
 unrelated cleanup found while the documentation overhaul is being implemented.
@@ -21,17 +21,15 @@ one that requires a new behavior decision remains here until it has an owner.
 
 ## Pending
 
-### Duplicate polymorphism roadmap test line
-
-- **Problem:** the resolver class-orchestration task repeats its `Tests:` line,
-  which makes the active plan look accidentally edited.
-- **Evidence:** the first resolver-maintainability task in
-  `POLYMORPHISM_ROADMAP.md` contains adjacent identical lines.
-- **Owner and priority:** polymorphism roadmap maintenance; low priority.
-- **Boundary:** remove only the duplicate line when that roadmap is next edited;
-  do not change the task contract.
+None.
 
 ## Completed
+
+### Duplicate polymorphism roadmap test line
+
+The reported adjacent duplicate was no longer present when DOC8 re-audited the
+active roadmap against its new focused design authority. The stale backlog
+entry was closed without changing the affected task contract.
 
 ### Alias and ownership maturity drift
 

@@ -59,9 +59,10 @@ contracts continue through verified MIR and native x86-64 execution. The
 remaining progression is:
 
 1. **Polymorphism.** Add inheritance, base projections, lifecycle composition,
-   virtual dispatch, interfaces, casts, and dynamic type metadata. The focused
-   implementation plan is the
-   [Polymorphism Roadmap](roadmaps/POLYMORPHISM_ROADMAP.md).
+   virtual dispatch, interfaces, type tests, and checked narrowing. The
+   exploratory source-visible direction is in
+   [Polymorphism](language/POLYMORPHISM.md), and the focused implementation
+   plan is the [Polymorphism Roadmap](roadmaps/POLYMORPHISM_ROADMAP.md).
 2. **Shared ownership.** Add allocation, reference counting, complete dynamic
    destruction, and syntax-directed borrow anchors.
 3. **Checked exceptions.** Integrate partial construction and cleanup with

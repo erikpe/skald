@@ -153,8 +153,10 @@ integer width changes, numeric/boolean conversion, and checked conversion
 failure—is not frozen.
 
 Optionals, arrays, strings, function values, and the value aspects of
-polymorphism and shared ownership are also not implemented or frozen. Their
-current maturity is recorded only in the [status matrix](STATUS.md#not-implemented).
+shared ownership are also not implemented or frozen. Their current maturity is
+recorded only in the [status matrix](STATUS.md#not-implemented). Exploratory
+polymorphic values, slicing, tests, and narrowing are separated into the
+[polymorphism design](POLYMORPHISM.md).
 Legacy examples are design input, not usable syntax or settled semantics.
 
 ## Implementation boundary

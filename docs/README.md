@@ -23,6 +23,8 @@ Use the authority closest to the behavior:
   places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
 - call-scoped alias access, lifetime, and future ownership boundaries belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
+- exploratory inheritance, polymorphic views, dispatch, interfaces, type tests,
+  and narrowing belong in [polymorphism](language/POLYMORPHISM.md);
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
 - active roadmaps own implementation order and unresolved feature decisions;

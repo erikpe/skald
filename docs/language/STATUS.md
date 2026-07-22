@@ -70,7 +70,7 @@ language guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| Inheritance and polymorphism | **Exploratory direction** | Single inheritance, base subobjects, opt-in virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing are planned together. The [polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) still begins by freezing syntax, semantics, ownership, metadata, and failure behavior. |
+| [Inheritance and polymorphism](POLYMORPHISM.md) | **Exploratory direction** | Single inheritance, base subobjects, opt-in virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing are planned together. The active roadmap still begins by freezing syntax, semantics, ownership, the view model, and failure behavior in that document. |
 | [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
 | Optionals, arrays, and strings | **Exploratory direction** | Likely type forms and broad constraints exist; construction, access, lifetime, conversion, and library contracts remain open. |
 | Recoverable and checked exceptions | **Exploratory direction** | Deterministic cleanup is a constraint, but throw/catch syntax, exception sets, failed-construction behavior, and lowering remain open. |

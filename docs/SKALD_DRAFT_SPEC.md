@@ -265,22 +265,10 @@ feature maturity remains authoritative in the
 
 ### 4.4 Universal Root Type
 
-`Obj` is the universal root type for object hierarchies.
-
-In Skald, `Obj` is usually meaningful through a polymorphic alias or shared handle:
-
-```ska
-fn describe(ref value: Obj) -> Str;
-fn retain(value: shared Obj) -> unit;
-```
-
-Standalone inline variables of type `Obj` are not allowed initially:
-
-```ska
-var value: Obj = Dog(); // illegal
-```
-
-This avoids slicing arbitrary object values down to an empty or partial root object. Concrete object values should use their concrete class type, while polymorphic APIs should use read-only or mutable alias parameters of type `Obj`, or `shared Obj`.
+The exploratory `Obj` view direction and the unresolved semantic-root versus
+physical-base choice are owned by
+[polymorphism](language/POLYMORPHISM.md#universal-obj-views). `Obj` is not an
+implemented or frozen type.
 
 ### 4.5 Alias Binding Modes
 
@@ -484,55 +472,11 @@ implementation contract.
 
 ### 5.4 Classes
 
-Class declarations:
-
-```ska
-class Dog extends Animal implements Named {
-    name: Str;
-
-    init(name: Str) {
-        self.name = name;
-    }
-
-    virtual fn speak() -> unit {
-        ...
-    }
-}
-```
-
-Classes support:
-
-- fields;
-- `init` declarations, including copy constructors;
-- `assign` declarations for copy assignment;
-- `destroy` declarations;
-- instance methods;
-- static methods;
-- static variables;
-- `private` members;
-- `final` fields;
-- single inheritance via `extends`;
-- interface conformance via `implements`;
-- explicitly declared virtual methods;
-- explicit `override` for overridden methods.
-
-`init`, `assign`, and `destroy` are contextual special-member introducers when used directly in a class body with their corresponding declaration syntax. They are not globally reserved identifiers and the special declarations do not introduce ordinary methods. Because ordinary methods require `fn`, the same spellings remain available to user code:
-
-```ska
-class Example {
-    init() { ... }                    // special initialization member
-    assign(ref other: Example) { ... } // special assignment member
-    destroy { ... }                   // special destruction member
-
-    fn init() -> unit { ... }         // ordinary method named init
-    fn assign(value: i64) -> unit { ... }
-    fn destroy() -> unit { ... }
-
-    init_count: i64;                  // ordinary field
-}
-```
-
-The words may likewise be used for locals, parameters, top-level functions, and other ordinary identifiers where the special class-member grammar is not being parsed.
+Implemented exact-class declarations and members are authoritative in
+[classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md). Exploratory bases,
+inherited members, virtual methods, conformance, and broader class features
+are separated into the [polymorphism design](language/POLYMORPHISM.md) and the
+[status matrix](language/STATUS.md#not-implemented).
 
 #### 5.4.1 Instance-Method Receiver Mutability
 
@@ -642,159 +586,42 @@ and move to the focused runtime ABI authority when designed.
 
 ## 8. Classes, Inheritance, and Polymorphism
 
+Single inheritance, base subobjects, inherited lookup, lifecycle composition,
+and dispatch are exploratory and authoritative in
+[polymorphism](language/POLYMORPHISM.md). The active roadmap must freeze every
+executable rule before implementation.
+
 ### 8.1 Inline Values and Slicing
 
-Assigning a derived inline value to a base inline variable slices:
-
-```ska
-var derived: Dog = Dog();
-var base: Animal = derived;
-```
-
-`base` contains a copied `Animal` base subobject. It does not remain dynamically connected to `derived`.
+The distinction between copied exact-base values and non-owning, non-slicing
+views is described in
+[values, slicing, and non-owning views](language/POLYMORPHISM.md#values-slicing-and-non-owning-views).
 
 ### 8.2 Shared Upcasts
 
-`shared Derived` may be implicitly upcast to `shared Base` when `Derived extends Base`:
-
-```ska
-var dog: shared Dog = new Dog();
-var animal: shared Animal = dog;
-```
-
-This copies the shared handle. The underlying heap object remains a `Dog`. The converted handle preserves the complete-object address and the allocation's dynamic `Dog` metadata; it does not replace that metadata with `Animal` metadata.
-
-If `animal` becomes the last owner, releasing it runs the complete `Dog` destruction sequence and then frees the original `Dog` allocation. The static type `Animal` controls which operations are available through the handle, but it never selects shared destruction.
+Shared ownership is outside the planned polymorphism profile. Shared upcasts
+remain future ownership design rather than a polymorphism contract.
 
 ### 8.3 Alias-Parameter Upcasts
 
-An existing `Derived` object may supply the place for a read-only or mutable alias parameter of type `Base`:
-
-```ska
-fn speak(ref animal: Animal) -> unit {
-    animal.speak();
-}
-
-var dog: Dog = Dog();
-var heap_dog: shared Dog = new Dog();
-
-speak(dog);
-speak(heap_dog);
-```
-
-The alias refers to the original object or shared pointee. No slicing occurs for alias parameters.
+Exploratory non-owning class upcasts must preserve source access and lifetime
+without slicing. Their exact conversion rules remain a profile-freeze choice.
 
 ### 8.4 Virtual Dispatch
 
-Instance methods are non-virtual by default. Virtual dispatch is enabled only for methods explicitly declared `virtual`.
-
-This follows the C++ direction: ordinary methods have direct-call semantics, while virtual methods opt into dynamic dispatch and per-object/type dispatch metadata.
-
-Complete-object destruction of a shared allocation is separate from user-visible virtual method dispatch. Destructors do not use `virtual` syntax, and a base class does not need to opt into safe polymorphic destruction. The shared runtime always selects the compiler-generated complete-object destruction entry from the allocation's dynamic type metadata.
-
-Example:
-
-```ska
-class Animal {
-    virtual fn speak() -> unit {
-        ...
-    }
-
-    fn debug_name() -> Str {
-        ...
-    }
-}
-
-class Dog extends Animal {
-    override fn speak() -> unit {
-        ...
-    }
-}
-```
-
-Rules:
-
-- only methods declared `virtual` in a base class may be overridden;
-- overriding requires explicit `override`;
-- override compatibility is exact initially, including receiver mutability;
-- private methods, static methods, and `init` members are not virtual;
-- non-virtual method calls are statically resolved;
-- virtual read-only `fn` calls through read-only aliases, mutable aliases, and `shared Base` handles dispatch according to the dynamic object type;
-- virtual `mut fn` calls require mutable receiver access and therefore cannot be made through a read-only alias parameter of type `Base`;
-- calls on sliced inline base values dispatch as the sliced base value.
+Non-virtual-by-default methods, opt-in virtual families, explicit overrides,
+and dynamic calls through non-owning views are described in
+[direct and virtual methods](language/POLYMORPHISM.md#direct-and-virtual-methods).
+Syntax and compatibility remain unfrozen.
 
 ---
 
 ## 9. Interfaces
 
-Skald interfaces participate in the inline-value, shared-ownership, and alias-binding model described by this specification.
-
-Interface declarations contain method signatures:
-
-```ska
-interface Hashable {
-    fn hash_code() -> u64;
-}
-
-interface Named {
-    fn get_name() -> Str;
-    mut fn set_name(name: Str) -> unit;
-}
-```
-
-Classes declare conformance:
-
-```ska
-class Key implements Hashable {
-    fn hash_code() -> u64 {
-        return 42u;
-    }
-}
-```
-
-Initial interface rules:
-
-- interfaces contain method signatures only;
-- no interface fields;
-- no default method bodies;
-- no interface inheritance initially;
-- class conformance is checked statically;
-- private methods do not satisfy interface requirements;
-- interface `fn` signatures require read-only implementations and `mut fn` signatures require mutable implementations;
-- method signature compatibility is exact, including receiver mutability.
-
-Interface use should primarily happen through alias parameters and shared handles:
-
-```ska
-fn print_hash(ref value: Hashable) -> unit {
-    var h: u64 = value.hash_code();
-}
-
-var key: Key = Key();
-var heap_key: shared Key = new Key();
-
-print_hash(key);
-print_hash(heap_key);
-```
-
-Standalone inline variables of interface type are not allowed initially:
-
-```ska
-var value: Hashable = Key(); // illegal
-```
-
-Interface use should go through read-only or mutable alias parameters of the interface type, or through `shared Interface`. This avoids needing a general inline interface-object representation.
-
-A read-only interface alias may call only read-only interface methods. A mutable interface alias may call both read-only and mutable interface methods. Interface dispatch does not change these access rules.
-
-A `shared C` handle may be implicitly converted to `shared I` when class `C` implements interface `I`:
-
-```ska
-var heap_key: shared Key = new Key();
-var hashable: shared Hashable = heap_key;
-```
-
-The interface conversion copies the same owning handle and preserves the complete-object address, reference count, allocation identity, and dynamic class metadata. If `hashable` is the final owner, release runs the complete dynamic `Key` destruction sequence before freeing the original allocation. Interface method tables participate in dispatch but do not select destruction.
+Nominal requirements, explicit conformance, non-owning interface views, and
+their open profile decisions are described in
+[interfaces](language/POLYMORPHISM.md#interfaces). Standalone interface values,
+shared handles, and interface inheritance are outside the planned profile.
 
 ---
 
@@ -882,27 +709,13 @@ The collection expression is evaluated once, and the iteration length is snapsho
 
 ## 11. Casts, Type Tests, and Equality
 
-The implemented language has no casts, implicit conversions, equality, or type
-tests. Exact-type requirements and the maturity of future conversion and
-equality behavior are authoritative in
-[Types, Values, and Expressions](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
-
-Object casts:
-
-- derived-to-base inline assignment slices;
-- binding a derived place to a base-typed alias parameter is an implicit non-slicing upcast;
-- binding a class place to an implemented-interface alias parameter is implicit;
-- binding an interface alias to an `Obj` alias parameter is implicit;
-- the corresponding derived-to-base, class-to-interface, and interface-to-`Obj` conversions of `shared` handles are implicit;
-- downcasts are explicit and checked at runtime;
-- interface casts are explicit and checked at runtime when not statically known;
-- every conversion or checked cast of a shared handle preserves its ownership pointer, allocation identity, reference count, and complete dynamic class metadata.
-
-`is` performs a runtime type/conformance test for inline objects, shared handles, and alias-bound receivers.
-
-The object-cast and type-test notes above remain migration input for the focused
-polymorphism design. Per the [status matrix](language/STATUS.md#not-implemented),
-they are not implemented or frozen language behavior.
+The implemented language has no casts, equality, type tests, or narrowing.
+Core conversion maturity is authoritative in
+[types and values](language/TYPES_AND_VALUES.md#conversions-and-future-value-families).
+The exploratory distinction among slicing, non-owning upcasts, type tests, and
+checked scoped narrowing is owned by
+[polymorphism](language/POLYMORPHISM.md#type-tests-and-checked-narrowing); every
+source form, conversion boundary, and failure rule remains unfrozen.
 
 ---
 
@@ -1267,7 +1080,11 @@ corresponding language area is considered complete:
   initialization in other storage contexts, base-subobject ordering, branching
   or throwing initializers, and partial-construction cleanup remain open.
 - **Static storage lifetime:** initialization and destruction order within and across modules, dependency cycles, and failure during static initialization.
-- **Polymorphic narrowing through aliases:** checked downcasts and interface casts are named, but the scoped alias-binding form for using a successfully narrowed object is not yet defined. It must inherit access mode and remain within the source alias's lifetime.
+- **Polymorphism:** the intended inheritance, view, dispatch, interface,
+  type-test, and narrowing constraints—and every choice still required before
+  implementation—are collected in
+  [polymorphism](language/POLYMORPHISM.md). This legacy draft does not freeze
+  their syntax or failure behavior.
 - **Modules, build model, linkage, and foreign interfaces:** Section 3.1 defines the implemented single-file exact-symbol profile and its planned extension over all primitive value types. Source-to-module mapping, import discovery, exports, separate compilation, symbol visibility, cross-module external-declaration coalescing, other ABI types, alternate calling conventions, and ownership rules for foreign calls remain open.
 - **Required library and runtime surface:** Sections 13.1 through 13.3 define only bootstrap scalar observation operations. The minimum facilities for general I/O, decimal floating formatting, dynamic storage or collections, diagnostics, and other practical programs are not yet identified. This is especially relevant to the eventual self-hosting compiler, even if it is outside the core language semantics.
 
@@ -1293,9 +1110,9 @@ Resolved decisions in this draft:
 - lifecycle declarations use the contextual special-member introducers `init`, `assign`, and `destroy` without `fn`;
 - those contextual words remain available as ordinary identifiers and special members do not occupy the ordinary method namespace;
 - instance methods and special members use `self`, not `__self`, for the current object;
-- virtual dispatch is opt-in with `virtual`;
-- inline interface-typed variables are not allowed initially;
-- `Obj` remains the universal root type, mainly for read-only and mutable alias parameters and `shared Obj`.
+- the exploratory polymorphism direction and its unresolved profile choices
+  are owned by [polymorphism](language/POLYMORPHISM.md), not by this resolved-
+  decision list;
 - default array construction is valid only for element types with default values;
 - array physical storage placement is an implementation detail;
 - `Str` is an immutable small inline value backed by immutable byte storage;

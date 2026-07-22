@@ -1,10 +1,12 @@
 # Polymorphism Roadmap
 
-Status: planned; the
-[documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) through DOC8
-precedes PM0.
+Status: planned; PM0 is next. The
+[documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) established the
+focused [polymorphism design authority](../language/POLYMORPHISM.md) through
+DOC8.
 
-This roadmap extends Skald's completed exact-class object-value model with
+This roadmap freezes and extends Skald's completed exact-class object-value
+model with
 single inheritance, base subobjects, opt-in virtual dispatch, interfaces,
 `Obj` views, type tests, and checked narrowing. The implementation must extend
 the existing place, lifecycle, return-storage, temporary, and cleanup models;
@@ -122,8 +124,8 @@ them.
       and how polymorphic receiver information crosses the internal alias ABI.
 - [ ] Freeze base construction, copy, assignment, destruction, slicing,
       temporary, return-storage, and permitted-elision behavior.
-- [ ] Reconcile the grammar, draft specification, future boundaries, and the
-      exclusions above so later tasks do not rely on provisional prose.
+- [ ] Reconcile the grammar, focused polymorphism document, future boundaries,
+      and the exclusions above so later tasks do not rely on provisional prose.
 
 **Tests:** Add focused grammar/spec consistency cases where executable rules can
 already be asserted; run `make check` and `git diff --check`.

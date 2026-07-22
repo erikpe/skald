@@ -175,8 +175,9 @@ Optional payloads and array elements are not alias sources because neither
 value family is implemented. Any future design must define how a conditional
 payload or element remains present and at a stable location while aliased;
 the current parameter model does not settle those constraints. Polymorphic
-alias conversions and narrowing are owned by the active
-[polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md).
+alias conversions and narrowing are described by the exploratory
+[polymorphism design](POLYMORPHISM.md); the active roadmap owns their profile
+freeze and implementation.
 
 ## Implementation boundary
 
