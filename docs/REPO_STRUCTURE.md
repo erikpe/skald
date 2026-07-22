@@ -196,6 +196,8 @@ safepoints, and write barriers do not belong here.
 - `scripts/` contains thin workflow wrappers; compiler behavior remains
   available through `skac` or library APIs.
 - `tests/runtime/` directly tests the C ABI.
+- `tests/compiler/robustness/` owns retained hostile-input corpora and the
+  operating notes for deterministic frontend and MIR mutation tests.
 - `tests/golden/` tests complete source-to-native and source-to-diagnostic
   behavior.
 - `docs/archive/` contains completed implementation roadmaps for historical
@@ -540,6 +542,8 @@ The root commands are:
 | `make lint` | run Clippy with warnings denied |
 | `make compiler-test` | run workspace tests |
 | `make golden-test` | run native and compile-failure goldens |
+| `make robustness-smoke` | run bounded deterministic frontend and MIR robustness cases |
+| `make robustness-long` | run the longer deterministic frontend corpus |
 | `make runtime` | build the runtime archive |
 | `make runtime-test` | run direct runtime tests |
 | `make check` | run the complete validation suite |

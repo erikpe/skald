@@ -16,6 +16,7 @@ mod object_fixtures;
 mod object_results;
 mod object_temporaries;
 mod objects;
+mod robustness;
 mod value_parameters;
 
 fn lower_text(text: &str) -> MirProgram {

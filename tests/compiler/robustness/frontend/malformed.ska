@@ -1,0 +1,8 @@
+class Broken {
+    value: i64
+    init(value: i64) { self.value = value + ; }
+}
+
+fn main( -> i64 {
+    return Broken(1).value
+}

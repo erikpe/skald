@@ -77,7 +77,7 @@ count.
 - [x] CQ14 — Split the MIR model by responsibility
 - [x] CQ15 — Introduce a small test-only MIR fixture vocabulary
 - [x] CQ16 — Migrate and divide oversized test suites
-- [ ] CQ17 — Add generative frontend and MIR robustness tests
+- [x] CQ17 — Add generative frontend and MIR robustness tests
 - [ ] CQ18 — Align living documentation and close the cleanup
 
 ## 3. PR-sized tasks
@@ -418,15 +418,15 @@ preserved or improved.
 **Purpose:** Exercise combinatorial malformed input without adding production
 complexity or dependencies.
 
-- [ ] Add a fuzz or property-test target for arbitrary byte/UTF-8 input through
+- [x] Add a fuzz or property-test target for arbitrary byte/UTF-8 input through
       source creation, lexing, parsing, and diagnostic rendering.
-- [ ] Assert termination within the existing nesting/resource limits and no
+- [x] Assert termination within the existing nesting/resource limits and no
       panics for hostile source input.
-- [ ] Add structured mutations of valid MIR covering identities, types,
+- [x] Add structured mutations of valid MIR covering identities, types,
       ownership, calls, places, CFG edges, and cleanup state.
-- [ ] Assert that invalid MIR yields structured verification errors and never
+- [x] Assert that invalid MIR yields structured verification errors and never
       reaches backend panics.
-- [ ] Keep corpora and dependencies outside production crates and document fast
+- [x] Keep corpora and dependencies outside production crates and document fast
       local smoke commands separately from longer scheduled runs.
 
 **Acceptance criteria:** A Makefile target runs a bounded deterministic smoke
