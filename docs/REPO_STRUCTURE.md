@@ -107,6 +107,11 @@ from executable bodies and statements, expression trees, and selected object
 paths. Its public `resolve` facade explicitly re-exports the phase products so
 these private responsibilities can evolve without downstream path changes.
 
+HIR keeps typed declarations and ID tables, callable bodies and control flow,
+scalar expressions and calls, and object ownership operations in separate
+private responsibilities. Cross-cutting `Type` and access semantics remain at
+the internal HIR facade, which preserves the public `hir` paths.
+
 `dump_format` deliberately shares only low-level formatting primitives. Every
 phase owns the vocabulary and structure of its own deterministic dump.
 `lexical_policy` similarly owns only source-identifier character policy, so

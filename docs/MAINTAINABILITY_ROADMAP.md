@@ -73,7 +73,7 @@ count.
 - [x] CQ10 — Define the compiler library API policy
 - [x] CQ11 — Complete shared typed ID-table storage
 - [x] CQ12 — Split the resolved IR model by responsibility
-- [ ] CQ13 — Split the HIR model by responsibility
+- [x] CQ13 — Split the HIR model by responsibility
 - [ ] CQ14 — Split the MIR model by responsibility
 - [ ] CQ15 — Introduce a small test-only MIR fixture vocabulary
 - [ ] CQ16 — Migrate and divide oversized test suites
@@ -344,13 +344,13 @@ path churn.
 **Purpose:** Give typed declarations, callable bodies, expressions, and object
 ownership operations clear homes.
 
-- [ ] Divide declaration/tables, body/control-flow, scalar expressions/calls,
+- [x] Divide declaration/tables, body/control-flow, scalar expressions/calls,
       and object construction/copy/place types into cohesive private modules.
-- [ ] Keep phase-owned types distinct even when their shapes resemble resolved
+- [x] Keep phase-owned types distinct even when their shapes resemble resolved
       IR or MIR.
-- [ ] Preserve the `hir` facade, exact dump vocabulary, and exhaustive
+- [x] Preserve the `hir` facade, exact dump vocabulary, and exhaustive
       downstream matches.
-- [ ] Keep small central types such as `Type`, `BlockFlow`, or `HirAccess` at
+- [x] Keep small central types such as `Type`, `BlockFlow`, or `HirAccess` at
       the narrowest sensible shared boundary.
 
 **Acceptance criteria:** HIR ownership and typing concepts are easy to locate,
