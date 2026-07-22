@@ -7,12 +7,13 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  the functions and control-flow rewrite is next. The broad language overview,
-  support/maturity matrix, exact grammar, and type/value/expression semantics
-  are established alongside the documentation authority, migration inventory,
-  discrepancy ownership, and local link/index checking. The roadmap replaces
-  the remaining draft and architecture monoliths with verified, focused
-  language, compiler, runtime, and development documentation.
+  the classes and initialization rewrite is next. The broad language overview,
+  support/maturity matrix, exact grammar, type/value/expression semantics, and
+  function/control-flow semantics are established alongside the documentation
+  authority, migration inventory, discrepancy ownership, and local link/index
+  checking. The roadmap replaces the remaining draft and architecture
+  monoliths with verified, focused language, compiler, runtime, and development
+  documentation.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; executable profile design
   follows the documentation overhaul's language foundation and focused
   polymorphism design destination. It then extends the completed exact-class
@@ -24,9 +25,9 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Follow-up backlogs
 
 - [Documentation overhaul discoveries](DOCUMENTATION_OVERHAUL_DISCOVERIES.md) —
-  active; currently owns the legacy draft's overstated authority claim and a
-  duplicate polymorphism-roadmap test line found during migration. The grammar
-  cleanup has been resolved.
+  active; currently owns a duplicate polymorphism-roadmap test line found
+  during migration. The grammar and legacy-draft authority cleanups have been
+  resolved.
 - [Maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md) — active;
   resolver class-body orchestration is followed by the corresponding
   type-checker program boundary. Both are scheduled by the polymorphism

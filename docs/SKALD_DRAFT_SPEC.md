@@ -1,10 +1,16 @@
 # Skald Draft Language Specification
 
-Status: exploratory draft.
+Status: legacy migration input.
 
-This document defines the **Skald** programming language. Skald began as a design exploration derived from Niflheim, but it is a distinct language rather than a backwards-compatible revision. Its central departure is the memory model: Skald is not garbage collected. It uses deterministic object lifetimes, value semantics, built-in shared ownership, and call-scoped alias parameters.
+This document preserves broader Skald design material while focused language
+documents are verified and established. It is authoritative only for areas
+that do not yet have a focused owner, and its sketches do not imply current
+compiler support or frozen design. Start with the
+[language overview](language/README.md) and [status matrix](language/STATUS.md).
 
-The goal of this document is to describe the language itself, not its standard library.
+Skald began as a design exploration derived from Niflheim, but it is a distinct
+language rather than a backwards-compatible revision. Its central departure is
+the memory model: Skald is not garbage collected.
 
 ---
 
@@ -622,86 +628,27 @@ All strategies must preserve the same observable semantics:
 
 ### 5.1 Local Variables
 
-Initial local declarations use the following syntax:
-
-```ska
-var name: Type = initializer;
-```
-
-`var` creates an owning value binding with its own storage. Initializing it from another inline value copies that value; initializing a `shared T` local copies the handle. It does not create an alias binding. The future local `ref` and `mut ref` forms are described separately in Section 4.5.2.
-
-Examples:
-
-```ska
-var count: i64 = 0;
-var dog: Dog = Dog();
-var maybe_dog: Dog? = none;
-var heap_dog: shared Dog = new Dog();
-```
-
-Ordinary statements and declarations use semicolon terminators.
-
-Variables must be definitely initialized before use. Uninitialized values must not be observable.
+Implemented local declaration, initialization, visibility, scope, and shadowing
+rules are authoritative in
+[Functions and Control Flow](language/FUNCTIONS_AND_CONTROL_FLOW.md#lexical-scopes-and-locals).
+Future local alias and ownership forms remain design input in their focused
+sections until their maturity changes.
 
 ### 5.2 Functions
 
-Function declarations:
-
-```ska
-fn name(param1: Type, param2: Type) -> ReturnType {
-    ...
-}
-```
-
-Binding modifiers precede the parameter name; they are not written as part of `Type`.
-
-Parameters may use value bindings, `shared` value types, and alias-binding modes:
-
-```ska
-fn copy_in(dog: Dog) -> unit;
-fn borrow_in(ref dog: Dog) -> unit;
-fn mutate_in(mut ref dog: Dog) -> unit;
-fn share_in(dog: shared Dog) -> unit;
-```
-
-Parameter passing:
-
-- `T` copies the argument into the callee.
-- `shared T` copies the shared handle into the callee.
-- `ref name: T` binds the parameter name as a call-scoped read-only alias.
-- `mut ref name: T` binds the parameter name as a call-scoped mutable alias.
-
-At a call site, both inline `T` storage and a `shared T` pointee can supply the place for an alias parameter. The callee declares only the access mode it needs; it does not provide separate overloads for inline and shared ownership.
-
-Return values may be primitives, inline objects, optionals, arrays, function values, or `shared` handles. Alias bindings cannot be returned.
+Implemented declarations, parameter categories, calls, results, and returns are
+authoritative in
+[Functions and Control Flow](language/FUNCTIONS_AND_CONTROL_FLOW.md). Broader
+shared, optional, array, and polymorphic signatures remain design input owned
+by their focused feature areas.
 
 ### 5.3 Function Values
 
-Skald initially uses capture-free function values.
-
-Type syntax:
-
-```ska
-fn(i64, i64) -> i64
-fn(ref Dog) -> unit
-fn(mut ref Dog) -> unit
-```
-
-In function-type syntax, `ref T` and `mut ref T` record the unnamed parameter binding mode. They do not construct reference types.
-
-Function values may refer to:
-
-- top-level functions;
-- static class methods.
-
-Out of scope initially:
-
-- captured-variable closures;
-- instance method values;
-- interface method values;
-- lambda literals.
-
-Function types are invariant and require exact parameter and return types.
+Function values, calls through expression values, closures, and lambda literals
+are not implemented or frozen. Their current maturity is authoritative in the
+[status matrix](language/STATUS.md#not-implemented). Syntax, variance, capture,
+and callable-source rules must be designed before this area becomes an
+implementation contract.
 
 ### 5.4 Classes
 
@@ -2262,114 +2209,26 @@ The interface conversion copies the same owning handle and preserves the complet
 
 Implemented expression and operator semantics have moved to
 [Types, Values, and Expressions](language/TYPES_AND_VALUES.md#expressions).
-Statement, control-flow, and evaluation-order material remains here as migration
-input until its focused document is established.
+Implemented statement, block, conditional, return, call-statement, and
+evaluation-order semantics have moved to
+[Functions and Control Flow](language/FUNCTIONS_AND_CONTROL_FLOW.md).
 
-**Specification status for loops:** provisional and intentionally incomplete. Looping and iteration are deferred until after the first vertical compiler slice. The `while`, `for ... in`, `break`, and `continue` entries below reserve the current design direction, but do not yet form an implementation-ready contract.
-
-Before loops are implementation-ready, the specification must define loop-variable scope, condition and collection evaluation order, cleanup on `break` and `continue`, targets in nested loops, mutation of a collection during iteration, whether produced elements are copied or borrowed, and the exact iterator protocol and lifetime rules. This does not make `if`, blocks, or `return` provisional.
-
-Statements:
-
-- block;
-- local variable declaration;
-- assignment;
-- expression statement;
-- `if` / `elif` / `else`;
-- `while`;
-- `for ... in`;
-- `return`;
-- `break`;
-- `continue`;
-- `init`-only `super(...)`.
+Loops, iteration, `break`, and `continue` are not implemented or frozen. Their
+scope, evaluation order, exit cleanup, nested targets, mutation behavior, and
+iterator protocol require a focused design before implementation.
 
 ### 10.1 Conditional Statements
 
-**Implementation status:** implemented end to end, including nested native
-behavior, exact diagnostics, return analysis, and repeated-process determinism
-coverage.
-
-The initial conditional form follows Niflheim's chained-arm spelling:
-
-```ska
-if (first_condition) {
-    first_action();
-}
-elif (second_condition) {
-    second_action();
-}
-else {
-    fallback_action();
-}
-```
-
-Its grammar is:
-
-```text
-if-statement = "if" "(" expression ")" block
-               ("elif" "(" expression ")" block)*
-               ["else" block]
-```
-
-There may be zero or more `elif` arms and at most one final `else` arm.
-Parentheses around every condition and a block for every arm are mandatory.
-`elif` is a distinct keyword and the only chained-arm spelling; `else if` is
-not accepted as an alternative. The construct is a statement and does not
-produce a value.
-
-Every condition must have type exactly `bool`. There is no implicit numeric,
-object, shared-handle, or optional truthiness. Conditions are evaluated from
-left to right. Evaluation stops at the first condition producing `true`, only
-that arm's block executes, and no later condition or arm is evaluated. If all
-conditions produce `false`, the `else` block executes when present; otherwise
-execution continues after the statement.
-
-Each condition is resolved in the lexical scope containing the complete
-conditional statement. Each arm block creates an independent child scope. A
-name declared in one arm is not visible in another arm, in a later `elif`
-condition, or after the conditional. Ordinary nested-block shadowing rules
-apply inside each arm.
-
-For definite-return analysis, a conditional definitely returns only if it has
-an `else` arm and every `if`, `elif`, and `else` block definitely returns. The
-rule composes through nested blocks and conditionals. A conditional without
-`else`, or with any arm that can reach its closing brace, can continue with the
-following statement. This analysis, rather than the parser or backend,
-enforces the requirement that every reachable path through a non-`unit`
-function returns a value.
-
-The initial C-series conditional profile does not include `if` expressions,
-`else if`, implicit truthiness, casts to or from `bool`, equality or ordering,
-logical negation, `&&`, `||`, pattern matching, optional presence tests,
-flow-sensitive type narrowing, loops, branch optimization, SSA, or phi nodes.
-The broader language may specify some of these separately. In particular,
-short-circuit logical operators require expression-level control flow and must
-not be introduced as eager binary operations.
+The implemented conditional contract is authoritative in
+[Functions and Control Flow](language/FUNCTIONS_AND_CONTROL_FLOW.md#conditionals).
+Accepted source shape is authoritative in the
+[grammar](language/GRAMMAR.md#blocks-and-statements).
 
 ### 10.2 Returns and Call Statements
 
-Function return syntax follows the declared result type:
-
-- a non-`unit` function returns with `return expression;`, where the
-  expression must have exactly the function's declared result type;
-- a `unit` function returns with `return;` and cannot attach an expression;
-- reaching the closing brace of a `unit` function is an implicit `return;`;
-- every reachable path through a non-`unit` function must return a value, so
-  reaching its closing brace is a compile-time error.
-
-The implemented language supports expression statements only for calls whose
-result is `unit`:
-
-```ska
-do_work();       // valid when do_work returns unit
-value_call();    // invalid when value_call returns i64
-1 + 2;           // invalid
-```
-
-Grouping parentheses do not change whether the outer operation is a call. This
-restricted call-statement rule avoids accidental discarded values and is
-narrower than the complete statement list above; broader expression statements
-may be specified later.
+Return typing, definite-return analysis, call-statement legality, result
+sequencing, and cleanup-before-return are authoritative in
+[Functions and Control Flow](language/FUNCTIONS_AND_CONTROL_FLOW.md#returns-and-definite-return).
 
 ### 10.3 Operators
 
@@ -2891,8 +2750,6 @@ The following decisions are intentionally not finalized by this draft:
 Resolved decisions in this draft:
 
 - the language is named Skald, its compiler is named `skac`, and source files use the `.ska` suffix;
-- local declarations use `var name: Type` syntax;
-- ordinary statements and declarations use semicolon terminators;
 - lifecycle declarations use the contextual special-member introducers `init`, `assign`, and `destroy` without `fn`;
 - those contextual words remain available as ordinary identifiers and special members do not occupy the ordinary method namespace;
 - instance methods and special members use `self`, not `__self`, for the current object;
@@ -2906,17 +2763,11 @@ Resolved decisions in this draft:
 - the implemented bootstrap external-function profile uses exact source identifiers as C-ABI linker symbols, accepts only by-value `i64`, `u64`, `u8`, `f64`, and `bool` parameters and `i64`, `u64`, `u8`, `f64`, `bool`, or `unit` results, and treats declarations as trusted ABI assertions;
 - on Linux x86-64 System V, Skald `bool` maps to C `bool` (`_Bool`), leaves Skald as canonical false or true, and external boolean results are normalized from the ABI result byte;
 - compiler-generated function symbols cannot collide with valid exact external identifiers and do not reserve an ordinary Skald identifier prefix;
-- external declarations and Skald function definitions share one non-overloaded namespace, and `main` must be a Skald definition;
-- `unit` functions use `return;` or implicit fallthrough, while non-`unit` functions must return a value on every reachable path;
-- the first implemented expression-statement subset contains only unit-producing calls;
 - `ska_rt_println_i64` writes the shortest ASCII signed decimal representation and one LF, and a detected incomplete output is unrecoverable;
 - the current runtime ABI implements `ska_rt_println_bool`, which writes
   lowercase ASCII `true` or `false` and one LF, uses the same unrecoverable
   detected-output-failure policy, and remains an ordinary external function;
 - runtime ABI version 4 implements `u64` and `u8` decimal output plus exact raw-bit `f64` observation, all as ordinary external functions;
-- conditionals use mandatory-parenthesized `if` and `elif` conditions, mandatory arm blocks, an optional final `else`, and do not accept `else if`;
-- conditional arms are tested left to right until the first true condition, only the selected block executes, and every arm has an independent lexical child scope;
-- a conditional definitely returns only when it has `else` and every arm definitely returns;
 - the restricted stage-0 object profile uses nominal top-level classes with
   primitive fields, exactly one explicit initializer, direct construction only
   into exact-type locals, and direct non-virtual receiver methods;
@@ -2927,9 +2778,6 @@ Resolved decisions in this draft:
   assign every field exactly once and never read an uninitialized field;
 - empty restricted classes are valid and have a one-byte addressable x86-64
   layout; other fields use declaration-order checked target layout;
-- restricted method receivers evaluate before explicit arguments and lower as
-  hidden first integer-class arguments, while MIR retains semantic places and
-  field identities rather than target offsets;
 - the frozen class-typed inline-field profile permits exact concrete class
   field types; by itself that slice retained primitive-only value parameters
   and results plus place-only object semantics;
@@ -2951,9 +2799,8 @@ Resolved decisions in this draft:
 - successfully initialized owning object locals register at complete
   constructor return and clean up on normal exits from innermost scope outward,
   in reverse registration order within each scope;
-- `return` evaluates and preserves its primitive result before cleanup, and a
-  complete object runs its user destruction body before recursively destroying
-  class fields in reverse declaration order;
+- a complete object runs its user destruction body before recursively
+  destroying class fields in reverse declaration order;
 - the local destruction profile does not add explicit early destruction,
   object values or copying, failed-construction or exceptional cleanup,
   inheritance, shared ownership, deallocation, arrays, or loop exits;

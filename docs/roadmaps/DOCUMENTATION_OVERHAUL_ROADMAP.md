@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC4 is next.
+Status: planned; DOC5 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -169,7 +169,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC1 — Create the language overview and status authority
 - [x] DOC2 — Rewrite the implemented grammar
 - [x] DOC3 — Rewrite types, values, and expressions
-- [ ] DOC4 — Rewrite functions and control flow
+- [x] DOC4 — Rewrite functions and control flow
 - [ ] DOC5 — Rewrite classes, initialization, and object places
 - [ ] DOC6 — Rewrite copying, destruction, and object lifetimes
 - [ ] DOC7 — Rewrite aliases and ownership
@@ -293,17 +293,17 @@ description independent of parser, IR, runtime, and x86 implementation.
 **Purpose:** Consolidate callable and statement semantics around source-visible
 behavior and evaluation order.
 
-- [ ] Create `FUNCTIONS_AND_CONTROL_FLOW.md` covering declarations, parameter
+- [x] Create `FUNCTIONS_AND_CONTROL_FLOW.md` covering declarations, parameter
       categories by reference, calls, results, scopes, locals, blocks,
       conditionals, return analysis, call statements, and evaluation order.
-- [ ] State implemented single-file and restricted-external boundaries clearly
+- [x] State implemented single-file and restricted-external boundaries clearly
       while linking alias and object-value details to their semantic owners.
-- [ ] Verify scope, shadowing, definite return, receiver/argument order,
+- [x] Verify scope, shadowing, definite return, receiver/argument order,
       object-result sequencing, and cleanup-before-return claims against
       resolver, type-checker, MIR, and native tests.
-- [ ] Move ABI placement, hidden results, phase data structures, and CFG
+- [x] Move ABI placement, hidden results, phase data structures, and CFG
       strategy to compiler/backend documentation.
-- [ ] Reduce loop and function-value material to concise maturity entries until
+- [x] Reduce loop and function-value material to concise maturity entries until
       their designs are implementation-ready.
 
 **Tests:** Run binding, control-flow, call, return, object-result, MIR CFG, and

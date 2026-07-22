@@ -78,8 +78,11 @@ compile-failure goldens cover access, forwarding, overlap, `self`, initializer
 aliases, evaluation order, and mixed register/stack signatures.
 
 See [the implemented grammar](docs/language/GRAMMAR.md) for the exact accepted
-source subset and [the draft specification](docs/SKALD_DRAFT_SPEC.md) for the
-broader language design.
+source subset, [types and values](docs/language/TYPES_AND_VALUES.md) for core
+expression semantics, [functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
+for callable and statement semantics, and the
+[draft specification](docs/SKALD_DRAFT_SPEC.md) for broader areas still being
+migrated.
 
 ## Compiler design
 
@@ -168,6 +171,7 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Draft language specification](docs/SKALD_DRAFT_SPEC.md)
 - [Implemented grammar](docs/language/GRAMMAR.md)
 - [Types, values, and expressions](docs/language/TYPES_AND_VALUES.md)
+- [Functions and control flow](docs/language/FUNCTIONS_AND_CONTROL_FLOW.md)
 - [Repository structure and compiler architecture](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)

@@ -274,5 +274,7 @@ particular, it does not define:
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.
 [Types, values, and expressions](TYPES_AND_VALUES.md) owns the detailed
-semantics of literals, exact types, expression values, and operators. Other
-focused semantic documents become authoritative as they are verified.
+semantics of literals, exact types, expression values, and operators.
+[Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) owns callable,
+scope, statement, return, and evaluation-order semantics. Other focused
+semantic documents become authoritative as they are verified.

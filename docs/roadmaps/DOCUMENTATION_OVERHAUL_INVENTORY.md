@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through types, values, and expressions.
+Status: active; audited through functions and control flow.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -18,6 +18,7 @@ step.
 | `docs/language/STATUS.md` | Retain as the sole feature-maturity and compiler-support matrix; update it whenever source behavior, target availability, or a future design state changes. |
 | `docs/language/GRAMMAR.md` | Retain as the sole exact accepted-syntax authority; update it with lexer/parser and source-shape tests whenever syntax changes. |
 | `docs/language/TYPES_AND_VALUES.md` | Retain as the authority for implemented types, literals, value/place distinctions, expressions, operators, conversion availability, and future value-family maturity links. |
+| `docs/language/FUNCTIONS_AND_CONTROL_FLOW.md` | Retain as the authority for callable declarations, parameters, calls, lexical scopes, statements, returns, definite-return analysis, and source-visible evaluation order. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
 | `docs/REPO_STRUCTURE.md` | DOC11-DOC15 move durable compiler, backend, runtime, driver, testing, and debugging contracts; DOC16 removes the exhaustive monolith. |

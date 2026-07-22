@@ -119,9 +119,8 @@ function values are not implemented; calls select named functions or methods.
 
 Precedence, associativity, grouping syntax, and the accepted postfix chain are
 defined by the [grammar](GRAMMAR.md#expressions). Statement legality and
-evaluation order are callable and control-flow concerns outside this document;
-their current support boundary is summarized in the
-[status matrix](STATUS.md#implemented-language).
+evaluation order are defined by
+[Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md).
 
 ## Operators
 
