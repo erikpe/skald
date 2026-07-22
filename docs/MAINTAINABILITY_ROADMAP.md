@@ -1,6 +1,6 @@
 # Compiler Maintainability Roadmap
 
-Status: planned; CQ0 is next.
+Status: in progress; CQ1 is next.
 
 This roadmap turns the 2026 code-quality audit into small, reviewable cleanup
 pull requests. Its purpose is to reduce the cost and risk of future language
@@ -60,7 +60,7 @@ count.
 
 ## 2. Progress summary
 
-- [ ] CQ0 — Declare and expose the supported toolchain checks
+- [x] CQ0 — Declare and expose the supported toolchain checks
 - [ ] CQ1 — Enforce the runtime ABI at link time
 - [ ] CQ2 — Establish the MIR verifier facade and shared foundations
 - [ ] CQ3 — Extract MIR program and declaration verification
@@ -88,20 +88,20 @@ count.
 external infrastructure, while preventing accidental increases to the minimum
 Rust version.
 
-- [ ] Determine and declare the minimum supported Rust version with
+- [x] Determine and declare the minimum supported Rust version with
       `workspace.package.rust-version`.
-- [ ] Add a repository toolchain file selecting stable Rust with the rustfmt
+- [x] Add a repository toolchain file selecting stable Rust with the rustfmt
       and Clippy components; keep the MSRV declaration authoritative.
-- [ ] Add a locally runnable `make msrv-check` target that compiles the complete
+- [x] Add a locally runnable `make msrv-check` target that compiles the complete
       workspace and all Rust test targets with the declared MSRV; it must not
       install toolchains or mutate contributor configuration.
-- [ ] Keep `make check` as the complete current-stable Rust, golden, and C
+- [x] Keep `make check` as the complete current-stable Rust, golden, and C
       runtime gate used by contributors and external infrastructure.
-- [ ] Document the one-time local prerequisite for installing the declared
+- [x] Document the one-time local prerequisite for installing the declared
       MSRV toolchain.
-- [ ] Document that scheduling, clean-checkout execution, and failure reporting
+- [x] Document that scheduling, clean-checkout execution, and failure reporting
       belong to existing external infrastructure rather than this repository.
-- [ ] Document the supported Rust, C compiler, archiver, and platform contract
+- [x] Document the supported Rust, C compiler, archiver, and platform contract
       in the README.
 
 **Acceptance criteria:** Contributors can run `make check` and

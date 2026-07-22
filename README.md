@@ -102,18 +102,29 @@ expected backend after the language core grows further.
 
 ## Building and using `skac`
 
-Development requires Linux, stable Rust with rustfmt and Clippy, GNU Make, a
-C11 compiler, and an archiver. The Rust workspace has no third-party crate
-dependencies.
+Development requires Linux, rustup, stable Rust with rustfmt and Clippy, GNU
+Make, a C11 compiler, and an archiver. The Rust workspace has no third-party
+crate dependencies.
 
 ```text
 make check          # formatting, checks, Clippy, Rust/golden tests, runtime tests
+make msrv-check     # compile every Rust target with the declared minimum version
 make golden-test    # source-to-native and compile-failure golden cases
 make runtime        # build build/runtime/libskald_runtime.a
 make runtime-test   # direct C runtime tests
 
 cargo run -p skac -- samples/inline_counter.ska -o build/inline_counter
 cargo run -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
+```
+
+The shared workspace manifest declares Rust 1.82.0 as the minimum supported
+version. The repository toolchain selects stable Rust with rustfmt and Clippy
+for ordinary development. Install the MSRV toolchain once before running its
+local check:
+
+```text
+rustup toolchain install 1.82.0 --profile minimal
+make msrv-check
 ```
 
 External infrastructure runs `make check` regularly from clean checkouts. CI

@@ -2,6 +2,7 @@
 name = "skac"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 skald-compiler = { path = "../skald-compiler" }
