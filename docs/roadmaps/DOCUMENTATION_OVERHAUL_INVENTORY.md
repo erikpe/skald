@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited for the start of the documentation overhaul.
+Status: active; audited through the language overview and status authority.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -14,6 +14,8 @@ step.
 |---|---|
 | `README.md` | DOC16 reduces it to project identity, quickstart, a short capability summary, and links to focused authorities. |
 | `docs/README.md` | DOC0 makes it the durable authority, maturity, navigation, linking, history, and verification policy. Later tasks replace its temporary legacy-authority list with the focused structure. |
+| `docs/language/README.md` | Retain as the broad language specification and navigation entry point; later language tasks add focused semantic links without turning it into another feature inventory. |
+| `docs/language/STATUS.md` | Retain as the sole feature-maturity and compiler-support matrix; update it whenever source behavior, target availability, or a future design state changes. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | DOC2 moves exact accepted syntax to `docs/language/GRAMMAR.md`; semantic and rollout prose moves to focused owners; DOC16 removes the compatibility file. |
 | `docs/REPO_STRUCTURE.md` | DOC11-DOC15 move durable compiler, backend, runtime, driver, testing, and debugging contracts; DOC16 removes the exhaustive monolith. |

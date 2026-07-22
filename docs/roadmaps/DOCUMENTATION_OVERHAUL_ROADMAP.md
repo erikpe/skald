@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC1 is next.
+Status: planned; DOC2 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -166,7 +166,7 @@ does not repeat the complete feature-status matrix.
 ## 4. Progress
 
 - [x] DOC0 — Establish documentation authority and verification tooling
-- [ ] DOC1 — Create the language overview and status authority
+- [x] DOC1 — Create the language overview and status authority
 - [ ] DOC2 — Rewrite the implemented grammar
 - [ ] DOC3 — Rewrite types, values, and expressions
 - [ ] DOC4 — Rewrite functions and control flow
@@ -218,16 +218,16 @@ fail through the standard Makefile gate.
 **Purpose:** Give readers a reliable entry point and a single answer to what is
 implemented, designed, exploratory, or unresolved.
 
-- [ ] Create `docs/language/README.md` as a concise broad specification of
+- [x] Create `docs/language/README.md` as a concise broad specification of
       language purpose, terminology, safety direction, value/object model, and
       document navigation.
-- [ ] Create `docs/language/STATUS.md` as the sole feature maturity and compiler
+- [x] Create `docs/language/STATUS.md` as the sole feature maturity and compiler
       support matrix, with links to semantic documents and active roadmaps.
-- [ ] Verify every implemented-status claim against current source, phase tests,
+- [x] Verify every implemented-status claim against current source, phase tests,
       public API tests, goldens, runtime tests, and target availability.
-- [ ] Keep unresolved and future features brief; link to their roadmap or open
+- [x] Keep unresolved and future features brief; link to their roadmap or open
       questions instead of embedding speculative implementation plans.
-- [ ] Add the language directory to the documentation index while retaining
+- [x] Add the language directory to the documentation index while retaining
       legacy links until their content has migrated.
 
 **Tests:** Check the status matrix against `make help`, current golden discovery,

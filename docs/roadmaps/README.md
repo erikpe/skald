@@ -7,11 +7,12 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Planned
 
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md) — planned;
-  the language overview and feature-status authority are next. Documentation
-  authority, migration inventory, discrepancy ownership, and local link/index
-  checking are established. The roadmap replaces the draft, grammar, and
-  architecture monoliths with verified, focused language, compiler, runtime,
-  and development documentation.
+  the exact implemented grammar rewrite is next. The broad language overview
+  and authoritative support/maturity matrix are established alongside the
+  documentation authority, migration inventory, discrepancy ownership, and
+  local link/index checking. The roadmap replaces the remaining draft,
+  grammar, and architecture monoliths with verified, focused language,
+  compiler, runtime, and development documentation.
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; executable profile design
   follows the documentation overhaul's language foundation and focused
   polymorphism design destination. It then extends the completed exact-class
@@ -23,8 +24,8 @@ roadmaps move to [`../archive/`](../archive/README.md).
 ## Follow-up backlogs
 
 - [Documentation overhaul discoveries](DOCUMENTATION_OVERHAUL_DISCOVERIES.md) —
-  active and currently empty; owns contradictions, behavior defects,
-  unresolved choices, and unrelated cleanup found during the migration.
+  active; currently owns a grammar rollout/production cleanup and a duplicate
+  polymorphism-roadmap test line found during the migration.
 - [Maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md) — active;
   resolver class-body orchestration is followed by the corresponding
   type-checker program boundary. Both are scheduled by the polymorphism

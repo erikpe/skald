@@ -8,7 +8,11 @@ compiler, and development guides are being created.
 
 Use the authority closest to the behavior:
 
-- source-visible language meaning belongs in focused language documents;
+- broad source-visible language meaning begins in the
+  [language overview](language/README.md), while detailed rules belong in its
+  focused language documents;
+- current support and design maturity belong only in the
+  [language status matrix](language/STATUS.md);
 - exact accepted syntax belongs in the implemented grammar;
 - compiler phases, IR, targets, runtime ABI, driver behavior, and contributor
   workflows belong in their respective implementation or development guides;
@@ -16,9 +20,9 @@ Use the authority closest to the behavior:
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
 
-During the documentation overhaul, the existing broad documents remain the
-working authorities below. Their content is migrated only after it has been
-checked against implementation and tests:
+During the documentation overhaul, the existing broad documents remain
+migration authorities for areas without a focused replacement. Their content
+is moved only after it has been checked against implementation and tests:
 
 - [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
   implemented-profile annotations, and open questions;
@@ -38,16 +42,9 @@ defines the ordered migration.
 
 ## Maturity
 
-Claims about features must use one of these states:
-
-- **implemented contract** — current compiler behavior protected by current
-  implementation and tests;
-- **frozen design** — settled behavior owned by an active implementation plan;
-- **exploratory direction** — non-normative constraints or examples;
-- **open question** — a choice that must be resolved before implementation;
-- **implementation detail** — compiler, target, runtime, driver, or test
-  behavior rather than a language rule;
-- **history** — implementation narrative retained only in archives or Git.
+The [language status matrix](language/STATUS.md) defines the maturity labels
+and is the sole feature-support inventory. Other documents state their own
+authority and maturity, then link to the matrix rather than repeating it.
 
 If prose disagrees with implementation evidence, do not silently choose a new
 language behavior. Correct plainly stale prose, strengthen tests for intended
