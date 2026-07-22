@@ -52,10 +52,11 @@ Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
 [runtime ABI](RUNTIME_ABI.md). Driver behavior is defined by
-[driver and artifacts](DRIVER_AND_ARTIFACTS.md). Testing and debugging details
-remain in the [legacy test migration guide](../REPO_STRUCTURE.md) and
-[debugging guide](../DEBUGGING.md). Contributor prerequisites and validation
-are defined by the [development workflow](../development/README.md).
+[driver and artifacts](DRIVER_AND_ARTIFACTS.md). Test ownership and selection
+are defined by [Testing](../development/TESTING.md), and inspection workflows
+by [Debugging the Compiler](../development/DEBUGGING.md). Contributor
+prerequisites and validation are defined by the
+[development workflow](../development/README.md).
 
 ## Pipeline
 

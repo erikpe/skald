@@ -2,7 +2,9 @@
 
 Runtime tests are small C harnesses linked directly with the runtime archive.
 They verify the [public runtime ABI](../../docs/compiler/RUNTIME_ABI.md)
-independently of compiler code generation.
+independently of compiler code generation. The
+[testing guide](../../docs/development/TESTING.md) owns general placement and
+selection policy.
 
 Run the current runtime suite from the repository root with:
 

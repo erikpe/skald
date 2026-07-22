@@ -1,14 +1,13 @@
-# Tests
+# Test Data and Harnesses
 
-The test tree separates reusable compiler corpus data, the C runtime, and
-complete source-to-executable behavior:
+General test ownership and selection are defined in the
+[testing guide](../docs/development/TESTING.md). This tree contains reusable
+non-Rust data and cross-crate harnesses:
 
-- `compiler/` — non-Rust corpus data shared by compiler robustness tests;
-- `runtime/` — separate C harnesses for the runtime contract, successful output, and fatal output failures;
-- `golden/` — end-to-end `.ska` compilation cases with stable expected results.
+- [`compiler/`](compiler/README.md) contains compiler corpus data;
+- [`golden/`](golden/README.md) contains complete `.ska` cases and expectation
+  sidecars; and
+- [`runtime/`](runtime/README.md) contains direct C runtime harnesses.
 
-Phase-level Rust tests live beside the implementation they exercise. Larger
-suites use behavior-oriented `tests/` modules. Rust tests that require only the
-public compiler API, including cross-phase checks, live in
-`crates/skald-compiler/tests/`. Top-level compiler corpus files are test data,
-not an alternate Rust integration-test location.
+Rust unit tests live beside their implementation. Public and cross-phase Rust
+integration tests live in the owning crate's `tests/` directory.

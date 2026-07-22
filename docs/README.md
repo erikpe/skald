@@ -43,6 +43,10 @@ Use the authority closest to the behavior:
   publication belong in [driver and artifacts](compiler/DRIVER_AND_ARTIFACTS.md);
 - contributor prerequisites and validation belong in the
   [development workflow](development/README.md);
+- test ownership, placement, fixtures, determinism, and robustness belong in
+  [testing](development/TESTING.md);
+- phase inspection, dump use, verifier boundaries, and assembly debugging
+  belong in [debugging the compiler](development/DEBUGGING.md);
 - active roadmaps own implementation order and unresolved feature decisions;
 - archived roadmaps and Git history explain how the project reached its current
   state, but never define current behavior.
@@ -54,11 +58,11 @@ is moved only after it has been checked against implementation and tests:
 - [Draft language specification](SKALD_DRAFT_SPEC.md) — language design,
   implemented-profile annotations, and open questions;
 - [Repository structure and compiler architecture](REPO_STRUCTURE.md) —
-  test boundaries awaiting a focused replacement;
+  compatibility and migration prose awaiting removal;
 - [Future development boundaries](NEXT_SLICE_BOUNDARIES.md) — planned
   sequencing awaiting final distribution;
-- [Compiler debugging artifacts](DEBUGGING.md) — dumps, verification points,
-  and assembly inspection.
+- [Compiler debugging compatibility path](DEBUGGING.md) — retained until old
+  entry points are removed.
 
 The [migration inventory](roadmaps/DOCUMENTATION_OVERHAUL_INVENTORY.md) maps
 every current heading and incoming reference to its intended focused owner.

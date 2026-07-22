@@ -1,8 +1,9 @@
 # Development Workflow
 
 Status: authoritative for contributor prerequisites, Makefile entry points,
-supported Rust toolchains, and local/external validation. Test placement and
-debugging techniques will be detailed in their focused development guides.
+supported Rust toolchains, and local/external validation. See
+[Testing](TESTING.md) for test ownership and selection and
+[Debugging the Compiler](DEBUGGING.md) for inspection workflows.
 
 ## Prerequisites
 

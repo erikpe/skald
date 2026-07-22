@@ -171,7 +171,8 @@ stable interchange or persistence schema.
 Stable identities, deterministic table/block order, and exact renderers are
 tested both within phases and across independent compiler processes. The
 public dump paths let integration tests and temporary tools inspect the same
-representation used by focused tests.
+representation used by focused tests. Practical inspection steps are in
+[Debugging the Compiler](../development/DEBUGGING.md).
 
 ## Trust and testing boundaries
 

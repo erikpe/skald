@@ -176,10 +176,11 @@ specification. In this checkout it is available at [`../niflheim`](../niflheim).
 - [Runtime ABI](docs/compiler/RUNTIME_ABI.md)
 - [Driver and artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md)
 - [Development workflow](docs/development/README.md)
+- [Testing](docs/development/TESTING.md)
+- [Debugging the compiler](docs/development/DEBUGGING.md)
 - [Test migration guide](docs/REPO_STRUCTURE.md)
 - [Future development boundaries](docs/NEXT_SLICE_BOUNDARIES.md)
 - [Active and planned roadmaps](docs/roadmaps/README.md)
-- [Compiler debugging artifacts](docs/DEBUGGING.md)
 - [Archived implementation roadmaps](docs/archive/README.md)
 
 Skald documentation takes precedence wherever it differs from Niflheim.

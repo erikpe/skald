@@ -33,30 +33,14 @@ a useful destination.
 
 ## Testing
 
-The repository uses complementary layers:
-
-1. colocated Rust unit tests for phase behavior and invariants;
-2. crate integration tests for public API and cross-phase behavior;
-3. exact AST, resolved, HIR, MIR, and assembly dumps;
-4. C runtime contract, successful-output, and fatal-output tests; and
-5. golden source programs for native behavior and exact diagnostics.
-
-Deterministic hostile frontend inputs and MIR mutations supplement these
-layers. Retained non-Rust inputs live under `tests/compiler/robustness/`; Rust
-harnesses remain beside their owning phase or in the compiler crate's
-integration-test directory.
-
-Golden programs are compiled in independent processes to compare assembly or
-diagnostics byte-for-byte. Native cases separately check stdout, empty stderr,
-and process status. The object-determinism integration test compares AST,
-resolved IR, HIR, MIR, and assembly across independent processes.
-
-Contributor prerequisites, supported toolchains, Makefile entry points, and
-external clean-checkout automation are defined by the
-[development workflow](development/README.md).
+Test layers, placement, fixtures, determinism, robustness, and focused
+commands are now defined by [Testing](development/TESTING.md). Contributor
+prerequisites and repository gates remain in the
+[development workflow](development/README.md). This compatibility heading
+remains only until the migration document is removed.
 
 ## Debugging
 
-The current [debugging artifacts guide](DEBUGGING.md) owns detailed renderer,
-dump, verifier, and assembly-inspection workflows until its focused
-development replacement is created.
+[Debugging the Compiler](development/DEBUGGING.md) owns renderer, dump,
+verifier, assembly-inspection, and symptom-to-owner workflows. The old
+[`DEBUGGING.md`](DEBUGGING.md) path is a temporary compatibility entry point.

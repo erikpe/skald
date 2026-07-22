@@ -1,6 +1,6 @@
 # Documentation Overhaul Migration Inventory
 
-Status: active; audited through driver, artifacts, and contributor workflows.
+Status: active; audited through testing and debugging workflows.
 
 This inventory gives every living heading and repository reference a planned
 destination. It is a migration ledger, not an additional authority for the
@@ -30,18 +30,20 @@ step.
 | `docs/compiler/RUNTIME_ABI.md` | Retain as the authority for the public C runtime surface, version and link guard, platform requirements, bootstrap output records, failure behavior, and current responsibility boundary. |
 | `docs/compiler/DRIVER_AND_ARTIFACTS.md` | Retain as the authority for compiler orchestration, CLI modes, target/toolchain/runtime selection, input protection, artifact publication, and driver failure boundaries. |
 | `docs/development/README.md` | Retain as the authority for contributor prerequisites, Makefile entry points, supported Rust toolchains, MSRV use, and external clean-checkout automation. |
+| `docs/development/TESTING.md` | Retain as the authority for test layers, ownership, placement, selection, fixtures, determinism, and robustness. |
+| `docs/development/DEBUGGING.md` | Retain as the authority for phase inspection, public renderers, verifier boundaries, assembly inspection, and symptom-to-owner guidance. |
 | `docs/SKALD_DRAFT_SPEC.md` | DOC1-DOC10 verify and migrate its retained language claims; DOC13 moves runtime claims; DOC16 removes the superseded monolith. |
 | `grammar/README.md` | Retain only as a pointer to `docs/language/GRAMMAR.md` while historical links still target the old path; DOC16 removes it. |
-| `docs/REPO_STRUCTURE.md` | DOC11-DOC14 moved compiler, backend, runtime, driver, and workflow contracts; DOC15 moves its remaining testing contract, and DOC16 removes the superseded migration document. |
+| `docs/REPO_STRUCTURE.md` | Its compiler, workflow, testing, and debugging contracts have moved; DOC16 removes the superseded migration document. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | DOC1 and DOC8-DOC11 move stable design maturity and extension policy; roadmap ordering remains in `docs/roadmaps/README.md`; DOC16 removes the duplicate. |
-| `docs/DEBUGGING.md` | DOC15 verifies and moves its workflow to `docs/development/DEBUGGING.md`; DOC16 removes the old path. |
+| `docs/DEBUGGING.md` | Retain only as a compatibility pointer to `docs/development/DEBUGGING.md`; DOC16 removes the old path. |
 | `samples/README.md` | Retain as the concise sample catalog; link language behavior to focused authorities when those exist. |
 | `scripts/README.md` | Retain as concise script ownership guidance linking to the Makefile-owned development workflow. |
 | `std/README.md` | Retain as the current standard-library status note; later link runtime and language authorities without speculating about an unimplemented library. |
-| `tests/README.md` | DOC15 slims it to top-level test placement and links to `docs/development/TESTING.md`. |
-| `tests/compiler/README.md` and `tests/compiler/robustness/README.md` | Retain as concise corpus mechanics; DOC15 moves general testing policy to the development guide. |
-| `tests/golden/README.md` | Retain golden discovery, sidecar, and harness mechanics; DOC15 removes duplicate feature claims. |
-| `tests/runtime/README.md` | DOC13 keeps only runtime-harness mechanics and links the runtime ABI authority; DOC15 aligns general test guidance. |
+| `tests/README.md` | Retain as the concise top-level test-data and harness index linking to the testing authority. |
+| `tests/compiler/README.md` and `tests/compiler/robustness/README.md` | Retain as concise corpus format and command mechanics linking to the testing authority. |
+| `tests/golden/README.md` | Retain golden discovery, sidecar, determinism, and harness mechanics without a feature inventory. |
+| `tests/runtime/README.md` | Retain runtime-harness mechanics and link the runtime ABI and testing authorities. |
 | `docs/roadmaps/README.md` | Retain as the only active-plan and dependency index. |
 | Active roadmap and discovery documents under `docs/roadmaps/` | Retain while actionable, then archive completed roadmaps and keep only pending discoveries indexed. |
 | Documents under `docs/archive/` | Preserve as history; DOC16 repairs links to new living authorities without rewriting historical prose. |
@@ -138,7 +140,7 @@ this ledger stale.
 | `grammar/README.md` compatibility path | Historical roadmap prose and external links may still name it; all living repository authorities now link directly to `docs/language/GRAMMAR.md`. |
 | `docs/REPO_STRUCTURE.md` | `README.md`, `docs/README.md`, `docs/compiler/README.md`, and `docs/archive/README.md` while the test replacement remains pending. |
 | `docs/NEXT_SLICE_BOUNDARIES.md` | `README.md`, `docs/README.md`, and `docs/archive/README.md`. |
-| `docs/DEBUGGING.md` | `README.md` and `docs/README.md`. |
+| `docs/DEBUGGING.md` | `docs/README.md` and `docs/REPO_STRUCTURE.md` retain compatibility links until the legacy entry point is removed. |
 
 Archived roadmap prose also names several legacy paths in code formatting.
 Those are historical references rather than links; DOC16 preserves the prose

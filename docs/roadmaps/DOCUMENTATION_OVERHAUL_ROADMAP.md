@@ -1,6 +1,6 @@
 # Documentation Overhaul Roadmap
 
-Status: planned; DOC15 is next.
+Status: planned; DOC16 is next.
 
 This roadmap replaces Skald's organically grown documentation with a small,
 explicit information architecture. The result should let a reader distinguish
@@ -180,7 +180,7 @@ does not repeat the complete feature-status matrix.
 - [x] DOC12 — Separate backend and target documentation
 - [x] DOC13 — Establish the runtime ABI authority
 - [x] DOC14 — Rewrite driver, artifact, and workflow documentation
-- [ ] DOC15 — Consolidate testing and debugging guidance
+- [x] DOC15 — Consolidate testing and debugging guidance
 - [ ] DOC16 — Update entry points and remove superseded monoliths
 - [ ] DOC17 — Verify, close, and archive the overhaul
 
@@ -572,19 +572,19 @@ accurate owners and remain reproducible through the Makefile.
 **Purpose:** Document how to verify and inspect the compiler without turning
 test guides into duplicate feature specifications.
 
-- [ ] Create `development/TESTING.md` for test layers, ownership, fixture and
+- [x] Create `development/TESTING.md` for test layers, ownership, fixture and
       corpus placement, determinism, robustness, focused commands, and when to
       add unit, integration, golden, or runtime coverage.
-- [ ] Create `development/DEBUGGING.md` from the current phase-artifact table,
+- [x] Create `development/DEBUGGING.md` from the current phase-artifact table,
       dump workflow, verifier boundaries, assembly inspection, and concise
       symptom-to-owner guidance.
-- [ ] Verify renderer names, public paths, test locations, commands, process
+- [x] Verify renderer names, public paths, test locations, commands, process
       isolation, mutation hooks, and verifier invocation points against code
       and tests.
-- [ ] Slim `tests/README.md` and test-local READMEs to discovery formats,
+- [x] Slim `tests/README.md` and test-local READMEs to discovery formats,
       sidecars, harness mechanics, and links; remove exhaustive feature
       inventories.
-- [ ] Keep language and ABI expectations in their authoritative documents even
+- [x] Keep language and ABI expectations in their authoritative documents even
       when a test guide names representative coverage.
 
 **Tests:** Run public API and dump tests, golden expectation tests,
