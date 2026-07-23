@@ -50,6 +50,15 @@ unsuccessfully without returning to Skald or guaranteeing remaining
 source-level cleanup. It does not introduce a catchable exception or settle a
 general panic facility.
 
+The frozen, unimplemented
+[shared-ownership design](SHARED_OWNERSHIP.md#unrecoverable-failures) applies
+the same non-returning boundary to allocation failure and `u64` strong-count
+overflow. Neither failure is catchable or guarantees remaining cleanup.
+Strong-count underflow, invalid handles, double finalization, and use after
+release are compiler/runtime defects rather than source-level failures. These
+rules do not change current compiler support or establish a general panic
+facility.
+
 ## Cleanup and abrupt termination
 
 The implemented deterministic cleanup rules apply to normal block

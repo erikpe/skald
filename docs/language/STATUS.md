@@ -11,8 +11,8 @@ model.
 
 - **Implemented contract** — accepted or emitted by the current compiler and
   protected by implementation and tests.
-- **Frozen design** — source-visible behavior deliberately settled for an
-  active implementation plan but not yet fully implemented.
+- **Frozen design** — source-visible behavior deliberately settled for
+  implementation but not yet fully implemented.
 - **Exploratory direction** — useful non-normative constraints or examples;
   details may change before implementation.
 - **Open question** — no implementation-ready source and semantic contract
@@ -69,7 +69,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
+| [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) | **Frozen design** | Non-null `shared T`, concrete `new`, copy/adopt/release value semantics, non-atomic `u64` strong counts, dynamic complete-object destruction, hidden call/narrowing anchors, permitted strong-cycle leaks, and a minimal allocation ABI are settled but not implemented. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |
 | Strings | **Exploratory direction** | An immutable language-facing string value is intended; its type/literal forms, encoding, byte semantics, ownership, storage, and library contract are open. |
@@ -82,8 +82,9 @@ guarantees.
 | Standard library | **Open question** | No Skald-written standard library is implemented; current scalar output is bootstrap runtime interoperation. |
 
 These rows are deliberately brief. Future behavior becomes normative only in a
-focused language document and reaches **frozen design** only after its active
-roadmap resolves the implementation-dependent choices.
+focused language document and reaches **frozen design** only after that design
+settles its source-visible and implementation-dependent choices. A roadmap
+then owns implementation order rather than redefining the frozen contract.
 
 ## Verification basis
 

@@ -128,9 +128,19 @@ operations above. It has no public ABI for:
 - recoverable or checked exceptions.
 
 Future language designs may require some of these responsibilities, but they
-do not exist merely because a runtime library is present. A future addition
-must first have a source-language contract, then define its runtime ownership,
-failure behavior, ABI representation, version transition, and focused tests.
+do not exist merely because a runtime library is present.
+
+Shared ownership now has a frozen, unimplemented boundary in the
+[Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#minimal-c-runtime-abi).
+Its implementation will make an incompatible transition to ABI version 5 and
+add only checked `ska_rt_alloc(uint64_t)` and `ska_rt_free(void *)` wrappers.
+Reference counting, metadata, anchors, and finalizer selection remain
+compiler-owned. This planned transition does not add those symbols to the
+currently shipped version-4 header or archive.
+
+Any other future addition must first have a source-language contract, then
+define its runtime ownership, failure behavior, ABI representation, version
+transition, and focused tests.
 
 ## Verification
 

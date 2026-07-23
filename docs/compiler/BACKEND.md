@@ -4,7 +4,10 @@ Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
 boundary. Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a
-separate contract.
+separate contract. The frozen future shared-handle/header layout and generated
+reference-counting realization are owned by the
+[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
+the current target profile below.
 
 ## Backend interface and target registry
 
@@ -248,6 +251,13 @@ step before the user body or synthesized direct fields. Cleanup follows the
 verified plan through derived bodies, recursively projected fields, and the
 base chain. No path performs implicit allocation, deallocation, or aggregate
 runtime copy.
+
+The frozen shared-ownership extension will add explicit verified allocation,
+copy/adopt/release, and anchor operations. Its one-word handle, allocation
+header, dynamic finalizer, and internal ABI rules are fixed in
+[Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
+Until that extension is implemented, the current backend continues to reject
+shared MIR and emits no allocation or reference-counting path.
 
 ## Symbols and process entry
 

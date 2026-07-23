@@ -21,8 +21,11 @@ Use the authority closest to the behavior:
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
 - exact classes, inline containment, receivers, initialization, and object
   places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
-- call-scoped alias access, lifetime, and future ownership boundaries belong in
+- implemented call-scoped alias access and lifetime belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
+- frozen non-null shared values, heap allocation, strong ownership,
+  last-owner destruction, and borrow-anchor semantics belong in
+  [shared ownership and heap allocation](language/SHARED_OWNERSHIP.md);
 - implemented inheritance, polymorphic views, virtual/interface dispatch,
   type tests, and checked narrowing belong in
   [polymorphism](language/POLYMORPHISM.md);
@@ -36,6 +39,9 @@ Use the authority closest to the behavior:
   policy belong in the [compiler architecture](compiler/README.md);
 - phase products, IR responsibilities, verification, dumps, and trust
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- frozen shared-owner lowering, allocation layout, generated reference
+  counting, finalizers, and the future minimal allocation ABI belong in the
+  [shared-ownership compiler and runtime contract](compiler/SHARED_OWNERSHIP.md);
 - target legality, layout, ABI realization, and code generation belong in the
   [backend and target contract](compiler/BACKEND.md);
 - the public C runtime surface and compiler/runtime compatibility mechanism

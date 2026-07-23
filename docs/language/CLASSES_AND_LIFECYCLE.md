@@ -498,6 +498,13 @@ interface dispatch, type tests, and checked narrowing execute on x86-64.
 Their maturity is recorded in the [status matrix](STATUS.md), and the
 [polymorphism profile](POLYMORPHISM.md) owns their language contract.
 
+Shared fields, heap construction, shared copying and assignment, and dynamic
+last-owner destruction now have a frozen but unimplemented extension in
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). That extension
+preserves the lifecycle order above: shared fields copy in declaration order,
+secure incoming owners before releasing old owners during assignment, and
+release in reverse declaration order during complete-object destruction.
+
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment
 algorithms, object offsets, hidden receiver placement, calling conventions,

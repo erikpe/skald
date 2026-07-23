@@ -102,6 +102,11 @@ Some type shapes above can be parsed in a general declaration position but
 are rejected semantically for external functions. Their appearance in the
 grammar does not extend the interoperability contract.
 
+The frozen initial [shared-ownership profile](SHARED_OWNERSHIP.md#initial-exclusions)
+deliberately preserves this restriction: shared values do not cross the
+external boundary, and the future allocator functions remain compiler/runtime
+ABI operations rather than source-visible shared-handle interoperation.
+
 ## Future modules and broader interoperation
 
 Modules and multiple-file programs are an **open question**, not reserved or

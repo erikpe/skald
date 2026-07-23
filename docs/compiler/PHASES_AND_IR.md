@@ -3,7 +3,10 @@
 Status: authoritative for current compiler phase inputs, products, invariants,
 verification boundaries, deterministic dumps, and phase-facing public paths.
 Source-visible meaning remains owned by the
-[language documentation](../language/README.md).
+[language documentation](../language/README.md). The frozen additions required
+for shared ownership are specified separately in the
+[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md); they are
+not descriptions of current phase products.
 
 ## Pipeline contract
 
@@ -230,6 +233,13 @@ The MIR pass pipeline currently verifies without transforming. Future
 analyses and transformations must have explicit ordering and must return MIR
 that satisfies the same verifier boundary. Compiler correctness must not
 depend on an optimization pass being enabled.
+
+The frozen shared-ownership extension preserves this division of
+responsibility: HIR records owner provenance and anchor requirements, MIR
+makes copy/adopt/release and anchor lifetimes explicit, and verification proves
+their structural ownership invariants before a backend realizes them. Exact
+future requirements are owned by
+[Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#target-independent-phase-contract).
 
 ## Deterministic inspection
 

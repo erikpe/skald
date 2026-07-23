@@ -425,8 +425,9 @@ This profile excludes:
 - standalone inline `Obj` or interface values, fields, value parameters, or
   results;
 - local/general reference values and narrowed aliases that outlive their block;
-- `shared`, heap allocation, reference counting, borrow anchors, and dynamic
-  shared destruction;
+- the implementation of `shared`, heap allocation, reference counting, borrow
+  anchors, and dynamic shared destruction, whose future semantics are frozen
+  separately in [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md);
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, optionals, closures, generics, statics/globals, and reflection;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
@@ -435,8 +436,9 @@ This profile excludes:
 - `super` field/method access, qualified base calls, and explicit destructor
   calls.
 
-Their exclusion keeps this implementation profile bounded and does not settle
-their eventual design.
+Their exclusion keeps this implemented profile bounded. Some exclusions,
+including shared ownership, have a separate frozen design; the
+[status matrix](STATUS.md) distinguishes those from still-open directions.
 
 ## Implementation boundary
 

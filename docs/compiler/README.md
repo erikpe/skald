@@ -51,7 +51,10 @@ optimization.
 Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
-[runtime ABI](RUNTIME_ABI.md). Driver behavior is defined by
+[runtime ABI](RUNTIME_ABI.md). The frozen, not-yet-implemented ownership,
+header, finalizer, anchor, and minimal allocation design is defined by the
+[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). Driver
+behavior is defined by
 [driver and artifacts](DRIVER_AND_ARTIFACTS.md). Test ownership and selection
 are defined by [Testing](../development/TESTING.md), and inspection workflows
 by [Debugging the Compiler](../development/DEBUGGING.md). Contributor

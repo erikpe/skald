@@ -3,9 +3,10 @@
 Status: authoritative for executable class and `Obj` aliases. Interface views
 follow the same source rules and lower through verified MIR; their backend
 execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared
-ownership, borrow anchors, local aliases, and aliases into other future value
-families are not implemented or frozen. Their maturity is authoritative in
-the [status matrix](STATUS.md).
+ownership and shared-backed borrow anchors are frozen but not implemented in
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
+aliases into other future value families remain unfrozen. Feature maturity is
+authoritative in the [status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -40,11 +41,13 @@ External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
 The designated type may be one concrete class, one interface, or `Obj`.
-Primitive, `unit`, shared, optional, array, and function alias parameter types
-are unsupported. `Obj` is a universal non-owning target with no members or
-inline storage. Interfaces expose only their declared requirements. Alias
-modifiers are not accepted on locals, fields, results, elements, statics, or
-captures.
+Primitive, `unit`, optional, array, and function alias parameter types are
+unsupported. The current compiler also rejects shared-backed sources; the
+frozen extension borrows the allocated class/interface/`Obj` pointee rather
+than treating `shared T` as the alias's designated type. `Obj` is a universal
+non-owning target with no members or inline storage. Interfaces expose only
+their declared requirements. Alias modifiers are not accepted on locals,
+fields, results, elements, statics, or captures.
 
 ## Eligible argument places
 
@@ -169,20 +172,19 @@ call exit requiring an anchor cleanup rule.
 
 ## Future ownership boundary
 
-Shared ownership and heap allocation are an **exploratory direction**, not
-usable syntax or a settled language contract. The intended broad model is a
-non-null owning handle with shared lifetime and deterministic destruction of
-the complete dynamic object when its last owner is released. Allocation
-failure, copying and assignment effects, cycle behavior, dynamic metadata,
-thread safety, and exact destruction integration remain to be frozen before
-implementation.
+Shared ownership and heap allocation have a **frozen design** but are not
+usable in the current compiler. The focused
+[shared-ownership authority](SHARED_OWNERSHIP.md) defines non-null owning
+handles, copy/adopt/release value semantics, dynamic last-owner destruction,
+strong-cycle leaks, and shared-backed borrowing.
 
-Aliases from shared-owned or otherwise replaceable storage are unsupported.
-Such a feature would need a source-visible guarantee that the containing
-storage stays alive for the call even if another path replaces an owner. A
-caller-owned borrow anchor is one design direction, but eligible sources,
-anchor selection, lifetime extension, retain/release observability, cleanup on
-all exits, and anchor coalescing are not current rules.
+That design extends eligible alias arguments to objects reached through shared
+ownership. An existing shared local or value parameter remains live through an
+ordinary call. A produced shared temporary has its lifetime extended, while a
+replaceable shared field or nested place is copied into a hidden owning anchor
+at its receiver or argument evaluation position. The complete allocation owner
+also anchors inline subobjects within its payload. Anchors remain live through
+the call and are then released in ordinary reverse temporary order.
 
 Local alias declarations are also an open design area. Their syntax, eligible
 sources, lexical lifetime, initialization, control-flow joins, interaction
@@ -204,7 +206,9 @@ object address to be source-visible, a particular parameter representation,
 frame home, register class, field offset, or calling convention.
 
 The current target realization is an implementation concern recorded in the
-[backend and target contract](../compiler/BACKEND.md). Future
-allocation, reference counting, and ownership-runtime mechanisms are outside
-the current [runtime ABI](../compiler/RUNTIME_ABI.md#responsibility-boundary)
-until their language design is frozen.
+[backend and target contract](../compiler/BACKEND.md). Frozen future
+allocation, reference counting, anchoring, and ownership-runtime mechanisms
+are specified in the
+[shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md);
+they remain outside the current
+[runtime ABI](../compiler/RUNTIME_ABI.md#responsibility-boundary).

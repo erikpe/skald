@@ -327,5 +327,8 @@ scope, statement, return, and evaluation-order semantics.
 member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
+[Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes future
+`shared T` and `new T(...)` source forms and semantics. Those forms remain
+outside this implemented grammar until compiler support is added.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-narrowing semantics.

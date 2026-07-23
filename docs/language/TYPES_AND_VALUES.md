@@ -169,12 +169,14 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values and the value aspects of shared ownership are also not
-implemented or frozen. Their current maturity is recorded in the
-[status matrix](STATUS.md#not-implemented). Frozen polymorphic views, slicing,
-tests, and narrowing are separated into the
-[polymorphism profile](POLYMORPHISM.md). Legacy examples are not usable syntax
-or settled semantics.
+Function values are not implemented or frozen. Shared ownership is also not
+implemented, but its non-null value type, compatible views, and
+copy/adopt/release behavior are frozen in
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Their current
+maturity is recorded in the [status matrix](STATUS.md#not-implemented).
+Implemented polymorphic views, slicing, tests, and narrowing are separated
+into the [polymorphism profile](POLYMORPHISM.md). Legacy examples are not
+usable syntax or settled semantics.
 
 ## Implementation boundary
 

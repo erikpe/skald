@@ -68,6 +68,14 @@ completed as caller-owned objects. Detailed copy selection, result-object
 lifetime, temporaries, and permitted elision are defined by
 [class lifecycle semantics](CLASSES_AND_LIFECYCLE.md#owning-value-parameters).
 
+The frozen, unimplemented shared-ownership extension adds non-null shared
+value parameters and results without changing source evaluation order. Named
+arguments and returns copy an owner; produced values transfer their existing
+owner; the callee owns each shared value parameter; and the caller owns a
+completed shared result. Shared-backed receivers and alias arguments use
+hidden anchors where needed. The complete future rule is owned by
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md#strong-owner-value-semantics).
+
 ## Lexical scopes and locals
 
 A block is a lexical scope, except that a callable's outermost block shares the

@@ -70,9 +70,11 @@ operations, even when a class receives synthesized field-wise behavior.
 
 The broader direction keeps nullability and ownership visible in source types,
 preserves or reduces access through conversions, and prevents non-owning views
-from escaping their valid source lifetime. Shared allocation, optionals, and
-exceptional control flow are not current compiler features, so their final
-safety rules remain subject to focused design.
+from escaping their valid source lifetime. The frozen shared-ownership design
+uses non-null `shared T` handles, deterministic last-owner destruction, and
+hidden owning anchors for borrows from replaceable shared storage. Shared
+allocation is not a current compiler feature. Optionals and exceptional
+control flow also remain unimplemented, and their final rules are not frozen.
 
 External function declarations are trusted ABI assertions. They form a narrow
 interoperation boundary rather than a proof that foreign code satisfies Skald
@@ -105,7 +107,10 @@ makes a result source-observable.
   classes, inline containment, receivers, ordinary initialization, and object
   places, plus copying, assignment, temporaries, and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
-  call-scoped aliases and the maturity boundary around future ownership forms.
+  call-scoped aliases, non-exclusive access, and current inline lifetime.
+- [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes the
+  future non-null shared value, allocation, copy/release, dynamic destruction,
+  cycle, and borrow-anchor semantics without claiming compiler support.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
   and checked narrowing.
