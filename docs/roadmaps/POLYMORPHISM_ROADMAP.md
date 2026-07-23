@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM10 is next. The
+Status: in progress; PM11 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -93,7 +93,7 @@ The frozen restricted profile excludes:
 - [x] PM7 — Represent and verify static inheritance in MIR
 - [x] PM8 — Lower static inheritance on x86-64
 - [x] PM9 — Resolve virtual declarations and override families
-- [ ] PM10 — Select virtual calls and receiver views in HIR
+- [x] PM10 — Select virtual calls and receiver views in HIR
 - [ ] PM11 — Represent and verify virtual dispatch in MIR
 - [ ] PM12 — Lower virtual dispatch on x86-64
 - [ ] PM13 — Parse and resolve interfaces and conformance declarations
@@ -336,15 +336,15 @@ and every override is fully validated before executable call selection.
 **Purpose:** Make dynamic versus direct dispatch and receiver metadata explicit
 in typed executable semantics.
 
-- [ ] Distinguish direct and virtual method targets in HIR using selected method
+- [x] Distinguish direct and virtual method targets in HIR using selected method
       and override-family identities.
-- [ ] Represent the frozen complete-object pointer/view and dynamic-class
+- [x] Represent the frozen complete-object pointer/view and dynamic-class
       metadata carried by polymorphic alias receivers.
-- [ ] Preserve dynamic receiver information through parameter forwarding,
+- [x] Preserve dynamic receiver information through parameter forwarding,
       nested calls, and base methods calling virtual methods through `self`.
-- [ ] Enforce receiver access before dispatch selection and keep calls on sliced
+- [x] Enforce receiver access before dispatch selection and keep calls on sliced
       inline bases exact and static.
-- [ ] Extend HIR dumps and diagnostics without introducing ABI fields.
+- [x] Extend HIR dumps and diagnostics without introducing ABI fields.
 
 **Tests:** Add HIR/type-check tests for base/derived receivers, deep overrides,
 `self` redispatch, forwarding, mutable calls, recursion, and sliced bases; run

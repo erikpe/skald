@@ -70,7 +70,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Dynamic polymorphism](POLYMORPHISM.md) | **Partial implementation** | Static hierarchy, lifecycle, inherited access, ancestor/`Obj` views, slicing, and x86-64 execution are implemented. Virtual/`override` declarations and exact family validation are implemented, but calls remain static; dynamic and interface dispatch, type tests, and narrowing remain unavailable. |
+| [Dynamic polymorphism](POLYMORPHISM.md) | **Partial implementation** | Static hierarchy, lifecycle, inherited access, ancestor/`Obj` views, slicing, and x86-64 execution are implemented. HIR selects virtual-family calls and preserves dynamic receiver origins; MIR and backend virtual/interface dispatch, type tests, and narrowing remain unavailable. |
 | [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |

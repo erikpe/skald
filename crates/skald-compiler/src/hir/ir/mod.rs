@@ -26,15 +26,15 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,
-    HirUnaryOperation,
+    HirMethodCallTarget, HirUnaryOperation,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirConstruction, HirCopyAssignment, HirCopyCapability,
     HirCopyConstruction, HirFieldAssignment, HirFieldConstruction, HirFieldCopyAssignment,
-    HirFieldCopyConstruction, HirFieldPlace, HirObjectCall, HirObjectCallTarget,
-    HirObjectInitialization, HirObjectPath, HirObjectPlace, HirObjectProducer, HirObjectReturn,
-    HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation, HirSynthesizedCopy,
-    HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
+    HirFieldCopyConstruction, HirFieldPlace, HirMethodReceiver, HirObjectCall, HirObjectCallTarget,
+    HirObjectInitialization, HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer,
+    HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
+    HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

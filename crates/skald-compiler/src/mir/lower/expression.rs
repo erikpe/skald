@@ -59,9 +59,9 @@ impl BodyLowerer<'_> {
             )),
             HirExpressionKind::MethodCall {
                 receiver,
-                method,
+                target,
                 arguments,
-            } => self.lower_method_call(expression, receiver, *method, arguments),
+            } => self.lower_method_call(expression, receiver, *target, arguments),
         }
     }
 

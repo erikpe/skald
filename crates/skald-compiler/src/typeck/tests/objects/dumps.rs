@@ -60,8 +60,11 @@ fn object_hir_dump_is_exact_and_identity_based() {
             "            ElidedCopy\n",
             "              Operation Synthesized c0\n",
             "        Return @150..169\n",
-            "          MethodCall c0:method0 : i64 @157..168\n",
-            "            ObjectPlace f0:l0 : class c0 mutable @157..162\n",
+            "          MethodCall Direct c0:method0 : i64 @157..168\n",
+            "            Receiver\n",
+            "              ObjectPlace f0:l0 : class c0 mutable @157..162\n",
+            "              Origin Exact dynamic c0\n",
+            "                ObjectPlace f0:l0 : class c0 mutable @157..162\n",
         )
     );
 }

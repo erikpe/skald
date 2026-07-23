@@ -65,12 +65,10 @@ fn checks_aliases_across_calls_owners_forwarding_grouping_and_overlap() {
     let HirExpressionKind::DirectCall { arguments, .. } = &left.kind else {
         panic!("expected forwarding call");
     };
-    assert!(matches!(arguments[0], HirCallArgument::Place(_)));
-    assert!(matches!(arguments[1], HirCallArgument::Place(_)));
+    assert!(matches!(arguments[0], HirCallArgument::View(_)));
+    assert!(matches!(arguments[1], HirCallArgument::View(_)));
     assert!(matches!(arguments[2], HirCallArgument::Value(_)));
-    let HirCallArgument::Place(first) = &arguments[0] else {
-        unreachable!()
-    };
+    let (_, first) = class_alias_view(&arguments[0]);
     assert_eq!(first.access, HirAccess::Mutable);
 }
 
@@ -297,8 +295,10 @@ fn alias_hir_dump_is_exact_and_records_modes_arguments_and_access() {
             "              Operation Synthesized c0\n",
             "        Return @160..179\n",
             "          DirectCall f0 : i64 @167..178\n",
-            "            PlaceArgument @172..177\n",
+            "            ViewArgument -> class c0 readonly @172..177\n",
             "              ObjectPlace f1:l0 : class c0 mutable @172..177\n",
+            "              Origin Exact dynamic c0\n",
+            "                ObjectPlace f1:l0 : class c0 mutable @172..177\n",
         )
     );
 }

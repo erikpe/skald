@@ -97,11 +97,13 @@ access and may additionally write primitive fields, replace objects in
 supported assignment contexts, and call mutable methods.
 
 Receiver requirements are checked at the call site. A mutable method requires
-a mutable receiver place; a read-only method accepts either access level. Calls
-are currently selected statically from the receiver's static class, including
-calls to declarations marked `virtual` or `override`. Those modifiers and
-their families are validated, but executable virtual and interface dispatch
-have not reached HIR call selection.
+a mutable receiver place; a read-only method accepts either access level. HIR
+selects non-virtual and exact owning calls directly. Calls through forwarded
+aliases or `self` to declarations marked `virtual` or `override` name the
+virtual family, stable slot, statically selected declaration, and complete-
+object origin. A sliced inline base is an independent exact base object and
+therefore selects a direct call. MIR and backend execution of dynamic calls
+remain unavailable.
 
 The root binding determines access for an entire inline path:
 

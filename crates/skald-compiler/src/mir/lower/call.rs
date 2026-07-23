@@ -1,7 +1,10 @@
 //! Scalar calls and source-ordered call argument lowering.
 
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirExpression, HirObjectView, HirViewSource, HirViewTarget},
+    hir::{
+        HirAccess, HirCallArgument, HirExpression, HirMethodCallTarget, HirMethodReceiver,
+        HirObjectView, HirViewSource, HirViewTarget,
+    },
     identity::FunctionId,
 };
 
@@ -22,15 +25,15 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_method_call(
         &mut self,
         expression: &HirExpression,
-        receiver: &crate::hir::HirObjectPlace,
-        method: crate::identity::MethodId,
+        receiver: &HirMethodReceiver,
+        target: HirMethodCallTarget,
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
         // Receiver selection precedes all explicit argument effects.
-        let receiver = self.lower_object_place(receiver);
+        let receiver = self.lower_object_place(&receiver.place);
         let arguments = self.lower_call_arguments(arguments);
         self.emit_scalar_call(
-            MirCallTarget::Method(method),
+            MirCallTarget::Method(target.selected()),
             Some(receiver),
             arguments,
             expression,

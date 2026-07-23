@@ -72,7 +72,7 @@ fn selects_copy_returns_and_destination_oriented_object_calls() {
     let dump = dump_hir(&hir);
     assert!(dump.contains("ObjectResult c0"));
     assert!(dump.contains("ObjectCall function f0 -> c0"));
-    assert!(dump.contains("ObjectCall method c0:method0 -> c0"));
+    assert!(dump.contains("ObjectCall method Direct c0:method0 -> c0"));
     assert_eq!(dump, dump_hir(&hir));
 }
 

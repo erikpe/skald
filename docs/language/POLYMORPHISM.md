@@ -5,9 +5,12 @@ inheritance, complete base lifecycle, inherited static member access,
 access-preserving class/`Obj` alias views, and inline slicing execute through
 verified MIR and the x86-64 backend. Contextual `virtual` and `override`
 declarations are accepted, assigned stable families, and checked for exact
-compatibility. Calls remain statically selected; dynamic dispatch, interfaces,
-type tests, and narrowing remain unavailable. The [status matrix](STATUS.md)
-distinguishes the executable static subset from the remaining frozen design.
+compatibility. Dynamic dispatch, interfaces, type tests, and narrowing remain
+unavailable below HIR. Typed HIR now distinguishes virtual-family calls from
+direct calls and retains complete-object and dynamic-class provenance across
+aliases and `self`; MIR representation and execution remain pending. The
+[status matrix](STATUS.md) distinguishes the typed semantic boundary from the
+executable static subset.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -218,15 +221,20 @@ Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
 occur in source evaluation order.
 
-The current HIR and MIR implement class-to-ancestor and class-to-`Obj` alias
-conversions, including forwarding of `Obj` aliases. Each converted MIR
-argument retains its source place, static target, and restricted access.
-Direct-base projections preserve the unique class subobject identity.
-The x86-64 backend lowers a static class view as the selected subobject address
-and carries an `Obj` view as an opaque source address; `Obj` has no operations
-in this static subset. Interface targets and the complete-object/dynamic
-metadata required for observable dispatch arrive with their corresponding
-verified IR contracts.
+HIR represents every class alias argument as a view with its selected static
+subobject, static target, restricted access, and complete-object origin. An
+exact owning source names its complete place and exact dynamic class. A
+forwarded alias or `self` names the incoming binding that carries both runtime
+components. Selecting a class field begins a new exact complete object;
+selecting a base preserves the enclosing origin.
+
+MIR and the x86-64 backend currently lower direct calls, including exact
+virtual-declaration calls that HIR can devirtualize. Existing static
+class/`Obj` views still retain their source place, target, and access in MIR.
+HIR-to-MIR lowering returns a structured unsupported-operation error when a
+call requires forwarded dynamic dispatch; it does not silently select the
+static declaration. MIR receiver metadata and executable virtual dispatch
+arrive in the next implementation stages.
 
 ## Inline slicing
 

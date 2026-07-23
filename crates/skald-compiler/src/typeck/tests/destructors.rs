@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirExpressionKind, HirParameterMode, HirStatement},
+    hir::{HirAccess, HirExpressionKind, HirParameterMode, HirStatement},
     identity::{CallableId, ClassId, DestructorId, FieldId, FunctionId},
     object_path::ObjectProjection,
 };
@@ -64,9 +64,7 @@ fn checks_destructor_bodies_as_mutable_complete_object_members() {
     let HirExpressionKind::DirectCall { arguments, .. } = &readonly_call.call.kind else {
         panic!("expected direct call");
     };
-    let HirCallArgument::Place(place) = &arguments[0] else {
-        panic!("expected object place argument");
-    };
+    let (_, place) = class_alias_view(&arguments[0]);
     assert_eq!(place.access, HirAccess::Mutable);
     assert_eq!(
         place.path.projections.as_slice(),

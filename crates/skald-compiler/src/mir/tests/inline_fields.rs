@@ -49,8 +49,8 @@ fn lowers_deep_source_places_without_class_values_and_preserves_them_through_pas
         .flat_map(|block| &block.instructions)
         .filter_map(|instruction| match instruction {
             MirInstruction::Call(call) => match &call.arguments[0] {
-                MirArgument::Place(place) => Some(place),
-                MirArgument::Value(_) | MirArgument::View(_) | MirArgument::OwnedPlace(_) => None,
+                MirArgument::View(view) => Some(&view.source),
+                MirArgument::Value(_) | MirArgument::Place(_) | MirArgument::OwnedPlace(_) => None,
             },
             _ => None,
         })
@@ -98,7 +98,7 @@ fn lowers_deep_source_places_without_class_values_and_preserves_them_through_pas
         dump.contains("initialize c0:init0:s0.field(c0:field2) with c3:init0(value(c0:init0:v0))")
     );
     assert!(dump.contains("store c0:method1:s0.field(c0:field1).field(c3:field2).field(c2:field1)"));
-    assert!(dump.contains("place(indirect(f2:s0).field(c0:field1).field(c3:field2))"));
+    assert!(dump.contains("view(indirect(f2:s0).field(c0:field1).field(c3:field2) -> class c2"));
 
     let expected = program.clone();
     assert_eq!(run_mir_pipeline(program).unwrap(), expected);

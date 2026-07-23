@@ -3,8 +3,8 @@
 use super::*;
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirObjectPlace, HirObjectView, HirViewSource, HirViewTarget,
-        Type,
+        HirAccess, HirCallArgument, HirObjectOrigin, HirObjectPlace, HirObjectView, HirViewSource,
+        HirViewTarget, Type,
     },
     identity::BindingId,
     resolve::{ResolvedExpression, ResolvedParameter, ResolvedTypeKind},
@@ -15,7 +15,10 @@ use crate::{
 };
 
 enum CheckedAliasSource {
-    Class(HirObjectPlace),
+    Class {
+        place: HirObjectPlace,
+        origin: HirObjectOrigin,
+    },
     Obj {
         binding: BindingId,
         access: HirAccess,
@@ -26,14 +29,14 @@ enum CheckedAliasSource {
 impl CheckedAliasSource {
     const fn access(&self) -> HirAccess {
         match self {
-            Self::Class(place) => place.access,
+            Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } => *access,
         }
     }
 
     const fn span(&self) -> Span {
         match self {
-            Self::Class(place) => place.span(),
+            Self::Class { place, .. } => place.span(),
             Self::Obj { span, .. } => *span,
         }
     }
@@ -82,14 +85,18 @@ impl CallableChecker<'_, '_> {
                         span: binding.span,
                     })
                 } else {
-                    self.check_binding_place(binding.binding, binding.span, false)
-                        .map(CheckedAliasSource::Class)
+                    let place = self.check_binding_place(binding.binding, binding.span, false)?;
+                    let origin = self.object_origin(&place);
+                    Some(CheckedAliasSource::Class { place, origin })
                 }
             }
             ResolvedExpression::Grouped(grouped) => {
                 let mut source = self.check_alias_source(&grouped.expression)?;
                 match &mut source {
-                    CheckedAliasSource::Class(place) => place.path.span = grouped.span,
+                    CheckedAliasSource::Class { place, origin } => {
+                        place.path.span = grouped.span;
+                        set_origin_span(origin, grouped.span);
+                    }
                     CheckedAliasSource::Obj { span, .. } => *span = grouped.span,
                 }
                 Some(source)
@@ -113,8 +120,9 @@ impl CallableChecker<'_, '_> {
                     .receiver
                     .clone()
                     .project_field(access.field, class, access.span);
-                self.check_object_place(&place, ObjectPlaceUse::Alias)
-                    .map(CheckedAliasSource::Class)
+                let place = self.check_object_place(&place, ObjectPlaceUse::Alias)?;
+                let origin = self.object_origin(&place);
+                Some(CheckedAliasSource::Class { place, origin })
             }
             _ => {
                 self.diagnostics.push(
@@ -153,7 +161,7 @@ impl CallableChecker<'_, '_> {
         };
 
         match (source, expected) {
-            (CheckedAliasSource::Class(place), Type::Class(target)) => {
+            (CheckedAliasSource::Class { place, origin }, Type::Class(target)) => {
                 let actual = place.class();
                 let Some(projected) = self.project_place_to_ancestor(place, target) else {
                     let actual_name = self
@@ -176,22 +184,20 @@ impl CallableChecker<'_, '_> {
                     ));
                     return None;
                 };
-                if actual == target {
-                    Some(HirCallArgument::Place(projected))
-                } else {
-                    let span = projected.span();
-                    Some(HirCallArgument::View(HirObjectView {
-                        source: HirViewSource::Place(projected),
-                        target: HirViewTarget::Class(target),
-                        access: required,
-                        span,
-                    }))
-                }
+                let span = projected.span();
+                Some(HirCallArgument::View(HirObjectView {
+                    source: HirViewSource::Place(projected),
+                    origin: Box::new(origin),
+                    target: HirViewTarget::Class(target),
+                    access: required,
+                    span,
+                }))
             }
-            (CheckedAliasSource::Class(place), Type::Obj) => {
+            (CheckedAliasSource::Class { place, origin }, Type::Obj) => {
                 let span = place.span();
                 Some(HirCallArgument::View(HirObjectView {
                     source: HirViewSource::Place(place),
+                    origin: Box::new(origin),
                     target: HirViewTarget::Obj,
                     access: required,
                     span,
@@ -211,6 +217,13 @@ impl CallableChecker<'_, '_> {
                     access,
                     span,
                 },
+                origin: Box::new(HirObjectOrigin::Forwarded {
+                    binding,
+                    static_target: HirViewTarget::Obj,
+                    access,
+                    dispatch_limit: None,
+                    span,
+                }),
                 target: HirViewTarget::Obj,
                 access: required,
                 span,
@@ -250,5 +263,14 @@ impl CallableChecker<'_, '_> {
             }
         }
         None
+    }
+}
+
+fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
+    match origin {
+        HirObjectOrigin::Exact { complete, .. } => complete.path.span = span,
+        HirObjectOrigin::Forwarded {
+            span: origin_span, ..
+        } => *origin_span = span,
     }
 }

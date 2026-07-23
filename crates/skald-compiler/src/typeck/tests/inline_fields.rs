@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirExpressionKind, HirStatement},
+    hir::{HirAccess, HirExpressionKind, HirStatement},
     identity::{BindingId, ClassId, FieldId, FunctionId},
     object_path::ObjectProjection,
 };
@@ -66,9 +66,7 @@ fn supports_nested_places_across_every_live_root_kind() {
     let HirExpressionKind::DirectCall { arguments, .. } = &left.kind else {
         panic!("expected nested alias call");
     };
-    let HirCallArgument::Place(alias) = &arguments[0] else {
-        panic!("expected place argument");
-    };
+    let (_, alias) = class_alias_view(&arguments[0]);
     assert_eq!(
         alias.root(),
         BindingId::Parameter(hir.declarations.get(FunctionId::new(3)).unwrap().parameters[0].id)
@@ -86,13 +84,13 @@ fn supports_nested_places_across_every_live_root_kind() {
         panic!("expected nested method call");
     };
     assert_eq!(
-        receiver.projections(),
+        receiver.place.projections(),
         [
             ObjectProjection::Field(branch_projection),
             ObjectProjection::Field(leaf_projection)
         ]
     );
-    assert_eq!(receiver.access, HirAccess::ReadOnly);
+    assert_eq!(receiver.place.access, HirAccess::ReadOnly);
 
     let through_mut = hir.definitions.get(FunctionId::new(4)).unwrap();
     let HirStatement::FieldAssignment(assignment) = &through_mut.body.statements[0] else {

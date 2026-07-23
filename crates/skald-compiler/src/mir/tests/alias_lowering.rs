@@ -120,8 +120,8 @@ fn lowers_alias_parameters_and_supported_place_sources() {
     assert!(dump.contains("Signature (mut ref class c0, i64) -> unit"));
     assert!(dump.contains("ref-parameter"));
     assert!(dump.contains("mut-ref-parameter"));
-    assert!(dump.contains("place(indirect("));
-    assert!(dump.contains("place(f"));
+    assert!(dump.contains("view(indirect("));
+    assert!(dump.contains("view(f"));
     assert!(dump.contains("Initializer c1:init0(ref class c0)"));
 
     let main = program.definitions.get(program.entry_function).unwrap();
@@ -137,11 +137,11 @@ fn lowers_alias_parameters_and_supported_place_sources() {
             _ => None,
         })
         .expect("main must call touch_twice");
-    let [MirArgument::Place(left), MirArgument::Place(right)] = overlap_call.arguments.as_slice()
+    let [MirArgument::View(left), MirArgument::View(right)] = overlap_call.arguments.as_slice()
     else {
-        panic!("touch_twice must receive two places");
+        panic!("touch_twice must receive two non-owning views");
     };
-    assert_eq!(left, right);
+    assert_eq!(left.source, right.source);
     assert_eq!(dump, dump_mir(&program));
 }
 
@@ -191,10 +191,10 @@ fn lowers_mixed_alias_and_scalar_arguments_in_source_evaluation_order() {
             assert!(matches!(
                 calls[2].arguments.as_slice(),
                 [
-                    MirArgument::Place(_),
+                    MirArgument::View(_),
                     MirArgument::Value(_),
                     MirArgument::Value(_),
-                    MirArgument::Place(_),
+                    MirArgument::View(_),
                 ]
             ));
         }

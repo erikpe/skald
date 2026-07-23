@@ -552,12 +552,12 @@ impl HirDumper {
             }
             HirExpressionKind::MethodCall {
                 receiver,
-                method,
+                target,
                 arguments,
             } => {
-                self.typed_line(&format!("MethodCall {method}"), expression);
+                self.typed_line(&format!("MethodCall {}", method_target(target)), expression);
                 self.indented(|dumper| {
-                    dumper.object_place(receiver);
+                    dumper.method_receiver(receiver);
                     for argument in arguments {
                         dumper.call_argument(argument);
                     }
@@ -584,12 +584,14 @@ impl HirDumper {
     fn object_call(&mut self, call: &HirObjectCall) {
         let target = match call.target {
             HirObjectCallTarget::Direct(function) => format!("function {function}"),
-            HirObjectCallTarget::Method { method, .. } => format!("method {method}"),
+            HirObjectCallTarget::Method { target, .. } => {
+                format!("method {}", method_target(&target))
+            }
         };
         self.line(&format!("ObjectCall {target} -> {}", call.class), call.span);
         self.indented(|dumper| {
             if let HirObjectCallTarget::Method { receiver, .. } = &call.target {
-                dumper.object_place(receiver);
+                dumper.method_receiver(receiver);
             }
             for argument in &call.arguments {
                 dumper.call_argument(argument);
@@ -617,27 +619,24 @@ impl HirDumper {
                     HirAccess::Mutable => "mutable",
                 };
                 self.line(&format!("ViewArgument -> {target} {access}"), view.span);
-                self.indented(|dumper| match &view.source {
-                    crate::hir::HirViewSource::Place(place) => dumper.object_place(place),
-                    crate::hir::HirViewSource::Forwarded {
-                        binding,
-                        target,
-                        access,
-                        span,
-                    } => {
-                        let target = match target {
-                            crate::hir::HirViewTarget::Class(class) => format!("class {class}"),
-                            crate::hir::HirViewTarget::Obj => "Obj".to_owned(),
-                        };
-                        let access = match access {
-                            HirAccess::ReadOnly => "readonly",
-                            HirAccess::Mutable => "mutable",
-                        };
-                        dumper.line(
-                            &format!("ForwardedView {binding} : {target} {access}"),
-                            *span,
-                        );
+                self.indented(|dumper| {
+                    match &view.source {
+                        crate::hir::HirViewSource::Place(place) => dumper.object_place(place),
+                        crate::hir::HirViewSource::Forwarded {
+                            binding,
+                            target,
+                            access,
+                            span,
+                        } => {
+                            let target = view_target_name(*target);
+                            let access = access_name(*access);
+                            dumper.line(
+                                &format!("ForwardedView {binding} : {target} {access}"),
+                                *span,
+                            );
+                        }
                     }
+                    dumper.object_origin(&view.origin);
                 });
             }
             HirCallArgument::Copy(copy) => {
@@ -702,6 +701,45 @@ impl HirDumper {
         );
     }
 
+    fn method_receiver(&mut self, receiver: &HirMethodReceiver) {
+        self.heading("Receiver");
+        self.indented(|dumper| {
+            dumper.object_place(&receiver.place);
+            dumper.object_origin(&receiver.origin);
+        });
+    }
+
+    fn object_origin(&mut self, origin: &HirObjectOrigin) {
+        match origin {
+            HirObjectOrigin::Exact {
+                complete,
+                dynamic_class,
+            } => {
+                self.heading(&format!("Origin Exact dynamic {dynamic_class}"));
+                self.indented(|dumper| dumper.object_place(complete));
+            }
+            HirObjectOrigin::Forwarded {
+                binding,
+                static_target,
+                access,
+                dispatch_limit,
+                span,
+            } => {
+                let limit = dispatch_limit
+                    .map(|class| format!(" limit {class}"))
+                    .unwrap_or_default();
+                self.line(
+                    &format!(
+                        "Origin Forwarded {binding} : {} {}{limit}",
+                        view_target_name(*static_target),
+                        access_name(*access)
+                    ),
+                    *span,
+                );
+            }
+        }
+    }
+
     fn typed_line(&mut self, name: &str, expression: &HirExpression) {
         self.write_indentation();
         let _ = write!(self.output, "{name} : {}", expression.ty.name());
@@ -733,6 +771,31 @@ impl HirDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
+    }
+}
+
+fn method_target(target: &HirMethodCallTarget) -> String {
+    match target {
+        HirMethodCallTarget::Direct(method) => format!("Direct {method}"),
+        HirMethodCallTarget::Virtual {
+            family,
+            slot,
+            selected,
+        } => format!("Virtual {family} slot {slot} selected {selected}"),
+    }
+}
+
+fn view_target_name(target: HirViewTarget) -> String {
+    match target {
+        HirViewTarget::Class(class) => format!("class {class}"),
+        HirViewTarget::Obj => "Obj".to_owned(),
+    }
+}
+
+const fn access_name(access: HirAccess) -> &'static str {
+    match access {
+        HirAccess::ReadOnly => "readonly",
+        HirAccess::Mutable => "mutable",
     }
 }
 

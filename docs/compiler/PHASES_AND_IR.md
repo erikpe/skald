@@ -107,9 +107,12 @@ Static inheritance crosses this boundary explicitly. HIR records selected base
 initializers, complete lifecycle composition, identity-based base projections,
 inherited field and direct-method selections, access-preserving class/`Obj`
 alias views, and owning slices with exact target copy operations. It also
-retains validated virtual-family declaration metadata. Method calls remain
-statically selected in the current executable subset; dynamic call selection
-belongs to the next polymorphism stage.
+retains validated virtual-family declaration metadata. Method-call targets are
+explicitly direct or virtual; virtual targets carry the family, slot, and
+statically selected method. Receivers and alias views retain either an exact
+complete place/dynamic class or a forwarded binding that carries runtime
+complete-object and dynamic-class metadata. Destructor `self` origins also
+record the frozen dispatch limit.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -143,6 +146,11 @@ including base initialization, full-expression temporaries, view arguments,
 and slices into locals, fields, arguments, return storage, and assignments.
 Supported HIR may rely on producer invariants; arbitrary public HIR
 construction is not a supported input contract.
+
+Dynamic virtual calls are a typed HIR operation but are not yet representable
+in MIR. Lowering rejects them with `HirLoweringError` before constructing
+partial MIR. Exact owning and sliced receivers select direct HIR calls and
+continue through the existing executable pipeline.
 
 ## Verification and passes
 

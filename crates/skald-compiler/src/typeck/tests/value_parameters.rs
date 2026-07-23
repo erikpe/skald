@@ -33,7 +33,7 @@ fn selects_explicit_copy_arguments_and_owning_parameter_places() {
         panic!("expected direct call return");
     };
     assert!(matches!(arguments[0], HirCallArgument::Copy(_)));
-    assert!(matches!(arguments[1], HirCallArgument::Place(_)));
+    assert!(matches!(arguments[1], HirCallArgument::View(_)));
     assert!(matches!(arguments[2], HirCallArgument::Value(_)));
 
     let dump = dump_hir(&hir);

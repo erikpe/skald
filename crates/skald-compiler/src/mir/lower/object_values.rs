@@ -41,9 +41,9 @@ impl BodyLowerer<'_> {
     fn lower_object_call(&mut self, call: &HirObjectCall, destination: MirPlace) {
         let (target, receiver) = match &call.target {
             HirObjectCallTarget::Direct(function) => (MirCallTarget::Direct(*function), None),
-            HirObjectCallTarget::Method { receiver, method } => (
-                MirCallTarget::Method(*method),
-                Some(self.lower_object_place(receiver)),
+            HirObjectCallTarget::Method { receiver, target } => (
+                MirCallTarget::Method(target.selected()),
+                Some(self.lower_object_place(&receiver.place)),
             ),
         };
         let arguments = self.lower_call_arguments(&call.arguments);

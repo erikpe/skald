@@ -435,10 +435,10 @@ fn lower_object_call(expression: HirExpression, class: ClassId) -> HirObjectCall
         },
         HirExpressionKind::MethodCall {
             receiver,
-            method,
+            target,
             arguments,
         } => HirObjectCall {
-            target: HirObjectCallTarget::Method { receiver, method },
+            target: HirObjectCallTarget::Method { receiver, target },
             arguments,
             class,
             span,

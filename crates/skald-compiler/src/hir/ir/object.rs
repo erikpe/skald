@@ -1,15 +1,13 @@
 //! Typed object construction, copying, calls, and place operations.
 
 use crate::{
-    identity::{
-        BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, MethodId,
-    },
+    identity::{BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId},
     object_path::ObjectPath,
     source::Span,
 };
 
 use super::{
-    expression::{HirCallArgument, HirExpression},
+    expression::{HirCallArgument, HirExpression, HirMethodCallTarget},
     HirAccess,
 };
 
@@ -133,8 +131,8 @@ pub struct HirObjectCall {
 pub enum HirObjectCallTarget {
     Direct(FunctionId),
     Method {
-        receiver: HirObjectPlace,
-        method: MethodId,
+        receiver: HirMethodReceiver,
+        target: HirMethodCallTarget,
     },
 }
 
@@ -267,6 +265,35 @@ impl HirObjectPlace {
     }
 }
 
+/// The complete-object and dynamic-class provenance retained across a
+/// non-owning receiver boundary.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirObjectOrigin {
+    /// An independently owned inline object whose dynamic class is exact.
+    Exact {
+        complete: HirObjectPlace,
+        dynamic_class: ClassId,
+    },
+    /// A call-scoped alias or method receiver carrying runtime complete-object
+    /// and dynamic-class metadata from its caller.
+    Forwarded {
+        binding: BindingId,
+        static_target: HirViewTarget,
+        access: HirAccess,
+        /// Restricts virtual selection while a destructor body runs.
+        dispatch_limit: Option<ClassId>,
+        span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirMethodReceiver {
+    /// The statically selected subobject used for access and direct calls.
+    pub place: HirObjectPlace,
+    /// The complete object used by virtual selection and nested forwarding.
+    pub origin: Box<HirObjectOrigin>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirViewTarget {
     Class(ClassId),
@@ -277,6 +304,7 @@ pub enum HirViewTarget {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirObjectView {
     pub source: HirViewSource,
+    pub origin: Box<HirObjectOrigin>,
     pub target: HirViewTarget,
     pub access: HirAccess,
     pub span: Span,

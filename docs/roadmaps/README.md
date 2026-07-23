@@ -7,8 +7,8 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its executable profile
-  is frozen, virtual declaration and override-family resolution are complete,
-  and typed virtual-call selection is next.
+  is frozen, typed virtual calls and receiver origins are explicit in HIR, and
+  target-independent MIR representation and verification are next.
   The roadmap
   extends the completed exact-class object model with inheritance, lifecycle
   composition, virtual dispatch, interfaces, `Obj` views, type tests, and

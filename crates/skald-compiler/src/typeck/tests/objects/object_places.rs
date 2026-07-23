@@ -41,9 +41,7 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     else {
         panic!("expected typed forwarding call");
     };
-    let HirCallArgument::Place(place) = &arguments[0] else {
-        panic!("expected projected alias place");
-    };
+    let (view, place) = class_alias_view(&arguments[0]);
     assert_eq!(
         place.root(),
         BindingId::Parameter(inspect_declaration.parameters[0].id)
@@ -52,6 +50,13 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     assert_eq!(place.class(), ClassId::new(0));
     assert_eq!(place.access, HirAccess::ReadOnly);
     assert_eq!(place.span(), grouped_span);
+    assert!(matches!(
+        view.origin.as_ref(),
+        crate::hir::HirObjectOrigin::Exact {
+            dynamic_class,
+            ..
+        } if *dynamic_class == ClassId::new(0)
+    ));
 
     let mutable_declaration = resolved.declarations.get(FunctionId::new(2)).unwrap();
     let mutable_definition = resolved.definitions.get(FunctionId::new(2)).unwrap();
@@ -68,8 +73,8 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&mutable).kind else {
         panic!("expected nested method receiver");
     };
-    assert_eq!(receiver.projections(), expected);
-    assert_eq!(receiver.access, HirAccess::Mutable);
+    assert_eq!(receiver.place.projections(), expected);
+    assert_eq!(receiver.place.access, HirAccess::Mutable);
 
     let local_declaration = resolved.declarations.get(FunctionId::new(3)).unwrap();
     let local_definition = resolved.definitions.get(FunctionId::new(3)).unwrap();
@@ -86,9 +91,9 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     let HirExpressionKind::MethodCall { receiver, .. } = &returned_expression(&local).kind else {
         panic!("expected local nested method receiver");
     };
-    assert_eq!(receiver.projections(), expected);
-    assert_eq!(receiver.root(), BindingId::Local(local.locals[0].id));
-    assert_eq!(receiver.access, HirAccess::Mutable);
+    assert_eq!(receiver.place.projections(), expected);
+    assert_eq!(receiver.place.root(), BindingId::Local(local.locals[0].id));
+    assert_eq!(receiver.place.access, HirAccess::Mutable);
 
     let class = resolved.classes.get(ClassId::new(2)).unwrap();
     let method = &class.methods[0];

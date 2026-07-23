@@ -13,6 +13,7 @@ mod alias;
 mod call;
 mod place;
 mod primitive;
+mod receiver;
 
 pub(super) use place::ObjectPlaceUse;
 

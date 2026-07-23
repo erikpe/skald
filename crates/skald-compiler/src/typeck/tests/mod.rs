@@ -83,6 +83,18 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
     }
 }
 
+fn class_alias_view(
+    argument: &crate::hir::HirCallArgument,
+) -> (&crate::hir::HirObjectView, &crate::hir::HirObjectPlace) {
+    let crate::hir::HirCallArgument::View(view) = argument else {
+        panic!("expected class alias view argument");
+    };
+    let crate::hir::HirViewSource::Place(place) = &view.source else {
+        panic!("expected class alias view to retain its static place");
+    };
+    (view, place)
+}
+
 fn source_place(source: &crate::hir::HirObjectSource) -> &crate::hir::HirObjectPlace {
     let crate::hir::HirObjectSource::Place(place) = source else {
         panic!("expected an existing-place object source");

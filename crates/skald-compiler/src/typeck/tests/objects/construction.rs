@@ -184,9 +184,7 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
         statement.construction.initializer,
         InitializerId::new(ClassId::new(1), 0)
     );
-    let HirCallArgument::Place(seed) = &statement.construction.arguments[0] else {
-        panic!("expected alias constructor argument");
-    };
+    let (_, seed) = class_alias_view(&statement.construction.arguments[0]);
     assert_eq!(seed.access, HirAccess::ReadOnly);
 
     let dump = dump_hir(&hir);

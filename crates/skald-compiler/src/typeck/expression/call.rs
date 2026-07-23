@@ -2,9 +2,12 @@
 
 use super::*;
 use crate::{
-    hir::{HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind},
+    hir::{
+        HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirMethodCallTarget,
+        HirMethodReceiver, HirObjectOrigin,
+    },
     identity::BindingId,
-    resolve::{ResolvedParameter, ResolvedParameterBindingMode},
+    resolve::{ResolvedMethodDispatch, ResolvedParameter, ResolvedParameterBindingMode},
 };
 
 use crate::typeck::program::{
@@ -88,10 +91,36 @@ impl CallableChecker<'_, '_> {
             Some(&method.name),
             Some(method.name_span),
         )?;
+        let origin = self.object_origin(&receiver);
+        let target = match method.dispatch {
+            ResolvedMethodDispatch::Direct => HirMethodCallTarget::Direct(call.method),
+            ResolvedMethodDispatch::VirtualRoot { family, slot }
+            | ResolvedMethodDispatch::Override { family, slot, .. } => {
+                if matches!(
+                    origin,
+                    HirObjectOrigin::Exact { .. }
+                        | HirObjectOrigin::Forwarded {
+                            dispatch_limit: Some(_),
+                            ..
+                        }
+                ) {
+                    HirMethodCallTarget::Direct(call.method)
+                } else {
+                    HirMethodCallTarget::Virtual {
+                        family,
+                        slot,
+                        selected: call.method,
+                    }
+                }
+            }
+        };
         valid.then_some(HirExpression {
             kind: HirExpressionKind::MethodCall {
-                receiver,
-                method: call.method,
+                receiver: HirMethodReceiver {
+                    place: receiver,
+                    origin: Box::new(origin),
+                },
+                target,
                 arguments,
             },
             ty: lower_type(&method.return_type),

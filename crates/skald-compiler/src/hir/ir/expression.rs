@@ -1,13 +1,14 @@
 //! Typed scalar expressions, calls, and their arguments.
 
 use crate::{
-    identity::{BindingId, FunctionId, InitializerId, MethodId},
+    identity::{BindingId, FunctionId, InitializerId, MethodId, VirtualFamilyId, VirtualSlotId},
     source::Span,
 };
 
 use super::{
     object::{
-        HirFieldPlace, HirObjectPlace, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
+        HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource, HirObjectView,
+        HirSelectedCopyOperation,
     },
     Type,
 };
@@ -43,11 +44,32 @@ pub enum HirExpressionKind {
     },
     FieldRead(HirFieldPlace),
     MethodCall {
-        receiver: HirObjectPlace,
-        method: MethodId,
+        receiver: HirMethodReceiver,
+        target: HirMethodCallTarget,
         arguments: Vec<HirCallArgument>,
     },
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirMethodCallTarget {
+    Direct(MethodId),
+    Virtual {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+        selected: MethodId,
+    },
+}
+
+impl HirMethodCallTarget {
+    pub const fn selected(self) -> MethodId {
+        match self {
+            Self::Direct(method)
+            | Self::Virtual {
+                selected: method, ..
+            } => method,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
