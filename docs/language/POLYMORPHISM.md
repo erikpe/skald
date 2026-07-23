@@ -7,10 +7,11 @@ verified MIR and the x86-64 backend. Contextual `virtual` and `override`
 declarations are accepted, assigned stable families, and checked for exact
 compatibility. Virtual dispatch executes on x86-64 through canonical MIR
 families and a private metadata ABI. Interface declarations, exact conformance,
-non-owning conversions, forwarding, and calls are validated into typed HIR;
-their MIR and backend execution remain unavailable. Type tests and narrowing
-remain unavailable. The [status matrix](STATUS.md) distinguishes executable
-virtual dispatch from the typed-only interface boundary and later stages.
+non-owning conversions, forwarding, and calls lower into verified,
+target-independent MIR; backend execution remains unavailable. Type tests and
+narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
+executable virtual dispatch from the verified interface boundary and later
+stages.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -221,28 +222,32 @@ Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
 occur in source evaluation order.
 
-HIR represents every class or interface alias argument as a view with its selected static
-subobject, static target, restricted access, and complete-object origin. An
-exact owning source names its complete place and exact dynamic class. A
-forwarded alias or `self` names the incoming binding that carries both runtime
-components. Selecting a class field begins a new exact complete object;
-selecting a base preserves the enclosing origin.
+HIR represents every class or interface alias argument as a view with its
+selected static subobject, static target, restricted access, and
+complete-object origin. An exact owning source names its complete place and
+exact dynamic class. A forwarded alias or `self` names the incoming binding
+that carries both runtime components. Selecting a class field begins a new
+exact complete object; selecting a base preserves the enclosing origin.
 
 Interface HIR additionally retains declarations, exact requirement-to-method
 maps for each effective class conformance, identity-selected interface calls,
 and access-preserving class/interface/`Obj` conversions. It deliberately
-contains no witness layout or target slot. MIR interface views and dispatch
-remain the next executable boundary.
+contains no witness layout or target slot.
 
-MIR currently represents canonical virtual families, direct and virtual method targets,
-and origin-bearing method receivers and class/`Obj` views. Its verifier checks
-family and slot ownership, exact signature and receiver-access agreement,
-static selection, compatible and live receiver places, and exact or forwarded
-metadata provenance. Scalar and object results, argument evaluation, ownership
-transfer, and full-expression cleanup use the ordinary call pipeline.
+MIR represents canonical virtual families, interface declarations, effective
+class conformance maps, direct/virtual/interface call targets, and
+origin-bearing class/interface/`Obj` views. Its verifier checks family and slot
+ownership, conformance and requirement agreement, exact signatures and
+receiver access, static conversions, compatible live places, non-ownership,
+and exact or forwarded metadata provenance. Scalar and object results,
+argument evaluation, ownership transfer, and full-expression cleanup use the
+ordinary call pipeline. MIR contains no interface witness layout or
+target-specific requirement slot.
 
 The x86-64 backend derives deterministic per-class virtual tables from MIR
-family identities. Internal receivers and object aliases carry their static
+family identities. Interface MIR is rejected with a structured unsupported
+backend error until its table representation is implemented. Internal
+receivers and executable class/`Obj` aliases carry their static
 address, complete-object address, and dynamic metadata together. A virtual
 call loads the family slot from that metadata and invokes the selected method
 through the ordinary argument, result, temporary, and cleanup pipeline. Exact

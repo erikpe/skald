@@ -50,8 +50,9 @@ callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
 owning slices, class/`Obj` alias views, and virtual-family calls. Interface
-dispatch, runtime type tests, and checked narrowing do not yet have MIR
-operations.
+declarations, views, and calls have verified MIR operations but are rejected
+with a structured unsupported error until target lowering exists. Runtime type
+tests and checked narrowing do not yet have MIR operations.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

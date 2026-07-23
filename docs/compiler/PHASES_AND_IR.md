@@ -121,10 +121,7 @@ Interfaces cross the typed boundary as declaration tables and deterministic
 requirement-to-method maps for every effective class conformance. Interface
 alias arguments retain their static interface target, access, and exact or
 forwarded complete-object origin. Interface calls name both `InterfaceId` and
-`InterfaceRequirementId`. These operations are intentionally HIR-only until
-MIR gains explicit interface views, calls, and verification; attempting to
-lower a program containing interface declarations returns a structured
-unsupported-lowering error.
+`InterfaceRequirementId`.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -140,10 +137,12 @@ explicit:
 - addressable storage and semantically projected places;
 - canonical direct-base metadata and identity-based base projections;
 - transient primitive values;
-- source-ordered calls, argument modes, and access-restricted class/`Obj`
-  views;
+- source-ordered calls, argument modes, and access-restricted
+  class/interface/`Obj` views;
 - canonical virtual-family metadata, explicit direct/virtual method targets,
   and complete-object receiver origins;
+- interface declarations, effective class conformance maps, and explicit
+  interface call targets;
 - initialization, copying, assignment, and cleanup operations;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
@@ -169,6 +168,13 @@ complete place/dynamic class or a forwarded metadata carrier. Scalar and
 object results use the existing value or destination forms, so virtual calls
 do not create a second call or cleanup pipeline.
 
+Interface calls lower through the same call, argument, result, and cleanup
+pipeline. Their MIR targets retain interface and requirement identities; their
+receivers are explicit non-owning interface views with source, target, access,
+and complete-object provenance. Conformance maps retain the effective
+implementing method for each class and requirement. MIR deliberately contains
+no backend witness layout, byte offset, or requirement slot.
+
 ## Verification and passes
 
 `mir::verify_mir` checks the structural and type invariants required before
@@ -181,6 +187,8 @@ target lowering, including:
   base lifecycle operations;
 - virtual-family density, membership, signature/access agreement, call
   selection, receiver compatibility, and complete-object provenance;
+- interface density, conformance and requirement/method agreement, view
+  provenance, access, non-ownership, signatures, and receiver liveness;
 - definition-before-use and valid block targets;
 - construction, copy, result-destination, temporary, and cleanup liveness;
 - branch, return, and terminator consistency on every block; and

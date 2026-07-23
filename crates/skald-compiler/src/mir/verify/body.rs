@@ -141,13 +141,13 @@ impl<'mir> Verifier<'mir> {
                     ),
                 );
             }
-            if storage.ty == MirType::Obj
+            if matches!(storage.ty, MirType::Interface(_) | MirType::Obj)
                 && !matches!(storage.kind, MirStorageKind::AliasParameter(_))
             {
                 self.function_error(
                     function.callable(),
                     format!(
-                        "storage {} with non-owning type `Obj` must be an alias parameter",
+                        "storage {} with a non-owning interface or `Obj` type must be an alias parameter",
                         storage.id
                     ),
                 );
@@ -167,6 +167,17 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(
                         function.callable(),
                         format!("storage {} has undeclared class type {class}", storage.id),
+                    );
+                }
+            }
+            if let MirType::Interface(interface) = storage.ty {
+                if self.program.interface(interface).is_none() {
+                    self.function_error(
+                        function.callable(),
+                        format!(
+                            "storage {} has undeclared interface type {interface}",
+                            storage.id
+                        ),
                     );
                 }
             }
@@ -367,7 +378,13 @@ impl<'mir> Verifier<'mir> {
                     if let Some(ty) =
                         self.verify_value_use(function, block, *value, defined_in_block)
                     {
-                        if matches!(return_type, MirType::Unit | MirType::Class(_)) {
+                        if matches!(
+                            return_type,
+                            MirType::Unit
+                                | MirType::Class(_)
+                                | MirType::Interface(_)
+                                | MirType::Obj
+                        ) {
                             self.block_error(
                                 function.callable(),
                                 block.id,
@@ -381,7 +398,11 @@ impl<'mir> Verifier<'mir> {
                             );
                         }
                     }
-                } else if return_type != MirType::Unit && !matches!(return_type, MirType::Class(_))
+                } else if return_type != MirType::Unit
+                    && !matches!(
+                        return_type,
+                        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                    )
                 {
                     self.block_error(
                         function.callable(),

@@ -51,9 +51,9 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
         .unwrap()
         .storage[0]
         .ty = MirType::I64;
-    assert!(messages(&primitive_alias)
-        .iter()
-        .any(|message| message.contains("alias parameter 0 must have class or `Obj` type")));
+    assert!(messages(&primitive_alias).iter().any(|message| {
+        message.contains("alias parameter 0 must have class, interface, or `Obj` type")
+    }));
 
     let (mut unlisted, ids) = alias_mir();
     unlisted
@@ -184,16 +184,19 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(ids.method)),
-            receiver: Some(MirMethodReceiver {
-                place: MirPlace::alias_parameter(function.parameters[0]),
-                origin: Box::new(MirObjectOrigin::Forwarded {
-                    carrier: function.parameters[0],
-                    static_target: MirViewTarget::Class(ids.class),
-                    access: MirAliasAccess::ReadOnly,
-                    dispatch_limit: None,
-                    span: function.span,
-                }),
-            }),
+            receiver: Some(
+                MirMethodReceiver {
+                    place: MirPlace::alias_parameter(function.parameters[0]),
+                    origin: Box::new(MirObjectOrigin::Forwarded {
+                        carrier: function.parameters[0],
+                        static_target: MirViewTarget::Class(ids.class),
+                        access: MirAliasAccess::ReadOnly,
+                        dispatch_limit: None,
+                        span: function.span,
+                    }),
+                }
+                .into(),
+            ),
             arguments: vec![
                 MirArgument::Place(MirPlace::alias_parameter(function.parameters[0])),
                 MirArgument::Place(MirPlace::alias_parameter(function.parameters[1])),

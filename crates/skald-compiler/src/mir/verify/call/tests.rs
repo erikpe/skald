@@ -145,10 +145,13 @@ fn initializer_and_method_receiver_contracts_retain_exact_diagnostics() {
             _ => None,
         })
         .unwrap();
-    call.receiver = Some(MirMethodReceiver::exact(
-        MirPlace::base(storage).project_field(FieldId::new(ClassId::new(0), 0)),
-        ClassId::new(0),
-    ));
+    call.receiver = Some(
+        MirMethodReceiver::exact(
+            MirPlace::base(storage).project_field(FieldId::new(ClassId::new(0), 0)),
+            ClassId::new(0),
+        )
+        .into(),
+    );
     assert!(messages(&wrong_receiver)
         .iter()
         .any(|message| message == "method receiver has the wrong class type"));

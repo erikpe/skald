@@ -1,10 +1,11 @@
 # Skald Aliases and Ownership
 
 Status: authoritative for executable class and `Obj` aliases. Interface views
-follow the same source rules and are validated through HIR; their executable
-boundary is owned by [polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
-aliases, and aliases into other future value families are not implemented or
-frozen. Their maturity is authoritative in the [status matrix](STATUS.md).
+follow the same source rules and lower through verified MIR; their backend
+execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared
+ownership, borrow anchors, local aliases, and aliases into other future value
+families are not implemented or frozen. Their maturity is authoritative in
+the [status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -124,8 +125,9 @@ reordering.
 
 Static polymorphic views are explicit and checked through MIR as
 source/target/access conversions. Exact-class, ancestor-class, and `Obj`
-aliases execute through the x86-64 internal calling convention. They retain
-the same non-owning, call-scoped, access-restricted source semantics.
+aliases execute through the x86-64 internal calling convention. Interface
+views use the same verified non-owning model, but do not execute until backend
+interface dispatch is implemented.
 
 ## Non-exclusivity
 

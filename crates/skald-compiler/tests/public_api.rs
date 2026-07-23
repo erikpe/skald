@@ -14,7 +14,8 @@ use skald_compiler::{
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
     mir::{
-        dump_mir, lower_hir, verify_mir, MirBaseCopy, MirDirectBase, MirObjectView,
+        dump_mir, lower_hir, verify_mir, MirBaseCopy, MirCallReceiver, MirDirectBase,
+        MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
         MirPlaceProjection, MirProgram, MirViewTarget,
     },
     passes::run_mir_pipeline,
@@ -64,6 +65,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_projection: Option<MirPlaceProjection> = None;
     let _mir_view: Option<MirObjectView> = None;
     let _mir_view_target: Option<MirViewTarget> = None;
+    let _mir_interface: Option<MirInterfaceDeclaration> = None;
+    let _mir_conformance: Option<MirInterfaceConformance> = None;
+    let _mir_interface_call: Option<MirInterfaceCallTarget> = None;
+    let _mir_receiver: Option<MirCallReceiver> = None;
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

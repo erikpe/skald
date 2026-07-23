@@ -25,6 +25,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             id: inner,
             name: "Inner".to_owned(),
             direct_base: None,
+            conformances: vec![],
             fields: vec![MirFieldDeclaration {
                 id: inner_value,
                 name: "value".to_owned(),
@@ -44,6 +45,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             id: outer,
             name: "Outer".to_owned(),
             direct_base: None,
+            conformances: vec![],
             fields: vec![MirFieldDeclaration {
                 id: outer_inner,
                 name: "inner".to_owned(),
@@ -120,7 +122,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         }));
     block.instructions.push(MirInstruction::Call(MirCall {
         target: MirCallTarget::Method(MirMethodCallTarget::Direct(outer_method)),
-        receiver: Some(MirMethodReceiver::exact(object_storage.into(), outer)),
+        receiver: Some(MirMethodReceiver::exact(object_storage.into(), outer).into()),
         arguments: vec![],
         result: Some(method_result),
         destination: None,

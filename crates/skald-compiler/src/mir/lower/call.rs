@@ -2,8 +2,8 @@
 
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirExpression, HirMethodCallTarget, HirMethodReceiver,
-        HirObjectOrigin, HirObjectView, HirViewSource, HirViewTarget,
+        HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirMethodCallTarget,
+        HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource, HirViewTarget,
     },
     identity::FunctionId,
 };
@@ -34,7 +34,28 @@ impl BodyLowerer<'_> {
         let arguments = self.lower_call_arguments(arguments);
         self.emit_scalar_call(
             MirCallTarget::Method(lower_method_target(target)),
-            Some(receiver),
+            Some(receiver.into()),
+            arguments,
+            expression,
+        )
+    }
+
+    pub(super) fn lower_interface_call(
+        &mut self,
+        expression: &HirExpression,
+        receiver: &HirObjectView,
+        target: HirInterfaceCallTarget,
+        arguments: &[HirCallArgument],
+    ) -> Option<ValueId> {
+        // Receiver selection precedes all explicit argument effects.
+        let receiver = self.lower_object_view(receiver);
+        let arguments = self.lower_call_arguments(arguments);
+        self.emit_scalar_call(
+            MirCallTarget::Interface(MirInterfaceCallTarget {
+                interface: target.interface,
+                requirement: target.requirement,
+            }),
+            Some(receiver.into()),
             arguments,
             expression,
         )
@@ -43,7 +64,7 @@ impl BodyLowerer<'_> {
     fn emit_scalar_call(
         &mut self,
         target: MirCallTarget,
-        receiver: Option<MirMethodReceiver>,
+        receiver: Option<MirCallReceiver>,
         arguments: Vec<MirArgument>,
         expression: &HirExpression,
     ) -> Option<ValueId> {
@@ -94,7 +115,7 @@ impl BodyLowerer<'_> {
             .collect()
     }
 
-    fn lower_object_view(&self, view: &HirObjectView) -> MirObjectView {
+    pub(super) fn lower_object_view(&self, view: &HirObjectView) -> MirObjectView {
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
             HirViewSource::Forwarded { binding, .. } => {
@@ -106,9 +127,7 @@ impl BodyLowerer<'_> {
             origin: Box::new(self.lower_object_origin(&view.origin)),
             target: match view.target {
                 HirViewTarget::Class(class) => MirViewTarget::Class(class),
-                HirViewTarget::Interface(_) => {
-                    unreachable!("interface HIR rejected before lowering")
-                }
+                HirViewTarget::Interface(interface) => MirViewTarget::Interface(interface),
                 HirViewTarget::Obj => MirViewTarget::Obj,
             },
             access: match view.access {
@@ -170,7 +189,7 @@ pub(super) const fn lower_method_target(target: HirMethodCallTarget) -> MirMetho
 const fn lower_view_target(target: HirViewTarget) -> MirViewTarget {
     match target {
         HirViewTarget::Class(class) => MirViewTarget::Class(class),
-        HirViewTarget::Interface(_) => unreachable!(),
+        HirViewTarget::Interface(interface) => MirViewTarget::Interface(interface),
         HirViewTarget::Obj => MirViewTarget::Obj,
     }
 }

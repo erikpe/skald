@@ -2,8 +2,8 @@
 
 use crate::{
     identity::{
-        ClassId, CopyAssignmentId, FunctionId, InitializerId, MethodId, VirtualFamilyId,
-        VirtualSlotId,
+        ClassId, CopyAssignmentId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId,
+        MethodId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -100,12 +100,60 @@ pub struct MirEndFullExpression {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirCall {
     pub target: MirCallTarget,
-    pub receiver: Option<MirMethodReceiver>,
+    pub receiver: Option<MirCallReceiver>,
     pub arguments: Vec<MirArgument>,
     pub result: Option<ValueId>,
     /// Caller-owned uninitialized storage for a class result.
     pub destination: Option<MirPlace>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirCallReceiver {
+    Method(MirMethodReceiver),
+    Interface(MirObjectView),
+}
+
+impl MirCallReceiver {
+    pub fn as_method(&self) -> Option<&MirMethodReceiver> {
+        match self {
+            Self::Method(receiver) => Some(receiver),
+            Self::Interface(_) => None,
+        }
+    }
+
+    pub fn as_method_mut(&mut self) -> Option<&mut MirMethodReceiver> {
+        match self {
+            Self::Method(receiver) => Some(receiver),
+            Self::Interface(_) => None,
+        }
+    }
+
+    pub fn as_interface(&self) -> Option<&MirObjectView> {
+        match self {
+            Self::Method(_) => None,
+            Self::Interface(view) => Some(view),
+        }
+    }
+
+    pub fn as_interface_mut(&mut self) -> Option<&mut MirObjectView> {
+        match self {
+            Self::Method(_) => None,
+            Self::Interface(view) => Some(view),
+        }
+    }
+}
+
+impl From<MirMethodReceiver> for MirCallReceiver {
+    fn from(receiver: MirMethodReceiver) -> Self {
+        Self::Method(receiver)
+    }
+}
+
+impl From<MirObjectView> for MirCallReceiver {
+    fn from(view: MirObjectView) -> Self {
+        Self::Interface(view)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -121,6 +169,7 @@ pub enum MirArgument {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirViewTarget {
     Class(ClassId),
+    Interface(InterfaceId),
     Obj,
 }
 
@@ -128,6 +177,7 @@ impl MirViewTarget {
     pub const fn ty(self) -> super::value::MirType {
         match self {
             Self::Class(class) => super::value::MirType::Class(class),
+            Self::Interface(interface) => super::value::MirType::Interface(interface),
             Self::Obj => super::value::MirType::Obj,
         }
     }
@@ -165,6 +215,13 @@ impl MirArgument {
 pub enum MirCallTarget {
     Direct(FunctionId),
     Method(MirMethodCallTarget),
+    Interface(MirInterfaceCallTarget),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirInterfaceCallTarget {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

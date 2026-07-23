@@ -129,7 +129,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
             ),
             MirInstruction::Call(MirCall {
                 target: MirCallTarget::Method(MirMethodCallTarget::Direct(alias_method)),
-                receiver: Some(MirMethodReceiver::exact(MirPlace::base(first), class)),
+                receiver: Some(MirMethodReceiver::exact(MirPlace::base(first), class).into()),
                 arguments: vec![
                     MirArgument::Place(MirPlace::base(second)),
                     MirArgument::Value(float),
@@ -156,7 +156,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
             _ => None,
         })
         .expect("counter fixture must read through its forwarding getter");
-    get_call.receiver = Some(MirMethodReceiver::exact(MirPlace::base(second), class));
+    get_call.receiver = Some(MirMethodReceiver::exact(MirPlace::base(second), class).into());
     let first_cleanup = main.body.blocks[0]
         .instructions
         .iter()
@@ -318,10 +318,9 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
-            receiver: Some(MirMethodReceiver::exact(
-                MirPlace::base(ids.first),
-                ids.container,
-            )),
+            receiver: Some(
+                MirMethodReceiver::exact(MirPlace::base(ids.first), ids.container).into(),
+            ),
             arguments,
             result: None,
             destination: None,

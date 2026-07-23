@@ -127,10 +127,8 @@ fn selects_inherited_conformance_and_interface_calls_by_identity() {
     assert!(dump.contains("i0:requirement0 -> c1:method0"));
     assert!(dump.contains("InterfaceCall i0 i0:requirement0"));
     assert!(dump.contains("ViewArgument -> interface i0 readonly"));
-    assert!(matches!(
-        crate::mir::lower_hir(&hir),
-        Err(crate::mir::HirLoweringError::InterfacesNotImplemented)
-    ));
+    let mir = crate::mir::lower_hir(&hir).expect("interface HIR must lower to MIR");
+    crate::mir::verify_mir(&mir).expect("lowered interface MIR must verify");
 }
 
 #[test]
@@ -227,4 +225,14 @@ fn enforces_mutable_interface_receiver_access() {
     assert!(output.diagnostics.iter().any(|diagnostic| diagnostic
         .message
         .contains("requires mutable receiver access")));
+
+    let valid = check_text(
+        "interface Mutable { mut fn update() -> unit; }\n\
+         class Item implements Mutable { init() {} mut fn update() -> unit {} }\n\
+         fn good(mut ref item: Mutable) -> unit { item.update(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(!valid.has_errors(), "{:?}", valid.diagnostics);
+    let mir = crate::mir::lower_hir(valid.hir.as_ref().unwrap()).unwrap();
+    crate::mir::verify_mir(&mir).unwrap();
 }

@@ -7,7 +7,7 @@ use crate::{
     },
     identity::{BindingId, CallableId, ClassId},
 };
-use std::fmt;
+use std::convert::Infallible;
 
 use super::{build::MirBodyBuilder, model::*};
 
@@ -22,29 +22,12 @@ mod statement;
 
 use cleanup::CleanupPlanner;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {
-    InterfacesNotImplemented,
-}
-
-impl fmt::Display for HirLoweringError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InterfacesNotImplemented => {
-                formatter.write_str("interface HIR lowering is not implemented")
-            }
-        }
-    }
-}
-
-impl std::error::Error for HirLoweringError {}
+/// HIR-to-MIR lowering is currently total after successful type checking.
+pub type HirLoweringError = Infallible;
 
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    if !hir.interfaces.is_empty() {
-        return Err(HirLoweringError::InterfacesNotImplemented);
-    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -255,6 +238,6 @@ const fn lower_type(ty: Type) -> MirType {
         Type::Unit => MirType::Unit,
         Type::Obj => MirType::Obj,
         Type::Class(class) => MirType::Class(class),
-        Type::Interface(_) => unreachable!(),
+        Type::Interface(interface) => MirType::Interface(interface),
     }
 }

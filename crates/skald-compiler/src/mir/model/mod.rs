@@ -5,6 +5,7 @@ mod declarations;
 mod definition;
 mod ids;
 mod instruction;
+mod interface;
 mod value;
 
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminator};
@@ -23,9 +24,14 @@ pub use definition::{
 };
 pub use ids::{BlockId, StorageId, ValueId};
 pub use instruction::{
-    MirArgument, MirAssignment, MirCall, MirCallTarget, MirCleanup, MirCopyAssignment,
-    MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction, MirMethodCallTarget,
-    MirMethodReceiver, MirObjectOrigin, MirObjectView, MirStore, MirViewTarget,
+    MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCleanup,
+    MirCopyAssignment, MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction,
+    MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver, MirObjectOrigin, MirObjectView,
+    MirStore, MirViewTarget,
+};
+pub use interface::{
+    MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,
+    MirInterfaceRequirement, MirRequirementImplementation,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,

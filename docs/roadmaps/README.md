@@ -8,7 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its executable profile
   is frozen through virtual dispatch, which is verified in target-independent
-  MIR and executes on x86-64. Interfaces are next. The roadmap extends the
+  MIR and executes on x86-64. Interface calls now lower into verified MIR;
+  their x86-64 lowering is next. The roadmap extends the
   completed exact-class object model with inheritance, lifecycle composition,
   virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing.
   Direct-base lifecycle, inherited static access, class/`Obj` alias views,

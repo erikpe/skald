@@ -6,7 +6,7 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        MethodId, VirtualFamilyId, VirtualSlotId,
+        InterfaceId, InterfaceRequirementId, MethodId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -15,12 +15,14 @@ use super::{
     definition::{
         MirDefinitionRef, MirFunctionDefinitionTable, MirMemberDefinition, MirMemberDefinitionTable,
     },
+    interface::{MirInterfaceConformance, MirInterfaceDeclarationTable, MirInterfaceRequirement},
     value::MirType,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
     pub classes: MirClassDeclarationTable,
+    pub interfaces: MirInterfaceDeclarationTable,
     pub virtual_families: MirVirtualFamilyTable,
     pub declarations: MirFunctionDeclarationTable,
     pub definitions: MirFunctionDefinitionTable,
@@ -65,6 +67,28 @@ impl MirProgram {
 
     pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
         self.class(id.class())?.method(id)
+    }
+
+    pub fn interface(&self, id: InterfaceId) -> Option<&super::interface::MirInterfaceDeclaration> {
+        self.interfaces.get(id)
+    }
+
+    pub fn interface_requirement(
+        &self,
+        id: InterfaceRequirementId,
+    ) -> Option<&MirInterfaceRequirement> {
+        self.interface(id.interface())?.requirement(id)
+    }
+
+    pub fn conformance(
+        &self,
+        class: ClassId,
+        interface: InterfaceId,
+    ) -> Option<&MirInterfaceConformance> {
+        self.class(class)?
+            .conformances
+            .iter()
+            .find(|conformance| conformance.interface == interface)
     }
 
     pub fn virtual_family(&self, id: VirtualFamilyId) -> Option<&MirVirtualFamily> {
@@ -254,6 +278,7 @@ pub struct MirClassDeclaration {
     pub id: ClassId,
     pub name: String,
     pub direct_base: Option<MirDirectBase>,
+    pub conformances: Vec<MirInterfaceConformance>,
     pub fields: Vec<MirFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
     pub copy_constructor_declaration: Option<MirInitializerDeclaration>,

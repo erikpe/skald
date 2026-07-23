@@ -44,11 +44,15 @@ impl BodyLowerer<'_> {
             HirObjectCallTarget::Direct(function) => (MirCallTarget::Direct(*function), None),
             HirObjectCallTarget::Method { receiver, target } => (
                 MirCallTarget::Method(lower_method_target(*target)),
-                Some(self.lower_method_receiver(receiver)),
+                Some(self.lower_method_receiver(receiver).into()),
             ),
-            HirObjectCallTarget::Interface { .. } => {
-                unreachable!("interface HIR rejected before MIR lowering")
-            }
+            HirObjectCallTarget::Interface { receiver, target } => (
+                MirCallTarget::Interface(MirInterfaceCallTarget {
+                    interface: target.interface,
+                    requirement: target.requirement,
+                }),
+                Some(self.lower_object_view(receiver).into()),
+            ),
         };
         let arguments = self.lower_call_arguments(&call.arguments);
         self.emit(MirInstruction::Call(MirCall {

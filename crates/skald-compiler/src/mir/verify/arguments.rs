@@ -122,7 +122,7 @@ impl Verifier<'_> {
                 self.verify_place(site.function, site.block, place);
             }
             MirArgument::View(view) => {
-                self.verify_place(site.function, site.block, &view.source);
+                self.verify_object_view(site.function, site.block, view, "extra object view");
             }
         }
     }
@@ -199,12 +199,12 @@ impl Verifier<'_> {
         parameter: &MirParameter,
     ) {
         let argument = self.verify_place(site.function, site.block, place);
-        if parameter.ty == MirType::Obj {
+        if matches!(parameter.ty, MirType::Interface(_) | MirType::Obj) {
             self.block_error(
                 site.function.callable(),
                 site.block.id,
                 format!(
-                    "{} argument {index} must represent an `Obj` conversion as a view",
+                    "{} argument {index} must represent a non-owning conversion as a view",
                     site.kind
                 ),
             );
@@ -234,37 +234,13 @@ impl Verifier<'_> {
         view: &MirObjectView,
         parameter: &MirParameter,
     ) {
-        let source = self.verify_place(site.function, site.block, &view.source);
+        self.verify_object_view(site.function, site.block, view, "object view");
         let target_ty = view.target.ty();
         if target_ty != parameter.ty {
             self.block_error(
                 site.function.callable(),
                 site.block.id,
                 format!("{} argument {index} view target type mismatch", site.kind),
-            );
-        }
-        let valid_conversion = source.is_some_and(|source| match target_ty {
-            MirType::Class(target) => source.ty == MirType::Class(target),
-            MirType::Obj => matches!(source.ty, MirType::Class(_) | MirType::Obj),
-            _ => false,
-        });
-        if !valid_conversion {
-            self.block_error(
-                site.function.callable(),
-                site.block.id,
-                format!(
-                    "{} argument {index} has an invalid static view conversion",
-                    site.kind
-                ),
-            );
-        }
-        if view.access == MirAliasAccess::Mutable
-            && source.is_some_and(|source| source.access != MirAliasAccess::Mutable)
-        {
-            self.block_error(
-                site.function.callable(),
-                site.block.id,
-                format!("{} argument {index} view grants mutable access", site.kind),
             );
         }
         if parameter.mode == MirParameterMode::MutableAlias
@@ -290,34 +266,6 @@ impl Verifier<'_> {
                     site.kind
                 ),
             );
-        }
-        let origin = self.verify_object_origin(
-            site.function,
-            site.block,
-            &view.origin,
-            &view.source,
-            source,
-            "object view",
-        );
-        if let Some(origin) = origin {
-            match view.target {
-                super::super::model::MirViewTarget::Class(target)
-                    if origin.static_class.is_some_and(|static_class| {
-                        target != static_class && !self.program.is_ancestor(target, static_class)
-                    }) =>
-                {
-                    self.block_error(
-                        site.function.callable(),
-                        site.block.id,
-                        format!(
-                            "{} argument {index} view target is incompatible with its origin",
-                            site.kind
-                        ),
-                    );
-                }
-                super::super::model::MirViewTarget::Obj => {}
-                _ => {}
-            }
         }
     }
 }

@@ -23,7 +23,7 @@ fn lowers_virtual_families_calls_and_forwarded_receivers_explicitly() {
             selected: ids.root_method,
         })
     );
-    let receiver = call.receiver.as_ref().unwrap();
+    let receiver = method_receiver(call);
     assert_eq!(receiver.place.base.storage(), receiver.origin_carrier());
     assert!(matches!(
         receiver.origin.as_ref(),
@@ -81,7 +81,7 @@ fn direct_method_forwarding_retains_dynamic_origin() {
         }) if selected == ids.root_method
     ));
     assert!(matches!(
-        call.receiver.as_ref().unwrap().origin.as_ref(),
+        method_receiver(call).origin.as_ref(),
         MirObjectOrigin::Forwarded { carrier, .. }
             if *carrier == relay.receiver
     ));
@@ -154,8 +154,7 @@ fn rejects_corrupt_family_slot_membership_and_signature_metadata() {
 fn rejects_corrupt_receiver_carriers_access_and_dispatch_selection() {
     let (mut wrong_carrier, ids) = virtual_dispatch_mir();
     let call = first_virtual_call_mut(&mut wrong_carrier);
-    let MirObjectOrigin::Forwarded { carrier, .. } =
-        call.receiver.as_mut().unwrap().origin.as_mut()
+    let MirObjectOrigin::Forwarded { carrier, .. } = method_receiver_mut(call).origin.as_mut()
     else {
         unreachable!()
     };
@@ -166,7 +165,7 @@ fn rejects_corrupt_receiver_carriers_access_and_dispatch_selection() {
 
     let (mut wrong_access, _) = virtual_dispatch_mir();
     let call = first_virtual_call_mut(&mut wrong_access);
-    let MirObjectOrigin::Forwarded { access, .. } = call.receiver.as_mut().unwrap().origin.as_mut()
+    let MirObjectOrigin::Forwarded { access, .. } = method_receiver_mut(call).origin.as_mut()
     else {
         unreachable!()
     };
@@ -209,7 +208,7 @@ fn rejects_dead_exact_virtual_receiver_origins() {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(ids.relay)),
-            receiver: Some(MirMethodReceiver::exact(MirPlace::base(storage), ids.root)),
+            receiver: Some(MirMethodReceiver::exact(MirPlace::base(storage), ids.root).into()),
             arguments: vec![
                 MirArgument::Value(ValueId::new(ids.forward, 0)),
                 MirArgument::View(MirObjectView {
@@ -267,14 +266,11 @@ fn rejects_corrupt_exact_selection_and_base_subobject_origins() {
         ClassId::new(0),
         0,
     )));
-    let projected = call
-        .receiver
-        .as_ref()
-        .unwrap()
+    let projected = method_receiver(call)
         .place
         .clone()
         .project_base(ClassId::new(0));
-    call.receiver.as_mut().unwrap().place = projected;
+    method_receiver_mut(call).place = projected;
     assert!(messages(&wrong_selection).iter().any(|message| {
         message
             == "direct virtual-family call selected method does not match the exact or dispatch-limited class"
@@ -294,15 +290,12 @@ fn rejects_corrupt_exact_selection_and_base_subobject_origins() {
             _ => None,
         })
         .unwrap();
-    let projected = call
-        .receiver
-        .as_ref()
-        .unwrap()
+    let projected = method_receiver(call)
         .place
         .clone()
         .project_base(ClassId::new(0));
-    call.receiver.as_mut().unwrap().place = projected.clone();
-    *call.receiver.as_mut().unwrap().origin = MirObjectOrigin::Exact {
+    method_receiver_mut(call).place = projected.clone();
+    *method_receiver_mut(call).origin = MirObjectOrigin::Exact {
         complete: projected,
         dynamic_class: ClassId::new(0),
     };
@@ -313,6 +306,20 @@ fn rejects_corrupt_exact_selection_and_base_subobject_origins() {
 
 trait ReceiverOriginCarrier {
     fn origin_carrier(&self) -> StorageId;
+}
+
+fn method_receiver(call: &MirCall) -> &MirMethodReceiver {
+    call.receiver
+        .as_ref()
+        .and_then(MirCallReceiver::as_method)
+        .expect("fixture method call must have a method receiver")
+}
+
+fn method_receiver_mut(call: &mut MirCall) -> &mut MirMethodReceiver {
+    call.receiver
+        .as_mut()
+        .and_then(MirCallReceiver::as_method_mut)
+        .expect("fixture method call must have a method receiver")
 }
 
 impl ReceiverOriginCarrier for MirMethodReceiver {

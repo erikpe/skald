@@ -17,19 +17,21 @@ pub use dump::dump_mir;
 pub use lower::{lower_hir, HirLoweringError};
 pub use model::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBaseCopy, MirBasicBlock,
-    MirBinaryOperation, MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
-    MirClassDeclarationTable, MirCleanup, MirCopyAssignment, MirCopyAssignmentDeclaration,
-    MirCopyCapability, MirCopyConstruction, MirDefinitionRef, MirDestructionPlan,
-    MirDestructionStep, MirDestructorDeclaration, MirDirectBase, MirEndFullExpression,
-    MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
+    MirBinaryOperation, MirBody, MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature,
+    MirClassDeclaration, MirClassDeclarationTable, MirCleanup, MirCopyAssignment,
+    MirCopyAssignmentDeclaration, MirCopyCapability, MirCopyConstruction, MirDefinitionRef,
+    MirDestructionPlan, MirDestructionStep, MirDestructorDeclaration, MirDirectBase,
+    MirEndFullExpression, MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
     MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize,
-    MirInitializerDeclaration, MirInstruction, MirMemberDefinition, MirMemberDefinitionTable,
-    MirMethodCallTarget, MirMethodDeclaration, MirMethodReceiver, MirObjectOrigin, MirObjectView,
-    MirParameter, MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram,
-    MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage,
-    MirStorageKind, MirStore, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminator, MirType,
-    MirUnaryOperation, MirUserCopy, MirValue, MirViewTarget, MirVirtualFamily,
-    MirVirtualFamilyTable, StorageId, ValueId,
+    MirInitializerDeclaration, MirInstruction, MirInterfaceCallTarget, MirInterfaceConformance,
+    MirInterfaceDeclaration, MirInterfaceDeclarationTable, MirInterfaceRequirement,
+    MirMemberDefinition, MirMemberDefinitionTable, MirMethodCallTarget, MirMethodDeclaration,
+    MirMethodReceiver, MirObjectOrigin, MirObjectView, MirParameter, MirParameterMode, MirPlace,
+    MirPlaceBase, MirPlaceProjection, MirProgram, MirReceiverAccess, MirRequirementImplementation,
+    MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage, MirStorageKind, MirStore,
+    MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminator, MirType, MirUnaryOperation,
+    MirUserCopy, MirValue, MirViewTarget, MirVirtualFamily, MirVirtualFamilyTable, StorageId,
+    ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 

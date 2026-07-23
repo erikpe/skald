@@ -3,8 +3,8 @@
 use super::*;
 use crate::hir::{
     HirAccess, HirClassDeclaration, HirCopyCapability, HirDestructionStep, HirFunctionDeclaration,
-    HirFunctionDefinition, HirFunctionLinkage, HirMemberDefinition, HirMethodDispatch,
-    HirSynthesizedFieldCopy,
+    HirFunctionDefinition, HirFunctionLinkage, HirInterfaceDeclaration, HirMemberDefinition,
+    HirMethodDispatch, HirSynthesizedFieldCopy,
 };
 
 pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
@@ -33,6 +33,12 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .collect();
     MirProgram {
         classes: MirClassDeclarationTable::new(classes),
+        interfaces: MirInterfaceDeclarationTable::new(
+            hir.interfaces
+                .iter()
+                .map(lower_interface_declaration)
+                .collect(),
+        ),
         virtual_families: MirVirtualFamilyTable::new(
             hir.virtual_families
                 .iter()
@@ -118,6 +124,21 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             class: base.class,
             span: base.span,
         }),
+        conformances: class
+            .conformances
+            .iter()
+            .map(|conformance| MirInterfaceConformance {
+                interface: conformance.interface,
+                implementations: conformance
+                    .implementations
+                    .iter()
+                    .map(|implementation| MirRequirementImplementation {
+                        requirement: implementation.requirement,
+                        method: implementation.method,
+                    })
+                    .collect(),
+            })
+            .collect(),
         fields,
         initializers: vec![MirInitializerDeclaration {
             id: class.initializer.id,
@@ -162,6 +183,44 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             })
             .collect(),
         span: class.span,
+    }
+}
+
+fn lower_interface_declaration(interface: &HirInterfaceDeclaration) -> MirInterfaceDeclaration {
+    MirInterfaceDeclaration {
+        id: interface.id,
+        name: interface.name.clone(),
+        requirements: interface
+            .requirements
+            .iter()
+            .map(|requirement| MirInterfaceRequirement {
+                id: requirement.id,
+                name: requirement.name.clone(),
+                receiver_access: match requirement.receiver_access {
+                    HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
+                    HirAccess::Mutable => MirReceiverAccess::Mutable,
+                },
+                parameters: requirement
+                    .parameters
+                    .iter()
+                    .map(|parameter| {
+                        let ty = lower_type(parameter.ty);
+                        match parameter.mode {
+                            crate::hir::HirParameterMode::Value => MirParameter::value(ty),
+                            crate::hir::HirParameterMode::ReadOnlyAlias => {
+                                MirParameter::read_only_alias(ty)
+                            }
+                            crate::hir::HirParameterMode::MutableAlias => {
+                                MirParameter::mutable_alias(ty)
+                            }
+                        }
+                    })
+                    .collect(),
+                return_type: lower_type(requirement.return_type),
+                span: requirement.span,
+            })
+            .collect(),
+        span: interface.span,
     }
 }
 

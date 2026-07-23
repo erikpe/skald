@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    identity::{ClassId, FieldId},
+    identity::{ClassId, FieldId, InterfaceId},
     source::Span,
 };
 
@@ -17,6 +17,9 @@ pub enum MirType {
     F64,
     Bool,
     Class(ClassId),
+    /// A non-owning interface-view target. It is valid only for alias storage
+    /// and never materializes as a scalar or inline object.
+    Interface(InterfaceId),
     /// The universal non-owning object-view target. It has no owning storage
     /// or target layout of its own.
     Obj,
@@ -25,7 +28,10 @@ pub enum MirType {
 
 impl MirType {
     pub const fn is_scalar_value(self) -> bool {
-        !matches!(self, Self::Class(_) | Self::Obj | Self::Unit)
+        !matches!(
+            self,
+            Self::Class(_) | Self::Interface(_) | Self::Obj | Self::Unit
+        )
     }
 }
 
@@ -38,6 +44,7 @@ impl fmt::Display for MirType {
             Self::F64 => formatter.write_str("f64"),
             Self::Bool => formatter.write_str("bool"),
             Self::Class(class) => write!(formatter, "class {class}"),
+            Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
             Self::Unit => formatter.write_str("unit"),
         }

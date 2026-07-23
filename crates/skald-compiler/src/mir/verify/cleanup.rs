@@ -6,9 +6,9 @@ use crate::identity::{CallableId, ClassId};
 
 use super::{
     super::model::{
-        BlockId, MirAliasAccess, MirArgument, MirBasicBlock, MirCleanup, MirDefinitionRef,
-        MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram,
-        MirStorageKind, MirTerminator, MirType,
+        BlockId, MirAliasAccess, MirArgument, MirBasicBlock, MirCallReceiver, MirCleanup,
+        MirDefinitionRef, MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase,
+        MirPlaceProjection, MirProgram, MirStorageKind, MirTerminator, MirType,
     },
     context::Verifier,
     place::{is_ancestor, places_overlap},
@@ -119,7 +119,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
             }
         }
         for storage in self.function.storage_entries() {
-            if !matches!(storage.ty, MirType::Class(_) | MirType::Obj) {
+            if !matches!(
+                storage.ty,
+                MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+            ) {
                 continue;
             }
             let place = match storage.kind {
@@ -305,13 +308,36 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 }
                 MirInstruction::Call(call) => {
                     if let Some(receiver) = &call.receiver {
-                        self.require_live_place(block, state, &receiver.place, "method receiver");
-                        self.require_live_origin(
-                            block,
-                            state,
-                            &receiver.origin,
-                            "method receiver origin",
-                        );
+                        match receiver {
+                            MirCallReceiver::Method(receiver) => {
+                                self.require_live_place(
+                                    block,
+                                    state,
+                                    &receiver.place,
+                                    "method receiver",
+                                );
+                                self.require_live_origin(
+                                    block,
+                                    state,
+                                    &receiver.origin,
+                                    "method receiver origin",
+                                );
+                            }
+                            MirCallReceiver::Interface(receiver) => {
+                                self.require_live_place(
+                                    block,
+                                    state,
+                                    &receiver.source,
+                                    "interface receiver",
+                                );
+                                self.require_live_origin(
+                                    block,
+                                    state,
+                                    &receiver.origin,
+                                    "interface receiver origin",
+                                );
+                            }
+                        }
                     }
                     self.check_borrowed_arguments(block, state, &call.arguments);
                     self.consume_owned_arguments(block, state, &call.arguments);

@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM15 is next. The
+Status: in progress; PM16 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -98,7 +98,7 @@ The frozen restricted profile excludes:
 - [x] PM12 — Lower virtual dispatch on x86-64
 - [x] PM13 — Parse and resolve interfaces and conformance declarations
 - [x] PM14 — Validate conformance and select interface views in HIR
-- [ ] PM15 — Represent and verify interface dispatch in MIR
+- [x] PM15 — Represent and verify interface dispatch in MIR
 - [ ] PM16 — Lower interface dispatch on x86-64
 - [ ] PM17 — Type-check type tests and checked narrowing
 - [ ] PM18 — Represent and verify tests and narrowing in MIR
@@ -445,13 +445,13 @@ non-owning view for every interface conversion and call.
 **Purpose:** Define interface views and calls without introducing interface
 objects or target table layouts.
 
-- [ ] Add explicit interface view operands, conversions, and call targets to
+- [x] Add explicit interface view operands, conversions, and call targets to
       MIR using interface and requirement identities.
-- [ ] Lower HIR interface calls and forwarding with complete-object pointer,
+- [x] Lower HIR interface calls and forwarding with complete-object pointer,
       dynamic-class metadata, access, and lifetime intact.
-- [ ] Verify conformance, requirement/method agreement, view provenance,
+- [x] Verify conformance, requirement/method agreement, view provenance,
       liveness, access, call signatures, and non-ownership.
-- [ ] Extend deterministic dumps, shared fixtures, and structured mutations for
+- [x] Extend deterministic dumps, shared fixtures, and structured mutations for
       wrong conformance, requirements, views, and calls.
 
 **Tests:** Run focused MIR call, argument, place, dump, verification, cleanup,

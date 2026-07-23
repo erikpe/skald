@@ -4,9 +4,9 @@ use crate::{
     backend::{BackendError, Target},
     identity::{CallableId, DestructorId, VirtualSlotId},
     mir::{
-        MirArgument, MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef,
-        MirFunctionLinkage, MirInitialize, MirMethodCallTarget, MirParameter, MirParameterMode,
-        MirPlace, MirType, ValueId,
+        MirArgument, MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature,
+        MirDefinitionRef, MirFunctionLinkage, MirInitialize, MirMethodCallTarget, MirParameter,
+        MirParameterMode, MirPlace, MirType, ValueId,
     },
 };
 
@@ -184,6 +184,7 @@ impl InstructionSelector<'_, '_> {
                 let receiver = call
                     .receiver
                     .as_ref()
+                    .and_then(MirCallReceiver::as_method)
                     .expect("verified method call has a receiver");
                 let slot = match method {
                     MirMethodCallTarget::Direct(_) => None,
@@ -197,6 +198,9 @@ impl InstructionSelector<'_, '_> {
                     }),
                     slot,
                 )
+            }
+            MirCallTarget::Interface(_) => {
+                unreachable!("interface MIR is rejected before instruction selection")
             }
         };
         self.select_callable(

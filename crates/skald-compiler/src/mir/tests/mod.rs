@@ -12,6 +12,8 @@ mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
 mod copy;
+mod interface_dispatch;
+mod interface_fixtures;
 mod object_fixtures;
 mod object_results;
 mod object_temporaries;

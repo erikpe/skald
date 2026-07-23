@@ -252,7 +252,7 @@ impl InstructionSelector<'_, '_> {
                 value::load_rax(source, self.output);
                 value::store_rax(destination, self.output);
             }
-            MirType::Class(_) | MirType::Obj | MirType::Unit => {
+            MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Unit => {
                 unreachable!("verified primitive copy step must have a payload primitive type")
             }
         }

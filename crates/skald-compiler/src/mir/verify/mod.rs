@@ -19,8 +19,10 @@ mod declarations;
 mod dispatch;
 mod inheritance;
 mod instructions;
+mod interfaces;
 mod place;
 mod sink;
+mod view;
 
 use context::Verifier;
 

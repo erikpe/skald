@@ -70,8 +70,13 @@ fn mutate_virtual_slot() -> Mutation {
 fn mutate_virtual_receiver_origin() -> Mutation {
     let (mut program, ids) = virtual_dispatch_mir();
     let call = first_virtual_call_mut(&mut program);
-    let MirObjectOrigin::Forwarded { carrier, .. } =
-        call.receiver.as_mut().unwrap().origin.as_mut()
+    let MirObjectOrigin::Forwarded { carrier, .. } = call
+        .receiver
+        .as_mut()
+        .and_then(MirCallReceiver::as_method_mut)
+        .unwrap()
+        .origin
+        .as_mut()
     else {
         unreachable!("virtual fixture receiver must be forwarded")
     };

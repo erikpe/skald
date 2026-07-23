@@ -21,6 +21,7 @@ impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_classes();
         self.verify_virtual_families();
+        self.verify_interfaces();
         let entry_declaration = self.program.declarations.get(self.program.entry_function);
         if entry_declaration.is_none() {
             self.program_error(format!(
@@ -79,23 +80,40 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
-            if declaration.return_type == MirType::Obj {
+            if let MirType::Interface(interface) = declaration.return_type {
+                if self.program.interface(interface).is_none() {
+                    self.function_error(
+                        declaration.id,
+                        format!("function result has undeclared interface type {interface}"),
+                    );
+                }
+            }
+            if matches!(
+                declaration.return_type,
+                MirType::Interface(_) | MirType::Obj
+            ) {
                 self.function_error(
                     declaration.id,
-                    "function result cannot have non-owning type `Obj`",
+                    "function result cannot have a non-owning interface or `Obj` type",
                 );
             }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
                 if declaration.parameters.iter().any(|parameter| {
                     parameter.mode != MirParameterMode::Value
-                        || matches!(parameter.ty, MirType::Class(_) | MirType::Obj)
+                        || matches!(
+                            parameter.ty,
+                            MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                        )
                 }) {
                     self.function_error(
                         declaration.id,
                         "external function cannot declare alias or object value parameters",
                     );
                 }
-                if matches!(declaration.return_type, MirType::Class(_)) {
+                if matches!(
+                    declaration.return_type,
+                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                ) {
                     self.function_error(
                         declaration.id,
                         "external function cannot return an object value",
@@ -215,8 +233,8 @@ impl<'mir> Verifier<'mir> {
                     ));
                 }
                 match field.ty {
-                    MirType::Obj => self.program_error(format!(
-                        "field {} cannot have non-owning type `Obj`",
+                    MirType::Interface(_) | MirType::Obj => self.program_error(format!(
+                        "field {} cannot have a non-owning interface or `Obj` type",
                         field.id
                     )),
                     MirType::Unit => self.program_error(format!(
@@ -302,9 +320,17 @@ impl<'mir> Verifier<'mir> {
                         ));
                     }
                 }
-                if method.return_type == MirType::Obj {
+                if let MirType::Interface(interface) = method.return_type {
+                    if self.program.interface(interface).is_none() {
+                        self.program_error(format!(
+                            "method {} has undeclared result interface {interface}",
+                            method.id
+                        ));
+                    }
+                }
+                if matches!(method.return_type, MirType::Interface(_) | MirType::Obj) {
                     self.program_error(format!(
-                        "method {} cannot return non-owning type `Obj`",
+                        "method {} cannot return a non-owning interface or `Obj` type",
                         method.id
                     ));
                 }
@@ -524,14 +550,21 @@ impl<'mir> Verifier<'mir> {
                 MirParameterMode::Value if parameter.ty == MirType::Unit => self.program_error(
                     format!("{owner} value parameter {index} cannot have type `unit`"),
                 ),
-                MirParameterMode::Value if parameter.ty == MirType::Obj => self.program_error(
-                    format!("{owner} value parameter {index} cannot have non-owning type `Obj`"),
-                ),
-                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
-                    if !matches!(parameter.ty, MirType::Class(_) | MirType::Obj) =>
+                MirParameterMode::Value
+                    if matches!(parameter.ty, MirType::Interface(_) | MirType::Obj) =>
                 {
                     self.program_error(format!(
-                        "{owner} alias parameter {index} must have class or `Obj` type"
+                        "{owner} value parameter {index} cannot have a non-owning interface or `Obj` type"
+                    ));
+                }
+                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
+                    if !matches!(
+                        parameter.ty,
+                        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                    ) =>
+                {
+                    self.program_error(format!(
+                        "{owner} alias parameter {index} must have class, interface, or `Obj` type"
                     ));
                 }
                 _ => {}
@@ -540,6 +573,13 @@ impl<'mir> Verifier<'mir> {
                 if self.program.class(class).is_none() {
                     self.program_error(format!(
                         "{owner} parameter {index} has undeclared class type {class}"
+                    ));
+                }
+            }
+            if let MirType::Interface(interface) = parameter.ty {
+                if self.program.interface(interface).is_none() {
+                    self.program_error(format!(
+                        "{owner} parameter {index} has undeclared interface type {interface}"
                     ));
                 }
             }

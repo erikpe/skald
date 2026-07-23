@@ -1,5 +1,5 @@
 use super::*;
-use crate::mir::MirClassDeclarationTable;
+use crate::mir::{MirClassDeclarationTable, MirInterfaceDeclarationTable};
 
 pub(super) fn f64_arithmetic_program() -> MirProgram {
     let span = test_span();
@@ -141,6 +141,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
 
     MirProgram {
         classes: MirClassDeclarationTable::default(),
+        interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
         member_definitions: MirMemberDefinitionTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![
@@ -270,6 +271,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
 
     MirProgram {
         classes: MirClassDeclarationTable::default(),
+        interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
         member_definitions: MirMemberDefinitionTable::default(),
         declarations: MirFunctionDeclarationTable::new(vec![

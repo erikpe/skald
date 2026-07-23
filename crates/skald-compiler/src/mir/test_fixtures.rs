@@ -95,7 +95,7 @@ pub(crate) fn call(
 ) -> MirInstruction {
     MirInstruction::Call(MirCall {
         target,
-        receiver,
+        receiver: receiver.map(Into::into),
         arguments,
         result,
         destination,

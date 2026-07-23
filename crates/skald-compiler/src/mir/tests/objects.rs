@@ -287,7 +287,12 @@ fn preserves_object_storage_and_call_order_across_nested_control_flow() {
         })
     {
         assert_eq!(
-            call.receiver.as_ref().unwrap().place.base,
+            call.receiver
+                .as_ref()
+                .and_then(MirCallReceiver::as_method)
+                .unwrap()
+                .place
+                .base,
             MirPlaceBase::Storage(relay.receiver)
         );
     }

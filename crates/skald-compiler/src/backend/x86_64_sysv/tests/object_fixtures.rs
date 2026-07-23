@@ -32,6 +32,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             id: nested,
             name: "Nested".to_owned(),
             direct_base: None,
+            conformances: vec![],
             fields: vec![
                 field(nested_small, "small", MirType::U8, span),
                 field(nested_payload, "payload", MirType::F64, span),
@@ -49,6 +50,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             id: container,
             name: "Container".to_owned(),
             direct_base: None,
+            conformances: vec![],
             fields: vec![
                 field(container_tag, "tag", MirType::Bool, span),
                 field(container_nested, "nested", MirType::Class(nested), span),
@@ -67,6 +69,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
             id: empty_class,
             name: "Empty".to_owned(),
             direct_base: None,
+            conformances: vec![],
             fields: vec![],
             initializers: vec![],
             copy_constructor_declaration: None,
@@ -207,6 +210,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         id: class,
         name: "Counter".to_owned(),
         direct_base: None,
+        conformances: vec![],
         fields: vec![field(value_field, "value", MirType::I64, span)],
         initializers: vec![MirInitializerDeclaration {
             id: initializer,
@@ -304,7 +308,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         ),
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(add)),
-            receiver: Some(MirMethodReceiver::exact(object.into(), class)),
+            receiver: Some(MirMethodReceiver::exact(object.into(), class).into()),
             arguments: MirArgument::values([ValueId::new(main_id, 2)]),
             result: None,
             destination: None,
@@ -312,7 +316,7 @@ pub(super) fn counter_member_program() -> MirProgram {
         }),
         MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(get_via_receiver)),
-            receiver: Some(MirMethodReceiver::exact(object.into(), class)),
+            receiver: Some(MirMethodReceiver::exact(object.into(), class).into()),
             arguments: vec![],
             result: Some(ValueId::new(main_id, 3)),
             destination: None,
@@ -444,7 +448,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
         .instructions
         .push(MirInstruction::Call(MirCall {
             target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
-            receiver: Some(MirMethodReceiver::exact(ids.first.into(), ids.container)),
+            receiver: Some(MirMethodReceiver::exact(ids.first.into(), ids.container).into()),
             arguments,
             result: None,
             destination: None,
