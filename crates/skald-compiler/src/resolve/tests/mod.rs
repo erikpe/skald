@@ -38,4 +38,5 @@ mod declarations;
 mod diagnostics;
 mod dumps;
 mod expressions;
+mod interfaces;
 mod objects;

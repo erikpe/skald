@@ -20,6 +20,7 @@ pub fn dump_ast(ast: &CompilationUnit) -> String {
                     dumper.external_function(function)
                 }
                 TopLevelDeclaration::Class(class) => dumper.class(class),
+                TopLevelDeclaration::Interface(interface) => dumper.interface(interface),
             }
         }
     });
@@ -33,12 +34,40 @@ struct AstDumper {
 }
 
 impl AstDumper {
+    fn interface(&mut self, interface: &InterfaceDecl) {
+        self.line("Interface", interface.span);
+        self.indented(|dumper| {
+            dumper.named("Name", &interface.name.text, interface.name.span);
+            dumper.heading("Requirements");
+            dumper.indented(|dumper| {
+                for requirement in &interface.requirements {
+                    dumper.line(
+                        if requirement.mut_span.is_some() {
+                            "Requirement Mutable"
+                        } else {
+                            "Requirement ReadOnly"
+                        },
+                        requirement.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.named("Name", &requirement.name.text, requirement.name.span);
+                        dumper.parameters(&requirement.parameters);
+                        dumper.type_syntax(&requirement.return_type);
+                    });
+                }
+            });
+        });
+    }
+
     fn class(&mut self, class: &ClassDecl) {
         self.line("Class", class.span);
         self.indented(|dumper| {
             dumper.named("Name", &class.name.text, class.name.span);
             if let Some(base) = &class.direct_base {
                 dumper.named("DirectBase", &base.text, base.span);
+            }
+            for interface in &class.implemented_interfaces {
+                dumper.named("Implements", &interface.text, interface.span);
             }
             dumper.heading("Members");
             dumper.indented(|dumper| {

@@ -63,8 +63,43 @@ macro_rules! class_member_id {
     };
 }
 
+macro_rules! interface_member_id {
+    ($name:ident, $prefix:literal) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub struct $name {
+            interface: InterfaceId,
+            index: usize,
+        }
+
+        impl $name {
+            pub const fn interface(self) -> InterfaceId {
+                self.interface
+            }
+            pub const fn index(self) -> usize {
+                self.index
+            }
+            pub(crate) const fn new(interface: InterfaceId, index: usize) -> Self {
+                Self { interface, index }
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    formatter,
+                    "{}:{}{}",
+                    self.interface(),
+                    $prefix,
+                    self.index()
+                )
+            }
+        }
+    };
+}
+
 global_id!(FunctionId, "f");
 global_id!(ClassId, "c");
+global_id!(InterfaceId, "i");
 global_id!(VirtualFamilyId, "vf");
 global_id!(VirtualSlotId, "vs");
 
@@ -73,6 +108,7 @@ class_member_id!(InitializerId, "init");
 class_member_id!(CopyAssignmentId, "assign");
 class_member_id!(DestructorId, "destroy");
 class_member_id!(MethodId, "method");
+interface_member_id!(InterfaceRequirementId, "requirement");
 
 /// Stable identity of a declaration with an executable body.
 ///

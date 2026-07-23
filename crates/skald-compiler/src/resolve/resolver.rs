@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
-        ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId, MethodId,
+        ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId, InterfaceId,
+        MethodId,
     },
     source::Span,
     syntax,
@@ -33,6 +34,7 @@ pub const INHERITANCE_CYCLE: &str = "RES014";
 pub const INHERITED_MEMBER_COLLISION: &str = "RES015";
 pub const INVALID_BASE_INITIALIZATION: &str = "RES016";
 pub const INVALID_OVERRIDE: &str = "RES017";
+pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -109,6 +111,7 @@ pub(super) struct TopLevelSymbol {
 pub(super) enum TopLevelSymbolKind {
     Function(FunctionId),
     Class(ClassId),
+    Interface(InterfaceId),
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -6,17 +6,19 @@ use super::{
 };
 use crate::{
     diagnostics::Diagnostic,
-    identity::{CallableId, ParameterId},
+    identity::{CallableId, InterfaceId, InterfaceRequirementId, ParameterId},
 };
 
 mod class;
 mod class_body;
 mod hierarchy;
+mod interface;
 mod virtuals;
 
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
 use hierarchy::build_class_hierarchy;
+use interface::{collect_interface_declarations, resolve_interface_claims};
 use virtuals::resolve_virtual_families;
 
 #[derive(Clone, Copy)]
@@ -30,6 +32,7 @@ pub(super) struct ProgramResolver<'ast> {
     top_levels: HashMap<String, TopLevelSymbol>,
     function_work: Vec<FunctionWorkItem>,
     class_work: Vec<(ClassId, usize)>,
+    interface_work: Vec<(InterfaceId, usize)>,
     diagnostics: Diagnostics,
 }
 
@@ -40,6 +43,7 @@ impl<'ast> ProgramResolver<'ast> {
             top_levels: HashMap::new(),
             function_work: Vec::new(),
             class_work: Vec::new(),
+            interface_work: Vec::new(),
             diagnostics: Diagnostics::new(),
         }
     }
@@ -48,9 +52,22 @@ impl<'ast> ProgramResolver<'ast> {
         self.collect_top_levels();
 
         let function_declarations = self.collect_function_declarations();
+        let interfaces = collect_interface_declarations(
+            self.ast,
+            &self.interface_work,
+            &self.top_levels,
+            &mut self.diagnostics,
+        );
         let (class_declarations, class_symbols, class_work) = self.collect_class_declarations();
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
+        resolve_interface_claims(
+            self.ast,
+            &self.class_work,
+            &self.top_levels,
+            &mut class_declarations,
+            &mut self.diagnostics,
+        );
         let hierarchy =
             build_class_hierarchy(&class_declarations, &class_symbols, &mut self.diagnostics);
         let virtual_families = resolve_virtual_families(
@@ -83,6 +100,7 @@ impl<'ast> ProgramResolver<'ast> {
             .and_then(|symbol| match symbol.kind {
                 TopLevelSymbolKind::Function(function) => Some(function),
                 TopLevelSymbolKind::Class(_) => None,
+                TopLevelSymbolKind::Interface(_) => None,
             });
 
         ResolveOutput {
@@ -90,6 +108,7 @@ impl<'ast> ProgramResolver<'ast> {
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 classes: class_declarations,
+                interfaces: ResolvedInterfaceDeclarationTable::new(interfaces),
                 hierarchy,
                 virtual_families,
                 class_definitions: ResolvedClassDefinitionTable::new(class_definitions),
@@ -120,6 +139,9 @@ impl<'ast> ProgramResolver<'ast> {
                 }
                 syntax::TopLevelDeclaration::Class(_) => {
                     TopLevelSymbolKind::Class(ClassId::new(self.class_work.len()))
+                }
+                syntax::TopLevelDeclaration::Interface(_) => {
+                    TopLevelSymbolKind::Interface(InterfaceId::new(self.interface_work.len()))
                 }
             };
 
@@ -158,6 +180,7 @@ impl<'ast> ProgramResolver<'ast> {
                     self.function_work.push(FunctionWorkItem { id, ast_index });
                 }
                 TopLevelSymbolKind::Class(id) => self.class_work.push((id, ast_index)),
+                TopLevelSymbolKind::Interface(id) => self.interface_work.push((id, ast_index)),
             }
         }
     }
@@ -207,6 +230,9 @@ impl<'ast> ProgramResolver<'ast> {
                     }
                 }
                 syntax::TopLevelDeclaration::Class(_) => {
+                    unreachable!("function work item must reference a function")
+                }
+                syntax::TopLevelDeclaration::Interface(_) => {
                     unreachable!("function work item must reference a function")
                 }
             })

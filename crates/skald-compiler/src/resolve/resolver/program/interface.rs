@@ -1,0 +1,118 @@
+//! Interface declaration collection and class conformance-name resolution.
+
+use super::*;
+use std::collections::HashSet;
+
+pub(super) fn collect_interface_declarations(
+    ast: &syntax::CompilationUnit,
+    work: &[(InterfaceId, usize)],
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> Vec<ResolvedInterfaceDeclaration> {
+    work.iter()
+        .copied()
+        .map(|(id, ast_index)| {
+            let syntax::TopLevelDeclaration::Interface(interface) = &ast.declarations[ast_index]
+            else {
+                unreachable!("interface work item must reference an interface")
+            };
+            let requirements = interface
+                .requirements
+                .iter()
+                .enumerate()
+                .map(|(index, requirement)| ResolvedInterfaceRequirement {
+                    id: InterfaceRequirementId::new(id, index),
+                    name: requirement.name.text.clone(),
+                    name_span: requirement.name.span,
+                    mutable: requirement.mut_span.is_some(),
+                    parameters: requirement
+                        .parameters
+                        .iter()
+                        .filter_map(|parameter| {
+                            resolve_type(&parameter.type_syntax, top_levels, diagnostics).map(
+                                |type_syntax| ResolvedInterfaceParameter {
+                                    binding_mode: resolve_parameter_binding_mode(
+                                        parameter.binding_mode,
+                                    ),
+                                    name: parameter.name.text.clone(),
+                                    name_span: parameter.name.span,
+                                    type_syntax,
+                                    span: parameter.span,
+                                },
+                            )
+                        })
+                        .collect(),
+                    return_type: resolve_result_type(
+                        &requirement.return_type,
+                        top_levels,
+                        diagnostics,
+                    ),
+                    span: requirement.span,
+                })
+                .collect();
+            ResolvedInterfaceDeclaration {
+                id,
+                name: interface.name.text.clone(),
+                name_span: interface.name.span,
+                requirements,
+                span: interface.span,
+            }
+        })
+        .collect()
+}
+
+pub(super) fn resolve_interface_claims(
+    ast: &syntax::CompilationUnit,
+    work: &[(ClassId, usize)],
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    classes: &mut ResolvedClassDeclarationTable,
+    diagnostics: &mut Diagnostics,
+) {
+    for ((_, ast_index), class) in work.iter().copied().zip(classes.iter_mut()) {
+        let syntax::TopLevelDeclaration::Class(syntax_class) = &ast.declarations[ast_index] else {
+            unreachable!("class work item must reference a class")
+        };
+        let mut seen = HashSet::new();
+        for claim in &syntax_class.implemented_interfaces {
+            match top_levels.get(&claim.text) {
+                Some(TopLevelSymbol {
+                    kind: TopLevelSymbolKind::Interface(interface),
+                    ..
+                }) if seen.insert(*interface) => {
+                    class.implemented_interfaces.push(ResolvedInterfaceClaim {
+                        interface: *interface,
+                        span: claim.span,
+                    });
+                }
+                Some(TopLevelSymbol {
+                    kind: TopLevelSymbolKind::Interface(_),
+                    name_span,
+                }) => {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_INTERFACE_CLAIM,
+                            format!("duplicate interface `{}`", claim.text),
+                        )
+                        .with_primary_label(claim.span, "repeated here")
+                        .with_secondary_label(*name_span, "interface declared here"),
+                    );
+                }
+                Some(symbol) => diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTERFACE_CLAIM,
+                        format!("`{}` does not name an interface", claim.text),
+                    )
+                    .with_primary_label(claim.span, "expected an interface name")
+                    .with_secondary_label(symbol.name_span, "different declaration kind here"),
+                ),
+                None => diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INTERFACE_CLAIM,
+                        format!("unknown interface `{}`", claim.text),
+                    )
+                    .with_primary_label(claim.span, "no interface with this name is declared"),
+                ),
+            }
+        }
+    }
+}

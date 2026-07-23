@@ -13,6 +13,7 @@ pub enum TopLevelDeclaration {
     Function(FunctionDecl),
     ExternalFunction(ExternalFunctionDecl),
     Class(ClassDecl),
+    Interface(InterfaceDecl),
 }
 
 impl TopLevelDeclaration {
@@ -21,6 +22,7 @@ impl TopLevelDeclaration {
             Self::Function(function) => &function.name,
             Self::ExternalFunction(function) => &function.name,
             Self::Class(class) => &class.name,
+            Self::Interface(interface) => &interface.name,
         }
     }
 
@@ -29,6 +31,7 @@ impl TopLevelDeclaration {
             Self::Function(function) => function.span,
             Self::ExternalFunction(function) => function.span,
             Self::Class(class) => class.span,
+            Self::Interface(interface) => interface.span,
         }
     }
 }
@@ -37,7 +40,24 @@ impl TopLevelDeclaration {
 pub struct ClassDecl {
     pub name: Name,
     pub direct_base: Option<Name>,
+    pub implemented_interfaces: Vec<Name>,
     pub members: Vec<ClassMember>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InterfaceDecl {
+    pub name: Name,
+    pub requirements: Vec<InterfaceRequirementDecl>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InterfaceRequirementDecl {
+    pub mut_span: Option<Span>,
+    pub name: Name,
+    pub parameters: Vec<Parameter>,
+    pub return_type: TypeSyntax,
     pub span: Span,
 }
 

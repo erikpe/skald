@@ -17,10 +17,12 @@ pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
     ResolvedCopyOperation, ResolvedDestructorDeclaration, ResolvedDirectBase,
     ResolvedFieldDeclaration, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
-    ResolvedFunctionLinkage, ResolvedInitializerDeclaration, ResolvedLocal,
-    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedType,
-    ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedFunctionLinkage, ResolvedInitializerDeclaration, ResolvedInterfaceClaim,
+    ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
+    ResolvedInterfaceRequirement, ResolvedLocal, ResolvedMethodDeclaration, ResolvedMethodDispatch,
+    ResolvedMethodModifier, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
+    ResolvedReceiverAccess, ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily,
+    ResolvedVirtualFamilyTable,
 };
 pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,

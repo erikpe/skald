@@ -11,6 +11,7 @@ use super::ast::*;
 mod class;
 mod declaration;
 mod expression;
+mod interface;
 mod recovery;
 mod statement;
 
@@ -21,6 +22,7 @@ pub const EXPECTED_EXPRESSION: &str = "PAR004";
 pub const EXCESSIVE_NESTING: &str = "PAR005";
 pub const INVALID_CLASS_MEMBER: &str = "PAR006";
 pub const INVALID_CLASS_HEADER: &str = "PAR007";
+pub const INVALID_INTERFACE_MEMBER: &str = "PAR008";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///
@@ -109,6 +111,8 @@ impl<'source> Parser<'source> {
                     .map(TopLevelDeclaration::ExternalFunction)
             } else if self.at(TokenKind::Class) {
                 self.parse_class().map(TopLevelDeclaration::Class)
+            } else if self.at_contextual("interface") {
+                self.parse_interface().map(TopLevelDeclaration::Interface)
             } else if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
                 self.report(
                     EXPECTED_DECLARATION,
@@ -122,7 +126,7 @@ impl<'source> Parser<'source> {
                     EXPECTED_DECLARATION,
                     "expected a top-level declaration",
                     self.peek().span,
-                    "expected `fn`, `extern fn`, or `class` at file scope",
+                    "expected `fn`, `extern fn`, `class`, or `interface` at file scope",
                 );
                 None
             };

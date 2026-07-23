@@ -123,6 +123,7 @@ compilation-unit              = { top-level-declaration } EOF
 top-level-declaration         = function-definition
                               | external-function-declaration
                               | class-declaration
+                              | interface-declaration
 
 function-definition           = "fn" identifier parameter-list
                                 "->" result-type block
@@ -154,6 +155,7 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
 ```text
 class-declaration           = "class" identifier ["extends" identifier]
+                              ["implements" identifier {"," identifier}]
                               "{" {class-member} "}"
 
 class-member                = field-declaration
@@ -169,6 +171,11 @@ destruction-declaration     = "destroy" block
 method-declaration          = [method-modifier] ["mut"] "fn" identifier parameter-list
                               "->" result-type block
 method-modifier             = "virtual" | "override"
+
+interface-declaration       = "interface" identifier
+                              "{" {interface-requirement} "}"
+interface-requirement       = ["mut"] "fn" identifier parameter-list
+                              "->" result-type ";"
 ```
 
 The grammar intentionally does not encode base-name resolution, hierarchy
@@ -177,6 +184,12 @@ initializer-body restrictions, receiver access, or member type legality. It
 only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
 name.
+
+`interface` and `implements` are contextual words. Interface bodies contain
+signatures only: fields, lifecycle declarations, method bodies, inheritance,
+and trailing separators are not part of this grammar. Name resolution
+validates interface names in `implements` lists; conformance checking and
+interface calls are not implemented yet.
 
 ## Blocks and statements
 

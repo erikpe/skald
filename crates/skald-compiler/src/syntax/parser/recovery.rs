@@ -11,7 +11,8 @@ impl Parser<'_> {
             TokenKind::Extern,
             TokenKind::Class,
             TokenKind::Eof,
-        ]) {
+        ]) && !self.at_contextual("interface")
+        {
             self.advance();
         }
         self.recovering_from_excessive_nesting = false;

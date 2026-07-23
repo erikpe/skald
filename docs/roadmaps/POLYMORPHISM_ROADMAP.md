@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM12 is next. The
+Status: in progress; PM14 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -96,7 +96,7 @@ The frozen restricted profile excludes:
 - [x] PM10 — Select virtual calls and receiver views in HIR
 - [x] PM11 — Represent and verify virtual dispatch in MIR
 - [x] PM12 — Lower virtual dispatch on x86-64
-- [ ] PM13 — Parse and resolve interfaces and conformance declarations
+- [x] PM13 — Parse and resolve interfaces and conformance declarations
 - [ ] PM14 — Validate conformance and select interface views in HIR
 - [ ] PM15 — Represent and verify interface dispatch in MIR
 - [ ] PM16 — Lower interface dispatch on x86-64
@@ -399,14 +399,14 @@ direct and sliced calls retain exact static behavior.
 **Purpose:** Establish stable interface and requirement identities independently
 of executable interface dispatch.
 
-- [ ] Parse top-level interface signatures and contextual class `implements`
+- [x] Parse top-level interface signatures and contextual class `implements`
       lists with focused recovery and no standalone interface values.
-- [ ] Add `InterfaceId` and interface-member identities using the shared typed
+- [x] Add `InterfaceId` and interface-member identities using the shared typed
       identity/table patterns; resolve nominal type positions by declaration
       kind.
-- [ ] Resolve class conformance lists in source order and reject unknown,
+- [x] Resolve class conformance lists in source order and reject unknown,
       duplicate, malformed, and wrong-kind entries deterministically.
-- [ ] Extend AST and resolved models/dumps, grammar snapshots, public phase API
+- [x] Extend AST and resolved models/dumps, grammar snapshots, public phase API
       tests, and frontend robustness mutations through cohesive private owners.
 
 **Tests:** Add parser recovery, identity/table, resolution diagnostic, exact

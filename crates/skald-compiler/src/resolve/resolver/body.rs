@@ -440,6 +440,19 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 )
                 .with_primary_label(identifier.span, "construct it with `(...)`"),
             ),
+            Some(TopLevelSymbol {
+                kind: TopLevelSymbolKind::Interface(_),
+                ..
+            }) => self.diagnostics.push(
+                Diagnostic::error(
+                    TOP_LEVEL_USED_AS_VALUE,
+                    format!(
+                        "interface `{}` cannot be used as a value",
+                        identifier.name.text
+                    ),
+                )
+                .with_primary_label(identifier.span, "interfaces are declaration-only"),
+            ),
             None => self.report_unknown(&identifier.name.text, identifier.span, "unknown name"),
         }
         None
@@ -588,6 +601,22 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                                 None
                             })?;
                         Some(CallTarget::Constructor { class, initializer })
+                    }
+                    Some(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::Interface(_),
+                        ..
+                    }) => {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_CALL_TARGET,
+                                format!("interface `{}` is not callable", identifier.name.text),
+                            )
+                            .with_primary_label(
+                                identifier.span,
+                                "interface calls are not available yet",
+                            ),
+                        );
+                        None
                     }
                     None => {
                         self.report_unknown(

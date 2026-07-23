@@ -298,6 +298,7 @@ impl ClassCollectionState {
                 name: class.name.text.clone(),
                 name_span: class.name.span,
                 direct_base: self.direct_base,
+                implemented_interfaces: Vec::new(),
                 fields: self.fields,
                 initializer: self.lifecycle.initializer,
                 copy_constructor,

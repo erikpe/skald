@@ -4,7 +4,8 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        LocalId, MethodId, ParameterId, VirtualFamilyId, VirtualSlotId,
+        InterfaceId, InterfaceRequirementId, LocalId, MethodId, ParameterId, VirtualFamilyId,
+        VirtualSlotId,
     },
     source::Span,
 };
@@ -19,6 +20,7 @@ pub struct ResolvedProgram {
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
     pub classes: ResolvedClassDeclarationTable,
+    pub interfaces: ResolvedInterfaceDeclarationTable,
     pub hierarchy: ResolvedClassHierarchy,
     pub virtual_families: ResolvedVirtualFamilyTable,
     pub class_definitions: ResolvedClassDefinitionTable,
@@ -31,6 +33,9 @@ pub struct ResolvedProgram {
 impl ResolvedProgram {
     pub fn class(&self, id: ClassId) -> Option<&ResolvedClassDeclaration> {
         self.classes.get(id)
+    }
+    pub fn interface(&self, id: InterfaceId) -> Option<&ResolvedInterfaceDeclaration> {
+        self.interfaces.get(id)
     }
 
     pub fn field(&self, id: FieldId) -> Option<&ResolvedFieldDeclaration> {
@@ -60,6 +65,53 @@ impl ResolvedProgram {
         let class = callable.class()?;
         self.class_definitions.get(class)?.member(callable)
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResolvedInterfaceDeclarationTable {
+    entries: DenseIdTable<InterfaceId, ResolvedInterfaceDeclaration>,
+}
+impl ResolvedInterfaceDeclarationTable {
+    pub(crate) fn new(entries: Vec<ResolvedInterfaceDeclaration>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |entry| entry.id),
+        }
+    }
+    pub fn get(&self, id: InterfaceId) -> Option<&ResolvedInterfaceDeclaration> {
+        self.entries.get(id, |entry| entry.id)
+    }
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedInterfaceDeclaration> {
+        self.entries.iter()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceDeclaration {
+    pub id: InterfaceId,
+    pub name: String,
+    pub name_span: Span,
+    pub requirements: Vec<ResolvedInterfaceRequirement>,
+    pub span: Span,
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceRequirement {
+    pub id: InterfaceRequirementId,
+    pub name: String,
+    pub name_span: Span,
+    pub mutable: bool,
+    pub parameters: Vec<ResolvedInterfaceParameter>,
+    pub return_type: ResolvedType,
+    pub span: Span,
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceParameter {
+    pub binding_mode: ResolvedParameterBindingMode,
+    pub name: String,
+    pub name_span: Span,
+    pub type_syntax: ResolvedType,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -108,6 +160,7 @@ pub struct ResolvedClassDeclaration {
     pub name: String,
     pub name_span: Span,
     pub direct_base: Option<ResolvedDirectBase>,
+    pub implemented_interfaces: Vec<ResolvedInterfaceClaim>,
     pub fields: Vec<ResolvedFieldDeclaration>,
     pub initializer: Option<ResolvedInitializerDeclaration>,
     pub copy_constructor_declaration: Option<ResolvedInitializerDeclaration>,
@@ -116,6 +169,11 @@ pub struct ResolvedClassDeclaration {
     pub copy_assignment: ResolvedCopyOperation<CopyAssignmentId>,
     pub destructor: Option<ResolvedDestructorDeclaration>,
     pub methods: Vec<ResolvedMethodDeclaration>,
+    pub span: Span,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceClaim {
+    pub interface: InterfaceId,
     pub span: Span,
 }
 

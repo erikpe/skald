@@ -28,6 +28,14 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if !program.interfaces.is_empty() {
+            dumper.heading("InterfaceDeclarations");
+            dumper.indented(|dumper| {
+                for interface in program.interfaces.iter() {
+                    dumper.interface_declaration(interface);
+                }
+            });
+        }
         if !program.virtual_families.is_empty() {
             dumper.heading("VirtualFamilies");
             dumper.indented(|dumper| {
@@ -70,6 +78,48 @@ struct ResolvedDumper {
 }
 
 impl ResolvedDumper {
+    fn interface_declaration(&mut self, interface: &ResolvedInterfaceDeclaration) {
+        self.write_indentation();
+        let _ = write!(self.output, "Interface {} ", interface.id);
+        write_quoted(&mut self.output, &interface.name);
+        write_span(&mut self.output, interface.span);
+        self.output.push('\n');
+        self.indented(|dumper| {
+            for requirement in &interface.requirements {
+                dumper.write_indentation();
+                let _ = write!(
+                    dumper.output,
+                    "Requirement {} {} ",
+                    requirement.id,
+                    if requirement.mutable {
+                        "mutable"
+                    } else {
+                        "readonly"
+                    },
+                );
+                write_quoted(&mut dumper.output, &requirement.name);
+                write_span(&mut dumper.output, requirement.span);
+                dumper.output.push('\n');
+                dumper.indented(|dumper| {
+                    for parameter in &requirement.parameters {
+                        dumper.named_parameter(parameter);
+                    }
+                    dumper.heading("ReturnType");
+                    dumper.indented(|dumper| dumper.type_syntax(&requirement.return_type));
+                });
+            }
+        });
+    }
+
+    fn named_parameter(&mut self, parameter: &ResolvedInterfaceParameter) {
+        self.write_indentation();
+        self.output.push_str("Parameter ");
+        write_quoted(&mut self.output, &parameter.name);
+        write_span(&mut self.output, parameter.span);
+        self.output.push('\n');
+        self.indented(|dumper| dumper.type_syntax(&parameter.type_syntax));
+    }
+
     fn class_declaration(&mut self, class: &ResolvedClassDeclaration) {
         self.write_indentation();
         let _ = write!(self.output, "Class {} ", class.id);
@@ -79,6 +129,9 @@ impl ResolvedDumper {
         self.indented(|dumper| {
             if let Some(base) = class.direct_base {
                 dumper.line(&format!("DirectBase {}", base.class), base.span);
+            }
+            for claim in &class.implemented_interfaces {
+                dumper.line(&format!("Implements {}", claim.interface), claim.span);
             }
             dumper.heading("Fields");
             dumper.indented(|dumper| {

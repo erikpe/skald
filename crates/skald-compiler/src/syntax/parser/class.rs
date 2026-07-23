@@ -8,6 +8,7 @@ impl Parser<'_> {
         let name = self.parse_name("expected a class name after `class`");
         let direct_base = self.parse_direct_base();
         self.discard_duplicate_base_clauses();
+        let implemented_interfaces = self.parse_implemented_interfaces();
         let left_brace = self.expect(TokenKind::LeftBrace, "`{` after the class header")?;
         self.brace_depth += 1;
         self.class_depth += 1;
@@ -20,9 +21,25 @@ impl Parser<'_> {
         Some(ClassDecl {
             name,
             direct_base,
+            implemented_interfaces,
             members,
             span: self.cover(class_token.span, right_brace.span),
         })
+    }
+
+    fn parse_implemented_interfaces(&mut self) -> Vec<Name> {
+        if !self.at_contextual("implements") {
+            return Vec::new();
+        }
+        self.advance();
+        let mut interfaces = Vec::new();
+        while let Some(name) = self.parse_name("expected an interface name after `implements`") {
+            interfaces.push(name);
+            if self.consume(TokenKind::Comma).is_none() {
+                break;
+            }
+        }
+        interfaces
     }
 
     fn parse_direct_base(&mut self) -> Option<Name> {

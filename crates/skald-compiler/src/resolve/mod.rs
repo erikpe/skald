@@ -18,19 +18,21 @@ pub use ir::{
     ResolvedFieldAccessExpr, ResolvedFieldAssignment, ResolvedFieldDeclaration,
     ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage, ResolvedGroupedExpr,
-    ResolvedInitializerDeclaration, ResolvedLocal, ResolvedLocalDecl, ResolvedMemberDefinition,
-    ResolvedMethodCallExpr, ResolvedMethodDeclaration, ResolvedMethodDispatch,
-    ResolvedMethodModifier, ResolvedNumericLiteralExpr, ResolvedObjectAssignment,
-    ResolvedObjectPlace, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
-    ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType, ResolvedTypeKind,
-    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedInitializerDeclaration, ResolvedInterfaceClaim, ResolvedInterfaceDeclaration,
+    ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter, ResolvedInterfaceRequirement,
+    ResolvedLocal, ResolvedLocalDecl, ResolvedMemberDefinition, ResolvedMethodCallExpr,
+    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier,
+    ResolvedNumericLiteralExpr, ResolvedObjectAssignment, ResolvedObjectPlace, ResolvedParameter,
+    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
+    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,
     INHERITANCE_CYCLE, INHERITED_MEMBER_COLLISION, INVALID_BASE_CLASS, INVALID_BASE_INITIALIZATION,
-    INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET, INVALID_LIFECYCLE_SIGNATURE,
-    INVALID_MEMBER_SELECTION, INVALID_OVERRIDE, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE,
-    UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
+    INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET, INVALID_INTERFACE_CLAIM,
+    INVALID_LIFECYCLE_SIGNATURE, INVALID_MEMBER_SELECTION, INVALID_OVERRIDE, SELF_OUTSIDE_MEMBER,
+    TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
 };
 
 #[cfg(test)]
