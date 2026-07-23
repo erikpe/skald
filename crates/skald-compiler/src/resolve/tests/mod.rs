@@ -40,3 +40,4 @@ mod dumps;
 mod expressions;
 mod interfaces;
 mod objects;
+mod type_operations;

@@ -234,6 +234,34 @@ impl AstDumper {
                     });
                 });
             }
+            Statement::Narrowing(statement) => {
+                self.line("Narrowing", statement.span);
+                self.indented(|dumper| {
+                    dumper.line(
+                        if statement.binding.mut_span.is_some() {
+                            "Binding Mutable"
+                        } else {
+                            "Binding ReadOnly"
+                        },
+                        statement.binding.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.named(
+                            "Name",
+                            &statement.binding.name.text,
+                            statement.binding.name.span,
+                        );
+                        dumper.named(
+                            "Target",
+                            &statement.binding.target.text,
+                            statement.binding.target.span,
+                        );
+                    });
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&statement.source));
+                    dumper.block(&statement.body);
+                });
+            }
             Statement::Local(local) => {
                 self.line("Local", local.span);
                 self.indented(|dumper| {
@@ -342,6 +370,15 @@ impl AstDumper {
                 self.indented(|dumper| {
                     dumper.expression(&binary.left);
                     dumper.expression(&binary.right);
+                });
+            }
+            Expression::TypeTest(test) => {
+                self.line("TypeTest", test.span);
+                self.indented(|dumper| {
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&test.source));
+                    dumper.line("Is", test.is_span);
+                    dumper.named("Target", &test.target.text, test.target.span);
                 });
             }
             Expression::Call(call) => {

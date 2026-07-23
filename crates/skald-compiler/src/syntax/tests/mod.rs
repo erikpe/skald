@@ -32,3 +32,4 @@ mod expressions;
 mod interfaces;
 mod objects;
 mod recovery;
+mod type_operations;

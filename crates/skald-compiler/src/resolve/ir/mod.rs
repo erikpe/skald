@@ -11,7 +11,8 @@ pub use body::{
     ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
     ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
-    ResolvedObjectAssignment, ResolvedReturn, ResolvedStatement,
+    ResolvedNarrowedAlias, ResolvedNarrowing, ResolvedObjectAssignment, ResolvedReturn,
+    ResolvedStatement,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
@@ -28,7 +29,7 @@ pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
     ResolvedConstructExpr, ResolvedDirectCallExpr, ResolvedExpression, ResolvedFieldAccessExpr,
     ResolvedGroupedExpr, ResolvedInterfaceCallExpr, ResolvedMethodCallExpr,
-    ResolvedNumericLiteralExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedNumericLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use object_place::ResolvedObjectPlace;

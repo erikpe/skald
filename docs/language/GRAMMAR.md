@@ -68,14 +68,12 @@ and `fn destroy() -> unit {}` is a method.
 by a call argument list is contextually recognized as a dedicated statement;
 resolution restricts it to the first statement of a derived ordinary
 initializer. Both spellings remain ordinary identifiers outside those shapes.
-`Obj` is now contextually recognized as the universal object-view type in
-alias-parameter type positions; it remains an ordinary identifier elsewhere
-except that it cannot name a top-level declaration. `virtual` and `override`
-are contextually recognized only as method modifiers. The frozen polymorphism
-profile will also contextually recognize `implements`, `interface`, `is`, and
-`narrow`; none of those later forms is part of the implemented grammar yet.
-Their exact source forms are specified in
-[polymorphism](POLYMORPHISM.md#frozen-source-profile).
+`Obj` is contextually recognized as the universal object-view type in
+alias-parameter and type-operation target positions; it remains an ordinary
+identifier elsewhere except that it cannot name a top-level declaration.
+`virtual` and `override` are contextually recognized only as method modifiers.
+`implements`, `interface`, `is`, and `narrow` are likewise contextual in the
+exact forms below. None is reserved by the lexer.
 
 ## Punctuation
 
@@ -200,6 +198,7 @@ block                 = "{" {statement} "}"
 
 statement             = local-declaration
                       | base-initialization
+                      | narrowing-statement
                       | return-statement
                       | conditional-statement
                       | assignment-statement
@@ -209,6 +208,8 @@ statement             = local-declaration
 local-declaration     = "var" identifier ":" storage-type
                         "=" expression ";"
 base-initialization   = "super" argument-list ";"
+narrowing-statement   = "narrow" alias-binding "=" expression block
+alias-binding         = ["mut"] "ref" identifier ":" view-target
 return-statement      = "return" [expression] ";"
 expression-statement  = expression ";"
 
@@ -236,10 +237,16 @@ mutability.
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
 parenthesized expression and a block.
 
+The source expression of a narrowing is parsed before its trailing block. The
+new alias is semantically visible only in that block. Type checking restricts
+the source to an existing object place or alias view and the target to a class
+or interface.
+
 ## Expressions
 
 ```text
-expression       = additive-expression
+expression       = additive-expression ["is" view-target]
+view-target      = identifier
 
 additive-expression
                  = multiplicative-expression
@@ -268,12 +275,14 @@ From tightest to loosest binding, precedence is:
 1. postfix member access and calls;
 2. unary `-`;
 3. binary `*`;
-4. binary `+` and `-`.
+4. binary `+` and `-`;
+5. contextual `is`.
 
 Postfix and binary operators associate left to right. Unary `-` associates
-right to left. Grouping overrides precedence and remains represented in the
-source-shaped syntax tree. Calls and member access may be interleaved in one
-postfix chain; declaration selection and call legality are semantic concerns.
+right to left. `is` is non-associative, so chained tests are syntax errors.
+Grouping overrides precedence and remains represented in the source-shaped
+syntax tree. Calls and member access may be interleaved in one postfix chain;
+declaration selection and call legality are semantic concerns.
 
 ## Syntax errors and nesting
 
@@ -318,5 +327,5 @@ scope, statement, return, and evaluation-order semantics.
 member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
-[Polymorphism](POLYMORPHISM.md) defines a frozen future profile; none of its
-source forms extend the implemented grammar on this page yet.
+[Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
+type tests, and checked-narrowing semantics.

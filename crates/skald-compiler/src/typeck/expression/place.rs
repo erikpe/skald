@@ -237,6 +237,13 @@ impl CallableChecker<'_, '_> {
                 receiver.access
             }
             BindingId::Local(_) => HirAccess::Mutable,
+            BindingId::NarrowedAlias(id) => {
+                if self.narrowed_alias(id).mutable {
+                    HirAccess::Mutable
+                } else {
+                    HirAccess::ReadOnly
+                }
+            }
             BindingId::Parameter(id) => {
                 let parameter = self.parameter(id);
                 lower_parameter_mode(parameter.binding_mode)
@@ -299,6 +306,7 @@ impl CallableChecker<'_, '_> {
                     .expect("resolved local ID must exist")
                     .type_syntax,
             ),
+            BindingId::NarrowedAlias(id) => lower_type(&self.narrowed_alias(id).target),
         }
     }
 }

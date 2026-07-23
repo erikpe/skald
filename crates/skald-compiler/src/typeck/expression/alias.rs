@@ -11,10 +11,44 @@ use crate::{
     source::Span,
     typeck::program::{
         lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
+        INVALID_NARROWING, INVALID_TYPE_TEST,
     },
 };
 
-enum CheckedAliasSource {
+#[derive(Clone, Copy)]
+pub(super) enum ViewSourceUse {
+    AliasArgument,
+    TypeTest,
+    Narrowing,
+}
+
+impl ViewSourceUse {
+    const fn diagnostic_code(self) -> &'static str {
+        match self {
+            Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
+            Self::TypeTest => INVALID_TYPE_TEST,
+            Self::Narrowing => INVALID_NARROWING,
+        }
+    }
+
+    const fn object_message(self) -> &'static str {
+        match self {
+            Self::AliasArgument => "alias argument must designate an object",
+            Self::TypeTest => "type-test source must designate an object",
+            Self::Narrowing => "checked-narrowing source must designate an object",
+        }
+    }
+
+    const fn place_message(self) -> &'static str {
+        match self {
+            Self::AliasArgument => "alias argument must be an existing object place",
+            Self::TypeTest => "type-test source must be an existing object place",
+            Self::Narrowing => "checked-narrowing source must be an existing object place",
+        }
+    }
+}
+
+pub(super) enum CheckedObjectViewSource {
     Class {
         place: HirObjectPlace,
         origin: HirObjectOrigin,
@@ -32,18 +66,78 @@ enum CheckedAliasSource {
     },
 }
 
-impl CheckedAliasSource {
-    const fn access(&self) -> HirAccess {
+impl CheckedObjectViewSource {
+    pub(super) const fn access(&self) -> HirAccess {
         match self {
             Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
         }
     }
 
-    const fn span(&self) -> Span {
+    pub(super) const fn span(&self) -> Span {
         match self {
             Self::Class { place, .. } => place.span(),
             Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
+        }
+    }
+
+    pub(super) const fn static_target(&self) -> HirViewTarget {
+        match self {
+            Self::Class { place, .. } => HirViewTarget::Class(place.class()),
+            Self::Obj { .. } => HirViewTarget::Obj,
+            Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
+        }
+    }
+
+    pub(super) fn exact_dynamic_class(&self) -> Option<crate::identity::ClassId> {
+        match self {
+            Self::Class {
+                origin: HirObjectOrigin::Exact { dynamic_class, .. },
+                ..
+            } => Some(*dynamic_class),
+            Self::Class {
+                origin: HirObjectOrigin::Forwarded { .. },
+                ..
+            }
+            | Self::Obj { .. }
+            | Self::Interface { .. } => None,
+        }
+    }
+
+    pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
+        match self {
+            Self::Class { place, origin } => HirObjectView {
+                span: place.span(),
+                source: HirViewSource::Place(place),
+                origin: Box::new(origin),
+                target,
+                access,
+            },
+            Self::Obj {
+                binding,
+                access: source_access,
+                span,
+            } => forwarded_object_view(
+                binding,
+                HirViewTarget::Obj,
+                target,
+                source_access,
+                access,
+                span,
+            ),
+            Self::Interface {
+                binding,
+                interface,
+                access: source_access,
+                span,
+            } => forwarded_object_view(
+                binding,
+                HirViewTarget::Interface(interface),
+                target,
+                source_access,
+                access,
+                span,
+            ),
         }
     }
 }
@@ -54,7 +148,7 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
-        let source = self.check_alias_source(expression)?;
+        let source = self.check_object_view_source(expression, ViewSourceUse::AliasArgument)?;
         let required = lower_parameter_mode(parameter.binding_mode())
             .required_access()
             .expect("alias parameter mode must require place access");
@@ -77,42 +171,53 @@ impl CallableChecker<'_, '_> {
         )
     }
 
-    fn check_alias_source(
+    pub(super) fn check_object_view_source(
         &mut self,
         expression: &ResolvedExpression,
-    ) -> Option<CheckedAliasSource> {
+        source_use: ViewSourceUse,
+    ) -> Option<CheckedObjectViewSource> {
         match expression {
             ResolvedExpression::Binding(binding) => {
-                if self.binding_type(binding.binding) == Type::Obj {
+                let binding_type = self.binding_type(binding.binding);
+                if binding_type == Type::Obj {
                     let access = self.binding_access(binding.binding, false, binding.span)?;
-                    Some(CheckedAliasSource::Obj {
+                    Some(CheckedObjectViewSource::Obj {
                         binding: binding.binding,
                         access,
                         span: binding.span,
                     })
-                } else if let Type::Interface(interface) = self.binding_type(binding.binding) {
+                } else if let Type::Interface(interface) = binding_type {
                     let access = self.binding_access(binding.binding, false, binding.span)?;
-                    Some(CheckedAliasSource::Interface {
+                    Some(CheckedObjectViewSource::Interface {
                         binding: binding.binding,
                         interface,
                         access,
                         span: binding.span,
                     })
-                } else {
+                } else if matches!(binding_type, Type::Class(_)) {
                     let place = self.check_binding_place(binding.binding, binding.span, false)?;
                     let origin = self.object_origin(&place);
-                    Some(CheckedAliasSource::Class { place, origin })
+                    Some(CheckedObjectViewSource::Class { place, origin })
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            source_use.diagnostic_code(),
+                            source_use.object_message(),
+                        )
+                        .with_primary_label(binding.span, "this binding has a primitive type"),
+                    );
+                    None
                 }
             }
             ResolvedExpression::Grouped(grouped) => {
-                let mut source = self.check_alias_source(&grouped.expression)?;
+                let mut source = self.check_object_view_source(&grouped.expression, source_use)?;
                 match &mut source {
-                    CheckedAliasSource::Class { place, origin } => {
+                    CheckedObjectViewSource::Class { place, origin } => {
                         place.path.span = grouped.span;
                         set_origin_span(origin, grouped.span);
                     }
-                    CheckedAliasSource::Obj { span, .. }
-                    | CheckedAliasSource::Interface { span, .. } => *span = grouped.span,
+                    CheckedObjectViewSource::Obj { span, .. }
+                    | CheckedObjectViewSource::Interface { span, .. } => *span = grouped.span,
                 }
                 Some(source)
             }
@@ -124,8 +229,8 @@ impl CallableChecker<'_, '_> {
                 let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            INVALID_ALIAS_ARGUMENT,
-                            "alias argument must designate an object",
+                            source_use.diagnostic_code(),
+                            source_use.object_message(),
                         )
                         .with_primary_label(access.member_span, "this field has a primitive type"),
                     );
@@ -137,18 +242,15 @@ impl CallableChecker<'_, '_> {
                     .project_field(access.field, class, access.span);
                 let place = self.check_object_place(&place, ObjectPlaceUse::Alias)?;
                 let origin = self.object_origin(&place);
-                Some(CheckedAliasSource::Class { place, origin })
+                Some(CheckedObjectViewSource::Class { place, origin })
             }
             _ => {
                 self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_ALIAS_ARGUMENT,
-                        "alias argument must be an existing object place",
-                    )
-                    .with_primary_label(
-                        expression.span(),
-                        "expected an object local, `self`, alias parameter, or grouping",
-                    ),
+                    Diagnostic::error(source_use.diagnostic_code(), source_use.place_message())
+                        .with_primary_label(
+                            expression.span(),
+                            "expected an object local, `self`, alias parameter, or grouping",
+                        ),
                 );
                 None
             }
@@ -157,7 +259,7 @@ impl CallableChecker<'_, '_> {
 
     fn convert_alias_argument(
         &mut self,
-        source: CheckedAliasSource,
+        source: CheckedObjectViewSource,
         expected: Type,
         required: HirAccess,
         parameter: &impl CallParameter,
@@ -176,7 +278,7 @@ impl CallableChecker<'_, '_> {
         };
 
         match (source, expected) {
-            (CheckedAliasSource::Class { place, origin }, Type::Class(target)) => {
+            (CheckedObjectViewSource::Class { place, origin }, Type::Class(target)) => {
                 let actual = place.class();
                 let Some(projected) = self.project_place_to_ancestor(place, target) else {
                     let actual_name = self
@@ -208,7 +310,7 @@ impl CallableChecker<'_, '_> {
                     span,
                 }))
             }
-            (CheckedAliasSource::Class { place, origin }, Type::Obj) => {
+            (CheckedObjectViewSource::Class { place, origin }, Type::Obj) => {
                 let span = place.span();
                 Some(HirCallArgument::View(HirObjectView {
                     source: HirViewSource::Place(place),
@@ -218,7 +320,7 @@ impl CallableChecker<'_, '_> {
                     span,
                 }))
             }
-            (CheckedAliasSource::Class { place, origin }, Type::Interface(interface)) => {
+            (CheckedObjectViewSource::Class { place, origin }, Type::Interface(interface)) => {
                 let actual = place.class();
                 if !self.class_conforms_to(actual, interface) {
                     let interface_name = &self
@@ -248,7 +350,7 @@ impl CallableChecker<'_, '_> {
                 }))
             }
             (
-                CheckedAliasSource::Obj {
+                CheckedObjectViewSource::Obj {
                     binding,
                     access,
                     span,
@@ -262,7 +364,7 @@ impl CallableChecker<'_, '_> {
                 required,
                 span,
             )),
-            (CheckedAliasSource::Obj { span, .. }, Type::Class(target)) => {
+            (CheckedObjectViewSource::Obj { span, .. }, Type::Class(target)) => {
                 let target_name = self
                     .program
                     .class(target)
@@ -278,7 +380,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                CheckedAliasSource::Interface {
+                CheckedObjectViewSource::Interface {
                     binding,
                     interface,
                     access,
@@ -294,7 +396,7 @@ impl CallableChecker<'_, '_> {
                 span,
             )),
             (
-                CheckedAliasSource::Interface {
+                CheckedObjectViewSource::Interface {
                     binding,
                     interface,
                     access,
@@ -309,7 +411,7 @@ impl CallableChecker<'_, '_> {
                 required,
                 span,
             )),
-            (CheckedAliasSource::Interface { span, .. }, Type::Class(target)) => {
+            (CheckedObjectViewSource::Interface { span, .. }, Type::Class(target)) => {
                 let target_name = &self
                     .program
                     .class(target)
@@ -324,7 +426,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (
-                CheckedAliasSource::Interface {
+                CheckedObjectViewSource::Interface {
                     interface: actual,
                     span,
                     ..
@@ -339,7 +441,7 @@ impl CallableChecker<'_, '_> {
                 ));
                 None
             }
-            (CheckedAliasSource::Obj { span, .. }, Type::Interface(expected)) => {
+            (CheckedObjectViewSource::Obj { span, .. }, Type::Interface(expected)) => {
                 self.diagnostics.push(mismatch(
                     "Obj",
                     &format!("interface {expected}"),
@@ -352,7 +454,7 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn class_conforms_to(
+    pub(super) fn class_conforms_to(
         &self,
         class: crate::identity::ClassId,
         interface: crate::identity::InterfaceId,
@@ -375,7 +477,7 @@ impl CallableChecker<'_, '_> {
             })
     }
 
-    fn project_place_to_ancestor(
+    pub(super) fn project_place_to_ancestor(
         &self,
         mut place: HirObjectPlace,
         target: crate::identity::ClassId,
@@ -402,7 +504,25 @@ fn forwarded_view(
     required_access: HirAccess,
     span: Span,
 ) -> HirCallArgument {
-    HirCallArgument::View(HirObjectView {
+    HirCallArgument::View(forwarded_object_view(
+        binding,
+        source_target,
+        target,
+        source_access,
+        required_access,
+        span,
+    ))
+}
+
+fn forwarded_object_view(
+    binding: BindingId,
+    source_target: HirViewTarget,
+    target: HirViewTarget,
+    source_access: HirAccess,
+    required_access: HirAccess,
+    span: Span,
+) -> HirObjectView {
+    HirObjectView {
         source: HirViewSource::Forwarded {
             binding,
             target: source_target,
@@ -419,7 +539,7 @@ fn forwarded_view(
         target,
         access: required_access,
         span,
-    })
+    }
 }
 
 fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {

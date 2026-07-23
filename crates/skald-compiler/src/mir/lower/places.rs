@@ -43,6 +43,9 @@ impl BodyLowerer<'_> {
                 .expect("receiver binding requires member receiver storage"),
             BindingId::Parameter(id) => self.parameter_storage[id.index()],
             BindingId::Local(id) => self.local_storage[id.index()],
+            BindingId::NarrowedAlias(_) => {
+                unreachable!("narrowed aliases are rejected before MIR body lowering")
+            }
         }
     }
 }

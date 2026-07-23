@@ -55,6 +55,8 @@ pub const COPY_OPERATION_UNAVAILABLE: &str = "TYP023";
 pub const INVALID_OVERRIDE_SIGNATURE: &str = "TYP024";
 pub const INVALID_INTERFACE_REQUIREMENT: &str = "TYP025";
 pub const INVALID_INTERFACE_CONFORMANCE: &str = "TYP026";
+pub const INVALID_TYPE_TEST: &str = "TYP027";
+pub const INVALID_NARROWING: &str = "TYP028";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

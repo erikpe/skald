@@ -313,6 +313,7 @@ impl<'ast> ProgramResolver<'ast> {
                 Some(ResolvedFunctionDefinition {
                     function: item.id,
                     locals: body.locals,
+                    narrowed_aliases: body.narrowed_aliases,
                     body: body.body,
                     span: function.span,
                 })

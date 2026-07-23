@@ -246,11 +246,41 @@ impl fmt::Display for LocalId {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct NarrowedAliasId {
+    callable: CallableId,
+    index: usize,
+}
+
+impl NarrowedAliasId {
+    pub const fn callable(self) -> CallableId {
+        self.callable
+    }
+
+    pub const fn index(self) -> usize {
+        self.index
+    }
+
+    pub(crate) fn new(callable: impl Into<CallableId>, index: usize) -> Self {
+        Self {
+            callable: callable.into(),
+            index,
+        }
+    }
+}
+
+impl fmt::Display for NarrowedAliasId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}:narrow{}", self.callable(), self.index())
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum BindingId {
     Receiver(CallableId),
     Parameter(ParameterId),
     Local(LocalId),
+    NarrowedAlias(NarrowedAliasId),
 }
 
 impl BindingId {
@@ -259,6 +289,7 @@ impl BindingId {
             Self::Receiver(callable) => callable,
             Self::Parameter(id) => id.callable(),
             Self::Local(id) => id.callable(),
+            Self::NarrowedAlias(id) => id.callable(),
         }
     }
 }
@@ -269,6 +300,7 @@ impl fmt::Display for BindingId {
             Self::Receiver(callable) => write!(formatter, "{callable}:self"),
             Self::Parameter(id) => id.fmt(formatter),
             Self::Local(id) => id.fmt(formatter),
+            Self::NarrowedAlias(id) => id.fmt(formatter),
         }
     }
 }

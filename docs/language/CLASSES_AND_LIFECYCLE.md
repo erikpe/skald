@@ -104,7 +104,7 @@ aliases or `self` to declarations marked `virtual` or `override` name the
 virtual family, stable slot, statically selected declaration, and complete-
 object origin. A sliced inline base is an independent exact base object and
 therefore selects a direct call. MIR retains and verifies dynamic calls and
-their receiver origins; backend execution remains unavailable.
+their receiver origins; the x86-64 backend executes the verified selection.
 
 The root binding determines access for an entire inline path:
 

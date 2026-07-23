@@ -211,6 +211,7 @@ pub struct Block {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Statement {
     BaseInitialization(BaseInitializationStatement),
+    Narrowing(NarrowingStatement),
     Local(LocalDecl),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
@@ -224,6 +225,7 @@ impl Statement {
     pub const fn span(&self) -> Span {
         match self {
             Self::BaseInitialization(statement) => statement.span,
+            Self::Narrowing(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
@@ -233,6 +235,23 @@ impl Statement {
             Self::ObjectAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NarrowingStatement {
+    pub binding: NarrowedAliasBinding,
+    pub source: Expression,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NarrowedAliasBinding {
+    pub mut_span: Option<Span>,
+    pub ref_span: Span,
+    pub name: Name,
+    pub target: Name,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -300,6 +319,7 @@ pub enum Expression {
     Boolean(BooleanExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
+    TypeTest(TypeTestExpr),
     Call(CallExpr),
     Grouped(GroupedExpr),
     SelfValue(SelfExpr),
@@ -314,12 +334,21 @@ impl Expression {
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
+            Self::TypeTest(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::SelfValue(expression) => expression.span,
             Self::MemberAccess(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TypeTestExpr {
+    pub source: Box<Expression>,
+    pub is_span: Span,
+    pub target: Name,
+    pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

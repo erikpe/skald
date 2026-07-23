@@ -404,6 +404,22 @@ impl HirDumper {
                     }
                 });
             }
+            HirStatement::Narrowing(statement) => {
+                let kind = match statement.kind {
+                    HirNarrowingKind::Static => "static",
+                    HirNarrowingKind::Runtime {
+                        failure: HirNarrowingFailure::Terminate,
+                    } => "runtime failure=terminate",
+                };
+                self.line(
+                    &format!("Narrowing {} {kind}", statement.binding),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.object_view("ObjectView", &statement.view);
+                    dumper.block(&statement.body);
+                });
+            }
             HirStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| match &local.initializer {
@@ -639,6 +655,18 @@ impl HirDumper {
                     }
                 });
             }
+            HirExpressionKind::TypeTest(test) => {
+                let kind = match test.kind {
+                    HirTypeTestKind::StaticSuccess => "static-success",
+                    HirTypeTestKind::StaticFailure => "static-failure",
+                    HirTypeTestKind::Runtime => "runtime",
+                };
+                self.typed_line(
+                    &format!("TypeTest -> {} {kind}", view_target_name(test.target)),
+                    expression,
+                );
+                self.indented(|dumper| dumper.object_view("ObjectView", &test.source));
+            }
         }
     }
 
@@ -692,37 +720,7 @@ impl HirDumper {
                 self.indented(|dumper| dumper.object_place(place));
             }
             HirCallArgument::View(view) => {
-                let target = match view.target {
-                    crate::hir::HirViewTarget::Class(class) => format!("class {class}"),
-                    crate::hir::HirViewTarget::Interface(interface) => {
-                        format!("interface {interface}")
-                    }
-                    crate::hir::HirViewTarget::Obj => "Obj".to_owned(),
-                };
-                let access = match view.access {
-                    HirAccess::ReadOnly => "readonly",
-                    HirAccess::Mutable => "mutable",
-                };
-                self.line(&format!("ViewArgument -> {target} {access}"), view.span);
-                self.indented(|dumper| {
-                    match &view.source {
-                        crate::hir::HirViewSource::Place(place) => dumper.object_place(place),
-                        crate::hir::HirViewSource::Forwarded {
-                            binding,
-                            target,
-                            access,
-                            span,
-                        } => {
-                            let target = view_target_name(*target);
-                            let access = access_name(*access);
-                            dumper.line(
-                                &format!("ForwardedView {binding} : {target} {access}"),
-                                *span,
-                            );
-                        }
-                    }
-                    dumper.object_origin(&view.origin);
-                });
+                self.object_view("ViewArgument", view);
             }
             HirCallArgument::Copy(copy) => {
                 self.line("CopyArgument", copy.span);
@@ -732,6 +730,36 @@ impl HirDumper {
                 });
             }
         }
+    }
+
+    fn object_view(&mut self, label: &str, view: &HirObjectView) {
+        self.line(
+            &format!(
+                "{label} -> {} {}",
+                view_target_name(view.target),
+                access_name(view.access)
+            ),
+            view.span,
+        );
+        self.indented(|dumper| {
+            match &view.source {
+                HirViewSource::Place(place) => dumper.object_place(place),
+                HirViewSource::Forwarded {
+                    binding,
+                    target,
+                    access,
+                    span,
+                } => dumper.line(
+                    &format!(
+                        "ForwardedView {binding} : {} {}",
+                        view_target_name(*target),
+                        access_name(*access)
+                    ),
+                    *span,
+                ),
+            }
+            dumper.object_origin(&view.origin);
+        });
     }
 
     fn object_source(&mut self, source: &crate::hir::HirObjectSource) {

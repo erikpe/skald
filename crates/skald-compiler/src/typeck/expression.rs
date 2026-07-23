@@ -17,6 +17,7 @@ mod call;
 mod place;
 mod primitive;
 mod receiver;
+mod type_operations;
 
 pub(super) use place::ObjectPlaceUse;
 
@@ -61,6 +62,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Boolean(boolean) => self.check_boolean_expression(boolean),
             ResolvedExpression::Unary(unary) => self.check_unary_expression(unary),
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
+            ResolvedExpression::TypeTest(test) => self.check_type_test(test),
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),

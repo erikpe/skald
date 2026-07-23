@@ -4,7 +4,32 @@ use super::*;
 
 impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
-        self.parse_additive()
+        let source = self.parse_additive()?;
+        if !self.at_contextual("is") {
+            return Some(source);
+        }
+
+        let is_token = self.advance();
+        let target = self.parse_name("expected a class, interface, or `Obj` after `is`")?;
+        let span = self.cover(source.span(), target.span);
+        let expression = Expression::TypeTest(TypeTestExpr {
+            source: Box::new(source),
+            is_span: is_token.span,
+            target,
+            span,
+        });
+        if self.at_contextual("is") {
+            let chained = self.advance();
+            self.report(
+                INVALID_TYPE_TEST,
+                "type tests cannot be chained",
+                chained.span,
+                "group separate tests explicitly",
+            );
+            let _ = self.parse_name("expected a type after `is`");
+            return None;
+        }
+        Some(expression)
     }
 
     fn parse_additive(&mut self) -> Option<Expression> {

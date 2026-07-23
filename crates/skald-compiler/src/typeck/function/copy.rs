@@ -344,6 +344,19 @@ impl CallableChecker<'_, '_> {
                 false
             }
             BindingId::Receiver(_) => true,
+            BindingId::NarrowedAlias(_) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "a narrowed alias-rooted object cannot be replaced",
+                    )
+                    .with_primary_label(
+                        destination.span(),
+                        "assign an owning local, value parameter, or mutable `self` field",
+                    ),
+                );
+                false
+            }
             BindingId::Parameter(id) => {
                 let parameter = self.parameter(id);
                 if parameter.binding_mode == crate::resolve::ResolvedParameterBindingMode::Value {

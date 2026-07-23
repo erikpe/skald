@@ -67,6 +67,9 @@ impl BodyLowerer<'_> {
                 target,
                 arguments,
             } => self.lower_interface_call(expression, receiver, *target, arguments),
+            HirExpressionKind::TypeTest(_) => {
+                unreachable!("type-operation HIR is rejected before body lowering")
+            }
         }
     }
 

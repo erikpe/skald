@@ -16,13 +16,16 @@ The target-independent compiler path is:
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
-| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
+| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` or structured `HirLoweringError` |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
 `driver::compile_source_to_assembly` composes these phases with target
 selection and backend emission. It stops after any source phase that produced
 an error. Successful type checking always produces HIR; failed type checking
-produces no executable HIR. The [backend and target contract](BACKEND.md)
+produces no HIR. A typed feature may temporarily precede its MIR representation
+during an ordered roadmap. `lower_hir` reports that boundary as a structured
+error rather than asserting that the HIR is executable. The
+[backend and target contract](BACKEND.md)
 defines how verified MIR is checked and realized for a selected target; driver
 behavior is separate from the target-independent phase model and is defined by
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md).
@@ -122,6 +125,13 @@ requirement-to-method maps for every effective class conformance. Interface
 alias arguments retain their static interface target, access, and exact or
 forwarded complete-object origin. Interface calls name both `InterfaceId` and
 `InterfaceRequirementId`.
+
+Type tests retain their class/interface/`Obj` target, selected non-owning
+source view, and static-success, static-failure, or runtime classification.
+Checked narrowing retains a callable-owned alias identity, access-preserving
+result view, lexical body, and either a static conversion or runtime check with
+explicit terminating failure. Narrowed aliases are views, not locals or owning
+storage.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling

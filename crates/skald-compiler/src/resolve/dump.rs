@@ -265,6 +265,7 @@ impl ResolvedDumper {
         );
         self.indented(|dumper| {
             dumper.locals(&definition.locals);
+            dumper.narrowed_aliases(&definition.narrowed_aliases);
             dumper.block(&definition.body);
         });
     }
@@ -299,7 +300,7 @@ impl ResolvedDumper {
 
         self.indented(|dumper| {
             dumper.locals(&definition.locals);
-
+            dumper.narrowed_aliases(&definition.narrowed_aliases);
             dumper.block(&definition.body);
         });
     }
@@ -352,6 +353,28 @@ impl ResolvedDumper {
         });
     }
 
+    fn narrowed_aliases(&mut self, aliases: &[ResolvedNarrowedAlias]) {
+        if aliases.is_empty() {
+            return;
+        }
+        self.heading("NarrowedAliases");
+        self.indented(|dumper| {
+            for alias in aliases {
+                dumper.write_indentation();
+                let _ = write!(
+                    dumper.output,
+                    "NarrowedAlias {} {} ",
+                    alias.id,
+                    if alias.mutable { "mutable" } else { "readonly" }
+                );
+                write_quoted(&mut dumper.output, &alias.name);
+                write_span(&mut dumper.output, alias.span);
+                dumper.output.push('\n');
+                dumper.indented(|dumper| dumper.type_syntax(&alias.target));
+            }
+        });
+    }
+
     fn type_syntax(&mut self, type_syntax: &ResolvedType) {
         let name = match type_syntax.kind {
             ResolvedTypeKind::I64 => "I64",
@@ -400,6 +423,14 @@ impl ResolvedDumper {
                             dumper.expression(argument);
                         }
                     });
+                });
+            }
+            ResolvedStatement::Narrowing(statement) => {
+                self.line(&format!("Narrowing {}", statement.binding), statement.span);
+                self.indented(|dumper| {
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&statement.source));
+                    dumper.block(&statement.body);
                 });
             }
             ResolvedStatement::Local(local) => {
@@ -506,6 +537,13 @@ impl ResolvedDumper {
                     dumper.expression(&binary.right);
                 });
             }
+            ResolvedExpression::TypeTest(test) => {
+                self.line(
+                    &format!("TypeTest target {}", render_type_kind(test.target.kind)),
+                    test.span,
+                );
+                self.indented(|dumper| dumper.expression(&test.source));
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.line(&format!("DirectCall {}", call.function), call.span);
                 self.indented(|dumper| {
@@ -597,5 +635,19 @@ impl ResolvedDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
+    }
+}
+
+fn render_type_kind(kind: ResolvedTypeKind) -> String {
+    match kind {
+        ResolvedTypeKind::I64 => "i64".to_owned(),
+        ResolvedTypeKind::U64 => "u64".to_owned(),
+        ResolvedTypeKind::U8 => "u8".to_owned(),
+        ResolvedTypeKind::F64 => "f64".to_owned(),
+        ResolvedTypeKind::Bool => "bool".to_owned(),
+        ResolvedTypeKind::Unit => "unit".to_owned(),
+        ResolvedTypeKind::Obj => "Obj".to_owned(),
+        ResolvedTypeKind::Class(class) => format!("class {class}"),
+        ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
     }
 }

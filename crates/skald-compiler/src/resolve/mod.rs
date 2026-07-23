@@ -22,10 +22,11 @@ pub use ir::{
     ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
     ResolvedInterfaceRequirement, ResolvedLocal, ResolvedLocalDecl, ResolvedMemberDefinition,
     ResolvedMethodCallExpr, ResolvedMethodDeclaration, ResolvedMethodDispatch,
-    ResolvedMethodModifier, ResolvedNumericLiteralExpr, ResolvedObjectAssignment,
-    ResolvedObjectPlace, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
-    ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType, ResolvedTypeKind,
-    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedMethodModifier, ResolvedNarrowedAlias, ResolvedNarrowing, ResolvedNumericLiteralExpr,
+    ResolvedObjectAssignment, ResolvedObjectPlace, ResolvedParameter, ResolvedParameterBindingMode,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType,
+    ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,

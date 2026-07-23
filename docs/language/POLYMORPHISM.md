@@ -8,10 +8,10 @@ declarations are accepted, assigned stable families, and checked for exact
 compatibility. Virtual dispatch executes on x86-64 through canonical MIR
 families and a private metadata ABI. Interface declarations, exact conformance,
 non-owning conversions, forwarding, and calls lower into verified,
-target-independent MIR; backend execution remains unavailable. Type tests and
-narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
-executable virtual dispatch from the verified interface boundary and later
-stages.
+target-independent MIR and execute on x86-64. Type tests and checked narrowing
+are accepted, resolved, type-checked, and represented explicitly in HIR; their
+MIR and backend realization remain unavailable. The
+[status matrix](STATUS.md) distinguishes these phase boundaries.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -26,10 +26,8 @@ profile. It extends, rather than replaces:
 ## Frozen source profile
 
 The following EBNF describes the complete surface owned by this profile. The
-optional `extends` clause, `super(...)`, and `Obj` alias target are now part of
-the [implemented grammar](GRAMMAR.md), as are `virtual` and `override` method
-modifiers and interface declarations. Type tests and narrowing become accepted
-only when their corresponding roadmap tasks land.
+forms below are part of the [implemented grammar](GRAMMAR.md). Runtime support
+still follows the phase boundary summarized above.
 
 ```text
 class-declaration       = "class" identifier ["extends" identifier]

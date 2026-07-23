@@ -13,8 +13,8 @@ mod object;
 pub use body::{
     BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
     HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirReturn, HirReturnValue,
-    HirStatement,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirNarrowing, HirNarrowingFailure,
+    HirNarrowingKind, HirReturn, HirReturnValue, HirStatement,
 };
 pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
@@ -28,7 +28,7 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,
-    HirInterfaceCallTarget, HirMethodCallTarget, HirUnaryOperation,
+    HirInterfaceCallTarget, HirMethodCallTarget, HirTypeTest, HirTypeTestKind, HirUnaryOperation,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirConstruction, HirCopyAssignment, HirCopyCapability,

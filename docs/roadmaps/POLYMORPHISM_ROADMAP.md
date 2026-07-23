@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM16 is next. The
+Status: in progress; PM18 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -100,7 +100,7 @@ The frozen restricted profile excludes:
 - [x] PM14 — Validate conformance and select interface views in HIR
 - [x] PM15 — Represent and verify interface dispatch in MIR
 - [x] PM16 — Lower interface dispatch on x86-64
-- [ ] PM17 — Type-check type tests and checked narrowing
+- [x] PM17 — Type-check type tests and checked narrowing
 - [ ] PM18 — Represent and verify tests and narrowing in MIR
 - [ ] PM19 — Lower tests and checked narrowing on x86-64
 - [ ] PM20 — Harden, document, and publish polymorphism
@@ -488,16 +488,16 @@ object without standalone interface storage or ownership transfer.
 **Purpose:** Complete the source and HIR conversion model over the established
 dynamic metadata.
 
-- [ ] Parse the frozen `is` and explicit checked-narrowing forms with clear
+- [x] Parse the frozen `is` and explicit checked-narrowing forms with clear
       precedence, grouping, and recovery.
-- [ ] Type-check class, base, `Obj`, and interface source/target combinations;
+- [x] Type-check class, base, `Obj`, and interface source/target combinations;
       distinguish static success, static impossibility, and runtime checks.
-- [ ] Bind successful narrowing only through the frozen scoped alias form,
+- [x] Bind successful narrowing only through the frozen scoped alias form,
       preserving source access and lifetime and rejecting escape or access
       increase.
-- [ ] Represent test/narrowing kind, target identity, selected view, and
+- [x] Represent test/narrowing kind, target identity, selected view, and
       failure behavior explicitly in HIR.
-- [ ] Extend the implemented grammar, focused polymorphism semantics, HIR
+- [x] Extend the implemented grammar, focused polymorphism semantics, HIR
       dumps, diagnostics, and frontend robustness mutations.
 
 **Tests:** Add parser/type-check/HIR tests for deep bases, interfaces, static and

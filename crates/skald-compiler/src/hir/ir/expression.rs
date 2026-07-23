@@ -11,7 +11,7 @@ use crate::{
 use super::{
     object::{
         HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource, HirObjectView,
-        HirSelectedCopyOperation,
+        HirSelectedCopyOperation, HirViewTarget,
     },
     Type,
 };
@@ -56,7 +56,22 @@ pub enum HirExpressionKind {
         target: HirInterfaceCallTarget,
         arguments: Vec<HirCallArgument>,
     },
+    TypeTest(HirTypeTest),
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirTypeTest {
+    pub source: HirObjectView,
+    pub target: HirViewTarget,
+    pub kind: HirTypeTestKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirTypeTestKind {
+    StaticSuccess,
+    StaticFailure,
+    Runtime,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

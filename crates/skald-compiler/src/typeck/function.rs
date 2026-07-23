@@ -8,10 +8,10 @@ use crate::{
         BlockFlow, HirAccess, HirConstruction, HirFieldAssignment, HirFieldConstruction,
         HirFunctionDefinition, HirLocal, HirMemberDefinition, HirStatement, Type,
     },
-    identity::{BindingId, CallableId, ClassId, FieldId},
+    identity::{BindingId, CallableId, ClassId, FieldId, NarrowedAliasId},
     resolve::{
         ResolvedBlock, ResolvedFunctionDeclaration, ResolvedFunctionDefinition, ResolvedLocal,
-        ResolvedMemberDefinition, ResolvedParameter, ResolvedProgram,
+        ResolvedMemberDefinition, ResolvedNarrowedAlias, ResolvedParameter, ResolvedProgram,
     },
 };
 
@@ -68,6 +68,7 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) callable: CallableId,
     pub(super) parameters: &'program [ResolvedParameter],
     pub(super) locals: &'program [ResolvedLocal],
+    pub(super) narrowed_aliases: &'program [ResolvedNarrowedAlias],
     body: &'program ResolvedBlock,
     definition_span: crate::source::Span,
     callable_name: String,
@@ -92,6 +93,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             callable: declaration.id.into(),
             parameters: &declaration.parameters,
             locals: &definition.locals,
+            narrowed_aliases: &definition.narrowed_aliases,
             body: &definition.body,
             definition_span: definition.span,
             callable_name: format!("function `{}`", declaration.name),
@@ -153,6 +155,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             callable: context.callable,
             parameters: context.parameters,
             locals: &context.definition.locals,
+            narrowed_aliases: &context.definition.narrowed_aliases,
             body: &context.definition.body,
             definition_span: context.definition.span,
             callable_name: context.callable_name,
@@ -247,5 +250,12 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                 }
             })
             .collect()
+    }
+
+    pub(in crate::typeck) fn narrowed_alias(&self, id: NarrowedAliasId) -> &ResolvedNarrowedAlias {
+        self.narrowed_aliases
+            .get(id.index())
+            .filter(|alias| alias.id == id)
+            .expect("resolved narrowed alias ID must exist")
     }
 }

@@ -3,13 +3,14 @@
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId, InitializerId, LocalId},
+    identity::{BindingId, CallableId, ClassId, InitializerId, LocalId, NarrowedAliasId},
 };
 
 mod place;
 
 pub(super) struct ResolvedCallableBody {
     pub(super) locals: Vec<ResolvedLocal>,
+    pub(super) narrowed_aliases: Vec<ResolvedNarrowedAlias>,
     pub(super) body: ResolvedBlock,
 }
 
@@ -84,6 +85,7 @@ struct CallableResolver<'program, 'diagnostics> {
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
+    narrowed_aliases: Vec<ResolvedNarrowedAlias>,
 }
 
 impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
@@ -116,6 +118,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             base_initialization,
             scopes: vec![parameters],
             locals: Vec::new(),
+            narrowed_aliases: Vec::new(),
         }
     }
 
@@ -144,6 +147,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         let body = self.resolve_block(body, false);
         ResolvedCallableBody {
             locals: self.locals,
+            narrowed_aliases: self.narrowed_aliases,
             body,
         }
     }
@@ -152,19 +156,28 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         if nested {
             self.scopes.push(HashMap::new());
         }
-        let statements = block
-            .statements
-            .iter()
-            .enumerate()
-            .filter_map(|(index, statement)| {
-                self.resolve_statement(statement, !nested && index == 0)
-            })
-            .collect();
+        let resolved = self.resolve_block_in_current_scope(block, !nested);
         if nested {
             self.scopes
                 .pop()
                 .expect("nested block must have a lexical scope");
         }
+        resolved
+    }
+
+    fn resolve_block_in_current_scope(
+        &mut self,
+        block: &syntax::Block,
+        allow_root_base_initialization: bool,
+    ) -> ResolvedBlock {
+        let statements = block
+            .statements
+            .iter()
+            .enumerate()
+            .filter_map(|(index, statement)| {
+                self.resolve_statement(statement, allow_root_base_initialization && index == 0)
+            })
+            .collect();
         ResolvedBlock {
             statements,
             span: block.span,
@@ -180,6 +193,9 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             syntax::Statement::BaseInitialization(statement) => self
                 .resolve_base_initialization(statement, first_root_statement)
                 .map(ResolvedStatement::BaseInitialization),
+            syntax::Statement::Narrowing(statement) => self
+                .resolve_narrowing(statement)
+                .map(ResolvedStatement::Narrowing),
             syntax::Statement::Local(local) => {
                 self.resolve_local(local).map(ResolvedStatement::Local)
             }
@@ -213,6 +229,52 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 self.resolve_object_assignment(assignment)
             }
         }
+    }
+
+    fn resolve_narrowing(
+        &mut self,
+        statement: &syntax::NarrowingStatement,
+    ) -> Option<ResolvedNarrowing> {
+        let target = self.resolve_view_target(&statement.binding.target);
+        let source = self.resolve_expression(&statement.source);
+        let id = NarrowedAliasId::new(self.callable, self.narrowed_aliases.len());
+
+        self.scopes.push(HashMap::new());
+        if let Some(target) = &target {
+            let symbol = BindingSymbol {
+                id: BindingId::NarrowedAlias(id),
+                ty: target.kind,
+                name_span: statement.binding.name.span,
+            };
+            self.declare_binding(&statement.binding.name.text, symbol, "narrowed alias");
+            self.narrowed_aliases.push(ResolvedNarrowedAlias {
+                id,
+                name: statement.binding.name.text.clone(),
+                name_span: statement.binding.name.span,
+                target: target.clone(),
+                mutable: statement.binding.mut_span.is_some(),
+                span: statement.binding.span,
+            });
+        }
+        let body = self.resolve_block_in_current_scope(&statement.body, false);
+        self.scopes
+            .pop()
+            .expect("narrowing body must have a lexical scope");
+
+        target?;
+        Some(ResolvedNarrowing {
+            binding: id,
+            source: source?,
+            body,
+            span: statement.span,
+        })
+    }
+
+    fn resolve_view_target(&mut self, name: &syntax::Name) -> Option<ResolvedType> {
+        self.resolve_type(&syntax::TypeSyntax {
+            kind: syntax::TypeKind::Named(name.clone()),
+            span: name.span,
+        })
     }
 
     fn resolve_base_initialization(
@@ -391,6 +453,21 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                             operator_span: binary.operator_span,
                             right: Box::new(right),
                             span: binary.span,
+                        }))
+                    }
+                    _ => None,
+                }
+            }
+            syntax::Expression::TypeTest(test) => {
+                let source = self.resolve_expression(&test.source);
+                let target = self.resolve_view_target(&test.target);
+                match (source, target) {
+                    (Some(source), Some(target)) => {
+                        Some(ResolvedExpression::TypeTest(ResolvedTypeTestExpr {
+                            source: Box::new(source),
+                            target,
+                            target_span: test.target.span,
+                            span: test.span,
                         }))
                     }
                     _ => None,

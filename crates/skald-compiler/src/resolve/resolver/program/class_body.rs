@@ -177,6 +177,7 @@ impl ClassBodyResolver<'_> {
         ResolvedMemberDefinition {
             callable,
             locals: body.locals,
+            narrowed_aliases: body.narrowed_aliases,
             body: body.body,
             span,
         }

@@ -4,8 +4,8 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
-        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn, HirReturn,
-        HirReturnValue, HirStatement, Type,
+        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirNarrowing, HirObjectReturn,
+        HirReturn, HirReturnValue, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -63,6 +63,7 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::BaseInitialization(statement) => {
                 self.check_base_initialization(statement)
             }
+            ResolvedStatement::Narrowing(statement) => self.check_narrowing_statement(statement),
             ResolvedStatement::Local(local) => self.check_local_statement(local),
             ResolvedStatement::Return(statement) => self.check_return_statement(statement),
             ResolvedStatement::Expression(statement) => self.check_call_statement(statement),
@@ -77,6 +78,25 @@ impl CallableChecker<'_, '_> {
                 self.check_object_assignment(assignment)
             }
         }
+    }
+
+    fn check_narrowing_statement(
+        &mut self,
+        statement: &crate::resolve::ResolvedNarrowing,
+    ) -> CheckedStatement {
+        let operation = self.check_narrowing_operation(statement);
+        let body = self.check_block(&statement.body);
+        let flow = body.flow;
+        let hir = operation.map(|(view, kind)| {
+            HirStatement::Narrowing(HirNarrowing {
+                binding: statement.binding,
+                view,
+                kind,
+                body,
+                span: statement.span,
+            })
+        });
+        CheckedStatement { hir, flow }
     }
 
     fn check_base_initialization(
