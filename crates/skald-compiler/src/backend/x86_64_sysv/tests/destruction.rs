@@ -37,21 +37,21 @@ fn lowers_body_then_recursive_fields_through_existing_place_and_call_machinery()
     assert!(first.contains(".Lska_class_1_destroy_0:"));
     assert!(first.contains(".Lska_class_2_destroy_0:"));
     assert!(first.contains(concat!(
-        "    leaq -96(%rbp), %rdi\n",
-        "    leaq -96(%rbp), %rsi\n",
-        "    leaq .Lska_class_0_dispatch(%rip), %rdx\n",
+        "    lea rdi, [rbp - 96]\n",
+        "    lea rsi, [rbp - 96]\n",
+        "    lea rdx, [rip + .Lska_class_0_dispatch]\n",
         "    call .Lska_class_0_destroy_0\n",
-        "    leaq -88(%rbp), %rdi\n",
-        "    leaq -88(%rbp), %rsi\n",
-        "    leaq .Lska_class_1_dispatch(%rip), %rdx\n",
+        "    lea rdi, [rbp - 88]\n",
+        "    lea rsi, [rbp - 88]\n",
+        "    lea rdx, [rip + .Lska_class_1_dispatch]\n",
         "    call .Lska_class_1_destroy_0\n",
-        "    leaq -40(%rbp), %rdi\n",
-        "    leaq -40(%rbp), %rsi\n",
-        "    leaq .Lska_class_2_dispatch(%rip), %rdx\n",
+        "    lea rdi, [rbp - 40]\n",
+        "    lea rsi, [rbp - 40]\n",
+        "    lea rdx, [rip + .Lska_class_2_dispatch]\n",
         "    call .Lska_class_2_destroy_0\n",
-        "    leaq -80(%rbp), %rdi\n",
-        "    leaq -80(%rbp), %rsi\n",
-        "    leaq .Lska_class_2_dispatch(%rip), %rdx\n",
+        "    lea rdi, [rbp - 80]\n",
+        "    lea rsi, [rbp - 80]\n",
+        "    lea rdx, [rip + .Lska_class_2_dispatch]\n",
         "    call .Lska_class_2_destroy_0\n",
     )));
     assert_system_assembler_accepts(&first);
@@ -78,7 +78,10 @@ fn cleanup_preserves_the_precomputed_return_value_without_aggregate_runtime_oper
     let cleanup = output
         .find("call .Lska_class_0_destroy_0")
         .expect("root cleanup must call its user body");
-    let expected_reload = format!("movq {}(%rbp), %rax", frame.value(return_value));
+    let expected_reload = format!(
+        "mov rax, qword ptr [rbp - {}]",
+        frame.value(return_value).unsigned_abs()
+    );
     let reload = output[cleanup..]
         .find(&expected_reload)
         .expect("return value must reload from its frame home after cleanup");
@@ -114,7 +117,10 @@ fn floating_return_values_reload_into_xmm0_after_cleanup_calls() {
     let cleanup = function
         .find("call .Lska_class_0_destroy_0")
         .expect("compute must clean its local resource");
-    let expected_reload = format!("movsd {}(%rbp), %xmm0", frame.value(return_value));
+    let expected_reload = format!(
+        "movsd xmm0, qword ptr [rbp - {}]",
+        frame.value(return_value).unsigned_abs()
+    );
 
     assert!(function[cleanup..].contains(&expected_reload));
 }
@@ -172,11 +178,11 @@ fn projected_receiver_cleanup_reuses_indirect_place_addressing() {
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert!(output.contains(concat!(
         ".Lska_class_0_method_0_block_0:\n",
-        "    movq -8(%rbp), %rdi\n",
-        "    leaq 8(%rdi), %rdi\n",
-        "    movq -8(%rbp), %rsi\n",
-        "    leaq 8(%rsi), %rsi\n",
-        "    leaq .Lska_class_1_dispatch(%rip), %rdx\n",
+        "    mov rdi, qword ptr [rbp - 8]\n",
+        "    lea rdi, [rdi + 8]\n",
+        "    mov rsi, qword ptr [rbp - 8]\n",
+        "    lea rsi, [rsi + 8]\n",
+        "    lea rdx, [rip + .Lska_class_1_dispatch]\n",
         "    call .Lska_class_1_destroy_0\n",
     )));
 }

@@ -118,13 +118,13 @@ fn lowers_nested_projected_places_with_width_correct_accesses() {
     assert!(verify_mir(&program).is_ok());
 
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    assert!(output.contains("subq $128, %rsp"));
-    assert!(output.contains("movb %al, -24(%rbp)"));
-    assert!(output.contains("movzbq -24(%rbp), %rax"));
-    assert!(output.contains("movsd %xmm14, -16(%rbp)"));
-    assert!(output.contains("movsd -16(%rbp), %xmm14"));
-    assert!(output.contains("movb %al, -32(%rbp)"));
-    assert!(output.contains("movzbq -32(%rbp), %rax"));
+    assert!(output.contains("sub rsp, 128"));
+    assert!(output.contains("mov byte ptr [rbp - 24], al"));
+    assert!(output.contains("movzx rax, byte ptr [rbp - 24]"));
+    assert!(output.contains("movsd qword ptr [rbp - 16], xmm14"));
+    assert!(output.contains("movsd xmm14, qword ptr [rbp - 16]"));
+    assert!(output.contains("mov byte ptr [rbp - 32], al"));
+    assert!(output.contains("movzx rax, byte ptr [rbp - 32]"));
 }
 
 #[test]
@@ -147,13 +147,13 @@ fn lowers_initializer_and_method_bodies_with_identity_based_symbols() {
     assert!(output.contains(".Lska_class_0_method_0:"));
     assert!(output.contains(".Lska_class_0_method_1:"));
     assert!(output.contains(".Lska_class_0_method_2:"));
-    assert!(output.contains("leaq -8(%rbp), %rdi"));
+    assert!(output.contains("lea rdi, [rbp - 8]"));
     assert!(output.contains("call .Lska_class_0_init_0"));
     assert!(output.contains("call .Lska_class_0_method_0"));
     assert!(output.contains("call .Lska_class_0_method_1"));
     assert!(output.contains("call .Lska_class_0_method_2"));
     assert!(output.contains("call .Lska_fn_1"));
-    assert!(output.contains("movq %rdi, -8(%rbp)"));
+    assert!(output.contains("mov qword ptr [rbp - 8], rdi"));
     assert_system_assembler_accepts(&format!("{output}\n{}", println_i64_stub()));
 }
 
@@ -190,11 +190,11 @@ fn lowers_exhausted_mixed_receiver_abi_through_stack_arguments() {
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains("subq $32, %rsp"));
-    assert!(output.contains("movq %rax, 16(%rsp)"));
-    assert!(output.contains("movsd %xmm14, 24(%rsp)"));
-    assert!(output.contains("movq 32(%rbp), %rax"));
-    assert!(output.contains("movsd 40(%rbp), %xmm14"));
+    assert!(output.contains("sub rsp, 32"));
+    assert!(output.contains("mov qword ptr [rsp + 16], rax"));
+    assert!(output.contains("movsd qword ptr [rsp + 24], xmm14"));
+    assert!(output.contains("mov rax, qword ptr [rbp + 32]"));
+    assert!(output.contains("movsd xmm14, qword ptr [rbp + 40]"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -216,8 +216,8 @@ fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
     assert_eq!(first, second);
     assert!(first.contains(".Lska_fn_3:"));
     assert!(first.contains(".Lska_fn_4:"));
-    assert!(first.contains("movq %rdi, -8(%rbp)"));
-    assert!(first.contains("movq -8(%rbp), %rdi"));
+    assert!(first.contains("mov qword ptr [rbp - 8], rdi"));
+    assert!(first.contains("mov rdi, qword ptr [rbp - 8]"));
     assert!(first.contains("call .Lska_fn_3"));
     assert!(first.contains("call .Lska_class_0_init_1"));
     assert!(first.contains("call .Lska_class_0_method_3"));
@@ -230,12 +230,12 @@ fn lowers_exhausted_receiver_alias_and_sse_arguments_through_ordered_stack_slots
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains("subq $128, %rsp"));
-    assert!(output.contains("leaq -32(%rbp), %rax"));
-    assert!(output.contains("movq %rax, (%rsp)"));
-    assert!(output.contains("movsd %xmm14, 120(%rsp)"));
-    assert!(output.contains("movq 16(%rbp), %rax"));
-    assert!(output.contains("movsd 136(%rbp), %xmm14"));
+    assert!(output.contains("sub rsp, 128"));
+    assert!(output.contains("lea rax, [rbp - 32]"));
+    assert!(output.contains("mov qword ptr [rsp], rax"));
+    assert!(output.contains("movsd qword ptr [rsp + 120], xmm14"));
+    assert!(output.contains("mov rax, qword ptr [rbp + 16]"));
+    assert!(output.contains("movsd xmm14, qword ptr [rbp + 136]"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -248,17 +248,17 @@ pub(super) fn println_i64_stub() -> &'static str {
         ".globl ska_rt_println_i64\n",
         ".type ska_rt_println_i64, @function\n",
         "ska_rt_println_i64:\n",
-        "    cmpq $42, %rdi\n",
+        "    cmp rdi, 42\n",
         "    jne .Lprintln_i64_bad_value\n",
-        "    movq $1, %rax\n",
-        "    movq $1, %rdi\n",
-        "    leaq .Lprintln_i64_output(%rip), %rsi\n",
-        "    movq $3, %rdx\n",
+        "    mov rax, 1\n",
+        "    mov rdi, 1\n",
+        "    lea rsi, [rip + .Lprintln_i64_output]\n",
+        "    mov rdx, 3\n",
         "    syscall\n",
         "    ret\n",
         ".Lprintln_i64_bad_value:\n",
-        "    movq $60, %rax\n",
-        "    movq $99, %rdi\n",
+        "    mov rax, 60\n",
+        "    mov rdi, 99\n",
         "    syscall\n",
         ".size ska_rt_println_i64, .-ska_rt_println_i64\n",
     )

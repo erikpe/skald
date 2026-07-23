@@ -30,8 +30,9 @@ fn assembly_mode_runs_the_pipeline_and_writes_only_assembly() {
     assert!(stdout.is_empty());
     assert!(stderr.is_empty());
     let text = fs::read_to_string(output).unwrap();
+    assert!(text.starts_with(".intel_syntax noprefix\n"));
     assert!(text.contains(".globl main"));
-    assert!(text.contains("movabsq $42, %rax"));
+    assert!(text.contains("mov rax, 42"));
     assert!(temporary_artifacts(directory.path()).is_empty());
 }
 

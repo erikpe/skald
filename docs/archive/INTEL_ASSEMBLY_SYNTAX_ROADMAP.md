@@ -1,6 +1,6 @@
 # Intel-Syntax Assembly Roadmap
 
-Status: planned; INTEL0 is next.
+Status: complete.
 
 Skald currently publishes deterministic GNU assembler text using AT&T
 instruction syntax. The x86-64 backend should instead publish GNU assembler
@@ -55,7 +55,7 @@ behavior, or the System V ABI.
 
 ## Progress
 
-- [ ] INTEL0 — Publish and verify Intel-syntax x86-64 assembly
+- [x] INTEL0 — Publish and verify Intel-syntax x86-64 assembly
 
 ## PR-sized implementation sequence
 
@@ -65,37 +65,37 @@ behavior, or the System V ABI.
 while preserving the target model, ABI, executable behavior, and deterministic
 artifact boundary.
 
-- [ ] Make register renderers return bare Intel register names without `%`
+- [x] Make register renderers return bare Intel register names without `%`
       prefixes.
-- [ ] Start every emitted assembly program with
+- [x] Start every emitted assembly program with
       `.intel_syntax noprefix`, followed by the existing text, function,
       dispatch-table, and non-executable-stack sections.
-- [ ] Render integer and SSE binary instructions in destination-first order,
+- [x] Render integer and SSE binary instructions in destination-first order,
       preserving the semantic `source` and `destination` fields in the private
       machine model.
-- [ ] Render immediates without `$`, indirect calls without `*`, frame and
+- [x] Render immediates without `$`, indirect calls without `*`, frame and
       stack memory as bracketed operands, and symbol addresses as RIP-relative
       Intel operands.
-- [ ] Render memory widths explicitly where instruction operands do not
+- [x] Render memory widths explicitly where instruction operands do not
       provide a complete width, including byte stores and zero-extending byte
       loads; keep floating and general-register/XMM transfers assembler-valid.
-- [ ] Keep full-width immediate values, dispatch-table relocations, function
+- [x] Keep full-width immediate values, dispatch-table relocations, function
       metadata, local labels, and deterministic ordering accepted by the GNU
       assembler.
-- [ ] Update the exact minimal assembly expectation and all focused backend,
+- [x] Update the exact minimal assembly expectation and all focused backend,
       MIR-boundary, and `skac` CLI assertions that encode AT&T instruction
       text.
-- [ ] Convert the hand-written output and floating-point validation stubs to
+- [x] Convert the hand-written output and floating-point validation stubs to
       Intel syntax, and keep the shared native-link helper in one explicit
       syntax mode for its complete combined input.
-- [ ] Add or retain focused assertions covering the syntax directive, integer
+- [x] Add or retain focused assertions covering the syntax directive, integer
       and floating operand order, byte and qword memory widths, zero extension,
       RIP-relative addressing, full-width immediates, and indirect calls.
-- [ ] Update living backend, debugging, and repository overview documentation
+- [x] Update living backend, debugging, and repository overview documentation
       to call the artifact “GNU assembler text using Intel syntax with
       `noprefix`,” and use bare register notation when describing the current
       target.
-- [ ] Audit living code, tests, and documentation for residual AT&T register,
+- [x] Audit living code, tests, and documentation for residual AT&T register,
       immediate, memory, mnemonic, and indirect-call forms. Do not rewrite
       archived roadmaps.
 

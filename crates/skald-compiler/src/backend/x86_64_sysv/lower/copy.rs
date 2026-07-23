@@ -223,7 +223,7 @@ impl InstructionSelector<'_, '_> {
         ty: MirType,
     ) -> Result<(), BackendError> {
         // Preserve the destination address in a caller-saved register while
-        // source addressing uses the established `%rax`/`%r11` scratch path.
+        // source addressing uses the established `rax`/`r11` scratch path.
         self.materialize_place_address(&destination, Register::Rdx)?;
         let (_, source) = self.frame_place(&source)?;
         let destination = value::memory(Register::Rdx, 0);

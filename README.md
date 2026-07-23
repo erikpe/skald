@@ -19,9 +19,10 @@ summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.
 
 Skald currently targets Linux x86-64 using the System V ABI. The compiler can
-emit GNU assembly or link a native executable against the repository's small C
-runtime. `x86_64-sysv` is the only registered target; additional targets are
-future work rather than current compatibility promises.
+emit GNU assembler text using Intel syntax with `noprefix`, or link a native
+executable against the repository's small C runtime. `x86_64-sysv` is the only
+registered target; additional targets are future work rather than current
+compatibility promises.
 
 ## Build and use
 

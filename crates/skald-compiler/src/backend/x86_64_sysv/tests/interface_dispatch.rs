@@ -30,7 +30,7 @@ fn emits_witness_entries_in_typed_identity_order() {
         "    .quad .Lska_class_0_method_0\n",
         "    .quad .Lska_class_0_method_1\n",
     )));
-    assert_eq!(output.matches("call *%r11").count(), 2);
+    assert_eq!(output.matches("call r11").count(), 2);
     assert_system_assembler_accepts(&output);
 }
 

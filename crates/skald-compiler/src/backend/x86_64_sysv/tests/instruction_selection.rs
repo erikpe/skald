@@ -8,10 +8,10 @@ fn selects_every_supported_arithmetic_operation_and_storage_copy() {
         "var x: i64 = 9; return helper(x * 3 - 4 + 2); }",
     ));
 
-    assert!(output.contains("negq %rax"));
-    assert!(output.contains("imulq %rcx, %rax"));
-    assert!(output.contains("subq %rcx, %rax"));
-    assert!(output.contains("addq %rcx, %rax"));
+    assert!(output.contains("neg rax"));
+    assert!(output.contains("imul rax, rcx"));
+    assert!(output.contains("sub rax, rcx"));
+    assert!(output.contains("add rax, rcx"));
     assert!(output.contains("call .Lska_fn_0"));
-    assert!(output.contains("movq %rax, -8(%rbp)"));
+    assert!(output.contains("mov qword ptr [rbp - 8], rax"));
 }

@@ -57,10 +57,10 @@ fn lowers_boolean_branches_and_returns_in_both_arms() {
     let output = emit_assembly(Target::X86_64SysV, &conditional_return_mir(true)).unwrap();
 
     assert!(output.contains(
-        "movq -8(%rbp), %rax\n    testq %rax, %rax\n    jne .Lska_fn_0_block_1\n    jmp .Lska_fn_0_block_2"
+        "mov rax, qword ptr [rbp - 8]\n    test rax, rax\n    jne .Lska_fn_0_block_1\n    jmp .Lska_fn_0_block_2"
     ));
-    assert!(output.contains(".Lska_fn_0_block_1:\n    movabsq $37, %rax"));
-    assert!(output.contains(".Lska_fn_0_block_2:\n    movabsq $12, %rax"));
+    assert!(output.contains(".Lska_fn_0_block_1:\n    mov rax, 37"));
+    assert!(output.contains(".Lska_fn_0_block_2:\n    mov rax, 12"));
     assert_eq!(output.matches("jmp .Lska_fn_0_epilogue").count(), 2);
     assert_eq!(output.matches(".Lska_fn_0_epilogue:").count(), 1);
 }
@@ -80,7 +80,7 @@ fn lowers_a_diamond_with_branch_local_calls_and_a_storage_join() {
     assert!(output.contains(".Lska_fn_2_block_1:\n    call .Lska_fn_0"));
     assert!(output.contains(".Lska_fn_2_block_2:\n    call .Lska_fn_1"));
     assert_eq!(output.matches("jmp .Lska_fn_2_block_3").count(), 2);
-    assert!(output.contains(".Lska_fn_2_block_3:\n    movq -8(%rbp), %rax"));
+    assert!(output.contains(".Lska_fn_2_block_3:\n    mov rax, qword ptr [rbp - 8]"));
 }
 
 #[test]

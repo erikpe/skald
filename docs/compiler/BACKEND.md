@@ -19,8 +19,9 @@ provides:
   target and returns textual assembly or a structured `BackendError`.
 
 `x86_64-sysv` is the only supported target name and the default. It selects a
-Linux x86-64 backend using the System V AMD64 ABI and GNU assembler syntax.
-Other names are rejected rather than silently selecting a fallback.
+Linux x86-64 backend using the System V AMD64 ABI and GNU assembler text in
+Intel syntax with `noprefix`. Other names are rejected rather than silently
+selecting a fallback.
 
 Target implementations remain private behind this facade. Adding a target
 requires an explicit registry entry and a complete legality, layout, ABI,
@@ -40,7 +41,7 @@ The x86-64 backend performs these steps in order:
    by the target calling convention;
 6. plan fixed stack frames and target addresses;
 7. select target instructions into a private assembly model; and
-8. emit deterministic GNU assembly text and metadata.
+8. emit deterministic GNU assembly text in Intel syntax with `noprefix`.
 
 Malformed MIR is returned as a backend error before target layout or
 instruction selection. Target-specific failures—including recursive layout,
@@ -103,14 +104,14 @@ Parameters are classified independently into integer and SSE classes:
 - `f64` uses the SSE class; and
 - `unit` is payload-free and cannot be a parameter.
 
-The integer argument registers are `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, and
-`%r9`. The SSE argument registers are `%xmm0` through `%xmm7`. The two register
+The integer argument registers are `rdi`, `rsi`, `rdx`, `rcx`, `r8`, and
+`r9`. The SSE argument registers are `xmm0` through `xmm7`. The two register
 sequences are consumed independently while preserving source argument order.
 Arguments that exhaust their class share one source-ordered stack area with
 eight-byte slots. The outgoing area is rounded to 16-byte alignment; incoming
 stack arguments begin after the saved frame pointer and return address.
 
-Integer results use `%rax`, and `f64` results use `%xmm0`. `unit` has no result
+Integer results use `rax`, and `f64` results use `xmm0`. `unit` has no result
 payload. The backend keeps `u8` values zero-extended after arithmetic, calls,
 parameters, and returns. It similarly normalizes the low-byte result of an
 external C-compatible `bool` call before storing it as a Skald value.
@@ -182,7 +183,7 @@ The current backend gives every MIR storage entry and transient scalar value a
 fixed stack home. Scalar values and pointer homes use eight-byte size and
 alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
-`%rbp`-relative addressing.
+`rbp`-relative addressing.
 
 Return destinations and owned class parameters store an incoming pointer in a
 frame home. Receivers and aliases additionally store complete-object and
@@ -264,11 +265,13 @@ internal symbol scheme.
 
 ## Assembly emission and verification
 
-The target assembly model is rendered as deterministic GNU/AT&T-style text
-with function metadata, explicit local labels, and a non-executable-stack
-note. The generated text is accepted by the system assembler in focused tests.
-Determinism is tested both by repeated backend emission and independent
-compiler processes.
+The target assembly model is rendered as deterministic GNU assembler text
+beginning with `.intel_syntax noprefix`. Instructions use destination-first
+operands, bare register names, bracketed memory operands, and explicit memory
+widths where required. Function metadata, explicit local labels, and a
+non-executable-stack note remain GNU/ELF directives. The generated text is
+accepted by the system assembler in focused tests. Determinism is tested both
+by repeated backend emission and independent compiler processes.
 
 Textual assembly is a supported compiler artifact published through the
 [driver](DRIVER_AND_ARTIFACTS.md), but exact internal symbol names, label

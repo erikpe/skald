@@ -37,16 +37,16 @@ pub(super) enum XmmRegister {
 impl XmmRegister {
     pub(super) const fn name(self) -> &'static str {
         match self {
-            Self::Xmm0 => "%xmm0",
-            Self::Xmm1 => "%xmm1",
-            Self::Xmm2 => "%xmm2",
-            Self::Xmm3 => "%xmm3",
-            Self::Xmm4 => "%xmm4",
-            Self::Xmm5 => "%xmm5",
-            Self::Xmm6 => "%xmm6",
-            Self::Xmm7 => "%xmm7",
-            Self::Xmm14 => "%xmm14",
-            Self::Xmm15 => "%xmm15",
+            Self::Xmm0 => "xmm0",
+            Self::Xmm1 => "xmm1",
+            Self::Xmm2 => "xmm2",
+            Self::Xmm3 => "xmm3",
+            Self::Xmm4 => "xmm4",
+            Self::Xmm5 => "xmm5",
+            Self::Xmm6 => "xmm6",
+            Self::Xmm7 => "xmm7",
+            Self::Xmm14 => "xmm14",
+            Self::Xmm15 => "xmm15",
         }
     }
 }
@@ -54,7 +54,7 @@ impl XmmRegister {
 impl ByteRegister {
     pub(super) const fn name(self) -> &'static str {
         match self {
-            Self::Al => "%al",
+            Self::Al => "al",
         }
     }
 }
@@ -62,16 +62,16 @@ impl ByteRegister {
 impl Register {
     pub(super) const fn name(self) -> &'static str {
         match self {
-            Self::Rax => "%rax",
-            Self::Rcx => "%rcx",
-            Self::Rdx => "%rdx",
-            Self::Rsi => "%rsi",
-            Self::Rdi => "%rdi",
-            Self::R8 => "%r8",
-            Self::R9 => "%r9",
-            Self::R11 => "%r11",
-            Self::Rbp => "%rbp",
-            Self::Rsp => "%rsp",
+            Self::Rax => "rax",
+            Self::Rcx => "rcx",
+            Self::Rdx => "rdx",
+            Self::Rsi => "rsi",
+            Self::Rdi => "rdi",
+            Self::R8 => "r8",
+            Self::R9 => "r9",
+            Self::R11 => "r11",
+            Self::Rbp => "rbp",
+            Self::Rsp => "rsp",
         }
     }
 }
@@ -184,8 +184,8 @@ pub(super) enum Instruction {
     },
     Test(Register),
     Compare {
-        left: Register,
-        right: Register,
+        source: Register,
+        destination: Register,
     },
     ReserveStack(u32),
     ReleaseStack(u32),

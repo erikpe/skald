@@ -38,7 +38,7 @@ fn emits_unique_class_metadata_membership_checks_and_failure_traps() {
     for class in 0..5 {
         assert!(output.contains(&format!(".Lska_class_{class}_dispatch:")));
     }
-    assert!(output.contains("cmpq %rcx, %r11"));
+    assert!(output.contains("cmp r11, rcx"));
     assert!(output.contains("ud2"));
     assert_system_assembler_accepts(&output);
 }

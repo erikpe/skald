@@ -23,7 +23,7 @@ fn lowers_user_and_synthesized_copy_in_mir_defined_field_order() {
 
     assert_eq!(output.matches("call .Lska_class_0_init_1").count(), 2);
     assert_eq!(output.matches("call .Lska_class_0_assign_0").count(), 2);
-    assert!(output.contains("movzbq"));
+    assert!(output.contains("movzx"));
     assert!(output.contains("movsd"));
     assert!(!output.contains("memcpy"));
     assert_system_assembler_accepts(&output);

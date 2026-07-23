@@ -40,7 +40,8 @@ fn assembly_output_runs_the_real_pipeline_through_the_binary() {
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
     let assembly_text = fs::read_to_string(&assembly).unwrap();
-    assert!(assembly_text.contains("imulq %rcx, %rax"));
+    assert!(assembly_text.starts_with(".intel_syntax noprefix\n"));
+    assert!(assembly_text.contains("imul rax, rcx"));
     assert!(assembly_text.contains(".globl main"));
 }
 

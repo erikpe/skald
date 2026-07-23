@@ -25,10 +25,10 @@ fn malformed_f64_mir_is_a_structured_backend_error() {
 fn uses_no_unpreserved_callee_saved_scratch_registers() {
     let output = assembly("fn main() -> i64 { return (2 + 3) * 4; }");
 
-    for register in ["%rbx", "%r12", "%r13", "%r14", "%r15"] {
+    for register in ["rbx", "r12", "r13", "r14", "r15"] {
         assert!(!output.contains(register));
     }
-    assert!(output.contains("pushq %rbp"));
+    assert!(output.contains("push rbp"));
     assert!(output.contains("leave"));
 }
 

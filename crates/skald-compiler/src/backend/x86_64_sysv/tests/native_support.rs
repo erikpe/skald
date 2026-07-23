@@ -39,7 +39,7 @@ fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
     // runtime. Supply only the link guard; driver and golden tests exercise
     // the real archive boundary.
     let linkable_output = format!(
-        ".text\n.globl {0}\n.type {0}, @function\n{0}:\n    ret\n.size {0}, .-{0}\n\n{output}",
+        "{output}\n.text\n.globl {0}\n.type {0}, @function\n{0}:\n    ret\n.size {0}, .-{0}\n",
         RUNTIME_ABI_MARKER_SYMBOL,
     );
     let mut child = Command::new("cc")

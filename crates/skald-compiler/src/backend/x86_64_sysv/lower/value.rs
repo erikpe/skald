@@ -122,7 +122,7 @@ pub(super) fn store_float(
     });
 }
 
-/// Converts a MIR value in `%rax` to its canonical full-register form.
+/// Converts a MIR value in `rax` to its canonical full-register form.
 ///
 /// `u8` values use eight-byte homes in the initial backend, but only their low
 /// eight bits belong to the language value. Every producer and ABI ingress

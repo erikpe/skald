@@ -16,7 +16,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
 | Diagnostics | `diagnostics::render_diagnostics` | diagnostic model, wording, spans, and source lookup |
-| GNU assembly | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
+| GNU assembly in Intel syntax | `backend::emit_assembly`, or `skac --emit asm` | selected backend |
 
 The phase renderers are repository-internal Rust APIs. There are no CLI modes
 for token, AST, resolved, HIR, or MIR dumps. Their text is a deterministic

@@ -29,7 +29,7 @@ fn emits_deterministic_tables_and_indirect_calls() {
         ".Lska_class_2_dispatch:\n",
         "    .quad .Lska_class_1_method_0\n",
     )));
-    assert!(output.contains("call *%r11"));
+    assert!(output.contains("call r11"));
     assert_system_assembler_accepts(&output);
 }
 

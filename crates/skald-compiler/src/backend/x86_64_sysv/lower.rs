@@ -110,7 +110,7 @@ fn lower_definition(
     })
 }
 
-/// C-compatible process entry boundary. Returning the Skald `i64` in `%rax`
+/// C-compatible process entry boundary. Returning the Skald `i64` in `rax`
 /// exposes its low 32 bits as C `main`'s `int`; Linux subsequently observes
 /// the low eight bits as the process exit status.
 fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {

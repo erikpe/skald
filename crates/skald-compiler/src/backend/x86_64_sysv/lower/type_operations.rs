@@ -112,8 +112,8 @@ impl InstructionSelector<'_, '_> {
                 destination: Register::Rcx,
             });
             self.output.push(Instruction::Compare {
-                left: Register::Rcx,
-                right: Register::R11,
+                source: Register::Rcx,
+                destination: Register::R11,
             });
             self.output.push(Instruction::JumpIfEqual(matched.clone()));
         }

@@ -19,11 +19,11 @@ fn verified_f64_mir_executes_through_internal_and_external_abi_boundaries() {
         ".globl validate_f64\n",
         ".type validate_f64, @function\n",
         "validate_f64:\n",
-        "    movq %xmm0, %rax\n",
-        "    movabsq $0xc008000000000000, %rcx\n",
-        "    cmpq %rcx, %rax\n",
-        "    setne %al\n",
-        "    movzbq %al, %rax\n",
+        "    movq rax, xmm0\n",
+        "    mov rcx, 0xc008000000000000\n",
+        "    cmp rax, rcx\n",
+        "    setne al\n",
+        "    movzx rax, al\n",
         "    ret\n",
         ".size validate_f64, .-validate_f64\n",
     ));
@@ -41,24 +41,24 @@ fn external_f64_results_are_read_from_xmm0() {
     verify_mir(&program).unwrap();
 
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
-    assert!(output.contains("call compute\n    movsd %xmm0,"));
+    assert!(output.contains("call compute\n    movsd qword ptr [rbp"));
     output.push_str(concat!(
         "\n.text\n",
         ".globl compute\n",
         ".type compute, @function\n",
         "compute:\n",
-        "    movabsq $0xc008000000000000, %rax\n",
-        "    movq %rax, %xmm0\n",
+        "    mov rax, 0xc008000000000000\n",
+        "    movq xmm0, rax\n",
         "    ret\n",
         ".size compute, .-compute\n",
         ".globl validate_f64\n",
         ".type validate_f64, @function\n",
         "validate_f64:\n",
-        "    movq %xmm0, %rax\n",
-        "    movabsq $0xc008000000000000, %rcx\n",
-        "    cmpq %rcx, %rax\n",
-        "    setne %al\n",
-        "    movzbq %al, %rax\n",
+        "    movq rax, xmm0\n",
+        "    mov rcx, 0xc008000000000000\n",
+        "    cmp rax, rcx\n",
+        "    setne al\n",
+        "    movzx rax, al\n",
         "    ret\n",
         ".size validate_f64, .-validate_f64\n",
     ));
