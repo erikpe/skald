@@ -127,6 +127,19 @@ fn recognizes_object_and_alias_keywords_without_reserving_prefixes() {
 }
 
 #[test]
+fn leaves_frozen_polymorphism_words_contextual() {
+    let (_, _, output) = lex_text(
+        "extends implements interface virtual override super is narrow Obj polymorphism_value",
+    );
+
+    assert!(output.tokens[..output.tokens.len() - 1]
+        .iter()
+        .all(|token| token.kind == TokenKind::Identifier));
+    assert_eq!(output.tokens.last().unwrap().kind, TokenKind::Eof);
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_u64_type_and_literal_without_reserving_identifier_prefixes() {
     let (_, _, output) = lex_text("u64 0u 18446744073709551615u u64_value unsigned");
     let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();

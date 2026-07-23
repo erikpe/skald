@@ -169,9 +169,9 @@ literal-lowering strategy is a language guarantee.
 
 Function values and the value aspects of shared ownership are also not
 implemented or frozen. Their current maturity is recorded in the
-[status matrix](STATUS.md#not-implemented). Exploratory polymorphic values,
-slicing, tests, and narrowing are separated into the
-[polymorphism design](POLYMORPHISM.md). Legacy examples are not usable syntax
+[status matrix](STATUS.md#not-implemented). Frozen polymorphic views, slicing,
+tests, and narrowing are separated into the
+[polymorphism profile](POLYMORPHISM.md). Legacy examples are not usable syntax
 or settled semantics.
 
 ## Implementation boundary

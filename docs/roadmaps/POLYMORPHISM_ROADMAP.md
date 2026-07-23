@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: planned; PM0 is next. The
+Status: in progress; PM3 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -21,7 +21,7 @@ PM1 and PM2 is complete, so hierarchy implementation can extend focused owners.
 
 ## 1. Scope and invariants
 
-The completed profile includes:
+The frozen profile includes:
 
 - one direct class base through contextual `extends`, with acyclic hierarchies;
 - explicit base-subobject initialization and stable semantic base projections;
@@ -67,7 +67,7 @@ The profile preserves these invariants:
    verifier, lowering, and backend responsibilities receive cohesive private
    owners and focused tests rather than returning to broad central modules.
 
-Unless PM0 deliberately revises the restricted profile, it excludes:
+The frozen restricted profile excludes:
 
 - multiple class inheritance and interface inheritance;
 - access modifiers, `final`, abstract methods/classes, default interface
@@ -83,7 +83,7 @@ Unless PM0 deliberately revises the restricted profile, it excludes:
 
 ## 2. Progress
 
-- [ ] PM0 — Freeze the executable polymorphism profile
+- [x] PM0 — Freeze the executable polymorphism profile
 - [x] PM1 — Extract resolver class-body orchestration
 - [x] PM2 — Extract type-checker class-program orchestration
 - [ ] PM3 — Parse and resolve class inheritance
@@ -112,18 +112,18 @@ Unless PM0 deliberately revises the restricted profile, it excludes:
 **Purpose:** Resolve source and representation choices before code depends on
 them.
 
-- [ ] Freeze the contextual forms for `extends`, `super(...)`, `virtual`,
+- [x] Freeze the contextual forms for `extends`, `super(...)`, `virtual`,
       `override`, `interface`, `implements`, `Obj`, `is`, and checked narrowing,
       including the scoped non-owning result of a successful narrowing.
-- [ ] Freeze inherited lookup, redeclaration and shadowing rules, virtual-root
+- [x] Freeze inherited lookup, redeclaration and shadowing rules, virtual-root
       and override compatibility, interface conformance, receiver access, and
       deterministic diagnostic precedence.
-- [ ] Freeze whether `Obj` is a semantic root or a physical base, the
+- [x] Freeze whether `Obj` is a semantic root or a physical base, the
       target-independent complete-object/view model, dynamic-class metadata,
       and how polymorphic receiver information crosses the internal alias ABI.
-- [ ] Freeze base construction, copy, assignment, destruction, slicing,
+- [x] Freeze base construction, copy, assignment, destruction, slicing,
       temporary, return-storage, and permitted-elision behavior.
-- [ ] Reconcile the [grammar](../language/GRAMMAR.md), focused
+- [x] Reconcile the [grammar](../language/GRAMMAR.md), focused
       [polymorphism document](../language/POLYMORPHISM.md),
       [status matrix](../language/STATUS.md), and the exclusions above so later
       tasks do not rely on provisional prose.
@@ -588,9 +588,9 @@ The order is deliberate:
 
 - The completed documentation overhaul established the language authority and
   focused polymorphism document. PM0 freezes its decisions there.
-- PM0 freezes contracts before representations. The resolver and type-checker
-  orchestration cleanups then remove the two known growth hazards before any
-  hierarchy member category is added.
+- PM1 and PM2 were source-design-independent preparation and removed the two
+  known orchestration growth hazards. PM0 freezes contracts before PM3 adds
+  hierarchy representations or member categories.
 - Static inheritance proceeds declaration graph, lifecycle, HIR, MIR, then
   backend. Dynamic dispatch cannot obscure an incomplete base-object model.
 - Virtual dispatch establishes the dynamic receiver and metadata contract used

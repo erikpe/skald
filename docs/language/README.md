@@ -105,9 +105,8 @@ makes a result source-observable.
   places, plus copying, assignment, temporaries, and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases and the maturity boundary around future ownership forms.
-- [Polymorphism](POLYMORPHISM.md) records the exploratory hierarchy, view,
-  dispatch, interface, type-test, and narrowing direction plus every decision
-  required before its profile can be frozen.
+- [Polymorphism](POLYMORPHISM.md) defines the frozen but not-yet-implemented
+  hierarchy, view, dispatch, interface, type-test, and narrowing profile.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

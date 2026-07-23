@@ -45,6 +45,13 @@ Foreign code reached through an external declaration may also fail to return
 or may terminate the process. Such behavior lies beyond the guarantees of the
 trusted [foreign-interoperation boundary](MODULES_AND_INTEROP.md#external-function-declarations).
 
+The frozen but unimplemented
+[checked-narrowing profile](POLYMORPHISM.md#checked-narrowing) adds one
+unrecoverable runtime failure. A failed dynamic narrowing will terminate
+unsuccessfully without returning to Skald or guaranteeing remaining
+source-level cleanup. It does not introduce a catchable exception or settle a
+general panic facility.
+
 ## Cleanup and abrupt termination
 
 The implemented deterministic cleanup rules apply to normal block

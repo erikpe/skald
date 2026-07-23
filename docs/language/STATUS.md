@@ -23,10 +23,9 @@ model.
   roadmaps or Git.
 
 An implemented row describes only the stated boundary. A broader feature name
-does not imply support beyond that boundary. No unimplemented language feature
-is currently classified as **frozen design**: the active polymorphism work must
-first settle its executable profile, and the remaining directions do not yet
-have focused implementation plans.
+does not imply support beyond that boundary. Polymorphism is the only
+unimplemented language area currently classified as **frozen design**; its
+active roadmap implements that settled profile in ordered slices.
 
 ## Implemented language
 
@@ -70,7 +69,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Inheritance and polymorphism](POLYMORPHISM.md) | **Exploratory direction** | Single inheritance, base subobjects, opt-in virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing are planned together. The active roadmap still begins by freezing syntax, semantics, ownership, the view model, and failure behavior in that document. |
+| [Inheritance and polymorphism](POLYMORPHISM.md) | **Frozen design** | Single inheritance, mandatory base lifecycle composition, exact explicit overrides, nominal interfaces, semantic-root `Obj` views, slicing, type tests, and scoped checked narrowing are settled but not yet accepted by the compiler. |
 | [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |

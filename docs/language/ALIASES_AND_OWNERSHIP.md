@@ -1,9 +1,10 @@
 # Skald Aliases and Ownership
 
 Status: authoritative for implemented exact-class alias parameters and their
-interaction with inline ownership. Shared ownership, borrow anchors, local
-aliases, and aliases into future value families are not implemented or frozen.
-Their maturity is authoritative in the [status matrix](STATUS.md).
+interaction with inline ownership. The frozen polymorphic extensions are owned
+by [polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
+aliases, and aliases into other future value families are not implemented or
+frozen. Their maturity is authoritative in the [status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)
@@ -174,10 +175,9 @@ parameter restrictions do not implicitly specify that larger feature.
 Optional payloads and array elements are not alias sources because neither
 value family is implemented. Any future design must define how a conditional
 payload or element remains present and at a stable location while aliased;
-the current parameter model does not settle those constraints. Polymorphic
-alias conversions and narrowing are described by the exploratory
-[polymorphism design](POLYMORPHISM.md); the active roadmap owns their profile
-freeze and implementation.
+the current parameter model does not settle those constraints. Frozen
+polymorphic alias conversions and scoped narrowing are defined by
+[polymorphism](POLYMORPHISM.md); the active roadmap owns their implementation.
 
 ## Implementation boundary
 

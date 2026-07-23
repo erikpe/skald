@@ -127,6 +127,32 @@ fn lifecycle_spellings_remain_ordinary_names_outside_special_member_syntax() {
 }
 
 #[test]
+fn frozen_polymorphism_words_remain_ordinary_names_outside_future_forms() {
+    let (_, output) = parse_text(concat!(
+        "class Names {\n",
+        "    extends: i64; implements: i64; interface: i64; virtual: i64;\n",
+        "    override: i64; super: i64; is: i64; narrow: i64; Obj: i64;\n",
+        "    init() {\n",
+        "        self.extends = 0; self.implements = 0; self.interface = 0;\n",
+        "        self.virtual = 0; self.override = 0; self.super = 0;\n",
+        "        self.is = 0; self.narrow = 0; self.Obj = 0;\n",
+        "    }\n",
+        "    fn virtual(override: i64) -> i64 {\n",
+        "        var super: i64 = override; return super;\n",
+        "    }\n",
+        "}\n",
+        "fn interface(implements: i64) -> i64 {\n",
+        "    var Obj: i64 = implements; var is: i64 = Obj;\n",
+        "    var narrow: i64 = is; return narrow;\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty());
+    assert_eq!(class(&output.ast, 0).members.len(), 11);
+    assert_eq!(function(&output.ast, 1).name.text, "interface");
+}
+
+#[test]
 fn parses_a_dedicated_destructor_with_a_complete_source_span() {
     let (sources, output) = parse_text(concat!(
         "class Resource {\n",

@@ -443,10 +443,10 @@ interfaces, virtual dispatch, `Obj`, class conversions, shared or heap-backed
 objects, `new`, nullable object references, static members, access modifiers,
 `final`, abstract members, overloads, reflection, or user-defined conversions.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
-the [polymorphism design](POLYMORPHISM.md) owns their exploratory language
-direction, and the active
-[polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) owns profile freeze
-and implementation order.
+the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
+contract, and the active
+[polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) owns implementation
+order.
 
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment

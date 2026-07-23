@@ -64,6 +64,13 @@ They remain available as field names, method names, parameter names, local
 names, and top-level function names. For example, `destroy: i64;` is a field
 and `fn destroy() -> unit {}` is a method.
 
+The frozen polymorphism profile will contextually recognize `extends`,
+`implements`, `interface`, `virtual`, `override`, `super`, `is`, `narrow`, and
+the type spelling `Obj`. None is reserved or has its future meaning in the
+current grammar. The exact future forms are specified separately in
+[polymorphism](POLYMORPHISM.md#frozen-source-profile) and become part of this
+implemented grammar only when their parser tasks land.
+
 ## Punctuation
 
 The complete punctuation and operator token set is:
@@ -283,5 +290,5 @@ scope, statement, return, and evaluation-order semantics.
 member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
-[Polymorphism](POLYMORPHISM.md) records exploratory future design only; none of
-its candidate source forms extend the implemented grammar on this page.
+[Polymorphism](POLYMORPHISM.md) defines a frozen future profile; none of its
+source forms extend the implemented grammar on this page yet.

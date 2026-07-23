@@ -4,11 +4,11 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-## Planned
+## In progress
 
-- [Polymorphism](POLYMORPHISM_ROADMAP.md) — planned; PM0 can now freeze the
-  executable profile in the focused polymorphism design authority. The roadmap
-  then extends the completed exact-class
+- [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its executable profile
+  is frozen, and class inheritance is next. The roadmap extends the completed
+  exact-class
   object model with inheritance, lifecycle composition, virtual dispatch,
   interfaces, `Obj` views, type tests, and checked narrowing. Its preparatory
   resolver and type-checker class orchestration tasks are complete.
