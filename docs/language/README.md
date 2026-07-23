@@ -114,6 +114,9 @@ makes a result source-observable.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
   and checked narrowing.
+- [Object casts](OBJECT_CASTS.md) freezes the C-style checked-place and
+  shared-owner cast syntax, the complete ownership-direction matrix, and the
+  replacement for implemented `narrow` without claiming compiler support.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

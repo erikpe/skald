@@ -177,6 +177,13 @@ Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
 
+The frozen [object-cast profile](OBJECT_CASTS.md) evaluates its source once,
+establishes any required lifetime anchor, performs a dynamic check when needed,
+then supplies the checked place or shared owner to its consuming context.
+Postfix calls on a cast result use explicit grouping, for example
+`((Leaf) value).read()`. Cast execution does not reorder receivers or later
+arguments.
+
 ## Unsupported control flow and callability
 
 Loops, `break`, `continue`, iteration, function values, closures, lambda

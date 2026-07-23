@@ -330,5 +330,9 @@ access, forwarding, overlap, and lifetime.
 [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes future
 `shared T` and `new T(...)` source forms and semantics. Those forms remain
 outside this implemented grammar until compiler support is added.
+[Object casts](OBJECT_CASTS.md) freezes future `(T) source` and
+`(shared T) source` forms, precedence, and type-name disambiguation. The
+current grammar continues to accept scoped `narrow` instead until the indexed
+cast roadmap is implemented.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-narrowing semantics.

@@ -137,6 +137,14 @@ result view, lexical body, and either a static conversion or runtime check with
 explicit terminating failure. Narrowed aliases are views, not locals or owning
 storage.
 
+The frozen [object-cast replacement](../language/OBJECT_CASTS.md) will move
+that dynamic check into an expression-level checked-place operation. HIR will
+retain the source view, target identity, preserved access/origin, static or
+runtime classification, and place-versus-shared-owner result. Plain cast views
+will be bounded by their consuming full expression rather than a narrowed
+alias identity or lexical body. These are planned phase changes, not current
+HIR fields.
+
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
 convention locations, or target symbols. Lower phases therefore consume
@@ -196,6 +204,13 @@ storage established only by a static binding or a checked-narrowing success
 edge and ended explicitly on lexical fallthrough. The verifier checks legal
 static/runtime relations, declared targets, view access and provenance,
 single definition, scoped liveness, and the terminating failure edge.
+
+The cast roadmap will replace that dedicated scoped storage with explicit
+checked-place evaluation feeding ordinary receiver, alias-argument, copy,
+assignment, and result operations. Runtime casts still require explicit
+success and unrecoverable failure control-flow edges; static casts become
+verified view projections. Future shared-owner casts add explicit copy/adopt
+ownership operations but no allocation operation.
 
 ## Verification and passes
 

@@ -8,6 +8,8 @@ shared storage, and strong cycles. The
 and the [implemented grammar](GRAMMAR.md) does not yet accept these forms.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
+Object conversion syntax and the complete inline/alias/shared direction matrix
+are owned by [Object Casts](OBJECT_CASTS.md).
 
 ## Safety contract
 
@@ -51,6 +53,13 @@ Allocation creates one complete object of the named concrete class and returns
 one produced strong owner. The expected type may immediately view that owner
 as the same class, an ancestor, a conformed interface, or `Obj`; this preserves
 the allocation and its complete dynamic class rather than slicing it.
+
+`new ConcreteClass(arguments)` is the only initial-profile source operation
+that creates a shared allocation and constructs a new shared object. Reads,
+assignments, calls, results, casts, upcasts, and hidden anchors may create,
+transfer, or end owners of an allocation that already exists, but none creates
+another allocated object. An inline value or alias cannot be converted to a
+shared owner by casting.
 
 Shared types are distinct from inline exact-class values and from non-owning
 aliases. There is no implicit conversion between an inline owning value and a
@@ -187,18 +196,20 @@ dynamic class where dispatch requires it.
 static-or-runtime classification. It evaluates the source once and does not
 change ownership.
 
-Checked narrowing of a shared source still creates a scoped non-owning
-`ref` or `mut ref` alias, not a new shared owner:
+The frozen cast profile provides two distinct shared-backed operations:
 
 ```ska
-narrow ref dog: Dog = shared_animal {
-    dog.speak();
-}
+((Dog) shared_animal).speak();
+var copied: Dog = (Dog) shared_animal;
+var owner: shared Dog = (shared Dog) shared_animal;
 ```
 
-The source is evaluated once, its dynamic class is checked as required, and
-the alias exists only in the trailing block. Failure terminates unsuccessfully
-under the existing checked-narrowing rule.
+`(Dog) shared_animal` is a checked non-owning place view. An immediate call
+borrows it; an inline `Dog` destination copy-constructs an independent exact
+`Dog` and may slice a more-derived dynamic object. `(shared Dog) shared_animal`
+creates or transfers an owner of the same allocation; it does not allocate,
+copy payload, or slice. The complete matrix is defined by
+[Object Casts](OBJECT_CASTS.md#complete-ownership-matrix).
 
 ## Borrow anchors
 
@@ -209,8 +220,8 @@ object and released after the borrow's required lifetime.
 
 ### Call-scoped aliases
 
-The following rules apply when a `ref` or `mut ref` argument, or a method
-receiver, reaches an object through shared ownership:
+The following rules apply when a `ref` or `mut ref` argument, method receiver,
+or checked place cast reaches an object through shared ownership:
 
 | Source | Lifetime proof |
 |---|---|
@@ -230,19 +241,18 @@ last-owner destruction timing. Anchor elimination is permitted only as a
 semantics-preserving optimization after the required ownership operations are
 represented and verified.
 
-### Scoped narrowing
+### Checked place casts
 
-Narrowing from shared ownership keeps one hidden owner for the entire
-narrowing block. A named shared source is copied into that anchor even though
-its original place is initially live, because code inside the block may
-replace that place. A produced shared source transfers its produced owner into
-the anchor.
+A checked place cast from a shared source uses the same anchor classification.
+An existing shared local or value parameter remains live through the consuming
+full expression. A replaceable shared field or nested place is copied into a
+hidden anchor at cast-source evaluation. A produced shared source keeps its
+produced owner through the expression.
 
-The alias is bound only after the dynamic check succeeds. On every normal exit
-from the block, the alias ends before the anchor is released. Narrowing from an
-existing `ref` or `mut ref` source inherits the enclosing lifetime guarantee
-and does not create a shared anchor. Unrecoverable narrowing failure makes no
-remaining-cleanup guarantee.
+The cast view ends before its anchor is released. If the view supplies a method
+receiver, alias argument, or inline copy source, the call or copy completes and
+its result is secured first. Cast failure terminates and makes no remaining
+cleanup guarantee.
 
 ## Strong cycles
 
@@ -276,6 +286,7 @@ This frozen profile does not include:
 - weak ownership;
 - explicit early release or user-visible reference counts;
 - raw pointers or unsafe handle construction;
+- casting an inline object or alias into shared ownership;
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;

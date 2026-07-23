@@ -148,6 +148,12 @@ target-independent phases. Multiple-file compilation must first settle the
 open language and build contracts in
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md).
 
+The planned replacement of scoped `narrow` with C-style object casts is indexed
+in the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md). Its
+source-visible matrix is frozen in
+[Object Casts](../language/OBJECT_CASTS.md); compiler phases must consume that
+authority rather than infer ownership from cast syntax.
+
 Feature maturity and implementation order belong in the
 [language status matrix](../language/STATUS.md) and
 [active roadmap index](../roadmaps/README.md), not in compiler architecture.

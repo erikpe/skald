@@ -59,6 +59,12 @@ release are compiler/runtime defects rather than source-level failures. These
 rules do not change current compiler support or establish a general panic
 facility.
 
+The frozen [object-cast design](OBJECT_CASTS.md#failure) carries the current
+checked-narrowing failure boundary forward: a dynamically unsuccessful cast
+terminates without producing a null or invalid view and without guaranteeing
+remaining cleanup. A statically impossible cast is rejected at compile time.
+These cast forms are not yet accepted by the compiler.
+
 ## Cleanup and abrupt termination
 
 The implemented deterministic cleanup rules apply to normal block

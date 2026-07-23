@@ -5,6 +5,8 @@ authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
 finalization, hidden anchors, and the minimal C allocation boundary. The
 source-visible contract is [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md).
+Object cast legality and consuming contexts are owned by
+[Object Casts](../language/OBJECT_CASTS.md).
 
 The current compiler IR has no shared types or operations, and the current
 [runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation functions.
@@ -43,7 +45,8 @@ Typed HIR records:
   and dynamic-metadata provenance;
 - the anchor requirement and source for every shared-backed receiver or alias
   argument; and
-- the anchor scope for shared-backed checked narrowing.
+- the full-expression anchor requirement for every shared-backed checked place
+  cast.
 
 HIR remains target-independent. It contains no header byte offset, reference
 count location, metadata slot, runtime symbol, register, or calling-convention
@@ -52,14 +55,14 @@ classification.
 MIR makes every ownership effect executable and explicit. Its schema must
 represent, by semantic operation rather than necessarily by these Rust names:
 
-- allocate storage for one exact concrete class and initialize its complete
-  object payload;
+- lower each source `new` to allocation storage for one exact concrete class
+  and initialization of its complete object payload;
 - create a strong owner by copy, transfer a produced owner by adopt, and end an
   owner by release;
 - perform shared assignment in secure-incoming, release-old, store order;
 - project a statically selected class/interface/`Obj` view from a shared
   handle while retaining complete-object and metadata provenance;
-- create and end hidden call and narrowing anchors;
+- create and end hidden call and checked-cast anchors;
 - delimit shared full-expression temporaries and normal cleanup; and
 - select a compiler-generated complete-object finalizer from dynamic metadata.
 
@@ -84,14 +87,16 @@ The MIR verifier must reject a program unless all of the following hold:
 - every shared pointee view carries a compatible static target, complete-object
   origin, and dynamic-metadata origin;
 - every replaceable borrowed source has an explicit owning anchor covering the
-  call or narrowing block;
+  consuming call, copy, or other cast full expression;
 - an inline subobject borrow is covered by the complete allocation's anchor;
 - receiver and argument anchors are created in source evaluation order and
   remain live through the call;
-- a narrowed alias ends before its shared anchor is released on every normal
-  exit;
+- a checked cast view ends before its shared anchor is released on every
+  normal full-expression exit;
 - allocation names a concrete constructible class and a complete
-  initialization operation;
+  initialization operation and originates from source `new`;
+- no cast, conversion, copy, anchor, call, result, or assignment creates an
+  allocation operation;
 - each dynamic class identifies exactly one compatible complete finalizer; and
 - shared values are absent from external signatures and static storage.
 
@@ -187,7 +192,7 @@ owner exists.
 
 Counts are non-atomic. The initial implementation provides no cross-thread
 sharing contract. Overflow uses the same class of backend-owned unrecoverable
-termination as a failed checked narrowing and guarantees neither diagnostic
+termination as a failed checked cast and guarantees neither diagnostic
 text nor remaining cleanup.
 
 ## Hidden anchor lowering
@@ -213,12 +218,14 @@ produced owner is adopted by a temporary whose lifetime extends through the
 call. A shared allocation's anchor covers every inline subobject within its
 payload.
 
-For checked narrowing from shared ownership, lowering evaluates the source
-once and creates one owning anchor before the check. It copies a named source
-or adopts a produced source. The success edge binds the non-owning scoped view;
-every normal block exit ends that view and then releases the anchor. Narrowing
-from an existing alias uses its already verified outer lifetime and creates no
-shared owner.
+For a checked place cast from shared ownership, lowering evaluates the source
+once and establishes any required owner before the dynamic check. An existing
+local or value parameter already supplies a stable owner; a replaceable place
+is copied; and a produced owner remains adopted by its temporary. The success
+edge supplies a non-owning view to its consuming receiver, alias argument, or
+inline copy. The view ends before the owner is released at the full-expression
+boundary. A cast from an existing alias uses its verified outer lifetime and
+creates no shared owner.
 
 HIR need only record provenance and the required anchor category. MIR owns the
 explicit storage and lifetime operations. Neither phase performs arbitrary
@@ -274,8 +281,9 @@ boundaries:
 Focused implementation tests must cover named and produced values in every
 local/field/parameter/result/assignment position; direct and indirect
 self-assignment; cleanup order; dynamic finalization through every static
-target; nested shared fields; strong cycles; call and narrowing anchors;
-receiver/argument order; overflow and allocation failure; malformed MIR; ABI
+target; nested shared fields; strong cycles; call and checked-place cast
+anchors; shared-owner casts; receiver/argument order; overflow and
+allocation failure; malformed MIR; ABI
 version mismatch; deterministic HIR/MIR dumps; assembly acceptance; and native
 execution.
 

@@ -6,6 +6,10 @@ inline slicing, opt-in virtual dispatch, interface dispatch, type tests, and
 checked narrowing execute through verified MIR on the x86-64 backend. The
 [status matrix](STATUS.md) owns the compiler-support boundary.
 
+The frozen [object-cast design](OBJECT_CASTS.md) replaces checked narrowing
+with expression-level C-style casts after its implementation roadmap completes.
+Until then, this document remains authoritative for current `narrow` behavior.
+
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
 
@@ -281,6 +285,13 @@ or returned derived source is first completed under the existing temporary or
 result rules, then sliced, then cleaned normally. An existing derived place is
 used directly as the copy source without an intermediate owning object.
 
+The frozen [object-cast design](OBJECT_CASTS.md) also allows a checked class
+place to supply an exact-class owning destination. The cast itself remains
+non-owning; initialization, value-parameter passing, return, or assignment
+then invokes the target class's selected copy operation. This applies equally
+when the checked source is an alias or shared allocation and preserves the
+same slicing rule.
+
 HIR represents slicing as an owning object source with the ordered direct-base
 identity path and exact ancestor target. MIR lowers that path to verified base
 projections on the copy source; the surrounding local, field, argument,
@@ -393,6 +404,31 @@ scope rules, cannot escape through a return or stored value, owns no cleanup,
 and cannot outlive the source call-scoped alias. Forwarding from the block uses
 the normal polymorphic view rules.
 
+## Frozen cast replacement
+
+The final object-conversion profile removes the `narrow` statement and
+narrowed-alias binding. `(Target) source` instead selects a checked, non-owning
+place for one consuming full expression:
+
+```ska
+fn read_leaf(ref value: Obj) -> i64 {
+    return ((Leaf) value).read();
+}
+```
+
+The cast uses the same static-success, static-impossibility, or runtime
+classification as checked narrowing and `is`. It preserves complete-object
+identity, dynamic metadata, and source access. Failure retains the current
+unrecoverable behavior. Inline owning contexts may copy from a class cast
+place; future `(shared Target)` casts preserve an existing shared allocation.
+The complete direction, slicing, lifetime, anchor, and allocation rules belong
+to [Object Casts](OBJECT_CASTS.md).
+
+The [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md) introduces the
+expression pipeline before deleting current narrowed-alias identities and
+control flow. This section describes the frozen replacement, not current
+compiler acceptance.
+
 ## Deterministic validation order
 
 Implementations may recover and report independent errors, but selection
@@ -424,7 +460,7 @@ This profile excludes:
   bodies, interface fields, overloads, and covariant overrides;
 - standalone inline `Obj` or interface values, fields, value parameters, or
   results;
-- local/general reference values and narrowed aliases that outlive their block;
+- local/general reference values and stored cast views;
 - the implementation of `shared`, heap allocation, reference counting, borrow
   anchors, and dynamic shared destruction, whose future semantics are frozen
   separately in [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md);
