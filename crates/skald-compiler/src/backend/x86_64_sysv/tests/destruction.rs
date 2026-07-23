@@ -39,19 +39,19 @@ fn lowers_body_then_recursive_fields_through_existing_place_and_call_machinery()
     assert!(first.contains(concat!(
         "    leaq -96(%rbp), %rdi\n",
         "    leaq -96(%rbp), %rsi\n",
-        "    movabsq $0, %rdx\n",
+        "    leaq .Lska_class_0_dispatch(%rip), %rdx\n",
         "    call .Lska_class_0_destroy_0\n",
         "    leaq -88(%rbp), %rdi\n",
         "    leaq -88(%rbp), %rsi\n",
-        "    movabsq $0, %rdx\n",
+        "    leaq .Lska_class_1_dispatch(%rip), %rdx\n",
         "    call .Lska_class_1_destroy_0\n",
         "    leaq -40(%rbp), %rdi\n",
         "    leaq -40(%rbp), %rsi\n",
-        "    movabsq $0, %rdx\n",
+        "    leaq .Lska_class_2_dispatch(%rip), %rdx\n",
         "    call .Lska_class_2_destroy_0\n",
         "    leaq -80(%rbp), %rdi\n",
         "    leaq -80(%rbp), %rsi\n",
-        "    movabsq $0, %rdx\n",
+        "    leaq .Lska_class_2_dispatch(%rip), %rdx\n",
         "    call .Lska_class_2_destroy_0\n",
     )));
     assert_system_assembler_accepts(&first);
@@ -176,7 +176,7 @@ fn projected_receiver_cleanup_reuses_indirect_place_addressing() {
         "    leaq 8(%rdi), %rdi\n",
         "    movq -8(%rbp), %rsi\n",
         "    leaq 8(%rsi), %rsi\n",
-        "    movabsq $0, %rdx\n",
+        "    leaq .Lska_class_1_dispatch(%rip), %rdx\n",
         "    call .Lska_class_1_destroy_0\n",
     )));
 }

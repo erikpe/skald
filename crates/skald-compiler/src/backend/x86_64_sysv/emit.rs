@@ -37,6 +37,9 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
                     None => output.push_str("    .quad 0\n"),
                 }
             }
+            // Every class metadata symbol occupies storage, even without
+            // dispatch slots, so its address is a unique dynamic identity.
+            output.push_str("    .quad 0\n");
             writeln!(output, ".size {}, .-{}", table.symbol, table.symbol).unwrap();
         }
     }
@@ -149,12 +152,17 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::Test(register) => {
             write!(output, "testq {}, {}", register.name(), register.name()).unwrap()
         }
+        Instruction::Compare { left, right } => {
+            write!(output, "cmpq {}, {}", left.name(), right.name()).unwrap()
+        }
         Instruction::ReserveStack(bytes) => write!(output, "subq ${bytes}, %rsp").unwrap(),
         Instruction::ReleaseStack(bytes) => write!(output, "addq ${bytes}, %rsp").unwrap(),
         Instruction::Call(symbol) => write!(output, "call {symbol}").unwrap(),
         Instruction::CallIndirect(register) => write!(output, "call *{}", register.name()).unwrap(),
         Instruction::Jump(label) => write!(output, "jmp {}", label.name()).unwrap(),
         Instruction::JumpIfNotZero(label) => write!(output, "jne {}", label.name()).unwrap(),
+        Instruction::JumpIfEqual(label) => write!(output, "je {}", label.name()).unwrap(),
+        Instruction::Trap => output.push_str("ud2"),
         Instruction::Leave => output.push_str("leave"),
         Instruction::Return => output.push_str("ret"),
     }

@@ -58,6 +58,7 @@ mod native_execution;
 mod object_results;
 mod objects;
 mod static_inheritance;
+mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;
 use objects::println_i64_stub;

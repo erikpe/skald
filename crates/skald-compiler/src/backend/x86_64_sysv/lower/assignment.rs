@@ -32,6 +32,10 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         assignment: &MirAssignment,
     ) -> Result<(), BackendError> {
+        if let MirRvalueKind::TypeTest { source, target } = &assignment.rvalue.kind {
+            self.select_type_test(source, *target, assignment.result);
+            return Ok(());
+        }
         let destination = value::frame_value(self.frame, assignment.result);
         self.select_rvalue(&assignment.rvalue.kind, assignment.rvalue.ty, destination)
     }
@@ -68,7 +72,7 @@ impl InstructionSelector<'_, '_> {
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
             MirRvalueKind::TypeTest { .. } => {
-                unreachable!("backend legality rejects runtime type tests")
+                unreachable!("runtime type tests are selected before ordinary rvalues")
             }
         }
         Ok(())

@@ -183,12 +183,18 @@ pub(super) enum Instruction {
         destination: XmmRegister,
     },
     Test(Register),
+    Compare {
+        left: Register,
+        right: Register,
+    },
     ReserveStack(u32),
     ReleaseStack(u32),
     Call(String),
     CallIndirect(Register),
     Jump(Label),
     JumpIfNotZero(Label),
+    JumpIfEqual(Label),
+    Trap,
     Leave,
     Return,
 }

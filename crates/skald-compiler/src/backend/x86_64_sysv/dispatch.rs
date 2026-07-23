@@ -58,8 +58,30 @@ impl DispatchMetadata {
         })
     }
 
-    pub(super) fn table_symbol(&self, class: ClassId) -> Option<String> {
-        (!self.tables[class.index()].is_empty()).then(|| symbol::dispatch_table(class))
+    pub(super) fn table_symbol(&self, class: ClassId) -> String {
+        debug_assert!(class.index() < self.tables.len());
+        symbol::dispatch_table(class)
+    }
+
+    pub(super) fn classes_providing_view(
+        &self,
+        program: &MirProgram,
+        target: crate::mir::MirViewTarget,
+    ) -> Vec<ClassId> {
+        program
+            .classes
+            .iter()
+            .filter(|class| match target {
+                crate::mir::MirViewTarget::Class(target) => {
+                    class.id == target || program.is_ancestor(target, class.id)
+                }
+                crate::mir::MirViewTarget::Interface(interface) => {
+                    program.conformance(class.id, interface).is_some()
+                }
+                crate::mir::MirViewTarget::Obj => true,
+            })
+            .map(|class| class.id)
+            .collect()
     }
 
     pub(super) fn slot_displacement(slot: VirtualSlotId) -> Result<i32, BackendError> {
@@ -80,7 +102,6 @@ impl DispatchMetadata {
         self.tables
             .iter()
             .enumerate()
-            .filter(|(_, entries)| !entries.is_empty())
             .map(|(index, entries)| {
                 let class = ClassId::new(index);
                 AssemblyDispatchTable {

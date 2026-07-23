@@ -42,7 +42,7 @@ pub(super) fn select(
             output.push(Instruction::Jump(block_label(*false_target)));
         }
         MirTerminator::CheckedNarrow { .. } | MirTerminator::Terminate { .. } => {
-            unreachable!("backend legality rejects runtime narrowing")
+            unreachable!("type-operation terminators use their dedicated selector")
         }
     }
 }

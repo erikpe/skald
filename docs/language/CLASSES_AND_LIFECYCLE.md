@@ -494,13 +494,11 @@ heap-backed objects, `new`, nullable object references, static members, access
 modifiers, `final`, abstract members, overloads, reflection, or user-defined
 conversions. Direct-base syntax, hierarchy validation, inherited selection and
 lifecycle, class/interface/`Obj` alias views, slicing, virtual dispatch, and
-interface dispatch execute on x86-64. Type tests and checked narrowing reach
-verified MIR but await backend realization.
+interface dispatch, type tests, and checked narrowing execute on x86-64.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
-the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
-contract, and the active
-[polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) owns implementation
-order.
+the [polymorphism profile](POLYMORPHISM.md) owns their language contract, and
+the active [polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) owns
+final hardening and publication.
 
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment

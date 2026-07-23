@@ -20,6 +20,7 @@ mod cleanup;
 mod copy;
 mod object_abi;
 mod terminator;
+mod type_operations;
 mod value;
 
 pub(super) fn lower(
@@ -73,27 +74,30 @@ fn lower_definition(
     let epilogue = epilogue_label(function.callable());
     for block in &function.body().blocks {
         instructions.push(Instruction::Label(block_label(block.id)));
-        for instruction in &block.instructions {
-            InstructionSelector::new(
-                program,
-                data_layout,
-                dispatch,
-                function,
-                &frame,
-                &mut instructions,
-            )
-            .select(instruction)?;
-        }
-        terminator::select(
-            block
-                .terminator
-                .as_ref()
-                .expect("verified block is terminated"),
+        let mut selector = InstructionSelector::new(
+            program,
+            data_layout,
+            dispatch,
+            function,
             &frame,
-            signature.return_type,
-            &epilogue,
             &mut instructions,
         );
+        for instruction in &block.instructions {
+            selector.select(instruction)?;
+        }
+        let block_terminator = block
+            .terminator
+            .as_ref()
+            .expect("verified block is terminated");
+        if !selector.select_type_operation_terminator(block_terminator, block.id)? {
+            terminator::select(
+                block_terminator,
+                &frame,
+                signature.return_type,
+                &epilogue,
+                &mut instructions,
+            );
+        }
     }
     instructions.push(Instruction::Label(epilogue));
     instructions.push(Instruction::Leave);
@@ -167,9 +171,10 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::CopyConstruct(copy) => self.select_copy_construction(copy)?,
             MirInstruction::CopyAssign(copy) => self.select_copy_assignment(copy)?,
             MirInstruction::EndFullExpression(end) => self.select_end_full_expression(end)?,
-            MirInstruction::BindNarrowedAlias(_) | MirInstruction::EndNarrowedAlias(_) => {
-                unreachable!("backend legality rejects narrowed aliases")
+            MirInstruction::BindNarrowedAlias(binding) => {
+                self.select_narrowed_alias_binding(binding)?
             }
+            MirInstruction::EndNarrowedAlias(_) => {}
         }
         Ok(())
     }

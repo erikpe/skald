@@ -163,6 +163,48 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
+    pub(super) fn load_origin_metadata(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        destination: Register,
+    ) {
+        match origin {
+            ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
+                let metadata = self
+                    .frame
+                    .object_origin(*carrier)
+                    .expect("verified forwarded carrier has object-origin homes")
+                    .metadata();
+                self.output.push(Instruction::Move {
+                    source: value::memory(Register::Rbp, metadata),
+                    destination: destination.into(),
+                });
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Exact { dynamic_class, .. }) => {
+                self.load_table_address(*dynamic_class, destination);
+            }
+            ObjectOriginOperand::Exact { dynamic_class, .. } => {
+                self.load_table_address(dynamic_class, destination);
+            }
+        }
+    }
+
+    pub(super) fn store_object_origin(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        destination: StorageId,
+    ) -> Result<(), BackendError> {
+        let homes = self
+            .frame
+            .object_origin(destination)
+            .expect("narrowed aliases carry object-origin homes");
+        self.select_origin_complete(origin, ArgumentLocation::IntegerRegister(Register::Rax))?;
+        value::store_rax(value::memory(Register::Rbp, homes.complete()), self.output);
+        self.load_origin_metadata(origin, Register::Rax);
+        value::store_rax(value::memory(Register::Rbp, homes.metadata()), self.output);
+        Ok(())
+    }
+
     pub(super) fn select_virtual_target(
         &mut self,
         origin: ObjectOriginOperand<'_>,
@@ -242,44 +284,28 @@ impl InstructionSelector<'_, '_> {
 
     fn select_metadata_symbol(&mut self, class: ClassId, location: ArgumentLocation) {
         let symbol = self.dispatch.table_symbol(class);
-        match (symbol, location) {
-            (Some(symbol), ArgumentLocation::IntegerRegister(destination)) => {
+        match location {
+            ArgumentLocation::IntegerRegister(destination) => {
                 self.output.push(Instruction::LoadSymbolAddress {
                     symbol,
                     destination,
                 });
             }
-            (Some(symbol), ArgumentLocation::Stack(displacement)) => {
+            ArgumentLocation::Stack(displacement) => {
                 self.output.push(Instruction::LoadSymbolAddress {
                     symbol,
                     destination: Register::Rax,
                 });
                 value::store_rax(value::memory(Register::Rsp, displacement), self.output);
             }
-            (None, ArgumentLocation::IntegerRegister(destination)) => {
-                self.output.push(Instruction::MoveImmediate64 {
-                    bits: 0,
-                    destination,
-                });
-            }
-            (None, ArgumentLocation::Stack(displacement)) => {
-                self.output.push(Instruction::MoveImmediate64 {
-                    bits: 0,
-                    destination: Register::Rax,
-                });
-                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
-            }
-            (_, ArgumentLocation::SseRegister(_)) => {
+            ArgumentLocation::SseRegister(_) => {
                 unreachable!("object metadata is always integer-class")
             }
         }
     }
 
     fn load_table_address(&mut self, class: ClassId, destination: Register) {
-        let symbol = self
-            .dispatch
-            .table_symbol(class)
-            .expect("virtual call dynamic class has a virtual table");
+        let symbol = self.dispatch.table_symbol(class);
         self.output.push(Instruction::LoadSymbolAddress {
             symbol,
             destination,

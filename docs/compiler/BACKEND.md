@@ -51,9 +51,10 @@ callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
 owning slices, class/interface/`Obj` alias views, virtual-family calls, and
-interface calls. Runtime type tests and checked narrowing have verified MIR
-operations but no instruction selection yet. The backend rejects them with a
-structured callable-specific error before target layout.
+interface calls. Runtime class/interface tests compare the forwarded dynamic
+class metadata identity against the verified target set. Checked narrowing
+uses the same check, materializes the successful scoped view under the
+ordinary alias ABI, and emits an illegal-instruction trap on failure.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -200,14 +201,14 @@ changing language semantics.
 
 ## Dynamic dispatch metadata and calls
 
-The backend computes one table per declared class when virtual families or
-interface requirements exist. Virtual entries follow canonical
-`VirtualSlotId` order. Interface witness entries follow dense `InterfaceId`
-and `InterfaceRequirementId` order, independently of names and conformance-list
-order. Each applicable entry contains the effective method for that class;
-unrelated entries contain zero. Missing executable bodies, invalid MIR
-metadata, unrepresentable table displacements, and unsupported external object
-signatures are rejected before instruction selection.
+The backend computes one metadata table per declared class. Every table has a
+unique address even when it has no dispatch entries. Virtual entries follow
+canonical `VirtualSlotId` order. Interface witness entries follow dense
+`InterfaceId` and `InterfaceRequirementId` order, independently of names and
+conformance-list order. Each applicable entry contains the effective method
+for that class; unrelated entries contain zero. Missing executable bodies,
+invalid MIR metadata, unrepresentable table displacements, and unsupported
+external object signatures are rejected before instruction selection.
 
 Tables are private read-only relocation data containing method symbols.
 Entering a polymorphic call with an exact object supplies its statically known
@@ -218,6 +219,13 @@ the selected method receiver and call indirectly through the ordinary ABI.
 This is valid for the current single-inheritance layout because every base
 subobject begins at offset zero. Direct calls continue to pass their statically
 selected place.
+
+Runtime membership checks compare the forwarded table address with the
+deterministic set of declared classes that provide the requested class or
+interface view. They do not inspect object bytes or traverse the class graph at
+runtime. A successful narrowing stores the selected address, complete-object
+address, and unchanged metadata address in scoped alias frame homes. Failure
+executes `ud2`; it does not return or run remaining source cleanup.
 
 ## Instruction selection and cleanup realization
 

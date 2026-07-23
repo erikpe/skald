@@ -5,7 +5,6 @@ use crate::{
     identity::CallableId,
     mir::{
         verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirParameter, MirProgram,
-        MirRvalueKind, MirTerminator,
     },
 };
 
@@ -19,7 +18,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
-    reject_unsupported_type_operations(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
@@ -96,40 +94,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         }
     }
     Ok((data_layout, dispatch))
-}
-
-fn reject_unsupported_type_operations(program: &MirProgram) -> Result<(), BackendError> {
-    for function in program.executable_definitions() {
-        for block in &function.body().blocks {
-            if matches!(
-                block.terminator,
-                Some(MirTerminator::CheckedNarrow { .. } | MirTerminator::Terminate { .. })
-            ) || block
-                .instructions
-                .iter()
-                .any(|instruction| match instruction {
-                    MirInstruction::Assign(assignment) => {
-                        matches!(assignment.rvalue.kind, MirRvalueKind::TypeTest { .. })
-                    }
-                    MirInstruction::BindNarrowedAlias(_) | MirInstruction::EndNarrowedAlias(_) => {
-                        true
-                    }
-                    _ => false,
-                })
-            {
-                return Err(type_operations_unavailable(function.callable()));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn type_operations_unavailable(function: CallableId) -> BackendError {
-    BackendError::new(
-        Target::X86_64SysV,
-        Some(function),
-        "runtime type operations are not supported by the x86-64 backend yet",
-    )
 }
 
 fn check_member_target(

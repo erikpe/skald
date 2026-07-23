@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM19 is next. The
+Status: in progress; PM20 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -102,7 +102,7 @@ The frozen restricted profile excludes:
 - [x] PM16 — Lower interface dispatch on x86-64
 - [x] PM17 — Type-check type tests and checked narrowing
 - [x] PM18 — Represent and verify tests and narrowing in MIR
-- [ ] PM19 — Lower tests and checked narrowing on x86-64
+- [x] PM19 — Lower tests and checked narrowing on x86-64
 - [ ] PM20 — Harden, document, and publish polymorphism
 
 ## 3. PR-sized implementation sequence
@@ -533,13 +533,13 @@ rejects malformed checks before backend selection.
 **Purpose:** Execute verified checks against deterministic class/interface
 metadata without ownership or object-graph search.
 
-- [ ] Lower static and runtime class/interface membership checks against the
+- [x] Lower static and runtime class/interface membership checks against the
       backend metadata established for dispatch.
-- [ ] Materialize successful scoped views under the existing polymorphic alias
+- [x] Materialize successful scoped views under the existing polymorphic alias
       ABI and implement the frozen unrecoverable failure behavior.
-- [ ] Preserve complete-object address, receiver access, evaluation order,
+- [x] Preserve complete-object address, receiver access, evaluation order,
       temporary cleanup, and stack alignment across success and failure paths.
-- [ ] Reject corrupt metadata and unsupported forms through structured backend
+- [x] Reject corrupt metadata and unsupported forms through structured backend
       errors.
 
 **Tests:** Add backend legality and native cases for success, failure, deep

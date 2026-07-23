@@ -76,10 +76,7 @@ fn lays_out_and_addresses_deep_source_subobjects_from_every_storage_base() {
                 .project_field(leaf_value),
         )
         .unwrap();
-    assert!(matches!(
-        alias.base(),
-        frame::FramePlaceBase::AliasParameter { .. }
-    ));
+    assert!(matches!(alias.base(), frame::FramePlaceBase::Alias { .. }));
     assert_eq!(alias.displacement(), 24);
     assert_eq!(alias.ty(), MirType::I64);
 }

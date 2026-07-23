@@ -9,8 +9,8 @@ compatibility. Virtual dispatch executes on x86-64 through canonical MIR
 families and a private metadata ABI. Interface declarations, exact conformance,
 non-owning conversions, forwarding, and calls lower into verified,
 target-independent MIR and execute on x86-64. Type tests and checked narrowing
-are accepted, resolved, type-checked, and represented explicitly in HIR and
-verified target-independent MIR; their backend realization remains unavailable. The
+are accepted, resolved, type-checked, represented explicitly in HIR and
+verified target-independent MIR, and executed by the x86-64 backend. The
 [status matrix](STATUS.md) distinguishes these phase boundaries.
 
 This document is the language authority for the restricted polymorphism
@@ -259,6 +259,12 @@ call loads its backend-selected entry from that metadata and invokes the
 selected method through the ordinary argument, result, temporary, and cleanup
 pipeline. Interface witness layout remains target-private. Exact and sliced
 values retain direct static selection.
+
+Runtime type checks use the dynamic class metadata already carried by aliases;
+they do not inspect object storage. Successful narrowing preserves the static
+address, complete-object address, dynamic metadata, and access in ordinary
+scoped alias homes. The x86-64 failure implementation traps and does not
+return, matching the unrecoverable language contract.
 
 ## Inline slicing
 

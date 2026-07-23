@@ -15,11 +15,10 @@ fn lowers_runtime_type_operations_to_explicit_metadata_and_control_flow() {
     assert!(dump.contains("end-narrowed"));
     assert!(dump.contains("narrowed("));
 
-    let error = emit_assembly(Target::X86_64SysV, &program)
-        .expect_err("PM19 owns backend support for runtime type operations");
-    assert!(error
-        .message()
-        .contains("runtime type operations are not supported"));
+    let assembly = emit_assembly(Target::X86_64SysV, &program)
+        .expect("verified type operations must reach backend lowering");
+    assert!(assembly.contains("cmpq"));
+    assert!(assembly.contains("ud2"));
 }
 
 #[test]

@@ -27,7 +27,7 @@ pub(super) enum FramePlaceBase {
     Return { home: i32 },
     Receiver { home: i32 },
     OwnedParameter { home: i32 },
-    AliasParameter { home: i32 },
+    Alias { home: i32 },
 }
 
 impl FramePlaceBase {
@@ -37,7 +37,7 @@ impl FramePlaceBase {
             Self::Return { home }
             | Self::Receiver { home }
             | Self::OwnedParameter { home }
-            | Self::AliasParameter { home } => Some(home),
+            | Self::Alias { home } => Some(home),
         }
     }
 }
@@ -97,7 +97,8 @@ impl FrameLayout {
                 (
                     MirStorageKind::Return
                     | MirStorageKind::Receiver
-                    | MirStorageKind::AliasParameter(_),
+                    | MirStorageKind::AliasParameter(_)
+                    | MirStorageKind::NarrowedAlias(_),
                     _,
                 )
                 | (MirStorageKind::Parameter, MirType::Class(_)) => {
@@ -112,7 +113,9 @@ impl FrameLayout {
             storage_offsets.push(allocator.allocate(size, alignment)?);
             let carries_origin = matches!(
                 storage.kind,
-                MirStorageKind::Receiver | MirStorageKind::AliasParameter(_)
+                MirStorageKind::Receiver
+                    | MirStorageKind::AliasParameter(_)
+                    | MirStorageKind::NarrowedAlias(_)
             );
             object_origins.push(if carries_origin {
                 Some(ObjectOriginHomes {
@@ -191,14 +194,17 @@ impl FrameLayout {
                 )
             }
             MirPlaceBase::AliasParameter(_) => (
-                FramePlaceBase::AliasParameter {
+                FramePlaceBase::Alias {
                     home: self.storage(storage_id),
                 },
                 0,
             ),
-            MirPlaceBase::NarrowedAlias(_) => {
-                unreachable!("backend legality rejects narrowed aliases")
-            }
+            MirPlaceBase::NarrowedAlias(_) => (
+                FramePlaceBase::Alias {
+                    home: self.storage(storage_id),
+                },
+                0,
+            ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
         };
         let mut ty = storage.ty;
