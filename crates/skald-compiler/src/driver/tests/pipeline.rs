@@ -83,22 +83,20 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn valid_static_inheritance_stops_at_the_structured_backend_boundary() {
-    let result = compile_source_to_assembly(
+fn static_inheritance_composes_through_the_complete_pipeline() {
+    let artifact = compile_source_to_assembly(
         "inheritance.ska",
         concat!(
-            "class Base { init() {} }\n",
-            "class Derived extends Base { init() { super(); } }\n",
-            "fn main() -> i64 { return 0; }\n",
+            "class Base { value: i64; init(value: i64) { self.value = value; } }\n",
+            "class Derived extends Base { init(value: i64) { super(value); } }\n",
+            "fn main() -> i64 { var value: Derived = Derived(7); return value.value; }\n",
         ),
         Target::X86_64SysV,
-    );
+    )
+    .unwrap();
 
-    assert!(matches!(
-        result,
-        Err(CompilationError::Backend(error))
-            if error.message().contains("not supported by the x86-64 backend yet")
-    ));
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains("call .Lska_class_0_init_0"));
 }
 
 #[test]

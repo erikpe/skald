@@ -1,7 +1,7 @@
 # Skald Classes and Lifecycle
 
-Status: authoritative for implemented exact-class behavior and the
-frontend/HIR contract for base-subobject lifecycle composition.
+Status: authoritative for implemented inline class behavior, including
+executable base-subobject lifecycle composition.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -13,12 +13,10 @@ call and evaluation-order rules.
 ## Exact nominal classes
 
 A class declaration introduces one nominal type. Two classes are different
-types even when their declarations have identical members. Executable MIR
-class semantics have no inheritance or implicit class conversion, so every
-currently executable class use requires the exact declared class. An optional
-direct-base header is parsed, resolved, validated as a canonical hierarchy,
-and carried through typed lifecycle and static-access HIR. Base layout and
-execution remain later phase work.
+types even when their declarations have identical members. A class may have
+one direct base. The compiler validates the canonical hierarchy and carries
+base identity through typed lifecycle operations, static member access,
+verified MIR, and target lowering. Dynamic dispatch remains unavailable.
 
 A class value is one complete inline object containing all of its direct
 fields. A class-typed field is a complete inline subobject of its containing
@@ -276,9 +274,9 @@ operations, not aggregate prefix copies or inferred physical layout.
 
 This contract reaches verified MIR. Direct-base metadata, base projections,
 selected base copy steps, terminal base destruction, and owning slices are
-explicit and checked before target lowering. The current x86-64 backend
-returns a structured feature-legality error until base layout and execution
-are implemented.
+explicit and checked before target lowering. The x86-64 backend embeds the
+direct base before derived fields and mechanically lowers those selected
+operations without aggregate copying.
 
 ## Copy capabilities
 
@@ -483,13 +481,12 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not yet include base layout,
-interfaces, virtual dispatch, executable `Obj` or class conversions, shared or
-heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, overloads, reflection, or user-defined
-conversions. Direct-base syntax, hierarchy validation, inherited static
-selection, base lifecycle, alias views, and slicing are the implemented typed
-HIR boundary.
+The implemented executable class model does not yet include interfaces,
+virtual dispatch, shared or heap-backed objects, `new`, nullable object
+references, static members, access modifiers, `final`, abstract members,
+overloads, reflection, or user-defined conversions. Direct-base syntax,
+hierarchy validation, inherited static selection, base lifecycle, class/`Obj`
+alias views, slicing, and x86-64 execution are implemented.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

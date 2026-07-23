@@ -39,15 +39,26 @@ pub(super) struct FieldLayout {
     pub offset: usize,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct BaseLayout {
+    pub class: ClassId,
+    pub offset: usize,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct ClassLayout {
     ty: TypeLayout,
+    base: Option<BaseLayout>,
     fields: Vec<FieldLayout>,
 }
 
 impl ClassLayout {
     pub(super) const fn ty(&self) -> TypeLayout {
         self.ty
+    }
+
+    pub(super) const fn base(&self) -> Option<BaseLayout> {
+        self.base
     }
 
     pub(super) fn field(&self, field: FieldId) -> Option<FieldLayout> {
@@ -149,9 +160,13 @@ impl<'mir> LayoutBuilder<'mir> {
         let Some(declaration) = self.program.class(class) else {
             return Err(layout_error(format!("class {class} is not declared")));
         };
+        let direct_base = declaration.direct_base.map(|base| base.class);
         let fields: Vec<_> = declaration.fields.iter().map(|field| field.ty).collect();
         self.states[class.index()] = VisitState::Visiting;
 
+        let base = direct_base
+            .map(|base| self.compute_class(base).map(|layout| (base, layout)))
+            .transpose()?;
         let mut laid_out_fields = Vec::with_capacity(fields.len());
         for ty in fields {
             let ty = match ty {
@@ -160,7 +175,7 @@ impl<'mir> LayoutBuilder<'mir> {
             };
             laid_out_fields.push(ty);
         }
-        let layout = layout_class(&laid_out_fields).ok_or_else(|| {
+        let layout = layout_class(base, &laid_out_fields).ok_or_else(|| {
             layout_error(format!(
                 "layout of class {class} exceeds target size limits"
             ))
@@ -188,9 +203,9 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
     }
 }
 
-fn layout_class(fields: &[TypeLayout]) -> Option<ClassLayout> {
-    let mut size = 0usize;
-    let mut alignment = 1usize;
+fn layout_class(base: Option<(ClassId, TypeLayout)>, fields: &[TypeLayout]) -> Option<ClassLayout> {
+    let mut size = base.map_or(0, |(_, layout)| layout.size());
+    let mut alignment = base.map_or(1, |(_, layout)| layout.alignment());
     let mut field_layouts = Vec::with_capacity(fields.len());
     for field in fields {
         size = abi::align_up(size, field.alignment())?;
@@ -199,7 +214,7 @@ fn layout_class(fields: &[TypeLayout]) -> Option<ClassLayout> {
         alignment = alignment.max(field.alignment());
     }
     size = abi::align_up(size, alignment)?;
-    if fields.is_empty() {
+    if base.is_none() && fields.is_empty() {
         size = 1;
     }
     if size > MAX_ADDRESSABLE_SIZE {
@@ -207,6 +222,7 @@ fn layout_class(fields: &[TypeLayout]) -> Option<ClassLayout> {
     }
     Some(ClassLayout {
         ty: TypeLayout::new(size, alignment),
+        base: base.map(|(class, _)| BaseLayout { class, offset: 0 }),
         fields: field_layouts,
     })
 }
@@ -221,14 +237,17 @@ mod tests {
 
     #[test]
     fn lays_out_empty_mixed_padded_and_reordered_fields() {
-        let empty = layout_class(&[]).unwrap();
+        let empty = layout_class(None, &[]).unwrap();
         assert_eq!(empty.ty(), TypeLayout::new(1, 1));
 
-        let mixed = layout_class(&[
-            TypeLayout::new(1, 1),
-            TypeLayout::new(8, 8),
-            TypeLayout::new(1, 1),
-        ])
+        let mixed = layout_class(
+            None,
+            &[
+                TypeLayout::new(1, 1),
+                TypeLayout::new(8, 8),
+                TypeLayout::new(1, 1),
+            ],
+        )
         .unwrap();
         assert_eq!(mixed.ty(), TypeLayout::new(24, 8));
         assert_eq!(
@@ -240,15 +259,47 @@ mod tests {
             ]
         );
 
-        let reordered = layout_class(&[
-            TypeLayout::new(8, 8),
-            TypeLayout::new(1, 1),
-            TypeLayout::new(1, 1),
-        ])
+        let reordered = layout_class(
+            None,
+            &[
+                TypeLayout::new(8, 8),
+                TypeLayout::new(1, 1),
+                TypeLayout::new(1, 1),
+            ],
+        )
         .unwrap();
         assert_eq!(reordered.ty(), TypeLayout::new(16, 8));
         assert_eq!(reordered.fields[1].offset, 8);
         assert_eq!(reordered.fields[2].offset, 9);
+    }
+
+    #[test]
+    fn lays_out_the_direct_base_before_derived_fields() {
+        let base = ClassId::new(0);
+        let derived = layout_class(
+            Some((base, TypeLayout::new(16, 8))),
+            &[TypeLayout::new(1, 1), TypeLayout::new(8, 8)],
+        )
+        .unwrap();
+
+        assert_eq!(
+            derived.base(),
+            Some(BaseLayout {
+                class: base,
+                offset: 0,
+            })
+        );
+        assert_eq!(derived.fields[0].offset, 16);
+        assert_eq!(derived.fields[1].offset, 24);
+        assert_eq!(derived.ty(), TypeLayout::new(32, 8));
+
+        let empty_base = layout_class(
+            Some((base, TypeLayout::new(1, 1))),
+            &[TypeLayout::new(8, 8)],
+        )
+        .unwrap();
+        assert_eq!(empty_base.fields[0].offset, 8);
+        assert_eq!(empty_base.ty(), TypeLayout::new(16, 8));
     }
 
     #[test]
@@ -265,8 +316,17 @@ mod tests {
 
     #[test]
     fn rejects_checked_size_and_alignment_overflow() {
-        assert!(layout_class(&[TypeLayout::new(usize::MAX, 1), TypeLayout::new(1, 1),]).is_none());
-        assert!(layout_class(&[TypeLayout::new(usize::MAX - 3, 8)]).is_none());
-        assert!(layout_class(&[TypeLayout::new(MAX_ADDRESSABLE_SIZE + 1, 1)]).is_none());
+        assert!(layout_class(
+            None,
+            &[TypeLayout::new(usize::MAX, 1), TypeLayout::new(1, 1),]
+        )
+        .is_none());
+        assert!(layout_class(None, &[TypeLayout::new(usize::MAX - 3, 8)]).is_none());
+        assert!(layout_class(None, &[TypeLayout::new(MAX_ADDRESSABLE_SIZE + 1, 1)]).is_none());
+        assert!(layout_class(
+            Some((ClassId::new(0), TypeLayout::new(usize::MAX, 8))),
+            &[TypeLayout::new(1, 1)],
+        )
+        .is_none());
     }
 }

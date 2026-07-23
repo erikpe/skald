@@ -270,7 +270,15 @@ impl InstructionSelector<'_, '_> {
                 self.select_value_argument(*argument, parameter.ty, location);
             }
             (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
-            | (MirArgument::Place(place), MirParameterMode::MutableAlias) => match location {
+            | (MirArgument::Place(place), MirParameterMode::MutableAlias)
+            | (
+                MirArgument::View(crate::mir::MirObjectView { source: place, .. }),
+                MirParameterMode::ReadOnlyAlias,
+            )
+            | (
+                MirArgument::View(crate::mir::MirObjectView { source: place, .. }),
+                MirParameterMode::MutableAlias,
+            ) => match location {
                 ArgumentLocation::IntegerRegister(register) => {
                     self.materialize_place_address(place, register)?;
                 }
@@ -279,7 +287,7 @@ impl InstructionSelector<'_, '_> {
                     value::store_rax(value::memory(Register::Rsp, displacement), self.output);
                 }
                 ArgumentLocation::SseRegister(_) => {
-                    unreachable!("alias descriptors are always integer-class")
+                    unreachable!("alias addresses are always integer-class")
                 }
             },
             (MirArgument::OwnedPlace(place), MirParameterMode::Value)

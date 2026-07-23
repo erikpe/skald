@@ -2,12 +2,10 @@
 
 Status: frozen design under active implementation. Canonical single
 inheritance, complete base lifecycle, inherited static member access,
-access-preserving class/`Obj` alias views, and inline slicing are represented
-explicitly through verified MIR. The current x86-64 backend does not yet
-implement base layout or the view ABI, so these valid programs stop at its
-structured feature-legality boundary. Virtual dispatch, interfaces, type
-tests, and narrowing remain unavailable. The [status matrix](STATUS.md)
-distinguishes this boundary from executable exact-class behavior.
+access-preserving class/`Obj` alias views, and inline slicing execute through
+verified MIR and the x86-64 backend. Virtual dispatch, interfaces, type tests,
+and narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
+the executable static subset from the remaining frozen design.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -221,8 +219,11 @@ The current HIR and MIR implement class-to-ancestor and class-to-`Obj` alias
 conversions, including forwarding of `Obj` aliases. Each converted MIR
 argument retains its source place, static target, and restricted access.
 Direct-base projections preserve the unique class subobject identity.
-Interface targets arrive later with interface conformance. Current static
-views stop before backend ABI lowering.
+The x86-64 backend lowers a static class view as the selected subobject address
+and carries an `Obj` view as an opaque source address; `Obj` has no operations
+in this static subset. Interface targets and the complete-object/dynamic
+metadata required for observable dispatch arrive with their corresponding
+verified IR contracts.
 
 ## Inline slicing
 

@@ -23,8 +23,8 @@ Use the authority closest to the behavior:
   places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
 - call-scoped alias access, lifetime, and future ownership boundaries belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
-- frozen but not-yet-implemented inheritance, polymorphic views, dispatch,
-  interfaces, type tests, and narrowing belong in
+- implemented static inheritance and frozen dynamic polymorphism, interfaces,
+  type tests, and narrowing belong in
   [polymorphism](language/POLYMORPHISM.md);
 - the current compilation unit, top-level namespace, entry point, external
   declarations, and future module boundary belong in

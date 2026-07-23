@@ -47,10 +47,10 @@ argument-area limits, frame limits, and displacement limits—also return
 `BackendError`. An error identifies its target and, when applicable, the
 callable being lowered.
 
-Verified static inheritance, base projections, owning slices, and class/`Obj`
-views currently stop at step 2. The target rejects them before layout because
-their base layout and internal view ABI belong to the next backend
-implementation boundary.
+The target accepts verified static single inheritance, base projections,
+owning slices, and class/`Obj` alias views. Virtual and interface dispatch,
+runtime type tests, and checked narrowing remain outside the accepted MIR
+surface because their target-independent operations are not implemented yet.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -71,16 +71,18 @@ The x86-64 target layout is:
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
 
-An inline class lays out fields in declaration order. Each field begins at the
-next offset satisfying that field's alignment; the complete size is rounded
-up to the maximum field alignment. Empty classes remain addressable with size
-and alignment one.
+An inline root class lays out fields in declaration order. A derived class
+first embeds its complete direct-base layout at offset zero, then lays out its
+direct fields in declaration order. Each field begins at the next offset
+satisfying that field's alignment; the complete size is rounded up to the
+maximum base-or-field alignment. Empty root classes remain addressable with
+size and alignment one, so a derived field after an empty base is padded as
+required by its own alignment.
 
 Class dependencies are laid out recursively from semantic `ClassId` and
 `FieldId` metadata. MIR field and base projections remain target-independent
-identities. The implemented layout turns exact-class field projections into
-byte offsets; verified base projections stop at feature legality until base
-layout is implemented. Recursive inline layouts, undeclared dependencies,
+identities; target layout turns both into checked byte offsets. Recursive
+inline layouts, undeclared dependencies, inconsistent base metadata,
 arithmetic overflow, and layouts beyond the target's signed 32-bit addressing
 limit are structured errors.
 
@@ -144,8 +146,10 @@ Skald-internal calls reuse the scalar System V classification but add
 compiler-private address conventions for inline objects:
 
 - a receiver is an integer-class address to the existing object place;
-- an alias is an integer-class address, with read-only and mutable access using
-  the same machine representation;
+- a static class alias is an integer-class address to its selected class
+  subobject, while an `Obj` alias uses the source address as an opaque identity
+  in the current operation-free static subset; read-only and mutable access
+  use the same representation;
 - an exact-class value parameter is an address to caller-created parameter
   storage whose ownership transfer was already selected in MIR; and
 - an exact-class result uses a hidden destination address before the receiver
@@ -158,7 +162,10 @@ sequence. Stack overflow arguments remain in one source-ordered area.
 
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible
-behavior remains unchanged. The backend does not choose copying, ownership,
+behavior remains unchanged. Dynamic-class metadata will extend the internal
+view representation when verified virtual dispatch reaches this boundary; it
+is not reconstructed from a base-subobject address. The backend does not
+choose copying, ownership,
 elision, cleanup, or evaluation order; it mechanically realizes operations and
 destinations already present in verified MIR. Those choices are owned by
 [functions and control flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md),
@@ -175,9 +182,9 @@ class layout. The complete frame is rounded to 16-byte alignment and uses
 
 Return destinations, receivers, owned class parameters, and aliases store an
 incoming pointer in a frame home. Projecting a MIR place loads the appropriate
-base when indirect, then accumulates checked target field offsets. Byte fields
-use byte-width loads and stores; wider primitive and address values use their
-target-width operations.
+base when indirect, then accumulates checked target base and field offsets.
+Byte fields use byte-width loads and stores; wider primitive and address
+values use their target-width operations.
 
 Frame allocation and projected displacements must fit signed 32-bit x86-64
 frame-relative addressing. Failure is a structured callable-specific backend
@@ -202,9 +209,11 @@ epilogue.
 
 Copy, construction, object-result, full-expression, and cleanup ordering are
 not rediscovered here. Verified MIR names the selected operation, target
-place, and order. Cleanup lowering follows the verified destruction plan using
-ordinary receiver calls and recursively projected fields; it performs no
-implicit allocation, deallocation, or aggregate runtime copy.
+place, and order. Copy construction and assignment lower the selected base
+step before the user body or synthesized direct fields. Cleanup follows the
+verified plan through derived bodies, recursively projected fields, and the
+base chain. No path performs implicit allocation, deallocation, or aggregate
+runtime copy.
 
 ## Symbols and process entry
 
@@ -234,7 +243,10 @@ spellings, frame offsets, and instruction sequences may change between
 compiler revisions. External symbols and behavior covered by the target ABI
 remain the compatibility boundary.
 
-Focused tests cover target registration, primitive and nested class layout,
-mixed register/stack classification, hidden destinations and receivers,
-frame/place addressing, legality and structured failures, instruction
-selection, assembler acceptance, call pressure, and native execution.
+Focused tests cover target registration, primitive, nested, and inherited
+class layout, mixed register/stack classification, hidden destinations and
+receivers, frame/place addressing, legality and structured failures,
+instruction selection, assembler acceptance, call pressure, and native
+execution. Golden execution additionally covers deep base chains, padded and
+empty bases, static views, slicing, object results, temporaries, and complete
+lifecycle order.

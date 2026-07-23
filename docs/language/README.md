@@ -40,8 +40,8 @@ explicit arguments.
 | **place** | An addressable storage location, such as a local, parameter, `self`, or a field path. |
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
-| **alias** | A call-scoped, non-owning view of an existing exact-class place. Read-only and mutable access are explicit. |
-| **exact class** | One nominal class identity without an inheritance conversion. Current executable semantics implement only exact-class behavior. |
+| **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be the class, an ancestor, or `Obj`. |
+| **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **lifecycle member** | A contextual `init`, `assign`, or `destroy` class member occupying a dedicated semantic slot rather than the ordinary method namespace. |
 
 ## Values, places, and mutation

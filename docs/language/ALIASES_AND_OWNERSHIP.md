@@ -1,7 +1,7 @@
 # Skald Aliases and Ownership
 
-Status: authoritative for executable exact-class aliases and the frontend/HIR
-contract for static class and `Obj` views. Interface views are owned by
+Status: authoritative for executable class and `Obj` aliases. Interface views
+are owned by
 [polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
 aliases, and aliases into other future value families are not implemented or
 frozen. Their maturity is authoritative in the [status matrix](STATUS.md).
@@ -14,8 +14,8 @@ defines object places, copying, and owning-object lifetime.
 
 ## Binding modes
 
-An alias parameter is a non-owning name for an existing exact-class object
-place. Its binding mode is separate from the object's class:
+An alias parameter is a non-owning name for an existing class object place or
+one of its static views. Its binding mode is separate from the static target:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -120,9 +120,9 @@ arguments. It does not create a separately observable value or permit argument
 reordering.
 
 Static polymorphic views are explicit and checked through MIR as
-source/target/access conversions. Exact-class aliases remain executable; the
-current x86-64 backend rejects the newer static views before target layout and
-calling-convention lowering.
+source/target/access conversions. Exact-class, ancestor-class, and `Obj`
+aliases execute through the x86-64 internal calling convention. They retain
+the same non-owning, call-scoped, access-restricted source semantics.
 
 ## Non-exclusivity
 

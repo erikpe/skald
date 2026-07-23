@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn alias_descriptors_are_integer_class_independent_of_access_mode() {
+    fn alias_addresses_are_integer_class_independent_of_access_mode() {
         let class = crate::identity::ClassId::new(0);
         let layout = CallLayout::classify(&[
             MirParameter::read_only_alias(MirType::Class(class)),

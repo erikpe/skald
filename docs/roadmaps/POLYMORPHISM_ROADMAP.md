@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM8 is next. The
+Status: in progress; PM9 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -91,7 +91,7 @@ The frozen restricted profile excludes:
 - [x] PM5 — Compose base initialization and lifecycle semantics
 - [x] PM6 — Add typed static base views and slicing in HIR
 - [x] PM7 — Represent and verify static inheritance in MIR
-- [ ] PM8 — Lower static inheritance on x86-64
+- [x] PM8 — Lower static inheritance on x86-64
 - [ ] PM9 — Resolve virtual declarations and override families
 - [ ] PM10 — Select virtual calls and receiver views in HIR
 - [ ] PM11 — Represent and verify virtual dispatch in MIR
@@ -292,13 +292,13 @@ valid MIR contains everything required to execute static inheritance.
 **Purpose:** Execute verified base layout and lifecycle behavior without
 exposing target layout above the backend.
 
-- [ ] Lay out the direct base according to the frozen ABI, then derived fields,
+- [x] Lay out the direct base according to the frozen ABI, then derived fields,
       with checked offsets, padding, alignment, and total-size arithmetic.
-- [ ] Lower every verified base projection and selected construction, copy,
+- [x] Lower every verified base projection and selected construction, copy,
       assignment, slicing, and destruction operation.
-- [ ] Preserve scalar/object argument classes, hidden results, aliases,
+- [x] Preserve scalar/object argument classes, hidden results, aliases,
       temporaries, cleanup, and mixed register/stack pressure.
-- [ ] Return structured backend errors for corrupt metadata or displacement
+- [x] Return structured backend errors for corrupt metadata or displacement
       overflow; do not add an implicit aggregate-copy path.
 
 **Tests:** Add layout and legality unit tests plus native traces for empty and

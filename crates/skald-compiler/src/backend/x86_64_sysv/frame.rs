@@ -166,8 +166,22 @@ impl FrameLayout {
         let mut ty = storage.ty;
         for projection in &place.projections {
             match *projection {
-                MirPlaceProjection::Base(_) => {
-                    unreachable!("target legality rejects static inheritance before frame layout")
+                MirPlaceProjection::Base(base) => {
+                    let class = match ty {
+                        MirType::Class(class) => class,
+                        _ => return Err(place_metadata_error(function.callable())),
+                    };
+                    let base_layout = data_layout
+                        .class(class)
+                        .and_then(|layout| layout.base())
+                        .filter(|layout| layout.class == base)
+                        .ok_or_else(|| place_metadata_error(function.callable()))?;
+                    let offset = i32::try_from(base_layout.offset)
+                        .map_err(|_| place_address_error(function.callable()))?;
+                    displacement = displacement
+                        .checked_add(offset)
+                        .ok_or_else(|| place_address_error(function.callable()))?;
+                    ty = MirType::Class(base);
                 }
                 MirPlaceProjection::Field(field_id) => {
                     let field_layout = data_layout
@@ -244,6 +258,14 @@ fn place_address_error(callable: crate::identity::CallableId) -> BackendError {
         Target::X86_64SysV,
         Some(callable),
         "projected place exceeds x86-64 displacement limits",
+    )
+}
+
+fn place_metadata_error(callable: crate::identity::CallableId) -> BackendError {
+    BackendError::new(
+        Target::X86_64SysV,
+        Some(callable),
+        "projected base has no matching x86-64 class layout",
     )
 }
 
