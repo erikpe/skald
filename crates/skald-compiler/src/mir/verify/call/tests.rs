@@ -1,7 +1,8 @@
 use crate::{
     identity::{ClassId, FieldId, FunctionId},
     mir::{
-        verify_mir, MirCall, MirCallTarget, MirInstruction, MirPlace, MirType, MirValue, ValueId,
+        verify_mir, MirCall, MirCallTarget, MirInstruction, MirMethodReceiver, MirPlace, MirType,
+        MirValue, ValueId,
     },
     test_support::lower_source_to_mir,
 };
@@ -144,7 +145,10 @@ fn initializer_and_method_receiver_contracts_retain_exact_diagnostics() {
             _ => None,
         })
         .unwrap();
-    call.receiver = Some(MirPlace::base(storage).project_field(FieldId::new(ClassId::new(0), 0)));
+    call.receiver = Some(MirMethodReceiver::exact(
+        MirPlace::base(storage).project_field(FieldId::new(ClassId::new(0), 0)),
+        ClassId::new(0),
+    ));
     assert!(messages(&wrong_receiver)
         .iter()
         .any(|message| message == "method receiver has the wrong class type"));

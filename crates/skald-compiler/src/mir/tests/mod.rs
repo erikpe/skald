@@ -19,6 +19,8 @@ mod objects;
 mod robustness;
 mod static_inheritance;
 mod value_parameters;
+mod virtual_dispatch;
+mod virtual_fixtures;
 
 fn lower_text(text: &str) -> MirProgram {
     lower_source_to_mir(text)

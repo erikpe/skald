@@ -318,7 +318,7 @@ fn obj_views_lower_to_verified_mir() {
     verify_mir(&mir).expect("lowered static object views must verify");
     let dump = crate::mir::dump_mir(&mir);
     assert!(dump.contains("view(indirect("));
-    assert!(dump.contains(" -> Obj readonly)"));
+    assert!(dump.contains(" -> Obj readonly origin forwarded("));
 }
 
 #[test]

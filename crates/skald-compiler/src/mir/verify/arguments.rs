@@ -291,6 +291,34 @@ impl Verifier<'_> {
                 ),
             );
         }
+        let origin = self.verify_object_origin(
+            site.function,
+            site.block,
+            &view.origin,
+            &view.source,
+            source,
+            "object view",
+        );
+        if let Some(origin) = origin {
+            match view.target {
+                super::super::model::MirViewTarget::Class(target)
+                    if origin.static_class.is_some_and(|static_class| {
+                        target != static_class && !self.program.is_ancestor(target, static_class)
+                    }) =>
+                {
+                    self.block_error(
+                        site.function.callable(),
+                        site.block.id,
+                        format!(
+                            "{} argument {index} view target is incompatible with its origin",
+                            site.kind
+                        ),
+                    );
+                }
+                super::super::model::MirViewTarget::Obj => {}
+                _ => {}
+            }
+        }
     }
 }
 

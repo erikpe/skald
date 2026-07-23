@@ -12,6 +12,20 @@ pub fn dump_mir(program: &MirProgram) -> String {
     write_span(&mut output, program.span);
     output.push('\n');
     let _ = writeln!(output, "  Entry {}", program.entry_function);
+    if !program.virtual_families.is_empty() {
+        output.push_str("  VirtualFamilies\n");
+        for family in program.virtual_families.iter() {
+            let _ = write!(
+                output,
+                "    Family {} slot {} root {} members",
+                family.id, family.slot, family.root
+            );
+            for member in &family.members {
+                let _ = write!(output, " {member}");
+            }
+            output.push('\n');
+        }
+    }
     output.push_str("  Classes\n");
     for class in program.classes.iter() {
         dump_class(&mut output, class);
@@ -268,13 +282,25 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     MirCallTarget::Direct(target) => {
                         let _ = write!(output, "call {target}");
                     }
-                    MirCallTarget::Method(target) => {
-                        let _ = write!(output, "call {target}");
+                    MirCallTarget::Method(MirMethodCallTarget::Direct(target)) => {
+                        let _ = write!(output, "call direct {target}");
+                    }
+                    MirCallTarget::Method(MirMethodCallTarget::Virtual {
+                        family,
+                        slot,
+                        selected,
+                    }) => {
+                        let _ = write!(
+                            output,
+                            "call virtual {family} slot {slot} selected {selected}"
+                        );
                     }
                 }
                 if let Some(receiver) = &call.receiver {
                     output.push_str(" on ");
-                    dump_place(output, receiver);
+                    dump_place(output, &receiver.place);
+                    output.push_str(" origin ");
+                    dump_object_origin(output, &receiver.origin);
                 }
                 output.push('(');
                 for (index, argument) in call.arguments.iter().enumerate() {
@@ -371,6 +397,43 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
     output.push('\n');
 }
 
+fn dump_object_origin(output: &mut String, origin: &MirObjectOrigin) {
+    match origin {
+        MirObjectOrigin::Exact {
+            complete,
+            dynamic_class,
+        } => {
+            output.push_str("exact(");
+            dump_place(output, complete);
+            let _ = write!(output, " : {dynamic_class})");
+        }
+        MirObjectOrigin::Forwarded {
+            carrier,
+            static_target,
+            access,
+            dispatch_limit,
+            ..
+        } => {
+            let _ = write!(output, "forwarded({carrier} : ");
+            dump_view_target(output, *static_target);
+            let _ = write!(output, " {access}");
+            if let Some(limit) = dispatch_limit {
+                let _ = write!(output, " limit {limit}");
+            }
+            output.push(')');
+        }
+    }
+}
+
+fn dump_view_target(output: &mut String, target: MirViewTarget) {
+    match target {
+        MirViewTarget::Class(class) => {
+            let _ = write!(output, "class {class}");
+        }
+        MirViewTarget::Obj => output.push_str("Obj"),
+    }
+}
+
 fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
     match &rvalue.kind {
         MirRvalueKind::ConstantI64(value) => {
@@ -459,13 +522,10 @@ fn dump_argument(output: &mut String, argument: &MirArgument) {
             output.push_str("view(");
             dump_place(output, &view.source);
             output.push_str(" -> ");
-            match view.target {
-                MirViewTarget::Class(class) => {
-                    let _ = write!(output, "class {class}");
-                }
-                MirViewTarget::Obj => output.push_str("Obj"),
-            }
-            let _ = write!(output, " {})", view.access);
+            dump_view_target(output, view.target);
+            let _ = write!(output, " {} origin ", view.access);
+            dump_object_origin(output, &view.origin);
+            output.push(')');
         }
         MirArgument::OwnedPlace(place) => {
             output.push_str("owned(");

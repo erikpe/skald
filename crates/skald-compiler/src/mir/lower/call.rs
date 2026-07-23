@@ -3,7 +3,7 @@
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirExpression, HirMethodCallTarget, HirMethodReceiver,
-        HirObjectView, HirViewSource, HirViewTarget,
+        HirObjectOrigin, HirObjectView, HirViewSource, HirViewTarget,
     },
     identity::FunctionId,
 };
@@ -30,10 +30,10 @@ impl BodyLowerer<'_> {
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
         // Receiver selection precedes all explicit argument effects.
-        let receiver = self.lower_object_place(&receiver.place);
+        let receiver = self.lower_method_receiver(receiver);
         let arguments = self.lower_call_arguments(arguments);
         self.emit_scalar_call(
-            MirCallTarget::Method(target.selected()),
+            MirCallTarget::Method(lower_method_target(target)),
             Some(receiver),
             arguments,
             expression,
@@ -43,7 +43,7 @@ impl BodyLowerer<'_> {
     fn emit_scalar_call(
         &mut self,
         target: MirCallTarget,
-        receiver: Option<MirPlace>,
+        receiver: Option<MirMethodReceiver>,
         arguments: Vec<MirArgument>,
         expression: &HirExpression,
     ) -> Option<ValueId> {
@@ -103,6 +103,7 @@ impl BodyLowerer<'_> {
         };
         MirObjectView {
             source,
+            origin: Box::new(self.lower_object_origin(&view.origin)),
             target: match view.target {
                 HirViewTarget::Class(class) => MirViewTarget::Class(class),
                 HirViewTarget::Obj => MirViewTarget::Obj,
@@ -113,5 +114,66 @@ impl BodyLowerer<'_> {
             },
             span: view.span,
         }
+    }
+
+    pub(super) fn lower_method_receiver(&self, receiver: &HirMethodReceiver) -> MirMethodReceiver {
+        MirMethodReceiver {
+            place: self.lower_object_place(&receiver.place),
+            origin: Box::new(self.lower_object_origin(&receiver.origin)),
+        }
+    }
+
+    fn lower_object_origin(&self, origin: &HirObjectOrigin) -> MirObjectOrigin {
+        match origin {
+            HirObjectOrigin::Exact {
+                complete,
+                dynamic_class,
+            } => MirObjectOrigin::Exact {
+                complete: self.lower_object_place(complete),
+                dynamic_class: *dynamic_class,
+            },
+            HirObjectOrigin::Forwarded {
+                binding,
+                static_target,
+                access,
+                dispatch_limit,
+                span,
+            } => MirObjectOrigin::Forwarded {
+                carrier: self.storage_for_binding(*binding),
+                static_target: lower_view_target(*static_target),
+                access: lower_access(*access),
+                dispatch_limit: *dispatch_limit,
+                span: *span,
+            },
+        }
+    }
+}
+
+pub(super) const fn lower_method_target(target: HirMethodCallTarget) -> MirMethodCallTarget {
+    match target {
+        HirMethodCallTarget::Direct(method) => MirMethodCallTarget::Direct(method),
+        HirMethodCallTarget::Virtual {
+            family,
+            slot,
+            selected,
+        } => MirMethodCallTarget::Virtual {
+            family,
+            slot,
+            selected,
+        },
+    }
+}
+
+const fn lower_view_target(target: HirViewTarget) -> MirViewTarget {
+    match target {
+        HirViewTarget::Class(class) => MirViewTarget::Class(class),
+        HirViewTarget::Obj => MirViewTarget::Obj,
+    }
+}
+
+const fn lower_access(access: HirAccess) -> MirAliasAccess {
+    match access {
+        HirAccess::ReadOnly => MirAliasAccess::ReadOnly,
+        HirAccess::Mutable => MirAliasAccess::Mutable,
     }
 }

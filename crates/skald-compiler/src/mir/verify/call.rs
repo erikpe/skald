@@ -5,10 +5,12 @@ use std::collections::HashSet;
 use super::{
     super::model::{
         MirAliasAccess, MirBasicBlock, MirCall, MirCallTarget, MirDefinitionRef, MirInitialize,
-        MirMethodDeclaration, MirParameter, MirPlace, MirPlaceBase, MirReceiverAccess,
-        MirStorageKind, MirType, ValueId,
+        MirMethodCallTarget, MirMethodDeclaration, MirMethodReceiver, MirObjectOrigin,
+        MirParameter, MirPlace, MirPlaceBase, MirPlaceProjection, MirReceiverAccess,
+        MirStorageKind, MirType, MirViewTarget, ValueId,
     },
     context::Verifier,
+    place::{is_ancestor, VerifiedPlace},
 };
 
 struct CallSignature<'mir> {
@@ -153,7 +155,8 @@ impl<'mir> Verifier<'mir> {
                     return_type: target.return_type,
                 })
             }
-            MirCallTarget::Method(target_id) => {
+            MirCallTarget::Method(method_target) => {
+                let target_id = method_target.selected();
                 let Some(target) = self.program.method(target_id) else {
                     self.block_error(
                         function.callable(),
@@ -166,7 +169,7 @@ impl<'mir> Verifier<'mir> {
                     function,
                     block,
                     call.receiver.as_ref(),
-                    target_id,
+                    method_target,
                     target,
                 );
                 Some(CallSignature {
@@ -181,8 +184,8 @@ impl<'mir> Verifier<'mir> {
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
-        receiver: Option<&MirPlace>,
-        target_id: crate::identity::MethodId,
+        receiver: Option<&MirMethodReceiver>,
+        call_target: MirMethodCallTarget,
         target: &MirMethodDeclaration,
     ) {
         let Some(receiver) = receiver else {
@@ -193,8 +196,9 @@ impl<'mir> Verifier<'mir> {
             );
             return;
         };
-        let receiver = self.verify_place(function, block, receiver);
-        if receiver.map(|place| place.ty) != Some(MirType::Class(target_id.class())) {
+        let place = self.verify_place(function, block, &receiver.place);
+        let target_id = call_target.selected();
+        if place.map(|place| place.ty) != Some(MirType::Class(target_id.class())) {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -202,13 +206,312 @@ impl<'mir> Verifier<'mir> {
             );
         }
         if target.receiver_access == MirReceiverAccess::Mutable
-            && receiver.is_some_and(|place| place.access != MirAliasAccess::Mutable)
+            && place.is_some_and(|place| place.access != MirAliasAccess::Mutable)
         {
             self.block_error(
                 function.callable(),
                 block.id,
                 "mutable method receiver requires mutable access",
             );
+        }
+        let origin = self.verify_object_origin(
+            function,
+            block,
+            &receiver.origin,
+            &receiver.place,
+            place,
+            "method receiver",
+        );
+        self.verify_dispatch_target(function, block, call_target, target, origin);
+    }
+
+    fn verify_dispatch_target(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        target: MirMethodCallTarget,
+        declaration: &MirMethodDeclaration,
+        origin: Option<VerifiedOrigin>,
+    ) {
+        let family_for_method = self
+            .program
+            .virtual_families
+            .iter()
+            .find(|family| family.members.contains(&declaration.id));
+        match target {
+            MirMethodCallTarget::Direct(_) => {
+                if let Some(family) = family_for_method {
+                    if origin.is_some_and(|origin| origin.forwarded && !origin.dispatch_limited) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "direct virtual-family call requires exact or dispatch-limited receiver origin",
+                        );
+                    }
+                    if let Some(static_class) = origin.and_then(|origin| origin.static_class) {
+                        if self.selected_family_member(family, static_class) != Some(declaration.id)
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "direct virtual-family call selected method does not match the exact or dispatch-limited class",
+                            );
+                        }
+                    }
+                }
+            }
+            MirMethodCallTarget::Virtual {
+                family,
+                slot,
+                selected,
+            } => {
+                let Some(metadata) = self.program.virtual_family(family) else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("virtual call family {family} is not declared"),
+                    );
+                    return;
+                };
+                if metadata.slot != slot {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "virtual call slot does not match its family",
+                    );
+                }
+                if !metadata.members.contains(&selected) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "virtual call selected method is not a member of its family",
+                    );
+                }
+                let Some(origin) = origin else {
+                    return;
+                };
+                if !origin.forwarded || origin.dispatch_limited {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "virtual call requires an unrestricted forwarded receiver origin",
+                    );
+                }
+                let Some(static_class) = origin.static_class else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "virtual call requires a class-typed receiver origin",
+                    );
+                    return;
+                };
+                if self.selected_family_member(metadata, static_class) != Some(selected) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "virtual call selected method does not match the receiver's static class",
+                    );
+                }
+            }
+        }
+    }
+
+    fn selected_family_member(
+        &self,
+        family: &crate::mir::MirVirtualFamily,
+        static_class: crate::identity::ClassId,
+    ) -> Option<crate::identity::MethodId> {
+        family
+            .members
+            .iter()
+            .copied()
+            .fold(None, |selected, method| {
+                let owner = method.class();
+                if owner != static_class && !self.program.is_ancestor(owner, static_class) {
+                    return selected;
+                }
+                match selected {
+                    Some(current) if !self.program.is_ancestor(current.class(), owner) => {
+                        Some(current)
+                    }
+                    _ => Some(method),
+                }
+            })
+    }
+
+    pub(super) fn verify_object_origin(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        origin: &MirObjectOrigin,
+        subject: &MirPlace,
+        subject_metadata: Option<VerifiedPlace>,
+        kind: &str,
+    ) -> Option<VerifiedOrigin> {
+        match origin {
+            MirObjectOrigin::Exact {
+                complete,
+                dynamic_class,
+            } => {
+                let complete_metadata = self.verify_place(function, block, complete);
+                if self.program.class(*dynamic_class).is_none() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} exact origin has an undeclared dynamic class"),
+                    );
+                }
+                if complete_metadata.map(|place| place.ty) != Some(MirType::Class(*dynamic_class)) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} exact origin has the wrong dynamic class"),
+                    );
+                }
+                if !is_ancestor(complete, subject) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} exact origin is not an ancestor of its static place"),
+                    );
+                }
+                let complete_storage = function.storage(complete.base.storage());
+                let forwarded_root = complete_storage.is_some_and(|storage| {
+                    matches!(
+                        storage.kind,
+                        MirStorageKind::Receiver | MirStorageKind::AliasParameter(_)
+                    )
+                });
+                let ends_at_field = matches!(
+                    complete.projections.last(),
+                    Some(MirPlaceProjection::Field(_))
+                );
+                if matches!(
+                    complete.projections.last(),
+                    Some(MirPlaceProjection::Base(_))
+                ) || (forwarded_root && !ends_at_field)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} exact origin does not name a complete object"),
+                    );
+                }
+                if complete_metadata
+                    .zip(subject_metadata)
+                    .is_some_and(|(complete, subject)| complete.access != subject.access)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} exact origin access differs from its static place"),
+                    );
+                }
+                Some(VerifiedOrigin {
+                    static_class: Some(*dynamic_class),
+                    forwarded: false,
+                    dispatch_limited: false,
+                })
+            }
+            MirObjectOrigin::Forwarded {
+                carrier,
+                static_target,
+                access,
+                dispatch_limit,
+                ..
+            } => {
+                let Some(storage) = function.storage(*carrier) else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} origin carrier {carrier} is not declared"),
+                    );
+                    return None;
+                };
+                let carrier_access = match storage.kind {
+                    MirStorageKind::Receiver => self.storage_access(function, storage),
+                    MirStorageKind::AliasParameter(access) => access,
+                    _ => {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} origin carrier is not a receiver or alias parameter"),
+                        );
+                        return None;
+                    }
+                };
+                let expected_base = match storage.kind {
+                    MirStorageKind::Receiver => MirPlaceBase::Storage(*carrier),
+                    MirStorageKind::AliasParameter(_) => MirPlaceBase::AliasParameter(*carrier),
+                    _ => unreachable!("origin carrier kind checked above"),
+                };
+                if subject.base != expected_base
+                    || subject
+                        .projections
+                        .iter()
+                        .any(|projection| matches!(projection, MirPlaceProjection::Field(_)))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} static place does not come from its forwarded carrier"),
+                    );
+                }
+                if *access != carrier_access
+                    || subject_metadata.is_some_and(|place| place.access != *access)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} forwarded origin access is inconsistent"),
+                    );
+                }
+                if static_target.ty() != storage.ty {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} forwarded origin target differs from its carrier type"),
+                    );
+                }
+                let static_class = match *static_target {
+                    MirViewTarget::Class(class) => Some(class),
+                    MirViewTarget::Obj => None,
+                };
+                if let (Some(static_class), Some(MirType::Class(subject_class))) =
+                    (static_class, subject_metadata.map(|metadata| metadata.ty))
+                {
+                    if subject_class != static_class
+                        && !self.program.is_ancestor(subject_class, static_class)
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} static place is incompatible with its origin target"),
+                        );
+                    }
+                }
+                if let Some(limit) = dispatch_limit {
+                    let valid_limit = matches!(
+                        (function.callable(), storage.kind),
+                        (
+                            crate::identity::CallableId::Destructor(_),
+                            MirStorageKind::Receiver
+                        )
+                    ) && Some(*limit) == static_class;
+                    if !valid_limit {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} has an invalid destructor dispatch limit"),
+                        );
+                    }
+                }
+                Some(VerifiedOrigin {
+                    static_class,
+                    forwarded: true,
+                    dispatch_limited: dispatch_limit.is_some(),
+                })
+            }
         }
     }
 
@@ -281,6 +584,13 @@ impl<'mir> Verifier<'mir> {
             _ => {}
         }
     }
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct VerifiedOrigin {
+    pub(super) static_class: Option<crate::identity::ClassId>,
+    pub(super) forwarded: bool,
+    pub(super) dispatch_limited: bool,
 }
 
 #[cfg(test)]

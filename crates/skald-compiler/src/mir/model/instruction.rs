@@ -1,14 +1,17 @@
 //! MIR instructions, calls, and argument forms.
 
 use crate::{
-    identity::{ClassId, CopyAssignmentId, FunctionId, InitializerId, MethodId},
+    identity::{
+        ClassId, CopyAssignmentId, FunctionId, InitializerId, MethodId, VirtualFamilyId,
+        VirtualSlotId,
+    },
     source::Span,
 };
 
 use super::{
     declarations::MirSelectedCopyOperation,
     definition::MirAliasAccess,
-    ids::ValueId,
+    ids::{StorageId, ValueId},
     value::{MirPlace, MirRvalue},
 };
 
@@ -97,7 +100,7 @@ pub struct MirEndFullExpression {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirCall {
     pub target: MirCallTarget,
-    pub receiver: Option<MirPlace>,
+    pub receiver: Option<MirMethodReceiver>,
     pub arguments: Vec<MirArgument>,
     pub result: Option<ValueId>,
     /// Caller-owned uninitialized storage for a class result.
@@ -134,6 +137,7 @@ impl MirViewTarget {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirObjectView {
     pub source: MirPlace,
+    pub origin: Box<MirObjectOrigin>,
     pub target: MirViewTarget,
     pub access: MirAliasAccess,
     pub span: Span,
@@ -160,5 +164,61 @@ impl MirArgument {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirCallTarget {
     Direct(FunctionId),
-    Method(MethodId),
+    Method(MirMethodCallTarget),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirMethodCallTarget {
+    Direct(MethodId),
+    Virtual {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+        selected: MethodId,
+    },
+}
+
+impl MirMethodCallTarget {
+    pub const fn selected(self) -> MethodId {
+        match self {
+            Self::Direct(method)
+            | Self::Virtual {
+                selected: method, ..
+            } => method,
+        }
+    }
+}
+
+/// Static receiver selection plus the complete-object provenance needed to
+/// preserve dynamic dispatch through direct and virtual calls.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirMethodReceiver {
+    pub place: MirPlace,
+    pub origin: Box<MirObjectOrigin>,
+}
+
+impl MirMethodReceiver {
+    pub fn exact(place: MirPlace, dynamic_class: ClassId) -> Self {
+        Self {
+            origin: Box::new(MirObjectOrigin::Exact {
+                complete: place.clone(),
+                dynamic_class,
+            }),
+            place,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirObjectOrigin {
+    Exact {
+        complete: MirPlace,
+        dynamic_class: ClassId,
+    },
+    Forwarded {
+        carrier: StorageId,
+        static_target: MirViewTarget,
+        access: MirAliasAccess,
+        dispatch_limit: Option<ClassId>,
+        span: Span,
+    },
 }

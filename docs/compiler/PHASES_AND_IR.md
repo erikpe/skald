@@ -130,6 +130,8 @@ explicit:
 - transient primitive values;
 - source-ordered calls, argument modes, and access-restricted class/`Obj`
   views;
+- canonical virtual-family metadata, explicit direct/virtual method targets,
+  and complete-object receiver origins;
 - initialization, copying, assignment, and cleanup operations;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
@@ -138,8 +140,9 @@ explicit:
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values. Field
 and base projections carry semantic identities rather than target offsets.
-Static views retain their source place, target, and access; slices are exact
-target-class copy operations from a verified base-projected source.
+Static views retain their source place, target, access, and complete-object
+origin; slices are exact target-class copy operations from a verified
+base-projected source.
 
 HIR-to-MIR lowering owns deterministic allocation and emission order,
 including base initialization, full-expression temporaries, view arguments,
@@ -147,10 +150,12 @@ and slices into locals, fields, arguments, return storage, and assignments.
 Supported HIR may rely on producer invariants; arbitrary public HIR
 construction is not a supported input contract.
 
-Dynamic virtual calls are a typed HIR operation but are not yet representable
-in MIR. Lowering rejects them with `HirLoweringError` before constructing
-partial MIR. Exact owning and sliced receivers select direct HIR calls and
-continue through the existing executable pipeline.
+Dynamic virtual calls lower to explicit MIR targets containing the canonical
+family, stable slot, and statically selected declaration. Every method call
+also carries its statically selected receiver place and either an exact
+complete place/dynamic class or a forwarded metadata carrier. Scalar and
+object results use the existing value or destination forms, so virtual calls
+do not create a second call or cleanup pipeline.
 
 ## Verification and passes
 
@@ -162,6 +167,8 @@ target lowering, including:
 - storage, value, place, projection, and operation types;
 - hierarchy acyclicity, direct-base paths, view targets/access, and selected
   base lifecycle operations;
+- virtual-family density, membership, signature/access agreement, call
+  selection, receiver compatibility, and complete-object provenance;
 - definition-before-use and valid block targets;
 - construction, copy, result-destination, temporary, and cleanup liveness;
 - branch, return, and terminator consistency on every block; and

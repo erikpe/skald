@@ -145,10 +145,11 @@ impl InstructionSelector<'_, '_> {
         let (target, receiver) = match call.target {
             MirCallTarget::Direct(function) => (CallableId::Function(function), None),
             MirCallTarget::Method(method) => (
-                CallableId::Method(method),
+                CallableId::Method(method.selected()),
                 Some(
                     call.receiver
                         .as_ref()
+                        .map(|receiver| &receiver.place)
                         .expect("verified method call has a receiver"),
                 ),
             ),

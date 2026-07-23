@@ -108,7 +108,7 @@ impl Verifier<'_> {
         Some(VerifiedPlace { ty, access })
     }
 
-    fn storage_access(
+    pub(super) fn storage_access(
         &self,
         function: MirDefinitionRef<'_>,
         storage: &MirStorage,

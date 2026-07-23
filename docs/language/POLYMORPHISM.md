@@ -228,13 +228,18 @@ forwarded alias or `self` names the incoming binding that carries both runtime
 components. Selecting a class field begins a new exact complete object;
 selecting a base preserves the enclosing origin.
 
-MIR and the x86-64 backend currently lower direct calls, including exact
-virtual-declaration calls that HIR can devirtualize. Existing static
-class/`Obj` views still retain their source place, target, and access in MIR.
-HIR-to-MIR lowering returns a structured unsupported-operation error when a
-call requires forwarded dynamic dispatch; it does not silently select the
-static declaration. MIR receiver metadata and executable virtual dispatch
-arrive in the next implementation stages.
+MIR represents canonical virtual families, direct and virtual method targets,
+and origin-bearing method receivers and class/`Obj` views. Its verifier checks
+family and slot ownership, exact signature and receiver-access agreement,
+static selection, compatible and live receiver places, and exact or forwarded
+metadata provenance. Scalar and object results, argument evaluation, ownership
+transfer, and full-expression cleanup use the ordinary call pipeline.
+
+The x86-64 backend currently lowers direct calls, including exact
+virtual-declaration calls that HIR can devirtualize. It rejects verified
+virtual calls before layout with a structured unsupported-feature error.
+Executable dynamic dispatch and its internal metadata ABI arrive in the next
+implementation stage.
 
 ## Inline slicing
 

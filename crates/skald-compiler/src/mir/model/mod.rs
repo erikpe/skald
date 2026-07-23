@@ -15,6 +15,7 @@ pub use declarations::{
     MirFunctionDeclarationTable, MirFunctionLinkage, MirInitializerDeclaration,
     MirMethodDeclaration, MirParameter, MirParameterMode, MirProgram, MirReceiverAccess,
     MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirUserCopy,
+    MirVirtualFamily, MirVirtualFamilyTable,
 };
 pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
@@ -23,8 +24,8 @@ pub use definition::{
 pub use ids::{BlockId, StorageId, ValueId};
 pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallTarget, MirCleanup, MirCopyAssignment,
-    MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction, MirObjectView,
-    MirStore, MirViewTarget,
+    MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction, MirMethodCallTarget,
+    MirMethodReceiver, MirObjectOrigin, MirObjectView, MirStore, MirViewTarget,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,

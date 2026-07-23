@@ -6,7 +6,7 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        MethodId,
+        MethodId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -21,6 +21,7 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
     pub classes: MirClassDeclarationTable,
+    pub virtual_families: MirVirtualFamilyTable,
     pub declarations: MirFunctionDeclarationTable,
     pub definitions: MirFunctionDefinitionTable,
     pub member_definitions: MirMemberDefinitionTable,
@@ -64,6 +65,10 @@ impl MirProgram {
 
     pub fn method(&self, id: MethodId) -> Option<&MirMethodDeclaration> {
         self.class(id.class())?.method(id)
+    }
+
+    pub fn virtual_family(&self, id: VirtualFamilyId) -> Option<&MirVirtualFamily> {
+        self.virtual_families.get(id)
     }
 
     pub fn destructor(&self, id: DestructorId) -> Option<&MirDestructorDeclaration> {
@@ -119,6 +124,49 @@ impl MirProgram {
             }
         }
     }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MirVirtualFamilyTable {
+    entries: DenseIdTable<VirtualFamilyId, MirVirtualFamily>,
+}
+
+impl MirVirtualFamilyTable {
+    pub(crate) fn new(entries: Vec<MirVirtualFamily>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |family| family.id),
+        }
+    }
+
+    pub fn get(&self, id: VirtualFamilyId) -> Option<&MirVirtualFamily> {
+        self.entries.get(id, |family| family.id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &MirVirtualFamily> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [MirVirtualFamily] {
+        self.entries.entries_mut_for_test()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirVirtualFamily {
+    pub id: VirtualFamilyId,
+    pub slot: VirtualSlotId,
+    pub root: MethodId,
+    /// Root followed by overrides in deterministic declaration order.
+    pub members: Vec<MethodId>,
 }
 
 #[derive(Clone, Copy, Debug)]

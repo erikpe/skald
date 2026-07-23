@@ -128,8 +128,8 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
                 span,
             ),
             MirInstruction::Call(MirCall {
-                target: MirCallTarget::Method(alias_method),
-                receiver: Some(MirPlace::base(first)),
+                target: MirCallTarget::Method(MirMethodCallTarget::Direct(alias_method)),
+                receiver: Some(MirMethodReceiver::exact(MirPlace::base(first), class)),
                 arguments: vec![
                     MirArgument::Place(MirPlace::base(second)),
                     MirArgument::Value(float),
@@ -146,14 +146,17 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
         .iter_mut()
         .find_map(|instruction| match instruction {
             MirInstruction::Call(call)
-                if call.target == MirCallTarget::Method(MethodId::new(class, 2)) =>
+                if call.target
+                    == MirCallTarget::Method(MirMethodCallTarget::Direct(MethodId::new(
+                        class, 2,
+                    ))) =>
             {
                 Some(call)
             }
             _ => None,
         })
         .expect("counter fixture must read through its forwarding getter");
-    get_call.receiver = Some(MirPlace::base(second));
+    get_call.receiver = Some(MirMethodReceiver::exact(MirPlace::base(second), class));
     let first_cleanup = main.body.blocks[0]
         .instructions
         .iter()
@@ -216,6 +219,7 @@ pub(super) fn alias_println_i64_stub() -> &'static str {
 pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
     let (mut program, ids) = projected_object_program();
     let span = program.span;
+    let initializer = InitializerId::new(ids.container, 0);
     let method = MethodId::new(ids.container, 0);
     let mut parameters = vec![MirParameter::read_only_alias(MirType::Class(ids.container)); 5];
     parameters.extend(MirParameter::values([MirType::F64; 8]));
@@ -223,16 +227,20 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
         MirParameter::mutable_alias(MirType::Class(ids.container)),
         MirParameter::value(MirType::F64),
     ]);
-    program.classes.entries_mut_for_test()[ids.container.index()]
-        .methods
-        .push(MirMethodDeclaration {
-            id: method,
-            name: "exhaust_aliases".to_owned(),
-            receiver_access: MirReceiverAccess::ReadOnly,
-            parameters: parameters.clone(),
-            return_type: MirType::Unit,
-            span,
-        });
+    let class = &mut program.classes.entries_mut_for_test()[ids.container.index()];
+    class.initializers.push(MirInitializerDeclaration {
+        id: initializer,
+        parameters: vec![],
+        span,
+    });
+    class.methods.push(MirMethodDeclaration {
+        id: method,
+        name: "exhaust_aliases".to_owned(),
+        receiver_access: MirReceiverAccess::ReadOnly,
+        parameters: parameters.clone(),
+        return_type: MirType::Unit,
+        span,
+    });
 
     let callable = CallableId::Method(method);
     let receiver = StorageId::new(callable, 0);
@@ -261,19 +269,24 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
             ),
         });
     }
-    program.member_definitions = MirMemberDefinitionTable::new(vec![member_definition(
-        callable,
-        receiver,
-        storage,
-        vec![],
-        vec![],
-        span,
-    )]);
+    program.member_definitions = MirMemberDefinitionTable::new(vec![
+        super::object_fixtures::empty_initializer_definition(initializer, span),
+        member_definition(callable, receiver, storage, vec![], vec![], span),
+    ]);
 
     let main = program
         .definitions
         .get_mut_for_test(program.entry_function)
         .unwrap();
+    main.body.blocks[0].instructions.insert(
+        0,
+        MirInstruction::Initialize(MirInitialize {
+            destination: MirPlace::base(ids.first),
+            target: initializer,
+            arguments: vec![],
+            span,
+        }),
+    );
     let first_value = main.values.len();
     let mut arguments = Vec::with_capacity(parameters.len());
     let mut float_index = 0;
@@ -304,11 +317,21 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
     main.body.blocks[0]
         .instructions
         .push(MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(method),
-            receiver: Some(MirPlace::base(ids.first)),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
+            receiver: Some(MirMethodReceiver::exact(
+                MirPlace::base(ids.first),
+                ids.container,
+            )),
             arguments,
             result: None,
             destination: None,
+            span,
+        }));
+    main.body.blocks[0]
+        .instructions
+        .push(MirInstruction::Cleanup(MirCleanup {
+            destination: ids.first.into(),
+            target: ids.container,
             span,
         }));
     program

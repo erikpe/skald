@@ -20,6 +20,7 @@ use super::{
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_classes();
+        self.verify_virtual_families();
         let entry_declaration = self.program.declarations.get(self.program.entry_function);
         if entry_declaration.is_none() {
             self.program_error(format!(

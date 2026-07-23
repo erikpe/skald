@@ -3,7 +3,8 @@
 use super::*;
 use crate::hir::{
     HirAccess, HirClassDeclaration, HirCopyCapability, HirDestructionStep, HirFunctionDeclaration,
-    HirFunctionDefinition, HirFunctionLinkage, HirMemberDefinition, HirSynthesizedFieldCopy,
+    HirFunctionDefinition, HirFunctionLinkage, HirMemberDefinition, HirMethodDispatch,
+    HirSynthesizedFieldCopy,
 };
 
 pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
@@ -32,6 +33,39 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .collect();
     MirProgram {
         classes: MirClassDeclarationTable::new(classes),
+        virtual_families: MirVirtualFamilyTable::new(
+            hir.virtual_families
+                .iter()
+                .map(|family| {
+                    let members = std::iter::once(family.root)
+                        .chain(
+                            hir.classes
+                                .iter()
+                                .flat_map(|class| &class.methods)
+                                .filter_map(|method| match method.dispatch {
+                                    HirMethodDispatch::VirtualRoot {
+                                        family: method_family,
+                                        ..
+                                    }
+                                    | HirMethodDispatch::Override {
+                                        family: method_family,
+                                        ..
+                                    } if method_family == family.id && method.id != family.root => {
+                                        Some(method.id)
+                                    }
+                                    _ => None,
+                                }),
+                        )
+                        .collect();
+                    MirVirtualFamily {
+                        id: family.id,
+                        slot: family.slot,
+                        root: family.root,
+                        members,
+                    }
+                })
+                .collect(),
+        ),
         declarations: MirFunctionDeclarationTable::new(declarations),
         definitions: MirFunctionDefinitionTable::new(definitions),
         member_definitions: MirMemberDefinitionTable::new(member_definitions),

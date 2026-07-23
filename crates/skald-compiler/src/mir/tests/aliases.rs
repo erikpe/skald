@@ -183,8 +183,17 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
     function.body.blocks[0]
         .instructions
         .push(MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(ids.method),
-            receiver: Some(MirPlace::alias_parameter(function.parameters[0])),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(ids.method)),
+            receiver: Some(MirMethodReceiver {
+                place: MirPlace::alias_parameter(function.parameters[0]),
+                origin: Box::new(MirObjectOrigin::Forwarded {
+                    carrier: function.parameters[0],
+                    static_target: MirViewTarget::Class(ids.class),
+                    access: MirAliasAccess::ReadOnly,
+                    dispatch_limit: None,
+                    span: function.span,
+                }),
+            }),
             arguments: vec![
                 MirArgument::Place(MirPlace::alias_parameter(function.parameters[0])),
                 MirArgument::Place(MirPlace::alias_parameter(function.parameters[1])),

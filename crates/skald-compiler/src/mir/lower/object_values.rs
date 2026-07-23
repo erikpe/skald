@@ -8,6 +8,7 @@ use crate::{
     source::Span,
 };
 
+use super::call::lower_method_target;
 use super::*;
 
 impl BodyLowerer<'_> {
@@ -42,8 +43,8 @@ impl BodyLowerer<'_> {
         let (target, receiver) = match &call.target {
             HirObjectCallTarget::Direct(function) => (MirCallTarget::Direct(*function), None),
             HirObjectCallTarget::Method { receiver, target } => (
-                MirCallTarget::Method(target.selected()),
-                Some(self.lower_object_place(&receiver.place)),
+                MirCallTarget::Method(lower_method_target(*target)),
+                Some(self.lower_method_receiver(receiver)),
             ),
         };
         let arguments = self.lower_call_arguments(&call.arguments);

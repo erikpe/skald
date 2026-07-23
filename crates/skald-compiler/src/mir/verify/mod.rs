@@ -16,6 +16,7 @@ mod call;
 mod cleanup;
 mod context;
 mod declarations;
+mod dispatch;
 mod inheritance;
 mod instructions;
 mod place;

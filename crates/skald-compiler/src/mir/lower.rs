@@ -19,22 +19,15 @@ mod object_values;
 mod places;
 mod program;
 mod statement;
-mod support;
 
 use cleanup::CleanupPlanner;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {
-    VirtualDispatchNotRepresented { span: crate::source::Span },
-}
+pub enum HirLoweringError {}
 
 impl fmt::Display for HirLoweringError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::VirtualDispatchNotRepresented { .. } => {
-                formatter.write_str("virtual dispatch is not represented in MIR yet")
-            }
-        }
+    fn fmt(&self, _formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {}
     }
 }
 
@@ -43,7 +36,6 @@ impl std::error::Error for HirLoweringError {}
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    support::ensure_representable(hir)?;
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]

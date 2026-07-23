@@ -102,8 +102,8 @@ selects non-virtual and exact owning calls directly. Calls through forwarded
 aliases or `self` to declarations marked `virtual` or `override` name the
 virtual family, stable slot, statically selected declaration, and complete-
 object origin. A sliced inline base is an independent exact base object and
-therefore selects a direct call. MIR and backend execution of dynamic calls
-remain unavailable.
+therefore selects a direct call. MIR retains and verifies dynamic calls and
+their receiver origins; backend execution remains unavailable.
 
 The root binding determines access for an entire inline path:
 

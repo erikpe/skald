@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM11 is next. The
+Status: in progress; PM12 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -94,7 +94,7 @@ The frozen restricted profile excludes:
 - [x] PM8 — Lower static inheritance on x86-64
 - [x] PM9 — Resolve virtual declarations and override families
 - [x] PM10 — Select virtual calls and receiver views in HIR
-- [ ] PM11 — Represent and verify virtual dispatch in MIR
+- [x] PM11 — Represent and verify virtual dispatch in MIR
 - [ ] PM12 — Lower virtual dispatch on x86-64
 - [ ] PM13 — Parse and resolve interfaces and conformance declarations
 - [ ] PM14 — Validate conformance and select interface views in HIR
@@ -358,13 +358,13 @@ view for every call, with no backend inference required.
 **Purpose:** Define a target-independent, corruption-resistant virtual call
 contract.
 
-- [ ] Add explicit virtual call targets and polymorphic receiver operands to
+- [x] Add explicit virtual call targets and polymorphic receiver operands to
       the MIR model behind the existing facades.
-- [ ] Lower HIR virtual calls while retaining source evaluation order, argument
+- [x] Lower HIR virtual calls while retaining source evaluation order, argument
       modes, result destinations, and full-expression cleanup.
-- [ ] Verify family/slot ownership, signature and access agreement, receiver
+- [x] Verify family/slot ownership, signature and access agreement, receiver
       view compatibility and liveness, and dynamic metadata provenance.
-- [ ] Extend dumps, shared fixtures, and structured mutations for invalid
+- [x] Extend dumps, shared fixtures, and structured mutations for invalid
       families, receivers, signatures, and metadata.
 
 **Tests:** Run focused MIR call, argument, place, cleanup, dump, and robustness

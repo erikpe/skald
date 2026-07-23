@@ -48,9 +48,11 @@ argument-area limits, frame limits, and displacement limits—also return
 callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
-owning slices, and class/`Obj` alias views. Virtual and interface dispatch,
-runtime type tests, and checked narrowing remain outside the accepted MIR
-surface because their target-independent operations are not implemented yet.
+owning slices, and class/`Obj` alias views. MIR can represent and verify
+virtual-family calls and complete-object receiver origins, but this target
+rejects virtual calls with a structured unsupported-feature error before
+layout. Interface dispatch, runtime type tests, and checked narrowing do not
+yet have MIR operations.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -162,10 +164,11 @@ sequence. Stack overflow arguments remain in one source-ordered area.
 
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible
-behavior remains unchanged. Dynamic-class metadata will extend the internal
-view representation when verified virtual dispatch reaches this boundary; it
-is not reconstructed from a base-subobject address. The backend does not
-choose copying, ownership,
+behavior remains unchanged. Verified MIR already carries dynamic-class
+provenance through method receivers and alias views. The target ABI will gain
+the corresponding machine representation with virtual-call lowering;
+metadata is never reconstructed from a base-subobject address. The backend
+does not choose copying, ownership,
 elision, cleanup, or evaluation order; it mechanically realizes operations and
 destinations already present in verified MIR. Those choices are owned by
 [functions and control flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md),

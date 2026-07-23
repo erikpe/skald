@@ -119,8 +119,8 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             span,
         }));
     block.instructions.push(MirInstruction::Call(MirCall {
-        target: MirCallTarget::Method(outer_method),
-        receiver: Some(object_storage.into()),
+        target: MirCallTarget::Method(MirMethodCallTarget::Direct(outer_method)),
+        receiver: Some(MirMethodReceiver::exact(object_storage.into(), outer)),
         arguments: vec![],
         result: Some(method_result),
         destination: None,

@@ -116,8 +116,11 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
             span,
         }),
         MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(method),
-            receiver: Some(MirPlace::base(object_ids.object_storage)),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
+            receiver: Some(MirMethodReceiver::exact(
+                MirPlace::base(object_ids.object_storage),
+                class,
+            )),
             arguments: vec![
                 MirArgument::Place(MirPlace::base(object_ids.object_storage)),
                 MirArgument::Place(MirPlace::base(second_object)),

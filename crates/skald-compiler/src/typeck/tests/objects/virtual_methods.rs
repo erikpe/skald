@@ -5,7 +5,7 @@ use crate::{
         HirReturnValue, HirStatement, HirViewTarget,
     },
     identity::{BindingId, ClassId, FunctionId, MethodId, VirtualFamilyId, VirtualSlotId},
-    mir::HirLoweringError,
+    mir::{verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget},
     typeck::INVALID_OVERRIDE_SIGNATURE,
 };
 
@@ -414,14 +414,36 @@ fn object_result_virtual_calls_use_the_same_explicit_target() {
         } if family == VirtualFamilyId::new(0)
             && selected == MethodId::new(ClassId::new(1), 0)
     ));
+    let mir = lower_hir(&hir).unwrap();
+    verify_mir(&mir).unwrap();
+    let through = mir.definitions.get(FunctionId::new(0)).unwrap();
+    let object_call = through.body.blocks[0]
+        .instructions
+        .iter()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) => Some(call),
+            _ => None,
+        })
+        .unwrap();
     assert!(matches!(
-        lower_hir(&hir),
-        Err(HirLoweringError::VirtualDispatchNotRepresented { .. })
+        object_call.target,
+        MirCallTarget::Method(MirMethodCallTarget::Virtual {
+            family,
+            selected,
+            ..
+        }) if family == VirtualFamilyId::new(0)
+            && selected == MethodId::new(ClassId::new(1), 0)
     ));
+    assert!(object_call.result.is_none());
+    assert!(object_call.destination.is_some());
+    assert!(through.body.blocks[0]
+        .instructions
+        .iter()
+        .any(|instruction| matches!(instruction, MirInstruction::EndFullExpression(_))));
 }
 
 #[test]
-fn virtual_call_dump_is_exact_and_mir_rejects_the_pending_boundary_cleanly() {
+fn virtual_call_dump_is_exact_and_lowers_to_verified_mir() {
     let output = check_text(VIRTUAL_CALLS);
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
     let hir = output.hir.unwrap();
@@ -445,8 +467,5 @@ fn virtual_call_dump_is_exact_and_mir_rejects_the_pending_boundary_cleanly() {
             "              Origin Forwarded f0:p0 : class c0 readonly",
         ]
     );
-    assert!(matches!(
-        lower_hir(&hir),
-        Err(HirLoweringError::VirtualDispatchNotRepresented { .. })
-    ));
+    verify_mir(&lower_hir(&hir).unwrap()).unwrap();
 }

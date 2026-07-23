@@ -5,7 +5,7 @@ use crate::{
     identity::{FieldId, FunctionId},
 };
 
-use super::*;
+use super::{virtual_fixtures::*, *};
 
 #[test]
 fn structured_mutations_are_rejected_before_backend_lowering() {
@@ -51,7 +51,36 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_cleanup_state(),
         mutate_base_projection(),
         mutate_object_view(),
+        mutate_virtual_slot(),
+        mutate_virtual_receiver_origin(),
     ]
+}
+
+fn mutate_virtual_slot() -> Mutation {
+    let (mut program, _) = virtual_dispatch_mir();
+    program.virtual_families.entries_mut_for_test()[0].slot =
+        crate::identity::VirtualSlotId::new(1);
+    Mutation {
+        name: "virtual slot",
+        expected_message: "non-canonical slot",
+        program,
+    }
+}
+
+fn mutate_virtual_receiver_origin() -> Mutation {
+    let (mut program, ids) = virtual_dispatch_mir();
+    let call = first_virtual_call_mut(&mut program);
+    let MirObjectOrigin::Forwarded { carrier, .. } =
+        call.receiver.as_mut().unwrap().origin.as_mut()
+    else {
+        unreachable!("virtual fixture receiver must be forwarded")
+    };
+    *carrier = StorageId::new(crate::identity::CallableId::Method(ids.relay), 2);
+    Mutation {
+        name: "virtual receiver origin",
+        expected_message: "static place does not come from its forwarded carrier",
+        program,
+    }
 }
 
 fn mutate_base_projection() -> Mutation {

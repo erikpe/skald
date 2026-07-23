@@ -7,8 +7,8 @@ use crate::identity::{CallableId, ClassId};
 use super::{
     super::model::{
         BlockId, MirAliasAccess, MirArgument, MirBasicBlock, MirCleanup, MirDefinitionRef,
-        MirInstruction, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirStorageKind,
-        MirTerminator, MirType,
+        MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram,
+        MirStorageKind, MirTerminator, MirType,
     },
     context::Verifier,
     place::{is_ancestor, places_overlap},
@@ -304,6 +304,15 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     }
                 }
                 MirInstruction::Call(call) => {
+                    if let Some(receiver) = &call.receiver {
+                        self.require_live_place(block, state, &receiver.place, "method receiver");
+                        self.require_live_origin(
+                            block,
+                            state,
+                            &receiver.origin,
+                            "method receiver origin",
+                        );
+                    }
                     self.check_borrowed_arguments(block, state, &call.arguments);
                     self.consume_owned_arguments(block, state, &call.arguments);
                     if let Some(destination) = &call.destination {
@@ -427,14 +436,38 @@ impl CleanupLivenessAnalysis<'_, '_> {
         arguments: &[MirArgument],
     ) {
         for argument in arguments {
-            let place = match argument {
-                MirArgument::View(view) => &view.source,
+            let view = match argument {
+                MirArgument::View(view) => view,
                 MirArgument::Value(_) | MirArgument::Place(_) | MirArgument::OwnedPlace(_) => {
                     continue
                 }
             };
-            self.require_live_place(block, state, place, "object view source");
+            self.require_live_place(block, state, &view.source, "object view source");
+            self.require_live_origin(block, state, &view.origin, "object view origin");
         }
+    }
+
+    fn require_live_origin(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &ObjectState,
+        origin: &MirObjectOrigin,
+        kind: &str,
+    ) {
+        let place = match origin {
+            MirObjectOrigin::Exact { complete, .. } => complete.clone(),
+            MirObjectOrigin::Forwarded { carrier, .. } => {
+                let Some(storage) = self.function.storage(*carrier) else {
+                    return;
+                };
+                match storage.kind {
+                    MirStorageKind::Receiver => MirPlace::base(*carrier),
+                    MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(*carrier),
+                    _ => return,
+                }
+            }
+        };
+        self.require_live_place(block, state, &place, kind);
     }
 
     fn require_live_place(

@@ -12,8 +12,9 @@ use crate::{
 use super::{
     BlockId, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall, MirCallTarget,
     MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage, MirInstruction,
-    MirMemberDefinition, MirParameter, MirParameterMode, MirPlace, MirRvalue, MirRvalueKind,
-    MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirValue, StorageId, ValueId,
+    MirMemberDefinition, MirMethodReceiver, MirParameter, MirParameterMode, MirPlace, MirRvalue,
+    MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirValue,
+    StorageId, ValueId,
 };
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
@@ -86,7 +87,7 @@ pub(crate) fn assign(
 
 pub(crate) fn call(
     target: MirCallTarget,
-    receiver: Option<MirPlace>,
+    receiver: Option<MirMethodReceiver>,
     arguments: Vec<MirArgument>,
     result: Option<ValueId>,
     destination: Option<MirPlace>,

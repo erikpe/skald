@@ -1,4 +1,5 @@
 use super::*;
+use crate::identity::CallableId;
 
 pub(super) struct ObjectProgramIds {
     pub nested: ClassId,
@@ -302,16 +303,16 @@ pub(super) fn counter_member_program() -> MirProgram {
             span,
         ),
         MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(add),
-            receiver: Some(object.into()),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(add)),
+            receiver: Some(MirMethodReceiver::exact(object.into(), class)),
             arguments: MirArgument::values([ValueId::new(main_id, 2)]),
             result: None,
             destination: None,
             span,
         }),
         MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(get_via_receiver),
-            receiver: Some(object.into()),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(get_via_receiver)),
+            receiver: Some(MirMethodReceiver::exact(object.into(), class)),
             arguments: vec![],
             result: Some(ValueId::new(main_id, 3)),
             destination: None,
@@ -336,20 +337,25 @@ pub(super) fn counter_member_program() -> MirProgram {
 
 pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
     let (mut program, ids) = projected_object_program();
+    let initializer = InitializerId::new(ids.container, 0);
     let method = MethodId::new(ids.container, 0);
     let mut parameter_types = vec![MirType::I64; 5];
     parameter_types.extend([MirType::F64; 8]);
     parameter_types.extend([MirType::I64, MirType::F64]);
-    program.classes.entries_mut_for_test()[ids.container.index()]
-        .methods
-        .push(MirMethodDeclaration {
-            id: method,
-            name: "exhaust".to_owned(),
-            receiver_access: MirReceiverAccess::ReadOnly,
-            parameters: MirParameter::values(parameter_types.clone()),
-            return_type: MirType::Unit,
-            span: program.span,
-        });
+    let class = &mut program.classes.entries_mut_for_test()[ids.container.index()];
+    class.initializers.push(MirInitializerDeclaration {
+        id: initializer,
+        parameters: vec![],
+        span: program.span,
+    });
+    class.methods.push(MirMethodDeclaration {
+        id: method,
+        name: "exhaust".to_owned(),
+        receiver_access: MirReceiverAccess::ReadOnly,
+        parameters: MirParameter::values(parameter_types.clone()),
+        return_type: MirType::Unit,
+        span: program.span,
+    });
 
     let callable = method.into();
     let receiver = StorageId::new(callable, 0);
@@ -366,39 +372,51 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
             )
         })
         .collect();
-    program.member_definitions = MirMemberDefinitionTable::new(vec![MirMemberDefinition {
-        callable,
-        return_storage: None,
-        receiver,
-        parameters: parameters.iter().map(|parameter| parameter.id).collect(),
-        storage: std::iter::once(receiver_storage(
+    program.member_definitions = MirMemberDefinitionTable::new(vec![
+        empty_initializer_definition(initializer, program.span),
+        MirMemberDefinition {
             callable,
+            return_storage: None,
             receiver,
-            ids.container,
-            program.span,
-        ))
-        .chain(parameters)
-        .collect(),
-        values: vec![],
-        body: MirBody {
-            entry: BlockId::new(callable, 0),
-            blocks: vec![MirBasicBlock {
-                id: BlockId::new(callable, 0),
-                instructions: vec![],
-                terminator: Some(MirTerminator::Return {
-                    value: None,
+            parameters: parameters.iter().map(|parameter| parameter.id).collect(),
+            storage: std::iter::once(receiver_storage(
+                callable,
+                receiver,
+                ids.container,
+                program.span,
+            ))
+            .chain(parameters)
+            .collect(),
+            values: vec![],
+            body: MirBody {
+                entry: BlockId::new(callable, 0),
+                blocks: vec![MirBasicBlock {
+                    id: BlockId::new(callable, 0),
+                    instructions: vec![],
+                    terminator: Some(MirTerminator::Return {
+                        value: None,
+                        span: program.span,
+                    }),
                     span: program.span,
-                }),
-                span: program.span,
-            }],
+                }],
+            },
+            span: program.span,
         },
-        span: program.span,
-    }]);
+    ]);
 
     let function = program
         .definitions
         .get_mut_for_test(program.entry_function)
         .unwrap();
+    function.body.blocks[0].instructions.insert(
+        0,
+        MirInstruction::Initialize(MirInitialize {
+            destination: MirPlace::base(ids.first),
+            target: initializer,
+            arguments: vec![],
+            span: program.span,
+        }),
+    );
     let first_value = function.values.len();
     let mut arguments = Vec::with_capacity(parameter_types.len());
     for (index, ty) in parameter_types.into_iter().enumerate() {
@@ -425,14 +443,42 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
     function.body.blocks[0]
         .instructions
         .push(MirInstruction::Call(MirCall {
-            target: MirCallTarget::Method(method),
-            receiver: Some(ids.second.into()),
+            target: MirCallTarget::Method(MirMethodCallTarget::Direct(method)),
+            receiver: Some(MirMethodReceiver::exact(ids.first.into(), ids.container)),
             arguments,
             result: None,
             destination: None,
             span: program.span,
         }));
+    function.body.blocks[0]
+        .instructions
+        .push(MirInstruction::Cleanup(MirCleanup {
+            destination: ids.first.into(),
+            target: ids.container,
+            span: program.span,
+        }));
     program
+}
+
+pub(super) fn empty_initializer_definition(
+    id: InitializerId,
+    span: crate::source::Span,
+) -> MirMemberDefinition {
+    let callable = CallableId::Initializer(id);
+    let receiver = StorageId::new(callable, 0);
+    fixture_member_definition(
+        callable,
+        receiver,
+        OneBlockDefinition {
+            return_storage: None,
+            parameters: vec![],
+            storage: vec![receiver_storage(callable, receiver, id.class(), span)],
+            values: vec![],
+            instructions: vec![],
+            terminator: Some(MirTerminator::Return { value: None, span }),
+            span,
+        },
+    )
 }
 
 fn initializer_definition(
@@ -575,8 +621,17 @@ fn forwarding_get_definition(
             storage: vec![receiver_storage(callable, receiver, id.class(), span)],
             values: vec![fixture_value(result, MirType::I64, span)],
             instructions: vec![fixture_call(
-                MirCallTarget::Method(target),
-                Some(receiver.into()),
+                MirCallTarget::Method(MirMethodCallTarget::Direct(target)),
+                Some(MirMethodReceiver {
+                    place: receiver.into(),
+                    origin: Box::new(MirObjectOrigin::Forwarded {
+                        carrier: receiver,
+                        static_target: MirViewTarget::Class(id.class()),
+                        access: MirAliasAccess::ReadOnly,
+                        dispatch_limit: None,
+                        span,
+                    }),
+                }),
                 vec![],
                 Some(result),
                 None,
