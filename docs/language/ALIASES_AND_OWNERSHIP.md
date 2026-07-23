@@ -119,8 +119,10 @@ selection participates at its source position alongside value and object-copy
 arguments. It does not create a separately observable value or permit argument
 reordering.
 
-Static polymorphic views are currently explicit in typed HIR and rejected by a
-structured HIR-to-MIR stage error. Exact-class aliases remain executable.
+Static polymorphic views are explicit and checked through MIR as
+source/target/access conversions. Exact-class aliases remain executable; the
+current x86-64 backend rejects the newer static views before target layout and
+calling-convention lowering.
 
 ## Non-exclusivity
 

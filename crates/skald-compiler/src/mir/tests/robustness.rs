@@ -49,7 +49,59 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_place(),
         mutate_control_flow(),
         mutate_cleanup_state(),
+        mutate_base_projection(),
+        mutate_object_view(),
     ]
+}
+
+fn mutate_base_projection() -> Mutation {
+    let mut program = static_inheritance_mir();
+    let definition = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(2))
+        .expect("relay definition must exist");
+    let view = definition.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) => match &mut call.arguments[0] {
+                MirArgument::View(view) => Some(view),
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("relay must contain an ancestor view");
+    view.source.projections[0] = MirPlaceProjection::Base(crate::identity::ClassId::new(0));
+    Mutation {
+        name: "base projection",
+        expected_message: "is not the declared direct base",
+        program,
+    }
+}
+
+fn mutate_object_view() -> Mutation {
+    let mut program = static_inheritance_mir();
+    let definition = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(2))
+        .expect("relay definition must exist");
+    let view = definition.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) => match &mut call.arguments[0] {
+                MirArgument::View(view) => Some(view),
+                _ => None,
+            },
+            _ => None,
+        })
+        .expect("relay must contain an ancestor view");
+    view.access = MirAliasAccess::Mutable;
+    Mutation {
+        name: "object view",
+        expected_message: "view grants mutable access",
+        program,
+    }
 }
 
 fn mutate_identity() -> Mutation {

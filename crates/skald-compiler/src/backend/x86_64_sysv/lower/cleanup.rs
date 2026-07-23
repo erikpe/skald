@@ -30,6 +30,9 @@ impl InstructionSelector<'_, '_> {
 
         for step in steps {
             match step {
+                MirDestructionStep::Base(_) => {
+                    unreachable!("target legality rejects base destruction before lowering")
+                }
                 MirDestructionStep::UserBody(destructor) => {
                     self.select_destructor_call(destructor, &destination)?;
                 }

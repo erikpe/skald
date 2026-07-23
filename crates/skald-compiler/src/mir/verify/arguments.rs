@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use super::{
     super::model::{
-        MirAliasAccess, MirArgument, MirBasicBlock, MirDefinitionRef, MirParameter,
+        MirAliasAccess, MirArgument, MirBasicBlock, MirDefinitionRef, MirObjectView, MirParameter,
         MirParameterMode, MirPlace, MirPlaceBase, MirStorageKind, MirType, ValueId,
     },
     context::Verifier,
@@ -68,6 +68,10 @@ impl Verifier<'_> {
                 | (MirArgument::Place(place), MirParameterMode::MutableAlias) => {
                     self.verify_alias_place_argument(site, index, place, parameter)
                 }
+                (MirArgument::View(view), MirParameterMode::ReadOnlyAlias)
+                | (MirArgument::View(view), MirParameterMode::MutableAlias) => {
+                    self.verify_view_argument(site, index, view, parameter)
+                }
                 (MirArgument::Value(value), _) => {
                     self.verify_value_use(function, block, *value, defined);
                     self.block_error(
@@ -82,6 +86,14 @@ impl Verifier<'_> {
                         function.callable(),
                         block.id,
                         format!("{kind} argument {index} must be a scalar value or owned place"),
+                    );
+                }
+                (MirArgument::View(view), MirParameterMode::Value) => {
+                    self.verify_place(function, block, &view.source);
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} argument {index} cannot pass a view by value"),
                     );
                 }
                 (MirArgument::OwnedPlace(place), _) => {
@@ -108,6 +120,9 @@ impl Verifier<'_> {
             }
             MirArgument::Place(place) | MirArgument::OwnedPlace(place) => {
                 self.verify_place(site.function, site.block, place);
+            }
+            MirArgument::View(view) => {
+                self.verify_place(site.function, site.block, &view.source);
             }
         }
     }
@@ -184,6 +199,16 @@ impl Verifier<'_> {
         parameter: &MirParameter,
     ) {
         let argument = self.verify_place(site.function, site.block, place);
+        if parameter.ty == MirType::Obj {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} must represent an `Obj` conversion as a view",
+                    site.kind
+                ),
+            );
+        }
         if argument.is_some_and(|argument| argument.ty != parameter.ty) {
             self.block_error(
                 site.function.callable(),
@@ -198,6 +223,72 @@ impl Verifier<'_> {
                 site.function.callable(),
                 site.block.id,
                 format!("{} argument {index} requires mutable access", site.kind),
+            );
+        }
+    }
+
+    fn verify_view_argument(
+        &mut self,
+        site: ArgumentSite<'_>,
+        index: usize,
+        view: &MirObjectView,
+        parameter: &MirParameter,
+    ) {
+        let source = self.verify_place(site.function, site.block, &view.source);
+        let target_ty = view.target.ty();
+        if target_ty != parameter.ty {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!("{} argument {index} view target type mismatch", site.kind),
+            );
+        }
+        let valid_conversion = source.is_some_and(|source| match target_ty {
+            MirType::Class(target) => source.ty == MirType::Class(target),
+            MirType::Obj => matches!(source.ty, MirType::Class(_) | MirType::Obj),
+            _ => false,
+        });
+        if !valid_conversion {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} has an invalid static view conversion",
+                    site.kind
+                ),
+            );
+        }
+        if view.access == MirAliasAccess::Mutable
+            && source.is_some_and(|source| source.access != MirAliasAccess::Mutable)
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!("{} argument {index} view grants mutable access", site.kind),
+            );
+        }
+        if parameter.mode == MirParameterMode::MutableAlias
+            && view.access != MirAliasAccess::Mutable
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!("{} argument {index} requires a mutable view", site.kind),
+            );
+        }
+        let required_access = match parameter.mode {
+            MirParameterMode::ReadOnlyAlias => MirAliasAccess::ReadOnly,
+            MirParameterMode::MutableAlias => MirAliasAccess::Mutable,
+            MirParameterMode::Value => unreachable!("view arguments require alias parameters"),
+        };
+        if view.access != required_access {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} view access does not match the parameter",
+                    site.kind
+                ),
             );
         }
     }

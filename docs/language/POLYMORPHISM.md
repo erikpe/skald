@@ -3,11 +3,11 @@
 Status: frozen design under active implementation. Canonical single
 inheritance, complete base lifecycle, inherited static member access,
 access-preserving class/`Obj` alias views, and inline slicing are represented
-explicitly through typed HIR. MIR base places and view operations are not yet
-available, so these valid programs stop at the structured HIR-lowering
-boundary. Virtual dispatch, interfaces, type tests, and narrowing remain
-unavailable. The [status matrix](STATUS.md) distinguishes this boundary from
-executable exact-class behavior.
+explicitly through verified MIR. The current x86-64 backend does not yet
+implement base layout or the view ABI, so these valid programs stop at its
+structured feature-legality boundary. Virtual dispatch, interfaces, type
+tests, and narrowing remain unavailable. The [status matrix](STATUS.md)
+distinguishes this boundary from executable exact-class behavior.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -217,11 +217,12 @@ Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
 occur in source evaluation order.
 
-The current HIR implements class-to-ancestor and class-to-`Obj` alias
-conversions, including forwarding of `Obj` aliases. Each converted argument
-retains its source place or forwarded view, static target, and restricted
-access. Interface targets arrive with interface conformance; none of these
-views is executable until MIR represents them.
+The current HIR and MIR implement class-to-ancestor and class-to-`Obj` alias
+conversions, including forwarding of `Obj` aliases. Each converted MIR
+argument retains its source place, static target, and restricted access.
+Direct-base projections preserve the unique class subobject identity.
+Interface targets arrive later with interface conformance. Current static
+views stop before backend ABI lowering.
 
 ## Inline slicing
 
@@ -247,10 +248,11 @@ or returned derived source is first completed under the existing temporary or
 result rules, then sliced, then cleaned normally. An existing derived place is
 used directly as the copy source without an intermediate owning object.
 
-The current HIR represents slicing as an owning object source with the ordered
-direct-base identity path and exact ancestor target. The surrounding local,
-field, argument, return, or assignment operation retains the selected target
-copy operation. No target layout or aggregate byte-copy choice appears in HIR.
+HIR represents slicing as an owning object source with the ordered direct-base
+identity path and exact ancestor target. MIR lowers that path to verified base
+projections on the copy source; the surrounding local, field, argument,
+return, or assignment operation retains the selected target copy operation.
+Neither IR contains a target offset or aggregate byte-copy choice.
 
 ## Base construction and lifecycle composition
 
@@ -292,10 +294,10 @@ available only when the base and every direct field support that operation.
 Root classes retain the implemented exact-class rules with an empty base step.
 
 Base construction, copying, assignment, and destruction are explicit selected
-semantic operations before MIR. They are not inferred from physical prefix
-layout and never become an untyped aggregate copy. The base step precedes direct
-fields for construction and assignment; destruction reverses complete-object
-construction by placing the base sequence last.
+semantic operations through MIR. They are not inferred from physical prefix
+layout and never become an untyped aggregate copy. The base step precedes
+direct fields for construction and assignment; destruction reverses
+complete-object construction by placing the base sequence last.
 
 The existing destination, temporary, result, registration, and permitted
 exact-class elision rules otherwise remain unchanged. Construction and copying

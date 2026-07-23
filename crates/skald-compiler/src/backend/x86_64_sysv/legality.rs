@@ -3,7 +3,7 @@
 use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
-    mir::{verify_mir, MirCallTarget, MirInstruction, MirParameter, MirProgram},
+    mir::{verify_mir, MirArgument, MirCallTarget, MirInstruction, MirParameter, MirProgram},
 };
 
 use super::{abi, layout::DataLayout};
@@ -16,6 +16,14 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+
+    if uses_static_polymorphism(program) {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "static inheritance and object views are not supported by the x86-64 backend yet",
+        ));
+    }
 
     let data_layout = DataLayout::compute(program)?;
 
@@ -74,6 +82,53 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
         }
     }
     Ok(data_layout)
+}
+
+fn uses_static_polymorphism(program: &MirProgram) -> bool {
+    program
+        .classes
+        .iter()
+        .any(|class| class.direct_base.is_some())
+        || program
+            .declarations
+            .iter()
+            .flat_map(|declaration| {
+                declaration
+                    .parameters
+                    .iter()
+                    .map(|parameter| parameter.ty)
+                    .chain(std::iter::once(declaration.return_type))
+            })
+            .chain(program.classes.iter().flat_map(|class| {
+                class
+                    .initializers
+                    .iter()
+                    .flat_map(|initializer| {
+                        initializer.parameters.iter().map(|parameter| parameter.ty)
+                    })
+                    .chain(class.methods.iter().flat_map(|method| {
+                        method
+                            .parameters
+                            .iter()
+                            .map(|parameter| parameter.ty)
+                            .chain(std::iter::once(method.return_type))
+                    }))
+            }))
+            .any(|ty| ty == crate::mir::MirType::Obj)
+        || program.executable_definitions().any(|definition| {
+            definition.body().blocks.iter().any(|block| {
+                block.instructions.iter().any(|instruction| {
+                    let arguments = match instruction {
+                        MirInstruction::Call(call) => &call.arguments,
+                        MirInstruction::Initialize(initialize) => &initialize.arguments,
+                        _ => return false,
+                    };
+                    arguments
+                        .iter()
+                        .any(|argument| matches!(argument, MirArgument::View(_)))
+                })
+            })
+        })
 }
 
 fn check_member_target(

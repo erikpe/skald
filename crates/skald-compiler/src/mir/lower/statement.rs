@@ -24,8 +24,8 @@ impl BodyLowerer<'_> {
 
     fn lower_statement(&mut self, statement: &HirStatement) {
         match statement {
-            HirStatement::BaseInitialization(_) => {
-                unreachable!("static inheritance is rejected before MIR body lowering")
+            HirStatement::BaseInitialization(statement) => {
+                self.lower_base_initialization(statement)
             }
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
@@ -42,6 +42,20 @@ impl BodyLowerer<'_> {
             }
             HirStatement::CopyAssignment(statement) => self.lower_copy_assignment(statement),
         }
+    }
+
+    fn lower_base_initialization(&mut self, statement: &crate::hir::HirBaseInitialization) {
+        let receiver = self
+            .receiver_storage
+            .expect("base initialization requires initializer receiver storage");
+        let arguments = self.lower_call_arguments(&statement.arguments);
+        self.emit(MirInstruction::Initialize(MirInitialize {
+            destination: MirPlace::base(receiver).project_base(statement.base),
+            target: statement.initializer,
+            arguments,
+            span: statement.span,
+        }));
+        self.finish_full_expression(statement.span);
     }
 
     fn lower_local(&mut self, local: &crate::hir::HirLocalDecl) {

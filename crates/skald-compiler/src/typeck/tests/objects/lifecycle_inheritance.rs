@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     hir::{HirBaseCopy, HirDestructionStep, HirObjectSource, HirStatement},
+    mir::MirCopyCapability,
     resolve::ResolvedCopyOperation,
     typeck::{capabilities::CopyPathElement, FIELD_INITIALIZATION, TYPE_MISMATCH},
 };
@@ -168,6 +169,17 @@ fn user_and_synthesized_copy_operations_compose_in_both_directions() {
             operation: synth_base.copy_assignment.selected().unwrap(),
         })
     );
+
+    let mir = lower_hir(&hir).expect("composed user and synthesized copies must lower");
+    verify_mir(&mir).expect("composed base copy plans must verify");
+    let MirCopyCapability::User(copy) = &mir.class(ClassId::new(3)).unwrap().copy_constructor
+    else {
+        panic!("MIR must retain the derived user copy operation");
+    };
+    assert_eq!(
+        copy.base.as_ref().map(|step| step.base),
+        Some(ClassId::new(2))
+    );
 }
 
 #[test]
@@ -313,17 +325,19 @@ fn base_arguments_cannot_read_incomplete_derived_fields() {
 }
 
 #[test]
-fn mir_lowering_rejects_static_inheritance_without_discarding_hir_semantics() {
+fn mir_lowering_preserves_static_inheritance_semantics() {
     let output = check_text(concat!(
         "class Base { init() {} }\n",
         "class Derived extends Base { init() { super(); } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
     let hir = output.hir.unwrap();
-    assert!(matches!(
-        lower_hir(&hir),
-        Err(crate::mir::HirLoweringError::StaticInheritanceNotRepresentable {
-            class
-        }) if class == ClassId::new(1)
-    ));
+    let mir = lower_hir(&hir).expect("static inheritance must lower to MIR");
+    verify_mir(&mir).expect("lowered static inheritance must verify");
+    let derived = mir.class(ClassId::new(1)).unwrap();
+    assert_eq!(derived.direct_base.unwrap().class, ClassId::new(0));
+    assert_eq!(
+        derived.destruction.steps.last(),
+        Some(&crate::mir::MirDestructionStep::Base(ClassId::new(0)))
+    );
 }

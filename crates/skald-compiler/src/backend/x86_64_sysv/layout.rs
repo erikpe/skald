@@ -71,6 +71,7 @@ impl DataLayout {
                 .class(class)
                 .map(ClassLayout::ty)
                 .ok_or_else(|| layout_error(format!("class {class} has no target layout"))),
+            MirType::Obj => Err(layout_error("`Obj` views have no owning storage layout")),
             MirType::Unit => Err(layout_error(
                 "payload-free type `unit` has no storage layout",
             )),
@@ -183,7 +184,7 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
     match ty {
         MirType::I64 | MirType::U64 | MirType::F64 => Some(TypeLayout::new(8, 8)),
         MirType::U8 | MirType::Bool => Some(TypeLayout::new(1, 1)),
-        MirType::Class(_) | MirType::Unit => None,
+        MirType::Class(_) | MirType::Obj | MirType::Unit => None,
     }
 }
 

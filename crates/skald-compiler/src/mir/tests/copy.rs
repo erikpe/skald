@@ -31,11 +31,17 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
     let value = mir.class(ClassId::new(0)).unwrap();
     assert_eq!(
         value.copy_constructor,
-        MirCopyCapability::User(InitializerId::new(value.id, 1))
+        MirCopyCapability::User(MirUserCopy {
+            operation: InitializerId::new(value.id, 1),
+            base: None,
+        })
     );
     assert_eq!(
         value.copy_assignment,
-        MirCopyCapability::User(CopyAssignmentId::new(value.id, 0))
+        MirCopyCapability::User(MirUserCopy {
+            operation: CopyAssignmentId::new(value.id, 0),
+            base: None,
+        })
     );
     assert!(mir
         .member_definition(InitializerId::new(value.id, 1).into())

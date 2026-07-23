@@ -17,12 +17,15 @@ pub enum MirType {
     F64,
     Bool,
     Class(ClassId),
+    /// The universal non-owning object-view target. It has no owning storage
+    /// or target layout of its own.
+    Obj,
     Unit,
 }
 
 impl MirType {
     pub const fn is_scalar_value(self) -> bool {
-        !matches!(self, Self::Class(_) | Self::Unit)
+        !matches!(self, Self::Class(_) | Self::Obj | Self::Unit)
     }
 }
 
@@ -35,6 +38,7 @@ impl fmt::Display for MirType {
             Self::F64 => formatter.write_str("f64"),
             Self::Bool => formatter.write_str("bool"),
             Self::Class(class) => write!(formatter, "class {class}"),
+            Self::Obj => formatter.write_str("Obj"),
             Self::Unit => formatter.write_str("unit"),
         }
     }
@@ -72,6 +76,11 @@ impl MirPlace {
         self.projections.push(MirPlaceProjection::Field(field));
         self
     }
+
+    pub fn project_base(mut self, base: ClassId) -> Self {
+        self.projections.push(MirPlaceProjection::Base(base));
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -96,6 +105,8 @@ impl From<StorageId> for MirPlace {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPlaceProjection {
+    /// Selects the declared direct base of the current class-typed place.
+    Base(ClassId),
     Field(FieldId),
 }
 

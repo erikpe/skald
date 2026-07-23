@@ -78,10 +78,16 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
+            if declaration.return_type == MirType::Obj {
+                self.function_error(
+                    declaration.id,
+                    "function result cannot have non-owning type `Obj`",
+                );
+            }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
                 if declaration.parameters.iter().any(|parameter| {
                     parameter.mode != MirParameterMode::Value
-                        || matches!(parameter.ty, MirType::Class(_))
+                        || matches!(parameter.ty, MirType::Class(_) | MirType::Obj)
                 }) {
                     self.function_error(
                         declaration.id,
@@ -192,6 +198,7 @@ impl<'mir> Verifier<'mir> {
     }
 
     fn verify_classes(&mut self) {
+        self.verify_class_hierarchy();
         for (class_index, class) in self.program.classes.iter().enumerate() {
             if class.id.index() != class_index {
                 self.program_error(format!(
@@ -207,6 +214,10 @@ impl<'mir> Verifier<'mir> {
                     ));
                 }
                 match field.ty {
+                    MirType::Obj => self.program_error(format!(
+                        "field {} cannot have non-owning type `Obj`",
+                        field.id
+                    )),
                     MirType::Unit => self.program_error(format!(
                         "field {} cannot have payload-free type `unit`",
                         field.id
@@ -263,11 +274,14 @@ impl<'mir> Verifier<'mir> {
                 .iter()
                 .filter_map(|field| matches!(field.ty, MirType::Class(_)).then_some(field.id))
                 .collect();
-            let expected_plan =
-                MirDestructionPlan::new(class.destruction.destructor.clone(), &class_fields);
+            let expected_plan = MirDestructionPlan::with_base(
+                class.destruction.destructor.clone(),
+                &class_fields,
+                class.direct_base.map(|base| base.class),
+            );
             if class.destruction.steps != expected_plan.steps {
                 self.program_error(format!(
-                    "class {} destruction plan must run its user body first and class fields in reverse declaration order",
+                    "class {} destruction plan must run its user body first and class fields in reverse declaration order, then its direct base",
                     class.id
                 ));
             }
@@ -286,6 +300,12 @@ impl<'mir> Verifier<'mir> {
                             method.id
                         ));
                     }
+                }
+                if method.return_type == MirType::Obj {
+                    self.program_error(format!(
+                        "method {} cannot return non-owning type `Obj`",
+                        method.id
+                    ));
                 }
             }
         }
@@ -307,21 +327,29 @@ impl<'mir> Verifier<'mir> {
             }
         }
         match &class.copy_constructor {
-            MirCopyCapability::User(id) => {
+            MirCopyCapability::User(copy) => {
                 if class
                     .copy_constructor_declaration
                     .as_ref()
                     .map(|item| item.id)
-                    != Some(*id)
+                    != Some(copy.operation)
                 {
                     self.program_error(format!(
                         "class {} user copy-constructor capability has no matching declaration",
                         class.id
                     ));
                 }
-                if self.program.member_definition((*id).into()).is_none() {
-                    self.program_error(format!("copy constructor {id} has no member definition"));
+                if self
+                    .program
+                    .member_definition(copy.operation.into())
+                    .is_none()
+                {
+                    self.program_error(format!(
+                        "copy constructor {} has no member definition",
+                        copy.operation
+                    ));
                 }
+                self.verify_constructor_base(class, copy.base);
             }
             MirCopyCapability::Synthesized(copy) => {
                 if class.copy_constructor_declaration.is_some() {
@@ -359,21 +387,29 @@ impl<'mir> Verifier<'mir> {
             }
         }
         match &class.copy_assignment {
-            MirCopyCapability::User(id) => {
+            MirCopyCapability::User(copy) => {
                 if class
                     .copy_assignment_declaration
                     .as_ref()
                     .map(|item| item.id)
-                    != Some(*id)
+                    != Some(copy.operation)
                 {
                     self.program_error(format!(
                         "class {} user copy-assignment capability has no matching declaration",
                         class.id
                     ));
                 }
-                if self.program.member_definition((*id).into()).is_none() {
-                    self.program_error(format!("copy assignment {id} has no member definition"));
+                if self
+                    .program
+                    .member_definition(copy.operation.into())
+                    .is_none()
+                {
+                    self.program_error(format!(
+                        "copy assignment {} has no member definition",
+                        copy.operation
+                    ));
                 }
+                self.verify_assignment_base(class, copy.base);
             }
             MirCopyCapability::Synthesized(copy) => {
                 if class.copy_assignment_declaration.is_some() {
@@ -400,6 +436,7 @@ impl<'mir> Verifier<'mir> {
         class: &MirClassDeclaration,
         copy: &MirSynthesizedCopy<crate::identity::InitializerId>,
     ) {
+        self.verify_constructor_base(class, copy.base);
         if copy.class != class.id || copy.fields.len() != class.fields.len() {
             self.program_error(format!(
                 "class {} synthesized copy-construction plan has the wrong owner or field count",
@@ -442,6 +479,7 @@ impl<'mir> Verifier<'mir> {
         class: &MirClassDeclaration,
         copy: &MirSynthesizedCopy<crate::identity::CopyAssignmentId>,
     ) {
+        self.verify_assignment_base(class, copy.base);
         if copy.class != class.id || copy.fields.len() != class.fields.len() {
             self.program_error(format!(
                 "class {} synthesized copy-assignment plan has the wrong owner or field count",
@@ -485,11 +523,14 @@ impl<'mir> Verifier<'mir> {
                 MirParameterMode::Value if parameter.ty == MirType::Unit => self.program_error(
                     format!("{owner} value parameter {index} cannot have type `unit`"),
                 ),
+                MirParameterMode::Value if parameter.ty == MirType::Obj => self.program_error(
+                    format!("{owner} value parameter {index} cannot have non-owning type `Obj`"),
+                ),
                 MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
-                    if !matches!(parameter.ty, MirType::Class(_)) =>
+                    if !matches!(parameter.ty, MirType::Class(_) | MirType::Obj) =>
                 {
                     self.program_error(format!(
-                        "{owner} alias parameter {index} must have class type"
+                        "{owner} alias parameter {index} must have class or `Obj` type"
                     ));
                 }
                 _ => {}

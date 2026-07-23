@@ -141,6 +141,17 @@ impl<'mir> Verifier<'mir> {
                     ),
                 );
             }
+            if storage.ty == MirType::Obj
+                && !matches!(storage.kind, MirStorageKind::AliasParameter(_))
+            {
+                self.function_error(
+                    function.callable(),
+                    format!(
+                        "storage {} with non-owning type `Obj` must be an alias parameter",
+                        storage.id
+                    ),
+                );
+            }
             if matches!(
                 storage.kind,
                 MirStorageKind::Return | MirStorageKind::Argument | MirStorageKind::Temporary

@@ -302,6 +302,15 @@ pub enum MirAliasAccess {
     Mutable,
 }
 
+impl std::fmt::Display for MirAliasAccess {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ReadOnly => formatter.write_str("readonly"),
+            Self::Mutable => formatter.write_str("mutable"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirStorage {
     pub id: StorageId,

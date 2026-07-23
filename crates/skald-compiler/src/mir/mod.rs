@@ -16,18 +16,19 @@ pub(crate) mod test_fixtures;
 pub use dump::dump_mir;
 pub use lower::{lower_hir, HirLoweringError};
 pub use model::{
-    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBinaryOperation,
-    MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
+    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBaseCopy, MirBasicBlock,
+    MirBinaryOperation, MirBody, MirCall, MirCallTarget, MirCallableSignature, MirClassDeclaration,
     MirClassDeclarationTable, MirCleanup, MirCopyAssignment, MirCopyAssignmentDeclaration,
     MirCopyCapability, MirCopyConstruction, MirDefinitionRef, MirDestructionPlan,
-    MirDestructionStep, MirDestructorDeclaration, MirEndFullExpression, MirFieldDeclaration,
-    MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,
-    MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize, MirInitializerDeclaration,
-    MirInstruction, MirMemberDefinition, MirMemberDefinitionTable, MirMethodDeclaration,
-    MirParameter, MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram,
-    MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage,
-    MirStorageKind, MirStore, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminator, MirType,
-    MirUnaryOperation, MirValue, StorageId, ValueId,
+    MirDestructionStep, MirDestructorDeclaration, MirDirectBase, MirEndFullExpression,
+    MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable,
+    MirFunctionDefinition, MirFunctionDefinitionTable, MirFunctionLinkage, MirInitialize,
+    MirInitializerDeclaration, MirInstruction, MirMemberDefinition, MirMemberDefinitionTable,
+    MirMethodDeclaration, MirObjectView, MirParameter, MirParameterMode, MirPlace, MirPlaceBase,
+    MirPlaceProjection, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
+    MirSelectedCopyOperation, MirStorage, MirStorageKind, MirStore, MirSynthesizedCopy,
+    MirSynthesizedFieldCopy, MirTerminator, MirType, MirUnaryOperation, MirUserCopy, MirValue,
+    MirViewTarget, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 

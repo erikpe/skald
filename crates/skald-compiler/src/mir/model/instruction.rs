@@ -7,6 +7,7 @@ use crate::{
 
 use super::{
     declarations::MirSelectedCopyOperation,
+    definition::MirAliasAccess,
     ids::ValueId,
     value::{MirPlace, MirRvalue},
 };
@@ -108,9 +109,34 @@ pub struct MirCall {
 pub enum MirArgument {
     Value(ValueId),
     Place(MirPlace),
+    View(MirObjectView),
     /// A complete live caller destination transferred to the corresponding
     /// class value parameter for the duration of the call.
     OwnedPlace(MirPlace),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirViewTarget {
+    Class(ClassId),
+    Obj,
+}
+
+impl MirViewTarget {
+    pub const fn ty(self) -> super::value::MirType {
+        match self {
+            Self::Class(class) => super::value::MirType::Class(class),
+            Self::Obj => super::value::MirType::Obj,
+        }
+    }
+}
+
+/// One non-owning static conversion at an alias call boundary.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirObjectView {
+    pub source: MirPlace,
+    pub target: MirViewTarget,
+    pub access: MirAliasAccess,
+    pub span: Span,
 }
 
 impl From<ValueId> for MirArgument {

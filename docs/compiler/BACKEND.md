@@ -32,12 +32,13 @@ frontend or target-independent IR code.
 The x86-64 backend performs these steps in order:
 
 1. run the public MIR verifier again at the backend trust boundary;
-2. compute checked primitive and class layouts;
-3. check that every executable signature and called member can be represented
+2. reject verified MIR features not yet implemented by this target;
+3. compute checked primitive and class layouts;
+4. check that every executable signature and called member can be represented
    by the target calling convention;
-4. plan fixed stack frames and target addresses;
-5. select target instructions into a private assembly model; and
-6. emit deterministic GNU assembly text.
+5. plan fixed stack frames and target addresses;
+6. select target instructions into a private assembly model; and
+7. emit deterministic GNU assembly text.
 
 Malformed MIR is returned as a backend error before target layout or
 instruction selection. Target-specific failures—including recursive layout,
@@ -45,6 +46,11 @@ unrepresentable sizes, missing callable bodies needed by target lowering,
 argument-area limits, frame limits, and displacement limits—also return
 `BackendError`. An error identifies its target and, when applicable, the
 callable being lowered.
+
+Verified static inheritance, base projections, owning slices, and class/`Obj`
+views currently stop at step 2. The target rejects them before layout because
+their base layout and internal view ABI belong to the next backend
+implementation boundary.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -62,6 +68,7 @@ The x86-64 target layout is:
 | `f64` | 8 | 8 |
 | `u8` | 1 | 1 |
 | `bool` | 1 | 1 |
+| `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
 
 An inline class lays out fields in declaration order. Each field begins at the
@@ -70,10 +77,12 @@ up to the maximum field alignment. Empty classes remain addressable with size
 and alignment one.
 
 Class dependencies are laid out recursively from semantic `ClassId` and
-`FieldId` metadata. MIR projections remain target-independent field
-identities; the backend alone turns them into byte offsets. Recursive inline
-layouts, undeclared dependencies, arithmetic overflow, and layouts beyond the
-target's signed 32-bit addressing limit are structured errors.
+`FieldId` metadata. MIR field and base projections remain target-independent
+identities. The implemented layout turns exact-class field projections into
+byte offsets; verified base projections stop at feature legality until base
+layout is implemented. Recursive inline layouts, undeclared dependencies,
+arithmetic overflow, and layouts beyond the target's signed 32-bit addressing
+limit are structured errors.
 
 These sizes and offsets are implementation contracts for the current target,
 not source-language promises or a portable external object layout. External

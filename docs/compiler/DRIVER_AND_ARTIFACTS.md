@@ -30,11 +30,12 @@ repository; see the [compiler crate API policy](README.md#compiler-crate-api-pol
 database and runs lexing, parsing, resolution, type checking, MIR lowering,
 the verified MIR pass pipeline, and target assembly emission in order. A
 source-phase error stops later phases and returns the accumulated source
-database and structured diagnostics. Unsupported HIR-to-MIR features, MIR
-verification, and backend failures remain distinct structured error
-categories. Static inheritance, inherited access, class/`Obj` alias views, and
-inline slicing currently reach typed HIR and then stop at the explicit
-HIR-lowering boundary until MIR base and view representation is available.
+database and structured diagnostics. HIR lowering, MIR verification, and
+backend failures remain distinct structured error categories. Static
+inheritance, inherited access, class/`Obj` alias views, and inline slicing
+reach verified target-independent MIR. The current x86-64 backend rejects that
+valid MIR with a structured feature-legality error until base layout and view
+calling conventions are implemented.
 
 The path supplied to this entry point labels diagnostics; the function does
 not read it. It performs no source I/O, host tool invocation, runtime linking,

@@ -67,6 +67,9 @@ fn inherited_fields_and_methods_use_identity_selected_base_receivers() {
         panic!("update must retain its method receiver");
     };
     assert_eq!(receiver.access, HirAccess::Mutable);
+    let mir = lower_hir(&hir).expect("inherited member places must lower to MIR");
+    verify_mir(&mir).expect("inherited member MIR must verify");
+    assert!(crate::mir::dump_mir(&mir).contains(".base(c1).base(c0)"));
 }
 
 #[test]
@@ -152,6 +155,12 @@ fn alias_upcasts_retain_access_target_and_complete_source_identity() {
     assert!(dump.contains("ViewArgument -> Obj readonly"));
     assert!(dump.contains("ForwardedView f2:p0 : Obj readonly"));
     assert!(dump.contains("-> base c1 -> base c0 : class c0"));
+    let mir = lower_hir(&hir).expect("class and Obj views must lower to MIR");
+    verify_mir(&mir).expect("class and Obj view MIR must verify");
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert!(mir_dump.contains("-> class c0 readonly"));
+    assert!(mir_dump.contains("-> class c0 mutable"));
+    assert!(mir_dump.contains("-> Obj readonly"));
 }
 
 #[test]
@@ -246,6 +255,11 @@ fn slicing_is_explicit_across_owning_destinations_and_never_elided() {
     let dump = crate::hir::dump_hir(&hir);
     assert!(dump.contains("SliceSource [c1 -> c0] -> c0"));
     assert_eq!(dump, crate::hir::dump_hir(&hir));
+    let mir = lower_hir(&hir).expect("all owning slice contexts must lower to MIR");
+    verify_mir(&mir).expect("all lowered owning slice contexts must verify");
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert!(mir_dump.contains(".base(c1).base(c0)"));
+    assert_eq!(mir_dump, crate::mir::dump_mir(&mir));
 }
 
 #[test]
@@ -288,7 +302,7 @@ fn invalid_static_conversions_report_relationship_and_access_failures() {
 }
 
 #[test]
-fn obj_views_stop_at_the_structured_mir_stage_boundary() {
+fn obj_views_lower_to_verified_mir() {
     let output = check_text(concat!(
         "class Root { init() {} }\n",
         "fn any(ref value: Obj) -> unit {}\n",
@@ -297,10 +311,11 @@ fn obj_views_stop_at_the_structured_mir_stage_boundary() {
     ));
     assert!(output.diagnostics.is_empty());
     let hir = output.hir.unwrap();
-    assert_eq!(
-        lower_hir(&hir),
-        Err(crate::mir::HirLoweringError::StaticObjectViewsNotRepresentable)
-    );
+    let mir = lower_hir(&hir).expect("static object views must lower to MIR");
+    verify_mir(&mir).expect("lowered static object views must verify");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("view(indirect("));
+    assert!(dump.contains(" -> Obj readonly)"));
 }
 
 #[test]

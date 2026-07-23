@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM7 is next. The
+Status: in progress; PM8 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -90,7 +90,7 @@ The frozen restricted profile excludes:
 - [x] PM4 — Build the canonical class hierarchy and inherited lookup
 - [x] PM5 — Compose base initialization and lifecycle semantics
 - [x] PM6 — Add typed static base views and slicing in HIR
-- [ ] PM7 — Represent and verify static inheritance in MIR
+- [x] PM7 — Represent and verify static inheritance in MIR
 - [ ] PM8 — Lower static inheritance on x86-64
 - [ ] PM9 — Resolve virtual declarations and override families
 - [ ] PM10 — Select virtual calls and receiver views in HIR
@@ -272,13 +272,13 @@ HIR and distinguishable as projection, alias view, or sliced value.
 **Purpose:** Extend target-independent places and lifecycle instructions with
 verified base semantics.
 
-- [ ] Add MIR base projections and explicit selected base copy/lifecycle
+- [x] Add MIR base projections and explicit selected base copy/lifecycle
       operations using the existing model facades and responsibility modules.
-- [ ] Lower HIR base views for locals, receivers, parameters, return storage,
+- [x] Lower HIR base views for locals, receivers, parameters, return storage,
       arguments, temporaries, aliases, and nested inline fields.
-- [ ] Verify ancestry, projection owner/terminal types, access, overlap,
+- [x] Verify ancestry, projection owner/terminal types, access, overlap,
       liveness, selected copy capabilities, and destruction-plan consistency.
-- [ ] Extend deterministic MIR dumps, test-only fixtures, and structured MIR
+- [x] Extend deterministic MIR dumps, test-only fixtures, and structured MIR
       mutations for corrupt hierarchy and base-place metadata.
 
 **Tests:** Run focused MIR lowering, dump, place, call, cleanup, and mutation

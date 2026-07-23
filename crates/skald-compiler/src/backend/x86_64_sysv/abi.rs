@@ -56,7 +56,7 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
                 Some(ScalarClass::Integer)
             }
             MirType::F64 => Some(ScalarClass::Sse),
-            MirType::Unit => None,
+            MirType::Obj | MirType::Unit => None,
         },
     }
 }

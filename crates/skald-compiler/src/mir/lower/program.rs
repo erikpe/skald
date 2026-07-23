@@ -73,15 +73,17 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     MirDestructionStep::UserBody(destructor)
                 }
                 HirDestructionStep::Field(field) => MirDestructionStep::Field(field),
-                HirDestructionStep::Base(_) => {
-                    unreachable!("static inheritance is rejected before MIR declaration lowering")
-                }
+                HirDestructionStep::Base(base) => MirDestructionStep::Base(base),
             })
             .collect(),
     };
     MirClassDeclaration {
         id: class.id,
         name: class.name.clone(),
+        direct_base: class.direct_base.as_ref().map(|base| MirDirectBase {
+            class: base.class,
+            span: base.span,
+        }),
         fields,
         initializers: vec![MirInitializerDeclaration {
             id: class.initializer.id,
@@ -131,10 +133,14 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
 
 fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyCapability<I> {
     match capability {
-        HirCopyCapability::User(copy) => MirCopyCapability::User(copy.operation),
+        HirCopyCapability::User(copy) => MirCopyCapability::User(MirUserCopy {
+            operation: copy.operation,
+            base: copy.base.map(lower_base_copy),
+        }),
         HirCopyCapability::Synthesized(copy) => {
             MirCopyCapability::Synthesized(MirSynthesizedCopy {
                 class: copy.class,
+                base: copy.base.map(lower_base_copy),
                 fields: copy
                     .fields
                     .iter()
@@ -153,6 +159,13 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
             })
         }
         HirCopyCapability::Unavailable => MirCopyCapability::Unavailable,
+    }
+}
+
+fn lower_base_copy<I: Copy>(copy: crate::hir::HirBaseCopy<I>) -> MirBaseCopy<I> {
+    MirBaseCopy {
+        base: copy.base,
+        operation: lower_selected_copy_operation(copy.operation),
     }
 }
 

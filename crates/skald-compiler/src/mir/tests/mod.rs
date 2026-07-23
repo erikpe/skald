@@ -17,10 +17,28 @@ mod object_results;
 mod object_temporaries;
 mod objects;
 mod robustness;
+mod static_inheritance;
 mod value_parameters;
 
 fn lower_text(text: &str) -> MirProgram {
     lower_source_to_mir(text)
+}
+
+fn static_inheritance_mir() -> MirProgram {
+    lower_text(concat!(
+        "class Base { value: i64; init(value: i64) { self.value = value; } }\n",
+        "class Mid extends Base { init(value: i64) { super(value); } }\n",
+        "class Derived extends Mid { init(value: i64) { super(value); } }\n",
+        "fn inspect(ref base: Base, ref any: Obj) -> unit {}\n",
+        "fn consume(value: Base) -> unit {}\n",
+        "fn relay(ref value: Derived) -> unit { inspect(value, value); }\n",
+        "fn main() -> i64 {\n",
+        "  var value: Derived = Derived(7);\n",
+        "  relay(value);\n",
+        "  consume(value);\n",
+        "  return value.value;\n",
+        "}\n",
+    ))
 }
 
 fn goto_join_mir() -> MirProgram {

@@ -24,6 +24,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         MirClassDeclaration {
             id: inner,
             name: "Inner".to_owned(),
+            direct_base: None,
             fields: vec![MirFieldDeclaration {
                 id: inner_value,
                 name: "value".to_owned(),
@@ -42,6 +43,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         MirClassDeclaration {
             id: outer,
             name: "Outer".to_owned(),
+            direct_base: None,
             fields: vec![MirFieldDeclaration {
                 id: outer_inner,
                 name: "inner".to_owned(),

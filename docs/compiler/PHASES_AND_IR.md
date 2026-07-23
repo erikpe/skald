@@ -16,7 +16,7 @@ The target-independent compiler path is:
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
-| MIR lowering | `mir::lower_hir` | `MirProgram` or structured unsupported-stage error |
+| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
 `driver::compile_source_to_assembly` composes these phases with target
@@ -117,21 +117,26 @@ explicit:
 
 - callable declarations and executable definitions;
 - addressable storage and semantically projected places;
+- canonical direct-base metadata and identity-based base projections;
 - transient primitive values;
-- source-ordered calls and argument modes;
+- source-ordered calls, argument modes, and access-restricted class/`Obj`
+  views;
 - initialization, copying, assignment, and cleanup operations;
+- selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
 - basic blocks with explicit return, jump, and boolean-branch terminators.
 
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
-objects remain addressable places rather than transient scalar values, and
-field projections carry semantic identities rather than target offsets.
+objects remain addressable places rather than transient scalar values. Field
+and base projections carry semantic identities rather than target offsets.
+Static views retain their source place, target, and access; slices are exact
+target-class copy operations from a verified base-projected source.
 
-HIR-to-MIR lowering owns deterministic allocation and emission order. It
-returns a structured error when otherwise valid HIR uses static inheritance or
-`Obj` views, because MIR does not yet represent base places, lifecycle steps,
-or static view conversions. Supported HIR may rely on producer invariants;
-arbitrary public HIR construction is not a supported input contract.
+HIR-to-MIR lowering owns deterministic allocation and emission order,
+including base initialization, full-expression temporaries, view arguments,
+and slices into locals, fields, arguments, return storage, and assignments.
+Supported HIR may rely on producer invariants; arbitrary public HIR
+construction is not a supported input contract.
 
 ## Verification and passes
 
@@ -141,6 +146,8 @@ target lowering, including:
 - identity ownership, table density, and declaration/definition agreement;
 - callable signatures, receiver and argument modes, and external exclusions;
 - storage, value, place, projection, and operation types;
+- hierarchy acyclicity, direct-base paths, view targets/access, and selected
+  base lifecycle operations;
 - definition-before-use and valid block targets;
 - construction, copy, result-destination, temporary, and cleanup liveness;
 - branch, return, and terminator consistency on every block; and

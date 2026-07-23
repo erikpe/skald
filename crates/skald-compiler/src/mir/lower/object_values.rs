@@ -76,9 +76,10 @@ impl BodyLowerer<'_> {
                 });
                 destination
             }
-            HirObjectSource::Slice(_) => {
-                unreachable!("static inheritance is rejected before MIR object-source lowering")
-            }
+            HirObjectSource::Slice(slice) => slice.bases.iter().copied().fold(
+                self.lower_object_source(&slice.source),
+                MirPlace::project_base,
+            ),
         }
     }
 

@@ -166,6 +166,9 @@ impl FrameLayout {
         let mut ty = storage.ty;
         for projection in &place.projections {
             match *projection {
+                MirPlaceProjection::Base(_) => {
+                    unreachable!("target legality rejects static inheritance before frame layout")
+                }
                 MirPlaceProjection::Field(field_id) => {
                     let field_layout = data_layout
                         .field(field_id)

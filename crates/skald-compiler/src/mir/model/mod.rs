@@ -9,12 +9,12 @@ mod value;
 
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminator};
 pub use declarations::{
-    MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable,
+    MirBaseCopy, MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable,
     MirCopyAssignmentDeclaration, MirCopyCapability, MirDestructionPlan, MirDestructionStep,
-    MirDestructorDeclaration, MirFieldDeclaration, MirFunctionDeclaration,
+    MirDestructorDeclaration, MirDirectBase, MirFieldDeclaration, MirFunctionDeclaration,
     MirFunctionDeclarationTable, MirFunctionLinkage, MirInitializerDeclaration,
     MirMethodDeclaration, MirParameter, MirParameterMode, MirProgram, MirReceiverAccess,
-    MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy,
+    MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirUserCopy,
 };
 pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
@@ -23,7 +23,8 @@ pub use definition::{
 pub use ids::{BlockId, StorageId, ValueId};
 pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallTarget, MirCleanup, MirCopyAssignment,
-    MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction, MirStore,
+    MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction, MirObjectView,
+    MirStore, MirViewTarget,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,

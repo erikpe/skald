@@ -27,9 +27,7 @@ impl BodyLowerer<'_> {
             .iter()
             .fold(root, |projected, projection| match *projection {
                 ObjectProjection::Field(field) => projected.project_field(field),
-                ObjectProjection::Base(_) => {
-                    unreachable!("static inheritance is rejected before MIR place lowering")
-                }
+                ObjectProjection::Base(base) => projected.project_base(base),
             })
     }
 

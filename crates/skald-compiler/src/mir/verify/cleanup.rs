@@ -119,7 +119,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
             }
         }
         for storage in self.function.storage_entries() {
-            if !matches!(storage.ty, MirType::Class(_)) {
+            if !matches!(storage.ty, MirType::Class(_) | MirType::Obj) {
                 continue;
             }
             let place = match storage.kind {
@@ -281,6 +281,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         initialize.target.class(),
                     ) =>
                 {
+                    self.check_borrowed_arguments(block, state, &initialize.arguments);
                     self.consume_owned_arguments(block, state, &initialize.arguments);
                     self.initialize_place(block, state, &initialize.destination);
                 }
@@ -303,6 +304,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     }
                 }
                 MirInstruction::Call(call) => {
+                    self.check_borrowed_arguments(block, state, &call.arguments);
                     self.consume_owned_arguments(block, state, &call.arguments);
                     if let Some(destination) = &call.destination {
                         self.initialize_place(block, state, destination);
@@ -418,6 +420,35 @@ impl CleanupLivenessAnalysis<'_, '_> {
         }
     }
 
+    fn check_borrowed_arguments(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &ObjectState,
+        arguments: &[MirArgument],
+    ) {
+        for argument in arguments {
+            let place = match argument {
+                MirArgument::View(view) => &view.source,
+                MirArgument::Value(_) | MirArgument::Place(_) | MirArgument::OwnedPlace(_) => {
+                    continue
+                }
+            };
+            self.require_live_place(block, state, place, "object view source");
+        }
+    }
+
+    fn require_live_place(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &ObjectState,
+        place: &MirPlace,
+        kind: &str,
+    ) {
+        if !self.place_is_live(state, place) {
+            self.block_error(block.id, format!("{kind} is not live"));
+        }
+    }
+
     fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
         state.live.iter().any(|live| is_ancestor(live, place))
     }
@@ -434,17 +465,29 @@ impl CleanupLivenessAnalysis<'_, '_> {
         }
         let mut ty = storage.ty;
         for projection in &place.projections {
-            let MirPlaceProjection::Field(field_id) = *projection;
-            let MirType::Class(owner) = ty else {
-                return false;
-            };
-            if field_id.class() != owner {
-                return false;
+            match *projection {
+                MirPlaceProjection::Base(base) => {
+                    let MirType::Class(owner) = ty else {
+                        return false;
+                    };
+                    if self.program.direct_base(owner) != Some(base) {
+                        return false;
+                    }
+                    ty = MirType::Class(base);
+                }
+                MirPlaceProjection::Field(field_id) => {
+                    let MirType::Class(owner) = ty else {
+                        return false;
+                    };
+                    if field_id.class() != owner {
+                        return false;
+                    }
+                    let Some(field) = self.program.field(field_id) else {
+                        return false;
+                    };
+                    ty = field.ty;
+                }
             }
-            let Some(field) = self.program.field(field_id) else {
-                return false;
-            };
-            ty = field.ty;
         }
         ty == MirType::Class(expected_class)
     }

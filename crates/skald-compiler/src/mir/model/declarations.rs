@@ -37,6 +37,23 @@ impl MirProgram {
         self.class(id.class())?.field(id)
     }
 
+    pub fn direct_base(&self, class: ClassId) -> Option<ClassId> {
+        self.class(class)?.direct_base.map(|base| base.class)
+    }
+
+    pub fn is_ancestor(&self, ancestor: ClassId, mut class: ClassId) -> bool {
+        for _ in 0..self.classes.len() {
+            let Some(base) = self.direct_base(class) else {
+                return false;
+            };
+            if base == ancestor {
+                return true;
+            }
+            class = base;
+        }
+        false
+    }
+
     pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
         self.class(id.class())?.initializer(id)
     }
@@ -188,6 +205,7 @@ impl MirClassDeclarationTable {
 pub struct MirClassDeclaration {
     pub id: ClassId,
     pub name: String,
+    pub direct_base: Option<MirDirectBase>,
     pub fields: Vec<MirFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
     pub copy_constructor_declaration: Option<MirInitializerDeclaration>,
@@ -196,6 +214,12 @@ pub struct MirClassDeclaration {
     pub copy_assignment: MirCopyCapability<CopyAssignmentId>,
     pub destruction: MirDestructionPlan,
     pub methods: Vec<MirMethodDeclaration>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirDirectBase {
+    pub class: ClassId,
     pub span: Span,
 }
 
@@ -267,7 +291,7 @@ pub struct MirCopyAssignmentDeclaration {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirCopyCapability<I> {
-    User(I),
+    User(MirUserCopy<I>),
     Synthesized(MirSynthesizedCopy<I>),
     Unavailable,
 }
@@ -275,7 +299,7 @@ pub enum MirCopyCapability<I> {
 impl<I: Copy> MirCopyCapability<I> {
     pub const fn selected(&self) -> Option<MirSelectedCopyOperation<I>> {
         match self {
-            Self::User(id) => Some(MirSelectedCopyOperation::User(*id)),
+            Self::User(copy) => Some(MirSelectedCopyOperation::User(copy.operation)),
             Self::Synthesized(copy) => Some(MirSelectedCopyOperation::Synthesized(copy.class)),
             Self::Unavailable => None,
         }
@@ -283,9 +307,22 @@ impl<I: Copy> MirCopyCapability<I> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirUserCopy<I> {
+    pub operation: I,
+    pub base: Option<MirBaseCopy<I>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSynthesizedCopy<I> {
     pub class: ClassId,
+    pub base: Option<MirBaseCopy<I>>,
     pub fields: Vec<MirSynthesizedFieldCopy<I>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MirBaseCopy<I> {
+    pub base: ClassId,
+    pub operation: MirSelectedCopyOperation<I>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -330,7 +367,19 @@ impl MirDestructionPlan {
     /// Builds the canonical complete-object order from class-typed fields in
     /// declaration order: the optional user body first, then fields in reverse.
     pub fn new(destructor: Option<MirDestructorDeclaration>, class_fields: &[FieldId]) -> Self {
-        let mut steps = Vec::with_capacity(class_fields.len() + usize::from(destructor.is_some()));
+        Self::with_base(destructor, class_fields, None)
+    }
+
+    pub fn with_base(
+        destructor: Option<MirDestructorDeclaration>,
+        class_fields: &[FieldId],
+        direct_base: Option<ClassId>,
+    ) -> Self {
+        let mut steps = Vec::with_capacity(
+            class_fields.len()
+                + usize::from(destructor.is_some())
+                + usize::from(direct_base.is_some()),
+        );
         if let Some(declaration) = &destructor {
             steps.push(MirDestructionStep::UserBody(declaration.id));
         }
@@ -341,6 +390,9 @@ impl MirDestructionPlan {
                 .copied()
                 .map(MirDestructionStep::Field),
         );
+        if let Some(base) = direct_base {
+            steps.push(MirDestructionStep::Base(base));
+        }
         Self { destructor, steps }
     }
 }
@@ -349,6 +401,7 @@ impl MirDestructionPlan {
 pub enum MirDestructionStep {
     UserBody(DestructorId),
     Field(FieldId),
+    Base(ClassId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

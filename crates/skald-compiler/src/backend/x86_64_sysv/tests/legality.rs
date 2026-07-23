@@ -58,6 +58,7 @@ fn unused_valid_object_metadata_is_accepted() {
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: ClassId::new(0),
         name: "Empty".to_owned(),
+        direct_base: None,
         fields: vec![],
         initializers: vec![],
         copy_constructor_declaration: None,
@@ -163,6 +164,7 @@ fn recursive_inline_layout_is_a_structured_target_error() {
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
         name: "Recursive".to_owned(),
+        direct_base: None,
         fields: vec![MirFieldDeclaration {
             id: recursive_field,
             name: "self".to_owned(),
@@ -194,6 +196,7 @@ fn incomplete_class_metadata_is_rejected_before_layout() {
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
         name: "Incomplete".to_owned(),
+        direct_base: None,
         fields: vec![MirFieldDeclaration {
             id: missing_field,
             name: "missing".to_owned(),

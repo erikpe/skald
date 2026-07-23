@@ -1,7 +1,7 @@
 //! Scalar calls and source-ordered call argument lowering.
 
 use crate::{
-    hir::{HirCallArgument, HirExpression},
+    hir::{HirAccess, HirCallArgument, HirExpression, HirObjectView, HirViewSource, HirViewTarget},
     identity::FunctionId,
 };
 
@@ -69,9 +69,7 @@ impl BodyLowerer<'_> {
                         .expect("typed value argument must produce a scalar value"),
                 ),
                 HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
-                HirCallArgument::View(_) => {
-                    unreachable!("static object views are rejected before MIR call lowering")
-                }
+                HirCallArgument::View(view) => MirArgument::View(self.lower_object_view(view)),
                 HirCallArgument::Copy(copy) => {
                     let source = self.lower_object_source(&copy.source);
                     let destination = self.new_object_storage(
@@ -91,5 +89,26 @@ impl BodyLowerer<'_> {
                 }
             })
             .collect()
+    }
+
+    fn lower_object_view(&self, view: &HirObjectView) -> MirObjectView {
+        let source = match &view.source {
+            HirViewSource::Place(place) => self.lower_object_place(place),
+            HirViewSource::Forwarded { binding, .. } => {
+                MirPlace::alias_parameter(self.storage_for_binding(*binding))
+            }
+        };
+        MirObjectView {
+            source,
+            target: match view.target {
+                HirViewTarget::Class(class) => MirViewTarget::Class(class),
+                HirViewTarget::Obj => MirViewTarget::Obj,
+            },
+            access: match view.access {
+                HirAccess::ReadOnly => MirAliasAccess::ReadOnly,
+                HirAccess::Mutable => MirAliasAccess::Mutable,
+            },
+            span: view.span,
+        }
     }
 }

@@ -38,6 +38,11 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
     write_quoted(output, &class.name);
     write_span(output, class.span);
     output.push('\n');
+    if let Some(base) = class.direct_base {
+        let _ = write!(output, "      DirectBase {}", base.class);
+        write_span(output, base.span);
+        output.push('\n');
+    }
     for field in &class.fields {
         let _ = write!(output, "      Field {} ", field.id);
         write_quoted(output, &field.name);
@@ -73,6 +78,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 MirDestructionStep::Field(field) => {
                     let _ = writeln!(output, "        Field {field}");
                 }
+                MirDestructionStep::Base(base) => {
+                    let _ = writeln!(output, "        Base {base}");
+                }
             }
         }
     }
@@ -94,11 +102,13 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
 ) {
     let _ = writeln!(output, "      {label}");
     match capability {
-        MirCopyCapability::User(id) => {
-            let _ = writeln!(output, "        User {id}");
+        MirCopyCapability::User(copy) => {
+            let _ = writeln!(output, "        User {}", copy.operation);
+            dump_base_copy(output, copy.base);
         }
         MirCopyCapability::Synthesized(copy) => {
             let _ = writeln!(output, "        Synthesized {}", copy.class);
+            dump_base_copy(output, copy.base);
             for field in &copy.fields {
                 match field {
                     MirSynthesizedFieldCopy::Primitive { field } => {
@@ -113,6 +123,14 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
             }
         }
         MirCopyCapability::Unavailable => output.push_str("        Unavailable\n"),
+    }
+}
+
+fn dump_base_copy<I: Copy + std::fmt::Display>(output: &mut String, copy: Option<MirBaseCopy<I>>) {
+    if let Some(copy) = copy {
+        let _ = write!(output, "          Base {} via ", copy.base);
+        dump_copy_operation(output, copy.operation);
+        output.push('\n');
     }
 }
 
@@ -417,6 +435,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
     }
     for projection in &place.projections {
         match projection {
+            MirPlaceProjection::Base(base) => {
+                let _ = write!(output, ".base({base})");
+            }
             MirPlaceProjection::Field(field) => {
                 let _ = write!(output, ".field({field})");
             }
@@ -433,6 +454,18 @@ fn dump_argument(output: &mut String, argument: &MirArgument) {
             output.push_str("place(");
             dump_place(output, place);
             output.push(')');
+        }
+        MirArgument::View(view) => {
+            output.push_str("view(");
+            dump_place(output, &view.source);
+            output.push_str(" -> ");
+            match view.target {
+                MirViewTarget::Class(class) => {
+                    let _ = write!(output, "class {class}");
+                }
+                MirViewTarget::Obj => output.push_str("Obj"),
+            }
+            let _ = write!(output, " {})", view.access);
         }
         MirArgument::OwnedPlace(place) => {
             output.push_str("owned(");

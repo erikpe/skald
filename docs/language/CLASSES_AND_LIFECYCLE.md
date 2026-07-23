@@ -264,7 +264,7 @@ destructor, end a lifetime early, or return a value. An ordinary method named
 
 One derived complete object owns its direct base subobject and direct fields
 under one lifetime. The base is not a separately registered lexical cleanup
-root. HIR records the selected ordinary base initializer, the base copy
+root. HIR and MIR record the selected ordinary base initializer, the base copy
 constructor and assignment capabilities, and an ordered destruction plan.
 
 Copy construction and assignment process the direct base before the derived
@@ -274,10 +274,11 @@ derived user body, direct class fields in reverse declaration order, and then
 the direct base's complete recursive destruction plan. These are semantic
 operations, not aggregate prefix copies or inferred physical layout.
 
-This contract currently stops at typed HIR. HIR-to-MIR lowering returns a
-structured unsupported-stage error for a program containing a direct base;
-MIR representation and backend execution arrive in their dedicated roadmap
-tasks.
+This contract reaches verified MIR. Direct-base metadata, base projections,
+selected base copy steps, terminal base destruction, and owning slices are
+explicit and checked before target lowering. The current x86-64 backend
+returns a structured feature-legality error until base layout and execution
+are implemented.
 
 ## Copy capabilities
 

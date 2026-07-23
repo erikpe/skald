@@ -54,32 +54,56 @@ impl Verifier<'_> {
         };
         let mut ty = storage.ty;
         for projection in &place.projections {
-            let MirPlaceProjection::Field(field_id) = *projection;
-            let MirType::Class(owner) = ty else {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("field projection {field_id} has a non-class base"),
-                );
-                return None;
-            };
-            if field_id.class() != owner {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("field projection {field_id} belongs to the wrong class"),
-                );
-                return None;
+            match *projection {
+                MirPlaceProjection::Base(base) => {
+                    let MirType::Class(owner) = ty else {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("base projection {base} has a non-class base"),
+                        );
+                        return None;
+                    };
+                    if self.program.direct_base(owner) != Some(base) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!(
+                                "base projection {base} is not the declared direct base of {owner}"
+                            ),
+                        );
+                        return None;
+                    }
+                    ty = MirType::Class(base);
+                }
+                MirPlaceProjection::Field(field_id) => {
+                    let MirType::Class(owner) = ty else {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("field projection {field_id} has a non-class base"),
+                        );
+                        return None;
+                    };
+                    if field_id.class() != owner {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("field projection {field_id} belongs to the wrong class"),
+                        );
+                        return None;
+                    }
+                    let Some(field) = self.program.field(field_id) else {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("field projection {field_id} is not declared"),
+                        );
+                        return None;
+                    };
+                    ty = field.ty;
+                }
             }
-            let Some(field) = self.program.field(field_id) else {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("field projection {field_id} is not declared"),
-                );
-                return None;
-            };
-            ty = field.ty;
         }
         Some(VerifiedPlace { ty, access })
     }

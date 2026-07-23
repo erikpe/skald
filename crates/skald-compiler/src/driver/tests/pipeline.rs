@@ -83,7 +83,7 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
 }
 
 #[test]
-fn valid_static_inheritance_stops_at_the_structured_hir_lowering_boundary() {
+fn valid_static_inheritance_stops_at_the_structured_backend_boundary() {
     let result = compile_source_to_assembly(
         "inheritance.ska",
         concat!(
@@ -96,9 +96,8 @@ fn valid_static_inheritance_stops_at_the_structured_hir_lowering_boundary() {
 
     assert!(matches!(
         result,
-        Err(CompilationError::HirLowering(
-            crate::mir::HirLoweringError::StaticInheritanceNotRepresentable { class }
-        )) if class == crate::identity::ClassId::new(1)
+        Err(CompilationError::Backend(error))
+            if error.message().contains("not supported by the x86-64 backend yet")
     ));
 }
 

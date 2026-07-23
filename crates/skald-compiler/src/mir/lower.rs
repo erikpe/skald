@@ -23,21 +23,11 @@ mod statement;
 use cleanup::CleanupPlanner;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {
-    StaticInheritanceNotRepresentable { class: ClassId },
-    StaticObjectViewsNotRepresentable,
-}
+pub enum HirLoweringError {}
 
 impl fmt::Display for HirLoweringError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::StaticInheritanceNotRepresentable { class } => write!(
-                formatter,
-                "HIR for {class} uses static inheritance, which is not representable in MIR yet"
-            ),
-            Self::StaticObjectViewsNotRepresentable => formatter
-                .write_str("HIR uses static object views, which are not representable in MIR yet"),
-        }
+    fn fmt(&self, _formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {}
     }
 }
 
@@ -45,21 +35,7 @@ impl std::error::Error for HirLoweringError {}
 
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
-/// Static inheritance is already meaningful in HIR but does not yet have MIR
-/// places or lifecycle instructions, so that valid staged feature returns a
-/// structured error instead of being discarded or reaching a backend panic.
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    if let Some(class) = hir
-        .classes
-        .iter()
-        .find(|class| class.direct_base.is_some())
-        .map(|class| class.id)
-    {
-        return Err(HirLoweringError::StaticInheritanceNotRepresentable { class });
-    }
-    if hir_uses_obj_views(hir) {
-        return Err(HirLoweringError::StaticObjectViewsNotRepresentable);
-    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -67,38 +43,6 @@ pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
     Ok(mir)
-}
-
-fn hir_uses_obj_views(hir: &HirProgram) -> bool {
-    hir.declarations
-        .iter()
-        .flat_map(|declaration| {
-            declaration
-                .parameters
-                .iter()
-                .map(|parameter| parameter.ty)
-                .chain(std::iter::once(declaration.return_type))
-        })
-        .chain(hir.classes.iter().flat_map(|class| {
-            class
-                .methods
-                .iter()
-                .flat_map(|method| {
-                    method
-                        .parameters
-                        .iter()
-                        .map(|parameter| parameter.ty)
-                        .chain(std::iter::once(method.return_type))
-                })
-                .chain(
-                    class
-                        .initializer
-                        .parameters
-                        .iter()
-                        .map(|parameter| parameter.ty),
-                )
-        }))
-        .any(|ty| ty == Type::Obj)
 }
 
 fn lower_selected_copy_operation<I>(
@@ -300,7 +244,7 @@ const fn lower_type(ty: Type) -> MirType {
         Type::F64 => MirType::F64,
         Type::Bool => MirType::Bool,
         Type::Unit => MirType::Unit,
-        Type::Obj => panic!("Obj views are rejected before MIR type lowering"),
+        Type::Obj => MirType::Obj,
         Type::Class(class) => MirType::Class(class),
     }
 }
