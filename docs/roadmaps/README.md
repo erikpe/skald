@@ -7,10 +7,10 @@ progress. Completed roadmaps and resolved discovery records move to
 ## Discoveries
 
 - [Polymorphism maintainability discoveries](POLYMORPHISM_DISCOVERIES.md) —
-  actionable resolver and backend call-lowering structure follow-ups found
-  during final hardening. They do not change the implemented language
-  contract; addressing them before shared-ownership implementation would keep
-  those ownership-sensitive boundaries easier to extend.
+  one actionable backend call-lowering structure follow-up found during final
+  hardening. It does not change the implemented language contract; addressing
+  it before shared-ownership implementation would keep that ownership-sensitive
+  boundary easier to extend.
 
 The completed polymorphism profile is now the baseline for focused
 shared-ownership work. Shared ownership is the next object-model direction;

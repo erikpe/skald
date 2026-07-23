@@ -1,27 +1,11 @@
 # Polymorphism Maintainability Discoveries
 
-Status: actionable follow-ups found during final polymorphism hardening.
+Status: one actionable follow-up remains from final polymorphism hardening.
 
 These items are outside the completed language-feature scope. They preserve
 evidence and a reviewable boundary for later maintainability work.
 
-## High priority
-
-### Split callable-body resolution by responsibility
-
-- **Problem:** `resolve/resolver/body.rs` is about 1,000 lines and combines
-  lexical scopes, statements, base initialization, narrowing, expressions,
-  direct and member calls, assignment, and binding diagnostics.
-- **Evidence:** call and member selection alone occupy roughly a third of the
-  file, while statement and binding orchestration form separate cohesive
-  responsibilities. The existing `body/place.rs` extraction demonstrates the
-  intended private-submodule pattern.
-- **Owner:** `crates/skald-compiler/src/resolve/resolver/body.rs`.
-- **Boundary:** retain `resolve_callable_body` as the facade; extract call/member
-  resolution and statement/binding resolution into private `body/` modules
-  without changing resolved IR, diagnostic order, recovery, or dump output.
-
-## Medium priority
+## Remaining discovery
 
 ### Separate dynamic-call targeting from ABI marshaling
 
