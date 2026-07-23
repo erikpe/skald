@@ -11,10 +11,10 @@ pub use dump::dump_resolved;
 pub use ir::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBlock,
     ResolvedBooleanExpr, ResolvedClassDeclaration, ResolvedClassDeclarationTable,
-    ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedConditional,
-    ResolvedConditionalArm, ResolvedConstructExpr, ResolvedCopyAssignmentDeclaration,
-    ResolvedCopyOperation, ResolvedDestructorDeclaration, ResolvedDirectBase,
-    ResolvedDirectCallExpr, ResolvedExpression, ResolvedExpressionStatement,
+    ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedClassHierarchy,
+    ResolvedClassMember, ResolvedConditional, ResolvedConditionalArm, ResolvedConstructExpr,
+    ResolvedCopyAssignmentDeclaration, ResolvedCopyOperation, ResolvedDestructorDeclaration,
+    ResolvedDirectBase, ResolvedDirectCallExpr, ResolvedExpression, ResolvedExpressionStatement,
     ResolvedFieldAccessExpr, ResolvedFieldAssignment, ResolvedFieldDeclaration,
     ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedFunctionLinkage, ResolvedGroupedExpr,
@@ -26,9 +26,9 @@ pub use ir::{
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,
-    INVALID_BASE_CLASS, INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET,
-    INVALID_LIFECYCLE_SIGNATURE, INVALID_MEMBER_SELECTION, SELF_OUTSIDE_MEMBER,
-    TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
+    INHERITANCE_CYCLE, INHERITED_MEMBER_COLLISION, INVALID_BASE_CLASS, INVALID_CALL_TARGET,
+    INVALID_CONSTRUCTION_TARGET, INVALID_LIFECYCLE_SIGNATURE, INVALID_MEMBER_SELECTION,
+    SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
 };
 
 #[cfg(test)]

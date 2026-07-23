@@ -12,7 +12,10 @@ use skald_compiler::{
     literal::NumericLiteralKind,
     mir::{dump_mir, lower_hir, verify_mir, MirProgram},
     passes::run_mir_pipeline,
-    resolve::{dump_resolved, resolve, ResolveOutput, ResolvedProgram},
+    resolve::{
+        dump_resolved, resolve, ResolveOutput, ResolvedClassHierarchy, ResolvedClassMember,
+        ResolvedProgram,
+    },
     source::SourceDatabase,
     syntax::{dump_ast, parse, CompilationUnit, ParseOutput},
     typeck::{type_check, TypeCheckOutput},
@@ -21,7 +24,10 @@ use skald_compiler::{
 #[test]
 fn intentional_phase_and_dump_paths_compose() {
     let mut sources = SourceDatabase::new();
-    let source_id = sources.add("api.ska", "fn main() -> i64 { return 0; }");
+    let source_id = sources.add(
+        "api.ska",
+        "class Empty { init() {} } fn main() -> i64 { return 0; }",
+    );
     let source = sources.get(source_id).unwrap();
 
     let lexed: LexOutput = lex(source);
@@ -31,6 +37,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let _ast_dump = dump_ast(ast);
     let resolved: ResolveOutput = resolve(ast);
     let resolved_program: &ResolvedProgram = &resolved.program;
+    let hierarchy: &ResolvedClassHierarchy = &resolved_program.hierarchy;
+    let class = resolved_program.classes.iter().next().unwrap().id;
+    let _base_chain = hierarchy.base_chain(class);
+    let _member: Option<ResolvedClassMember> = hierarchy.member(class, "member");
     let _resolved_dump = dump_resolved(resolved_program);
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();

@@ -1,11 +1,12 @@
 # Skald Polymorphism
 
 Status: frozen design under active implementation. The compiler parses one
-contextual `extends` clause and resolves its target to a class identity, but
-rejects every inheritance-shaped program before HIR. Hierarchy behavior,
-interfaces, polymorphic views, type tests, and narrowing remain unavailable.
-The [status matrix](STATUS.md) distinguishes this boundary from executable
-exact-class behavior.
+contextual `extends` clause, resolves its target to a class identity, rejects
+cycles and inherited member collisions, and builds canonical ancestry and
+member lookup. Every inheritance-shaped program still stops before HIR; base
+lifecycle, inherited source access, interfaces, polymorphic views, type tests,
+and narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
+this boundary from executable exact-class behavior.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -93,6 +94,12 @@ Selected fields and non-virtual methods retain the identity and declaring
 class of their original declaration. An override retains its own method
 identity and joins the virtual family rooted at the inherited declaration.
 Lower phases never recreate inheritance or ownership from source names.
+
+The current compiler implements this declaration-graph boundary: validated
+base chains, subtype queries, nearest ordinary-member selection, and declaring
+owners are available through one resolved identity model. Member bodies do not
+yet use inherited selections because the corresponding base-subobject places
+are not represented in HIR.
 
 ## Virtual methods and overrides
 

@@ -76,10 +76,17 @@ fn rejects_invalid_direct_base_names_in_source_order() {
         .classes
         .iter()
         .all(|class| class.direct_base.is_none()));
+    assert!((0..3).all(|index| {
+        output
+            .program
+            .hierarchy
+            .direct_base(ClassId::new(index))
+            .is_none()
+    }));
 }
 
 #[test]
-fn inherited_members_remain_unavailable_during_resolution() {
+fn inherited_body_uses_remain_disabled_before_base_projections() {
     let output = resolve_source(concat!(
         "class Base { value: i64; init() {} }\n",
         "class Derived extends Base {\n",
@@ -103,6 +110,16 @@ fn inherited_members_remain_unavailable_during_resolution() {
             .direct_base
             .map(|base| base.class),
         Some(ClassId::new(0))
+    );
+    assert_eq!(
+        output
+            .program
+            .hierarchy
+            .inherited_member(ClassId::new(1), "value"),
+        Some(crate::resolve::ResolvedClassMember::Field(FieldId::new(
+            ClassId::new(0),
+            0,
+        )))
     );
 }
 

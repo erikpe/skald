@@ -83,3 +83,33 @@ fn accepts_forward_references_repeated_types_diamonds_and_empty_classes() {
 
     assert!(diagnostics.is_empty());
 }
+
+#[test]
+fn includes_base_subobjects_in_finite_containment_validation() {
+    let diagnostics = containment_diagnostics(concat!(
+        "class Base { derived: Derived; init() {} }\n",
+        "class Derived extends Base { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(diagnostics.len(), 1);
+    let diagnostic = diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, RECURSIVE_INLINE_CONTAINMENT);
+    assert_eq!(
+        diagnostic.message,
+        "recursive inline containment: `Base.derived -> Derived extends Base -> Base`"
+    );
+    assert_eq!(diagnostic.labels.len(), 2);
+}
+
+#[test]
+fn accepts_acyclic_base_and_field_containment_diamonds() {
+    let diagnostics = containment_diagnostics(concat!(
+        "class Root { init() {} }\n",
+        "class Branch extends Root { init() {} }\n",
+        "class Holder { root: Root; branch: Branch; init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(diagnostics.is_empty());
+}

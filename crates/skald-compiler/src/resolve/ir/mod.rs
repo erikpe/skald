@@ -3,6 +3,7 @@
 mod body;
 mod declarations;
 mod expression;
+mod hierarchy;
 mod object_place;
 
 pub use body::{
@@ -25,4 +26,7 @@ pub use expression::{
     ResolvedGroupedExpr, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr, ResolvedUnaryExpr,
     ResolvedUnaryOperator,
 };
+pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use object_place::ResolvedObjectPlace;
+
+pub(crate) use hierarchy::ResolvedClassHierarchyEntry;

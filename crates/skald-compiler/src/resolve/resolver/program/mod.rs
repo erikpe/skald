@@ -11,9 +11,11 @@ use crate::{
 
 mod class;
 mod class_body;
+mod hierarchy;
 
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
+use hierarchy::build_class_hierarchy;
 
 #[derive(Clone, Copy)]
 struct FunctionWorkItem {
@@ -47,6 +49,13 @@ impl<'ast> ProgramResolver<'ast> {
         let (class_declarations, class_symbols, class_work) = self.collect_class_declarations();
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         let class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
+        let hierarchy = build_class_hierarchy(
+            self.ast,
+            &class_work,
+            &class_declarations,
+            &class_symbols,
+            &mut self.diagnostics,
+        );
 
         let function_definitions = self.resolve_function_bodies(
             &function_declarations,
@@ -74,6 +83,7 @@ impl<'ast> ProgramResolver<'ast> {
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 classes: class_declarations,
+                hierarchy,
                 class_definitions: ResolvedClassDefinitionTable::new(class_definitions),
                 entry_function,
                 span: self.ast.span,

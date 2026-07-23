@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM4 is next. The
+Status: in progress; PM5 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -87,7 +87,7 @@ The frozen restricted profile excludes:
 - [x] PM1 — Extract resolver class-body orchestration
 - [x] PM2 — Extract type-checker class-program orchestration
 - [x] PM3 — Parse and resolve class inheritance
-- [ ] PM4 — Build the canonical class hierarchy and inherited lookup
+- [x] PM4 — Build the canonical class hierarchy and inherited lookup
 - [ ] PM5 — Compose base initialization and lifecycle semantics
 - [ ] PM6 — Add typed static base views and slicing in HIR
 - [ ] PM7 — Represent and verify static inheritance in MIR
@@ -203,13 +203,13 @@ inherited member use and cyclic hierarchies still fail before HIR.
 **Purpose:** Create the one target-independent hierarchy service used by all
 later lifecycle, typing, verification, and layout work.
 
-- [ ] Reject direct and indirect cycles before HIR or layout with stable
+- [x] Reject direct and indirect cycles before HIR or layout with stable
       source-order diagnostics.
-- [ ] Define deterministic base-chain traversal, subtype queries, inherited
+- [x] Define deterministic base-chain traversal, subtype queries, inherited
       field/method lookup, collision handling, and declaration-owner recovery.
-- [ ] Keep the hierarchy keyed by typed IDs and prevent later phases from
+- [x] Keep the hierarchy keyed by typed IDs and prevent later phases from
       reconstructing relationships from names or declaration order.
-- [ ] Cover forward references, deep chains, inherited redeclarations,
+- [x] Cover forward references, deep chains, inherited redeclarations,
       containment interaction, and deterministic first-error paths.
 
 **Tests:** Add hierarchy service unit tests plus resolver/type-check diagnostics

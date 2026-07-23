@@ -1,4 +1,4 @@
-//! Deterministic, non-recursive analysis of class-field dependencies.
+//! Deterministic, non-recursive analysis of inline class dependencies.
 
 use std::collections::VecDeque;
 
@@ -12,8 +12,15 @@ use super::RECURSIVE_INLINE_CONTAINMENT;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ContainmentEdge {
-    field: FieldId,
+    source: ClassId,
     target: ClassId,
+    kind: ContainmentEdgeKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ContainmentEdgeKind {
+    Base,
+    Field(FieldId),
 }
 
 pub(in crate::typeck) fn validate_containment(
@@ -41,6 +48,14 @@ impl ContainmentGraph {
         let mut reverse_edges = vec![Vec::new(); class_count];
 
         for class in program.classes.iter() {
+            if let Some(target) = program.hierarchy.direct_base(class.id) {
+                edges[class.id.index()].push(ContainmentEdge {
+                    source: class.id,
+                    target,
+                    kind: ContainmentEdgeKind::Base,
+                });
+                reverse_edges[target.index()].push(class.id.index());
+            }
             for field in &class.fields {
                 let ResolvedTypeKind::Class(target) = field.type_syntax.kind else {
                     continue;
@@ -49,8 +64,9 @@ impl ContainmentGraph {
                     continue;
                 }
                 edges[class.id.index()].push(ContainmentEdge {
-                    field: field.id,
+                    source: class.id,
                     target,
+                    kind: ContainmentEdgeKind::Field(field.id),
                 });
                 reverse_edges[target.index()].push(class.id.index());
             }
@@ -195,7 +211,7 @@ fn reconstruct_path(
     while current != from {
         let edge = predecessor.get(current).copied().flatten()?;
         reversed.push(edge);
-        current = edge.field.class().index();
+        current = edge.source.index();
     }
     reversed.reverse();
     Some(reversed)
@@ -203,54 +219,88 @@ fn reconstruct_path(
 
 fn cycle_diagnostic(program: &ResolvedProgram, cycle: &[ContainmentEdge]) -> Diagnostic {
     let path = render_cycle(program, cycle);
-    let first = program
-        .field(cycle[0].field)
-        .expect("containment edge must reference its resolved field");
-    let first_target = program
-        .class(cycle[0].target)
-        .expect("containment edge must target a resolved class");
     let mut diagnostic = Diagnostic::error(
         RECURSIVE_INLINE_CONTAINMENT,
         format!("recursive inline containment: {path}"),
     )
-    .with_primary_label(
-        first.type_syntax.span,
-        format!(
-            "field `{}` contains `{}` inline",
-            first.name, first_target.name
-        ),
-    );
+    .with_primary_label(edge_span(program, cycle[0]), edge_label(program, cycle[0]));
 
     for &edge in &cycle[1..] {
-        let field = program
-            .field(edge.field)
-            .expect("containment edge must reference its resolved field");
-        let target = program
-            .class(edge.target)
-            .expect("containment edge must target a resolved class");
-        diagnostic = diagnostic.with_secondary_label(
-            field.type_syntax.span,
-            format!("field `{}` contains `{}` inline", field.name, target.name),
-        );
+        diagnostic =
+            diagnostic.with_secondary_label(edge_span(program, edge), edge_label(program, edge));
     }
 
-    diagnostic.with_note("inline class fields must form an acyclic, finite layout")
+    diagnostic
+        .with_note("inline class fields and base subobjects must form an acyclic, finite layout")
 }
 
 fn render_cycle(program: &ResolvedProgram, cycle: &[ContainmentEdge]) -> String {
     let mut path = Vec::with_capacity(cycle.len() + 1);
     for edge in cycle {
-        let field = program
-            .field(edge.field)
-            .expect("containment edge must reference its resolved field");
         let owner = program
-            .class(edge.field.class())
-            .expect("containment field must have a resolved owner");
-        path.push(format!("{}.{}", owner.name, field.name));
+            .class(edge.source)
+            .expect("containment edge must have a resolved owner");
+        match edge.kind {
+            ContainmentEdgeKind::Base => {
+                let target = program
+                    .class(edge.target)
+                    .expect("base containment edge must target a class");
+                path.push(format!("{} extends {}", owner.name, target.name));
+            }
+            ContainmentEdgeKind::Field(field) => {
+                let field = program
+                    .field(field)
+                    .expect("field containment edge must reference a field");
+                path.push(format!("{}.{}", owner.name, field.name));
+            }
+        }
     }
     let destination = program
         .class(cycle.last().expect("cycle cannot be empty").target)
         .expect("containment edge must target a resolved class");
     path.push(destination.name.clone());
     format!("`{}`", path.join(" -> "))
+}
+
+fn edge_span(program: &ResolvedProgram, edge: ContainmentEdge) -> crate::source::Span {
+    match edge.kind {
+        ContainmentEdgeKind::Base => {
+            program
+                .class(edge.source)
+                .and_then(|class| class.direct_base)
+                .filter(|base| base.class == edge.target)
+                .expect("base containment edge must reference resolved source metadata")
+                .span
+        }
+        ContainmentEdgeKind::Field(field) => {
+            program
+                .field(field)
+                .expect("field containment edge must reference a field")
+                .type_syntax
+                .span
+        }
+    }
+}
+
+fn edge_label(program: &ResolvedProgram, edge: ContainmentEdge) -> String {
+    let target = program
+        .class(edge.target)
+        .expect("containment edge must target a resolved class");
+    match edge.kind {
+        ContainmentEdgeKind::Base => {
+            let source = program
+                .class(edge.source)
+                .expect("base containment edge must have a resolved owner");
+            format!(
+                "class `{}` contains base `{}` inline",
+                source.name, target.name
+            )
+        }
+        ContainmentEdgeKind::Field(field) => {
+            let field = program
+                .field(field)
+                .expect("field containment edge must reference a field");
+            format!("field `{}` contains `{}` inline", field.name, target.name)
+        }
+    }
 }

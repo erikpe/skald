@@ -17,7 +17,8 @@ A class declaration introduces one nominal type. Two classes are different
 types even when their declarations have identical members. Executable class
 semantics have no inheritance or implicit class conversion, so every current
 class use requires the exact declared class. An optional direct-base header is
-parsed and resolved but rejected before HIR until hierarchy semantics land.
+parsed, resolved, and validated as a canonical hierarchy, but rejected before
+HIR until base lifecycle and typed base-subobject semantics land.
 
 A class value is one complete inline object containing all of its direct
 fields. A class-typed field is a complete inline subobject of its containing
@@ -57,9 +58,10 @@ not satisfy the ordinary-initializer requirement. Any other valid `init`
 signature is ordinary, and a second ordinary initializer is rejected rather
 than forming an overload set.
 
-All current fields and methods are accessible wherever the receiver is
-available. Static members, access modifiers, and inherited member lookup are
-not implemented.
+All executable fields and methods are accessible wherever the receiver is
+available. Static members and access modifiers are not implemented. Resolution
+can select inherited ordinary members and rejects redeclarations across a base
+chain, but source uses remain disabled until typed base-subobject places exist.
 
 ## Fields and finite containment
 
@@ -71,6 +73,10 @@ Inline containment must be finite. The directed relation from each class to
 the classes of its direct fields must be acyclic. Direct self-containment and
 indirect cycles are invalid. Forward references, repeated fields of the same
 class, acyclic diamonds, and empty contained classes are valid.
+
+Resolved base subobjects participate in the same finite-containment analysis.
+A cycle formed by any combination of class fields and direct bases is rejected
+before HIR.
 
 Field declaration order is source-visible where initialization and lifecycle
 rules refer to direct fields, but it does not require a particular physical
@@ -443,8 +449,9 @@ The implemented executable class model does not include inheritance, base
 members, interfaces, virtual dispatch, `Obj`, class conversions, shared or
 heap-backed objects, `new`, nullable object references, static members, access
 modifiers, `final`, abstract members, overloads, reflection, or user-defined
-conversions. Direct-base syntax and identity resolution are the only
-implemented inheritance boundary.
+conversions. Direct-base syntax, identity resolution, hierarchy validation,
+inherited ordinary-member selection, and finite-containment analysis are the
+implemented non-executable inheritance boundary.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

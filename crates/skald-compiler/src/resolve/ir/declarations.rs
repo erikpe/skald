@@ -12,12 +12,14 @@ use crate::{
 use super::body::{
     ResolvedClassDefinitionTable, ResolvedFunctionDefinitionTable, ResolvedMemberDefinition,
 };
+use super::hierarchy::ResolvedClassHierarchy;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
     pub classes: ResolvedClassDeclarationTable,
+    pub hierarchy: ResolvedClassHierarchy,
     pub class_definitions: ResolvedClassDefinitionTable,
     /// Function named `main`, selected during resolution. Type checking
     /// validates its signature and diagnoses its absence.

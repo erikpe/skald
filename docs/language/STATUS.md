@@ -69,7 +69,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Inheritance and polymorphism](POLYMORPHISM.md) | **Frozen design** | One contextual direct-base clause is parsed and resolved to a class identity; invalid targets are diagnosed, and all inheritance-shaped programs stop before HIR. Hierarchy behavior, lifecycle composition, conversions, dispatch, interfaces, tests, and narrowing remain unavailable. |
+| [Inheritance and polymorphism](POLYMORPHISM.md) | **Frozen design** | Direct bases resolve to a canonical identity graph with cycle rejection, subtype queries, inherited ordinary-member lookup, collision diagnostics, and declaring-owner recovery. All inheritance-shaped programs still stop before HIR; lifecycle composition, inherited source access, conversions, dispatch, interfaces, tests, and narrowing remain unavailable. |
 | [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |

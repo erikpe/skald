@@ -82,6 +82,12 @@ spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
 
+Resolved programs contain one canonical class hierarchy keyed by `ClassId`.
+It validates cycles, traverses direct-to-root chains, answers subtype and
+nearest inherited-member queries, and preserves each selected field or
+method's declaring owner. Inherited collision checks and finite-containment
+analysis consume this model instead of rebuilding ancestry from declarations.
+
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
@@ -95,8 +101,9 @@ targets, object places, construction destinations, copy choices, and
 structured flow summaries.
 
 The current direct-base implementation deliberately stops before this
-boundary: until canonical hierarchy validation is implemented, any resolved
-class base produces a type diagnostic and no HIR.
+boundary: hierarchy validation is complete, but base lifecycle and typed
+base-subobject places are not. Any valid resolved class base therefore
+produces a type diagnostic and no HIR.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
