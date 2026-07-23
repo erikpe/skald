@@ -244,14 +244,14 @@ argument evaluation, ownership transfer, and full-expression cleanup use the
 ordinary call pipeline. MIR contains no interface witness layout or
 target-specific requirement slot.
 
-The x86-64 backend derives deterministic per-class virtual tables from MIR
-family identities. Interface MIR is rejected with a structured unsupported
-backend error until its table representation is implemented. Internal
-receivers and executable class/`Obj` aliases carry their static
-address, complete-object address, and dynamic metadata together. A virtual
-call loads the family slot from that metadata and invokes the selected method
-through the ordinary argument, result, temporary, and cleanup pipeline. Exact
-and sliced values retain direct static selection.
+The x86-64 backend derives deterministic per-class dispatch tables from MIR
+virtual-family, interface, and requirement identities. Internal receivers and
+executable class/interface/`Obj` aliases carry their static address,
+complete-object address, and dynamic metadata together. A virtual or interface
+call loads its backend-selected entry from that metadata and invokes the
+selected method through the ordinary argument, result, temporary, and cleanup
+pipeline. Interface witness layout remains target-private. Exact and sliced
+values retain direct static selection.
 
 ## Inline slicing
 

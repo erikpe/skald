@@ -158,6 +158,32 @@ fn external_alias_signature_is_a_structured_verification_error() {
 }
 
 #[test]
+fn external_interface_signature_is_rejected_before_instruction_selection() {
+    let mut mir = lower_text(concat!(
+        "interface Runner { fn run() -> i64; }\n",
+        "class Worker implements Runner {\n",
+        "  init() {}\n",
+        "  fn run() -> i64 { return 1; }\n",
+        "}\n",
+        "fn invoke(ref value: Runner) -> i64 { return value.run(); }\n",
+        "fn main() -> i64 { var value: Worker = Worker(); return invoke(value); }\n",
+    ));
+    let invoke = FunctionId::new(0);
+    let declaration = &mut mir.declarations.entries_mut_for_test()[invoke.index()];
+    declaration.linkage = MirFunctionLinkage::External {
+        symbol: declaration.name.clone(),
+    };
+    mir.definitions.remove_for_test(invoke);
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("external function cannot declare alias or object value parameters"));
+}
+
+#[test]
 fn recursive_inline_layout_is_a_structured_target_error() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     let class = ClassId::new(0);

@@ -99,7 +99,7 @@ The frozen restricted profile excludes:
 - [x] PM13 — Parse and resolve interfaces and conformance declarations
 - [x] PM14 — Validate conformance and select interface views in HIR
 - [x] PM15 — Represent and verify interface dispatch in MIR
-- [ ] PM16 — Lower interface dispatch on x86-64
+- [x] PM16 — Lower interface dispatch on x86-64
 - [ ] PM17 — Type-check type tests and checked narrowing
 - [ ] PM18 — Represent and verify tests and narrowing in MIR
 - [ ] PM19 — Lower tests and checked narrowing on x86-64
@@ -466,13 +466,13 @@ source-reachable corruptions stop at verification.
 **Purpose:** Execute verified interface calls through deterministic backend-owned
 tables.
 
-- [ ] Compute stable interface requirement tables and class witnesses from
+- [x] Compute stable interface requirement tables and class witnesses from
       typed identities without source-name ordering.
-- [ ] Lower class/interface/`Obj` views under the frozen internal ABI and route
+- [x] Lower class/interface/`Obj` views under the frozen internal ABI and route
       calls to the selected implementing method.
-- [ ] Preserve dynamic metadata through multiple interface conversions and
+- [x] Preserve dynamic metadata through multiple interface conversions and
       inherited overrides, including calls made through `self`.
-- [ ] Retain structured legality and overflow errors and reject external
+- [x] Retain structured legality and overflow errors and reject external
       interface signatures before instruction selection.
 
 **Tests:** Add backend table/legality tests and native cases for multiple

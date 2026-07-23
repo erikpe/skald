@@ -25,9 +25,9 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         }
         writeln!(output, ".size {}, .-{}", function.symbol, function.symbol).unwrap();
     }
-    if !program.virtual_tables.is_empty() {
+    if !program.dispatch_tables.is_empty() {
         output.push_str("\n.section .data.rel.ro.local,\"aw\",@progbits\n");
-        for table in &program.virtual_tables {
+        for table in &program.dispatch_tables {
             output.push_str(".p2align 3\n");
             writeln!(output, ".type {}, @object", table.symbol).unwrap();
             writeln!(output, "{}:", table.symbol).unwrap();

@@ -33,7 +33,8 @@ The x86-64 backend performs these steps in order:
 
 1. run the public MIR verifier again at the backend trust boundary;
 2. reject verified MIR features not yet implemented by this target;
-3. compute deterministic virtual tables from verified families and classes;
+3. compute deterministic class dispatch tables from verified virtual families,
+   interfaces, requirements, conformances, and classes;
 4. compute checked primitive and class layouts;
 5. check that every executable signature and called member can be represented
    by the target calling convention;
@@ -49,10 +50,9 @@ argument-area limits, frame limits, and displacement limits—also return
 callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
-owning slices, class/`Obj` alias views, and virtual-family calls. Interface
-declarations, views, and calls have verified MIR operations but are rejected
-with a structured unsupported error until target lowering exists. Runtime type
-tests and checked narrowing do not yet have MIR operations.
+owning slices, class/interface/`Obj` alias views, virtual-family calls, and
+interface calls. Runtime type tests and checked narrowing do not yet have MIR
+operations.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -149,10 +149,10 @@ compiler-private address conventions for inline objects:
 
 - a receiver carries three integer-class components in order: its statically
   selected address, complete-object address, and dynamic metadata address;
-- a class or `Obj` alias carries the same three components. Its first address
-  selects the static class subobject or opaque `Obj` identity; forwarding
-  preserves the latter two components unchanged. Read-only and mutable access
-  use the same representation;
+- a class, interface, or `Obj` alias carries the same three components. Its
+  first address selects the static class subobject or complete-object identity;
+  forwarding preserves the latter two components unchanged. Read-only and
+  mutable access use the same representation;
 - an exact-class value parameter is an address to caller-created parameter
   storage whose ownership transfer was already selected in MIR; and
 - an exact-class result uses a hidden destination address before the receiver
@@ -197,23 +197,26 @@ The stack-heavy strategy is replaceable. Register allocation or another
 location strategy must preserve the MIR and ABI boundaries rather than
 changing language semantics.
 
-## Virtual metadata and calls
+## Dynamic dispatch metadata and calls
 
-The backend computes one table per declared class when virtual families exist.
-Tables and entries follow dense `ClassId` and canonical `VirtualSlotId` order.
-Each applicable slot contains the most-derived declared method for that class;
-unrelated slots contain zero. Missing executable bodies, invalid MIR family
+The backend computes one table per declared class when virtual families or
+interface requirements exist. Virtual entries follow canonical
+`VirtualSlotId` order. Interface witness entries follow dense `InterfaceId`
+and `InterfaceRequirementId` order, independently of names and conformance-list
+order. Each applicable entry contains the effective method for that class;
+unrelated entries contain zero. Missing executable bodies, invalid MIR
 metadata, unrepresentable table displacements, and unsupported external object
 signatures are rejected before instruction selection.
 
 Tables are private read-only relocation data containing method symbols.
 Entering a polymorphic call with an exact object supplies its statically known
 class table. Forwarded receivers and aliases copy the incoming complete-object
-and table addresses. A virtual call loads its slot from the forwarded table,
-passes the complete object as the selected method receiver, and calls
-indirectly. This is valid for the current single-inheritance layout because
-every base subobject begins at offset zero. Direct calls continue to pass their
-statically selected place.
+and table addresses. A virtual call loads its family slot; an interface call
+loads the witness entry for its requirement. Both pass the complete object as
+the selected method receiver and call indirectly through the ordinary ABI.
+This is valid for the current single-inheritance layout because every base
+subobject begins at offset zero. Direct calls continue to pass their statically
+selected place.
 
 ## Instruction selection and cleanup realization
 

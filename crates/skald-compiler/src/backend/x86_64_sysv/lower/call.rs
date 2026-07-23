@@ -2,7 +2,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{CallableId, DestructorId, VirtualSlotId},
+    identity::{CallableId, DestructorId, InterfaceRequirementId, MethodId, VirtualSlotId},
     mir::{
         MirArgument, MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature,
         MirDefinitionRef, MirFunctionLinkage, MirInitialize, MirMethodCallTarget, MirParameter,
@@ -18,6 +18,45 @@ use super::{
     object_abi::{ObjectOriginOperand, ReceiverOperand},
     value, FrameLayout, InstructionSelector,
 };
+
+#[derive(Clone, Copy)]
+enum LoweredCallTarget {
+    Direct(CallableId),
+    Virtual {
+        selected: MethodId,
+        slot: VirtualSlotId,
+    },
+    Interface(InterfaceRequirementId),
+}
+
+impl LoweredCallTarget {
+    fn signature<'program>(
+        self,
+        program: &'program crate::mir::MirProgram,
+    ) -> MirCallableSignature<'program> {
+        match self {
+            Self::Direct(target) => program
+                .callable_signature(target)
+                .expect("verified call target must be declared"),
+            Self::Virtual { selected, .. } => program
+                .callable_signature(selected.into())
+                .expect("verified virtual target must be declared"),
+            Self::Interface(requirement) => {
+                let requirement = program
+                    .interface_requirement(requirement)
+                    .expect("verified interface target must be declared");
+                MirCallableSignature {
+                    parameters: &requirement.parameters,
+                    return_type: requirement.return_type,
+                }
+            }
+        }
+    }
+
+    const fn is_indirect(self) -> bool {
+        !matches!(self, Self::Direct(_))
+    }
+}
 
 pub(super) fn spill_parameters(
     signature: MirCallableSignature<'_>,
@@ -178,29 +217,41 @@ fn spill_integer(location: ArgumentLocation, destination: Operand, output: &mut 
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_call(&mut self, call: &MirCall) -> Result<(), BackendError> {
-        let (target, receiver, virtual_slot) = match call.target {
-            MirCallTarget::Direct(function) => (CallableId::Function(function), None, None),
+        let (target, receiver) = match call.target {
+            MirCallTarget::Direct(function) => (LoweredCallTarget::Direct(function.into()), None),
             MirCallTarget::Method(method) => {
                 let receiver = call
                     .receiver
                     .as_ref()
                     .and_then(MirCallReceiver::as_method)
                     .expect("verified method call has a receiver");
-                let slot = match method {
-                    MirMethodCallTarget::Direct(_) => None,
-                    MirMethodCallTarget::Virtual { slot, .. } => Some(slot),
+                let target = match method {
+                    MirMethodCallTarget::Direct(method) => LoweredCallTarget::Direct(method.into()),
+                    MirMethodCallTarget::Virtual { selected, slot, .. } => {
+                        LoweredCallTarget::Virtual { selected, slot }
+                    }
                 };
                 (
-                    CallableId::Method(method.selected()),
+                    target,
                     Some(ReceiverOperand {
                         place: &receiver.place,
                         origin: ObjectOriginOperand::Mir(&receiver.origin),
                     }),
-                    slot,
                 )
             }
-            MirCallTarget::Interface(_) => {
-                unreachable!("interface MIR is rejected before instruction selection")
+            MirCallTarget::Interface(target) => {
+                let receiver = call
+                    .receiver
+                    .as_ref()
+                    .and_then(MirCallReceiver::as_interface)
+                    .expect("verified interface call has a receiver");
+                (
+                    LoweredCallTarget::Interface(target.requirement),
+                    Some(ReceiverOperand {
+                        place: &receiver.source,
+                        origin: ObjectOriginOperand::Mir(&receiver.origin),
+                    }),
+                )
             }
         };
         self.select_callable(
@@ -209,7 +260,6 @@ impl InstructionSelector<'_, '_> {
             receiver,
             &call.arguments,
             call.result,
-            virtual_slot,
         )
     }
 
@@ -218,7 +268,7 @@ impl InstructionSelector<'_, '_> {
         initialize: &MirInitialize,
     ) -> Result<(), BackendError> {
         self.select_callable(
-            CallableId::Initializer(initialize.target),
+            LoweredCallTarget::Direct(initialize.target.into()),
             None,
             Some(ReceiverOperand {
                 place: &initialize.destination,
@@ -229,7 +279,6 @@ impl InstructionSelector<'_, '_> {
             }),
             &initialize.arguments,
             None,
-            None,
         )
     }
 
@@ -239,7 +288,7 @@ impl InstructionSelector<'_, '_> {
         receiver: &MirPlace,
     ) -> Result<(), BackendError> {
         self.select_callable(
-            CallableId::Destructor(target),
+            LoweredCallTarget::Direct(target.into()),
             None,
             Some(ReceiverOperand {
                 place: receiver,
@@ -250,23 +299,35 @@ impl InstructionSelector<'_, '_> {
             }),
             &[],
             None,
-            None,
         )
     }
 
-    pub(super) fn select_callable(
+    pub(super) fn select_direct_callable(
         &mut self,
         target: CallableId,
         return_destination: Option<&MirPlace>,
         receiver: Option<ReceiverOperand<'_>>,
         arguments: &[MirArgument],
         result: Option<ValueId>,
-        virtual_slot: Option<VirtualSlotId>,
     ) -> Result<(), BackendError> {
-        let signature = self
-            .program
-            .callable_signature(target)
-            .expect("verified call target must be declared");
+        self.select_callable(
+            LoweredCallTarget::Direct(target),
+            return_destination,
+            receiver,
+            arguments,
+            result,
+        )
+    }
+
+    fn select_callable(
+        &mut self,
+        target: LoweredCallTarget,
+        return_destination: Option<&MirPlace>,
+        receiver: Option<ReceiverOperand<'_>>,
+        arguments: &[MirArgument],
+        result: Option<ValueId>,
+    ) -> Result<(), BackendError> {
+        let signature = target.signature(self.program);
         let layout = classify_call(
             signature.parameters,
             receiver.is_some(),
@@ -296,7 +357,7 @@ impl InstructionSelector<'_, '_> {
             let locations = layout
                 .receiver_locations()
                 .expect("receiver-aware layout has a receiver location");
-            if virtual_slot.is_some() {
+            if target.is_indirect() {
                 self.select_origin_complete(receiver.origin, locations.address())?;
             } else {
                 self.select_place_address(receiver.place, locations.address())?;
@@ -314,16 +375,24 @@ impl InstructionSelector<'_, '_> {
             self.select_argument(argument, *parameter, *location)?;
         }
 
-        if let Some(slot) = virtual_slot {
-            let receiver = receiver.expect("virtual call has a receiver");
-            self.select_virtual_target(receiver.origin, slot)?;
-            self.output.push(Instruction::CallIndirect(Register::R11));
-        } else {
-            self.output
-                .push(Instruction::Call(super::super::symbol::callable(
-                    self.program,
-                    target,
-                )));
+        match target {
+            LoweredCallTarget::Direct(target) => {
+                self.output
+                    .push(Instruction::Call(super::super::symbol::callable(
+                        self.program,
+                        target,
+                    )));
+            }
+            LoweredCallTarget::Virtual { slot, .. } => {
+                let receiver = receiver.expect("virtual call has a receiver");
+                self.select_virtual_target(receiver.origin, slot)?;
+                self.output.push(Instruction::CallIndirect(Register::R11));
+            }
+            LoweredCallTarget::Interface(requirement) => {
+                let receiver = receiver.expect("interface call has a receiver");
+                self.select_interface_target(receiver.origin, requirement)?;
+                self.output.push(Instruction::CallIndirect(Register::R11));
+            }
         }
         if layout.stack_size() != 0 {
             self.output
@@ -406,7 +475,10 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    fn normalize_external_bool_result(&mut self, target: CallableId, return_type: MirType) {
+    fn normalize_external_bool_result(&mut self, target: LoweredCallTarget, return_type: MirType) {
+        let LoweredCallTarget::Direct(target) = target else {
+            return;
+        };
         let external = target.as_function().is_some_and(|function| {
             self.program
                 .declarations

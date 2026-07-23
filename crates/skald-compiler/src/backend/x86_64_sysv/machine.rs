@@ -203,11 +203,11 @@ pub(super) struct AssemblyFunction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct AssemblyProgram {
     pub functions: Vec<AssemblyFunction>,
-    pub virtual_tables: Vec<AssemblyVirtualTable>,
+    pub dispatch_tables: Vec<AssemblyDispatchTable>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct AssemblyVirtualTable {
+pub(super) struct AssemblyDispatchTable {
     pub symbol: String,
     pub entries: Vec<Option<String>>,
 }

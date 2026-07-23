@@ -40,8 +40,8 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
     }
 }
 
-pub(super) fn virtual_table(class: ClassId) -> String {
-    format!(".Lska_class_{}_vtable", class.index())
+pub(super) fn dispatch_table(class: ClassId) -> String {
+    format!(".Lska_class_{}_dispatch", class.index())
 }
 
 pub(super) fn local_label_stem(callable: CallableId) -> String {

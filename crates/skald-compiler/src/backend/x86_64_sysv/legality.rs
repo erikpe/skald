@@ -18,14 +18,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
-    if !program.interfaces.is_empty() {
-        return Err(BackendError::new(
-            Target::X86_64SysV,
-            None,
-            "interface dispatch is not implemented by the x86-64 backend",
-        ));
-    }
-
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
@@ -67,9 +59,17 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                                 ));
                             }
                         }
-                        MirCallTarget::Interface(_) => unreachable!(
-                            "interface programs are rejected before backend legality traversal"
-                        ),
+                        MirCallTarget::Interface(target) => {
+                            let requirement = program
+                                .interface_requirement(target.requirement)
+                                .expect("verified interface target must be declared");
+                            if classify(&requirement.parameters, true).is_none() {
+                                return Err(abi_limit(
+                                    function.callable(),
+                                    "outgoing interface argument area",
+                                ));
+                            }
+                        }
                     },
                     // Cleanup targets and their complete destruction plans are
                     // verified before target layout and instruction selection.

@@ -52,6 +52,7 @@ mod control_flow;
 mod copy;
 mod destruction;
 mod instruction_selection;
+mod interface_dispatch;
 mod legality;
 mod native_execution;
 mod object_results;

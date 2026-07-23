@@ -108,7 +108,7 @@ fn verified_virtual_mir_reaches_indirect_backend_lowering() {
     verify_mir(&program).unwrap();
     let assembly =
         crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program).unwrap();
-    assert!(assembly.contains(".Lska_class_0_vtable:"));
+    assert!(assembly.contains(".Lska_class_0_dispatch:"));
     assert!(assembly.contains("call *%r11"));
 }
 

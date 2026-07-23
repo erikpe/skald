@@ -126,8 +126,8 @@ reordering.
 Static polymorphic views are explicit and checked through MIR as
 source/target/access conversions. Exact-class, ancestor-class, and `Obj`
 aliases execute through the x86-64 internal calling convention. Interface
-views use the same verified non-owning model, but do not execute until backend
-interface dispatch is implemented.
+views use the same verified non-owning representation and execute through
+backend-owned class witness entries.
 
 ## Non-exclusivity
 

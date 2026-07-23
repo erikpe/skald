@@ -2,7 +2,7 @@
 
 use crate::{
     backend::BackendError,
-    identity::{ClassId, VirtualSlotId},
+    identity::{ClassId, InterfaceRequirementId, VirtualSlotId},
     mir::{MirObjectOrigin, MirPlace, MirType, StorageId},
 };
 
@@ -168,6 +168,22 @@ impl InstructionSelector<'_, '_> {
         origin: ObjectOriginOperand<'_>,
         slot: VirtualSlotId,
     ) -> Result<(), BackendError> {
+        let displacement = DispatchMetadata::slot_displacement(slot)?;
+        self.select_dispatch_target(origin, displacement);
+        Ok(())
+    }
+
+    pub(super) fn select_interface_target(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        requirement: InterfaceRequirementId,
+    ) -> Result<(), BackendError> {
+        let displacement = self.dispatch.requirement_displacement(requirement)?;
+        self.select_dispatch_target(origin, displacement);
+        Ok(())
+    }
+
+    fn select_dispatch_target(&mut self, origin: ObjectOriginOperand<'_>, displacement: i32) {
         match origin {
             ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
                 let metadata = self
@@ -187,7 +203,6 @@ impl InstructionSelector<'_, '_> {
                 self.load_table_address(dynamic_class, Register::R11);
             }
         }
-        let displacement = DispatchMetadata::slot_displacement(slot)?;
         self.output.push(Instruction::Move {
             source: Operand::Memory {
                 base: Register::R11,
@@ -195,7 +210,6 @@ impl InstructionSelector<'_, '_> {
             },
             destination: Register::R11.into(),
         });
-        Ok(())
     }
 
     fn select_forwarded_origin(&mut self, carrier: StorageId, locations: ObjectOriginLocations) {

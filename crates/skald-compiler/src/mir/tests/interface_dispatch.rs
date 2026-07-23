@@ -94,17 +94,6 @@ fn interface_mir_dump_is_deterministic_and_target_independent() {
 }
 
 #[test]
-fn verified_interface_mir_stops_at_the_backend_boundary() {
-    let (program, _) = interface_dispatch_mir();
-    verify_mir(&program).unwrap();
-    let error =
-        crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program).unwrap_err();
-    assert!(error
-        .to_string()
-        .contains("interface dispatch is not implemented by the x86-64 backend"));
-}
-
-#[test]
 fn interface_object_results_use_existing_destinations_and_cleanup() {
     let program = lower_text(concat!(
         "interface Factory { fn make() -> Product; }\n",

@@ -43,7 +43,7 @@ pub(super) fn lower(
     functions.push(entry_wrapper(program, entry.id.into()));
     Ok(AssemblyProgram {
         functions,
-        virtual_tables: dispatch.assembly_tables(program),
+        dispatch_tables: dispatch.assembly_tables(program),
     })
 }
 

@@ -201,7 +201,7 @@ impl InstructionSelector<'_, '_> {
         destination: &MirPlace,
         source: &MirPlace,
     ) -> Result<(), BackendError> {
-        self.select_callable(
+        self.select_direct_callable(
             target,
             None,
             Some(super::object_abi::ReceiverOperand {
@@ -212,7 +212,6 @@ impl InstructionSelector<'_, '_> {
                 },
             }),
             &[MirArgument::Place(source.clone())],
-            None,
             None,
         )
     }

@@ -18,15 +18,15 @@ fn emits_deterministic_tables_and_indirect_calls() {
     ));
 
     assert!(output.contains(concat!(
-        ".Lska_class_0_vtable:\n",
+        ".Lska_class_0_dispatch:\n",
         "    .quad .Lska_class_0_method_0\n",
     )));
     assert!(output.contains(concat!(
-        ".Lska_class_1_vtable:\n",
+        ".Lska_class_1_dispatch:\n",
         "    .quad .Lska_class_1_method_0\n",
     )));
     assert!(output.contains(concat!(
-        ".Lska_class_2_vtable:\n",
+        ".Lska_class_2_dispatch:\n",
         "    .quad .Lska_class_1_method_0\n",
     )));
     assert!(output.contains("call *%r11"));

@@ -191,7 +191,7 @@ and trailing separators are not part of this grammar. Name resolution
 validates interface names in `implements` lists. Type checking validates exact
 conformance, non-owning interface views, and interface calls into HIR. MIR and
 its verifier represent those operations without choosing target table layouts;
-backend interface dispatch is not implemented yet.
+the x86-64 backend owns and executes the resulting witness layout.
 
 ## Blocks and statements
 

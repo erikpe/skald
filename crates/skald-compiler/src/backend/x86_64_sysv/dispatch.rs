@@ -1,79 +1,90 @@
-//! Deterministic target-side virtual-table analysis.
+//! Deterministic target-side dynamic-dispatch analysis.
 //!
-//! MIR owns virtual-family identities and semantic slots. This module derives
-//! the concrete per-class selections and target data representation so machine
-//! details never leak back into target-independent IR.
+//! MIR owns virtual-family, interface, and requirement identities. This module
+//! derives concrete per-class selections and target table representation so
+//! machine details never leak back into target-independent IR.
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{ClassId, MethodId, VirtualSlotId},
+    identity::{ClassId, InterfaceRequirementId, MethodId, VirtualSlotId},
     mir::{MirProgram, MirVirtualFamily},
 };
 
 use super::{
-    machine::AssemblyVirtualTable,
+    machine::AssemblyDispatchTable,
     symbol::{self, callable},
 };
 
-const VIRTUAL_ENTRY_SIZE: usize = 8;
+const DISPATCH_ENTRY_SIZE: usize = 8;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct DispatchMetadata {
+    /// Per-class entries: canonical virtual slots, then each interface's
+    /// requirements in typed identity order.
     tables: Vec<Vec<Option<MethodId>>>,
+    /// First table entry for each dense `InterfaceId`.
+    interface_starts: Vec<usize>,
 }
 
 impl DispatchMetadata {
     pub(super) fn compute(program: &MirProgram) -> Result<Self, BackendError> {
+        let (interface_starts, entry_count) = interface_layout(program)?;
         let mut tables = Vec::with_capacity(program.classes.len());
         for class in program.classes.iter() {
-            let mut entries = vec![None; program.virtual_families.len()];
+            let mut entries = vec![None; entry_count];
             for family in program.virtual_families.iter() {
                 let selected = select_for_class(program, family, class.id);
-                if let Some(method) = selected {
-                    if program.member_definition(method.into()).is_none() {
-                        return Err(BackendError::new(
-                            Target::X86_64SysV,
-                            None,
-                            format!(
-                                "virtual table for class {} selects method {method} without a MIR definition",
-                                class.id
-                            ),
-                        ));
-                    }
-                }
+                verify_executable_selection(program, class.id, "virtual table", selected)?;
                 entries[family.slot.index()] = selected;
+            }
+            for conformance in &class.conformances {
+                let start = interface_starts[conformance.interface.index()];
+                for implementation in &conformance.implementations {
+                    verify_executable_selection(
+                        program,
+                        class.id,
+                        "interface witness",
+                        Some(implementation.method),
+                    )?;
+                    entries[start + implementation.requirement.index()] =
+                        Some(implementation.method);
+                }
             }
             tables.push(entries);
         }
-        Ok(Self { tables })
+        Ok(Self {
+            tables,
+            interface_starts,
+        })
     }
 
     pub(super) fn table_symbol(&self, class: ClassId) -> Option<String> {
-        (!self.tables[class.index()].is_empty()).then(|| symbol::virtual_table(class))
+        (!self.tables[class.index()].is_empty()).then(|| symbol::dispatch_table(class))
     }
 
     pub(super) fn slot_displacement(slot: VirtualSlotId) -> Result<i32, BackendError> {
-        slot.index()
-            .checked_mul(VIRTUAL_ENTRY_SIZE)
-            .and_then(|offset| i32::try_from(offset).ok())
-            .ok_or_else(|| {
-                BackendError::new(
-                    Target::X86_64SysV,
-                    None,
-                    "virtual table exceeds x86-64 displacement limits",
-                )
-            })
+        entry_displacement(slot.index(), "virtual table")
     }
 
-    pub(super) fn assembly_tables(&self, program: &MirProgram) -> Vec<AssemblyVirtualTable> {
+    pub(super) fn requirement_displacement(
+        &self,
+        requirement: InterfaceRequirementId,
+    ) -> Result<i32, BackendError> {
+        let index = self.interface_starts[requirement.interface().index()]
+            .checked_add(requirement.index())
+            .ok_or_else(|| displacement_error("interface witness table"))?;
+        entry_displacement(index, "interface witness table")
+    }
+
+    pub(super) fn assembly_tables(&self, program: &MirProgram) -> Vec<AssemblyDispatchTable> {
         self.tables
             .iter()
             .enumerate()
             .filter(|(_, entries)| !entries.is_empty())
             .map(|(index, entries)| {
                 let class = ClassId::new(index);
-                AssemblyVirtualTable {
-                    symbol: symbol::virtual_table(class),
+                AssemblyDispatchTable {
+                    symbol: symbol::dispatch_table(class),
                     entries: entries
                         .iter()
                         .map(|method| method.map(|method| callable(program, method.into())))
@@ -82,6 +93,56 @@ impl DispatchMetadata {
             })
             .collect()
     }
+}
+
+fn interface_layout(program: &MirProgram) -> Result<(Vec<usize>, usize), BackendError> {
+    let mut starts = Vec::with_capacity(program.interfaces.iter().len());
+    let mut entry_count = program.virtual_families.len();
+    for interface in program.interfaces.iter() {
+        starts.push(entry_count);
+        entry_count = entry_count
+            .checked_add(interface.requirements.len())
+            .ok_or_else(|| displacement_error("interface witness table"))?;
+    }
+    if entry_count != 0 {
+        entry_displacement(entry_count - 1, "class dispatch table")?;
+    }
+    Ok((starts, entry_count))
+}
+
+fn verify_executable_selection(
+    program: &MirProgram,
+    class: ClassId,
+    table: &str,
+    selected: Option<MethodId>,
+) -> Result<(), BackendError> {
+    if let Some(method) = selected {
+        if program.member_definition(method.into()).is_none() {
+            return Err(BackendError::new(
+                Target::X86_64SysV,
+                None,
+                format!(
+                    "{table} for class {class} selects method {method} without a MIR definition"
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn entry_displacement(index: usize, table: &str) -> Result<i32, BackendError> {
+    index
+        .checked_mul(DISPATCH_ENTRY_SIZE)
+        .and_then(|offset| i32::try_from(offset).ok())
+        .ok_or_else(|| displacement_error(table))
+}
+
+fn displacement_error(table: &str) -> BackendError {
+    BackendError::new(
+        Target::X86_64SysV,
+        None,
+        format!("{table} exceeds x86-64 displacement limits"),
+    )
 }
 
 fn select_for_class(
@@ -103,4 +164,26 @@ fn select_for_class(
                 _ => Some(method),
             }
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::identity::InterfaceId;
+
+    #[test]
+    fn reports_interface_witness_displacement_overflow() {
+        let metadata = DispatchMetadata {
+            tables: vec![],
+            interface_starts: vec![usize::MAX],
+        };
+        let runner = InterfaceId::new(0);
+        let error = metadata
+            .requirement_displacement(InterfaceRequirementId::new(runner, 0))
+            .unwrap_err();
+
+        assert!(error
+            .message()
+            .contains("interface witness table exceeds x86-64 displacement limits"));
+    }
 }
