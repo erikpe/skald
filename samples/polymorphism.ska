@@ -1,0 +1,49 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Message implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Decorated extends Message {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = extra;
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+}
+
+fn print_readable(ref value: Readable) -> unit {
+    ska_rt_println_i64(value.read());
+}
+
+fn inspect(ref value: Obj) -> unit {
+    if (value is Decorated) {
+        narrow ref decorated: Decorated = value {
+            ska_rt_println_i64(decorated.read());
+        }
+    }
+}
+
+fn main() -> i64 {
+    var value: Decorated = Decorated(40, 2);
+    print_readable(value);
+    inspect(value);
+    return 0;
+}

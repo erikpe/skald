@@ -5,7 +5,12 @@ use crate::{
     identity::{FieldId, FunctionId},
 };
 
-use super::{type_operation_fixtures::type_operation_mir, virtual_fixtures::*, *};
+use super::{
+    interface_fixtures::{first_interface_call_mut, interface_dispatch_mir},
+    type_operation_fixtures::type_operation_mir,
+    virtual_fixtures::*,
+    *,
+};
 
 #[test]
 fn structured_mutations_are_rejected_before_backend_lowering() {
@@ -53,8 +58,52 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_object_view(),
         mutate_virtual_slot(),
         mutate_virtual_receiver_origin(),
+        mutate_interface_requirement(),
         mutate_type_operation_target(),
+        mutate_narrowing_failure_edge(),
     ]
+}
+
+fn mutate_narrowing_failure_edge() -> Mutation {
+    let mut program = type_operation_mir();
+    let definition = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .expect("type-operation fixture must contain inspect");
+    let (success_target, failure_target) = definition
+        .body
+        .blocks
+        .iter_mut()
+        .find_map(|block| match block.terminator.as_mut() {
+            Some(MirTerminator::CheckedNarrow {
+                success_target,
+                failure_target,
+                ..
+            }) => Some((*success_target, failure_target)),
+            _ => None,
+        })
+        .expect("type-operation fixture must contain checked narrowing");
+    *failure_target = success_target;
+    Mutation {
+        name: "checked-narrowing failure edge",
+        expected_message: "success and failure edges must differ",
+        program,
+    }
+}
+
+fn mutate_interface_requirement() -> Mutation {
+    let (mut program, _) = interface_dispatch_mir();
+    let call = first_interface_call_mut(&mut program);
+    let MirCallTarget::Interface(target) = &mut call.target else {
+        unreachable!("interface fixture must contain an interface call")
+    };
+    target.requirement =
+        crate::identity::InterfaceRequirementId::new(crate::identity::InterfaceId::new(99), 0);
+    Mutation {
+        name: "interface requirement",
+        expected_message: "interface requirement target i99:requirement0 is not declared",
+        program,
+    }
 }
 
 fn mutate_type_operation_target() -> Mutation {

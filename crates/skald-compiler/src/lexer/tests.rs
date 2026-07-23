@@ -127,7 +127,7 @@ fn recognizes_object_and_alias_keywords_without_reserving_prefixes() {
 }
 
 #[test]
-fn leaves_frozen_polymorphism_words_contextual() {
+fn leaves_polymorphism_words_contextual() {
     let (_, _, output) = lex_text(
         "extends implements interface virtual override super is narrow Obj polymorphism_value",
     );

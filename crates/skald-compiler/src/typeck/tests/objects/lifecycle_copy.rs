@@ -326,7 +326,7 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
 }
 
 #[test]
-fn diagnoses_object_assignment_outside_the_frozen_destination_and_source_boundary() {
+fn diagnoses_object_assignment_outside_the_supported_destination_and_source_boundary() {
     let output = check_text(concat!(
         "class Value { init() {} }\n",
         "class Other { init() {} }\n",

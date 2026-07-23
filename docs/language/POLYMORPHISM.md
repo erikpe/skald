@@ -1,17 +1,10 @@
 # Skald Polymorphism
 
-Status: partially implemented frozen design. Canonical single
-inheritance, complete base lifecycle, inherited static member access,
-access-preserving class/`Obj` alias views, and inline slicing execute through
-verified MIR and the x86-64 backend. Contextual `virtual` and `override`
-declarations are accepted, assigned stable families, and checked for exact
-compatibility. Virtual dispatch executes on x86-64 through canonical MIR
-families and a private metadata ABI. Interface declarations, exact conformance,
-non-owning conversions, forwarding, and calls lower into verified,
-target-independent MIR and execute on x86-64. Type tests and checked narrowing
-are accepted, resolved, type-checked, represented explicitly in HIR and
-verified target-independent MIR, and executed by the x86-64 backend. The
-[status matrix](STATUS.md) distinguishes these phase boundaries.
+Status: implemented restricted contract. Canonical single inheritance,
+complete base lifecycle, inherited member access, class/interface/`Obj` views,
+inline slicing, opt-in virtual dispatch, interface dispatch, type tests, and
+checked narrowing execute through verified MIR on the x86-64 backend. The
+[status matrix](STATUS.md) owns the compiler-support boundary.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -23,11 +16,10 @@ profile. It extends, rather than replaces:
 - [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) for calls,
   evaluation order, results, and normal cleanup.
 
-## Frozen source profile
+## Implemented source profile
 
-The following EBNF describes the complete surface owned by this profile. The
-forms below are part of the [implemented grammar](GRAMMAR.md). Runtime support
-still follows the phase boundary summarized above.
+The following EBNF summarizes the surface owned by this profile. The
+[implemented grammar](GRAMMAR.md) is the exact syntax authority.
 
 ```text
 class-declaration       = "class" identifier ["extends" identifier]
@@ -58,10 +50,9 @@ not reserve them. A class header always places `extends` before `implements`.
 Modifier order is `virtual` or `override`, then optional `mut`, then `fn`.
 Neither modifier may be repeated or combined with the other.
 
-Once the profile is enabled, `Obj` cannot be the name of a top-level
-declaration because type positions must identify the universal root
-unambiguously. It remains usable as an ordinary field, method, parameter, or
-local name where a type is not expected.
+`Obj` cannot be the name of a top-level declaration because type positions
+must identify the universal root unambiguously. It remains usable as an
+ordinary field, method, parameter, or local name where a type is not expected.
 
 `is` is non-associative and binds less tightly than arithmetic. Thus
 `value + offset is T` groups the addition before the test, though semantic
@@ -458,5 +449,5 @@ edges and verifies them before target lowering.
 The language does not prescribe compiler ID encodings, IR node names, object
 offsets, metadata layouts, table slots, symbols, registers, stack locations,
 pointer-adjustment algorithms, or runtime allocation headers. Backends may
-choose those details only after target-independent IR has preserved the frozen
+choose those details only after target-independent IR has preserved the
 complete-object, dynamic-class, access, lifecycle, and failure semantics.

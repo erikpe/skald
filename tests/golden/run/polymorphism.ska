@@ -1,0 +1,121 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+interface Adjustable {
+    mut fn add(amount: i64) -> i64;
+}
+
+class Root implements Adjustable, Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    init(ref other: Root) {
+        self.value = other.value + 100;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+
+    virtual mut fn add(amount: i64) -> i64 {
+        self.value = self.value + amount;
+        return self.value;
+    }
+
+    fn read_through_self() -> i64 {
+        return self.read();
+    }
+
+    destroy {
+        ska_rt_println_i64(1000 + self.value);
+    }
+}
+
+class Middle extends Root {
+    init(value: i64) {
+        super(value);
+    }
+
+    destroy {
+        ska_rt_println_i64(2000 + self.value);
+    }
+}
+
+class Leaf extends Middle {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = extra;
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+
+    override mut fn add(amount: i64) -> i64 {
+        self.value = self.value + amount + self.extra;
+        return self.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(3000 + self.extra);
+    }
+}
+
+fn read_root(ref value: Root) -> i64 {
+    return value.read();
+}
+
+fn read_interface(ref value: Readable) -> i64 {
+    return value.read();
+}
+
+fn adjust_interface(mut ref value: Adjustable, amount: i64) -> i64 {
+    return value.add(amount);
+}
+
+fn classify(ref value: Obj) -> i64 {
+    if (value is Leaf) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+fn classify_interface(ref value: Readable) -> i64 {
+    return classify(value);
+}
+
+fn narrow_read(ref value: Obj) -> i64 {
+    narrow ref leaf: Leaf = value {
+        return leaf.read();
+    }
+}
+
+fn slice(ref value: Leaf) -> Root {
+    return value;
+}
+
+fn main() -> i64 {
+    var leaf: Leaf = Leaf(10, 5);
+    ska_rt_println_i64(read_root(leaf));
+    ska_rt_println_i64(read_interface(leaf));
+    ska_rt_println_i64(adjust_interface(leaf, 2));
+    ska_rt_println_i64(leaf.read_through_self());
+    ska_rt_println_i64(classify_interface(leaf));
+    ska_rt_println_i64(narrow_read(leaf));
+
+    var sliced: Root = slice(leaf);
+    ska_rt_println_i64(read_root(sliced));
+
+    var copied: Leaf = leaf;
+    ska_rt_println_i64(read_root(copied));
+    return 0;
+}

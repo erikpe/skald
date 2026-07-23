@@ -48,3 +48,17 @@ fn rejects_duplicate_unknown_and_wrong_kind_claims_in_source_order() {
         ]
     );
 }
+
+#[test]
+fn rejects_interface_construction_without_claiming_interface_calls_are_unavailable() {
+    let output = resolve_text(
+        "interface Readable { fn read() -> i64; }\n\
+         fn main() -> i64 { Readable(); return 0; }\n",
+    );
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.message, "interface `Readable` is not callable");
+    assert_eq!(
+        diagnostic.labels[0].message,
+        "interfaces describe non-owning views and cannot be constructed"
+    );
+}

@@ -26,10 +26,10 @@ rather than an implicit nullable object reference. Class-typed fields are
 subobjects of their containing value, and each complete value has one
 deterministic lifetime.
 
-Execution is organized around top-level functions and statically selected
-class members. Blocks introduce lexical scopes. Receivers, operands, and
-arguments have deterministic source order; a receiver is evaluated before its
-explicit arguments.
+Execution is organized around top-level functions and class members with
+explicit direct, virtual, or interface selection. Blocks introduce lexical
+scopes. Receivers, operands, and arguments have deterministic source order; a
+receiver is evaluated before its explicit arguments.
 
 ## Terms
 
@@ -40,7 +40,7 @@ explicit arguments.
 | **place** | An addressable storage location, such as a local, parameter, `self`, or a field path. |
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
-| **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be the class, an ancestor, or `Obj`. |
+| **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **lifecycle member** | A contextual `init`, `assign`, or `destroy` class member occupying a dedicated semantic slot rather than the ordinary method namespace. |
 
@@ -52,9 +52,9 @@ destruction use the selected lifecycle operation for the exact class.
 
 Value parameters own their incoming value. Current class value parameters are
 copy-constructed by the caller and cleaned by the callee. `ref` and `mut ref`
-parameters instead borrow an existing exact-class place for one call; they do
-not copy or own the object. Ordinary methods have read-only receivers, while
-`mut fn` methods may mutate through their receiver.
+parameters instead borrow an existing object place or supported polymorphic
+view for one call; they do not copy or own the object. Ordinary methods have
+read-only receivers, while `mut fn` methods may mutate through their receiver.
 
 Assignment updates an already live value without beginning a new lifetime.
 Construction begins a lifetime, and destruction ends it. Class fields are
@@ -70,9 +70,9 @@ operations, even when a class receives synthesized field-wise behavior.
 
 The broader direction keeps nullability and ownership visible in source types,
 preserves or reduces access through conversions, and prevents non-owning views
-from escaping their valid source lifetime. Shared allocation, polymorphic
-views, optionals, and exceptional control flow are not current compiler
-features, so their final safety rules remain subject to focused design.
+from escaping their valid source lifetime. Shared allocation, optionals, and
+exceptional control flow are not current compiler features, so their final
+safety rules remain subject to focused design.
 
 External function declarations are trusted ABI assertions. They form a narrow
 interoperation boundary rather than a proof that foreign code satisfies Skald
@@ -80,11 +80,12 @@ ownership or safety rules.
 
 ## Programs and implementation boundary
 
-The current compilation unit is one UTF-8 `.ska` source file. Top-level
-functions and classes share one non-overloaded namespace, and execution starts
-at a defined `fn main() -> i64`. Restricted exact-symbol external declarations
-connect primitive values to the platform ABI. Modules, imports, packages, and
-separate compilation are not yet language features.
+The current compilation unit is one UTF-8 `.ska` source file. Functions,
+external declarations, classes, and interfaces share one non-overloaded
+top-level namespace, and execution starts at a defined `fn main() -> i64`.
+Restricted exact-symbol external declarations connect primitive values to the
+platform ABI. Modules, imports, packages, and separate compilation are not yet
+language features.
 
 Target layout, registers, calling conventions, compiler IR, generated symbols,
 runtime allocation, and tool invocation are implementation concerns. They do
@@ -106,8 +107,8 @@ makes a result source-observable.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases and the maturity boundary around future ownership forms.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
-  class/interface/`Obj` views, slicing, and virtual/interface dispatch, plus
-  the frozen type-test and narrowing profile.
+  class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
+  and checked narrowing.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

@@ -4,21 +4,17 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-## In progress
+## Discoveries
 
-- [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its frozen profile
-  extends through checked narrowing. Interface calls execute on x86-64;
-  type tests and scoped checked narrowing now execute through verified MIR on
-  x86-64; final hardening and publication are next. The roadmap extends the
-  completed exact-class object model with inheritance, lifecycle composition,
-  virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing.
-  Direct-base lifecycle, inherited static access, class/`Obj` alias views,
-  owning slices, opt-in virtual methods, and interface dispatch are
-  implemented.
+- [Polymorphism maintainability discoveries](POLYMORPHISM_DISCOVERIES.md) —
+  actionable resolver and backend call-lowering structure follow-ups found
+  during final hardening. They do not change the implemented language
+  contract; addressing them before shared-ownership implementation would keep
+  those ownership-sensitive boundaries easier to extend.
 
-The current object-model dependency order is polymorphism before focused
-shared-ownership work, followed by checked exceptions that extend cleanup to
-exceptional control flow. Shared ownership and exceptions remain exploratory:
-neither is scheduled until a focused design and roadmap make its contracts
-reviewable. Other unscheduled language directions and their maturity are owned
-by the [status matrix](../language/STATUS.md#not-implemented).
+The completed polymorphism profile is now the baseline for focused
+shared-ownership work. Shared ownership is the next object-model direction;
+checked exceptions follow because they extend cleanup to exceptional control
+flow. Both remain exploratory until focused designs and roadmaps make their
+contracts reviewable. Other unscheduled language directions and their maturity
+are owned by the [status matrix](../language/STATUS.md#not-implemented).

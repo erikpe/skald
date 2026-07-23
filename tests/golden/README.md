@@ -21,8 +21,9 @@ The runner builds the runtime and invokes the real `skac` binary from the
 repository root. It compiles each run case to assembly in two independent
 processes and compares the bytes before linking and execution. It likewise
 compiles each failure twice and compares stderr before checking its snapshot.
-Native execution then checks stdout, stderr, and process status independently.
-Disposable artifacts are written under `build/golden/`.
+Each native executable runs twice; both status and output must agree before
+stdout, stderr, and process status are checked independently. Disposable
+artifacts are written under `build/golden/`.
 
 Keep each source focused and give related cases descriptive names. Put
 source-visible, target-independent expectations in the source and sidecars;

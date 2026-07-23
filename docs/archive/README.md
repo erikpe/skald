@@ -34,6 +34,7 @@ Archived plans:
 - [Object value semantics](OBJECT_VALUE_SEMANTICS_ROADMAP.md)
 - [Compiler maintainability cleanup](MAINTAINABILITY_ROADMAP.md)
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md)
+- [Restricted polymorphism](POLYMORPHISM_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

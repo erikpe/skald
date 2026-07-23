@@ -1,0 +1,42 @@
+error[TYP026]: method `resize` does not exactly implement `Shape.resize`
+ --> tests/golden/compile_fail/polymorphism_types.ska:17:8
+    |
+17 |     fn resize(ref other: Shape) -> bool {
+    |        ^^^^^^ receiver access differs from the interface requirement
+   |
+2 |     mut fn resize(ref other: Shape) -> bool;
+   |            ------ requirement declared here
+  = note: receiver access, binding modes, parameter types, and result type must match exactly
+
+error[TYP026]: class `Bad` does not implement requirement `Shape.area`
+ --> tests/golden/compile_fail/polymorphism_types.ska:11:7
+    |
+11 | class Bad extends Root implements Shape {
+    |       ^^^ required method is missing from this class and its bases
+   |
+3 |     fn area() -> u64;
+   |        ---- requirement declared here
+
+error[TYP021]: checked narrowing cannot increase alias access
+ --> tests/golden/compile_fail/polymorphism_types.ska:27:35
+    |
+27 |     narrow mut ref mutable: Bad = erased {}
+    |                                   ^^^^^^ this source provides read-only access
+    |
+27 |     narrow mut ref mutable: Bad = erased {}
+    |                    ------- mutable narrowed alias requested here
+
+error[TYP028]: checked narrowing can never succeed
+ --> tests/golden/compile_fail/polymorphism_types.ska:28:28
+    |
+28 |     narrow ref impossible: Root = other {}
+    |                            ^^^^ no possible dynamic class provides this view
+    |
+28 |     narrow ref impossible: Root = other {}
+    |                                   ----- source view
+
+error[TYP027]: type-test source must designate an object
+ --> tests/golden/compile_fail/polymorphism_types.ska:29:30
+    |
+29 |     var invalid_test: bool = scalar is Shape;
+    |                              ^^^^^^ this binding has a primitive type

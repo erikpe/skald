@@ -119,7 +119,7 @@ explicitly direct or virtual; virtual targets carry the family, slot, and
 statically selected method. Receivers and alias views retain either an exact
 complete place/dynamic class or a forwarded binding that carries runtime
 complete-object and dynamic-class metadata. Destructor `self` origins also
-record the frozen dispatch limit.
+record the declared dispatch limit.
 
 Interfaces cross the typed boundary as declaration tables and deterministic
 requirement-to-method maps for every effective class conformance. Interface

@@ -137,15 +137,28 @@ fn run_native_case(
         .map_err(|error| format!("could not start skac: {error}"))?;
     require_successful_compilation(&compilation)?;
 
-    let execution = Command::new(&executable)
-        .output()
-        .map_err(|error| format!("could not run generated executable: {error}"))?;
+    let execution = run_executable(&executable)?;
+    let repeated = run_executable(&executable)?;
+    if (
+        execution.status.code(),
+        &execution.stdout,
+        &execution.stderr,
+    ) != (repeated.status.code(), &repeated.stdout, &repeated.stderr)
+    {
+        return Err("native observation changed across two independent executions".to_owned());
+    }
     verify_native_execution(
         &expected,
         execution.status.code(),
         &execution.stdout,
         &execution.stderr,
     )
+}
+
+fn run_executable(executable: &Path) -> Result<Output, String> {
+    Command::new(executable)
+        .output()
+        .map_err(|error| format!("could not run generated executable: {error}"))
 }
 
 fn assert_deterministic_assembly(

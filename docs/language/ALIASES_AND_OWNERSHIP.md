@@ -192,9 +192,9 @@ parameter restrictions do not implicitly specify that larger feature.
 Optional payloads and array elements are not alias sources because neither
 value family is implemented. Any future design must define how a conditional
 payload or element remains present and at a stable location while aliased;
-the current parameter model does not settle those constraints. Frozen
+the current parameter model does not settle those constraints. Implemented
 polymorphic alias conversions and scoped narrowing are defined by
-[polymorphism](POLYMORPHISM.md); the active roadmap owns their implementation.
+[polymorphism](POLYMORPHISM.md).
 
 ## Implementation boundary
 

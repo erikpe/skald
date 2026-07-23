@@ -1,0 +1,27 @@
+fn helper() -> i64 {
+    return 0;
+}
+
+class Unknown extends Missing {
+    init() {}
+}
+
+class WrongKind extends helper {
+    init() {}
+}
+
+class SelfBase extends SelfBase {
+    init() {}
+}
+
+class Alpha extends Beta {
+    init() {}
+}
+
+class Beta extends Alpha {
+    init() {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

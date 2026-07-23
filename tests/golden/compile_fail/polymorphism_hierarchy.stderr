@@ -1,0 +1,45 @@
+error[RES013]: unknown base class `Missing`
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:5:23
+   |
+5 | class Unknown extends Missing {
+   |                       ^^^^^^^ no class with this name is declared
+
+error[RES013]: `helper` does not name a base class
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:9:25
+   |
+9 | class WrongKind extends helper {
+   |                         ^^^^^^ expected a class name
+   |
+1 | fn helper() -> i64 {
+   |    ------ function declared here
+
+error[RES013]: class `SelfBase` cannot extend itself
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:13:24
+    |
+13 | class SelfBase extends SelfBase {
+    |                        ^^^^^^^^ this resolves to the enclosing class
+    |
+13 | class SelfBase extends SelfBase {
+    |       -------- class declared here
+
+error[RES014]: inheritance cycle: `Alpha -> Beta -> Alpha`
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:17:21
+    |
+17 | class Alpha extends Beta {
+    |                     ^^^^ class `Alpha` participates in this cycle
+    |
+21 | class Beta extends Alpha {
+    |                    ----- class `Beta` continues the cycle
+  = note: class inheritance must form an acyclic chain
+
+error[RES016]: a derived initializer must begin with `super(...)`
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:18:12
+    |
+18 |     init() {}
+    |            ^^ initialize the direct base before derived fields
+
+error[RES016]: a derived initializer must begin with `super(...)`
+ --> tests/golden/compile_fail/polymorphism_hierarchy.ska:22:12
+    |
+22 |     init() {}
+    |            ^^ initialize the direct base before derived fields

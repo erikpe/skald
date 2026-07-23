@@ -1,0 +1,18 @@
+class Root {
+    init() {}
+    fn direct() -> unit {}
+    virtual fn dynamic() -> unit {}
+}
+
+class Bad extends Root {
+    init() {
+        super();
+    }
+
+    override fn direct() -> unit {}
+    fn dynamic() -> unit {}
+}
+
+fn main() -> i64 {
+    return 0;
+}

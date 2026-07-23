@@ -9,7 +9,7 @@ its reviewed scope and ordering stay stable.
 
 ## Resolved
 
-The [polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) completed both
+The [polymorphism roadmap](POLYMORPHISM_ROADMAP.md) completed both
 follow-ups before hierarchy implementation so new member and lifecycle
 categories build on concise owners.
 

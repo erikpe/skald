@@ -1,0 +1,34 @@
+interface Shape {
+    mut fn resize(ref other: Shape) -> bool;
+    fn area() -> u64;
+}
+
+class Root {
+    init() {}
+    virtual fn dynamic() -> unit {}
+}
+
+class Bad extends Root implements Shape {
+    init() {
+        super();
+    }
+
+    override fn dynamic() -> unit {}
+    fn resize(ref other: Shape) -> bool {
+        return true;
+    }
+}
+
+class Other {
+    init() {}
+}
+
+fn invalid(ref erased: Obj, ref other: Other, scalar: i64) -> unit {
+    narrow mut ref mutable: Bad = erased {}
+    narrow ref impossible: Root = other {}
+    var invalid_test: bool = scalar is Shape;
+}
+
+fn main() -> i64 {
+    return 0;
+}

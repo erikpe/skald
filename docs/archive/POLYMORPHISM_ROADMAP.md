@@ -1,7 +1,7 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM20 is next. The
-[archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
+Status: complete and archived. The
+[archived documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
 
@@ -103,7 +103,7 @@ The frozen restricted profile excludes:
 - [x] PM17 — Type-check type tests and checked narrowing
 - [x] PM18 — Represent and verify tests and narrowing in MIR
 - [x] PM19 — Lower tests and checked narrowing on x86-64
-- [ ] PM20 — Harden, document, and publish polymorphism
+- [x] PM20 — Harden, document, and publish polymorphism
 
 ## 3. PR-sized implementation sequence
 
@@ -555,22 +555,22 @@ and produce only verified non-owning views.
 **Purpose:** Make the restricted profile dependable and leave a stable boundary
 for shared ownership.
 
-- [ ] Complete compile-failure and native goldens across hierarchy declarations,
+- [x] Complete compile-failure and native goldens across hierarchy declarations,
       lifecycle, layout, static access, slicing, virtual/interface dispatch,
       `Obj`, conversions, tests, narrowing, aliases, object values, and cleanup.
-- [ ] Add cross-process determinism coverage for every phase dump, dynamic
+- [x] Add cross-process determinism coverage for every phase dump, dynamic
       metadata artifact, assembly, diagnostic, and native observation.
-- [ ] Audit source-reachable assertions, hierarchy/table assumptions,
+- [x] Audit source-reachable assertions, hierarchy/table assumptions,
       complete-object views, initialized-place transitions, verifier mutations,
       and backend legality; retain every discovered regression as a focused
       test.
-- [ ] Audit touched files and functions by responsibility, split any enlarged
+- [x] Audit touched files and functions by responsibility, split any enlarged
       owner or test module, and record unrelated follow-ups in the indexed
       discoveries document.
-- [ ] Update the focused grammar, status, polymorphism, class, alias, compiler
+- [x] Update the focused grammar, status, polymorphism, class, alias, compiler
       phase, backend, README, debugging, sample, testing, and roadmap-index
       authorities with only current behavior.
-- [ ] Complete all quality gates, mark this roadmap complete, archive it, repair
+- [x] Complete all quality gates, mark this roadmap complete, archive it, repair
       links and indexes, and publish shared ownership as the next object-model
       direction.
 

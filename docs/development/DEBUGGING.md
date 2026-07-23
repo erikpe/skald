@@ -79,9 +79,10 @@ are useful for comparison but are not an ABI promise. The
 runtime selection, artifact publication, diagnostics, and process status.
 
 For complete behavior, use the golden runner. It keeps deterministic assembly
-or diagnostic checks separate from link and execution observations, and it
-reports stdout, stderr, and exit-status mismatches independently. Build
-artifacts are under `build/golden/`; they are disposable debugging output.
+or diagnostic checks separate from link and execution observations, compares
+two native executions, and reports stdout, stderr, and exit-status mismatches
+independently. Build artifacts are under `build/golden/`; they are disposable
+debugging output.
 
 ## Symptom to owner
 

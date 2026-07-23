@@ -88,10 +88,12 @@ it. Do not introduce a second renderer solely to make a test convenient.
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.
-`object_determinism` compares AST, resolved, HIR, MIR, and assembly products
-from two independent test processes. The golden runner invokes `skac` twice
-for every successful assembly and every compile failure, comparing assembly
-bytes or stderr bytes before it evaluates the remaining expectations.
+`pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
+products for representative object-lifetime and polymorphism programs from
+two independent test processes. The golden runner invokes `skac` twice for
+every successful assembly and every compile failure, comparing assembly or
+diagnostic bytes. It also executes every native case twice and compares status,
+stdout, and stderr before evaluating the checked-in expectations.
 
 Preserve this process isolation for behavior affected by identity allocation,
 table traversal, filesystem paths, labels, diagnostics, or formatting. A

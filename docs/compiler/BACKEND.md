@@ -279,7 +279,7 @@ remain the compatibility boundary.
 Focused tests cover target registration, primitive, nested, and inherited
 class layout, mixed register/stack classification, hidden destinations and
 receivers, frame/place addressing, legality and structured failures,
-instruction selection, assembler acceptance, call pressure, and native
-execution. Golden execution additionally covers deep base chains, padded and
-empty bases, static views, slicing, object results, temporaries, and complete
-lifecycle order.
+instruction selection, assembler acceptance, call pressure, virtual and
+interface dispatch, runtime type operations, and native execution. Golden
+execution additionally covers deep base chains, static and polymorphic views,
+slicing, object results, temporaries, and complete lifecycle order.

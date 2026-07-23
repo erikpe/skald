@@ -23,9 +23,7 @@ model.
   roadmaps or Git.
 
 An implemented row describes only the stated boundary. A broader feature name
-does not imply support beyond that boundary. Polymorphism is the only
-unimplemented language area currently classified as **frozen design**; its
-active roadmap implements that settled profile in ordered slices.
+does not imply support beyond that boundary.
 
 ## Implemented language
 
@@ -39,6 +37,7 @@ active roadmap implements that settled profile in ordered slices.
 | [Entry point and primitive interoperation](MODULES_AND_INTEROP.md) | **Implemented contract** | A defined `fn main() -> i64`; trusted external declarations using their source name as the linker symbol and by-value primitive parameters/results, with `unit` also allowed as a result. |
 | [Exact nominal classes](CLASSES_AND_LIFECYCLE.md#exact-nominal-classes) | **Implemented contract** | Inline class values; primitive and class fields; exactly one ordinary initializer; and read-only and mutable receiver methods. Opt-in virtual dispatch is tracked separately under dynamic polymorphism. |
 | [Static inheritance semantics](POLYMORPHISM.md#hierarchies-and-declaration-namespaces) | **Implemented contract** | Canonical single-base identity; mandatory `super(...)`; complete lifecycle composition; inherited fields and direct methods through verified base projections; access-preserving class/`Obj` views; exact-copy owning slices; and x86-64 execution. |
+| [Dynamic polymorphism](POLYMORPHISM.md) | **Implemented contract** | Opt-in virtual methods, exact inherited interface conformance, class/interface/`Obj` views and forwarding, virtual/interface calls, type tests, and scoped checked narrowing execute on x86-64. |
 | [Inline containment and initialization](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-contract) | **Implemented contract** | Acyclic exact-class subobjects, direct field construction, straight-line definite field initialization, nested field places, and access-preserving projected receivers. |
 | [Call-scoped aliases](ALIASES_AND_OWNERSHIP.md) | **Implemented contract** | `ref` and `mut ref` parameters over existing class places, including ancestor and `Obj` views, forwarding, and deliberate overlap. Aliases remain non-owning and access-restricted; local aliases and external alias signatures are unsupported. |
 | [Deterministic object lifetime](CLASSES_AND_LIFECYCLE.md#lifetime-registration-and-normal-cleanup) | **Implemented contract** | Optional user `destroy` bodies, normal block/conditional/return cleanup, reverse local and field order, and exactly-once cleanup for owning inline values. Failed construction and exceptional cleanup are outside the implemented control-flow model. |
@@ -70,7 +69,6 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Dynamic polymorphism](POLYMORPHISM.md) | **Partial implementation** | Static hierarchy, lifecycle, inherited access, ancestor/interface/`Obj` views, slicing, opt-in virtual methods, exact inherited interface conformance, forwarding, interface calls, type tests, and scoped checked narrowing execute on x86-64. Final hardening and publication remain in the active roadmap. |
 | [Shared ownership and heap allocation](ALIASES_AND_OWNERSHIP.md#future-ownership-boundary) | **Exploratory direction** | Non-null shared owning handles, reference counting, dynamic complete-object destruction, and borrow anchors are intended, but source and runtime contracts are not frozen. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |
@@ -103,7 +101,7 @@ than copied from legacy prose:
   source-to-assembly entry point;
 - the golden runner recursively discovers `tests/golden/run/**/*.ska` and
   `tests/golden/compile_fail/**/*.ska`, checks deterministic assembly or
-  diagnostics, and executes successful programs;
+  diagnostics, and compares repeated native status and output;
 - the runtime Makefile builds the contract, successful-output, and
   output-failure C harnesses documented in the
   [runtime test guide](../../tests/runtime/README.md);

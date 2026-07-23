@@ -10,3 +10,5 @@ Small Skald programs used for language bring-up and manual experimentation belon
 - `object_value_semantics.ska` demonstrates copy construction and assignment,
   internal object parameters/results, bounded produced-object temporaries,
   deterministic cleanup, and the direct constructor-elision cases.
+- `polymorphism.ska` demonstrates inheritance, virtual and interface dispatch,
+  an `Obj` type test, and scoped checked narrowing.

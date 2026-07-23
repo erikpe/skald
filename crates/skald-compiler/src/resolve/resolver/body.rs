@@ -708,7 +708,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                             )
                             .with_primary_label(
                                 identifier.span,
-                                "interface calls are not available yet",
+                                "interfaces describe non-owning views and cannot be constructed",
                             ),
                         );
                         None

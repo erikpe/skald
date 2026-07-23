@@ -127,7 +127,7 @@ fn lifecycle_spellings_remain_ordinary_names_outside_special_member_syntax() {
 }
 
 #[test]
-fn frozen_polymorphism_words_remain_ordinary_names_outside_future_forms() {
+fn polymorphism_words_remain_ordinary_names_outside_their_contextual_forms() {
     let (_, output) = parse_text(concat!(
         "class Names {\n",
         "    extends: i64; implements: i64; interface: i64; virtual: i64;\n",
@@ -153,7 +153,7 @@ fn frozen_polymorphism_words_remain_ordinary_names_outside_future_forms() {
 }
 
 #[test]
-fn parses_contextual_virtual_method_modifiers_in_the_frozen_order() {
+fn parses_contextual_virtual_method_modifiers_in_the_required_order() {
     let (sources, output) = parse_text(concat!(
         "class Base {\n",
         "  init() {}\n",

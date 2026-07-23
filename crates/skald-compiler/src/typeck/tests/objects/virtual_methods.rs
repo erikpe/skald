@@ -336,7 +336,7 @@ fn mutable_virtual_calls_use_existing_receiver_access_diagnostics() {
 }
 
 #[test]
-fn destructor_self_calls_use_the_frozen_dispatch_limit() {
+fn destructor_self_calls_use_the_declared_dispatch_limit() {
     let output = check_text(concat!(
         "class Root {\n",
         "  init() {}\n",

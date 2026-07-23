@@ -202,7 +202,7 @@ pub enum HirObjectReturn {
         class: ClassId,
         span: Span,
     },
-    /// The frozen return-elision case: construct directly in return storage.
+    /// The supported return-elision case: construct directly in return storage.
     Construct {
         construction: HirConstruction,
         omitted_copy: HirSelectedCopyOperation<InitializerId>,

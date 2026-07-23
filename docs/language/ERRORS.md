@@ -37,17 +37,15 @@ operation requiring a general language panic policy.
 The repository's bootstrap output functions are ordinary external calls. Their
 current runtime contract terminates the process unsuccessfully when a write or
 flush failure is detected. No exact diagnostic text, process status, or signal
-is promised. This is the only repository runtime-failure behavior currently
-exposed through supported source programs, and it does not establish a general
-Skald panic mechanism.
+is promised. This does not establish a general Skald panic mechanism.
 
 Foreign code reached through an external declaration may also fail to return
 or may terminate the process. Such behavior lies beyond the guarantees of the
 trusted [foreign-interoperation boundary](MODULES_AND_INTEROP.md#external-function-declarations).
 
-The frozen but unimplemented
-[checked-narrowing profile](POLYMORPHISM.md#checked-narrowing) adds one
-unrecoverable runtime failure. A failed dynamic narrowing will terminate
+The implemented
+[checked-narrowing profile](POLYMORPHISM.md#checked-narrowing) has one
+unrecoverable runtime failure. A failed dynamic narrowing terminates
 unsuccessfully without returning to Skald or guaranteeing remaining
 source-level cleanup. It does not introduce a catchable exception or settle a
 general panic facility.

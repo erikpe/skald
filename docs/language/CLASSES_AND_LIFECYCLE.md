@@ -35,7 +35,7 @@ The implemented class member categories are:
 |---|---|
 | Field | Named inline storage with a primitive or exact-class type. |
 | Ordinary initializer | The one required operation that establishes a new complete object. |
-| Method | A statically selected instance operation with a read-only or mutable receiver. |
+| Method | An instance operation with a read-only or mutable receiver; polymorphism defines direct and virtual selection. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
 The shared top-level namespace is defined by
@@ -495,10 +495,8 @@ modifiers, `final`, abstract members, overloads, reflection, or user-defined
 conversions. Direct-base syntax, hierarchy validation, inherited selection and
 lifecycle, class/interface/`Obj` alias views, slicing, virtual dispatch, and
 interface dispatch, type tests, and checked narrowing execute on x86-64.
-Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
-the [polymorphism profile](POLYMORPHISM.md) owns their language contract, and
-the active [polymorphism roadmap](../roadmaps/POLYMORPHISM_ROADMAP.md) owns
-final hardening and publication.
+Their maturity is recorded in the [status matrix](STATUS.md), and the
+[polymorphism profile](POLYMORPHISM.md) owns their language contract.
 
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment
