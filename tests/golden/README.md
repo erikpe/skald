@@ -17,13 +17,13 @@ line feeds, and non-UTF-8 stdout are not normalized. Successful native cases
 must produce empty stderr. Compile failures must produce no stdout and exit
 with compiler status 1.
 
-The runner builds the runtime and invokes the real `skac` binary from the
-repository root. It compiles each run case to assembly in two independent
-processes and compares the bytes before linking and execution. It likewise
-compiles each failure twice and compares stderr before checking its snapshot.
-Each native executable runs twice; both status and output must agree before
-stdout, stderr, and process status are checked independently. Disposable
-artifacts are written under `build/golden/`.
+The root Makefile builds the runtime before the runner invokes the real `skac`
+binary from the repository root. The runner compiles each run case to assembly
+in two independent processes and compares the bytes before linking and
+execution. It likewise compiles each failure twice and compares stderr before
+checking its snapshot. Each native executable runs twice; both status and
+output must agree before stdout, stderr, and process status are checked
+independently. Disposable artifacts are written under `build/golden/`.
 
 Keep each source focused and give related cases descriptive names. Put
 source-visible, target-independent expectations in the source and sidecars;
@@ -34,8 +34,9 @@ from the repository root with:
 make golden-test
 ```
 
-The sidecar loader and mismatch reporting have a separate focused suite:
+`make golden-test` includes the sidecar loader and mismatch-reporting suite.
+Run only that focused suite with:
 
 ```text
-cargo test --locked -p skac --test golden-expectations
+make golden-expectations-test
 ```

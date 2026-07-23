@@ -31,8 +31,12 @@ make help
 
 for the current detailed command inventory. Focused targets are useful while
 iterating; `make check` is the complete ordinary gate for the selected stable
-toolchain and includes formatting, workspace checks, Clippy, Rust and golden
-tests, direct C runtime tests, and documentation validation.
+toolchain. Its dependency graph is explicit: `static-check` combines
+formatting, workspace checks, Clippy, and documentation validation, while
+`test` combines compiler, CLI, golden, direct C runtime, and documentation
+tests. The bounded robustness cases are part of the compiler suite; only the
+larger scheduled robustness run and the minimum-supported-Rust check remain
+outside the ordinary gate for less frequent external validation.
 
 Commands should remain independently runnable through the Makefile. A helper
 script may implement a repeated workflow, but it must not become the only way

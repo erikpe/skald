@@ -50,11 +50,10 @@ that assembly text alone does not establish.
 cargo test --locked -p skald-compiler lexer::tests
 cargo test --locked -p skald-compiler mir::verify
 cargo test --locked -p skald-compiler --test public_api
-cargo test --locked -p skac --test cli
-cargo test --locked -p skac --test golden-expectations
+make cli-test
 make golden-test
 make runtime-test
-make robustness-smoke
+make compiler-test
 ```
 
 Rust test-name filters match substrings and may select more than one test; use
@@ -101,11 +100,11 @@ single-process equality check is useful but does not replace it.
 
 ## Robustness
 
-`make robustness-smoke` runs fixed-seed, bounded hostile frontend inputs plus
-structured MIR mutations. It is included indirectly in `make check` through
-the Rust workspace tests. `make robustness-long` raises the generated case
-count through `SKALD_ROBUSTNESS_CASES`; it is intended for scheduled or
-pre-release use and remains reproducible.
+`make compiler-test` includes the fixed-seed bounded hostile frontend inputs
+and structured MIR mutations with the rest of the compiler suite.
+`make robustness-long` reruns the generated frontend cases with a larger
+`SKALD_ROBUSTNESS_CASES` value. It is intended for less frequent external,
+scheduled, or pre-release validation and remains reproducible.
 
 When robustness testing finds a defect, retain the smallest focused regression
 at the owning layer. Add corpus data only when the bytes or source are clearer

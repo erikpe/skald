@@ -23,8 +23,10 @@ The suite contains three focused executables:
 
 The two output harnesses share only the small error-reporting and exact-f64-bit
 construction helpers in `runtime_test_support.c`. The Makefile builds and runs
-the contract, successful-output, and failure harnesses in that order so a
-failure identifies the responsible boundary directly.
+the runtime archive before entering the runtime test Makefile, which retains
+the archive dependency for direct use. It then builds and runs the contract,
+successful-output, and failure harnesses in that order so a failure identifies
+the responsible boundary directly.
 
 The successful-output cases include integer boundaries, boolean values,
 representative exact binary64 patterns, and mixed consecutive records. The

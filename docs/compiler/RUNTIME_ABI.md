@@ -134,7 +134,8 @@ failure behavior, ABI representation, version transition, and focused tests.
 
 ## Verification
 
-`make runtime-test` builds the runtime and three directly linked C harnesses:
+`make runtime-test` explicitly depends on the runtime archive and then builds
+three directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;

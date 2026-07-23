@@ -36,7 +36,6 @@ fn run() -> Result<(), String> {
         ));
     }
 
-    build_runtime(&repository)?;
     fs::create_dir_all(&build_root)
         .map_err(|error| format!("could not create golden build directory: {error}"))?;
 
@@ -99,23 +98,6 @@ fn discover_sources(directory: &Path, sources: &mut Vec<PathBuf>) -> Result<(), 
         }
     }
     Ok(())
-}
-
-fn build_runtime(repository: &Path) -> Result<(), String> {
-    let result = Command::new("make")
-        .arg("-C")
-        .arg(repository.join("runtime"))
-        .output()
-        .map_err(|error| format!("could not start runtime build: {error}"))?;
-    if result.status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "runtime build failed with {}: {}",
-            display_status(result.status.code()),
-            captured_output(&result)
-        ))
-    }
 }
 
 fn run_native_case(
