@@ -4,14 +4,6 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-## Discoveries
-
-- [Polymorphism maintainability discoveries](POLYMORPHISM_DISCOVERIES.md) —
-  one actionable backend call-lowering structure follow-up found during final
-  hardening. It does not change the implemented language contract; addressing
-  it before shared-ownership implementation would keep that ownership-sensitive
-  boundary easier to extend.
-
 The completed polymorphism profile is now the baseline for focused
 shared-ownership work. Shared ownership is the next object-model direction;
 checked exceptions follow because they extend cleanup to exceptional control

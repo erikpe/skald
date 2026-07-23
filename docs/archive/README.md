@@ -44,3 +44,4 @@ Supporting records for the documentation overhaul:
 Resolved compiler-maintainability follow-ups:
 
 - [maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md)
+- [polymorphism maintainability discoveries](POLYMORPHISM_DISCOVERIES.md)
