@@ -19,7 +19,8 @@ const BYTE_SEED: u64 = 0x6a09_e667_f3bc_c909;
 const UTF8_SEED: u64 = 0xbb67_ae85_84ca_a73b;
 const VALID_CHARACTERS: &[char] = &[
     '\0', '\n', '\r', '\t', ' ', '(', ')', '{', '}', ':', ';', ',', '.', '+', '-', '*', '/', '=',
-    '0', '1', '8', '9', 'a', 'f', 'i', 'n', 'r', 't', 'u', '_', 'é', 'λ', '中', '🦀',
+    '0', '1', '8', '9', 'a', 'c', 'd', 'e', 'f', 'i', 'l', 'n', 'r', 's', 't', 'u', 'x', '_', 'é',
+    'λ', '中', '🦀',
 ];
 
 #[test]
@@ -27,6 +28,22 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     let cases = generated_case_count();
     exercise_generated_bytes(cases);
     exercise_generated_utf8(cases);
+    exercise_class_header_mutations();
+}
+
+fn exercise_class_header_mutations() {
+    const SEED: &str = "class Derived extends Base { init() {} }";
+
+    for index in 0..SEED.len() {
+        let mut deletion = SEED.to_owned();
+        deletion.remove(index);
+        assert_frontend_does_not_panic(&format!("class-header-delete-{index}"), &deletion);
+    }
+    for index in 0..=SEED.len() {
+        let mut insertion = SEED.to_owned();
+        insertion.insert_str(index, " extends ");
+        assert_frontend_does_not_panic(&format!("class-header-insert-{index}"), &insertion);
+    }
 }
 
 #[test]

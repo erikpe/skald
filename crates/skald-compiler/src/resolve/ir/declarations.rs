@@ -98,6 +98,7 @@ pub struct ResolvedClassDeclaration {
     pub id: ClassId,
     pub name: String,
     pub name_span: Span,
+    pub direct_base: Option<ResolvedDirectBase>,
     pub fields: Vec<ResolvedFieldDeclaration>,
     pub initializer: Option<ResolvedInitializerDeclaration>,
     pub copy_constructor_declaration: Option<ResolvedInitializerDeclaration>,
@@ -106,6 +107,12 @@ pub struct ResolvedClassDeclaration {
     pub copy_assignment: ResolvedCopyOperation<CopyAssignmentId>,
     pub destructor: Option<ResolvedDestructorDeclaration>,
     pub methods: Vec<ResolvedMethodDeclaration>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedDirectBase {
+    pub class: ClassId,
     pub span: Span,
 }
 

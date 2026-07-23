@@ -64,12 +64,12 @@ They remain available as field names, method names, parameter names, local
 names, and top-level function names. For example, `destroy: i64;` is a field
 and `fn destroy() -> unit {}` is a method.
 
-The frozen polymorphism profile will contextually recognize `extends`,
-`implements`, `interface`, `virtual`, `override`, `super`, `is`, `narrow`, and
-the type spelling `Obj`. None is reserved or has its future meaning in the
-current grammar. The exact future forms are specified separately in
-[polymorphism](POLYMORPHISM.md#frozen-source-profile) and become part of this
-implemented grammar only when their parser tasks land.
+`extends` is contextually recognized only after a class name. It remains an
+ordinary identifier everywhere else. The frozen polymorphism profile will
+also contextually recognize `implements`, `interface`, `virtual`, `override`,
+`super`, `is`, `narrow`, and the type spelling `Obj`; none of those later
+forms is part of the implemented grammar yet. Their exact source forms are
+specified in [polymorphism](POLYMORPHISM.md#frozen-source-profile).
 
 ## Punctuation
 
@@ -145,7 +145,8 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 ## Class declarations
 
 ```text
-class-declaration           = "class" identifier "{" {class-member} "}"
+class-declaration           = "class" identifier ["extends" identifier]
+                              "{" {class-member} "}"
 
 class-member                = field-declaration
                             | initializer-declaration
@@ -161,11 +162,12 @@ method-declaration          = ["mut"] "fn" identifier parameter-list
                               "->" result-type block
 ```
 
-The grammar intentionally does not encode the required number or signature of
-lifecycle members, initializer-body restrictions, receiver access, or member
-type legality. It only classifies their source forms. A lifecycle word used
-after `fn` is an ordinary method name; a lifecycle word followed by `:` is an
-ordinary field name.
+The grammar intentionally does not encode base-name resolution, hierarchy
+validity, the required number or signature of lifecycle members,
+initializer-body restrictions, receiver access, or member type legality. It
+only classifies their source forms. A lifecycle word used after `fn` is an
+ordinary method name; a lifecycle word followed by `:` is an ordinary field
+name.
 
 ## Blocks and statements
 

@@ -77,9 +77,10 @@ name-dependent.
 
 The resolved program replaces successful name uses with typed identities for
 functions, classes, members, callables, parameters, locals, and bindings.
-Callable-owned identities also scope later local MIR identities. Declaration
-tables retain deterministic identity order, and later phases select entries by
-identity rather than by source spelling.
+Optional direct class bases likewise carry `ClassId` rather than source
+spelling. Callable-owned identities also scope later local MIR identities.
+Declaration tables retain deterministic identity order, and later phases
+select entries by identity rather than by source spelling.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
@@ -92,6 +93,10 @@ when no type error remains. HIR records exact semantic types, receiver and
 alias access, selected primitive and lifecycle operations, exact callable
 targets, object places, construction destinations, copy choices, and
 structured flow summaries.
+
+The current direct-base implementation deliberately stops before this
+boundary: until canonical hierarchy validation is implemented, any resolved
+class base produces a type diagnostic and no HIR.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling

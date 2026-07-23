@@ -41,7 +41,7 @@ explicit arguments.
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **alias** | A call-scoped, non-owning view of an existing exact-class place. Read-only and mutable access are explicit. |
-| **exact class** | One nominal class identity without an inheritance conversion. The current compiler implements only exact-class behavior. |
+| **exact class** | One nominal class identity without an inheritance conversion. Current executable semantics implement only exact-class behavior. |
 | **lifecycle member** | A contextual `init`, `assign`, or `destroy` class member occupying a dedicated semantic slot rather than the ordinary method namespace. |
 
 ## Values, places, and mutation
@@ -105,8 +105,9 @@ makes a result source-observable.
   places, plus copying, assignment, temporaries, and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases and the maturity boundary around future ownership forms.
-- [Polymorphism](POLYMORPHISM.md) defines the frozen but not-yet-implemented
-  hierarchy, view, dispatch, interface, type-test, and narrowing profile.
+- [Polymorphism](POLYMORPHISM.md) defines the frozen profile and its current
+  direct-base parsing/resolution boundary, plus the pending hierarchy, view,
+  dispatch, interface, type-test, and narrowing semantics.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

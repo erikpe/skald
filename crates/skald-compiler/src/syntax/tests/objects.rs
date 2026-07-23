@@ -153,6 +153,75 @@ fn frozen_polymorphism_words_remain_ordinary_names_outside_future_forms() {
 }
 
 #[test]
+fn parses_contextual_extends_without_reserving_the_spelling() {
+    let (_, output) = parse_text(concat!(
+        "class Base { init() {} }\n",
+        "class Derived extends Base { init() {} }\n",
+        "class extends { extends: i64; init(extends: i64) { self.extends = extends; } }\n",
+        "fn extends(extends: i64) -> i64 { return extends; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    assert!(class(&output.ast, 0).direct_base.is_none());
+    let derived = class(&output.ast, 1);
+    assert_eq!(
+        derived.direct_base.as_ref().map(|base| base.text.as_str()),
+        Some("Base")
+    );
+    assert_eq!(class(&output.ast, 2).name.text, "extends");
+    assert_eq!(function(&output.ast, 3).name.text, "extends");
+}
+
+#[test]
+fn malformed_and_duplicate_base_clauses_recover_at_the_class_body() {
+    let (_, output) = parse_text(concat!(
+        "class Missing extends { init() {} }\n",
+        "class Duplicate extends First extends Second { init() {} }\n",
+        "class First { init() {} }\n",
+        "class Second { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let codes: Vec<_> = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
+    assert_eq!(codes, [EXPECTED_TOKEN, INVALID_CLASS_HEADER]);
+    assert_eq!(output.ast.declarations.len(), 5);
+    assert!(class(&output.ast, 0).direct_base.is_none());
+    assert_eq!(
+        class(&output.ast, 1)
+            .direct_base
+            .as_ref()
+            .map(|base| base.text.as_str()),
+        Some("First")
+    );
+    assert_eq!(function(&output.ast, 4).name.text, "main");
+}
+
+#[test]
+fn class_base_spelling_is_explicit_in_the_ast_dump() {
+    let (_, output) = parse_text("class Derived extends Base { init() {} }");
+    assert!(output.diagnostics.is_empty());
+
+    assert_eq!(
+        dump_ast(&output.ast),
+        concat!(
+            "CompilationUnit @0..40\n",
+            "  Class @0..40\n",
+            "    Name \"Derived\" @6..13\n",
+            "    DirectBase \"Base\" @22..26\n",
+            "    Members\n",
+            "      Initializer @29..38\n",
+            "        Introducer @29..33\n",
+            "        Parameters\n",
+            "        Block @36..38\n",
+        )
+    );
+}
+
+#[test]
 fn parses_a_dedicated_destructor_with_a_complete_source_span() {
     let (sources, output) = parse_text(concat!(
         "class Resource {\n",

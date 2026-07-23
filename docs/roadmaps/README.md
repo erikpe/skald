@@ -7,11 +7,11 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its executable profile
-  is frozen, and class inheritance is next. The roadmap extends the completed
-  exact-class
-  object model with inheritance, lifecycle composition, virtual dispatch,
-  interfaces, `Obj` views, type tests, and checked narrowing. Its preparatory
-  resolver and type-checker class orchestration tasks are complete.
+  is frozen, and canonical hierarchy validation and inherited lookup are next.
+  The roadmap extends the completed exact-class object model with inheritance,
+  lifecycle composition, virtual dispatch, interfaces, `Obj` views, type
+  tests, and checked narrowing. Direct-base syntax and resolved identity are
+  complete; executable inheritance remains blocked before HIR.
 
 The current object-model dependency order is polymorphism before focused
 shared-ownership work, followed by checked exceptions that extend cleanup to

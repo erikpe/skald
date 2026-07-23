@@ -1,10 +1,11 @@
 # Skald Polymorphism
 
-Status: frozen design for the active polymorphism implementation roadmap. The
-current compiler still rejects every inheritance, interface, polymorphic-view,
-type-test, and narrowing form described here until its scheduled implementation
-task lands. The [status matrix](STATUS.md) distinguishes this frozen profile
-from the implemented exact-class baseline.
+Status: frozen design under active implementation. The compiler parses one
+contextual `extends` clause and resolves its target to a class identity, but
+rejects every inheritance-shaped program before HIR. Hierarchy behavior,
+interfaces, polymorphic views, type tests, and narrowing remain unavailable.
+The [status matrix](STATUS.md) distinguishes this boundary from executable
+exact-class behavior.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -18,9 +19,10 @@ profile. It extends, rather than replaces:
 
 ## Frozen source profile
 
-The following EBNF describes the future surface owned by this profile. It is
-not part of the implemented grammar until the corresponding roadmap tasks
-update the parser and [implemented grammar](GRAMMAR.md).
+The following EBNF describes the complete surface owned by this profile. The
+optional `extends` clause is now part of the
+[implemented grammar](GRAMMAR.md); the remaining forms become accepted only
+when their corresponding roadmap tasks land.
 
 ```text
 class-declaration       = "class" identifier ["extends" identifier]

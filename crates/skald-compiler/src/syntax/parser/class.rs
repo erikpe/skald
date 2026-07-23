@@ -6,7 +6,9 @@ impl Parser<'_> {
     pub(super) fn parse_class(&mut self) -> Option<ClassDecl> {
         let class_token = self.advance();
         let name = self.parse_name("expected a class name after `class`");
-        let left_brace = self.expect(TokenKind::LeftBrace, "`{` after the class name")?;
+        let direct_base = self.parse_direct_base();
+        self.discard_duplicate_base_clauses();
+        let left_brace = self.expect(TokenKind::LeftBrace, "`{` after the class header")?;
         self.brace_depth += 1;
         self.class_depth += 1;
         let body = self.with_syntax_nesting(left_brace.span, |parser| parser.parse_class_body());
@@ -17,9 +19,42 @@ impl Parser<'_> {
 
         Some(ClassDecl {
             name,
+            direct_base,
             members,
             span: self.cover(class_token.span, right_brace.span),
         })
+    }
+
+    fn parse_direct_base(&mut self) -> Option<Name> {
+        if !self.at_contextual("extends") {
+            return None;
+        }
+
+        self.advance();
+        self.parse_name("expected a base class name after `extends`")
+    }
+
+    fn discard_duplicate_base_clauses(&mut self) {
+        while self.at_contextual("extends") {
+            let extends = self.advance();
+            self.report(
+                INVALID_CLASS_HEADER,
+                "a class cannot declare more than one direct base",
+                extends.span,
+                "remove this duplicate `extends` clause",
+            );
+            if self.at(TokenKind::Identifier) {
+                self.advance();
+            } else {
+                self.report(
+                    INVALID_CLASS_HEADER,
+                    "expected a base class name after `extends`",
+                    self.peek().span,
+                    "a base clause requires a class name",
+                );
+                break;
+            }
+        }
     }
 
     fn parse_class_body(&mut self) -> Option<(Vec<ClassMember>, Token)> {

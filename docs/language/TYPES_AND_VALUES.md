@@ -21,8 +21,9 @@ result type `unit`:
 | `unit` | Successful completion without a result payload. |
 
 Two separately declared classes are different types even when their fields are
-identical. The current compiler has no inheritance, structural class
-compatibility, or universal object type, so a class type is always exact.
+identical. Current executable semantics have no inheritance conversion,
+structural class compatibility, or universal object type, so a class type is
+always exact. Resolved direct-base metadata does not yet change typing.
 
 `unit` is not a storable value type. It may appear only as a callable result in
 the implemented grammar. A call returning `unit` can be used as a call

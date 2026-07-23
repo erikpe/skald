@@ -1,8 +1,110 @@
 use crate::{
     identity::{ClassId, CopyAssignmentId, DestructorId, FieldId, InitializerId, MethodId},
-    resolve::{ResolvedCopyOperation, DUPLICATE_MEMBER, INVALID_LIFECYCLE_SIGNATURE},
+    resolve::{
+        ResolvedCopyOperation, DUPLICATE_MEMBER, INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
+        UNKNOWN_MEMBER,
+    },
     test_support::resolve_source,
 };
+
+#[test]
+fn resolves_forward_direct_bases_to_stable_class_ids() {
+    let output = resolve_source(concat!(
+        "class Derived extends Base { init() {} }\n",
+        "class Base { init() {} }\n",
+        "class Leaf extends Derived { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    assert_eq!(
+        output
+            .program
+            .classes
+            .get(ClassId::new(0))
+            .unwrap()
+            .direct_base
+            .map(|base| base.class),
+        Some(ClassId::new(1))
+    );
+    assert_eq!(
+        output
+            .program
+            .classes
+            .get(ClassId::new(1))
+            .unwrap()
+            .direct_base
+            .map(|base| base.class),
+        None
+    );
+    assert_eq!(
+        output
+            .program
+            .classes
+            .get(ClassId::new(2))
+            .unwrap()
+            .direct_base
+            .map(|base| base.class),
+        Some(ClassId::new(0))
+    );
+}
+
+#[test]
+fn rejects_invalid_direct_base_names_in_source_order() {
+    let output = resolve_source(concat!(
+        "class Unknown extends Missing { init() {} }\n",
+        "fn helper() -> i64 { return 0; }\n",
+        "class WrongKind extends helper { init() {} }\n",
+        "class SelfBase extends SelfBase { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 3);
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_BASE_CLASS));
+    assert!(diagnostics[0]
+        .message
+        .contains("unknown base class `Missing`"));
+    assert!(diagnostics[1]
+        .message
+        .contains("does not name a base class"));
+    assert!(diagnostics[2].message.contains("cannot extend itself"));
+    assert!(output
+        .program
+        .classes
+        .iter()
+        .all(|class| class.direct_base.is_none()));
+}
+
+#[test]
+fn inherited_members_remain_unavailable_during_resolution() {
+    let output = resolve_source(concat!(
+        "class Base { value: i64; init() {} }\n",
+        "class Derived extends Base {\n",
+        "    init() {}\n",
+        "    fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        UNKNOWN_MEMBER
+    );
+    assert_eq!(
+        output
+            .program
+            .classes
+            .get(ClassId::new(1))
+            .unwrap()
+            .direct_base
+            .map(|base| base.class),
+        Some(ClassId::new(0))
+    );
+}
 
 #[test]
 fn source_order_assigns_dense_ids_and_records_every_accepted_body() {

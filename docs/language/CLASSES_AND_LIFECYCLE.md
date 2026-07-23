@@ -14,9 +14,10 @@ call and evaluation-order rules.
 ## Exact nominal classes
 
 A class declaration introduces one nominal type. Two classes are different
-types even when their declarations have identical members. The current model
-has no inheritance or implicit class conversion, so every class use requires
-the exact declared class.
+types even when their declarations have identical members. Executable class
+semantics have no inheritance or implicit class conversion, so every current
+class use requires the exact declared class. An optional direct-base header is
+parsed and resolved but rejected before HIR until hierarchy semantics land.
 
 A class value is one complete inline object containing all of its direct
 fields. A class-typed field is a complete inline subobject of its containing
@@ -438,10 +439,12 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented class model does not include inheritance, base members,
-interfaces, virtual dispatch, `Obj`, class conversions, shared or heap-backed
-objects, `new`, nullable object references, static members, access modifiers,
-`final`, abstract members, overloads, reflection, or user-defined conversions.
+The implemented executable class model does not include inheritance, base
+members, interfaces, virtual dispatch, `Obj`, class conversions, shared or
+heap-backed objects, `new`, nullable object references, static members, access
+modifiers, `final`, abstract members, overloads, reflection, or user-defined
+conversions. Direct-base syntax and identity resolution are the only
+implemented inheritance boundary.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

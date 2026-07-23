@@ -1,6 +1,49 @@
 use super::*;
 
 #[test]
+fn resolved_direct_base_dump_is_exact_and_identity_based() {
+    let output = resolve_text("class Derived extends Base {}\nclass Base {}");
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+
+    assert_eq!(
+        dump_resolved(&output.program),
+        concat!(
+            "ResolvedProgram @0..43\n",
+            "  Entry <none>\n",
+            "  ClassDeclarations\n",
+            "    Class c0 \"Derived\" @0..29\n",
+            "      DirectBase c1 @22..26\n",
+            "      Fields\n",
+            "      OrdinaryInitializer\n",
+            "        <none>\n",
+            "      CopyConstructor\n",
+            "        Synthesized c0\n",
+            "      CopyAssignment\n",
+            "        Synthesized c0\n",
+            "      Destructor\n",
+            "        <none>\n",
+            "      Methods\n",
+            "    Class c1 \"Base\" @30..43\n",
+            "      Fields\n",
+            "      OrdinaryInitializer\n",
+            "        <none>\n",
+            "      CopyConstructor\n",
+            "        Synthesized c1\n",
+            "      CopyAssignment\n",
+            "        Synthesized c1\n",
+            "      Destructor\n",
+            "        <none>\n",
+            "      Methods\n",
+            "  Declarations\n",
+            "  Definitions\n",
+            "  ClassDefinitions\n",
+            "    ClassDefinition c0 @0..29\n",
+            "    ClassDefinition c1 @30..43\n",
+        )
+    );
+}
+
+#[test]
 fn resolved_destructor_dump_is_exact_and_identity_based() {
     let output = resolve_text(concat!(
         "class Empty { init() {} destroy { return; } }\n",

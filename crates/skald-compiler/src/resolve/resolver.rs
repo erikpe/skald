@@ -28,6 +28,7 @@ pub const INVALID_MEMBER_SELECTION: &str = "RES009";
 pub const SELF_OUTSIDE_MEMBER: &str = "RES010";
 pub const INVALID_CONSTRUCTION_TARGET: &str = "RES011";
 pub const INVALID_LIFECYCLE_SIGNATURE: &str = "RES012";
+pub const INVALID_BASE_CLASS: &str = "RES013";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

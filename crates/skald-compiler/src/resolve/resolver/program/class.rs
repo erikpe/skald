@@ -26,6 +26,7 @@ impl LifecycleDeclarations {
 
 struct ClassCollectionState {
     id: ClassId,
+    direct_base: Option<ResolvedDirectBase>,
     fields: Vec<ResolvedFieldDeclaration>,
     methods: Vec<ResolvedMethodDeclaration>,
     lifecycle: LifecycleDeclarations,
@@ -34,9 +35,10 @@ struct ClassCollectionState {
 }
 
 impl ClassCollectionState {
-    fn new(id: ClassId, ast_index: usize) -> Self {
+    fn new(id: ClassId, ast_index: usize, direct_base: Option<ResolvedDirectBase>) -> Self {
         Self {
             id,
+            direct_base,
             fields: Vec::new(),
             methods: Vec::new(),
             lifecycle: LifecycleDeclarations::new(),
@@ -285,6 +287,7 @@ impl ClassCollectionState {
                 id: self.id,
                 name: class.name.text.clone(),
                 name_span: class.name.span,
+                direct_base: self.direct_base,
                 fields: self.fields,
                 initializer: self.lifecycle.initializer,
                 copy_constructor,
@@ -308,7 +311,8 @@ pub(super) fn collect_class(
     top_levels: &HashMap<String, TopLevelSymbol>,
     diagnostics: &mut Diagnostics,
 ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
-    let mut state = ClassCollectionState::new(id, ast_index);
+    let direct_base = resolve_direct_base(id, class, top_levels, diagnostics);
+    let mut state = ClassCollectionState::new(id, ast_index, direct_base);
     for (member_index, member) in class.members.iter().enumerate() {
         match member {
             syntax::ClassMember::Field(field) => {
@@ -337,6 +341,59 @@ pub(super) fn collect_class(
         }
     }
     state.finish(class)
+}
+
+fn resolve_direct_base(
+    owner: ClassId,
+    class: &syntax::ClassDecl,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> Option<ResolvedDirectBase> {
+    let base = class.direct_base.as_ref()?;
+    match top_levels.get(&base.text) {
+        Some(TopLevelSymbol {
+            kind: TopLevelSymbolKind::Class(base_id),
+            ..
+        }) if *base_id == owner => {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_BASE_CLASS,
+                    format!("class `{}` cannot extend itself", class.name.text),
+                )
+                .with_primary_label(base.span, "this resolves to the enclosing class")
+                .with_secondary_label(class.name.span, "class declared here"),
+            );
+            None
+        }
+        Some(TopLevelSymbol {
+            kind: TopLevelSymbolKind::Class(base_id),
+            ..
+        }) => Some(ResolvedDirectBase {
+            class: *base_id,
+            span: base.span,
+        }),
+        Some(symbol) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_BASE_CLASS,
+                    format!("`{}` does not name a base class", base.text),
+                )
+                .with_primary_label(base.span, "expected a class name")
+                .with_secondary_label(symbol.name_span, "function declared here"),
+            );
+            None
+        }
+        None => {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_BASE_CLASS,
+                    format!("unknown base class `{}`", base.text),
+                )
+                .with_primary_label(base.span, "no class with this name is declared"),
+            );
+            None
+        }
+    }
 }
 
 #[derive(Clone)]

@@ -20,6 +20,7 @@ pub const EXPECTED_STATEMENT: &str = "PAR003";
 pub const EXPECTED_EXPRESSION: &str = "PAR004";
 pub const EXCESSIVE_NESTING: &str = "PAR005";
 pub const INVALID_CLASS_MEMBER: &str = "PAR006";
+pub const INVALID_CLASS_HEADER: &str = "PAR007";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///
@@ -265,6 +266,10 @@ impl<'source> Parser<'source> {
         self.source
             .slice(token.span.range())
             .expect("token range must be valid for its source")
+    }
+
+    fn at_contextual(&self, spelling: &str) -> bool {
+        self.at(TokenKind::Identifier) && self.lexeme(self.peek()) == spelling
     }
 
     fn cover(&self, start: Span, end: Span) -> Span {

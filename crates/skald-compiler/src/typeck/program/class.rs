@@ -39,6 +39,26 @@ fn lower_class_declaration(
     copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
+    if let Some(base) = class.direct_base {
+        diagnostics.push(
+            Diagnostic::error(
+                INVALID_OBJECT_DECLARATION,
+                format!(
+                    "class inheritance for `{}` is not executable yet",
+                    class.name
+                ),
+            )
+            .with_primary_label(
+                base.span,
+                "the direct base is resolved, but hierarchy lowering is not implemented",
+            )
+            .with_note(
+                "inheritance is rejected before HIR until hierarchy validation is available",
+            ),
+        );
+        return None;
+    }
+
     let mut valid = true;
     let fields = class
         .fields
@@ -150,6 +170,9 @@ pub(super) fn check_class_definitions(
         .classes
         .iter()
         .filter_map(|class| {
+            if class.direct_base.is_some() {
+                return None;
+            }
             let definition = program.class_definitions.get(class.id)?;
             ClassDefinitionChecker {
                 program,
@@ -361,5 +384,38 @@ mod tests {
 
         assert!(diagnostics.is_empty());
         assert_eq!(outer.fields[0].ty, Type::Class(ClassId::new(1)));
+    }
+
+    #[test]
+    fn resolved_inheritance_is_rejected_before_hir_until_hierarchies_exist() {
+        let output = type_check_source(concat!(
+            "class Derived extends Base { init() {} }\n",
+            "class Base { init() {} }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ));
+
+        assert!(output.hir.is_none());
+        let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].code, INVALID_OBJECT_DECLARATION);
+        assert!(diagnostics[0]
+            .message
+            .contains("class inheritance for `Derived` is not executable yet"));
+    }
+
+    #[test]
+    fn cyclic_headers_cannot_reach_hir_before_cycle_validation_lands() {
+        let output = type_check_source(concat!(
+            "class First extends Second { init() {} }\n",
+            "class Second extends First { init() {} }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ));
+
+        assert!(output.hir.is_none());
+        assert_eq!(output.diagnostics.len(), 2);
+        assert!(output
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == INVALID_OBJECT_DECLARATION));
     }
 }

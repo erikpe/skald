@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM3 is next. The
+Status: in progress; PM4 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -86,7 +86,7 @@ The frozen restricted profile excludes:
 - [x] PM0 — Freeze the executable polymorphism profile
 - [x] PM1 — Extract resolver class-body orchestration
 - [x] PM2 — Extract type-checker class-program orchestration
-- [ ] PM3 — Parse and resolve class inheritance
+- [x] PM3 — Parse and resolve class inheritance
 - [ ] PM4 — Build the canonical class hierarchy and inherited lookup
 - [ ] PM5 — Compose base initialization and lifecycle semantics
 - [ ] PM6 — Add typed static base views and slicing in HIR
@@ -182,14 +182,14 @@ class-program owner without duplicating `MemberCheckContext` assembly.
 **Purpose:** Establish stable direct-base identity without yet enabling
 inherited access or polymorphic conversions.
 
-- [ ] Parse contextual `extends` on classes with focused malformed-input
+- [x] Parse contextual `extends` on classes with focused malformed-input
       recovery and no global keyword regressions.
-- [ ] Resolve the base name to `ClassId`, rejecting unknown, duplicate,
+- [x] Resolve the base name to `ClassId`, rejecting unknown, duplicate,
       self-referential, and wrong-kind bases in deterministic order.
-- [ ] Extend class declaration models and typed tables through resolved IR
+- [x] Extend class declaration models and typed tables through resolved IR
       while keeping the source spelling only where dumps and diagnostics need
       it.
-- [ ] Extend AST and resolved dumps, grammar snapshots, and hostile frontend
+- [x] Extend AST and resolved dumps, grammar snapshots, and hostile frontend
       mutation coverage.
 
 **Tests:** Add parser recovery, resolution identity/diagnostic, exact-dump, and

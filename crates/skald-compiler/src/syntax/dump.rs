@@ -37,6 +37,9 @@ impl AstDumper {
         self.line("Class", class.span);
         self.indented(|dumper| {
             dumper.named("Name", &class.name.text, class.name.span);
+            if let Some(base) = &class.direct_base {
+                dumper.named("DirectBase", &base.text, base.span);
+            }
             dumper.heading("Members");
             dumper.indented(|dumper| {
                 for member in &class.members {

@@ -13,11 +13,11 @@ pub use body::{
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
-    ResolvedCopyOperation, ResolvedDestructorDeclaration, ResolvedFieldDeclaration,
-    ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable, ResolvedFunctionLinkage,
-    ResolvedInitializerDeclaration, ResolvedLocal, ResolvedMethodDeclaration, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedType,
-    ResolvedTypeKind,
+    ResolvedCopyOperation, ResolvedDestructorDeclaration, ResolvedDirectBase,
+    ResolvedFieldDeclaration, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
+    ResolvedFunctionLinkage, ResolvedInitializerDeclaration, ResolvedLocal,
+    ResolvedMethodDeclaration, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
+    ResolvedReceiverAccess, ResolvedType, ResolvedTypeKind,
 };
 pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,

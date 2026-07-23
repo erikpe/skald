@@ -36,6 +36,7 @@ impl TopLevelDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ClassDecl {
     pub name: Name,
+    pub direct_base: Option<Name>,
     pub members: Vec<ClassMember>,
     pub span: Span,
 }

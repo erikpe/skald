@@ -66,6 +66,9 @@ impl ResolvedDumper {
         write_span(&mut self.output, class.span);
         self.output.push('\n');
         self.indented(|dumper| {
+            if let Some(base) = class.direct_base {
+                dumper.line(&format!("DirectBase {}", base.class), base.span);
+            }
             dumper.heading("Fields");
             dumper.indented(|dumper| {
                 for field in &class.fields {
