@@ -16,7 +16,10 @@ impl CallableResolver<'_, '_> {
             ),
             syntax::Expression::MemberAccess(member) => {
                 let receiver = self.resolve_object_place(&member.receiver)?;
-                match self.select_member(receiver.class, &member.member)? {
+                let selected = self.select_member(receiver.class, &member.member)?;
+                let receiver =
+                    self.project_to_declaring_class(receiver, selected.declaring_class());
+                match selected {
                     OrdinaryMemberSymbolKind::Field(field) => {
                         self.project_field(receiver, field, member.span, member.member.span)
                     }
@@ -126,6 +129,29 @@ impl CallableResolver<'_, '_> {
             );
             return None;
         };
-        Some(receiver.project(field, class, span))
+        Some(receiver.project_field(field, class, span))
+    }
+
+    pub(super) fn project_to_declaring_class(
+        &self,
+        mut receiver: ResolvedObjectPlace,
+        declaring_class: ClassId,
+    ) -> ResolvedObjectPlace {
+        if receiver.class == declaring_class {
+            return receiver;
+        }
+        let span = receiver.span;
+        for base in self
+            .environment
+            .hierarchy
+            .base_chain(receiver.class)
+            .expect("resolved member receiver must have valid ancestry")
+        {
+            receiver = receiver.project_base(base, span);
+            if base == declaring_class {
+                return receiver;
+            }
+        }
+        unreachable!("selected inherited member owner must be in the receiver base chain")
     }
 }

@@ -18,6 +18,7 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     top_levels: &'program HashMap<String, TopLevelSymbol>,
     classes: &'program ResolvedClassDeclarationTable,
     class_symbols: &'program [ClassSymbols],
+    hierarchy: &'program ResolvedClassHierarchy,
 }
 
 impl<'program> BodyResolutionEnvironment<'program> {
@@ -25,11 +26,13 @@ impl<'program> BodyResolutionEnvironment<'program> {
         top_levels: &'program HashMap<String, TopLevelSymbol>,
         classes: &'program ResolvedClassDeclarationTable,
         class_symbols: &'program [ClassSymbols],
+        hierarchy: &'program ResolvedClassHierarchy,
     ) -> Self {
         Self {
             top_levels,
             classes,
             class_symbols,
+            hierarchy,
         }
     }
 }
@@ -461,7 +464,9 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         member: &syntax::MemberAccessExpr,
     ) -> Option<ResolvedExpression> {
         let receiver = self.resolve_object_place(&member.receiver)?;
-        match self.select_member(receiver.class, &member.member)? {
+        let selected = self.select_member(receiver.class, &member.member)?;
+        let receiver = self.project_to_declaring_class(receiver, selected.declaring_class());
+        match selected {
             OrdinaryMemberSymbolKind::Field(field) => {
                 Some(ResolvedExpression::FieldAccess(ResolvedFieldAccessExpr {
                     receiver,
@@ -596,7 +601,10 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             }
             syntax::Expression::MemberAccess(member) => {
                 let receiver = self.resolve_object_place(&member.receiver)?;
-                match self.select_member(receiver.class, &member.member)? {
+                let selected = self.select_member(receiver.class, &member.member)?;
+                let receiver =
+                    self.project_to_declaring_class(receiver, selected.declaring_class());
+                match selected {
                     OrdinaryMemberSymbolKind::Method(method) => Some(CallTarget::Method {
                         receiver,
                         method,
@@ -641,7 +649,11 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         let receiver = self.resolve_object_place(&assignment.place.receiver);
         let selected = receiver.and_then(|receiver| {
             self.select_member(receiver.class, &assignment.place.member)
-                .map(|member| (receiver, member))
+                .map(|member| {
+                    let receiver =
+                        self.project_to_declaring_class(receiver, member.declaring_class());
+                    (receiver, member)
+                })
         });
         let value = self.resolve_expression(&assignment.value);
         let (receiver, selected, value) = match (selected, value) {
@@ -714,11 +726,13 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         class: ClassId,
         name: &syntax::Name,
     ) -> Option<OrdinaryMemberSymbolKind> {
-        let symbols = &self.environment.class_symbols[class.index()];
-        symbols
-            .ordinary
-            .get(&name.text)
-            .map(|member| member.kind)
+        self.environment
+            .hierarchy
+            .member(class, &name.text)
+            .map(|member| match member {
+                ResolvedClassMember::Field(field) => OrdinaryMemberSymbolKind::Field(field),
+                ResolvedClassMember::Method(method) => OrdinaryMemberSymbolKind::Method(method),
+            })
             .or_else(|| {
                 let class_name = &self
                     .environment

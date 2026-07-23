@@ -66,6 +66,7 @@ fn resolve_type(
         syntax::TypeKind::F64 => ResolvedTypeKind::F64,
         syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
         syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
+        syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
         syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
             Some(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
@@ -119,6 +120,15 @@ pub(super) struct OrdinaryMemberSymbol {
 pub(super) enum OrdinaryMemberSymbolKind {
     Field(FieldId),
     Method(MethodId),
+}
+
+impl OrdinaryMemberSymbolKind {
+    pub(super) const fn declaring_class(self) -> ClassId {
+        match self {
+            Self::Field(field) => field.class(),
+            Self::Method(method) => method.class(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]

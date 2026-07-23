@@ -278,6 +278,7 @@ impl ResolvedDumper {
             ResolvedTypeKind::F64 => "F64",
             ResolvedTypeKind::Bool => "Bool",
             ResolvedTypeKind::Unit => "Unit",
+            ResolvedTypeKind::Obj => "Obj",
             ResolvedTypeKind::Class(class) => {
                 self.line(&format!("Type Class {class}"), type_syntax.span);
                 return;

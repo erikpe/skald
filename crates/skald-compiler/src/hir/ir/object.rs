@@ -150,6 +150,7 @@ pub struct HirCopyConstruction {
 pub enum HirObjectSource {
     Place(HirObjectPlace),
     Produced(HirObjectProducer),
+    Slice(HirObjectSlice),
 }
 
 impl HirObjectSource {
@@ -157,6 +158,7 @@ impl HirObjectSource {
         match self {
             Self::Place(place) => place.class(),
             Self::Produced(producer) => producer.class(),
+            Self::Slice(slice) => slice.target,
         }
     }
 
@@ -164,8 +166,20 @@ impl HirObjectSource {
         match self {
             Self::Place(place) => place.span(),
             Self::Produced(producer) => producer.span(),
+            Self::Slice(slice) => slice.span,
         }
     }
+}
+
+/// An owning conversion that copies one selected ancestor subobject into an
+/// independent exact-class destination.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirObjectSlice {
+    pub source: Box<HirObjectSource>,
+    /// Direct-base identities from the source class to `target`.
+    pub bases: Vec<ClassId>,
+    pub target: ClassId,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -208,7 +222,7 @@ pub struct HirFieldConstruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldCopyConstruction {
     pub place: HirFieldPlace,
-    pub source: HirObjectPlace,
+    pub source: HirObjectSource,
     pub operation: HirSelectedCopyOperation<InitializerId>,
     pub span: Span,
 }
@@ -216,7 +230,7 @@ pub struct HirFieldCopyConstruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldCopyAssignment {
     pub place: HirFieldPlace,
-    pub source: HirObjectPlace,
+    pub source: HirObjectSource,
     pub operation: HirSelectedCopyOperation<CopyAssignmentId>,
     pub span: Span,
 }
@@ -244,13 +258,39 @@ impl HirObjectPlace {
         self.path.class
     }
 
-    pub fn projections(&self) -> &[FieldId] {
+    pub fn projections(&self) -> &[crate::object_path::ObjectProjection] {
         &self.path.projections
     }
 
     pub const fn span(&self) -> Span {
         self.path.span
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirViewTarget {
+    Class(ClassId),
+    Obj,
+}
+
+/// A non-owning, access-preserving conversion used only at an alias boundary.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirObjectView {
+    pub source: HirViewSource,
+    pub target: HirViewTarget,
+    pub access: HirAccess,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirViewSource {
+    Place(HirObjectPlace),
+    Forwarded {
+        binding: BindingId,
+        target: HirViewTarget,
+        access: HirAccess,
+        span: Span,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

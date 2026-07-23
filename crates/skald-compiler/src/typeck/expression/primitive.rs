@@ -21,13 +21,17 @@ impl CallableChecker<'_, '_> {
         binding: &crate::resolve::ResolvedBindingExpr,
     ) -> Option<HirExpression> {
         let ty = self.binding_type(binding.binding);
-        if matches!(ty, Type::Class(_)) {
+        if matches!(ty, Type::Class(_) | Type::Obj) {
+            let message = if ty == Type::Obj {
+                "an object view cannot be used as an ordinary value"
+            } else {
+                "an inline object cannot be used as an ordinary value"
+            };
             self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OBJECT_CONTEXT,
-                    "an inline object cannot be used as an ordinary value",
-                )
-                .with_primary_label(binding.span, "use the object as a field or method receiver"),
+                Diagnostic::error(INVALID_OBJECT_CONTEXT, message).with_primary_label(
+                    binding.span,
+                    "use the object as a field or method receiver",
+                ),
             );
             return None;
         }
@@ -209,6 +213,6 @@ fn select_binary_operation(
         (ResolvedBinaryOperator::Add, Type::F64) => Some(HirBinaryOperation::AddF64),
         (ResolvedBinaryOperator::Subtract, Type::F64) => Some(HirBinaryOperation::SubtractF64),
         (ResolvedBinaryOperator::Multiply, Type::F64) => Some(HirBinaryOperation::MultiplyF64),
-        (_, Type::Bool | Type::Unit | Type::Class(_)) => None,
+        (_, Type::Bool | Type::Unit | Type::Obj | Type::Class(_)) => None,
     }
 }

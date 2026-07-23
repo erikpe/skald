@@ -68,10 +68,12 @@ and `fn destroy() -> unit {}` is a method.
 by a call argument list is contextually recognized as a dedicated statement;
 resolution restricts it to the first statement of a derived ordinary
 initializer. Both spellings remain ordinary identifiers outside those shapes.
-The frozen polymorphism profile will also contextually recognize `implements`,
-`interface`, `virtual`, `override`, `is`, `narrow`, and the type spelling
-`Obj`; none of those later forms is part of the implemented grammar yet. Their
-exact source forms are specified in
+`Obj` is now contextually recognized as the universal object-view type in
+alias-parameter type positions; it remains an ordinary identifier elsewhere
+except that it cannot name a top-level declaration. The frozen polymorphism
+profile will also contextually recognize `implements`, `interface`, `virtual`,
+`override`, `is`, and `narrow`; none of those later forms is part of the
+implemented grammar yet. Their exact source forms are specified in
 [polymorphism](POLYMORPHISM.md#frozen-source-profile).
 
 ## Punctuation
@@ -130,7 +132,8 @@ external-function-declaration = "extern" "fn" identifier parameter-list
 parameter-list                = "(" [parameter {"," parameter}] ")"
 parameter                     = value-parameter | alias-parameter
 value-parameter               = identifier ":" storage-type
-alias-parameter               = ["mut"] "ref" identifier ":" identifier
+alias-parameter               = ["mut"] "ref" identifier ":" alias-target
+alias-target                  = identifier | "Obj"
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
 named-type                    = identifier
@@ -141,7 +144,8 @@ result-type                   = storage-type | "unit"
 Parameter and argument lists do not accept trailing commas. Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
-named types are legal. `unit` is syntactically restricted to result positions.
+named types are legal. `Obj` is legal only for non-owning internal alias
+parameters. `unit` is syntactically restricted to result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
 defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 

@@ -8,8 +8,7 @@ use crate::{
 };
 
 use crate::typeck::program::{
-    lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_INITIALIZER_BODY,
-    READ_ONLY_RECEIVER, WRONG_ARGUMENT_COUNT,
+    lower_type, INVALID_INITIALIZER_BODY, READ_ONLY_RECEIVER, WRONG_ARGUMENT_COUNT,
 };
 
 impl CallableChecker<'_, '_> {
@@ -180,49 +179,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
-                let place = self.check_alias_argument_place(source)?;
-                let Type::Class(expected_class) = lower_type(&parameter.type_syntax) else {
-                    return None;
-                };
-                if place.class() != expected_class {
-                    let actual = &self
-                        .program
-                        .class(place.class())
-                        .expect("resolved alias argument class must exist")
-                        .name;
-                    let expected = &self
-                        .program
-                        .class(expected_class)
-                        .expect("resolved alias parameter class must exist")
-                        .name;
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            TYPE_MISMATCH,
-                            format!("alias argument has type `{actual}`, expected `{expected}`"),
-                        )
-                        .with_primary_label(place.span(), "this place has the wrong class")
-                        .with_secondary_label(
-                            parameter.type_syntax.span,
-                            "alias parameter type declared here",
-                        ),
-                    );
-                    return None;
-                }
-                let required = lower_parameter_mode(parameter.binding_mode)
-                    .required_access()
-                    .expect("alias parameter mode must require place access");
-                if !place.access.permits(required) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INSUFFICIENT_ALIAS_ACCESS,
-                            "read-only access cannot satisfy a mutable alias parameter",
-                        )
-                        .with_primary_label(place.span(), "this place provides read-only access")
-                        .with_secondary_label(parameter.span, "mutable alias declared here"),
-                    );
-                    return None;
-                }
-                Some(HirCallArgument::Place(place))
+                self.check_alias_argument(source, parameter)
             }
         }
     }

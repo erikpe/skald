@@ -69,6 +69,9 @@ impl BodyLowerer<'_> {
                         .expect("typed value argument must produce a scalar value"),
                 ),
                 HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
+                HirCallArgument::View(_) => {
+                    unreachable!("static object views are rejected before MIR call lowering")
+                }
                 HirCallArgument::Copy(copy) => {
                     let source = self.lower_object_source(&copy.source);
                     let destination = self.new_object_storage(

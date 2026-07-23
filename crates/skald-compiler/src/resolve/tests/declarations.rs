@@ -74,6 +74,25 @@ fn diagnoses_duplicate_names_across_all_external_and_defined_combinations() {
 }
 
 #[test]
+fn reserves_obj_only_for_the_universal_type_at_top_level() {
+    for declaration in [
+        "class Obj { init() {} }\n",
+        "fn Obj() -> unit {}\n",
+        "extern fn Obj() -> unit;\n",
+    ] {
+        let output = resolve_text(&format!(
+            "{declaration}fn main() -> i64 {{ var Obj: i64 = 0; return Obj; }}\n"
+        ));
+        let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].code, DUPLICATE_TOP_LEVEL);
+        assert!(diagnostics[0]
+            .message
+            .contains("universal object-view type"));
+    }
+}
+
+#[test]
 fn diagnoses_duplicate_external_parameter_names() {
     let output = resolve_text(concat!(
         "extern fn emit(value: i64, value: i64) -> unit;\n",

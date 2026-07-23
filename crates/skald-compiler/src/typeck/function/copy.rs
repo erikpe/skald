@@ -5,7 +5,7 @@ use crate::{
     hir::{
         HirCopyAssignment, HirCopyConstruction, HirExpression, HirExpressionKind,
         HirLocalInitializer, HirObjectCall, HirObjectCallTarget, HirObjectInitialization,
-        HirObjectPlace, HirObjectProducer, HirObjectSource,
+        HirObjectPlace, HirObjectProducer, HirObjectSlice, HirObjectSource,
     },
     object_path::ObjectPath,
     resolve::ResolvedObjectAssignment,
@@ -78,7 +78,8 @@ impl CallableChecker<'_, '_> {
         let destination = self.object_local_destination(local, class);
         if matches!(
             initializer,
-            crate::resolve::ResolvedExpression::Construct(_)
+            crate::resolve::ResolvedExpression::Construct(construction)
+                if construction.class == class
         ) {
             let construction = self.check_construction_initializer(class, initializer)?;
             // Elision does not change validity: the corresponding non-elided
@@ -94,8 +95,18 @@ impl CallableChecker<'_, '_> {
                 elided_copy: Some(elided_copy),
             }));
         }
+        if matches!(
+            initializer,
+            crate::resolve::ResolvedExpression::Construct(construction)
+                if self.program.hierarchy.is_subtype(construction.class, class) != Some(true)
+        ) {
+            let _ = self.check_construction_initializer(class, initializer);
+            return None;
+        }
 
-        if is_object_call_source(initializer) {
+        if is_object_call_source(initializer)
+            && self.resolved_object_class(initializer) == Some(class)
+        {
             let expression = self.check_expression(initializer)?;
             if !require_type(
                 expression.ty,
@@ -137,29 +148,141 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirObjectSource> {
         if let Some(construction) = construction_through_groups(expression) {
             let mut construction =
-                self.check_object_construction(class, construction, "object destination")?;
+                self.check_object_construction(construction.class, construction, "object source")?;
             construction.span = expression.span();
-            return Some(HirObjectSource::Produced(HirObjectProducer::Construct(
-                construction,
-            )));
+            let source = HirObjectSource::Produced(HirObjectProducer::Construct(construction));
+            return self.convert_object_source(source, class, context);
         }
         if is_object_call_source(expression) {
             let checked = self.check_expression(expression)?;
-            if !require_type(
-                checked.ty,
-                Type::Class(class),
-                checked.span,
-                context,
-                self.diagnostics,
-            ) {
+            let Type::Class(actual) = checked.ty else {
+                let _ = require_type(
+                    checked.ty,
+                    Type::Class(class),
+                    checked.span,
+                    context,
+                    self.diagnostics,
+                );
                 return None;
-            }
-            return Some(HirObjectSource::Produced(HirObjectProducer::Call(
-                lower_object_call(checked, class),
+            };
+            let source = HirObjectSource::Produced(HirObjectProducer::Call(lower_object_call(
+                checked, actual,
             )));
+            return self.convert_object_source(source, class, context);
         }
-        self.check_copy_source_place(expression, class)
-            .map(HirObjectSource::Place)
+        let source = self
+            .check_object_source_place(expression)
+            .map(HirObjectSource::Place)?;
+        self.convert_object_source(source, class, context)
+    }
+
+    fn convert_object_source(
+        &mut self,
+        source: HirObjectSource,
+        target: ClassId,
+        context: &'static str,
+    ) -> Option<HirObjectSource> {
+        let actual = source.class();
+        if actual == target {
+            return Some(source);
+        }
+        let Some(true) = self.program.hierarchy.is_subtype(actual, target) else {
+            let actual_name = &self
+                .program
+                .class(actual)
+                .expect("object source class must exist")
+                .name;
+            let target_name = &self
+                .program
+                .class(target)
+                .expect("object target class must exist")
+                .name;
+            let diagnostic = if matches!(
+                source,
+                HirObjectSource::Produced(HirObjectProducer::Construct(_))
+            ) {
+                Diagnostic::error(
+                    INVALID_CONSTRUCTION,
+                    format!("constructor type does not match the {context}"),
+                )
+                .with_primary_label(
+                    source.span(),
+                    format!("constructs `{actual_name}`, expected `{target_name}`"),
+                )
+            } else {
+                Diagnostic::error(
+                    INVALID_OBJECT_CONTEXT,
+                    "copy source and destination must have the same class or an ancestry relation",
+                )
+                .with_primary_label(
+                    source.span(),
+                    format!("source has class `{actual_name}`, expected `{target_name}`"),
+                )
+            };
+            self.diagnostics.push(diagnostic);
+            return None;
+        };
+        let bases = self
+            .program
+            .hierarchy
+            .base_chain(actual)
+            .expect("valid subtype source must have valid ancestry")
+            .take_while(|base| *base != target)
+            .chain(std::iter::once(target))
+            .collect();
+        let span = source.span();
+        Some(HirObjectSource::Slice(HirObjectSlice {
+            source: Box::new(source),
+            bases,
+            target,
+            span,
+        }))
+    }
+
+    pub(super) fn resolved_object_class(
+        &self,
+        expression: &crate::resolve::ResolvedExpression,
+    ) -> Option<ClassId> {
+        match expression {
+            crate::resolve::ResolvedExpression::Binding(binding) => {
+                match self.binding_type(binding.binding) {
+                    Type::Class(class) => Some(class),
+                    _ => None,
+                }
+            }
+            crate::resolve::ResolvedExpression::FieldAccess(access) => {
+                match self
+                    .program
+                    .field(access.field)
+                    .expect("resolved field access must select a field")
+                    .type_syntax
+                    .kind
+                {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }
+            }
+            crate::resolve::ResolvedExpression::Construct(construction) => Some(construction.class),
+            crate::resolve::ResolvedExpression::DirectCall(call) => self
+                .program
+                .declarations
+                .get(call.function)
+                .and_then(|declaration| match declaration.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }),
+            crate::resolve::ResolvedExpression::MethodCall(call) => self
+                .program
+                .method(call.method)
+                .and_then(|method| match method.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }),
+            crate::resolve::ResolvedExpression::Grouped(grouped) => {
+                self.resolved_object_class(&grouped.expression)
+            }
+            _ => None,
+        }
     }
 
     fn object_local_destination(

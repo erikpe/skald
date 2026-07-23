@@ -319,6 +319,7 @@ pub enum ResolvedTypeKind {
     F64,
     Bool,
     Unit,
+    Obj,
     Class(ClassId),
 }
 

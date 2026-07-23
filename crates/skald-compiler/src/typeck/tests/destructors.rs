@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     hir::{HirAccess, HirCallArgument, HirExpressionKind, HirParameterMode, HirStatement},
     identity::{CallableId, ClassId, DestructorId, FieldId, FunctionId},
+    object_path::ObjectProjection,
 };
 
 #[test]
@@ -69,7 +70,10 @@ fn checks_destructor_bodies_as_mutable_complete_object_members() {
     assert_eq!(place.access, HirAccess::Mutable);
     assert_eq!(
         place.path.projections.as_slice(),
-        &[FieldId::new(owner.id, 0), FieldId::new(ClassId::new(1), 0)]
+        &[
+            ObjectProjection::Field(FieldId::new(owner.id, 0)),
+            ObjectProjection::Field(FieldId::new(ClassId::new(1), 0))
+        ]
     );
 
     let HirStatement::Conditional(conditional) = &definition.body.statements[4] else {

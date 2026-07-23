@@ -73,14 +73,13 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
                 crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
             ));
         }
-        crate::hir::HirCallArgument::Copy(copy) => {
-            if let crate::hir::HirObjectSource::Place(place) = &copy.source {
-                assert!(matches!(
-                    place.access,
-                    crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
-                ));
-            }
+        crate::hir::HirCallArgument::View(view) => {
+            assert!(matches!(
+                view.access,
+                crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
+            ));
         }
+        crate::hir::HirCallArgument::Copy(_) => {}
     }
 }
 

@@ -6,7 +6,7 @@ use skald_compiler::{
     backend::{emit_assembly, target_by_name, Target},
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{compile_source_to_assembly, run_cli, Toolchain},
-    hir::{dump_hir, HirProgram},
+    hir::{dump_hir, HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection},
     identity::CallableId,
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
@@ -45,6 +45,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
     let _hir_dump = dump_hir(hir);
+    let _base_projection: Option<ObjectProjection> = None;
+    let _object_slice: Option<HirObjectSlice> = None;
+    let _object_view: Option<HirObjectView> = None;
+    let _view_target: Option<HirViewTarget> = None;
     let mir: MirProgram = lower_hir(hir).unwrap();
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();

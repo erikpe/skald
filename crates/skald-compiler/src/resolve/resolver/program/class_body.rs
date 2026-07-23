@@ -10,12 +10,13 @@ pub(super) fn resolve_class_bodies(
     work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     class_symbols: &[ClassSymbols],
+    hierarchy: &ResolvedClassHierarchy,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedClassDefinition> {
     let resolver = ClassBodyResolver {
         ast,
         classes,
-        environment: BodyResolutionEnvironment::new(top_levels, classes, class_symbols),
+        environment: BodyResolutionEnvironment::new(top_levels, classes, class_symbols, hierarchy),
     };
     work.iter()
         .map(|item| resolver.resolve_class(item, diagnostics))

@@ -154,7 +154,10 @@ fn type_checks_class_field_copy_operations_only_inside_copy_bodies() {
         panic!("expected class-field copy construction");
     };
     assert_eq!(copy_child.source.class(), ClassId::new(0));
-    assert_eq!(copy_child.source.access, HirAccess::ReadOnly);
+    let crate::hir::HirObjectSource::Place(copy_source) = &copy_child.source else {
+        panic!("copy-constructor field source should remain an exact place");
+    };
+    assert_eq!(copy_source.access, HirAccess::ReadOnly);
     assert_eq!(
         copy_child.operation,
         HirSelectedCopyOperation::Synthesized(ClassId::new(0))

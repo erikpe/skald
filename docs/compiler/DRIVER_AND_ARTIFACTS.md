@@ -32,8 +32,9 @@ the verified MIR pass pipeline, and target assembly emission in order. A
 source-phase error stops later phases and returns the accumulated source
 database and structured diagnostics. Unsupported HIR-to-MIR features, MIR
 verification, and backend failures remain distinct structured error
-categories. Static inheritance currently reaches typed HIR and then stops at
-the explicit HIR-lowering boundary until MIR base representation is available.
+categories. Static inheritance, inherited access, class/`Obj` alias views, and
+inline slicing currently reach typed HIR and then stop at the explicit
+HIR-lowering boundary until MIR base and view representation is available.
 
 The path supplied to this entry point labels diagnostics; the function does
 not read it. It performs no source I/O, host tool invocation, runtime linking,

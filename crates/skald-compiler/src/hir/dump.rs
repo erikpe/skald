@@ -390,7 +390,7 @@ impl HirDumper {
                 self.line("FieldCopyConstruction", statement.span);
                 self.indented(|dumper| {
                     dumper.field_place(&statement.place);
-                    dumper.object_place(&statement.source);
+                    dumper.object_source(&statement.source);
                     dumper.selected_copy_operation(statement.operation);
                 });
             }
@@ -398,7 +398,7 @@ impl HirDumper {
                 self.line("FieldCopyAssignment", statement.span);
                 self.indented(|dumper| {
                     dumper.field_place(&statement.place);
-                    dumper.object_place(&statement.source);
+                    dumper.object_source(&statement.source);
                     dumper.selected_copy_operation(statement.operation);
                 });
             }
@@ -578,6 +578,39 @@ impl HirDumper {
                 self.line("PlaceArgument", place.span());
                 self.indented(|dumper| dumper.object_place(place));
             }
+            HirCallArgument::View(view) => {
+                let target = match view.target {
+                    crate::hir::HirViewTarget::Class(class) => format!("class {class}"),
+                    crate::hir::HirViewTarget::Obj => "Obj".to_owned(),
+                };
+                let access = match view.access {
+                    HirAccess::ReadOnly => "readonly",
+                    HirAccess::Mutable => "mutable",
+                };
+                self.line(&format!("ViewArgument -> {target} {access}"), view.span);
+                self.indented(|dumper| match &view.source {
+                    crate::hir::HirViewSource::Place(place) => dumper.object_place(place),
+                    crate::hir::HirViewSource::Forwarded {
+                        binding,
+                        target,
+                        access,
+                        span,
+                    } => {
+                        let target = match target {
+                            crate::hir::HirViewTarget::Class(class) => format!("class {class}"),
+                            crate::hir::HirViewTarget::Obj => "Obj".to_owned(),
+                        };
+                        let access = match access {
+                            HirAccess::ReadOnly => "readonly",
+                            HirAccess::Mutable => "mutable",
+                        };
+                        dumper.line(
+                            &format!("ForwardedView {binding} : {target} {access}"),
+                            *span,
+                        );
+                    }
+                });
+            }
             HirCallArgument::Copy(copy) => {
                 self.line("CopyArgument", copy.span);
                 self.indented(|dumper| {
@@ -594,6 +627,19 @@ impl HirDumper {
             crate::hir::HirObjectSource::Produced(producer) => {
                 self.line("MaterializedSource", producer.span());
                 self.indented(|dumper| dumper.object_producer(producer));
+            }
+            crate::hir::HirObjectSource::Slice(slice) => {
+                let path = slice
+                    .bases
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(" -> ");
+                self.line(
+                    &format!("SliceSource [{path}] -> {}", slice.target),
+                    slice.span,
+                );
+                self.indented(|dumper| dumper.object_source(&slice.source));
             }
         }
     }
@@ -677,8 +723,8 @@ mod tests {
         let span = sources.get(source).unwrap().span(0, 14).unwrap();
         let root = BindingId::Local(LocalId::new(FunctionId::new(0), 0));
         let path = ObjectPath::root(root, ClassId::new(2), span)
-            .project(FieldId::new(ClassId::new(2), 0), ClassId::new(1), span)
-            .project(FieldId::new(ClassId::new(1), 3), ClassId::new(0), span);
+            .project_field(FieldId::new(ClassId::new(2), 0), ClassId::new(1), span)
+            .project_field(FieldId::new(ClassId::new(1), 3), ClassId::new(0), span);
         let place = HirObjectPlace {
             path,
             access: HirAccess::ReadOnly,

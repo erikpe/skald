@@ -1,8 +1,8 @@
 use crate::{
     identity::{ClassId, CopyAssignmentId, DestructorId, FieldId, InitializerId, MethodId},
     resolve::{
-        ResolvedCopyOperation, DUPLICATE_MEMBER, INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
-        UNKNOWN_MEMBER,
+        ResolvedCopyOperation, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
+        INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
     },
     test_support::resolve_source,
 };
@@ -86,7 +86,7 @@ fn rejects_invalid_direct_base_names_in_source_order() {
 }
 
 #[test]
-fn inherited_body_uses_remain_disabled_before_base_projections() {
+fn inherited_body_uses_select_the_declaring_base_projection() {
     let output = resolve_source(concat!(
         "class Base { value: i64; init() {} }\n",
         "class Derived extends Base {\n",
@@ -96,11 +96,7 @@ fn inherited_body_uses_remain_disabled_before_base_projections() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert_eq!(output.diagnostics.len(), 1);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        UNKNOWN_MEMBER
-    );
+    assert!(output.diagnostics.is_empty());
     assert_eq!(
         output
             .program
@@ -120,6 +116,22 @@ fn inherited_body_uses_remain_disabled_before_base_projections() {
             ClassId::new(0),
             0,
         )))
+    );
+    let definition = output
+        .program
+        .class_definitions
+        .get(ClassId::new(1))
+        .unwrap();
+    let ResolvedStatement::Return(result) = &definition.methods[0].body.statements[0] else {
+        panic!("derived method must return the inherited field");
+    };
+    let Some(ResolvedExpression::FieldAccess(access)) = &result.value else {
+        panic!("derived method must retain the inherited field selection");
+    };
+    assert_eq!(access.field, FieldId::new(ClassId::new(0), 0));
+    assert_eq!(
+        access.receiver.projections,
+        [crate::object_path::ObjectProjection::Base(ClassId::new(0))]
     );
 }
 

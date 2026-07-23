@@ -5,7 +5,7 @@ error[TYP009]: external function `external_result` has an unsupported signature
     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected by-value `i64`, `u64`, `u8`, `f64`, or `bool` parameters and a result of type `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
   = note: the source function name must also be its exact linker symbol
 
-error[TYP014]: copy source and destination must have the same class
+error[TYP014]: copy source and destination must have the same class or an ancestry relation
  --> tests/golden/compile_fail/object_value_results.ska:14:12
     |
 14 |     return actual;

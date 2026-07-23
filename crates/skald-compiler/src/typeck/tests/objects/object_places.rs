@@ -13,8 +13,8 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
         "fn main() -> i64 { return 0; }\n",
     ));
     let expected = [
-        FieldId::new(ClassId::new(2), 0),
-        FieldId::new(ClassId::new(1), 0),
+        ObjectProjection::Field(FieldId::new(ClassId::new(2), 0)),
+        ObjectProjection::Field(FieldId::new(ClassId::new(1), 0)),
     ];
     let copy_capabilities = CopyCapabilities::compute(&resolved);
 

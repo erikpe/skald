@@ -6,7 +6,9 @@ use crate::{
 };
 
 use super::{
-    object::{HirFieldPlace, HirObjectPlace, HirObjectSource, HirSelectedCopyOperation},
+    object::{
+        HirFieldPlace, HirObjectPlace, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
+    },
     Type,
 };
 
@@ -52,6 +54,7 @@ pub enum HirExpressionKind {
 pub enum HirCallArgument {
     Value(HirExpression),
     Place(HirObjectPlace),
+    View(HirObjectView),
     Copy(HirCopyArgument),
 }
 
@@ -67,6 +70,7 @@ impl HirCallArgument {
         match self {
             Self::Value(expression) => expression.span,
             Self::Place(place) => place.span(),
+            Self::View(view) => view.span,
             Self::Copy(copy) => copy.span,
         }
     }

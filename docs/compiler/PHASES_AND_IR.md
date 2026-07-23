@@ -100,10 +100,10 @@ alias access, selected primitive and lifecycle operations, exact callable
 targets, object places, construction destinations, copy choices, and
 structured flow summaries.
 
-Direct-base lifecycle crosses this boundary explicitly. HIR records the
-selected base initializer, base-first copy contributions, direct-field
-contributions, and derived-body/field/base destruction order. General typed
-base projections and inherited access remain outside the current HIR surface.
+Static inheritance crosses this boundary explicitly. HIR records selected base
+initializers, complete lifecycle composition, identity-based base projections,
+inherited field and direct-method selections, access-preserving class/`Obj`
+alias views, and owning slices with exact target copy operations.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -128,10 +128,10 @@ objects remain addressable places rather than transient scalar values, and
 field projections carry semantic identities rather than target offsets.
 
 HIR-to-MIR lowering owns deterministic allocation and emission order. It
-returns a structured error when otherwise valid HIR uses static inheritance,
-because MIR does not represent base places or lifecycle steps yet. Supported
-HIR may rely on producer invariants; arbitrary public HIR construction is not
-a supported input contract.
+returns a structured error when otherwise valid HIR uses static inheritance or
+`Obj` views, because MIR does not yet represent base places, lifecycle steps,
+or static view conversions. Supported HIR may rely on producer invariants;
+arbitrary public HIR construction is not a supported input contract.
 
 ## Verification and passes
 

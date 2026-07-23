@@ -76,6 +76,9 @@ impl BodyLowerer<'_> {
                 });
                 destination
             }
+            HirObjectSource::Slice(_) => {
+                unreachable!("static inheritance is rejected before MIR object-source lowering")
+            }
         }
     }
 

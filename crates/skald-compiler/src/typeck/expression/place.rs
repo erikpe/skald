@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{HirAccess, HirExpression, HirExpressionKind, HirFieldPlace, HirObjectPlace, Type},
     identity::{BindingId, FieldId, ParameterId},
-    object_path::ObjectPath,
+    object_path::{ObjectPath, ObjectProjection},
     resolve::{ResolvedExpression, ResolvedObjectPlace, ResolvedParameter, ResolvedTypeKind},
     source::Span,
 };
@@ -93,20 +93,32 @@ impl CallableChecker<'_, '_> {
         let mut checked =
             self.check_binding_place(place.root, place.span, allow_initializing_self)?;
         let mut class = checked.class();
-        for &field in &place.projections {
-            assert_eq!(
-                field.class(),
-                class,
-                "resolved object-place projection must belong to its receiver class"
-            );
-            let declaration = self
-                .program
-                .field(field)
-                .expect("resolved object-place projection must reference a field");
-            let ResolvedTypeKind::Class(target) = declaration.type_syntax.kind else {
-                panic!("resolved object-place projection must have a class type");
-            };
-            class = target;
+        for &projection in &place.projections {
+            match projection {
+                ObjectProjection::Base(base) => {
+                    assert_eq!(
+                        self.program.hierarchy.direct_base(class),
+                        Some(base),
+                        "resolved base projection must select the direct base"
+                    );
+                    class = base;
+                }
+                ObjectProjection::Field(field) => {
+                    assert_eq!(
+                        field.class(),
+                        class,
+                        "resolved field projection must belong to its receiver class"
+                    );
+                    let declaration = self
+                        .program
+                        .field(field)
+                        .expect("resolved object-place projection must reference a field");
+                    let ResolvedTypeKind::Class(target) = declaration.type_syntax.kind else {
+                        panic!("resolved object-place projection must have a class type");
+                    };
+                    class = target;
+                }
+            }
         }
         assert_eq!(
             class, place.class,
@@ -125,60 +137,9 @@ impl CallableChecker<'_, '_> {
         Some(checked)
     }
 
-    pub(super) fn check_alias_argument_place(
+    pub(in crate::typeck) fn check_object_source_place(
         &mut self,
         expression: &ResolvedExpression,
-    ) -> Option<HirObjectPlace> {
-        match expression {
-            ResolvedExpression::Binding(binding) => {
-                self.check_binding_place(binding.binding, binding.span, false)
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                let mut place = self.check_alias_argument_place(&grouped.expression)?;
-                place.path.span = grouped.span;
-                Some(place)
-            }
-            ResolvedExpression::FieldAccess(access) => {
-                let field = self
-                    .program
-                    .field(access.field)
-                    .expect("resolved field access must reference a field");
-                let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_ALIAS_ARGUMENT,
-                            "alias argument must designate an object",
-                        )
-                        .with_primary_label(access.member_span, "this field has a primitive type"),
-                    );
-                    return None;
-                };
-                let place = access
-                    .receiver
-                    .clone()
-                    .project(access.field, class, access.span);
-                self.check_object_place(&place, ObjectPlaceUse::Alias)
-            }
-            _ => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INVALID_ALIAS_ARGUMENT,
-                        "alias argument must be an existing object place",
-                    )
-                    .with_primary_label(
-                        expression.span(),
-                        "expected an object local, `self`, alias parameter, or grouping",
-                    ),
-                );
-                None
-            }
-        }
-    }
-
-    pub(in crate::typeck) fn check_copy_source_place(
-        &mut self,
-        expression: &ResolvedExpression,
-        expected_class: crate::identity::ClassId,
     ) -> Option<HirObjectPlace> {
         let place = match expression {
             ResolvedExpression::Binding(binding)
@@ -187,8 +148,7 @@ impl CallableChecker<'_, '_> {
                 self.check_binding_place(binding.binding, binding.span, false)
             }
             ResolvedExpression::Grouped(grouped) => {
-                let mut place =
-                    self.check_copy_source_place(&grouped.expression, expected_class)?;
+                let mut place = self.check_object_source_place(&grouped.expression)?;
                 place.path.span = grouped.span;
                 Some(place)
             }
@@ -210,7 +170,7 @@ impl CallableChecker<'_, '_> {
                 let place = access
                     .receiver
                     .clone()
-                    .project(access.field, class, access.span);
+                    .project_field(access.field, class, access.span);
                 self.check_object_place(&place, ObjectPlaceUse::CopySource)
             }
             _ => {
@@ -227,35 +187,10 @@ impl CallableChecker<'_, '_> {
                 return None;
             }
         }?;
-
-        if place.class() != expected_class {
-            let actual = &self
-                .program
-                .class(place.class())
-                .expect("copy-source class must exist")
-                .name;
-            let expected = &self
-                .program
-                .class(expected_class)
-                .expect("copy-destination class must exist")
-                .name;
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_OBJECT_CONTEXT,
-                    "copy source and destination must have the same class",
-                )
-                .with_primary_label(
-                    place.span(),
-                    format!("source has class `{actual}`, expected `{expected}`"),
-                ),
-            );
-            return None;
-        }
-
         Some(place)
     }
 
-    fn check_binding_place(
+    pub(in crate::typeck) fn check_binding_place(
         &mut self,
         binding: BindingId,
         span: Span,
@@ -271,6 +206,19 @@ impl CallableChecker<'_, '_> {
             );
             return None;
         };
+        let access = self.binding_access(binding, allow_initializing_self, span)?;
+        Some(HirObjectPlace {
+            path: ObjectPath::root(binding, class, span),
+            access,
+        })
+    }
+
+    pub(in crate::typeck) fn binding_access(
+        &mut self,
+        binding: BindingId,
+        allow_initializing_self: bool,
+        span: Span,
+    ) -> Option<HirAccess> {
         let access = match binding {
             BindingId::Receiver(_) => {
                 let receiver = self
@@ -296,10 +244,7 @@ impl CallableChecker<'_, '_> {
                     .unwrap_or(HirAccess::Mutable)
             }
         };
-        Some(HirObjectPlace {
-            path: ObjectPath::root(binding, class, span),
-            access,
-        })
+        Some(access)
     }
 
     pub(super) fn check_initializer_field_liveness(&mut self, field: FieldId, span: Span) -> bool {
@@ -333,7 +278,7 @@ impl CallableChecker<'_, '_> {
             .expect("resolved parameter ID must exist")
     }
 
-    pub(super) fn binding_type(&self, binding: BindingId) -> Type {
+    pub(in crate::typeck) fn binding_type(&self, binding: BindingId) -> Type {
         assert_eq!(
             binding.callable(),
             self.callable,

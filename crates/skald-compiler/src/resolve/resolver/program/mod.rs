@@ -61,6 +61,7 @@ impl<'ast> ProgramResolver<'ast> {
             &function_declarations,
             &class_declarations,
             &class_symbols,
+            &hierarchy,
         );
         let class_definitions = resolve_class_bodies(
             self.ast,
@@ -68,6 +69,7 @@ impl<'ast> ProgramResolver<'ast> {
             &class_work,
             &class_declarations,
             &class_symbols,
+            &hierarchy,
             &mut self.diagnostics,
         );
         let entry_function = self
@@ -95,6 +97,16 @@ impl<'ast> ProgramResolver<'ast> {
     fn collect_top_levels(&mut self) {
         for (ast_index, declaration) in self.ast.declarations.iter().enumerate() {
             let name = declaration.name();
+            if name.text == "Obj" {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        DUPLICATE_TOP_LEVEL,
+                        "`Obj` is reserved as the universal object-view type",
+                    )
+                    .with_primary_label(name.span, "choose another top-level declaration name"),
+                );
+                continue;
+            }
             let kind = match declaration {
                 syntax::TopLevelDeclaration::Function(_)
                 | syntax::TopLevelDeclaration::ExternalFunction(_) => {
@@ -232,6 +244,7 @@ impl<'ast> ProgramResolver<'ast> {
         functions: &ResolvedFunctionDeclarationTable,
         classes: &ResolvedClassDeclarationTable,
         class_symbols: &[ClassSymbols],
+        hierarchy: &ResolvedClassHierarchy,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let work = self.function_work.clone();
         work.into_iter()
@@ -250,7 +263,12 @@ impl<'ast> ProgramResolver<'ast> {
                     &declaration.parameters,
                     &function.body,
                     BaseInitializationPolicy::Forbidden,
-                    BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
+                    BodyResolutionEnvironment::new(
+                        &self.top_levels,
+                        classes,
+                        class_symbols,
+                        hierarchy,
+                    ),
                     &mut self.diagnostics,
                 );
                 Some(ResolvedFunctionDefinition {

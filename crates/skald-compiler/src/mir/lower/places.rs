@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::identity::BindingId;
+use crate::object_path::ObjectProjection;
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
@@ -24,7 +25,12 @@ impl BodyLowerer<'_> {
         place
             .projections()
             .iter()
-            .fold(root, |projected, &field| projected.project_field(field))
+            .fold(root, |projected, projection| match *projection {
+                ObjectProjection::Field(field) => projected.project_field(field),
+                ObjectProjection::Base(_) => {
+                    unreachable!("static inheritance is rejected before MIR place lowering")
+                }
+            })
     }
 
     pub(super) fn storage_for_binding(&self, binding: BindingId) -> StorageId {

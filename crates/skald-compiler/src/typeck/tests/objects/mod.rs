@@ -10,6 +10,7 @@ use crate::{
         BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, MethodId,
     },
     mir::{lower_hir, verify_mir, MirInstruction, MirPlaceProjection},
+    object_path::ObjectProjection,
     typeck::function::{CallableChecker, MemberCheckContext, ReceiverContext},
 };
 
@@ -19,3 +20,4 @@ mod lifecycle_copy;
 mod lifecycle_inheritance;
 mod object_places;
 mod receiver_access;
+mod static_inheritance;

@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     hir::{HirAccess, HirCallArgument, HirExpressionKind, HirStatement},
     identity::{BindingId, ClassId, FieldId, FunctionId},
+    object_path::ObjectProjection,
 };
 
 #[test]
@@ -72,13 +73,25 @@ fn supports_nested_places_across_every_live_root_kind() {
         alias.root(),
         BindingId::Parameter(hir.declarations.get(FunctionId::new(3)).unwrap().parameters[0].id)
     );
-    assert_eq!(alias.projections(), [branch_projection, leaf_projection]);
+    assert_eq!(
+        alias.projections(),
+        [
+            ObjectProjection::Field(branch_projection),
+            ObjectProjection::Field(leaf_projection)
+        ]
+    );
     assert_eq!(alias.access, HirAccess::ReadOnly);
 
     let HirExpressionKind::MethodCall { receiver, .. } = &right.kind else {
         panic!("expected nested method call");
     };
-    assert_eq!(receiver.projections(), [branch_projection, leaf_projection]);
+    assert_eq!(
+        receiver.projections(),
+        [
+            ObjectProjection::Field(branch_projection),
+            ObjectProjection::Field(leaf_projection)
+        ]
+    );
     assert_eq!(receiver.access, HirAccess::ReadOnly);
 
     let through_mut = hir.definitions.get(FunctionId::new(4)).unwrap();
@@ -87,7 +100,10 @@ fn supports_nested_places_across_every_live_root_kind() {
     };
     assert_eq!(
         assignment.place.receiver.projections(),
-        [branch_projection, leaf_projection]
+        [
+            ObjectProjection::Field(branch_projection),
+            ObjectProjection::Field(leaf_projection)
+        ]
     );
     assert_eq!(assignment.place.receiver.access, HirAccess::Mutable);
 

@@ -1,8 +1,8 @@
 # Skald Aliases and Ownership
 
-Status: authoritative for implemented exact-class alias parameters and their
-interaction with inline ownership. The frozen polymorphic extensions are owned
-by [polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
+Status: authoritative for executable exact-class aliases and the frontend/HIR
+contract for static class and `Obj` views. Interface views are owned by
+[polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
 aliases, and aliases into other future value families are not implemented or
 frozen. Their maturity is authoritative in the [status matrix](STATUS.md).
 
@@ -38,15 +38,16 @@ the same read-only source-binding semantics as part of their more specialized
 External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
-The designated type must be one exact concrete class. Primitive, `unit`,
-shared, optional, array, function, interface, and polymorphic alias parameter
-types are unsupported. Alias modifiers are not accepted on locals, fields,
-results, elements, statics, or captures.
+The designated type may be one concrete class or `Obj`. Primitive, `unit`,
+shared, optional, array, function, and interface alias parameter types are
+unsupported. `Obj` is a universal non-owning target with no members or inline
+storage. Alias modifiers are not accepted on locals, fields, results, elements,
+statics, or captures.
 
 ## Eligible argument places
 
-An alias argument must designate an existing, already-live object place of the
-exact parameter class. Its root may be:
+An alias argument must designate an existing, already-live object place or a
+forwarded `Obj` view. Its root may be:
 
 - an owning exact-class local;
 - an owning exact-class value parameter;
@@ -58,8 +59,13 @@ Grouping around a root or projection preserves the same place. This includes
 inline subobjects reached through owning values, receivers, and existing
 aliases.
 
-A fresh construction, object-returning call, primitive binding or field,
-wrong-class object, and any other produced value is not an alias source.
+A concrete class source may convert to the same class, any ancestor class, or
+`Obj`. These conversions retain the original complete object and do not slice.
+An `Obj` view may be forwarded only to `Obj`; there is no implicit downcast.
+Unrelated classes are invalid.
+
+A fresh construction, object-returning call, primitive binding or field, and
+any other produced value is not an alias source.
 Initializer `self` is also ineligible while the enclosing object is incomplete;
 an already initialized direct field may be passed independently when its
 initializer-body rules permit.
@@ -78,9 +84,9 @@ Each root supplies one access capability for its complete projection path:
 | `ref` parameter | Read-only |
 | `mut ref` parameter | Mutable |
 
-Projecting an inline class field preserves that access. Mutable access may be
-restricted when forwarding to `ref`; read-only access cannot satisfy a
-`mut ref` parameter.
+Projecting an inline class field or direct base preserves that access. A view
+conversion may restrict mutable access when forwarding to `ref`; read-only
+access cannot satisfy a `mut ref` parameter.
 
 Through read-only access, code may read primitive fields, call read-only
 methods, use the object as a copy source, and forward the place to another
@@ -96,9 +102,10 @@ alias or end the object's lifetime.
 
 ## Forwarding, copying, and calls
 
-Forwarding passes the same object place into a nested call. A `ref` parameter
-may be forwarded only as `ref`; a `mut ref` parameter may be forwarded as
-either mode. Grouping does not change these rules.
+Forwarding passes the same complete object into a nested call. A `ref`
+parameter may be forwarded only as `ref`; a `mut ref` parameter may be
+forwarded as either mode. Class-to-ancestor and class-to-`Obj` conversions
+change only the static view target. Grouping does not change these rules.
 
 An alias name is not an ordinary scalar value. It cannot itself be copied,
 stored, assigned, or returned. The object it designates may still be copied in
@@ -111,6 +118,9 @@ then explicit arguments are evaluated from left to right. Alias place
 selection participates at its source position alongside value and object-copy
 arguments. It does not create a separately observable value or permit argument
 reordering.
+
+Static polymorphic views are currently explicit in typed HIR and rejected by a
+structured HIR-to-MIR stage error. Exact-class aliases remain executable.
 
 ## Non-exclusivity
 

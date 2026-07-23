@@ -45,13 +45,17 @@ fn lower_class_declaration(
         .iter()
         .map(|field| {
             let ty = lower_type(&field.type_syntax);
-            if ty == Type::Unit {
+            if matches!(ty, Type::Unit | Type::Obj) {
+                let name = ty.name();
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
-                        format!("field `{}` cannot have type `unit`", field.name),
+                        format!("field `{}` cannot have type `{name}`", field.name),
                     )
-                    .with_primary_label(field.type_syntax.span, "fields require storage"),
+                    .with_primary_label(
+                        field.type_syntax.span,
+                        "`Obj` is a non-owning alias view and `unit` has no storage",
+                    ),
                 );
                 valid = false;
             }
@@ -127,13 +131,27 @@ fn lower_class_declaration(
         .iter()
         .map(|method| {
             valid &= validate_parameters(&method.parameters, diagnostics, "method");
+            let return_type = lower_type(&method.return_type);
+            if return_type == Type::Obj {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_DECLARATION,
+                        format!("method `{}` cannot return `Obj`", method.name),
+                    )
+                    .with_primary_label(
+                        method.return_type.span,
+                        "non-owning views cannot escape a call",
+                    ),
+                );
+                valid = false;
+            }
             HirMethodDeclaration {
                 id: method.id,
                 name: method.name.clone(),
                 name_span: method.name_span,
                 receiver_access: lower_receiver_access(method.receiver_access),
                 parameters: method.parameters.iter().map(lower_parameter).collect(),
-                return_type: lower_type(&method.return_type),
+                return_type,
                 span: method.span,
             }
         })

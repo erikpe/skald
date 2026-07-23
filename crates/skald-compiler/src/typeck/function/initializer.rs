@@ -30,12 +30,7 @@ impl CallableChecker<'_, '_> {
 
         let hir = match (target.ty, body_kind) {
             (Type::Class(class), MemberBodyKind::OrdinaryInitializer) => self
-                .check_direct_field_construction(
-                    target.place.clone(),
-                    class,
-                    &target.name,
-                    assignment,
-                ),
+                .check_field_initialization(target.place.clone(), class, &target.name, assignment),
             (Type::Class(class), MemberBodyKind::CopyConstructor) => self
                 .check_copy_constructor_field_assignment(
                     target.place.clone(),
@@ -46,13 +41,15 @@ impl CallableChecker<'_, '_> {
             (Type::Class(class), MemberBodyKind::CopyAssignment) => {
                 self.check_field_copy_assignment(target.place.clone(), class, assignment)
             }
-            (Type::Bool | Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Unit, _) => self
-                .check_primitive_field_assignment(
-                    target.place.clone(),
-                    target.ty,
-                    &target.name,
-                    assignment,
-                ),
+            (
+                Type::Bool | Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Unit | Type::Obj,
+                _,
+            ) => self.check_primitive_field_assignment(
+                target.place.clone(),
+                target.ty,
+                &target.name,
+                assignment,
+            ),
             (Type::Class(_), MemberBodyKind::MethodOrDestructor) => {
                 unreachable!("method field copy assignment is handled before initializer policy")
             }
@@ -178,7 +175,7 @@ impl CallableChecker<'_, '_> {
             })
     }
 
-    fn check_copy_constructor_field_assignment(
+    fn check_field_initialization(
         &mut self,
         place: HirFieldPlace,
         class: ClassId,
@@ -187,11 +184,30 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirStatement> {
         if matches!(
             &assignment.value,
-            crate::resolve::ResolvedExpression::Construct(_)
+            crate::resolve::ResolvedExpression::Construct(construction)
+                if construction.class == class
         ) {
             return self.check_direct_field_construction(place, class, field_name, assignment);
         }
-        let source = self.check_copy_source_place(&assignment.value, class)?;
+        let Some(actual) = self.resolved_object_class(&assignment.value) else {
+            let _ = self.check_field_construction(class, field_name, &assignment.value);
+            return None;
+        };
+        if actual == class || self.program.hierarchy.is_subtype(actual, class) != Some(true) {
+            let _ = self.check_field_construction(class, field_name, &assignment.value);
+            return None;
+        }
+        self.check_field_copy_construction(place, class, assignment)
+    }
+
+    fn check_field_copy_construction(
+        &mut self,
+        place: HirFieldPlace,
+        class: ClassId,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> Option<HirStatement> {
+        let source =
+            self.check_object_source(&assignment.value, class, "field initialization source")?;
         let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
             self.report_unavailable_copy_operation(class, true, assignment.value.span());
             return None;
@@ -206,13 +222,31 @@ impl CallableChecker<'_, '_> {
         ))
     }
 
+    fn check_copy_constructor_field_assignment(
+        &mut self,
+        place: HirFieldPlace,
+        class: ClassId,
+        field_name: &str,
+        assignment: &crate::resolve::ResolvedFieldAssignment,
+    ) -> Option<HirStatement> {
+        if matches!(
+            &assignment.value,
+            crate::resolve::ResolvedExpression::Construct(construction)
+                if construction.class == class
+        ) {
+            return self.check_direct_field_construction(place, class, field_name, assignment);
+        }
+        self.check_field_copy_construction(place, class, assignment)
+    }
+
     fn check_field_copy_assignment(
         &mut self,
         place: HirFieldPlace,
         class: ClassId,
         assignment: &crate::resolve::ResolvedFieldAssignment,
     ) -> Option<HirStatement> {
-        let source = self.check_copy_source_place(&assignment.value, class)?;
+        let source =
+            self.check_object_source(&assignment.value, class, "field assignment source")?;
         let Some(operation) = self.copy_capabilities.assignment(class).selected() else {
             self.report_unavailable_copy_operation(class, false, assignment.value.span());
             return None;
@@ -236,7 +270,7 @@ impl CallableChecker<'_, '_> {
                 .receiver
                 .path
                 .clone()
-                .project(place.field, class, assignment.span),
+                .project_field(place.field, class, assignment.span),
             access: place.receiver.access,
         };
         self.finish_copy_assignment(destination, &assignment.value, assignment.span)

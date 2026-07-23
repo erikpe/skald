@@ -162,23 +162,29 @@ impl BodyLowerer<'_> {
     }
 
     fn lower_field_copy_construction(&mut self, statement: &crate::hir::HirFieldCopyConstruction) {
+        let destination = self.lower_field_place(&statement.place);
+        let source = self.lower_object_source(&statement.source);
         self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
-            destination: self.lower_field_place(&statement.place),
-            source: self.lower_object_place(&statement.source),
+            destination,
+            source,
             class: statement.source.class(),
             operation: lower_selected_copy_operation(statement.operation),
             span: statement.span,
         }));
+        self.finish_full_expression(statement.span);
     }
 
     fn lower_field_copy_assignment(&mut self, statement: &crate::hir::HirFieldCopyAssignment) {
+        let destination = self.lower_field_place(&statement.place);
+        let source = self.lower_object_source(&statement.source);
         self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
-            destination: self.lower_field_place(&statement.place),
-            source: self.lower_object_place(&statement.source),
+            destination,
+            source,
             class: statement.source.class(),
             operation: lower_selected_copy_operation(statement.operation),
             span: statement.span,
         }));
+        self.finish_full_expression(statement.span);
     }
 
     fn lower_copy_assignment(&mut self, statement: &crate::hir::HirCopyAssignment) {

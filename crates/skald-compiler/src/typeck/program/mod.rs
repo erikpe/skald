@@ -108,6 +108,18 @@ fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &m
     for declaration in program.declarations.iter() {
         if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
             validate_parameters(&declaration.parameters, diagnostics, "function");
+            if lower_type(&declaration.return_type) == Type::Obj {
+                diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_DECLARATION,
+                        format!("function `{}` cannot return `Obj`", declaration.name),
+                    )
+                    .with_primary_label(
+                        declaration.return_type.span,
+                        "non-owning views cannot escape a call",
+                    ),
+                );
+            }
         }
     }
 }
@@ -121,7 +133,7 @@ fn validate_parameters(
     for parameter in parameters {
         let ty = lower_type(&parameter.type_syntax);
         match parameter.binding_mode {
-            ResolvedParameterBindingMode::Value if ty == Type::Unit => {
+            ResolvedParameterBindingMode::Value if matches!(ty, Type::Unit | Type::Obj) => {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
@@ -132,20 +144,20 @@ fn validate_parameters(
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "`unit` value parameters are unavailable",
+                        "`unit` and `Obj` value parameters are unavailable",
                     ),
                 );
                 valid = false;
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. }
-                if !matches!(ty, Type::Class(_)) =>
+                if !matches!(ty, Type::Class(_) | Type::Obj) =>
             {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a class",
+                            "{owner} alias parameter `{}` must name a class or `Obj`",
                             parameter.name
                         ),
                     )
@@ -322,6 +334,7 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::F64 => Type::F64,
         ResolvedTypeKind::Bool => Type::Bool,
         ResolvedTypeKind::Unit => Type::Unit,
+        ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
     }
 }

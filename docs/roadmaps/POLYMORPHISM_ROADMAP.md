@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM6 is next. The
+Status: in progress; PM7 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -89,7 +89,7 @@ The frozen restricted profile excludes:
 - [x] PM3 — Parse and resolve class inheritance
 - [x] PM4 — Build the canonical class hierarchy and inherited lookup
 - [x] PM5 — Compose base initialization and lifecycle semantics
-- [ ] PM6 — Add typed static base views and slicing in HIR
+- [x] PM6 — Add typed static base views and slicing in HIR
 - [ ] PM7 — Represent and verify static inheritance in MIR
 - [ ] PM8 — Lower static inheritance on x86-64
 - [ ] PM9 — Resolve virtual declarations and override families
@@ -249,15 +249,15 @@ explicit, ordered base contribution and no backend-owned lifecycle choice.
 **Purpose:** Make static inherited access and exact base-object production
 explicit at the typed semantic boundary.
 
-- [ ] Add HIR base projections carrying selected declarations, terminal class,
+- [x] Add HIR base projections carrying selected declarations, terminal class,
       and preserved receiver access.
-- [ ] Type-check inherited fields, direct non-virtual methods, read-only and
+- [x] Type-check inherited fields, direct non-virtual methods, read-only and
       mutable alias upcasts, and `Obj` upcasts without slicing.
-- [ ] Represent inline derived-to-base value conversion as selected base copy
+- [x] Represent inline derived-to-base value conversion as selected base copy
       construction into exact base storage, never as raw prefix bytes.
-- [ ] Preserve receiver-before-argument evaluation, exact object-value
+- [x] Preserve receiver-before-argument evaluation, exact object-value
       ownership, return-storage, temporary, and elision rules.
-- [ ] Extend HIR dumps and place/access diagnostics without leaking target
+- [x] Extend HIR dumps and place/access diagnostics without leaking target
       layout.
 
 **Tests:** Add focused HIR/type-check tests for deep projections, access

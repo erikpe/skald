@@ -9,6 +9,7 @@ use crate::{
 
 use super::{function::CallableChecker, program::TYPE_MISMATCH};
 
+mod alias;
 mod call;
 mod place;
 mod primitive;

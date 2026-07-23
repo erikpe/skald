@@ -1,12 +1,13 @@
 # Skald Polymorphism
 
-Status: frozen design under active implementation. The compiler parses one
-contextual `extends` clause, resolves its target to a class identity, rejects
-cycles and inherited member collisions, and builds canonical ancestry and
-member lookup. Every inheritance-shaped program still stops before HIR; base
-lifecycle, inherited source access, interfaces, polymorphic views, type tests,
-and narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
-this boundary from executable exact-class behavior.
+Status: frozen design under active implementation. Canonical single
+inheritance, complete base lifecycle, inherited static member access,
+access-preserving class/`Obj` alias views, and inline slicing are represented
+explicitly through typed HIR. MIR base places and view operations are not yet
+available, so these valid programs stop at the structured HIR-lowering
+boundary. Virtual dispatch, interfaces, type tests, and narrowing remain
+unavailable. The [status matrix](STATUS.md) distinguishes this boundary from
+executable exact-class behavior.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -21,9 +22,9 @@ profile. It extends, rather than replaces:
 ## Frozen source profile
 
 The following EBNF describes the complete surface owned by this profile. The
-optional `extends` clause is now part of the
-[implemented grammar](GRAMMAR.md); the remaining forms become accepted only
-when their corresponding roadmap tasks land.
+optional `extends` clause, `super(...)`, and `Obj` alias target are now part of
+the [implemented grammar](GRAMMAR.md); the remaining forms become accepted
+only when their corresponding roadmap tasks land.
 
 ```text
 class-declaration       = "class" identifier ["extends" identifier]
@@ -95,11 +96,11 @@ class of their original declaration. An override retains its own method
 identity and joins the virtual family rooted at the inherited declaration.
 Lower phases never recreate inheritance or ownership from source names.
 
-The current compiler implements this declaration-graph boundary: validated
-base chains, subtype queries, nearest ordinary-member selection, and declaring
-owners are available through one resolved identity model. Member bodies do not
-yet use inherited selections because the corresponding base-subobject places
-are not represented in HIR.
+The compiler carries nearest inherited selections into typed HIR. Every
+receiver path records the direct-base identities needed to reach the declaring
+class, followed by any ordinary inline-field projections. The terminal class,
+selected field or method identity, and receiver access are therefore explicit
+without physical offsets.
 
 ## Virtual methods and overrides
 
@@ -216,6 +217,12 @@ Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
 occur in source evaluation order.
 
+The current HIR implements class-to-ancestor and class-to-`Obj` alias
+conversions, including forwarding of `Obj` aliases. Each converted argument
+retains its source place or forwarded view, static target, and restricted
+access. Interface targets arrive with interface conformance; none of these
+views is executable until MIR represents them.
+
 ## Inline slicing
 
 An inline derived-to-ancestor conversion slices. It creates or updates an
@@ -239,6 +246,11 @@ Slicing is never one of the two exact-class constructor-elision cases. A fresh
 or returned derived source is first completed under the existing temporary or
 result rules, then sliced, then cleaned normally. An existing derived place is
 used directly as the copy source without an intermediate owning object.
+
+The current HIR represents slicing as an owning object source with the ordered
+direct-base identity path and exact ancestor target. The surrounding local,
+field, argument, return, or assignment operation retains the selected target
+copy operation. No target layout or aggregate byte-copy choice appears in HIR.
 
 ## Base construction and lifecycle composition
 

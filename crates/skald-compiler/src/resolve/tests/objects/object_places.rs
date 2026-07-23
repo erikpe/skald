@@ -14,8 +14,8 @@ fn resolves_nested_object_places_from_locals_self_and_alias_roots() {
 
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let expected = [
-        FieldId::new(ClassId::new(2), 0),
-        FieldId::new(ClassId::new(1), 0),
+        ObjectProjection::Field(FieldId::new(ClassId::new(2), 0)),
+        ObjectProjection::Field(FieldId::new(ClassId::new(1), 0)),
     ];
 
     let root_definition = &output

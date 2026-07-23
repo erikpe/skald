@@ -1,5 +1,6 @@
 use super::*;
 use crate::identity::FieldId;
+use crate::object_path::ObjectProjection;
 
 fn class(output: &ResolveOutput, index: usize) -> &ResolvedClassDeclaration {
     output

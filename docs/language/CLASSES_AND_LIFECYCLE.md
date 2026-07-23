@@ -17,7 +17,7 @@ types even when their declarations have identical members. Executable MIR
 class semantics have no inheritance or implicit class conversion, so every
 currently executable class use requires the exact declared class. An optional
 direct-base header is parsed, resolved, validated as a canonical hierarchy,
-and carried through typed lifecycle HIR. Static base projections, layout, and
+and carried through typed lifecycle and static-access HIR. Base layout and
 execution remain later phase work.
 
 A class value is one complete inline object containing all of its direct
@@ -58,10 +58,11 @@ not satisfy the ordinary-initializer requirement. Any other valid `init`
 signature is ordinary, and a second ordinary initializer is rejected rather
 than forming an overload set.
 
-All executable fields and methods are accessible wherever the receiver is
-available. Static members and access modifiers are not implemented. Resolution
-can select inherited ordinary members and rejects redeclarations across a base
-chain, but source uses remain disabled until typed base-subobject places exist.
+All executable exact-class fields and methods are accessible wherever the
+receiver is available. Static members and access modifiers are not
+implemented. Resolution selects inherited ordinary members and rejects
+redeclarations across a base chain. Typed HIR projects the receiver through
+each selected direct base to the member's declaring class.
 
 ## Fields and finite containment
 
@@ -117,9 +118,10 @@ zero or more class-field projections. Implemented live roots are owning locals,
 owning value parameters, `self`, and `ref` or `mut ref` parameters. Grouping
 around a root or projection preserves the same place.
 
-Each intermediate projection must select a class-typed field. A class-typed
-endpoint remains an object place and may be used in a supported copy,
-assignment, receiver, or alias context. It is not an ordinary scalar value.
+Each intermediate projection selects either a direct base identity or a
+class-typed field. A class-typed endpoint remains an object place and may be
+used in a supported copy, assignment, receiver, or alias context. It is not an
+ordinary scalar value.
 Selecting a final primitive field reads or writes that field according to the
 surrounding expression or statement and the root's access.
 
@@ -129,9 +131,10 @@ final primitive field. In `root.branch.leaf.read()`, the `leaf` endpoint is the
 method receiver. In `inspect(root.branch.leaf)`, it may be an alias argument
 when the parameter expects that exact class.
 
-Projection is valid only through fields owned by the class at that point in
-the path. A primitive field cannot be projected further, a method is not a
-field place, and member selection does not search unrelated classes.
+Field projection is valid only through fields owned by the class at that point
+in the path; base projection follows only canonical direct-base edges. A
+primitive field cannot be projected further, a method is not a field place,
+and member selection does not search unrelated classes.
 
 ## Ordinary initializer contract
 
@@ -480,13 +483,12 @@ deallocation or any particular storage operation.
 ## Unsupported extensions
 
 The implemented executable class model does not yet include base layout,
-inherited member access, interfaces, virtual dispatch, `Obj`, class
-conversions, shared or heap-backed objects, `new`, nullable object references,
-static members, access modifiers, `final`, abstract members, overloads,
-reflection, or user-defined conversions. Direct-base syntax, identity
-resolution, hierarchy validation, inherited ordinary-member selection,
-finite-containment analysis, and complete base lifecycle selection are the
-implemented non-executable inheritance boundary.
+interfaces, virtual dispatch, executable `Obj` or class conversions, shared or
+heap-backed objects, `new`, nullable object references, static members, access
+modifiers, `final`, abstract members, overloads, reflection, or user-defined
+conversions. Direct-base syntax, hierarchy validation, inherited static
+selection, base lifecycle, alias views, and slicing are the implemented typed
+HIR boundary.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

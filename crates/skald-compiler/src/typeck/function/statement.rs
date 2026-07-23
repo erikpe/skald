@@ -190,7 +190,7 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::Unit, Some(value)) => {
+            (Type::Unit | Type::Obj, Some(value)) => {
                 // Preserve independent expression diagnostics even when the
                 // return form itself is invalid.
                 let _ = self.check_expression(value);
@@ -203,7 +203,7 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::Unit, None) => Some(HirStatement::Return(HirReturn {
+            (Type::Unit | Type::Obj, None) => Some(HirStatement::Return(HirReturn {
                 value: None,
                 span: statement.span,
             })),
@@ -222,31 +222,47 @@ impl CallableChecker<'_, '_> {
                     self.report_unavailable_copy_operation(class, true, value.span());
                     return CheckedStatement::terminates(None);
                 };
-                let object_return =
-                    if let crate::resolve::ResolvedExpression::Construct(construction) = value {
-                        let Some(construction) = self.check_object_construction(
-                            class,
-                            construction,
-                            "return destination",
-                        ) else {
-                            return CheckedStatement::terminates(None);
-                        };
-                        HirObjectReturn::Construct {
-                            construction,
-                            omitted_copy: operation,
-                        }
-                    } else {
-                        let Some(source) = self.check_object_source(value, class, "object return")
-                        else {
-                            return CheckedStatement::terminates(None);
-                        };
-                        HirObjectReturn::Copy {
-                            source,
-                            operation,
-                            class,
-                            span: value.span(),
-                        }
+                let object_return = if matches!(
+                    value,
+                    crate::resolve::ResolvedExpression::Construct(construction)
+                        if construction.class == class
+                ) {
+                    let crate::resolve::ResolvedExpression::Construct(construction) = value else {
+                        unreachable!("matching construction must remain a construction")
                     };
+                    let Some(construction) =
+                        self.check_object_construction(class, construction, "return destination")
+                    else {
+                        return CheckedStatement::terminates(None);
+                    };
+                    HirObjectReturn::Construct {
+                        construction,
+                        omitted_copy: operation,
+                    }
+                } else {
+                    if let crate::resolve::ResolvedExpression::Construct(construction) = value {
+                        if self.program.hierarchy.is_subtype(construction.class, class)
+                            != Some(true)
+                        {
+                            let _ = self.check_object_construction(
+                                class,
+                                construction,
+                                "return destination",
+                            );
+                            return CheckedStatement::terminates(None);
+                        }
+                    }
+                    let Some(source) = self.check_object_source(value, class, "object return")
+                    else {
+                        return CheckedStatement::terminates(None);
+                    };
+                    HirObjectReturn::Copy {
+                        source,
+                        operation,
+                        class,
+                        span: value.span(),
+                    }
+                };
                 Some(HirStatement::Return(HirReturn {
                     value: Some(HirReturnValue::Object(object_return)),
                     span: statement.span,
