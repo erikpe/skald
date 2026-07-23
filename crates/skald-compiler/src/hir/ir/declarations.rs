@@ -136,6 +136,7 @@ pub struct HirClassDeclaration {
     pub id: ClassId,
     pub name: String,
     pub name_span: Span,
+    pub direct_base: Option<HirDirectBase>,
     pub fields: Vec<HirFieldDeclaration>,
     pub initializer: HirInitializerDeclaration,
     pub copy_constructor_declaration: Option<HirInitializerDeclaration>,
@@ -143,8 +144,55 @@ pub struct HirClassDeclaration {
     pub copy_assignment_declaration: Option<HirCopyAssignmentDeclaration>,
     pub copy_assignment: HirCopyCapability<CopyAssignmentId>,
     pub destructor: Option<HirDestructorDeclaration>,
+    pub destruction: HirDestructionPlan,
     pub methods: Vec<HirMethodDeclaration>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirDirectBase {
+    pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirDestructionPlan {
+    pub steps: Vec<HirDestructionStep>,
+}
+
+impl HirDestructionPlan {
+    pub(crate) fn new(
+        destructor: Option<DestructorId>,
+        class_fields: &[FieldId],
+        direct_base: Option<ClassId>,
+    ) -> Self {
+        let mut steps = Vec::with_capacity(
+            usize::from(destructor.is_some())
+                + class_fields.len()
+                + usize::from(direct_base.is_some()),
+        );
+        if let Some(destructor) = destructor {
+            steps.push(HirDestructionStep::UserBody(destructor));
+        }
+        steps.extend(
+            class_fields
+                .iter()
+                .rev()
+                .copied()
+                .map(HirDestructionStep::Field),
+        );
+        if let Some(base) = direct_base {
+            steps.push(HirDestructionStep::Base(base));
+        }
+        Self { steps }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirDestructionStep {
+    UserBody(DestructorId),
+    Field(FieldId),
+    Base(ClassId),
 }
 
 impl HirClassDeclaration {

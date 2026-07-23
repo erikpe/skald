@@ -1,7 +1,7 @@
 //! Program-wide declaration collection and deterministic identity assignment.
 
 use super::{
-    body::{resolve_callable_body, BodyResolutionEnvironment},
+    body::{resolve_callable_body, BaseInitializationPolicy, BodyResolutionEnvironment},
     *,
 };
 use crate::{
@@ -249,6 +249,7 @@ impl<'ast> ProgramResolver<'ast> {
                     None,
                     &declaration.parameters,
                     &function.body,
+                    BaseInitializationPolicy::Forbidden,
                     BodyResolutionEnvironment::new(&self.top_levels, classes, class_symbols),
                     &mut self.diagnostics,
                 );

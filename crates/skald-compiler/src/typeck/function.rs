@@ -74,6 +74,7 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     pub(super) return_type: Type,
     pub(super) receiver: Option<ReceiverContext>,
     pub(super) initialized_fields: BTreeSet<FieldId>,
+    pub(super) base_initialized: bool,
     pub(super) diagnostics: &'diagnostics mut Diagnostics,
 }
 
@@ -97,6 +98,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             return_type: lower_type(&declaration.return_type),
             receiver: None,
             initialized_fields: BTreeSet::new(),
+            base_initialized: true,
             diagnostics,
         }
     }
@@ -137,6 +139,14 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         context: MemberCheckContext<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
+        let base_initialized = !matches!(
+            context.receiver.body_kind,
+            MemberBodyKind::OrdinaryInitializer
+        ) || program
+            .class(context.receiver.class)
+            .expect("member receiver class must exist")
+            .direct_base
+            .is_none();
         Self {
             program,
             copy_capabilities,
@@ -149,6 +159,7 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             return_type: context.return_type,
             receiver: Some(context.receiver),
             initialized_fields: BTreeSet::new(),
+            base_initialized,
             diagnostics,
         }
     }
@@ -162,6 +173,18 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
                 .program
                 .class(receiver.class)
                 .expect("member receiver must reference a class");
+            if class.direct_base.is_some() && !self.base_initialized {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INITIALIZER_BODY,
+                        format!("base subobject of `{}` is not initialized", class.name),
+                    )
+                    .with_primary_label(
+                        self.body.span,
+                        "a derived ordinary initializer must begin with a valid `super(...)`",
+                    ),
+                );
+            }
             for field in &class.fields {
                 if !self.initialized_fields.contains(&field.id) {
                     self.diagnostics.push(

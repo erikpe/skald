@@ -70,6 +70,11 @@ impl Parser<'_> {
     }
 
     fn parse_statement(&mut self) -> Option<Statement> {
+        if self.at_contextual("super") && self.peek_ahead(1).kind == TokenKind::LeftParen {
+            return self
+                .parse_base_initialization()
+                .map(Statement::BaseInitialization);
+        }
         if self.at(TokenKind::Var) {
             return self.parse_local().map(Statement::Local);
         }
@@ -108,6 +113,21 @@ impl Parser<'_> {
             "expected `var`, `return`, `if`, an expression, a field assignment, or a nested block",
         );
         None
+    }
+
+    fn parse_base_initialization(&mut self) -> Option<BaseInitializationStatement> {
+        let super_token = self.advance();
+        let (arguments, arguments_end) = self.parse_call_arguments()?;
+        let semicolon = self.expect(
+            TokenKind::Semicolon,
+            "`;` after the base-initialization statement",
+        );
+        let end_span = semicolon.map_or(arguments_end, |token| token.span);
+        Some(BaseInitializationStatement {
+            super_span: super_token.span,
+            arguments,
+            span: self.cover(super_token.span, end_span),
+        })
     }
 
     fn discard_misplaced_alias_binding(&mut self) {

@@ -142,6 +142,8 @@ fn destructor_hir_dump_is_exact_and_identity_based() {
             "        Synthesized c0\n",
             "          Primitive c0:field0\n",
             "      Destructor c0:destroy0 mutable -> unit @76..124\n",
+            "      DestructionPlan\n",
+            "        UserBody c0:destroy0\n",
             "      Methods\n",
             "  ClassDefinitions\n",
             "    ClassDefinition c0 @0..126\n",

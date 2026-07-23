@@ -3,7 +3,7 @@
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, LocalId},
+    identity::{BindingId, CallableId, ClassId, InitializerId, LocalId},
 };
 
 mod place;
@@ -39,6 +39,7 @@ pub(super) fn resolve_callable_body(
     receiver_class: Option<ClassId>,
     parameters: &[ResolvedParameter],
     body: &syntax::Block,
+    base_initialization: BaseInitializationPolicy,
     environment: BodyResolutionEnvironment<'_>,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedCallableBody {
@@ -46,10 +47,20 @@ pub(super) fn resolve_callable_body(
         callable,
         receiver_class,
         parameters,
+        base_initialization,
         environment,
         diagnostics,
     )
     .resolve(body)
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum BaseInitializationPolicy {
+    Forbidden,
+    Required {
+        base: ClassId,
+        initializer: Option<InitializerId>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -64,6 +75,7 @@ struct CallableResolver<'program, 'diagnostics> {
     receiver_class: Option<ClassId>,
     environment: BodyResolutionEnvironment<'program>,
     diagnostics: &'diagnostics mut Diagnostics,
+    base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
 }
@@ -73,6 +85,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         callable: CallableId,
         receiver_class: Option<ClassId>,
         parameters: &[ResolvedParameter],
+        base_initialization: BaseInitializationPolicy,
         environment: BodyResolutionEnvironment<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
@@ -94,12 +107,34 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             receiver_class,
             environment,
             diagnostics,
+            base_initialization,
             scopes: vec![parameters],
             locals: Vec::new(),
         }
     }
 
     fn resolve(mut self, body: &syntax::Block) -> ResolvedCallableBody {
+        if matches!(
+            self.base_initialization,
+            BaseInitializationPolicy::Required { .. }
+        ) && !matches!(
+            body.statements.first(),
+            Some(syntax::Statement::BaseInitialization(_))
+        ) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_BASE_INITIALIZATION,
+                    "a derived initializer must begin with `super(...)`",
+                )
+                .with_primary_label(
+                    body.statements
+                        .first()
+                        .map(syntax::Statement::span)
+                        .unwrap_or(body.span),
+                    "initialize the direct base before derived fields",
+                ),
+            );
+        }
         let body = self.resolve_block(body, false);
         ResolvedCallableBody {
             locals: self.locals,
@@ -114,7 +149,10 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         let statements = block
             .statements
             .iter()
-            .filter_map(|statement| self.resolve_statement(statement))
+            .enumerate()
+            .filter_map(|(index, statement)| {
+                self.resolve_statement(statement, !nested && index == 0)
+            })
             .collect();
         if nested {
             self.scopes
@@ -127,8 +165,15 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         }
     }
 
-    fn resolve_statement(&mut self, statement: &syntax::Statement) -> Option<ResolvedStatement> {
+    fn resolve_statement(
+        &mut self,
+        statement: &syntax::Statement,
+        first_root_statement: bool,
+    ) -> Option<ResolvedStatement> {
         match statement {
+            syntax::Statement::BaseInitialization(statement) => self
+                .resolve_base_initialization(statement, first_root_statement)
+                .map(ResolvedStatement::BaseInitialization),
             syntax::Statement::Local(local) => {
                 self.resolve_local(local).map(ResolvedStatement::Local)
             }
@@ -161,6 +206,67 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             syntax::Statement::ObjectAssignment(assignment) => {
                 self.resolve_object_assignment(assignment)
             }
+        }
+    }
+
+    fn resolve_base_initialization(
+        &mut self,
+        statement: &syntax::BaseInitializationStatement,
+        first_root_statement: bool,
+    ) -> Option<ResolvedBaseInitialization> {
+        let target = match self.base_initialization {
+            BaseInitializationPolicy::Required { base, initializer } if first_root_statement => {
+                initializer
+                    .map(|initializer| (base, initializer))
+                    .or_else(|| {
+                        let base_name = &self
+                            .environment
+                            .classes
+                            .get(base)
+                            .expect("resolved direct base must exist")
+                            .name;
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_BASE_INITIALIZATION,
+                                format!("base class `{base_name}` has no ordinary initializer"),
+                            )
+                            .with_primary_label(
+                                statement.super_span,
+                                "this base initialization has no callable target",
+                            ),
+                        );
+                        None
+                    })
+            }
+            BaseInitializationPolicy::Required { .. } | BaseInitializationPolicy::Forbidden => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_BASE_INITIALIZATION,
+                        "`super(...)` is allowed only as the first statement of a derived ordinary initializer",
+                    )
+                    .with_primary_label(statement.super_span, "misplaced base initialization"),
+                );
+                None
+            }
+        };
+
+        let mut arguments = Vec::with_capacity(statement.arguments.len());
+        let mut valid = true;
+        for argument in &statement.arguments {
+            match self.resolve_expression(argument) {
+                Some(argument) => arguments.push(argument),
+                None => valid = false,
+            }
+        }
+        match (target, valid) {
+            (Some((base, initializer)), true) => Some(ResolvedBaseInitialization {
+                base,
+                initializer,
+                arguments,
+                super_span: statement.super_span,
+                span: statement.span,
+            }),
+            _ => None,
         }
     }
 

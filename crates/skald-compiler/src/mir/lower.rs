@@ -7,6 +7,7 @@ use crate::{
     },
     identity::{BindingId, CallableId, ClassId},
 };
+use std::fmt;
 
 use super::{build::MirBodyBuilder, model::*};
 
@@ -21,14 +22,45 @@ mod statement;
 
 use cleanup::CleanupPlanner;
 
-pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirLoweringError {
+    StaticInheritanceNotRepresentable { class: ClassId },
+}
+
+impl fmt::Display for HirLoweringError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::StaticInheritanceNotRepresentable { class } => write!(
+                formatter,
+                "HIR for {class} uses static inheritance, which is not representable in MIR yet"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for HirLoweringError {}
+
+/// Lowers every currently representable HIR operation into executable MIR.
+///
+/// Static inheritance is already meaningful in HIR but does not yet have MIR
+/// places or lifecycle instructions, so that valid staged feature returns a
+/// structured error instead of being discarded or reaching a backend panic.
+pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
+    if let Some(class) = hir
+        .classes
+        .iter()
+        .find(|class| class.direct_base.is_some())
+        .map(|class| class.id)
+    {
+        return Err(HirLoweringError::StaticInheritanceNotRepresentable { class });
+    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
     if let Err(errors) = super::verify_mir(&mir) {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
-    mir
+    Ok(mir)
 }
 
 fn lower_selected_copy_operation<I>(

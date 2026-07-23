@@ -1,0 +1,38 @@
+class Base {
+    init(value: i64) {}
+}
+
+class Missing extends Base {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+}
+
+class Duplicate extends Base {
+    init() {
+        super(0);
+        super(1);
+    }
+}
+
+class Root {
+    init() {
+        super();
+    }
+}
+
+class Copy extends Base {
+    init() {
+        super(0);
+    }
+
+    init(ref source: Copy) {
+        super(0);
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

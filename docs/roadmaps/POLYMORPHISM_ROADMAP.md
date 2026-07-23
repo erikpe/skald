@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM5 is next. The
+Status: in progress; PM6 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -88,7 +88,7 @@ The frozen restricted profile excludes:
 - [x] PM2 — Extract type-checker class-program orchestration
 - [x] PM3 — Parse and resolve class inheritance
 - [x] PM4 — Build the canonical class hierarchy and inherited lookup
-- [ ] PM5 — Compose base initialization and lifecycle semantics
+- [x] PM5 — Compose base initialization and lifecycle semantics
 - [ ] PM6 — Add typed static base views and slicing in HIR
 - [ ] PM7 — Represent and verify static inheritance in MIR
 - [ ] PM8 — Lower static inheritance on x86-64
@@ -224,16 +224,16 @@ questions through one canonical identity-based model.
 **Purpose:** Extend complete-object ownership through base subobjects before any
 dynamic dispatch is executable.
 
-- [ ] Parse and resolve the frozen `super(...)` form only in the permitted
+- [x] Parse and resolve the frozen `super(...)` form only in the permitted
       initializer position and select the base initializer by stable identity.
-- [ ] Type-check base initialization before derived fields and track base
+- [x] Type-check base initialization before derived fields and track base
       liveness explicitly during construction.
-- [ ] Include the base first in copy-construction and copy-assignment capability
+- [x] Include the base first in copy-construction and copy-assignment capability
       computation; retain exact selected operations in HIR.
-- [ ] Extend destruction planning to derived body, derived fields in reverse,
+- [x] Extend destruction planning to derived body, derived fields in reverse,
       then the complete base sequence, with no implicit failed-construction
       cleanup.
-- [ ] Keep diagnostics source-ordered through base and field paths and document
+- [x] Keep diagnostics source-ordered through base and field paths and document
       the executable lifecycle contract.
 
 **Tests:** Add lifecycle/capability unit tests and exact diagnostics for missing,

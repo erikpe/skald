@@ -142,3 +142,62 @@ fn diagnoses_invalid_member_kinds_receivers_and_missing_initializers() {
         ]
     );
 }
+
+#[test]
+fn resolves_only_first_statement_super_for_derived_ordinary_initializers() {
+    let output = resolve_text(concat!(
+        "class Base { init(value: i64) {} }\n",
+        "class Good extends Base { init(value: i64) { super(value); } }\n",
+        "class Missing extends Base { value: i64; init() { self.value = 0; } }\n",
+        "class Duplicate extends Base { init() { super(0); super(1); } }\n",
+        "class Root { init() { super(); } }\n",
+        "class Copy extends Base { init() { super(0); } init(ref source: Copy) { super(0); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_BASE_INITIALIZATION)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 4);
+    assert!(diagnostics[0].message.contains("must begin"));
+    assert!(diagnostics[1]
+        .message
+        .contains("only as the first statement"));
+    assert!(diagnostics[2]
+        .message
+        .contains("only as the first statement"));
+    assert!(diagnostics[3]
+        .message
+        .contains("only as the first statement"));
+
+    let definition = output
+        .program
+        .class_definitions
+        .get(ClassId::new(1))
+        .unwrap();
+    let ResolvedStatement::BaseInitialization(base) =
+        &definition.initializer.as_ref().unwrap().body.statements[0]
+    else {
+        panic!("expected resolved base initialization");
+    };
+    assert_eq!(base.base, ClassId::new(0));
+    assert_eq!(base.initializer, InitializerId::new(ClassId::new(0), 0));
+}
+
+#[test]
+fn diagnoses_super_when_the_direct_base_has_no_initializer() {
+    let output = resolve_text(concat!(
+        "class Base {}\n",
+        "class Derived extends Base { init() { super(); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == INVALID_BASE_INITIALIZATION)
+        .expect("missing base initializer must be diagnosed");
+    assert!(diagnostic.message.contains("has no ordinary initializer"));
+}

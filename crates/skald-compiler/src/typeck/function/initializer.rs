@@ -113,6 +113,18 @@ impl CallableChecker<'_, '_> {
                     .with_primary_label(assignment.span, "expected a field of `self`"),
                 );
                 valid = false;
+            } else if body_kind == MemberBodyKind::OrdinaryInitializer && !self.base_initialized {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_INITIALIZER_BODY,
+                        "derived fields cannot be initialized before the base subobject",
+                    )
+                    .with_primary_label(
+                        assignment.member_span,
+                        "place `super(...)` first in the initializer",
+                    ),
+                );
+                valid = false;
             } else if self.initialized_fields.contains(&place.field) {
                 self.diagnostics.push(
                     Diagnostic::error(

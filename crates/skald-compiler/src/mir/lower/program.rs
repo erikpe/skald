@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::hir::{
-    HirAccess, HirClassDeclaration, HirCopyCapability, HirFunctionDeclaration,
+    HirAccess, HirClassDeclaration, HirCopyCapability, HirDestructionStep, HirFunctionDeclaration,
     HirFunctionDefinition, HirFunctionLinkage, HirMemberDefinition, HirSynthesizedFieldCopy,
 };
 
@@ -62,10 +62,23 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             },
             span: destructor.span,
         });
-    let class_field_ids: Vec<_> = fields
-        .iter()
-        .filter_map(|field| matches!(field.ty, MirType::Class(_)).then_some(field.id))
-        .collect();
+    let destruction = MirDestructionPlan {
+        destructor,
+        steps: class
+            .destruction
+            .steps
+            .iter()
+            .map(|step| match *step {
+                HirDestructionStep::UserBody(destructor) => {
+                    MirDestructionStep::UserBody(destructor)
+                }
+                HirDestructionStep::Field(field) => MirDestructionStep::Field(field),
+                HirDestructionStep::Base(_) => {
+                    unreachable!("static inheritance is rejected before MIR declaration lowering")
+                }
+            })
+            .collect(),
+    };
     MirClassDeclaration {
         id: class.id,
         name: class.name.clone(),
@@ -96,7 +109,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             }
         }),
         copy_assignment: lower_copy_capability(&class.copy_assignment),
-        destruction: MirDestructionPlan::new(destructor, &class_field_ids),
+        destruction,
         methods: class
             .methods
             .iter()
@@ -118,7 +131,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
 
 fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyCapability<I> {
     match capability {
-        HirCopyCapability::User(id) => MirCopyCapability::User(*id),
+        HirCopyCapability::User(copy) => MirCopyCapability::User(copy.operation),
         HirCopyCapability::Synthesized(copy) => {
             MirCopyCapability::Synthesized(MirSynthesizedCopy {
                 class: copy.class,

@@ -59,6 +59,9 @@ impl HirDumper {
         write_span(&mut self.output, class.span);
         self.output.push('\n');
         self.indented(|dumper| {
+            if let Some(base) = &class.direct_base {
+                dumper.line(&format!("DirectBase {}", base.class), base.span);
+            }
             dumper.heading("Fields");
             dumper.indented(|dumper| {
                 for field in &class.fields {
@@ -104,6 +107,24 @@ impl HirDumper {
                     &format!("Destructor {} {access} -> unit", destructor.id),
                     destructor.span,
                 );
+            }
+            if !class.destruction.steps.is_empty() {
+                dumper.heading("DestructionPlan");
+                dumper.indented(|dumper| {
+                    for step in &class.destruction.steps {
+                        match step {
+                            HirDestructionStep::UserBody(destructor) => {
+                                dumper.raw_line(&format!("UserBody {destructor}"));
+                            }
+                            HirDestructionStep::Field(field) => {
+                                dumper.raw_line(&format!("Field {field}"));
+                            }
+                            HirDestructionStep::Base(base) => {
+                                dumper.raw_line(&format!("Base {base}"));
+                            }
+                        }
+                    }
+                });
             }
             dumper.heading("Methods");
             dumper.indented(|dumper| {
@@ -160,11 +181,23 @@ impl HirDumper {
 
     fn copy_capability<I: Copy + Display>(&mut self, capability: &HirCopyCapability<I>) {
         match capability {
-            HirCopyCapability::User(id) => self.raw_line(&format!("User {id}")),
+            HirCopyCapability::User(copy) => {
+                self.raw_line(&format!("User {}", copy.operation));
+                if let Some(base) = copy.base {
+                    self.indented(|dumper| {
+                        dumper.raw_line(&format!("Base {}", base.base));
+                        dumper.indented(|dumper| dumper.selected_copy_operation(base.operation));
+                    });
+                }
+            }
             HirCopyCapability::Unavailable => self.raw_line("Unavailable"),
             HirCopyCapability::Synthesized(operation) => {
                 self.raw_line(&format!("Synthesized {}", operation.class));
                 self.indented(|dumper| {
+                    if let Some(base) = operation.base {
+                        dumper.raw_line(&format!("Base {}", base.base));
+                        dumper.indented(|dumper| dumper.selected_copy_operation(base.operation));
+                    }
                     for field in &operation.fields {
                         match field {
                             HirSynthesizedFieldCopy::Primitive { field } => {
@@ -268,6 +301,20 @@ impl HirDumper {
 
     fn statement(&mut self, statement: &HirStatement) {
         match statement {
+            HirStatement::BaseInitialization(statement) => {
+                self.line(
+                    &format!(
+                        "BaseInitialization {} via {}",
+                        statement.base, statement.initializer
+                    ),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    for argument in &statement.arguments {
+                        dumper.call_argument(argument);
+                    }
+                });
+            }
             HirStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| match &local.initializer {

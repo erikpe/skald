@@ -3,7 +3,10 @@ use crate::{
     hir::HirCopyCapability,
     identity::{ClassId, FieldId},
     resolve::ResolvedCopyOperation,
-    typeck::{capabilities::CopyCapabilities, type_check, COPY_OPERATION_UNAVAILABLE},
+    typeck::{
+        capabilities::{CopyCapabilities, CopyPathElement},
+        type_check, COPY_OPERATION_UNAVAILABLE,
+    },
 };
 
 #[test]
@@ -26,7 +29,7 @@ fn propagates_the_first_unavailable_field_path_without_affecting_the_other_opera
     );
     assert_eq!(
         capabilities.assignment_failure(ClassId::new(0)),
-        Some([FieldId::new(ClassId::new(0), 0)].as_slice())
+        Some([CopyPathElement::Field(FieldId::new(ClassId::new(0), 0))].as_slice())
     );
     assert_eq!(
         capabilities.assignment_failure(ClassId::new(1)),
@@ -72,7 +75,7 @@ fn recursive_synthesis_terminates_and_marks_the_capability_unavailable() {
     );
     assert_eq!(
         capabilities.constructor_failure(ClassId::new(0)),
-        Some([FieldId::new(ClassId::new(0), 0)].as_slice())
+        Some([CopyPathElement::Field(FieldId::new(ClassId::new(0), 0))].as_slice())
     );
     assert_eq!(
         capabilities.assignment(ClassId::new(0)),

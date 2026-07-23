@@ -96,18 +96,23 @@ impl Parser<'_> {
     }
 
     fn finish_call(&mut self, callee: Expression) -> Option<Expression> {
-        let _left_paren = self.advance();
+        let (arguments, end_span) = self.parse_call_arguments()?;
+        Some(Expression::Call(CallExpr {
+            span: self.cover(callee.span(), end_span),
+            callee: Box::new(callee),
+            arguments,
+        }))
+    }
+
+    pub(super) fn parse_call_arguments(&mut self) -> Option<(Vec<Expression>, Span)> {
+        let left_paren = self.advance();
+        debug_assert_eq!(left_paren.kind, TokenKind::LeftParen);
         let mut arguments = Vec::new();
         let mut valid = true;
 
         if self.consume(TokenKind::RightParen).is_some() {
             let right_paren = self.previous();
-            let span = self.cover(callee.span(), right_paren.span);
-            return Some(Expression::Call(CallExpr {
-                callee: Box::new(callee),
-                arguments,
-                span,
-            }));
+            return Some((arguments, right_paren.span));
         }
 
         loop {
@@ -170,16 +175,12 @@ impl Parser<'_> {
         let end_span = right_paren
             .map(|token| token.span)
             .or_else(|| arguments.last().map(Expression::span))
-            .unwrap_or_else(|| callee.span());
+            .unwrap_or(left_paren.span);
         if !valid {
             return None;
         }
 
-        Some(Expression::Call(CallExpr {
-            span: self.cover(callee.span(), end_span),
-            callee: Box::new(callee),
-            arguments,
-        }))
+        Some((arguments, end_span))
     }
 
     fn parse_primary(&mut self) -> Option<Expression> {

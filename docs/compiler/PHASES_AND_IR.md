@@ -16,7 +16,7 @@ The target-independent compiler path is:
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
-| MIR lowering | `mir::lower_hir` | `MirProgram` |
+| MIR lowering | `mir::lower_hir` | `MirProgram` or structured unsupported-stage error |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
 `driver::compile_source_to_assembly` composes these phases with target
@@ -100,10 +100,10 @@ alias access, selected primitive and lifecycle operations, exact callable
 targets, object places, construction destinations, copy choices, and
 structured flow summaries.
 
-The current direct-base implementation deliberately stops before this
-boundary: hierarchy validation is complete, but base lifecycle and typed
-base-subobject places are not. Any valid resolved class base therefore
-produces a type diagnostic and no HIR.
+Direct-base lifecycle crosses this boundary explicitly. HIR records the
+selected base initializer, base-first copy contributions, direct-field
+contributions, and derived-body/field/base destruction order. General typed
+base projections and inherited access remain outside the current HIR surface.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -127,10 +127,11 @@ MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values, and
 field projections carry semantic identities rather than target offsets.
 
-HIR-to-MIR lowering owns deterministic allocation and emission order. It may
-assume valid typed HIR and uses internal assertions for violated producer
-invariants; arbitrary public HIR construction is not a supported input
-contract.
+HIR-to-MIR lowering owns deterministic allocation and emission order. It
+returns a structured error when otherwise valid HIR uses static inheritance,
+because MIR does not represent base places or lifecycle steps yet. Supported
+HIR may rely on producer invariants; arbitrary public HIR construction is not
+a supported input contract.
 
 ## Verification and passes
 

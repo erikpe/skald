@@ -17,21 +17,22 @@ pub use body::{
 };
 pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
-    HirCopyAssignmentDeclaration, HirDestructorDeclaration, HirFieldDeclaration,
-    HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionLinkage,
-    HirInitializerDeclaration, HirLocal, HirMethodDeclaration, HirParameter, HirParameterMode,
-    HirProgram,
+    HirCopyAssignmentDeclaration, HirDestructionPlan, HirDestructionStep, HirDestructorDeclaration,
+    HirDirectBase, HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
+    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirMethodDeclaration, HirParameter,
+    HirParameterMode, HirProgram,
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,
     HirUnaryOperation,
 };
 pub use object::{
-    HirConstruction, HirCopyAssignment, HirCopyCapability, HirCopyConstruction, HirFieldAssignment,
-    HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace,
-    HirObjectCall, HirObjectCallTarget, HirObjectInitialization, HirObjectPath, HirObjectPlace,
-    HirObjectProducer, HirObjectReturn, HirObjectSource, HirSelectedCopyOperation,
-    HirSynthesizedCopy, HirSynthesizedFieldCopy,
+    HirBaseCopy, HirBaseInitialization, HirConstruction, HirCopyAssignment, HirCopyCapability,
+    HirCopyConstruction, HirFieldAssignment, HirFieldConstruction, HirFieldCopyAssignment,
+    HirFieldCopyConstruction, HirFieldPlace, HirObjectCall, HirObjectCallTarget,
+    HirObjectInitialization, HirObjectPath, HirObjectPlace, HirObjectProducer, HirObjectReturn,
+    HirObjectSource, HirSelectedCopyOperation, HirSynthesizedCopy, HirSynthesizedFieldCopy,
+    HirUserCopy,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

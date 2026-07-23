@@ -4,8 +4,8 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
         HirAccess, HirClassDeclaration, HirClassDefinition, HirCopyAssignmentDeclaration,
-        HirDestructorDeclaration, HirFieldDeclaration, HirInitializerDeclaration,
-        HirMemberDefinition, HirMethodDeclaration, Type,
+        HirDestructionPlan, HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration,
+        HirInitializerDeclaration, HirMemberDefinition, HirMethodDeclaration, Type,
     },
     identity::CallableId,
     resolve::{
@@ -39,26 +39,8 @@ fn lower_class_declaration(
     copy_capabilities: &CopyCapabilities,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
-    if let Some(base) = class.direct_base {
-        diagnostics.push(
-            Diagnostic::error(
-                INVALID_OBJECT_DECLARATION,
-                format!(
-                    "class inheritance for `{}` is not executable yet",
-                    class.name
-                ),
-            )
-            .with_primary_label(
-                base.span,
-                "the hierarchy is valid, but base lifecycle and HIR lowering are not implemented",
-            )
-            .with_note("inheritance remains rejected before HIR until base semantics are explicit"),
-        );
-        return None;
-    }
-
     let mut valid = true;
-    let fields = class
+    let fields: Vec<_> = class
         .fields
         .iter()
         .map(|field| {
@@ -127,6 +109,19 @@ fn lower_class_declaration(
             receiver_access: DESTRUCTOR_RECEIVER_ACCESS,
             span: destructor.span,
         });
+    let direct_base = class.direct_base.map(|base| HirDirectBase {
+        class: base.class,
+        span: base.span,
+    });
+    let class_field_ids = fields
+        .iter()
+        .filter_map(|field| matches!(field.ty, Type::Class(_)).then_some(field.id))
+        .collect::<Vec<_>>();
+    let destruction = HirDestructionPlan::new(
+        destructor.as_ref().map(|destructor| destructor.id),
+        &class_field_ids,
+        direct_base.as_ref().map(|base| base.class),
+    );
     let methods = class
         .methods
         .iter()
@@ -147,6 +142,7 @@ fn lower_class_declaration(
         id: class.id,
         name: class.name.clone(),
         name_span: class.name_span,
+        direct_base,
         fields,
         initializer,
         copy_constructor_declaration,
@@ -154,6 +150,7 @@ fn lower_class_declaration(
         copy_assignment_declaration,
         copy_assignment: copy_capabilities.assignment(class.id).clone(),
         destructor,
+        destruction,
         methods,
         span: class.span,
     })
@@ -168,9 +165,6 @@ pub(super) fn check_class_definitions(
         .classes
         .iter()
         .filter_map(|class| {
-            if class.direct_base.is_some() {
-                return None;
-            }
             let definition = program.class_definitions.get(class.id)?;
             ClassDefinitionChecker {
                 program,
@@ -385,19 +379,23 @@ mod tests {
     }
 
     #[test]
-    fn validated_inheritance_is_rejected_before_hir_until_base_semantics_exist() {
+    fn validated_inheritance_crosses_type_check_with_explicit_base_lifecycle() {
         let output = type_check_source(concat!(
-            "class Derived extends Base { init() {} }\n",
+            "class Derived extends Base { init() { super(); } }\n",
             "class Base { init() {} }\n",
             "fn main() -> i64 { return 0; }\n",
         ));
 
-        assert!(output.hir.is_none());
-        let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-        assert_eq!(diagnostics.len(), 1);
-        assert_eq!(diagnostics[0].code, INVALID_OBJECT_DECLARATION);
-        assert!(diagnostics[0]
-            .message
-            .contains("class inheritance for `Derived` is not executable yet"));
+        assert!(output.diagnostics.is_empty());
+        let hir = output.hir.unwrap();
+        let derived = hir.class(ClassId::new(0)).unwrap();
+        assert_eq!(
+            derived.direct_base.as_ref().map(|base| base.class),
+            Some(ClassId::new(1))
+        );
+        assert_eq!(
+            derived.destruction.steps.last(),
+            Some(&crate::hir::HirDestructionStep::Base(ClassId::new(1)))
+        );
     }
 }

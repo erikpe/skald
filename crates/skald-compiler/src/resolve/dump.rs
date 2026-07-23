@@ -297,6 +297,24 @@ impl ResolvedDumper {
 
     fn statement(&mut self, statement: &ResolvedStatement) {
         match statement {
+            ResolvedStatement::BaseInitialization(statement) => {
+                self.line(
+                    &format!(
+                        "BaseInitialization {} {}",
+                        statement.base, statement.initializer
+                    ),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Super", statement.super_span);
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &statement.arguments {
+                            dumper.expression(argument);
+                        }
+                    });
+                });
+            }
             ResolvedStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| dumper.expression(&local.initializer));

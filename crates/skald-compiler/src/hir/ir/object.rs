@@ -15,12 +15,20 @@ use super::{
 
 pub type HirObjectPath = ObjectPath;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirBaseInitialization {
+    pub base: ClassId,
+    pub initializer: InitializerId,
+    pub arguments: Vec<HirCallArgument>,
+    pub span: Span,
+}
+
 /// Whether a class supports one copy operation and which implementation was
-/// selected. Synthesized capabilities retain their ordered semantic field
+/// selected. Synthesized capabilities retain their ordered base and field
 /// operations so later phases never infer copying from layout.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirCopyCapability<I> {
-    User(I),
+    User(HirUserCopy<I>),
     Synthesized(HirSynthesizedCopy<I>),
     Unavailable,
 }
@@ -28,7 +36,7 @@ pub enum HirCopyCapability<I> {
 impl<I: Copy> HirCopyCapability<I> {
     pub const fn selected(&self) -> Option<HirSelectedCopyOperation<I>> {
         match self {
-            Self::User(id) => Some(HirSelectedCopyOperation::User(*id)),
+            Self::User(copy) => Some(HirSelectedCopyOperation::User(copy.operation)),
             Self::Synthesized(operation) => {
                 Some(HirSelectedCopyOperation::Synthesized(operation.class))
             }
@@ -38,9 +46,22 @@ impl<I: Copy> HirCopyCapability<I> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirUserCopy<I> {
+    pub operation: I,
+    pub base: Option<HirBaseCopy<I>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirSynthesizedCopy<I> {
     pub class: ClassId,
+    pub base: Option<HirBaseCopy<I>>,
     pub fields: Vec<HirSynthesizedFieldCopy<I>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirBaseCopy<I> {
+    pub base: ClassId,
+    pub operation: HirSelectedCopyOperation<I>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

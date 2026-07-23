@@ -173,6 +173,26 @@ fn parses_contextual_extends_without_reserving_the_spelling() {
 }
 
 #[test]
+fn parses_super_call_shape_as_a_dedicated_statement() {
+    let (_, output) = parse_text(concat!(
+        "class Base { init(value: i64) {} }\n",
+        "class Derived extends Base { init(value: i64) { super(value); } }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty());
+    let TopLevelDeclaration::Class(derived) = &output.ast.declarations[1] else {
+        panic!("expected derived class");
+    };
+    let ClassMember::Initializer(initializer) = &derived.members[0] else {
+        panic!("expected initializer");
+    };
+    let Statement::BaseInitialization(base) = &initializer.body.statements[0] else {
+        panic!("expected dedicated base-initialization statement");
+    };
+    assert_eq!(base.arguments.len(), 1);
+}
+
+#[test]
 fn malformed_and_duplicate_base_clauses_recover_at_the_class_body() {
     let (_, output) = parse_text(concat!(
         "class Missing extends { init() {} }\n",

@@ -9,6 +9,7 @@ use crate::{
     },
     object_path::ObjectPath,
     resolve::ResolvedObjectAssignment,
+    typeck::capabilities::CopyPathElement,
 };
 
 impl CallableChecker<'_, '_> {
@@ -41,20 +42,29 @@ impl CallableChecker<'_, '_> {
         if let Some(path) = failure.filter(|path| !path.is_empty()) {
             let names = path
                 .iter()
-                .map(|field| {
-                    let declaration = self
-                        .program
-                        .field(*field)
-                        .expect("capability failure field must exist");
-                    let owner = self
-                        .program
-                        .class(field.class())
-                        .expect("capability failure owner must exist");
-                    format!("{}.{}", owner.name, declaration.name)
+                .map(|element| match *element {
+                    CopyPathElement::Base(base) => {
+                        let base = self
+                            .program
+                            .class(base)
+                            .expect("capability failure base must exist");
+                        format!("base {}", base.name)
+                    }
+                    CopyPathElement::Field(field) => {
+                        let declaration = self
+                            .program
+                            .field(field)
+                            .expect("capability failure field must exist");
+                        let owner = self
+                            .program
+                            .class(field.class())
+                            .expect("capability failure owner must exist");
+                        format!("{}.{}", owner.name, declaration.name)
+                    }
                 })
                 .collect::<Vec<_>>()
                 .join(" -> ");
-            diagnostic = diagnostic.with_note(format!("first unavailable field path: {names}"));
+            diagnostic = diagnostic.with_note(format!("first unavailable lifecycle path: {names}"));
         }
         self.diagnostics.push(diagnostic);
     }

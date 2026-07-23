@@ -16,5 +16,6 @@ use crate::{
 mod construction;
 mod dumps;
 mod lifecycle_copy;
+mod lifecycle_inheritance;
 mod object_places;
 mod receiver_access;

@@ -205,7 +205,7 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
         ]
     );
 
-    let mir = lower_hir(&hir);
+    let mir = lower_hir(&hir).unwrap();
     assert!(verify_mir(&mir).is_ok());
     let parent_initializer = mir.member_definition(parent.initializer.id.into()).unwrap();
     let construction = parent_initializer.body.blocks[0]

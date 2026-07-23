@@ -175,6 +175,7 @@ pub struct Block {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Statement {
+    BaseInitialization(BaseInitializationStatement),
     Local(LocalDecl),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
@@ -187,6 +188,7 @@ pub enum Statement {
 impl Statement {
     pub const fn span(&self) -> Span {
         match self {
+            Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
@@ -196,6 +198,13 @@ impl Statement {
             Self::ObjectAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BaseInitializationStatement {
+    pub super_span: Span,
+    pub arguments: Vec<Expression>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -10,9 +10,9 @@ use crate::{
 #[test]
 fn resolves_forward_direct_bases_to_stable_class_ids() {
     let output = resolve_source(concat!(
-        "class Derived extends Base { init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
         "class Base { init() {} }\n",
-        "class Leaf extends Derived { init() {} }\n",
+        "class Leaf extends Derived { init() { super(); } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
@@ -90,7 +90,7 @@ fn inherited_body_uses_remain_disabled_before_base_projections() {
     let output = resolve_source(concat!(
         "class Base { value: i64; init() {} }\n",
         "class Derived extends Base {\n",
-        "    init() {}\n",
+        "    init() { super(); }\n",
         "    fn read() -> i64 { return self.value; }\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",

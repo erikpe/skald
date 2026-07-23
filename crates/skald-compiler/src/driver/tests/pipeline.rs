@@ -83,6 +83,26 @@ fn composes_the_complete_frontend_and_backend_pipeline() {
 }
 
 #[test]
+fn valid_static_inheritance_stops_at_the_structured_hir_lowering_boundary() {
+    let result = compile_source_to_assembly(
+        "inheritance.ska",
+        concat!(
+            "class Base { init() {} }\n",
+            "class Derived extends Base { init() { super(); } }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        Target::X86_64SysV,
+    );
+
+    assert!(matches!(
+        result,
+        Err(CompilationError::HirLowering(
+            crate::mir::HirLoweringError::StaticInheritanceNotRepresentable { class }
+        )) if class == crate::identity::ClassId::new(1)
+    ));
+}
+
+#[test]
 fn composes_the_complete_object_frontend_and_backend_pipeline() {
     let artifact = compile_source_to_assembly(
         "object.ska",

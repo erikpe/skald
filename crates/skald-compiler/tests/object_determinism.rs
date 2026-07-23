@@ -88,7 +88,7 @@ fn complete_phase_dump() -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let mir = run_mir_pipeline(lower_hir(&hir).unwrap()).unwrap();
     let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
 
     format!(

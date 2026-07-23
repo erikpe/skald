@@ -1,8 +1,7 @@
 # Skald Classes and Lifecycle
 
-Status: authoritative for implemented exact-class declarations, inline
-containment, receiver access, initialization, copying, assignment,
-materialization, destruction, and normal-flow object lifetimes.
+Status: authoritative for implemented exact-class behavior and the
+frontend/HIR contract for base-subobject lifecycle composition.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -14,11 +13,12 @@ call and evaluation-order rules.
 ## Exact nominal classes
 
 A class declaration introduces one nominal type. Two classes are different
-types even when their declarations have identical members. Executable class
-semantics have no inheritance or implicit class conversion, so every current
-class use requires the exact declared class. An optional direct-base header is
-parsed, resolved, and validated as a canonical hierarchy, but rejected before
-HIR until base lifecycle and typed base-subobject semantics land.
+types even when their declarations have identical members. Executable MIR
+class semantics have no inheritance or implicit class conversion, so every
+currently executable class use requires the exact declared class. An optional
+direct-base header is parsed, resolved, validated as a canonical hierarchy,
+and carried through typed lifecycle HIR. Static base projections, layout, and
+execution remain later phase work.
 
 A class value is one complete inline object containing all of its direct
 fields. A class-typed field is a complete inline subobject of its containing
@@ -141,10 +141,21 @@ result, and the implemented internal parameter categories described in
 `self` storage exists while the body runs but is not yet a live complete
 object.
 
-The body is a straight-line sequence of direct assignments to fields of that
-`self`. It cannot contain locals, nested blocks, conditionals, call statements,
-explicit returns, or assignment through another root or a deeper destination.
-Grouping around `self` does not change the direct destination.
+For a root class, the body is a straight-line sequence of direct assignments
+to fields of that `self`. A derived initializer must begin with exactly one
+`super(arguments);`, followed by the same direct-field sequence. A root
+initializer, copy constructor, or other callable cannot contain `super`.
+Initializer bodies cannot otherwise contain locals, nested blocks,
+conditionals, call statements, explicit returns, or assignment through
+another root or a deeper destination. Grouping around `self` does not change
+the direct destination.
+
+The base call selects the direct base's ordinary initializer by stable
+identity. Arguments evaluate left to right and may use initializer parameters
+and ordinary expressions, but cannot read or alias incomplete `self`. The base
+becomes live only after a valid call; direct derived fields cannot be
+initialized first. Argument temporaries remain explicit call arguments and
+end at the `super(...)` statement boundary.
 
 Every direct field must be initialized exactly once. Fields may be initialized
 in any source order. A field becomes initialized only after its complete,
@@ -212,8 +223,8 @@ field as described above. It is also an object source in the copy, assignment,
 argument, and return contexts below.
 
 Skald has no recoverable construction failure. Exceptional initialization,
-partially completed object cleanup, delegation between ordinary initializers,
-and construction of base subobjects are not defined by the implemented model.
+partially completed object cleanup, and delegation between ordinary
+initializers are not defined by the implemented model.
 The constraints on any future exceptional construction path are owned by
 [errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
@@ -246,18 +257,40 @@ perform supported assignments. It cannot explicitly invoke a special
 destructor, end a lifetime early, or return a value. An ordinary method named
 `destroy` is a separate callable with no lifecycle effect.
 
+## Base-subobject lifecycle
+
+One derived complete object owns its direct base subobject and direct fields
+under one lifetime. The base is not a separately registered lexical cleanup
+root. HIR records the selected ordinary base initializer, the base copy
+constructor and assignment capabilities, and an ordered destruction plan.
+
+Copy construction and assignment process the direct base before the derived
+body or synthesized direct fields. This requirement applies to user-defined
+derived copy operations as well as synthesized ones. Destruction runs the
+derived user body, direct class fields in reverse declaration order, and then
+the direct base's complete recursive destruction plan. These are semantic
+operations, not aggregate prefix copies or inferred physical layout.
+
+This contract currently stops at typed HIR. HIR-to-MIR lowering returns a
+structured unsupported-stage error for a program containing a direct base;
+MIR representation and backend execution arrive in their dedicated roadmap
+tasks.
+
 ## Copy capabilities
 
 Copy construction and copy assignment are separate capabilities. An explicit
 declaration supplies that operation's complete user body. It neither requests
 nor receives an implicit field-wise prefix or suffix.
 
-When a declaration is absent, the compiler synthesizes the operation exactly
-when every direct field supports the same operation. Primitive fields support
-both capabilities. An exact-class field recursively uses its class's selected
-operation. Empty and primitive-only classes therefore support both operations;
-one unavailable field capability makes only the corresponding containing
-capability unavailable.
+For a derived class, the direct base capability is checked first. A user
+operation is unavailable when its required base operation is unavailable,
+even if its body does not use every direct field. When a declaration is
+absent, the compiler synthesizes the operation exactly when the base and every
+direct field support it. Primitive fields support both capabilities. An
+exact-class field recursively uses its class's selected operation. Empty root
+classes and primitive-only root classes therefore support both operations;
+one unavailable base or field capability makes only the corresponding
+containing capability unavailable.
 
 A synthesized copy constructor initializes direct fields in source declaration
 order. It copies primitive payloads exactly and copy-constructs class fields.
@@ -431,7 +464,8 @@ Destroying one complete object performs the following sequence exactly once:
 1. run its user `destroy` body, if declared;
 2. clean all objects owned by that body before the body completes;
 3. destroy exact-class fields recursively in reverse source declaration order;
-4. end the complete object's lifetime.
+4. for a derived object, run the direct base's complete destruction sequence;
+5. end the complete object's lifetime.
 
 Primitive fields require no destruction step. An absent user declaration is
 an empty first step and does not suppress field cleanup. Field order is based
@@ -445,12 +479,13 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not include inheritance, base
-members, interfaces, virtual dispatch, `Obj`, class conversions, shared or
-heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, overloads, reflection, or user-defined
-conversions. Direct-base syntax, identity resolution, hierarchy validation,
-inherited ordinary-member selection, and finite-containment analysis are the
+The implemented executable class model does not yet include base layout,
+inherited member access, interfaces, virtual dispatch, `Obj`, class
+conversions, shared or heap-backed objects, `new`, nullable object references,
+static members, access modifiers, `final`, abstract members, overloads,
+reflection, or user-defined conversions. Direct-base syntax, identity
+resolution, hierarchy validation, inherited ordinary-member selection,
+finite-containment analysis, and complete base lifecycle selection are the
 implemented non-executable inheritance boundary.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language

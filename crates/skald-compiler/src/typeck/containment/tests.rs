@@ -88,7 +88,7 @@ fn accepts_forward_references_repeated_types_diamonds_and_empty_classes() {
 fn includes_base_subobjects_in_finite_containment_validation() {
     let diagnostics = containment_diagnostics(concat!(
         "class Base { derived: Derived; init() {} }\n",
-        "class Derived extends Base { init() {} }\n",
+        "class Derived extends Base { init() { super(); } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
@@ -106,7 +106,7 @@ fn includes_base_subobjects_in_finite_containment_validation() {
 fn accepts_acyclic_base_and_field_containment_diamonds() {
     let diagnostics = containment_diagnostics(concat!(
         "class Root { init() {} }\n",
-        "class Branch extends Root { init() {} }\n",
+        "class Branch extends Root { init() { super(); } }\n",
         "class Holder { root: Root; branch: Branch; init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));

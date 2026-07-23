@@ -17,14 +17,14 @@ fn lowers_valid_copy_lifecycle_declarations_and_bodies_into_hir() {
     let class = hir.class(ClassId::new(0)).unwrap();
     let copy_constructor = InitializerId::new(class.id, 1);
     let copy_assignment = CopyAssignmentId::new(class.id, 0);
-    assert_eq!(
-        class.copy_constructor,
-        HirCopyCapability::User(copy_constructor)
-    );
-    assert_eq!(
-        class.copy_assignment,
-        HirCopyCapability::User(copy_assignment)
-    );
+    assert!(matches!(
+        &class.copy_constructor,
+        HirCopyCapability::User(copy) if copy.operation == copy_constructor
+    ));
+    assert!(matches!(
+        &class.copy_assignment,
+        HirCopyCapability::User(copy) if copy.operation == copy_assignment
+    ));
     assert_eq!(
         class
             .copy_constructor_declaration

@@ -3,8 +3,9 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        BlockFlow, HirBlock, HirCallStatement, HirConditional, HirConditionalArm, HirLocalDecl,
-        HirLocalInitializer, HirObjectReturn, HirReturn, HirReturnValue, HirStatement, Type,
+        BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
+        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn, HirReturn,
+        HirReturnValue, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -40,7 +41,10 @@ impl CallableChecker<'_, '_> {
         if self
             .receiver
             .is_some_and(|receiver| receiver.body_kind.initializes_receiver())
-            && !matches!(statement, ResolvedStatement::FieldAssignment(_))
+            && !matches!(
+                statement,
+                ResolvedStatement::BaseInitialization(_) | ResolvedStatement::FieldAssignment(_)
+            )
         {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -56,6 +60,9 @@ impl CallableChecker<'_, '_> {
         }
 
         match statement {
+            ResolvedStatement::BaseInitialization(statement) => {
+                self.check_base_initialization(statement)
+            }
             ResolvedStatement::Local(local) => self.check_local_statement(local),
             ResolvedStatement::Return(statement) => self.check_return_statement(statement),
             ResolvedStatement::Expression(statement) => self.check_call_statement(statement),
@@ -70,6 +77,51 @@ impl CallableChecker<'_, '_> {
                 self.check_object_assignment(assignment)
             }
         }
+    }
+
+    fn check_base_initialization(
+        &mut self,
+        statement: &crate::resolve::ResolvedBaseInitialization,
+    ) -> CheckedStatement {
+        let receiver = self
+            .receiver
+            .expect("resolved base initialization must occur in a member");
+        if receiver.body_kind != crate::typeck::function::MemberBodyKind::OrdinaryInitializer
+            || self.base_initialized
+        {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INITIALIZER_BODY,
+                    "base initialization must occur exactly once before derived fields",
+                )
+                .with_primary_label(statement.span, "invalid base-initialization position"),
+            );
+            return CheckedStatement::falls_through(None);
+        }
+        let initializer = self
+            .program
+            .initializer(statement.initializer)
+            .expect("resolved base initialization must select an initializer");
+        let arguments = self.check_arguments(
+            &statement.arguments,
+            &initializer.parameters,
+            statement.super_span,
+            "base initializer",
+            None,
+            Some(initializer.span),
+        );
+        let Some(arguments) = arguments else {
+            return CheckedStatement::falls_through(None);
+        };
+        self.base_initialized = true;
+        CheckedStatement::falls_through(Some(HirStatement::BaseInitialization(
+            HirBaseInitialization {
+                base: statement.base,
+                initializer: statement.initializer,
+                arguments,
+                span: statement.span,
+            },
+        )))
     }
 
     fn check_local_statement(&mut self, local: &ResolvedLocalDecl) -> CheckedStatement {

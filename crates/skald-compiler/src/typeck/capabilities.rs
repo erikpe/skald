@@ -1,7 +1,9 @@
 //! Deterministic copy-capability analysis over inline class fields.
 
 use crate::{
-    hir::{HirCopyCapability, HirSynthesizedCopy, HirSynthesizedFieldCopy},
+    hir::{
+        HirBaseCopy, HirCopyCapability, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy,
+    },
     identity::{ClassId, CopyAssignmentId, FieldId, InitializerId},
     resolve::{ResolvedClassDeclaration, ResolvedCopyOperation, ResolvedProgram, ResolvedTypeKind},
 };
@@ -28,11 +30,11 @@ impl CopyCapabilities {
         self.assignments.capability(class)
     }
 
-    pub(super) fn constructor_failure(&self, class: ClassId) -> Option<&[FieldId]> {
+    pub(super) fn constructor_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.constructors.failure(class)
     }
 
-    pub(super) fn assignment_failure(&self, class: ClassId) -> Option<&[FieldId]> {
+    pub(super) fn assignment_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.assignments.failure(class)
     }
 }
@@ -43,7 +45,13 @@ struct CapabilitySet<I> {
     /// The deterministic outer-to-inner field path responsible for an
     /// unavailable synthesized operation. An empty path means the class's own
     /// resolved operation is unavailable.
-    failure_paths: Vec<Option<Vec<FieldId>>>,
+    failure_paths: Vec<Option<Vec<CopyPathElement>>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum CopyPathElement {
+    Base(ClassId),
+    Field(FieldId),
 }
 
 impl<I: Copy> CapabilitySet<I> {
@@ -79,7 +87,7 @@ impl<I: Copy> CapabilitySet<I> {
         &self.capabilities[class.index()]
     }
 
-    fn failure(&self, class: ClassId) -> Option<&[FieldId]> {
+    fn failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.failure_paths[class.index()].as_deref()
     }
 }
@@ -96,7 +104,7 @@ fn compute_class<I: Copy>(
     program: &ResolvedProgram,
     resolved_operation: fn(&ResolvedClassDeclaration) -> ResolvedCopyOperation<I>,
     capabilities: &mut [Option<HirCopyCapability<I>>],
-    failure_paths: &mut [Option<Vec<FieldId>>],
+    failure_paths: &mut [Option<Vec<CopyPathElement>>],
     states: &mut [VisitState],
 ) -> HirCopyCapability<I> {
     match states[class_id.index()] {
@@ -113,8 +121,38 @@ fn compute_class<I: Copy>(
     let class = program
         .class(class_id)
         .expect("capability class must be resolved");
+    let base = class.direct_base.and_then(|direct_base| {
+        let nested = compute_class(
+            direct_base.class,
+            program,
+            resolved_operation,
+            capabilities,
+            failure_paths,
+            states,
+        );
+        nested.selected().map(|operation| HirBaseCopy {
+            base: direct_base.class,
+            operation,
+        })
+    });
+    if let Some(direct_base) = class.direct_base {
+        if base.is_none() {
+            let mut path = vec![CopyPathElement::Base(direct_base.class)];
+            if let Some(nested_path) = &failure_paths[direct_base.class.index()] {
+                path.extend(nested_path);
+            }
+            capabilities[class_id.index()] = Some(HirCopyCapability::Unavailable);
+            failure_paths[class_id.index()] = Some(path);
+            states[class_id.index()] = VisitState::Complete;
+            return HirCopyCapability::Unavailable;
+        }
+    }
+
     let (capability, failure) = match resolved_operation(class) {
-        ResolvedCopyOperation::User(id) => (HirCopyCapability::User(id), None),
+        ResolvedCopyOperation::User(operation) => (
+            HirCopyCapability::User(HirUserCopy { operation, base }),
+            None,
+        ),
         ResolvedCopyOperation::Unavailable => (HirCopyCapability::Unavailable, Some(Vec::new())),
         ResolvedCopyOperation::Synthesized(_) => {
             let mut fields = Vec::with_capacity(class.fields.len());
@@ -131,7 +169,7 @@ fn compute_class<I: Copy>(
                             states,
                         );
                         let Some(operation) = nested.selected() else {
-                            let mut path = vec![field.id];
+                            let mut path = vec![CopyPathElement::Field(field.id)];
                             if let Some(nested_path) = &failure_paths[target.index()] {
                                 path.extend(nested_path);
                             }
@@ -151,6 +189,7 @@ fn compute_class<I: Copy>(
                 None => (
                     HirCopyCapability::Synthesized(HirSynthesizedCopy {
                         class: class_id,
+                        base,
                         fields,
                     }),
                     None,

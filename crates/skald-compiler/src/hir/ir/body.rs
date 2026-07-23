@@ -10,8 +10,9 @@ use super::{
     declarations::HirLocal,
     expression::HirExpression,
     object::{
-        HirCopyAssignment, HirCopyConstruction, HirFieldAssignment, HirFieldConstruction,
-        HirFieldCopyAssignment, HirFieldCopyConstruction, HirObjectInitialization, HirObjectReturn,
+        HirBaseInitialization, HirCopyAssignment, HirCopyConstruction, HirFieldAssignment,
+        HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction,
+        HirObjectInitialization, HirObjectReturn,
     },
 };
 
@@ -179,6 +180,7 @@ pub struct HirBlock {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirStatement {
+    BaseInitialization(HirBaseInitialization),
     Local(HirLocalDecl),
     Return(HirReturn),
     Call(HirCallStatement),
@@ -194,6 +196,7 @@ pub enum HirStatement {
 impl HirStatement {
     pub const fn span(&self) -> Span {
         match self {
+            Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Call(statement) => statement.span,

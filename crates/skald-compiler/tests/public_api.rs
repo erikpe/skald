@@ -45,7 +45,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
     let _hir_dump = dump_hir(hir);
-    let mir: MirProgram = lower_hir(hir);
+    let mir: MirProgram = lower_hir(hir).unwrap();
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

@@ -30,8 +30,10 @@ repository; see the [compiler crate API policy](README.md#compiler-crate-api-pol
 database and runs lexing, parsing, resolution, type checking, MIR lowering,
 the verified MIR pass pipeline, and target assembly emission in order. A
 source-phase error stops later phases and returns the accumulated source
-database and structured diagnostics. MIR verification and backend failures
-remain distinct structured error categories.
+database and structured diagnostics. Unsupported HIR-to-MIR features, MIR
+verification, and backend failures remain distinct structured error
+categories. Static inheritance currently reaches typed HIR and then stops at
+the explicit HIR-lowering boundary until MIR base representation is available.
 
 The path supplied to this entry point labels diagnostics; the function does
 not read it. It performs no source I/O, host tool invocation, runtime linking,
@@ -111,10 +113,11 @@ and rename.
 
 ## Diagnostics and exit status
 
-Source diagnostics use the compiler's structured renderer. Invalid MIR or
-backend failures are reported as internal compiler failures, while host-tool
-and artifact errors retain their driver category. User-controlled failures do
-not become compiler panics.
+Source diagnostics use the compiler's structured renderer. A valid feature
+whose next IR stage is not implemented is reported as a compiler-stage
+limitation. Invalid MIR or backend failures are reported as internal compiler
+failures, while host-tool and artifact errors retain their driver category.
+User-controlled failures do not become compiler panics.
 
 The CLI process statuses are:
 

@@ -183,6 +183,18 @@ impl AstDumper {
 
     fn statement(&mut self, statement: &Statement) {
         match statement {
+            Statement::BaseInitialization(statement) => {
+                self.line("BaseInitialization", statement.span);
+                self.indented(|dumper| {
+                    dumper.line("Super", statement.super_span);
+                    dumper.heading("Arguments");
+                    dumper.indented(|dumper| {
+                        for argument in &statement.arguments {
+                            dumper.expression(argument);
+                        }
+                    });
+                });
+            }
             Statement::Local(local) => {
                 self.line("Local", local.span);
                 self.indented(|dumper| {

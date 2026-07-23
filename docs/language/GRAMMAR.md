@@ -64,12 +64,15 @@ They remain available as field names, method names, parameter names, local
 names, and top-level function names. For example, `destroy: i64;` is a field
 and `fn destroy() -> unit {}` is a method.
 
-`extends` is contextually recognized only after a class name. It remains an
-ordinary identifier everywhere else. The frozen polymorphism profile will
-also contextually recognize `implements`, `interface`, `virtual`, `override`,
-`super`, `is`, `narrow`, and the type spelling `Obj`; none of those later
-forms is part of the implemented grammar yet. Their exact source forms are
-specified in [polymorphism](POLYMORPHISM.md#frozen-source-profile).
+`extends` is contextually recognized only after a class name. `super` followed
+by a call argument list is contextually recognized as a dedicated statement;
+resolution restricts it to the first statement of a derived ordinary
+initializer. Both spellings remain ordinary identifiers outside those shapes.
+The frozen polymorphism profile will also contextually recognize `implements`,
+`interface`, `virtual`, `override`, `is`, `narrow`, and the type spelling
+`Obj`; none of those later forms is part of the implemented grammar yet. Their
+exact source forms are specified in
+[polymorphism](POLYMORPHISM.md#frozen-source-profile).
 
 ## Punctuation
 
@@ -175,6 +178,7 @@ name.
 block                 = "{" {statement} "}"
 
 statement             = local-declaration
+                      | base-initialization
                       | return-statement
                       | conditional-statement
                       | assignment-statement
@@ -183,6 +187,7 @@ statement             = local-declaration
 
 local-declaration     = "var" identifier ":" storage-type
                         "=" expression ";"
+base-initialization   = "super" argument-list ";"
 return-statement      = "return" [expression] ";"
 expression-statement  = expression ";"
 

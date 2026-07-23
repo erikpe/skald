@@ -7,10 +7,11 @@ mod hierarchy;
 mod object_place;
 
 pub use body::{
-    ResolvedBlock, ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedConditional,
-    ResolvedConditionalArm, ResolvedExpressionStatement, ResolvedFieldAssignment,
-    ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedLocalDecl,
-    ResolvedMemberDefinition, ResolvedObjectAssignment, ResolvedReturn, ResolvedStatement,
+    ResolvedBaseInitialization, ResolvedBlock, ResolvedClassDefinition,
+    ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
+    ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
+    ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
+    ResolvedObjectAssignment, ResolvedReturn, ResolvedStatement,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,

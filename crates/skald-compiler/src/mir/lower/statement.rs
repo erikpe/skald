@@ -24,6 +24,9 @@ impl BodyLowerer<'_> {
 
     fn lower_statement(&mut self, statement: &HirStatement) {
         match statement {
+            HirStatement::BaseInitialization(_) => {
+                unreachable!("static inheritance is rejected before MIR body lowering")
+            }
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),

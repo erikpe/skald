@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FieldId, FunctionId, LocalId},
+    identity::{CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId},
     source::Span,
 };
 
@@ -150,6 +150,7 @@ pub struct ResolvedBlock {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedStatement {
+    BaseInitialization(ResolvedBaseInitialization),
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
     Expression(ResolvedExpressionStatement),
@@ -162,6 +163,7 @@ pub enum ResolvedStatement {
 impl ResolvedStatement {
     pub const fn span(&self) -> Span {
         match self {
+            Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
@@ -171,6 +173,15 @@ impl ResolvedStatement {
             Self::ObjectAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedBaseInitialization {
+    pub base: ClassId,
+    pub initializer: InitializerId,
+    pub arguments: Vec<ResolvedExpression>,
+    pub super_span: Span,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

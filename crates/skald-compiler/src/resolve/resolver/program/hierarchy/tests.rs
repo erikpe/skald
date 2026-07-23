@@ -7,9 +7,9 @@ use crate::{
 #[test]
 fn answers_forward_deep_ancestry_and_declaring_owner_queries() {
     let output = resolve_source(concat!(
-        "class Leaf extends Middle { leaf: i64; init() {} }\n",
+        "class Leaf extends Middle { leaf: i64; init() { super(); } }\n",
         "class Root { root: i64; init() {} fn read() -> i64 { return self.root; } }\n",
-        "class Middle extends Root { middle: i64; init() {} }\n",
+        "class Middle extends Root { middle: i64; init() { super(); } }\n",
         "class Unrelated { init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
