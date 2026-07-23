@@ -8,9 +8,9 @@ use crate::{
     },
 };
 
-use super::{abi, layout::DataLayout};
+use super::{abi, dispatch::DispatchMetadata, layout::DataLayout};
 
-pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
+pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadata), BackendError> {
     verify_mir(program).map_err(|errors| {
         BackendError::new(
             Target::X86_64SysV,
@@ -19,7 +19,7 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
         )
     })?;
 
-    reject_unsupported_dispatch(program)?;
+    let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
     for function in program.executable_definitions() {
@@ -43,8 +43,10 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
                         MirCallTarget::Method(MirMethodCallTarget::Direct(method)) => {
                             check_member_target(program, function.callable(), method.into())?;
                         }
-                        MirCallTarget::Method(MirMethodCallTarget::Virtual { .. }) => {
-                            unreachable!("unsupported virtual calls were rejected before layout")
+                        MirCallTarget::Method(MirMethodCallTarget::Virtual {
+                            selected, ..
+                        }) => {
+                            check_member_target(program, function.callable(), selected.into())?;
                         }
                         MirCallTarget::Direct(target) => {
                             let target = program
@@ -79,31 +81,7 @@ pub(super) fn check(program: &MirProgram) -> Result<DataLayout, BackendError> {
             }
         }
     }
-    Ok(data_layout)
-}
-
-fn reject_unsupported_dispatch(program: &MirProgram) -> Result<(), BackendError> {
-    for function in program.executable_definitions() {
-        let has_virtual_call = function.body().blocks.iter().any(|block| {
-            block.instructions.iter().any(|instruction| {
-                matches!(
-                    instruction,
-                    MirInstruction::Call(crate::mir::MirCall {
-                        target: MirCallTarget::Method(MirMethodCallTarget::Virtual { .. }),
-                        ..
-                    })
-                )
-            })
-        });
-        if has_virtual_call {
-            return Err(BackendError::new(
-                Target::X86_64SysV,
-                Some(function.callable()),
-                "virtual dispatch is not implemented by this backend",
-            ));
-        }
-    }
-    Ok(())
+    Ok((data_layout, dispatch))
 }
 
 fn check_member_target(

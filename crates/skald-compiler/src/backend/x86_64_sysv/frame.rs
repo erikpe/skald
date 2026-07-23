@@ -64,7 +64,24 @@ impl FramePlace {
 pub(super) struct FrameLayout {
     size: u32,
     storage_offsets: Vec<i32>,
+    object_origins: Vec<Option<ObjectOriginHomes>>,
     value_offsets: Vec<i32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ObjectOriginHomes {
+    complete: i32,
+    metadata: i32,
+}
+
+impl ObjectOriginHomes {
+    pub(super) const fn complete(self) -> i32 {
+        self.complete
+    }
+
+    pub(super) const fn metadata(self) -> i32 {
+        self.metadata
+    }
 }
 
 impl FrameLayout {
@@ -74,6 +91,7 @@ impl FrameLayout {
     ) -> Result<Self, BackendError> {
         let mut allocator = FrameAllocator::new(function);
         let mut storage_offsets = Vec::with_capacity(function.storage_entries().len());
+        let mut object_origins = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
             let (size, alignment) = match (storage.kind, storage.ty) {
                 (
@@ -92,6 +110,18 @@ impl FrameLayout {
                 (_, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
             };
             storage_offsets.push(allocator.allocate(size, alignment)?);
+            let carries_origin = matches!(
+                storage.kind,
+                MirStorageKind::Receiver | MirStorageKind::AliasParameter(_)
+            );
+            object_origins.push(if carries_origin {
+                Some(ObjectOriginHomes {
+                    complete: allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?,
+                    metadata: allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?,
+                })
+            } else {
+                None
+            });
         }
         let mut value_offsets = Vec::with_capacity(function.values().len());
         for _ in function.values() {
@@ -102,6 +132,7 @@ impl FrameLayout {
         Ok(Self {
             size,
             storage_offsets,
+            object_origins,
             value_offsets,
         })
     }
@@ -116,6 +147,10 @@ impl FrameLayout {
 
     pub(super) fn value(&self, id: ValueId) -> i32 {
         self.value_offsets[id.index()]
+    }
+
+    pub(super) fn object_origin(&self, id: StorageId) -> Option<ObjectOriginHomes> {
+        self.object_origins[id.index()]
     }
 
     /// Resolves a verified semantic place into one frame-relative address.

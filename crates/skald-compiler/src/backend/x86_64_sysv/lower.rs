@@ -7,6 +7,7 @@ use crate::{
 };
 
 use super::{
+    dispatch::DispatchMetadata,
     frame::FrameLayout,
     layout::DataLayout,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
@@ -17,12 +18,14 @@ mod assignment;
 mod call;
 mod cleanup;
 mod copy;
+mod object_abi;
 mod terminator;
 mod value;
 
 pub(super) fn lower(
     program: &MirProgram,
     data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
 ) -> Result<AssemblyProgram, BackendError> {
     let mut functions = program
         .executable_definitions()
@@ -30,7 +33,7 @@ pub(super) fn lower(
             let signature = program
                 .callable_signature(definition.callable())
                 .expect("verified definition must have a declaration");
-            lower_definition(program, data_layout, signature, definition)
+            lower_definition(program, data_layout, dispatch, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
     let entry = program
@@ -38,12 +41,16 @@ pub(super) fn lower(
         .get(program.entry_function)
         .expect("verified entry declaration must exist");
     functions.push(entry_wrapper(program, entry.id.into()));
-    Ok(AssemblyProgram { functions })
+    Ok(AssemblyProgram {
+        functions,
+        virtual_tables: dispatch.assembly_tables(program),
+    })
 }
 
 fn lower_definition(
     program: &MirProgram,
     data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
 ) -> Result<AssemblyFunction, BackendError> {
@@ -67,8 +74,15 @@ fn lower_definition(
     for block in &function.body().blocks {
         instructions.push(Instruction::Label(block_label(block.id)));
         for instruction in &block.instructions {
-            InstructionSelector::new(program, data_layout, function, &frame, &mut instructions)
-                .select(instruction)?;
+            InstructionSelector::new(
+                program,
+                data_layout,
+                dispatch,
+                function,
+                &frame,
+                &mut instructions,
+            )
+            .select(instruction)?;
         }
         terminator::select(
             block
@@ -116,6 +130,7 @@ fn entry_wrapper(program: &MirProgram, entry: CallableId) -> AssemblyFunction {
 struct InstructionSelector<'program, 'output> {
     program: &'program MirProgram,
     data_layout: &'program DataLayout,
+    dispatch: &'program DispatchMetadata,
     function: MirDefinitionRef<'program>,
     frame: &'program FrameLayout,
     output: &'output mut Vec<Instruction>,
@@ -125,6 +140,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
     fn new(
         program: &'program MirProgram,
         data_layout: &'program DataLayout,
+        dispatch: &'program DispatchMetadata,
         function: MirDefinitionRef<'program>,
         frame: &'program FrameLayout,
         output: &'output mut Vec<Instruction>,
@@ -132,6 +148,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         Self {
             program,
             data_layout,
+            dispatch,
             function,
             frame,
             output,

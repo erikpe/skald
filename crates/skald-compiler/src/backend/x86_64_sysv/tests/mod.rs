@@ -58,4 +58,5 @@ mod object_results;
 mod objects;
 mod static_inheritance;
 mod value_parameters;
+mod virtual_dispatch;
 use objects::println_i64_stub;

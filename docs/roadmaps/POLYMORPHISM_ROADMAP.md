@@ -95,7 +95,7 @@ The frozen restricted profile excludes:
 - [x] PM9 — Resolve virtual declarations and override families
 - [x] PM10 — Select virtual calls and receiver views in HIR
 - [x] PM11 — Represent and verify virtual dispatch in MIR
-- [ ] PM12 — Lower virtual dispatch on x86-64
+- [x] PM12 — Lower virtual dispatch on x86-64
 - [ ] PM13 — Parse and resolve interfaces and conformance declarations
 - [ ] PM14 — Validate conformance and select interface views in HIR
 - [ ] PM15 — Represent and verify interface dispatch in MIR
@@ -377,13 +377,13 @@ one valid complete-object receiver view.
 
 **Purpose:** Execute opt-in virtual methods through a checked internal ABI.
 
-- [ ] Compute deterministic per-class virtual tables from stable identities in
+- [x] Compute deterministic per-class virtual tables from stable identities in
       a backend analysis rather than embedding target slots in MIR.
-- [ ] Map polymorphic receiver views to the frozen internal register/stack ABI
+- [x] Map polymorphic receiver views to the frozen internal register/stack ABI
       and forward their dynamic metadata through nested calls.
-- [ ] Lower virtual calls with existing scalar/object arguments, hidden results,
+- [x] Lower virtual calls with existing scalar/object arguments, hidden results,
       temporaries, cleanup, recursion, and stack alignment.
-- [ ] Reject malformed metadata and unsupported external signatures before
+- [x] Reject malformed metadata and unsupported external signatures before
       instruction selection.
 
 **Tests:** Add backend metadata/legality tests and native cases for deep

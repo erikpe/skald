@@ -25,6 +25,21 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         }
         writeln!(output, ".size {}, .-{}", function.symbol, function.symbol).unwrap();
     }
+    if !program.virtual_tables.is_empty() {
+        output.push_str("\n.section .data.rel.ro.local,\"aw\",@progbits\n");
+        for table in &program.virtual_tables {
+            output.push_str(".p2align 3\n");
+            writeln!(output, ".type {}, @object", table.symbol).unwrap();
+            writeln!(output, "{}:", table.symbol).unwrap();
+            for entry in &table.entries {
+                match entry {
+                    Some(symbol) => writeln!(output, "    .quad {symbol}").unwrap(),
+                    None => output.push_str("    .quad 0\n"),
+                }
+            }
+            writeln!(output, ".size {}, .-{}", table.symbol, table.symbol).unwrap();
+        }
+    }
     output.push_str("\n.section .note.GNU-stack,\"\",@progbits\n");
     output
 }
@@ -63,6 +78,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             destination.name()
         )
         .unwrap(),
+        Instruction::LoadSymbolAddress {
+            symbol,
+            destination,
+        } => write!(output, "leaq {symbol}(%rip), {}", destination.name()).unwrap(),
         Instruction::MoveImmediate64 { bits, destination } => {
             if *bits <= i64::MAX as u64 {
                 write!(output, "movabsq ${bits}, {}", destination.name()).unwrap()
@@ -133,6 +152,7 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::ReserveStack(bytes) => write!(output, "subq ${bytes}, %rsp").unwrap(),
         Instruction::ReleaseStack(bytes) => write!(output, "addq ${bytes}, %rsp").unwrap(),
         Instruction::Call(symbol) => write!(output, "call {symbol}").unwrap(),
+        Instruction::CallIndirect(register) => write!(output, "call *{}", register.name()).unwrap(),
         Instruction::Jump(label) => write!(output, "jmp {}", label.name()).unwrap(),
         Instruction::JumpIfNotZero(label) => write!(output, "jne {}", label.name()).unwrap(),
         Instruction::Leave => output.push_str("leave"),

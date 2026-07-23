@@ -37,6 +37,88 @@ pub(super) enum ArgumentLocation {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ObjectLocations {
+    address: ArgumentLocation,
+    complete: ArgumentLocation,
+    metadata: ArgumentLocation,
+}
+
+impl ObjectLocations {
+    pub(super) const fn address(self) -> ArgumentLocation {
+        self.address
+    }
+
+    pub(super) const fn complete(self) -> ArgumentLocation {
+        self.complete
+    }
+
+    pub(super) const fn metadata(self) -> ArgumentLocation {
+        self.metadata
+    }
+
+    pub(super) fn incoming(self) -> Option<Self> {
+        Some(Self {
+            address: self.address.incoming()?,
+            complete: self.complete.incoming()?,
+            metadata: self.metadata.incoming()?,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ParameterLocations {
+    value: ArgumentLocation,
+    origin: Option<ObjectOriginLocations>,
+}
+
+impl ParameterLocations {
+    pub(super) const fn value(self) -> ArgumentLocation {
+        self.value
+    }
+
+    pub(super) const fn origin(self) -> Option<ObjectOriginLocations> {
+        self.origin
+    }
+
+    pub(super) fn incoming(self) -> Option<Self> {
+        Some(Self {
+            value: self.value.incoming()?,
+            origin: match self.origin {
+                Some(origin) => Some(origin.incoming()?),
+                None => None,
+            },
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ObjectOriginLocations {
+    complete: ArgumentLocation,
+    metadata: ArgumentLocation,
+}
+
+impl ObjectOriginLocations {
+    pub(super) const fn new(complete: ArgumentLocation, metadata: ArgumentLocation) -> Self {
+        Self { complete, metadata }
+    }
+
+    pub(super) const fn complete(self) -> ArgumentLocation {
+        self.complete
+    }
+
+    pub(super) const fn metadata(self) -> ArgumentLocation {
+        self.metadata
+    }
+
+    fn incoming(self) -> Option<Self> {
+        Some(Self {
+            complete: self.complete.incoming()?,
+            metadata: self.metadata.incoming()?,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ScalarClass {
     Integer,
     Sse,
@@ -73,8 +155,8 @@ impl ArgumentLocation {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct CallLayout {
     return_destination: Option<ArgumentLocation>,
-    receiver: Option<ArgumentLocation>,
-    locations: Vec<ArgumentLocation>,
+    receiver: Option<ObjectLocations>,
+    locations: Vec<ParameterLocations>,
     stack_size: u32,
 }
 
@@ -103,37 +185,37 @@ impl CallLayout {
         let return_destination = has_return_destination.then_some(
             ArgumentLocation::IntegerRegister(INTEGER_ARGUMENT_REGISTERS[0]),
         );
-        let receiver_index = usize::from(has_return_destination);
-        let receiver = has_receiver.then_some(ArgumentLocation::IntegerRegister(
-            INTEGER_ARGUMENT_REGISTERS[receiver_index],
-        ));
-        let mut integer_index = receiver_index + usize::from(has_receiver);
-        let mut sse_index = 0;
-        let mut stack_count = 0usize;
+        let mut classifier = Classifier {
+            integer_index: usize::from(has_return_destination),
+            sse_index: 0,
+            stack_count: 0,
+        };
+        let receiver = if has_receiver {
+            Some(ObjectLocations {
+                address: classifier.classify(ScalarClass::Integer)?,
+                complete: classifier.classify(ScalarClass::Integer)?,
+                metadata: classifier.classify(ScalarClass::Integer)?,
+            })
+        } else {
+            None
+        };
         let mut locations = Vec::with_capacity(parameters.len());
 
         for &parameter in parameters {
-            let location = match parameter_class(parameter)? {
-                ScalarClass::Sse if sse_index < SSE_ARGUMENT_REGISTERS.len() => {
-                    let register = SSE_ARGUMENT_REGISTERS[sse_index];
-                    sse_index += 1;
-                    ArgumentLocation::SseRegister(register)
+            let value = classifier.classify(parameter_class(parameter)?)?;
+            let origin = match parameter.mode {
+                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias => {
+                    Some(ObjectOriginLocations {
+                        complete: classifier.classify(ScalarClass::Integer)?,
+                        metadata: classifier.classify(ScalarClass::Integer)?,
+                    })
                 }
-                ScalarClass::Sse => stack_location(stack_count)?,
-                ScalarClass::Integer if integer_index < INTEGER_ARGUMENT_REGISTERS.len() => {
-                    let register = INTEGER_ARGUMENT_REGISTERS[integer_index];
-                    integer_index += 1;
-                    ArgumentLocation::IntegerRegister(register)
-                }
-                ScalarClass::Integer => stack_location(stack_count)?,
+                MirParameterMode::Value => None,
             };
-            if matches!(location, ArgumentLocation::Stack(_)) {
-                stack_count += 1;
-            }
-            locations.push(location);
+            locations.push(ParameterLocations { value, origin });
         }
 
-        let bytes = stack_count.checked_mul(STACK_SLOT_SIZE)?;
+        let bytes = classifier.stack_count.checked_mul(STACK_SLOT_SIZE)?;
         let aligned = align_up(bytes, STACK_ALIGNMENT)?;
         let stack_size = u32::try_from(aligned).ok()?;
         (aligned <= i32::MAX as usize).then_some(Self {
@@ -148,16 +230,58 @@ impl CallLayout {
         self.return_destination
     }
 
-    pub(super) const fn receiver(&self) -> Option<ArgumentLocation> {
+    #[cfg(test)]
+    pub(super) fn receiver(&self) -> Option<ArgumentLocation> {
+        self.receiver.map(ObjectLocations::address)
+    }
+
+    pub(super) const fn receiver_locations(&self) -> Option<ObjectLocations> {
         self.receiver
     }
 
-    pub(super) fn locations(&self) -> &[ArgumentLocation] {
+    #[cfg(test)]
+    pub(super) fn locations(&self) -> Vec<ArgumentLocation> {
+        self.locations
+            .iter()
+            .map(|locations| locations.value())
+            .collect()
+    }
+
+    pub(super) fn parameter_locations(&self) -> &[ParameterLocations] {
         &self.locations
     }
 
     pub(super) const fn stack_size(&self) -> u32 {
         self.stack_size
+    }
+}
+
+struct Classifier {
+    integer_index: usize,
+    sse_index: usize,
+    stack_count: usize,
+}
+
+impl Classifier {
+    fn classify(&mut self, class: ScalarClass) -> Option<ArgumentLocation> {
+        let location = match class {
+            ScalarClass::Sse if self.sse_index < SSE_ARGUMENT_REGISTERS.len() => {
+                let register = SSE_ARGUMENT_REGISTERS[self.sse_index];
+                self.sse_index += 1;
+                ArgumentLocation::SseRegister(register)
+            }
+            ScalarClass::Sse => stack_location(self.stack_count)?,
+            ScalarClass::Integer if self.integer_index < INTEGER_ARGUMENT_REGISTERS.len() => {
+                let register = INTEGER_ARGUMENT_REGISTERS[self.integer_index];
+                self.integer_index += 1;
+                ArgumentLocation::IntegerRegister(register)
+            }
+            ScalarClass::Integer => stack_location(self.stack_count)?,
+        };
+        if matches!(location, ArgumentLocation::Stack(_)) {
+            self.stack_count += 1;
+        }
+        Some(location)
     }
 }
 
@@ -252,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn hidden_receiver_consumes_only_the_first_integer_location() {
+    fn hidden_receiver_carries_address_complete_object_and_metadata() {
         let layout = CallLayout::classify_with_receiver(&MirParameter::values([
             MirType::I64,
             MirType::F64,
@@ -268,11 +392,19 @@ mod tests {
         assert_eq!(
             layout.locations(),
             [
-                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rcx),
                 ArgumentLocation::SseRegister(XmmRegister::Xmm0),
-                ArgumentLocation::IntegerRegister(Register::Rdx),
+                ArgumentLocation::IntegerRegister(Register::R8),
                 ArgumentLocation::SseRegister(XmmRegister::Xmm1),
             ]
+        );
+        assert_eq!(
+            layout.receiver_locations(),
+            Some(ObjectLocations {
+                address: ArgumentLocation::IntegerRegister(Register::Rdi),
+                complete: ArgumentLocation::IntegerRegister(Register::Rsi),
+                metadata: ArgumentLocation::IntegerRegister(Register::Rdx),
+            })
         );
     }
 
@@ -283,13 +415,13 @@ mod tests {
         types.extend([MirType::I64, MirType::F64]);
         let layout = CallLayout::classify_with_receiver(&MirParameter::values(types)).unwrap();
 
-        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(0));
-        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(8));
-        assert_eq!(layout.stack_size(), 16);
+        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(16));
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(24));
+        assert_eq!(layout.stack_size(), 32);
     }
 
     #[test]
-    fn alias_addresses_are_integer_class_independent_of_access_mode() {
+    fn alias_addresses_and_origins_are_integer_class() {
         let class = crate::identity::ClassId::new(0);
         let layout = CallLayout::classify(&[
             MirParameter::read_only_alias(MirType::Class(class)),
@@ -303,8 +435,15 @@ mod tests {
             [
                 ArgumentLocation::IntegerRegister(Register::Rdi),
                 ArgumentLocation::SseRegister(XmmRegister::Xmm0),
-                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rcx),
             ]
+        );
+        assert_eq!(
+            layout.parameter_locations()[0].origin(),
+            Some(ObjectOriginLocations {
+                complete: ArgumentLocation::IntegerRegister(Register::Rsi),
+                metadata: ArgumentLocation::IntegerRegister(Register::Rdx),
+            })
         );
     }
 
@@ -319,9 +458,9 @@ mod tests {
         ]);
         let layout = CallLayout::classify(&parameters).unwrap();
 
-        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(0));
-        assert_eq!(layout.locations()[15], ArgumentLocation::Stack(8));
-        assert_eq!(layout.stack_size(), 16);
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(96));
+        assert_eq!(layout.locations()[15], ArgumentLocation::Stack(120));
+        assert_eq!(layout.stack_size(), 128);
     }
 
     #[test]
@@ -339,8 +478,8 @@ mod tests {
             layout.receiver(),
             Some(ArgumentLocation::IntegerRegister(Register::Rdi))
         );
-        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(0));
-        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(8));
-        assert_eq!(layout.stack_size(), 16);
+        assert_eq!(layout.locations()[13], ArgumentLocation::Stack(96));
+        assert_eq!(layout.locations()[14], ArgumentLocation::Stack(120));
+        assert_eq!(layout.stack_size(), 128);
     }
 }

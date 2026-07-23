@@ -129,6 +129,10 @@ pub(super) enum Instruction {
         source: Operand,
         destination: Register,
     },
+    LoadSymbolAddress {
+        symbol: String,
+        destination: Register,
+    },
     MoveImmediate64 {
         bits: u64,
         destination: Register,
@@ -182,6 +186,7 @@ pub(super) enum Instruction {
     ReserveStack(u32),
     ReleaseStack(u32),
     Call(String),
+    CallIndirect(Register),
     Jump(Label),
     JumpIfNotZero(Label),
     Leave,
@@ -198,4 +203,11 @@ pub(super) struct AssemblyFunction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct AssemblyProgram {
     pub functions: Vec<AssemblyFunction>,
+    pub virtual_tables: Vec<AssemblyVirtualTable>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyVirtualTable {
+    pub symbol: String,
+    pub entries: Vec<Option<String>>,
 }

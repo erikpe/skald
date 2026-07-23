@@ -1,7 +1,7 @@
 //! Collision-proof assembly symbols derived from canonical identities.
 
 use crate::{
-    identity::CallableId,
+    identity::{CallableId, ClassId},
     mir::{MirFunctionLinkage, MirProgram},
 };
 
@@ -38,6 +38,10 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
             method.index()
         ),
     }
+}
+
+pub(super) fn virtual_table(class: ClassId) -> String {
+    format!(".Lska_class_{}_vtable", class.index())
 }
 
 pub(super) fn local_label_stem(callable: CallableId) -> String {

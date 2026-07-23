@@ -5,12 +5,10 @@ inheritance, complete base lifecycle, inherited static member access,
 access-preserving class/`Obj` alias views, and inline slicing execute through
 verified MIR and the x86-64 backend. Contextual `virtual` and `override`
 declarations are accepted, assigned stable families, and checked for exact
-compatibility. Dynamic dispatch, interfaces, type tests, and narrowing remain
-unavailable below HIR. Typed HIR now distinguishes virtual-family calls from
-direct calls and retains complete-object and dynamic-class provenance across
-aliases and `self`; MIR representation and execution remain pending. The
-[status matrix](STATUS.md) distinguishes the typed semantic boundary from the
-executable static subset.
+compatibility. Virtual dispatch executes on x86-64 through canonical MIR
+families and a private metadata ABI. Interfaces, type tests, and narrowing
+remain unavailable. The [status matrix](STATUS.md) distinguishes implemented
+virtual dispatch from those later polymorphism stages.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -235,11 +233,12 @@ static selection, compatible and live receiver places, and exact or forwarded
 metadata provenance. Scalar and object results, argument evaluation, ownership
 transfer, and full-expression cleanup use the ordinary call pipeline.
 
-The x86-64 backend currently lowers direct calls, including exact
-virtual-declaration calls that HIR can devirtualize. It rejects verified
-virtual calls before layout with a structured unsupported-feature error.
-Executable dynamic dispatch and its internal metadata ABI arrive in the next
-implementation stage.
+The x86-64 backend derives deterministic per-class virtual tables from MIR
+family identities. Internal receivers and object aliases carry their static
+address, complete-object address, and dynamic metadata together. A virtual
+call loads the family slot from that metadata and invokes the selected method
+through the ordinary argument, result, temporary, and cleanup pipeline. Exact
+and sliced values retain direct static selection.
 
 ## Inline slicing
 

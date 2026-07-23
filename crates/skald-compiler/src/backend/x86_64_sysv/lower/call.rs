@@ -2,19 +2,20 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{CallableId, DestructorId},
+    identity::{CallableId, DestructorId, VirtualSlotId},
     mir::{
         MirArgument, MirCall, MirCallTarget, MirCallableSignature, MirDefinitionRef,
-        MirFunctionLinkage, MirInitialize, MirParameter, MirParameterMode, MirPlace, MirType,
-        ValueId,
+        MirFunctionLinkage, MirInitialize, MirMethodCallTarget, MirParameter, MirParameterMode,
+        MirPlace, MirType, ValueId,
     },
 };
 
 use super::{
     super::{
-        abi::{ArgumentLocation, CallLayout},
-        machine::{ByteRegister, Instruction, Register, XmmRegister},
+        abi::{ArgumentLocation, CallLayout, ObjectOriginLocations, ParameterLocations},
+        machine::{ByteRegister, Instruction, Operand, Register, XmmRegister},
     },
+    object_abi::{ObjectOriginOperand, ReceiverOperand},
     value, FrameLayout, InstructionSelector,
 };
 
@@ -65,33 +66,37 @@ pub(super) fn spill_parameters(
 
     if let Some(receiver) = function.receiver() {
         let incoming = layout
-            .receiver()
+            .receiver_locations()
             .expect("receiver-aware layout has a receiver location")
             .incoming()
             .ok_or_else(|| {
                 argument_area_error(function, "incoming receiver area exceeds x86-64 limits")
             })?;
-        let destination = value::frame_storage(frame, receiver);
-        match incoming {
-            ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
-                source: register.into(),
-                destination,
-            }),
-            ArgumentLocation::Stack(displacement) => {
-                value::load_rax(value::memory(Register::Rbp, displacement), output);
-                value::store_rax(destination, output);
-            }
-            ArgumentLocation::SseRegister(_) => {
-                unreachable!("receiver is always integer-class")
-            }
-        }
+        spill_integer(
+            incoming.address(),
+            value::frame_storage(frame, receiver),
+            output,
+        );
+        let homes = frame
+            .object_origin(receiver)
+            .expect("receiver storage has object-origin homes");
+        spill_integer(
+            incoming.complete(),
+            value::memory(Register::Rbp, homes.complete()),
+            output,
+        );
+        spill_integer(
+            incoming.metadata(),
+            value::memory(Register::Rbp, homes.metadata()),
+            output,
+        );
     }
 
     for ((storage, parameter), location) in function
         .parameters()
         .iter()
         .zip(signature.parameters)
-        .zip(layout.locations())
+        .zip(layout.parameter_locations())
     {
         let incoming = location.incoming().ok_or_else(|| {
             argument_area_error(
@@ -100,7 +105,7 @@ pub(super) fn spill_parameters(
             )
         })?;
         let destination = value::frame_storage(frame, *storage);
-        match incoming {
+        match incoming.value() {
             ArgumentLocation::IntegerRegister(register)
                 if parameter.mode == MirParameterMode::Value && parameter.ty == MirType::U8 =>
             {
@@ -136,23 +141,63 @@ pub(super) fn spill_parameters(
                 value::store_rax(destination, output);
             }
         }
+        if let Some(origin) = incoming.origin() {
+            let homes = frame
+                .object_origin(*storage)
+                .expect("alias parameter storage has object-origin homes");
+            spill_integer(
+                origin.complete(),
+                value::memory(Register::Rbp, homes.complete()),
+                output,
+            );
+            spill_integer(
+                origin.metadata(),
+                value::memory(Register::Rbp, homes.metadata()),
+                output,
+            );
+        }
     }
     Ok(())
 }
 
+fn spill_integer(location: ArgumentLocation, destination: Operand, output: &mut Vec<Instruction>) {
+    match location {
+        ArgumentLocation::IntegerRegister(register) => output.push(Instruction::Move {
+            source: register.into(),
+            destination,
+        }),
+        ArgumentLocation::Stack(displacement) => {
+            value::load_rax(value::memory(Register::Rbp, displacement), output);
+            value::store_rax(destination, output);
+        }
+        ArgumentLocation::SseRegister(_) => {
+            unreachable!("object ABI components are always integer-class")
+        }
+    }
+}
+
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_call(&mut self, call: &MirCall) -> Result<(), BackendError> {
-        let (target, receiver) = match call.target {
-            MirCallTarget::Direct(function) => (CallableId::Function(function), None),
-            MirCallTarget::Method(method) => (
-                CallableId::Method(method.selected()),
-                Some(
-                    call.receiver
-                        .as_ref()
-                        .map(|receiver| &receiver.place)
-                        .expect("verified method call has a receiver"),
-                ),
-            ),
+        let (target, receiver, virtual_slot) = match call.target {
+            MirCallTarget::Direct(function) => (CallableId::Function(function), None, None),
+            MirCallTarget::Method(method) => {
+                let receiver = call
+                    .receiver
+                    .as_ref()
+                    .expect("verified method call has a receiver");
+                let slot = match method {
+                    MirMethodCallTarget::Direct(_) => None,
+                    MirMethodCallTarget::Virtual { slot, .. } => Some(slot),
+                };
+                (
+                    CallableId::Method(method.selected()),
+                    Some(ReceiverOperand {
+                        place: &receiver.place,
+                        origin: ObjectOriginOperand::Mir(&receiver.origin),
+                    }),
+                    slot,
+                )
+            }
         };
         self.select_callable(
             target,
@@ -160,6 +205,7 @@ impl InstructionSelector<'_, '_> {
             receiver,
             &call.arguments,
             call.result,
+            virtual_slot,
         )
     }
 
@@ -170,8 +216,15 @@ impl InstructionSelector<'_, '_> {
         self.select_callable(
             CallableId::Initializer(initialize.target),
             None,
-            Some(&initialize.destination),
+            Some(ReceiverOperand {
+                place: &initialize.destination,
+                origin: ObjectOriginOperand::Exact {
+                    complete: &initialize.destination,
+                    dynamic_class: initialize.target.class(),
+                },
+            }),
             &initialize.arguments,
+            None,
             None,
         )
     }
@@ -184,8 +237,15 @@ impl InstructionSelector<'_, '_> {
         self.select_callable(
             CallableId::Destructor(target),
             None,
-            Some(receiver),
+            Some(ReceiverOperand {
+                place: receiver,
+                origin: ObjectOriginOperand::Exact {
+                    complete: receiver,
+                    dynamic_class: target.class(),
+                },
+            }),
             &[],
+            None,
             None,
         )
     }
@@ -194,9 +254,10 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         target: CallableId,
         return_destination: Option<&MirPlace>,
-        receiver: Option<&MirPlace>,
+        receiver: Option<ReceiverOperand<'_>>,
         arguments: &[MirArgument],
         result: Option<ValueId>,
+        virtual_slot: Option<VirtualSlotId>,
     ) -> Result<(), BackendError> {
         let signature = self
             .program
@@ -228,27 +289,38 @@ impl InstructionSelector<'_, '_> {
             self.materialize_place_address(return_destination, register)?;
         }
         if let Some(receiver) = receiver {
-            let location = layout
-                .receiver()
+            let locations = layout
+                .receiver_locations()
                 .expect("receiver-aware layout has a receiver location");
-            let ArgumentLocation::IntegerRegister(register) = location else {
-                unreachable!("receiver always has an integer-class register location")
-            };
-            self.materialize_place_address(receiver, register)?;
+            if virtual_slot.is_some() {
+                self.select_origin_complete(receiver.origin, locations.address())?;
+            } else {
+                self.select_place_address(receiver.place, locations.address())?;
+            }
+            self.select_object_origin(
+                receiver.origin,
+                ObjectOriginLocations::new(locations.complete(), locations.metadata()),
+            )?;
         }
         for ((argument, parameter), location) in arguments
             .iter()
             .zip(signature.parameters)
-            .zip(layout.locations())
+            .zip(layout.parameter_locations())
         {
             self.select_argument(argument, *parameter, *location)?;
         }
 
-        self.output
-            .push(Instruction::Call(super::super::symbol::callable(
-                self.program,
-                target,
-            )));
+        if let Some(slot) = virtual_slot {
+            let receiver = receiver.expect("virtual call has a receiver");
+            self.select_virtual_target(receiver.origin, slot)?;
+            self.output.push(Instruction::CallIndirect(Register::R11));
+        } else {
+            self.output
+                .push(Instruction::Call(super::super::symbol::callable(
+                    self.program,
+                    target,
+                )));
+        }
         if layout.stack_size() != 0 {
             self.output
                 .push(Instruction::ReleaseStack(layout.stack_size()));
@@ -264,48 +336,32 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         argument: &MirArgument,
         parameter: MirParameter,
-        location: ArgumentLocation,
+        locations: ParameterLocations,
     ) -> Result<(), BackendError> {
         match (argument, parameter.mode) {
             (MirArgument::Value(argument), MirParameterMode::Value) => {
-                self.select_value_argument(*argument, parameter.ty, location);
+                self.select_value_argument(*argument, parameter.ty, locations.value());
             }
             (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
-            | (MirArgument::Place(place), MirParameterMode::MutableAlias)
-            | (
-                MirArgument::View(crate::mir::MirObjectView { source: place, .. }),
-                MirParameterMode::ReadOnlyAlias,
-            )
-            | (
-                MirArgument::View(crate::mir::MirObjectView { source: place, .. }),
-                MirParameterMode::MutableAlias,
-            ) => match location {
-                ArgumentLocation::IntegerRegister(register) => {
-                    self.materialize_place_address(place, register)?;
-                }
-                ArgumentLocation::Stack(displacement) => {
-                    self.materialize_place_address(place, Register::Rax)?;
-                    value::store_rax(value::memory(Register::Rsp, displacement), self.output);
-                }
-                ArgumentLocation::SseRegister(_) => {
-                    unreachable!("alias addresses are always integer-class")
-                }
-            },
+            | (MirArgument::Place(place), MirParameterMode::MutableAlias) => {
+                self.select_inferred_alias(place, locations)?;
+            }
+            (
+                MirArgument::View(crate::mir::MirObjectView { source, origin, .. }),
+                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias,
+            ) => {
+                self.select_place_address(source, locations.value())?;
+                self.select_object_origin(
+                    ObjectOriginOperand::Mir(origin),
+                    locations
+                        .origin()
+                        .expect("alias layout carries object-origin locations"),
+                )?;
+            }
             (MirArgument::OwnedPlace(place), MirParameterMode::Value)
                 if matches!(parameter.ty, MirType::Class(_)) =>
             {
-                match location {
-                    ArgumentLocation::IntegerRegister(register) => {
-                        self.materialize_place_address(place, register)?;
-                    }
-                    ArgumentLocation::Stack(displacement) => {
-                        self.materialize_place_address(place, Register::Rax)?;
-                        value::store_rax(value::memory(Register::Rsp, displacement), self.output);
-                    }
-                    ArgumentLocation::SseRegister(_) => {
-                        unreachable!("owned object addresses are integer-class")
-                    }
-                }
+                self.select_place_address(place, locations.value())?;
             }
             _ => unreachable!("verified argument kind must match its parameter mode"),
         }

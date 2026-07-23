@@ -103,15 +103,13 @@ fn virtual_mir_dump_is_deterministic_and_target_independent() {
 }
 
 #[test]
-fn verified_virtual_mir_stops_at_the_backend_boundary_without_panicking() {
+fn verified_virtual_mir_reaches_indirect_backend_lowering() {
     let (program, _) = virtual_dispatch_mir();
     verify_mir(&program).unwrap();
-    let error = crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program)
-        .expect_err("virtual dispatch remains a backend implementation task");
-    assert_eq!(
-        error.message(),
-        "virtual dispatch is not implemented by this backend"
-    );
+    let assembly =
+        crate::backend::emit_assembly(crate::backend::Target::X86_64SysV, &program).unwrap();
+    assert!(assembly.contains(".Lska_class_0_vtable:"));
+    assert!(assembly.contains("call *%r11"));
 }
 
 #[test]

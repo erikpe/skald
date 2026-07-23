@@ -33,12 +33,13 @@ The x86-64 backend performs these steps in order:
 
 1. run the public MIR verifier again at the backend trust boundary;
 2. reject verified MIR features not yet implemented by this target;
-3. compute checked primitive and class layouts;
-4. check that every executable signature and called member can be represented
+3. compute deterministic virtual tables from verified families and classes;
+4. compute checked primitive and class layouts;
+5. check that every executable signature and called member can be represented
    by the target calling convention;
-5. plan fixed stack frames and target addresses;
-6. select target instructions into a private assembly model; and
-7. emit deterministic GNU assembly text.
+6. plan fixed stack frames and target addresses;
+7. select target instructions into a private assembly model; and
+8. emit deterministic GNU assembly text and metadata.
 
 Malformed MIR is returned as a backend error before target layout or
 instruction selection. Target-specific failures—including recursive layout,
@@ -48,11 +49,9 @@ argument-area limits, frame limits, and displacement limits—also return
 callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
-owning slices, and class/`Obj` alias views. MIR can represent and verify
-virtual-family calls and complete-object receiver origins, but this target
-rejects virtual calls with a structured unsupported-feature error before
-layout. Interface dispatch, runtime type tests, and checked narrowing do not
-yet have MIR operations.
+owning slices, class/`Obj` alias views, and virtual-family calls. Interface
+dispatch, runtime type tests, and checked narrowing do not yet have MIR
+operations.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -147,28 +146,27 @@ requirements are defined by the [runtime ABI](RUNTIME_ABI.md).
 Skald-internal calls reuse the scalar System V classification but add
 compiler-private address conventions for inline objects:
 
-- a receiver is an integer-class address to the existing object place;
-- a static class alias is an integer-class address to its selected class
-  subobject, while an `Obj` alias uses the source address as an opaque identity
-  in the current operation-free static subset; read-only and mutable access
+- a receiver carries three integer-class components in order: its statically
+  selected address, complete-object address, and dynamic metadata address;
+- a class or `Obj` alias carries the same three components. Its first address
+  selects the static class subobject or opaque `Obj` identity; forwarding
+  preserves the latter two components unchanged. Read-only and mutable access
   use the same representation;
 - an exact-class value parameter is an address to caller-created parameter
   storage whose ownership transfer was already selected in MIR; and
 - an exact-class result uses a hidden destination address before the receiver
   and explicit arguments.
 
-For an object-returning method, the hidden result destination consumes the
-first integer location and the receiver consumes the next. Explicit integer
-arguments continue after both, while SSE arguments retain their independent
-sequence. Stack overflow arguments remain in one source-ordered area.
+For an object-returning method, the hidden result destination precedes all
+three receiver components. Each object alias's complete-object and metadata
+components immediately follow its static address. Explicit scalar/value
+arguments otherwise retain source order, SSE arguments retain their
+independent sequence, and overflow components share one aligned stack area.
 
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible
-behavior remains unchanged. Verified MIR already carries dynamic-class
-provenance through method receivers and alias views. The target ABI will gain
-the corresponding machine representation with virtual-call lowering;
-metadata is never reconstructed from a base-subobject address. The backend
-does not choose copying, ownership,
+behavior remains unchanged. Metadata is never reconstructed from a
+base-subobject address. The backend does not choose copying, ownership,
 elision, cleanup, or evaluation order; it mechanically realizes operations and
 destinations already present in verified MIR. Those choices are owned by
 [functions and control flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md),
@@ -183,8 +181,9 @@ alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
 `%rbp`-relative addressing.
 
-Return destinations, receivers, owned class parameters, and aliases store an
-incoming pointer in a frame home. Projecting a MIR place loads the appropriate
+Return destinations and owned class parameters store an incoming pointer in a
+frame home. Receivers and aliases additionally store complete-object and
+metadata homes for forwarding. Projecting a MIR place loads the appropriate
 base when indirect, then accumulates checked target base and field offsets.
 Byte fields use byte-width loads and stores; wider primitive and address
 values use their target-width operations.
@@ -196,6 +195,24 @@ error rather than wrapped arithmetic or truncated offsets.
 The stack-heavy strategy is replaceable. Register allocation or another
 location strategy must preserve the MIR and ABI boundaries rather than
 changing language semantics.
+
+## Virtual metadata and calls
+
+The backend computes one table per declared class when virtual families exist.
+Tables and entries follow dense `ClassId` and canonical `VirtualSlotId` order.
+Each applicable slot contains the most-derived declared method for that class;
+unrelated slots contain zero. Missing executable bodies, invalid MIR family
+metadata, unrepresentable table displacements, and unsupported external object
+signatures are rejected before instruction selection.
+
+Tables are private read-only relocation data containing method symbols.
+Entering a polymorphic call with an exact object supplies its statically known
+class table. Forwarded receivers and aliases copy the incoming complete-object
+and table addresses. A virtual call loads its slot from the forwarded table,
+passes the complete object as the selected method receiver, and calls
+indirectly. This is valid for the current single-inheritance layout because
+every base subobject begins at offset zero. Direct calls continue to pass their
+statically selected place.
 
 ## Instruction selection and cleanup realization
 

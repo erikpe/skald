@@ -122,6 +122,11 @@ impl MirMemberDefinitionTable {
     ) -> Option<&mut MirMemberDefinition> {
         self.entries.get_mut(&callable)
     }
+
+    #[cfg(test)]
+    pub(crate) fn remove_for_test(&mut self, callable: CallableId) {
+        self.entries.remove(&callable);
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

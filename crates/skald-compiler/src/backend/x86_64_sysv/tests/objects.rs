@@ -193,11 +193,11 @@ fn lowers_exhausted_mixed_receiver_abi_through_stack_arguments() {
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains("subq $16, %rsp"));
-    assert!(output.contains("movq %rax, (%rsp)"));
-    assert!(output.contains("movsd %xmm14, 8(%rsp)"));
-    assert!(output.contains("movq 16(%rbp), %rax"));
-    assert!(output.contains("movsd 24(%rbp), %xmm14"));
+    assert!(output.contains("subq $32, %rsp"));
+    assert!(output.contains("movq %rax, 16(%rsp)"));
+    assert!(output.contains("movsd %xmm14, 24(%rsp)"));
+    assert!(output.contains("movq 32(%rbp), %rax"));
+    assert!(output.contains("movsd 40(%rbp), %xmm14"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -211,8 +211,8 @@ fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
     let function = program.definitions.get(ids.add).unwrap();
     let planned = frame::FrameLayout::plan(function.into(), &data).unwrap();
     assert_eq!(planned.storage(function.parameters[0]), -8);
-    assert_eq!(planned.storage(function.parameters[1]), -16);
-    assert_eq!(planned.size(), 48);
+    assert_eq!(planned.storage(function.parameters[1]), -32);
+    assert_eq!(planned.size(), 64);
 
     let first = emit_assembly(Target::X86_64SysV, &program).unwrap();
     let second = emit_assembly(Target::X86_64SysV, &program).unwrap();
@@ -233,12 +233,12 @@ fn lowers_exhausted_receiver_alias_and_sse_arguments_through_ordered_stack_slots
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
 
-    assert!(output.contains("subq $16, %rsp"));
+    assert!(output.contains("subq $128, %rsp"));
     assert!(output.contains("leaq -32(%rbp), %rax"));
     assert!(output.contains("movq %rax, (%rsp)"));
-    assert!(output.contains("movsd %xmm14, 8(%rsp)"));
+    assert!(output.contains("movsd %xmm14, 120(%rsp)"));
     assert!(output.contains("movq 16(%rbp), %rax"));
-    assert!(output.contains("movsd 24(%rbp), %xmm14"));
+    assert!(output.contains("movsd 136(%rbp), %xmm14"));
     assert_system_assembler_accepts(&output);
 }
 

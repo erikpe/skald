@@ -1,0 +1,274 @@
+//! Polymorphic receiver and object-alias ABI lowering.
+
+use crate::{
+    backend::BackendError,
+    identity::{ClassId, VirtualSlotId},
+    mir::{MirObjectOrigin, MirPlace, MirType, StorageId},
+};
+
+use super::{
+    super::{
+        abi::{ArgumentLocation, ObjectOriginLocations, ParameterLocations},
+        dispatch::DispatchMetadata,
+        machine::{Instruction, Operand, Register},
+    },
+    value, InstructionSelector,
+};
+
+#[derive(Clone, Copy)]
+pub(super) struct ReceiverOperand<'mir> {
+    pub(super) place: &'mir MirPlace,
+    pub(super) origin: ObjectOriginOperand<'mir>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum ObjectOriginOperand<'mir> {
+    Mir(&'mir MirObjectOrigin),
+    Exact {
+        complete: &'mir MirPlace,
+        dynamic_class: ClassId,
+    },
+}
+
+impl InstructionSelector<'_, '_> {
+    pub(super) fn select_inferred_alias(
+        &mut self,
+        place: &MirPlace,
+        locations: ParameterLocations,
+    ) -> Result<(), BackendError> {
+        self.select_place_address(place, locations.value())?;
+        let origin_locations = locations
+            .origin()
+            .expect("alias layout carries object-origin locations");
+        if let Some(field_index) = place
+            .projections
+            .iter()
+            .rposition(|projection| matches!(projection, crate::mir::MirPlaceProjection::Field(_)))
+        {
+            let mut complete = place.clone();
+            complete.projections.truncate(field_index + 1);
+            let dynamic_class = match complete.projections[field_index] {
+                crate::mir::MirPlaceProjection::Field(field) => {
+                    let MirType::Class(class) = self
+                        .program
+                        .field(field)
+                        .expect("verified field projection names a declared field")
+                        .ty
+                    else {
+                        unreachable!("an object alias field source has class type")
+                    };
+                    class
+                }
+                crate::mir::MirPlaceProjection::Base(_) => unreachable!(),
+            };
+            return self.select_object_origin(
+                ObjectOriginOperand::Exact {
+                    complete: &complete,
+                    dynamic_class,
+                },
+                origin_locations,
+            );
+        }
+        let carrier = place.base.storage();
+        if self.frame.object_origin(carrier).is_some() {
+            self.select_forwarded_origin(carrier, origin_locations);
+            return Ok(());
+        }
+        let MirType::Class(dynamic_class) = self
+            .function
+            .storage(carrier)
+            .expect("verified alias place base names storage")
+            .ty
+        else {
+            unreachable!("an exact object alias place has a class-typed owning root")
+        };
+        let mut complete = place.clone();
+        complete.projections.clear();
+        self.select_object_origin(
+            ObjectOriginOperand::Exact {
+                complete: &complete,
+                dynamic_class,
+            },
+            origin_locations,
+        )
+    }
+
+    pub(super) fn select_place_address(
+        &mut self,
+        place: &MirPlace,
+        location: ArgumentLocation,
+    ) -> Result<(), BackendError> {
+        match location {
+            ArgumentLocation::IntegerRegister(register) => {
+                self.materialize_place_address(place, register)?;
+            }
+            ArgumentLocation::Stack(displacement) => {
+                self.materialize_place_address(place, Register::Rax)?;
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("object addresses are always integer-class")
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn select_object_origin(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        locations: ObjectOriginLocations,
+    ) -> Result<(), BackendError> {
+        match origin {
+            ObjectOriginOperand::Mir(MirObjectOrigin::Exact {
+                complete,
+                dynamic_class,
+            }) => {
+                self.select_place_address(complete, locations.complete())?;
+                self.select_metadata_symbol(*dynamic_class, locations.metadata());
+            }
+            ObjectOriginOperand::Exact {
+                complete,
+                dynamic_class,
+            } => {
+                self.select_place_address(complete, locations.complete())?;
+                self.select_metadata_symbol(dynamic_class, locations.metadata());
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
+                self.select_forwarded_origin(*carrier, locations);
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn select_origin_complete(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        location: ArgumentLocation,
+    ) -> Result<(), BackendError> {
+        match origin {
+            ObjectOriginOperand::Mir(MirObjectOrigin::Exact { complete, .. }) => {
+                self.select_place_address(complete, location)
+            }
+            ObjectOriginOperand::Exact { complete, .. } => {
+                self.select_place_address(complete, location)
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
+                let homes = self
+                    .frame
+                    .object_origin(*carrier)
+                    .expect("verified forwarded carrier has object-origin homes");
+                self.select_frame_word(homes.complete(), location);
+                Ok(())
+            }
+        }
+    }
+
+    pub(super) fn select_virtual_target(
+        &mut self,
+        origin: ObjectOriginOperand<'_>,
+        slot: VirtualSlotId,
+    ) -> Result<(), BackendError> {
+        match origin {
+            ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
+                let metadata = self
+                    .frame
+                    .object_origin(*carrier)
+                    .expect("verified forwarded carrier has object-origin homes")
+                    .metadata();
+                self.output.push(Instruction::Move {
+                    source: value::memory(Register::Rbp, metadata),
+                    destination: Register::R11.into(),
+                });
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Exact { dynamic_class, .. }) => {
+                self.load_table_address(*dynamic_class, Register::R11);
+            }
+            ObjectOriginOperand::Exact { dynamic_class, .. } => {
+                self.load_table_address(dynamic_class, Register::R11);
+            }
+        }
+        let displacement = DispatchMetadata::slot_displacement(slot)?;
+        self.output.push(Instruction::Move {
+            source: Operand::Memory {
+                base: Register::R11,
+                displacement,
+            },
+            destination: Register::R11.into(),
+        });
+        Ok(())
+    }
+
+    fn select_forwarded_origin(&mut self, carrier: StorageId, locations: ObjectOriginLocations) {
+        let homes = self
+            .frame
+            .object_origin(carrier)
+            .expect("verified forwarded carrier has object-origin homes");
+        self.select_frame_word(homes.complete(), locations.complete());
+        self.select_frame_word(homes.metadata(), locations.metadata());
+    }
+
+    fn select_frame_word(&mut self, home: i32, location: ArgumentLocation) {
+        let source = value::memory(Register::Rbp, home);
+        match location {
+            ArgumentLocation::IntegerRegister(register) => {
+                self.output.push(Instruction::Move {
+                    source,
+                    destination: register.into(),
+                });
+            }
+            ArgumentLocation::Stack(displacement) => {
+                value::load_rax(source, self.output);
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("object metadata is always integer-class")
+            }
+        }
+    }
+
+    fn select_metadata_symbol(&mut self, class: ClassId, location: ArgumentLocation) {
+        let symbol = self.dispatch.table_symbol(class);
+        match (symbol, location) {
+            (Some(symbol), ArgumentLocation::IntegerRegister(destination)) => {
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol,
+                    destination,
+                });
+            }
+            (Some(symbol), ArgumentLocation::Stack(displacement)) => {
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol,
+                    destination: Register::Rax,
+                });
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            (None, ArgumentLocation::IntegerRegister(destination)) => {
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 0,
+                    destination,
+                });
+            }
+            (None, ArgumentLocation::Stack(displacement)) => {
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 0,
+                    destination: Register::Rax,
+                });
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            (_, ArgumentLocation::SseRegister(_)) => {
+                unreachable!("object metadata is always integer-class")
+            }
+        }
+    }
+
+    fn load_table_address(&mut self, class: ClassId, destination: Register) {
+        let symbol = self
+            .dispatch
+            .table_symbol(class)
+            .expect("virtual call dynamic class has a virtual table");
+        self.output.push(Instruction::LoadSymbolAddress {
+            symbol,
+            destination,
+        });
+    }
+}

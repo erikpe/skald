@@ -61,10 +61,10 @@ fn return_destination_precedes_receiver_and_explicit_arguments() {
         layout.locations(),
         [
             super::super::abi::ArgumentLocation::IntegerRegister(
-                super::super::machine::Register::Rdx,
+                super::super::machine::Register::R8,
             ),
             super::super::abi::ArgumentLocation::IntegerRegister(
-                super::super::machine::Register::Rcx,
+                super::super::machine::Register::R9,
             ),
         ]
     );

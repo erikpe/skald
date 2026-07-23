@@ -204,8 +204,15 @@ impl InstructionSelector<'_, '_> {
         self.select_callable(
             target,
             None,
-            Some(destination),
+            Some(super::object_abi::ReceiverOperand {
+                place: destination,
+                origin: super::object_abi::ObjectOriginOperand::Exact {
+                    complete: destination,
+                    dynamic_class: target.class().expect("copy call target is a class member"),
+                },
+            }),
             &[MirArgument::Place(source.clone())],
+            None,
             None,
         )
     }

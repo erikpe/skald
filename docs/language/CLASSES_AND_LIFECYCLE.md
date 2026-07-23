@@ -16,7 +16,8 @@ A class declaration introduces one nominal type. Two classes are different
 types even when their declarations have identical members. A class may have
 one direct base. The compiler validates the canonical hierarchy and carries
 base identity through typed lifecycle operations, static member access,
-verified MIR, and target lowering. Dynamic dispatch remains unavailable.
+verified MIR, and target lowering. Opt-in virtual method behavior is defined
+separately by [polymorphism](POLYMORPHISM.md#virtual-methods-and-overrides).
 
 A class value is one complete inline object containing all of its direct
 fields. A class-typed field is a complete inline subobject of its containing

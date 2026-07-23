@@ -8,6 +8,7 @@
 //! `docs/compiler/BACKEND.md`.
 
 mod abi;
+mod dispatch;
 mod emit;
 mod frame;
 mod layout;
@@ -21,8 +22,8 @@ use crate::mir::MirProgram;
 use super::BackendError;
 
 pub fn emit_assembly(program: &MirProgram) -> Result<String, BackendError> {
-    let data_layout = legality::check(program)?;
-    let assembly = lower::lower(program, &data_layout)?;
+    let (data_layout, dispatch) = legality::check(program)?;
+    let assembly = lower::lower(program, &data_layout, &dispatch)?;
     Ok(emit::emit(&assembly))
 }
 

@@ -7,14 +7,12 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its executable profile
-  is frozen, virtual calls and receiver origins are verified in
-  target-independent MIR, and x86-64 virtual dispatch is next.
-  The roadmap
-  extends the completed exact-class object model with inheritance, lifecycle
-  composition, virtual dispatch, interfaces, `Obj` views, type tests, and
-  checked narrowing. Direct-base lifecycle, inherited static access,
-  class/`Obj` alias views, owning slices, and their x86-64 execution are
-  implemented.
+  is frozen through virtual dispatch, which is verified in target-independent
+  MIR and executes on x86-64. Interfaces are next. The roadmap extends the
+  completed exact-class object model with inheritance, lifecycle composition,
+  virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing.
+  Direct-base lifecycle, inherited static access, class/`Obj` alias views,
+  owning slices, and opt-in virtual methods are implemented.
 
 The current object-model dependency order is polymorphism before focused
 shared-ownership work, followed by checked exceptions that extend cleanup to
