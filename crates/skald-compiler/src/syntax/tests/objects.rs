@@ -153,6 +153,119 @@ fn frozen_polymorphism_words_remain_ordinary_names_outside_future_forms() {
 }
 
 #[test]
+fn parses_contextual_virtual_method_modifiers_in_the_frozen_order() {
+    let (sources, output) = parse_text(concat!(
+        "class Base {\n",
+        "  init() {}\n",
+        "  virtual fn read(value: i64) -> i64 { return value; }\n",
+        "  virtual mut fn write(value: i64) -> unit {}\n",
+        "}\n",
+        "class Derived {\n",
+        "  init() {}\n",
+        "  override fn read(value: i64) -> i64 { return value; }\n",
+        "  override mut fn write(value: i64) -> unit {}\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let methods = [class(&output.ast, 0), class(&output.ast, 1)]
+        .into_iter()
+        .flat_map(|class| &class.members)
+        .filter_map(|member| match member {
+            ClassMember::Method(method) => Some(method),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(methods.len(), 4);
+    assert!(matches!(
+        methods[0].modifier,
+        Some(MethodModifier::Virtual { .. })
+    ));
+    assert!(methods[0].mut_span.is_none());
+    assert!(matches!(
+        methods[1].modifier,
+        Some(MethodModifier::Virtual { .. })
+    ));
+    assert_eq!(source_text(&sources, methods[1].mut_span.unwrap()), "mut");
+    assert!(matches!(
+        methods[2].modifier,
+        Some(MethodModifier::Override { .. })
+    ));
+    assert!(matches!(
+        methods[3].modifier,
+        Some(MethodModifier::Override { .. })
+    ));
+    assert_eq!(source_text(&sources, methods[3].mut_span.unwrap()), "mut");
+}
+
+#[test]
+fn invalid_method_modifier_sequences_recover_at_following_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "  init() {}\n",
+        "  virtual override fn first() -> unit {}\n",
+        "  override override fn second() -> unit {}\n",
+        "  mut virtual fn third() -> unit {}\n",
+        "  fn after() -> unit {}\n",
+        "}\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code)
+            .collect::<Vec<_>>(),
+        [
+            INVALID_CLASS_MEMBER,
+            INVALID_CLASS_MEMBER,
+            INVALID_CLASS_MEMBER
+        ]
+    );
+    let broken = class(&output.ast, 0);
+    let method_names = broken
+        .members
+        .iter()
+        .filter_map(|member| match member {
+            ClassMember::Method(method) => Some(method.name.text.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(method_names, ["first", "second", "third", "after"]);
+}
+
+#[test]
+fn virtual_method_modifiers_are_explicit_in_the_ast_dump() {
+    let (_, output) = parse_text(concat!(
+        "class Methods {\n",
+        "  virtual fn read() -> unit {}\n",
+        "  override mut fn write() -> unit {}\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let dump = dump_ast(&output.ast);
+    let relevant_lines = dump
+        .lines()
+        .filter(|line| {
+            line.contains("Method ")
+                || line.contains("Modifier ")
+                || line.trim_start().starts_with("Mut ")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        relevant_lines,
+        [
+            "      Method ReadOnly @18..46",
+            "        Modifier Virtual @18..25",
+            "      Method Mutable @49..83",
+            "        Modifier Override @49..57",
+            "        Mut @58..61",
+        ]
+    );
+}
+
+#[test]
 fn parses_contextual_extends_without_reserving_the_spelling() {
     let (_, output) = parse_text(concat!(
         "class Base { init() {} }\n",

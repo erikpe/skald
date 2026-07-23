@@ -5,7 +5,7 @@ use crate::{
     hir::{
         HirClassDeclarationTable, HirClassDefinitionTable, HirFunctionDeclaration,
         HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage, HirParameter,
-        HirParameterMode, HirProgram, Type,
+        HirParameterMode, HirProgram, HirVirtualFamily, HirVirtualFamilyTable, Type,
     },
     identity::FunctionId,
     resolve::{
@@ -20,8 +20,10 @@ use super::{
 };
 
 mod class;
+mod overrides;
 
 use class::{check_class_definitions, lower_class_declarations};
+use overrides::validate_override_signatures;
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
 const EXTERNAL_RESULT_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool", "unit"];
@@ -47,6 +49,7 @@ pub const INVALID_ALIAS_PARAMETER: &str = "TYP019";
 pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
 pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
 pub const COPY_OPERATION_UNAVAILABLE: &str = "TYP023";
+pub const INVALID_OVERRIDE_SIGNATURE: &str = "TYP024";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -67,6 +70,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
+    validate_override_signatures(program, &mut diagnostics);
     let copy_capabilities = CopyCapabilities::compute(program);
     let classes = lower_class_declarations(program, &copy_capabilities, &mut diagnostics);
     let declarations = program.declarations.iter().map(lower_declaration).collect();
@@ -93,6 +97,17 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     } else {
         Some(HirProgram {
             classes: HirClassDeclarationTable::new(classes),
+            virtual_families: HirVirtualFamilyTable::new(
+                program
+                    .virtual_families
+                    .iter()
+                    .map(|family| HirVirtualFamily {
+                        id: family.id,
+                        slot: family.slot,
+                        root: family.root,
+                    })
+                    .collect(),
+            ),
             class_definitions: HirClassDefinitionTable::new(class_definitions),
             declarations: HirFunctionDeclarationTable::new(declarations),
             definitions: HirFunctionDefinitionTable::new(definitions),

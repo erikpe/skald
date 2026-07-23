@@ -65,6 +65,8 @@ macro_rules! class_member_id {
 
 global_id!(FunctionId, "f");
 global_id!(ClassId, "c");
+global_id!(VirtualFamilyId, "vf");
+global_id!(VirtualSlotId, "vs");
 
 class_member_id!(FieldId, "field");
 class_member_id!(InitializerId, "init");
@@ -243,6 +245,8 @@ mod tests {
     fn top_level_identities_preserve_owner_index_ordering_and_display() {
         let first = FunctionId::new(2);
         let second = FunctionId::new(3);
+        let family = VirtualFamilyId::new(6);
+        let slot = VirtualSlotId::new(7);
         let parameter = ParameterId::new(first, 4);
         let local = LocalId::new(first, 5);
 
@@ -253,6 +257,8 @@ mod tests {
         assert_eq!(local.callable(), CallableId::Function(first));
         assert_eq!(local.index(), 5);
         assert_eq!(first.to_string(), "f2");
+        assert_eq!(family.to_string(), "vf6");
+        assert_eq!(slot.to_string(), "vs7");
         assert_eq!(parameter.to_string(), "f2:p4");
         assert_eq!(local.to_string(), "f2:l5");
         assert_eq!(

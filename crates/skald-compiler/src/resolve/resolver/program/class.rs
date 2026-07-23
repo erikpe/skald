@@ -254,6 +254,16 @@ impl ClassCollectionState {
             } else {
                 ResolvedReceiverAccess::ReadOnly
             },
+            modifier: match method.modifier {
+                None => ResolvedMethodModifier::Direct,
+                Some(syntax::MethodModifier::Virtual { span }) => {
+                    ResolvedMethodModifier::Virtual { span }
+                }
+                Some(syntax::MethodModifier::Override { span }) => {
+                    ResolvedMethodModifier::Override { span }
+                }
+            },
+            dispatch: ResolvedMethodDispatch::Direct,
             parameters: resolve_parameters(id.into(), &method.parameters, top_levels, diagnostics),
             return_type: resolve_result_type(&method.return_type, top_levels, diagnostics),
             span: method.span,

@@ -21,3 +21,4 @@ mod lifecycle_inheritance;
 mod object_places;
 mod receiver_access;
 mod static_inheritance;
+mod virtual_methods;

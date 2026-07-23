@@ -18,8 +18,9 @@ pub use declarations::{
     ResolvedCopyOperation, ResolvedDestructorDeclaration, ResolvedDirectBase,
     ResolvedFieldDeclaration, ResolvedFunctionDeclaration, ResolvedFunctionDeclarationTable,
     ResolvedFunctionLinkage, ResolvedInitializerDeclaration, ResolvedLocal,
-    ResolvedMethodDeclaration, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
-    ResolvedReceiverAccess, ResolvedType, ResolvedTypeKind,
+    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedParameter,
+    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedType,
+    ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,

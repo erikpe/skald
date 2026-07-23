@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 use super::*;
 
 pub(super) fn build_class_hierarchy(
-    ast: &syntax::CompilationUnit,
-    work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     class_symbols: &[ClassSymbols],
     diagnostics: &mut Diagnostics,
@@ -36,9 +34,7 @@ pub(super) fn build_class_hierarchy(
                 .collect::<BTreeMap<_, _>>(),
         })
         .collect();
-    let hierarchy = ResolvedClassHierarchy::new(entries);
-    report_inherited_collisions(ast, work, classes, class_symbols, &hierarchy, diagnostics);
-    hierarchy
+    ResolvedClassHierarchy::new(entries)
 }
 
 fn inheritance_cycles(direct_bases: &[Option<ClassId>]) -> Vec<Vec<ClassId>> {
@@ -179,120 +175,10 @@ fn cycle_diagnostic(classes: &ResolvedClassDeclarationTable, cycle: &[ClassId]) 
     diagnostic.with_note("class inheritance must form an acyclic chain")
 }
 
-fn report_inherited_collisions(
-    ast: &syntax::CompilationUnit,
-    work: &[ClassWorkItem],
-    classes: &ResolvedClassDeclarationTable,
-    class_symbols: &[ClassSymbols],
-    hierarchy: &ResolvedClassHierarchy,
-    diagnostics: &mut Diagnostics,
-) {
-    for item in work {
-        let syntax::TopLevelDeclaration::Class(class) = &ast.declarations[item.ast_index] else {
-            unreachable!("class work item must reference a class")
-        };
-        let symbols = &class_symbols[item.id.index()];
-
-        for member in &class.members {
-            let Some((name, name_span)) = ordinary_member_name(member) else {
-                continue;
-            };
-            let Some(direct) = symbols
-                .ordinary
-                .get(&name.text)
-                .filter(|symbol| symbol.name_span == name_span)
-            else {
-                continue;
-            };
-            let Some(inherited) = hierarchy.inherited_member(item.id, &name.text) else {
-                continue;
-            };
-            diagnostics.push(inherited_collision_diagnostic(
-                classes,
-                item.id,
-                resolved_member(direct.kind),
-                inherited,
-                &name.text,
-                name_span,
-            ));
-        }
-    }
-}
-
-fn ordinary_member_name(member: &syntax::ClassMember) -> Option<(&syntax::Name, Span)> {
-    match member {
-        syntax::ClassMember::Field(field) => Some((&field.name, field.name.span)),
-        syntax::ClassMember::Method(method) => Some((&method.name, method.name.span)),
-        syntax::ClassMember::Initializer(_)
-        | syntax::ClassMember::CopyAssignment(_)
-        | syntax::ClassMember::Destructor(_) => None,
-    }
-}
-
-fn inherited_collision_diagnostic(
-    classes: &ResolvedClassDeclarationTable,
-    derived: ClassId,
-    direct: ResolvedClassMember,
-    inherited: ResolvedClassMember,
-    name: &str,
-    name_span: Span,
-) -> Diagnostic {
-    let derived_name = &classes.get(derived).expect("derived class must exist").name;
-    let inherited_owner = inherited.declaring_class();
-    let inherited_owner_name = &classes
-        .get(inherited_owner)
-        .expect("inherited member owner must exist")
-        .name;
-    let inherited_span = member_name_span(classes, inherited);
-
-    Diagnostic::error(
-        INHERITED_MEMBER_COLLISION,
-        format!(
-            "{} `{name}` in class `{derived_name}` conflicts with inherited {}",
-            member_kind(direct),
-            member_kind(inherited),
-        ),
-    )
-    .with_primary_label(name_span, "redeclared in this derived class")
-    .with_secondary_label(
-        inherited_span,
-        format!(
-            "inherited {} declared in class `{inherited_owner_name}`",
-            member_kind(inherited)
-        ),
-    )
-}
-
-fn member_name_span(classes: &ResolvedClassDeclarationTable, member: ResolvedClassMember) -> Span {
-    match member {
-        ResolvedClassMember::Field(field) => {
-            classes
-                .get(field.class())
-                .and_then(|class| class.field(field))
-                .expect("inherited field must exist")
-                .name_span
-        }
-        ResolvedClassMember::Method(method) => {
-            classes
-                .get(method.class())
-                .and_then(|class| class.method(method))
-                .expect("inherited method must exist")
-                .name_span
-        }
-    }
-}
-
 const fn resolved_member(kind: OrdinaryMemberSymbolKind) -> ResolvedClassMember {
     match kind {
         OrdinaryMemberSymbolKind::Field(field) => ResolvedClassMember::Field(field),
         OrdinaryMemberSymbolKind::Method(method) => ResolvedClassMember::Method(method),
-    }
-}
-
-const fn member_kind(member: ResolvedClassMember) -> &'static str {
-    match member {
-        ResolvedClassMember::Field(_) => "field",
-        ResolvedClassMember::Method(_) => "method",
     }
 }
 

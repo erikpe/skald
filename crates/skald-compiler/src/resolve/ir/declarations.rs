@@ -4,7 +4,7 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        LocalId, MethodId, ParameterId,
+        LocalId, MethodId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -20,6 +20,7 @@ pub struct ResolvedProgram {
     pub definitions: ResolvedFunctionDefinitionTable,
     pub classes: ResolvedClassDeclarationTable,
     pub hierarchy: ResolvedClassHierarchy,
+    pub virtual_families: ResolvedVirtualFamilyTable,
     pub class_definitions: ResolvedClassDefinitionTable,
     /// Function named `main`, selected during resolution. Type checking
     /// validates its signature and diagnoses its absence.
@@ -87,6 +88,12 @@ impl ResolvedClassDeclarationTable {
 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    pub(crate) fn iter_mut(
+        &mut self,
+    ) -> impl ExactSizeIterator<Item = &mut ResolvedClassDeclaration> {
+        self.entries.iter_mut()
     }
 
     #[cfg(test)]
@@ -219,9 +226,85 @@ pub struct ResolvedMethodDeclaration {
     pub name: String,
     pub name_span: Span,
     pub receiver_access: ResolvedReceiverAccess,
+    pub modifier: ResolvedMethodModifier,
+    pub dispatch: ResolvedMethodDispatch,
     pub parameters: Vec<ResolvedParameter>,
     pub return_type: ResolvedType,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedMethodModifier {
+    Direct,
+    Virtual { span: Span },
+    Override { span: Span },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedMethodDispatch {
+    Direct,
+    VirtualRoot {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+    },
+    Override {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+        root: MethodId,
+        overridden: MethodId,
+    },
+}
+
+impl ResolvedMethodDispatch {
+    pub const fn family(self) -> Option<VirtualFamilyId> {
+        match self {
+            Self::Direct => None,
+            Self::VirtualRoot { family, .. } | Self::Override { family, .. } => Some(family),
+        }
+    }
+
+    pub const fn slot(self) -> Option<VirtualSlotId> {
+        match self {
+            Self::Direct => None,
+            Self::VirtualRoot { slot, .. } | Self::Override { slot, .. } => Some(slot),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ResolvedVirtualFamilyTable {
+    entries: DenseIdTable<VirtualFamilyId, ResolvedVirtualFamily>,
+}
+
+impl ResolvedVirtualFamilyTable {
+    pub(crate) fn new(entries: Vec<ResolvedVirtualFamily>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |family| family.id),
+        }
+    }
+
+    pub fn get(&self, id: VirtualFamilyId) -> Option<&ResolvedVirtualFamily> {
+        self.entries.get(id, |family| family.id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedVirtualFamily> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedVirtualFamily {
+    pub id: VirtualFamilyId,
+    pub slot: VirtualSlotId,
+    pub root: MethodId,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

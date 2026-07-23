@@ -5,12 +5,13 @@ use crate::{
     hir::{
         HirAccess, HirClassDeclaration, HirClassDefinition, HirCopyAssignmentDeclaration,
         HirDestructionPlan, HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration,
-        HirInitializerDeclaration, HirMemberDefinition, HirMethodDeclaration, Type,
+        HirInitializerDeclaration, HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch,
+        Type,
     },
     identity::CallableId,
     resolve::{
         ResolvedClassDeclaration, ResolvedClassDefinition, ResolvedMemberDefinition,
-        ResolvedParameter, ResolvedProgram, ResolvedReceiverAccess,
+        ResolvedMethodDispatch, ResolvedParameter, ResolvedProgram, ResolvedReceiverAccess,
     },
 };
 
@@ -150,6 +151,23 @@ fn lower_class_declaration(
                 name: method.name.clone(),
                 name_span: method.name_span,
                 receiver_access: lower_receiver_access(method.receiver_access),
+                dispatch: match method.dispatch {
+                    ResolvedMethodDispatch::Direct => HirMethodDispatch::Direct,
+                    ResolvedMethodDispatch::VirtualRoot { family, slot } => {
+                        HirMethodDispatch::VirtualRoot { family, slot }
+                    }
+                    ResolvedMethodDispatch::Override {
+                        family,
+                        slot,
+                        root,
+                        overridden,
+                    } => HirMethodDispatch::Override {
+                        family,
+                        slot,
+                        root,
+                        overridden,
+                    },
+                },
                 parameters: method.parameters.iter().map(lower_parameter).collect(),
                 return_type,
                 span: method.span,

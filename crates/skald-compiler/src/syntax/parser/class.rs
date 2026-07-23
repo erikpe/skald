@@ -89,7 +89,8 @@ impl Parser<'_> {
     fn starts_class_member(&self) -> bool {
         self.at_any(&[TokenKind::Fn, TokenKind::Mut, TokenKind::Ref])
             || (self.at(TokenKind::Identifier)
-                && (self.peek_ahead(1).kind == TokenKind::Colon
+                && (self.starts_method_modifier()
+                    || self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
                     || (self.lexeme(self.peek()) == "assign"
                         && self.peek_ahead(1).kind == TokenKind::LeftParen)
@@ -130,7 +131,7 @@ impl Parser<'_> {
             return None;
         }
 
-        if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) {
+        if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) || self.starts_method_modifier() {
             return self.parse_method().map(ClassMember::Method);
         }
 
@@ -161,7 +162,7 @@ impl Parser<'_> {
                 INVALID_CLASS_MEMBER,
                 message,
                 span,
-                "class members use `name: type;`, `init(...) { ... }`, `assign(ref name: Class) { ... }`, `destroy { ... }`, or `[mut] fn name(...) -> type { ... }`",
+                "class members use `name: type;`, `init(...) { ... }`, `assign(ref name: Class) { ... }`, `destroy { ... }`, or `[virtual|override] [mut] fn name(...) -> type { ... }`",
             );
             return None;
         }
@@ -306,9 +307,28 @@ impl Parser<'_> {
     }
 
     fn parse_method(&mut self) -> Option<MethodDecl> {
+        let modifier = self.parse_method_modifier();
         let mut_token = self.consume(TokenKind::Mut);
-        let start_span = mut_token.map_or_else(|| self.peek().span, |token| token.span);
-        self.expect(TokenKind::Fn, "`fn` after `mut` in a method declaration")?;
+        if mut_token.is_some() && (self.at_contextual("virtual") || self.at_contextual("override"))
+        {
+            let misplaced = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "method dispatch modifiers must precede `mut`",
+                misplaced.span,
+                "write `virtual mut fn` or `override mut fn`",
+            );
+        }
+        let start_span = modifier
+            .map(MethodModifier::span)
+            .or_else(|| mut_token.map(|token| token.span))
+            .unwrap_or_else(|| self.peek().span);
+        let expectation = if modifier.is_some() || mut_token.is_some() {
+            "`fn` after method modifiers"
+        } else {
+            "`fn` in a method declaration"
+        };
+        self.expect(TokenKind::Fn, expectation)?;
         let name = self.parse_name("expected a method name after `fn`");
         let parameters = self.parse_parameter_list();
         self.expect(TokenKind::Arrow, "`->` after the method parameter list");
@@ -324,6 +344,7 @@ impl Parser<'_> {
             _ => return None,
         };
         Some(MethodDecl {
+            modifier,
             mut_span: mut_token.map(|token| token.span),
             name,
             parameters,
@@ -331,5 +352,40 @@ impl Parser<'_> {
             span: self.cover(start_span, body.span),
             body,
         })
+    }
+
+    fn parse_method_modifier(&mut self) -> Option<MethodModifier> {
+        let modifier = if self.at_contextual("virtual") {
+            Some(MethodModifier::Virtual {
+                span: self.advance().span,
+            })
+        } else if self.at_contextual("override") {
+            Some(MethodModifier::Override {
+                span: self.advance().span,
+            })
+        } else {
+            None
+        };
+
+        while self.at_contextual("virtual") || self.at_contextual("override") {
+            let duplicate = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "a method cannot combine or repeat dispatch modifiers",
+                duplicate.span,
+                "use exactly one of `virtual` or `override`",
+            );
+        }
+        modifier
+    }
+
+    fn starts_method_modifier(&self) -> bool {
+        if !(self.at_contextual("virtual") || self.at_contextual("override")) {
+            return false;
+        }
+        let next = self.peek_ahead(1);
+        matches!(next.kind, TokenKind::Fn | TokenKind::Mut)
+            || (next.kind == TokenKind::Identifier
+                && matches!(self.lexeme(next), "virtual" | "override"))
     }
 }

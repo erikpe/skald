@@ -6,7 +6,7 @@
 
 use std::marker::PhantomData;
 
-use crate::identity::{ClassId, FunctionId};
+use crate::identity::{ClassId, FunctionId, VirtualFamilyId};
 
 pub(crate) trait DenseId: Copy + Eq {
     fn index(self) -> usize;
@@ -19,6 +19,12 @@ impl DenseId for FunctionId {
 }
 
 impl DenseId for ClassId {
+    fn index(self) -> usize {
+        self.index()
+    }
+}
+
+impl DenseId for VirtualFamilyId {
     fn index(self) -> usize {
         self.index()
     }
@@ -53,6 +59,10 @@ impl<I: DenseId, T> DenseIdTable<I, T> {
 
     pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
         self.entries.iter()
+    }
+
+    pub(crate) fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
+        self.entries.iter_mut()
     }
 
     pub(crate) fn len(&self) -> usize {

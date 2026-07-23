@@ -70,10 +70,11 @@ resolution restricts it to the first statement of a derived ordinary
 initializer. Both spellings remain ordinary identifiers outside those shapes.
 `Obj` is now contextually recognized as the universal object-view type in
 alias-parameter type positions; it remains an ordinary identifier elsewhere
-except that it cannot name a top-level declaration. The frozen polymorphism
-profile will also contextually recognize `implements`, `interface`, `virtual`,
-`override`, `is`, and `narrow`; none of those later forms is part of the
-implemented grammar yet. Their exact source forms are specified in
+except that it cannot name a top-level declaration. `virtual` and `override`
+are contextually recognized only as method modifiers. The frozen polymorphism
+profile will also contextually recognize `implements`, `interface`, `is`, and
+`narrow`; none of those later forms is part of the implemented grammar yet.
+Their exact source forms are specified in
 [polymorphism](POLYMORPHISM.md#frozen-source-profile).
 
 ## Punctuation
@@ -165,8 +166,9 @@ field-declaration           = identifier ":" storage-type ";"
 initializer-declaration     = "init" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
 destruction-declaration     = "destroy" block
-method-declaration          = ["mut"] "fn" identifier parameter-list
+method-declaration          = [method-modifier] ["mut"] "fn" identifier parameter-list
                               "->" result-type block
+method-modifier             = "virtual" | "override"
 ```
 
 The grammar intentionally does not encode base-name resolution, hierarchy

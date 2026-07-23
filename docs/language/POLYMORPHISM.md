@@ -3,9 +3,11 @@
 Status: frozen design under active implementation. Canonical single
 inheritance, complete base lifecycle, inherited static member access,
 access-preserving class/`Obj` alias views, and inline slicing execute through
-verified MIR and the x86-64 backend. Virtual dispatch, interfaces, type tests,
-and narrowing remain unavailable. The [status matrix](STATUS.md) distinguishes
-the executable static subset from the remaining frozen design.
+verified MIR and the x86-64 backend. Contextual `virtual` and `override`
+declarations are accepted, assigned stable families, and checked for exact
+compatibility. Calls remain statically selected; dynamic dispatch, interfaces,
+type tests, and narrowing remain unavailable. The [status matrix](STATUS.md)
+distinguishes the executable static subset from the remaining frozen design.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -21,7 +23,8 @@ profile. It extends, rather than replaces:
 
 The following EBNF describes the complete surface owned by this profile. The
 optional `extends` clause, `super(...)`, and `Obj` alias target are now part of
-the [implemented grammar](GRAMMAR.md); the remaining forms become accepted
+the [implemented grammar](GRAMMAR.md), as are `virtual` and `override` method
+modifiers. Interface declarations, type tests, and narrowing become accepted
 only when their corresponding roadmap tasks land.
 
 ```text

@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM9 is next. The
+Status: in progress; PM10 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -92,7 +92,7 @@ The frozen restricted profile excludes:
 - [x] PM6 — Add typed static base views and slicing in HIR
 - [x] PM7 — Represent and verify static inheritance in MIR
 - [x] PM8 — Lower static inheritance on x86-64
-- [ ] PM9 — Resolve virtual declarations and override families
+- [x] PM9 — Resolve virtual declarations and override families
 - [ ] PM10 — Select virtual calls and receiver views in HIR
 - [ ] PM11 — Represent and verify virtual dispatch in MIR
 - [ ] PM12 — Lower virtual dispatch on x86-64
@@ -313,14 +313,14 @@ deterministically on x86-64 with target choices confined to the backend.
 **Purpose:** Establish stable virtual identities and compatibility before
 representing dynamic calls.
 
-- [ ] Parse contextual `virtual` and `override` method modifiers in the frozen
+- [x] Parse contextual `virtual` and `override` method modifiers in the frozen
       order with focused recovery.
-- [ ] Resolve virtual roots and explicit overrides from canonical inherited
+- [x] Resolve virtual roots and explicit overrides from canonical inherited
       lookup; reject missing roots, non-virtual redeclarations, and invalid
       modifier combinations.
-- [ ] Validate exact parameters, result, receiver mutability, and all other
+- [x] Validate exact parameters, result, receiver mutability, and all other
       frozen signature rules.
-- [ ] Assign deterministic override-family and slot identities without target
+- [x] Assign deterministic override-family and slot identities without target
       offsets or symbols; extend AST, resolved, and HIR declaration dumps.
 
 **Tests:** Add parser, resolution, type-check, and exact-dump tests for deep

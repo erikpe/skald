@@ -91,6 +91,16 @@ impl AstDumper {
                     method.span,
                 );
                 self.indented(|dumper| {
+                    if let Some(modifier) = method.modifier {
+                        match modifier {
+                            MethodModifier::Virtual { span } => {
+                                dumper.line("Modifier Virtual", span)
+                            }
+                            MethodModifier::Override { span } => {
+                                dumper.line("Modifier Override", span)
+                            }
+                        }
+                    }
                     if let Some(span) = method.mut_span {
                         dumper.line("Mut", span);
                     }

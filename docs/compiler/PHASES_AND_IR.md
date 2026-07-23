@@ -85,8 +85,11 @@ select entries by identity rather than by source spelling.
 Resolved programs contain one canonical class hierarchy keyed by `ClassId`.
 It validates cycles, traverses direct-to-root chains, answers subtype and
 nearest inherited-member queries, and preserves each selected field or
-method's declaring owner. Inherited collision checks and finite-containment
-analysis consume this model instead of rebuilding ancestry from declarations.
+method's declaring owner. Virtual roots allocate deterministic family and slot
+identities; each explicit override records that family, its root, and the
+nearest overridden declaration. Inherited collision checks, override
+resolution, and finite-containment analysis consume the canonical hierarchy
+instead of rebuilding ancestry from declarations.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
@@ -103,7 +106,10 @@ structured flow summaries.
 Static inheritance crosses this boundary explicitly. HIR records selected base
 initializers, complete lifecycle composition, identity-based base projections,
 inherited field and direct-method selections, access-preserving class/`Obj`
-alias views, and owning slices with exact target copy operations.
+alias views, and owning slices with exact target copy operations. It also
+retains validated virtual-family declaration metadata. Method calls remain
+statically selected in the current executable subset; dynamic call selection
+belongs to the next polymorphism stage.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling

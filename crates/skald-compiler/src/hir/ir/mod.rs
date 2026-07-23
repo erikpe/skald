@@ -20,8 +20,9 @@ pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
     HirCopyAssignmentDeclaration, HirDestructionPlan, HirDestructionStep, HirDestructorDeclaration,
     HirDirectBase, HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
-    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirMethodDeclaration, HirParameter,
-    HirParameterMode, HirProgram,
+    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirMethodDeclaration,
+    HirMethodDispatch, HirParameter, HirParameterMode, HirProgram, HirVirtualFamily,
+    HirVirtualFamilyTable,
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,

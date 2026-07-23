@@ -15,3 +15,4 @@ mod diagnostics;
 mod dumps;
 mod member_lookup;
 mod object_places;
+mod virtual_methods;

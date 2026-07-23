@@ -29,6 +29,17 @@ pub fn dump_hir(program: &HirProgram) -> String {
                 }
             });
         }
+        if !program.virtual_families.is_empty() {
+            dumper.heading("VirtualFamilies");
+            dumper.indented(|dumper| {
+                for family in program.virtual_families.iter() {
+                    dumper.raw_line(&format!(
+                        "Family {} slot {} root {}",
+                        family.id, family.slot, family.root
+                    ));
+                }
+            });
+        }
         dumper.heading("Declarations");
         dumper.indented(|dumper| {
             for declaration in program.declarations.iter() {
@@ -140,6 +151,7 @@ impl HirDumper {
                     write_span(&mut dumper.output, method.span);
                     dumper.output.push('\n');
                     dumper.indented(|dumper| {
+                        dumper.method_dispatch(method.dispatch);
                         for parameter in &method.parameters {
                             dumper.parameter(parameter);
                         }
@@ -147,6 +159,23 @@ impl HirDumper {
                 }
             });
         });
+    }
+
+    fn method_dispatch(&mut self, dispatch: HirMethodDispatch) {
+        match dispatch {
+            HirMethodDispatch::Direct => {}
+            HirMethodDispatch::VirtualRoot { family, slot } => {
+                self.raw_line(&format!("Dispatch VirtualRoot {family} slot {slot}"));
+            }
+            HirMethodDispatch::Override {
+                family,
+                slot,
+                root,
+                overridden,
+            } => self.raw_line(&format!(
+                "Dispatch Override {family} slot {slot} root {root} overridden {overridden}"
+            )),
+        }
     }
 
     fn class_definition(&mut self, class: &HirClassDefinition) {

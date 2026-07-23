@@ -32,6 +32,7 @@ pub const INVALID_BASE_CLASS: &str = "RES013";
 pub const INHERITANCE_CYCLE: &str = "RES014";
 pub const INHERITED_MEMBER_COLLISION: &str = "RES015";
 pub const INVALID_BASE_INITIALIZATION: &str = "RES016";
+pub const INVALID_OVERRIDE: &str = "RES017";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

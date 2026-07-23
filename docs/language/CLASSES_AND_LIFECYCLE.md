@@ -59,8 +59,11 @@ than forming an overload set.
 All executable exact-class fields and methods are accessible wherever the
 receiver is available. Static members and access modifiers are not
 implemented. Resolution selects inherited ordinary members and rejects
-redeclarations across a base chain. Typed HIR projects the receiver through
-each selected direct base to the member's declaring class.
+implicit redeclarations across a base chain. A method may instead explicitly
+extend an inherited virtual family with `override`; the exact rules are owned
+by [polymorphism](POLYMORPHISM.md#virtual-methods-and-overrides). Typed HIR
+projects statically selected receivers through each direct base to the
+member's declaring class.
 
 ## Fields and finite containment
 
@@ -95,8 +98,10 @@ supported assignment contexts, and call mutable methods.
 
 Receiver requirements are checked at the call site. A mutable method requires
 a mutable receiver place; a read-only method accepts either access level. Calls
-are selected statically from the exact receiver class. There is no virtual or
-interface dispatch.
+are currently selected statically from the receiver's static class, including
+calls to declarations marked `virtual` or `override`. Those modifiers and
+their families are validated, but executable virtual and interface dispatch
+have not reached HIR call selection.
 
 The root binding determines access for an entire inline path:
 
@@ -482,11 +487,12 @@ deallocation or any particular storage operation.
 ## Unsupported extensions
 
 The implemented executable class model does not yet include interfaces,
-virtual dispatch, shared or heap-backed objects, `new`, nullable object
+dynamic virtual dispatch, shared or heap-backed objects, `new`, nullable object
 references, static members, access modifiers, `final`, abstract members,
 overloads, reflection, or user-defined conversions. Direct-base syntax,
 hierarchy validation, inherited static selection, base lifecycle, class/`Obj`
-alias views, slicing, and x86-64 execution are implemented.
+alias views, slicing, virtual-family declaration validation, and x86-64
+execution of the static subset are implemented.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

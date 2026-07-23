@@ -94,12 +94,27 @@ pub struct DestructorDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodDecl {
+    pub modifier: Option<MethodModifier>,
     pub mut_span: Option<Span>,
     pub name: Name,
     pub parameters: Vec<Parameter>,
     pub return_type: TypeSyntax,
     pub body: Block,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MethodModifier {
+    Virtual { span: Span },
+    Override { span: Span },
+}
+
+impl MethodModifier {
+    pub const fn span(self) -> Span {
+        match self {
+            Self::Virtual { span } | Self::Override { span } => span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

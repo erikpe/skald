@@ -4,7 +4,7 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        LocalId, MethodId, ParameterId,
+        LocalId, MethodId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -18,6 +18,7 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
     pub classes: HirClassDeclarationTable,
+    pub virtual_families: HirVirtualFamilyTable,
     pub class_definitions: HirClassDefinitionTable,
     pub declarations: HirFunctionDeclarationTable,
     pub definitions: HirFunctionDefinitionTable,
@@ -280,9 +281,61 @@ pub struct HirMethodDeclaration {
     pub name: String,
     pub name_span: Span,
     pub receiver_access: HirAccess,
+    pub dispatch: HirMethodDispatch,
     pub parameters: Vec<HirParameter>,
     pub return_type: Type,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirMethodDispatch {
+    Direct,
+    VirtualRoot {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+    },
+    Override {
+        family: VirtualFamilyId,
+        slot: VirtualSlotId,
+        root: MethodId,
+        overridden: MethodId,
+    },
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HirVirtualFamilyTable {
+    entries: DenseIdTable<VirtualFamilyId, HirVirtualFamily>,
+}
+
+impl HirVirtualFamilyTable {
+    pub(crate) fn new(entries: Vec<HirVirtualFamily>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |family| family.id),
+        }
+    }
+
+    pub fn get(&self, id: VirtualFamilyId) -> Option<&HirVirtualFamily> {
+        self.entries.get(id, |family| family.id)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirVirtualFamily> {
+        self.entries.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirVirtualFamily {
+    pub id: VirtualFamilyId,
+    pub slot: VirtualSlotId,
+    pub root: MethodId,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
