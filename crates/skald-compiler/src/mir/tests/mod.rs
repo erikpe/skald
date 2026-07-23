@@ -20,6 +20,8 @@ mod object_temporaries;
 mod objects;
 mod robustness;
 mod static_inheritance;
+mod type_operation_fixtures;
+mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;
 mod virtual_fixtures;

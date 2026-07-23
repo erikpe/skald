@@ -33,18 +33,46 @@ impl Verifier<'_> {
         view: &MirObjectView,
         kind: &str,
     ) -> Option<VerifiedPlace> {
+        self.verify_object_view_conversion(function, block, view, kind, false)
+    }
+
+    pub(super) fn verify_narrowing_view(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        view: &MirObjectView,
+        kind: &str,
+    ) -> Option<VerifiedPlace> {
+        self.verify_object_view_conversion(function, block, view, kind, true)
+    }
+
+    fn verify_object_view_conversion(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        view: &MirObjectView,
+        kind: &str,
+        allow_dynamic_conversion: bool,
+    ) -> Option<VerifiedPlace> {
         let source = self.verify_place(function, block, &view.source);
-        let valid_conversion = source.is_some_and(|source| match view.target {
-            MirViewTarget::Class(target) => source.ty == MirType::Class(target),
-            MirViewTarget::Interface(target) => match source.ty {
-                MirType::Class(class) => self.program.conformance(class, target).is_some(),
-                MirType::Interface(source) => source == target,
-                _ => false,
-            },
-            MirViewTarget::Obj => matches!(
-                source.ty,
-                MirType::Class(_) | MirType::Interface(_) | MirType::Obj
-            ),
+        let valid_conversion = source.is_some_and(|source| {
+            allow_dynamic_conversion
+                && matches!(
+                    source.ty,
+                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                )
+                || match view.target {
+                    MirViewTarget::Class(target) => source.ty == MirType::Class(target),
+                    MirViewTarget::Interface(target) => match source.ty {
+                        MirType::Class(class) => self.program.conformance(class, target).is_some(),
+                        MirType::Interface(source) => source == target,
+                        _ => false,
+                    },
+                    MirViewTarget::Obj => matches!(
+                        source.ty,
+                        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                    ),
+                }
         });
         if !valid_conversion {
             self.block_error(
@@ -166,7 +194,9 @@ impl Verifier<'_> {
         let forwarded_root = complete_storage.is_some_and(|storage| {
             matches!(
                 storage.kind,
-                MirStorageKind::Receiver | MirStorageKind::AliasParameter(_)
+                MirStorageKind::Receiver
+                    | MirStorageKind::AliasParameter(_)
+                    | MirStorageKind::NarrowedAlias(_)
             )
         });
         let ends_at_field = matches!(
@@ -222,15 +252,14 @@ impl Verifier<'_> {
         };
         let carrier_access = match storage.kind {
             MirStorageKind::Receiver => self.storage_access(site.function, storage),
-            MirStorageKind::AliasParameter(access) => access,
+            MirStorageKind::AliasParameter(access) | MirStorageKind::NarrowedAlias(access) => {
+                access
+            }
             _ => {
                 self.block_error(
                     site.function.callable(),
                     site.block.id,
-                    format!(
-                        "{} origin carrier is not a receiver or alias parameter",
-                        site.kind
-                    ),
+                    format!("{} origin carrier is not a receiver or alias", site.kind),
                 );
                 return None;
             }
@@ -238,6 +267,7 @@ impl Verifier<'_> {
         let expected_base = match storage.kind {
             MirStorageKind::Receiver => MirPlaceBase::Storage(carrier),
             MirStorageKind::AliasParameter(_) => MirPlaceBase::AliasParameter(carrier),
+            MirStorageKind::NarrowedAlias(_) => MirPlaceBase::NarrowedAlias(carrier),
             _ => unreachable!("origin carrier kind checked above"),
         };
         if site.subject.base != expected_base

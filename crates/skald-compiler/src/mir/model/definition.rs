@@ -295,6 +295,8 @@ pub enum MirStorageKind {
     Receiver,
     Parameter,
     AliasParameter(MirAliasAccess),
+    /// Scoped indirect storage established by a checked narrowing operation.
+    NarrowedAlias(MirAliasAccess),
     Local,
     /// Caller-owned storage transferred to one callee value parameter.
     Argument,

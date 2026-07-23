@@ -119,21 +119,19 @@ impl BodyLowerer<'_> {
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
             HirViewSource::Forwarded { binding, .. } => {
-                MirPlace::alias_parameter(self.storage_for_binding(*binding))
+                let storage = self.storage_for_binding(*binding);
+                match self.storage[storage.index()].kind {
+                    MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
+                    MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(storage),
+                    _ => unreachable!("forwarded HIR views require indirect storage"),
+                }
             }
         };
         MirObjectView {
             source,
             origin: Box::new(self.lower_object_origin(&view.origin)),
-            target: match view.target {
-                HirViewTarget::Class(class) => MirViewTarget::Class(class),
-                HirViewTarget::Interface(interface) => MirViewTarget::Interface(interface),
-                HirViewTarget::Obj => MirViewTarget::Obj,
-            },
-            access: match view.access {
-                HirAccess::ReadOnly => MirAliasAccess::ReadOnly,
-                HirAccess::Mutable => MirAliasAccess::Mutable,
-            },
+            target: type_operations::lower_view_target(view.target),
+            access: type_operations::lower_access(view.access),
             span: view.span,
         }
     }

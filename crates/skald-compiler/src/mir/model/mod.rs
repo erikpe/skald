@@ -8,7 +8,7 @@ mod instruction;
 mod interface;
 mod value;
 
-pub use control_flow::{MirBasicBlock, MirBody, MirTerminator};
+pub use control_flow::{MirBasicBlock, MirBody, MirTerminationReason, MirTerminator};
 pub use declarations::{
     MirBaseCopy, MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable,
     MirCopyAssignmentDeclaration, MirCopyCapability, MirDestructionPlan, MirDestructionStep,
@@ -26,8 +26,8 @@ pub use ids::{BlockId, StorageId, ValueId};
 pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCleanup,
     MirCopyAssignment, MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction,
-    MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver, MirObjectOrigin, MirObjectView,
-    MirStore, MirViewTarget,
+    MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver, MirNarrowedAliasBinding,
+    MirNarrowedAliasEnd, MirObjectOrigin, MirObjectView, MirStore, MirViewTarget,
 };
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,

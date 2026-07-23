@@ -167,6 +167,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::CopyConstruct(copy) => self.select_copy_construction(copy)?,
             MirInstruction::CopyAssign(copy) => self.select_copy_assignment(copy)?,
             MirInstruction::EndFullExpression(end) => self.select_end_full_expression(end)?,
+            MirInstruction::BindNarrowedAlias(_) | MirInstruction::EndNarrowedAlias(_) => {
+                unreachable!("backend legality rejects narrowed aliases")
+            }
         }
         Ok(())
     }

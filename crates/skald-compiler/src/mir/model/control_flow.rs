@@ -4,7 +4,7 @@ use crate::source::Span;
 
 use super::{
     ids::{BlockId, ValueId},
-    instruction::MirInstruction,
+    instruction::{MirInstruction, MirNarrowedAliasBinding},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,14 +39,33 @@ pub enum MirTerminator {
         false_target: BlockId,
         span: Span,
     },
+    /// Performs a metadata check and establishes `binding` only on success.
+    CheckedNarrow {
+        binding: MirNarrowedAliasBinding,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
+    /// An explicit language-defined abnormal exit.
+    Terminate {
+        reason: MirTerminationReason,
+        span: Span,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirTerminationReason {
+    NarrowingFailure,
 }
 
 impl MirTerminator {
     pub const fn span(&self) -> Span {
         match self {
-            Self::Return { span, .. } | Self::Goto { span, .. } | Self::Branch { span, .. } => {
-                *span
-            }
+            Self::Return { span, .. }
+            | Self::Goto { span, .. }
+            | Self::Branch { span, .. }
+            | Self::CheckedNarrow { span, .. }
+            | Self::Terminate { span, .. } => *span,
         }
     }
 
@@ -61,6 +80,12 @@ impl MirTerminator {
                 false_target,
                 ..
             } => [Some(*true_target), Some(*false_target)],
+            Self::CheckedNarrow {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target)],
+            Self::Terminate { .. } => [None, None],
         };
         targets.into_iter().flatten()
     }

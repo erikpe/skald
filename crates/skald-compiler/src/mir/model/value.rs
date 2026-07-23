@@ -79,6 +79,13 @@ impl MirPlace {
         }
     }
 
+    pub fn narrowed_alias(base: StorageId) -> Self {
+        Self {
+            base: MirPlaceBase::NarrowedAlias(base),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
@@ -94,12 +101,15 @@ impl MirPlace {
 pub enum MirPlaceBase {
     Storage(StorageId),
     AliasParameter(StorageId),
+    NarrowedAlias(StorageId),
 }
 
 impl MirPlaceBase {
     pub const fn storage(self) -> StorageId {
         match self {
-            Self::Storage(storage) | Self::AliasParameter(storage) => storage,
+            Self::Storage(storage)
+            | Self::AliasParameter(storage)
+            | Self::NarrowedAlias(storage) => storage,
         }
     }
 }
@@ -140,6 +150,11 @@ pub enum MirRvalueKind {
         operation: MirBinaryOperation,
         left: ValueId,
         right: ValueId,
+    },
+    /// A runtime metadata query. Statically known outcomes are constants.
+    TypeTest {
+        source: super::instruction::MirObjectView,
+        target: super::instruction::MirViewTarget,
     },
 }
 

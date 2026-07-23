@@ -9,8 +9,8 @@ compatibility. Virtual dispatch executes on x86-64 through canonical MIR
 families and a private metadata ABI. Interface declarations, exact conformance,
 non-owning conversions, forwarding, and calls lower into verified,
 target-independent MIR and execute on x86-64. Type tests and checked narrowing
-are accepted, resolved, type-checked, and represented explicitly in HIR; their
-MIR and backend realization remain unavailable. The
+are accepted, resolved, type-checked, and represented explicitly in HIR and
+verified target-independent MIR; their backend realization remains unavailable. The
 [status matrix](STATUS.md) distinguishes these phase boundaries.
 
 This document is the language authority for the restricted polymorphism
@@ -241,6 +241,15 @@ and exact or forwarded metadata provenance. Scalar and object results,
 argument evaluation, ownership transfer, and full-expression cleanup use the
 ordinary call pipeline. MIR contains no interface witness layout or
 target-specific requirement slot.
+
+Static type-test outcomes lower to boolean constants. Runtime tests retain
+their source view and target identity as a metadata-query rvalue. Checked
+narrowing uses indirect scoped alias storage: a static success emits an
+explicit binding, while a runtime case terminates its source block with
+separate success and unrecoverable-failure edges. Both forms explicitly end a
+falling-through alias scope. Verification checks the type relation, target,
+view access and provenance, unique alias definition, scope liveness, and the
+required terminating failure edge before backend selection.
 
 The x86-64 backend derives deterministic per-class dispatch tables from MIR
 virtual-family, interface, and requirement identities. Internal receivers and

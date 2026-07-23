@@ -77,6 +77,12 @@ impl Verifier<'_> {
             MirInstruction::Store(store) => {
                 self.verify_store(function, block, store, defined_in_block)
             }
+            MirInstruction::BindNarrowedAlias(binding) => {
+                self.verify_narrowed_alias_binding(function, block, binding, false)
+            }
+            MirInstruction::EndNarrowedAlias(end) => {
+                self.verify_narrowed_alias_end(function, block, end)
+            }
         }
     }
 
@@ -265,10 +271,15 @@ impl Verifier<'_> {
             );
         }
         let destination_storage = function.storage(destination_place.base.storage());
-        if matches!(destination_place.base, MirPlaceBase::AliasParameter(_))
-            || destination_storage
-                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
-        {
+        if matches!(
+            destination_place.base,
+            MirPlaceBase::AliasParameter(_) | MirPlaceBase::NarrowedAlias(_)
+        ) || destination_storage.is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::AliasParameter(_) | MirStorageKind::NarrowedAlias(_)
+            )
+        }) {
             self.block_error(
                 function.callable(),
                 block.id,
@@ -380,6 +391,9 @@ impl Verifier<'_> {
                 }
                 self.verify_arithmetic_operand(function, block, *left, expected, defined);
                 self.verify_arithmetic_operand(function, block, *right, expected, defined);
+            }
+            MirRvalueKind::TypeTest { source, target } => {
+                self.verify_type_test(function, block, rvalue, source, *target)
             }
         }
     }

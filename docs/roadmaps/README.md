@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Polymorphism](POLYMORPHISM_ROADMAP.md) — in progress; its frozen profile
   extends through checked narrowing. Interface calls execute on x86-64;
-  type tests and scoped checked narrowing are now explicit in typed HIR, and
-  their target-independent MIR representation is next. The roadmap extends the
+  type tests and scoped checked narrowing are now explicit in typed HIR and
+  verified target-independent MIR; x86-64 execution is next. The roadmap extends the
   completed exact-class object model with inheritance, lifecycle composition,
   virtual dispatch, interfaces, `Obj` views, type tests, and checked narrowing.
   Direct-base lifecycle, inherited static access, class/`Obj` alias views,

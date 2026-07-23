@@ -24,6 +24,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_receiver(function);
         self.verify_parameters(parameters, function);
         self.verify_return_storage(return_type, function);
+        self.verify_narrowed_alias_definitions(function);
 
         if function.body().entry.callable() != function.callable() {
             self.function_error(
@@ -118,6 +119,10 @@ impl<'mir> Verifier<'mir> {
                         MirStorageKind::AliasParameter(_),
                         Some(BindingId::Parameter(_))
                     )
+                    | (
+                        MirStorageKind::NarrowedAlias(_),
+                        Some(BindingId::NarrowedAlias(_))
+                    )
                     | (MirStorageKind::Local, Some(BindingId::Local(_)))
                     | (MirStorageKind::Return, None)
                     | (MirStorageKind::Argument, None)
@@ -142,7 +147,10 @@ impl<'mir> Verifier<'mir> {
                 );
             }
             if matches!(storage.ty, MirType::Interface(_) | MirType::Obj)
-                && !matches!(storage.kind, MirStorageKind::AliasParameter(_))
+                && !matches!(
+                    storage.kind,
+                    MirStorageKind::AliasParameter(_) | MirStorageKind::NarrowedAlias(_)
+                )
             {
                 self.function_error(
                     function.callable(),
@@ -434,11 +442,24 @@ impl<'mir> Verifier<'mir> {
                 self.verify_block_target(function, block, *true_target);
                 self.verify_block_target(function, block, *false_target);
             }
+            Some(MirTerminator::CheckedNarrow {
+                binding,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_checked_narrow_terminator(
+                function,
+                block,
+                binding,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::Terminate { .. }) => {}
             None => self.block_error(function.callable(), block.id, "block has no terminator"),
         }
     }
 
-    fn verify_block_target(
+    pub(super) fn verify_block_target(
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,

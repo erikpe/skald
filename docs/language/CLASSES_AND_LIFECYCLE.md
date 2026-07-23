@@ -489,13 +489,13 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not yet include interfaces,
-dynamic virtual dispatch, shared or heap-backed objects, `new`, nullable object
-references, static members, access modifiers, `final`, abstract members,
-overloads, reflection, or user-defined conversions. Direct-base syntax,
-hierarchy validation, inherited static selection, base lifecycle, class/`Obj`
-alias views, slicing, virtual-family declaration validation, and x86-64
-execution of the static subset are implemented.
+The implemented executable class model does not yet include shared or
+heap-backed objects, `new`, nullable object references, static members, access
+modifiers, `final`, abstract members, overloads, reflection, or user-defined
+conversions. Direct-base syntax, hierarchy validation, inherited selection and
+lifecycle, class/interface/`Obj` alias views, slicing, virtual dispatch, and
+interface dispatch execute on x86-64. Type tests and checked narrowing reach
+verified MIR but await backend realization.
 Their maturity is recorded in the [status matrix](STATUS.md#not-implemented),
 the frozen [polymorphism profile](POLYMORPHISM.md) owns their future language
 contract, and the active

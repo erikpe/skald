@@ -22,6 +22,7 @@ mod instructions;
 mod interfaces;
 mod place;
 mod sink;
+mod type_operations;
 mod view;
 
 use context::Verifier;

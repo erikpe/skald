@@ -59,7 +59,10 @@ impl<'mir> Verifier<'mir> {
         defined_in_block: &HashSet<ValueId>,
     ) {
         let destination = self.verify_place(function, block, &initialize.destination);
-        if matches!(initialize.destination.base, MirPlaceBase::AliasParameter(_)) {
+        if matches!(
+            initialize.destination.base,
+            MirPlaceBase::AliasParameter(_) | MirPlaceBase::NarrowedAlias(_)
+        ) {
             self.block_error(
                 function.callable(),
                 block.id,

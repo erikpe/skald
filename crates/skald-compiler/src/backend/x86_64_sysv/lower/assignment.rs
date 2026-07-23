@@ -67,6 +67,9 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
+            MirRvalueKind::TypeTest { .. } => {
+                unreachable!("backend legality rejects runtime type tests")
+            }
         }
         Ok(())
     }

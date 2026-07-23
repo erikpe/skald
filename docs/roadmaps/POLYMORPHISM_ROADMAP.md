@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM18 is next. The
+Status: in progress; PM19 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -101,7 +101,7 @@ The frozen restricted profile excludes:
 - [x] PM15 — Represent and verify interface dispatch in MIR
 - [x] PM16 — Lower interface dispatch on x86-64
 - [x] PM17 — Type-check type tests and checked narrowing
-- [ ] PM18 — Represent and verify tests and narrowing in MIR
+- [x] PM18 — Represent and verify tests and narrowing in MIR
 - [ ] PM19 — Lower tests and checked narrowing on x86-64
 - [ ] PM20 — Harden, document, and publish polymorphism
 
@@ -512,13 +512,13 @@ semantic kind and can produce only a bounded non-owning view.
 **Purpose:** Make runtime metadata checks and their control flow explicit before
 target lowering.
 
-- [ ] Add MIR type-test and checked-narrowing operations carrying source view,
+- [x] Add MIR type-test and checked-narrowing operations carrying source view,
       target identities, result view, and explicit failure behavior.
-- [ ] Lower static outcomes without unnecessary runtime metadata work and lower
+- [x] Lower static outcomes without unnecessary runtime metadata work and lower
       dynamic success/failure control flow deterministically.
-- [ ] Verify legal type relations, metadata provenance, target conformance,
+- [x] Verify legal type relations, metadata provenance, target conformance,
       scoped result liveness/access, and failure edges.
-- [ ] Extend dumps, shared fixtures, and mutations for invalid targets,
+- [x] Extend dumps, shared fixtures, and mutations for invalid targets,
       metadata, views, and check results.
 
 **Tests:** Run focused MIR lowering, CFG, place, cleanup, dump, verification, and

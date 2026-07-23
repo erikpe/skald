@@ -253,6 +253,8 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::Parameter => "parameter",
             MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly) => "ref-parameter",
             MirStorageKind::AliasParameter(MirAliasAccess::Mutable) => "mut-ref-parameter",
+            MirStorageKind::NarrowedAlias(MirAliasAccess::ReadOnly) => "narrowed-ref",
+            MirStorageKind::NarrowedAlias(MirAliasAccess::Mutable) => "narrowed-mut-ref",
             MirStorageKind::Local => "local",
             MirStorageKind::Argument => "argument",
             MirStorageKind::Temporary => "temporary",
@@ -406,6 +408,15 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 }
                 write_span(output, end.span);
             }
+            MirInstruction::BindNarrowedAlias(binding) => {
+                let _ = write!(output, "bind-narrowed {} = ", binding.destination);
+                dump_object_view(output, &binding.view);
+                write_span(output, binding.span);
+            }
+            MirInstruction::EndNarrowedAlias(end) => {
+                let _ = write!(output, "end-narrowed {}", end.alias);
+                write_span(output, end.span);
+            }
         }
         output.push('\n');
     }
@@ -432,6 +443,27 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 output,
                 "branch {condition}, true {true_target}, false {false_target}"
             );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::CheckedNarrow {
+            binding,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(output, "checked-narrow {} = ", binding.destination);
+            dump_object_view(output, &binding.view);
+            let _ = write!(
+                output,
+                ", success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::Terminate { reason, span }) => {
+            let reason = match reason {
+                MirTerminationReason::NarrowingFailure => "narrowing-failure",
+            };
+            let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
         }
         None => output.push_str("<unterminated>"),
@@ -528,6 +560,12 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             };
             let _ = write!(output, "{operation} {left}, {right}");
         }
+        MirRvalueKind::TypeTest { source, target } => {
+            output.push_str("type-test ");
+            dump_object_view(output, source);
+            output.push_str(" is ");
+            dump_view_target(output, *target);
+        }
     }
     let _ = write!(output, " : {}", rvalue.ty);
 }
@@ -539,6 +577,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
         }
         MirPlaceBase::AliasParameter(storage) => {
             let _ = write!(output, "indirect({storage})");
+        }
+        MirPlaceBase::NarrowedAlias(storage) => {
+            let _ = write!(output, "narrowed({storage})");
         }
     }
     for projection in &place.projections {

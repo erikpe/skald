@@ -51,8 +51,9 @@ callable being lowered.
 
 The target accepts verified static single inheritance, base projections,
 owning slices, class/interface/`Obj` alias views, virtual-family calls, and
-interface calls. Runtime type tests and checked narrowing do not yet have MIR
-operations.
+interface calls. Runtime type tests and checked narrowing have verified MIR
+operations but no instruction selection yet. The backend rejects them with a
+structured callable-specific error before target layout.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

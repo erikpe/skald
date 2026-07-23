@@ -41,5 +41,8 @@ pub(super) fn select(
             output.push(Instruction::JumpIfNotZero(block_label(*true_target)));
             output.push(Instruction::Jump(block_label(*false_target)));
         }
+        MirTerminator::CheckedNarrow { .. } | MirTerminator::Terminate { .. } => {
+            unreachable!("backend legality rejects runtime narrowing")
+        }
     }
 }

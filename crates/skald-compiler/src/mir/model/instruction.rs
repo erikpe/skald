@@ -25,6 +25,8 @@ pub enum MirInstruction {
     CopyConstruct(MirCopyConstruction),
     CopyAssign(MirCopyAssignment),
     EndFullExpression(MirEndFullExpression),
+    BindNarrowedAlias(MirNarrowedAliasBinding),
+    EndNarrowedAlias(MirNarrowedAliasEnd),
 }
 
 impl MirInstruction {
@@ -38,8 +40,24 @@ impl MirInstruction {
             Self::CopyConstruct(instruction) => instruction.span,
             Self::CopyAssign(instruction) => instruction.span,
             Self::EndFullExpression(instruction) => instruction.span,
+            Self::BindNarrowedAlias(instruction) => instruction.span,
+            Self::EndNarrowedAlias(instruction) => instruction.span,
         }
     }
+}
+
+/// Establishes one scoped alias after a statically successful narrowing.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNarrowedAliasBinding {
+    pub destination: StorageId,
+    pub view: MirObjectView,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirNarrowedAliasEnd {
+    pub alias: StorageId,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -196,6 +196,9 @@ impl FrameLayout {
                 },
                 0,
             ),
+            MirPlaceBase::NarrowedAlias(_) => {
+                unreachable!("backend legality rejects narrowed aliases")
+            }
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
         };
         let mut ty = storage.ty;

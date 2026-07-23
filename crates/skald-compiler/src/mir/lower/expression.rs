@@ -67,9 +67,7 @@ impl BodyLowerer<'_> {
                 target,
                 arguments,
             } => self.lower_interface_call(expression, receiver, *target, arguments),
-            HirExpressionKind::TypeTest(_) => {
-                unreachable!("type-operation HIR is rejected before body lowering")
-            }
+            HirExpressionKind::TypeTest(test) => Some(self.lower_type_test(expression, test)),
         }
     }
 
@@ -133,7 +131,12 @@ impl BodyLowerer<'_> {
         ))
     }
 
-    fn assign(&mut self, kind: MirRvalueKind, ty: MirType, span: crate::source::Span) -> ValueId {
+    pub(super) fn assign(
+        &mut self,
+        kind: MirRvalueKind,
+        ty: MirType,
+        span: crate::source::Span,
+    ) -> ValueId {
         let result = self.new_value(ty, span);
         self.emit(MirInstruction::Assign(MirAssignment {
             result,

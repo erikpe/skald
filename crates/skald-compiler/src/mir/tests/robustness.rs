@@ -5,7 +5,7 @@ use crate::{
     identity::{FieldId, FunctionId},
 };
 
-use super::{virtual_fixtures::*, *};
+use super::{type_operation_fixtures::type_operation_mir, virtual_fixtures::*, *};
 
 #[test]
 fn structured_mutations_are_rejected_before_backend_lowering() {
@@ -53,7 +53,39 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_object_view(),
         mutate_virtual_slot(),
         mutate_virtual_receiver_origin(),
+        mutate_type_operation_target(),
     ]
+}
+
+fn mutate_type_operation_target() -> Mutation {
+    let mut program = type_operation_mir();
+    let definition = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .expect("type-operation fixture must contain inspect");
+    let assignment = definition
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(assignment)
+                if matches!(assignment.rvalue.kind, MirRvalueKind::TypeTest { .. }) =>
+            {
+                Some(assignment)
+            }
+            _ => None,
+        })
+        .expect("type-operation fixture must contain a runtime test");
+    let MirRvalueKind::TypeTest { target, .. } = &mut assignment.rvalue.kind else {
+        unreachable!("runtime test selected above")
+    };
+    *target = MirViewTarget::Class(crate::identity::ClassId::new(99));
+    Mutation {
+        name: "runtime type-test target",
+        expected_message: "type-test target is not declared",
+        program,
+    }
 }
 
 fn mutate_virtual_slot() -> Mutation {

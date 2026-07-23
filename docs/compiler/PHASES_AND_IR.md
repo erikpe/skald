@@ -22,9 +22,10 @@ The target-independent compiler path is:
 `driver::compile_source_to_assembly` composes these phases with target
 selection and backend emission. It stops after any source phase that produced
 an error. Successful type checking always produces HIR; failed type checking
-produces no HIR. A typed feature may temporarily precede its MIR representation
-during an ordered roadmap. `lower_hir` reports that boundary as a structured
-error rather than asserting that the HIR is executable. The
+produces no HIR. HIR lowering currently represents every typed operation in
+target-independent MIR. Its result type retains a structured lowering-error
+boundary so future staged work need not turn a temporary phase gap into a
+panic. The
 [backend and target contract](BACKEND.md)
 defines how verified MIR is checked and realized for a selected target; driver
 behavior is separate from the target-independent phase model and is defined by
@@ -156,7 +157,8 @@ explicit:
 - initialization, copying, assignment, and cleanup operations;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
-- basic blocks with explicit return, jump, and boolean-branch terminators.
+- basic blocks with explicit return, jump, boolean-branch, checked-narrowing,
+  and unrecoverable-failure terminators.
 
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values. Field
@@ -184,6 +186,13 @@ receivers are explicit non-owning interface views with source, target, access,
 and complete-object provenance. Conformance maps retain the effective
 implementing method for each class and requirement. MIR deliberately contains
 no backend witness layout, byte offset, or requirement slot.
+
+Static type tests become boolean constants; runtime tests retain an explicit
+source view and target identity. Narrowed aliases use dedicated indirect
+storage established only by a static binding or a checked-narrowing success
+edge and ended explicitly on lexical fallthrough. The verifier checks legal
+static/runtime relations, declared targets, view access and provenance,
+single definition, scoped liveness, and the terminating failure edge.
 
 ## Verification and passes
 

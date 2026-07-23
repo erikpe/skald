@@ -5,7 +5,7 @@ use crate::{
         HirTypeTestKind, HirViewSource, HirViewTarget,
     },
     identity::{ClassId, FunctionId, InterfaceId},
-    mir::{lower_hir, HirLoweringError},
+    mir::{dump_mir, lower_hir, verify_mir},
     resolve::{ResolvedExpression, ResolvedStatement, ResolvedTypeKind},
 };
 
@@ -84,10 +84,12 @@ fn classifies_type_tests_from_exact_and_forwarded_class_obj_and_interface_views(
         HirViewSource::Forwarded { .. }
     ));
 
-    assert!(matches!(
-        lower_hir(&hir),
-        Err(HirLoweringError::TypeOperationsUnsupported { .. })
-    ));
+    let mir = lower_hir(&hir).expect("typed type operations must lower to MIR");
+    verify_mir(&mir).expect("lowered type operations must verify");
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("const.bool true"));
+    assert!(dump.contains("const.bool false"));
+    assert!(dump.contains("type-test"));
 }
 
 #[test]

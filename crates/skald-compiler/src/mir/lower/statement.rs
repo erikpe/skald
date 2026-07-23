@@ -27,9 +27,7 @@ impl BodyLowerer<'_> {
             HirStatement::BaseInitialization(statement) => {
                 self.lower_base_initialization(statement)
             }
-            HirStatement::Narrowing(_) => {
-                unreachable!("type-operation HIR is rejected before body lowering")
-            }
+            HirStatement::Narrowing(narrowing) => self.lower_narrowing(narrowing),
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),

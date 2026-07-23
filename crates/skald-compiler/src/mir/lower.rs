@@ -2,14 +2,12 @@
 
 use crate::{
     hir::{
-        HirBlock, HirCallArgument, HirExpression, HirExpressionKind, HirLocal, HirLocalInitializer,
-        HirObjectProducer, HirObjectReturn, HirObjectSource, HirParameter, HirParameterMode,
-        HirProgram, HirReturnValue, HirSelectedCopyOperation, HirStatement, Type,
+        HirBlock, HirExpression, HirLocal, HirParameter, HirParameterMode, HirProgram,
+        HirSelectedCopyOperation, Type,
     },
     identity::{BindingId, CallableId, ClassId},
-    source::Span,
 };
-use std::fmt;
+use std::convert::Infallible;
 
 use super::{build::MirBodyBuilder, model::*};
 
@@ -21,33 +19,15 @@ mod object_values;
 mod places;
 mod program;
 mod statement;
+mod type_operations;
 
 use cleanup::CleanupPlanner;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {
-    /// PM17 represents type operations in HIR; PM18 will define their MIR.
-    TypeOperationsUnsupported { span: Span },
-}
-
-impl fmt::Display for HirLoweringError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::TypeOperationsUnsupported { .. } => {
-                formatter.write_str("type tests and checked narrowing are not lowered to MIR yet")
-            }
-        }
-    }
-}
-
-impl std::error::Error for HirLoweringError {}
+pub type HirLoweringError = Infallible;
 
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    if let Some(span) = first_type_operation(hir) {
-        return Err(HirLoweringError::TypeOperationsUnsupported { span });
-    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -55,123 +35,6 @@ pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
     Ok(mir)
-}
-
-fn first_type_operation(program: &HirProgram) -> Option<Span> {
-    program
-        .definitions
-        .iter()
-        .find_map(|definition| block_type_operation(&definition.body))
-        .or_else(|| {
-            program.class_definitions.iter().find_map(|class| {
-                std::iter::once(&class.initializer)
-                    .chain(class.copy_constructor.iter())
-                    .chain(class.copy_assignment.iter())
-                    .chain(class.destructor.iter())
-                    .chain(class.methods.iter())
-                    .find_map(|definition| block_type_operation(&definition.body))
-            })
-        })
-}
-
-fn block_type_operation(block: &HirBlock) -> Option<Span> {
-    block.statements.iter().find_map(statement_type_operation)
-}
-
-fn statement_type_operation(statement: &HirStatement) -> Option<Span> {
-    match statement {
-        HirStatement::Narrowing(narrowing) => Some(narrowing.span),
-        HirStatement::BaseInitialization(initialization) => {
-            arguments_type_operation(&initialization.arguments)
-        }
-        HirStatement::Local(local) => match &local.initializer {
-            HirLocalInitializer::Value(expression) => expression_type_operation(expression),
-            HirLocalInitializer::Object(initialization) => {
-                producer_type_operation(&initialization.producer)
-            }
-            HirLocalInitializer::Copy(copy) => source_type_operation(&copy.source),
-        },
-        HirStatement::Return(statement) => statement.value.as_ref().and_then(|value| match value {
-            HirReturnValue::Scalar(expression) => expression_type_operation(expression),
-            HirReturnValue::Object(HirObjectReturn::Copy { source, .. }) => {
-                source_type_operation(source)
-            }
-            HirReturnValue::Object(HirObjectReturn::Construct { construction, .. }) => {
-                arguments_type_operation(&construction.arguments)
-            }
-        }),
-        HirStatement::Call(statement) => expression_type_operation(&statement.call),
-        HirStatement::Conditional(conditional) => conditional
-            .arms
-            .iter()
-            .find_map(|arm| {
-                expression_type_operation(&arm.condition)
-                    .or_else(|| block_type_operation(&arm.body))
-            })
-            .or_else(|| {
-                conditional
-                    .else_block
-                    .as_ref()
-                    .and_then(block_type_operation)
-            }),
-        HirStatement::Block(block) => block_type_operation(block),
-        HirStatement::FieldAssignment(assignment) => expression_type_operation(&assignment.value),
-        HirStatement::FieldConstruction(construction) => {
-            arguments_type_operation(&construction.construction.arguments)
-        }
-        HirStatement::FieldCopyConstruction(construction) => {
-            source_type_operation(&construction.source)
-        }
-        HirStatement::FieldCopyAssignment(assignment) => source_type_operation(&assignment.source),
-        HirStatement::CopyAssignment(assignment) => source_type_operation(&assignment.source),
-    }
-}
-
-fn expression_type_operation(expression: &HirExpression) -> Option<Span> {
-    match &expression.kind {
-        HirExpressionKind::TypeTest(_) => Some(expression.span),
-        HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
-            expression_type_operation(operand)
-        }
-        HirExpressionKind::Binary { left, right, .. } => {
-            expression_type_operation(left).or_else(|| expression_type_operation(right))
-        }
-        HirExpressionKind::DirectCall { arguments, .. }
-        | HirExpressionKind::MethodCall { arguments, .. }
-        | HirExpressionKind::InterfaceCall { arguments, .. } => arguments_type_operation(arguments),
-        HirExpressionKind::Binding(_)
-        | HirExpressionKind::I64(_)
-        | HirExpressionKind::U64(_)
-        | HirExpressionKind::U8(_)
-        | HirExpressionKind::F64Bits(_)
-        | HirExpressionKind::Boolean(_)
-        | HirExpressionKind::FieldRead(_) => None,
-    }
-}
-
-fn arguments_type_operation(arguments: &[HirCallArgument]) -> Option<Span> {
-    arguments.iter().find_map(|argument| match argument {
-        HirCallArgument::Value(expression) => expression_type_operation(expression),
-        HirCallArgument::Copy(copy) => source_type_operation(&copy.source),
-        HirCallArgument::Place(_) | HirCallArgument::View(_) => None,
-    })
-}
-
-fn source_type_operation(source: &HirObjectSource) -> Option<Span> {
-    match source {
-        HirObjectSource::Produced(producer) => producer_type_operation(producer),
-        HirObjectSource::Slice(slice) => source_type_operation(&slice.source),
-        HirObjectSource::Place(_) => None,
-    }
-}
-
-fn producer_type_operation(producer: &HirObjectProducer) -> Option<Span> {
-    match producer {
-        HirObjectProducer::Construct(construction) => {
-            arguments_type_operation(&construction.arguments)
-        }
-        HirObjectProducer::Call(call) => arguments_type_operation(&call.arguments),
-    }
 }
 
 fn lower_selected_copy_operation<I>(
@@ -209,6 +72,7 @@ struct BodyLowerer<'hir> {
     receiver_storage: Option<StorageId>,
     parameter_storage: Vec<StorageId>,
     local_storage: Vec<StorageId>,
+    narrowed_alias_storage: Vec<StorageId>,
     storage: Vec<MirStorage>,
     values: Vec<MirValue>,
     body: MirBodyBuilder,
@@ -221,6 +85,7 @@ impl<'hir> BodyLowerer<'hir> {
         let mut lowerer = Self {
             parameter_storage: Vec::with_capacity(input.parameters.len()),
             local_storage: Vec::with_capacity(input.locals.len()),
+            narrowed_alias_storage: Vec::new(),
             storage: Vec::with_capacity(
                 input.parameters.len()
                     + input.locals.len()
@@ -328,6 +193,23 @@ impl<'hir> BodyLowerer<'hir> {
                 kind: MirStorageKind::Local,
                 ty: lower_type(local.ty),
                 span: local.span,
+            });
+        }
+        let aliases = type_operations::collect_narrowed_aliases(self.input.source_body);
+        self.narrowed_alias_storage.reserve(aliases.len());
+        for narrowing in aliases {
+            debug_assert_eq!(narrowing.binding.index(), self.narrowed_alias_storage.len());
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.narrowed_alias_storage.push(id);
+            self.storage.push(MirStorage {
+                id,
+                source: Some(BindingId::NarrowedAlias(narrowing.binding)),
+                name: format!("narrow#{}", narrowing.binding.index()),
+                kind: MirStorageKind::NarrowedAlias(type_operations::lower_access(
+                    narrowing.view.access,
+                )),
+                ty: type_operations::lower_view_target(narrowing.view.target).ty(),
+                span: narrowing.span,
             });
         }
     }
