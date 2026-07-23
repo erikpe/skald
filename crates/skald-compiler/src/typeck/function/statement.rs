@@ -190,7 +190,7 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::Unit | Type::Obj, Some(value)) => {
+            (Type::Unit | Type::Obj | Type::Interface(_), Some(value)) => {
                 // Preserve independent expression diagnostics even when the
                 // return form itself is invalid.
                 let _ = self.check_expression(value);
@@ -203,10 +203,12 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::Unit | Type::Obj, None) => Some(HirStatement::Return(HirReturn {
-                value: None,
-                span: statement.span,
-            })),
+            (Type::Unit | Type::Obj | Type::Interface(_), None) => {
+                Some(HirStatement::Return(HirReturn {
+                    value: None,
+                    span: statement.span,
+                }))
+            }
             (Type::Class(class), value) => {
                 let Some(value) = value else {
                     self.diagnostics.push(

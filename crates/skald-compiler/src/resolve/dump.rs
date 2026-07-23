@@ -365,6 +365,10 @@ impl ResolvedDumper {
                 self.line(&format!("Type Class {class}"), type_syntax.span);
                 return;
             }
+            ResolvedTypeKind::Interface(interface) => {
+                self.line(&format!("Type Interface {interface}"), type_syntax.span);
+                return;
+            }
         };
         self.line(&format!("Type {name}"), type_syntax.span);
     }
@@ -528,6 +532,20 @@ impl ResolvedDumper {
                             dumper.expression(argument);
                         }
                     });
+                });
+            }
+            ResolvedExpression::InterfaceCall(call) => {
+                self.line(
+                    &format!(
+                        "InterfaceCall {} {} receiver {}",
+                        call.interface, call.requirement, call.receiver
+                    ),
+                    call.span,
+                );
+                self.indented(|dumper| {
+                    for argument in &call.arguments {
+                        dumper.expression(argument);
+                    }
                 });
             }
             ResolvedExpression::Construct(construct) => {

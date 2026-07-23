@@ -5,8 +5,8 @@ use crate::{
     hir::{
         HirAccess, HirClassDeclaration, HirClassDefinition, HirCopyAssignmentDeclaration,
         HirDestructionPlan, HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration,
-        HirInitializerDeclaration, HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch,
-        Type,
+        HirInitializerDeclaration, HirInterfaceConformance, HirMemberDefinition,
+        HirMethodDeclaration, HirMethodDispatch, Type,
     },
     identity::CallableId,
     resolve::{
@@ -26,18 +26,27 @@ const DESTRUCTOR_RECEIVER_ACCESS: HirAccess = HirAccess::Mutable;
 pub(super) fn lower_class_declarations(
     program: &ResolvedProgram,
     copy_capabilities: &CopyCapabilities,
+    conformances: &[Vec<HirInterfaceConformance>],
     diagnostics: &mut Diagnostics,
 ) -> Vec<HirClassDeclaration> {
     program
         .classes
         .iter()
-        .filter_map(|class| lower_class_declaration(class, copy_capabilities, diagnostics))
+        .filter_map(|class| {
+            lower_class_declaration(
+                class,
+                copy_capabilities,
+                conformances[class.id.index()].clone(),
+                diagnostics,
+            )
+        })
         .collect()
 }
 
 fn lower_class_declaration(
     class: &ResolvedClassDeclaration,
     copy_capabilities: &CopyCapabilities,
+    conformances: Vec<HirInterfaceConformance>,
     diagnostics: &mut Diagnostics,
 ) -> Option<HirClassDeclaration> {
     let mut valid = true;
@@ -46,7 +55,7 @@ fn lower_class_declaration(
         .iter()
         .map(|field| {
             let ty = lower_type(&field.type_syntax);
-            if matches!(ty, Type::Unit | Type::Obj) {
+            if matches!(ty, Type::Unit | Type::Obj | Type::Interface(_)) {
                 let name = ty.name();
                 diagnostics.push(
                     Diagnostic::error(
@@ -55,7 +64,7 @@ fn lower_class_declaration(
                     )
                     .with_primary_label(
                         field.type_syntax.span,
-                        "`Obj` is a non-owning alias view and `unit` has no storage",
+                        "`Obj` and interfaces are non-owning views; `unit` has no storage",
                     ),
                 );
                 valid = false;
@@ -133,11 +142,11 @@ fn lower_class_declaration(
         .map(|method| {
             valid &= validate_parameters(&method.parameters, diagnostics, "method");
             let return_type = lower_type(&method.return_type);
-            if return_type == Type::Obj {
+            if matches!(return_type, Type::Obj | Type::Interface(_)) {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
-                        format!("method `{}` cannot return `Obj`", method.name),
+                        format!("method `{}` cannot return a non-owning view", method.name),
                     )
                     .with_primary_label(
                         method.return_type.span,
@@ -179,6 +188,7 @@ fn lower_class_declaration(
         name: class.name.clone(),
         name_span: class.name_span,
         direct_base,
+        conformances,
         fields,
         initializer,
         copy_constructor_declaration,
@@ -406,6 +416,7 @@ mod tests {
         let outer = lower_class_declaration(
             resolved.program.classes.get(ClassId::new(0)).unwrap(),
             &copy_capabilities,
+            Vec::new(),
             &mut diagnostics,
         )
         .expect("class-typed fields should lower to HIR declarations");

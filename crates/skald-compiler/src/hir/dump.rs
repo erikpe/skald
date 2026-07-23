@@ -29,6 +29,14 @@ pub fn dump_hir(program: &HirProgram) -> String {
                 }
             });
         }
+        if !program.interfaces.is_empty() {
+            dumper.heading("Interfaces");
+            dumper.indented(|dumper| {
+                for interface in program.interfaces.iter() {
+                    dumper.interface_declaration(interface);
+                }
+            });
+        }
         if !program.virtual_families.is_empty() {
             dumper.heading("VirtualFamilies");
             dumper.indented(|dumper| {
@@ -63,6 +71,42 @@ struct HirDumper {
 }
 
 impl HirDumper {
+    fn interface_declaration(&mut self, interface: &HirInterfaceDeclaration) {
+        self.write_indentation();
+        let _ = write!(self.output, "Interface {} ", interface.id);
+        write_quoted(&mut self.output, &interface.name);
+        write_span(&mut self.output, interface.span);
+        self.output.push('\n');
+        self.indented(|dumper| {
+            for requirement in &interface.requirements {
+                let access = match requirement.receiver_access {
+                    HirAccess::ReadOnly => "readonly",
+                    HirAccess::Mutable => "mutable",
+                };
+                dumper.write_indentation();
+                let _ = write!(dumper.output, "Requirement {} {access} ", requirement.id);
+                write_quoted(&mut dumper.output, &requirement.name);
+                let _ = write!(dumper.output, " -> {}", requirement.return_type.name());
+                write_span(&mut dumper.output, requirement.span);
+                dumper.output.push('\n');
+                dumper.indented(|dumper| {
+                    for parameter in &requirement.parameters {
+                        dumper.write_indentation();
+                        let _ = write!(
+                            dumper.output,
+                            "Parameter {} ",
+                            parameter_mode_name(parameter.mode)
+                        );
+                        write_quoted(&mut dumper.output, &parameter.name);
+                        let _ = write!(dumper.output, " : {}", parameter.ty.name());
+                        write_span(&mut dumper.output, parameter.span);
+                        dumper.output.push('\n');
+                    }
+                });
+            }
+        });
+    }
+
     fn class_declaration(&mut self, class: &HirClassDeclaration) {
         self.write_indentation();
         let _ = write!(self.output, "Class {} ", class.id);
@@ -72,6 +116,22 @@ impl HirDumper {
         self.indented(|dumper| {
             if let Some(base) = &class.direct_base {
                 dumper.line(&format!("DirectBase {}", base.class), base.span);
+            }
+            if !class.conformances.is_empty() {
+                dumper.heading("Conformances");
+                dumper.indented(|dumper| {
+                    for conformance in &class.conformances {
+                        dumper.raw_line(&format!("Interface {}", conformance.interface));
+                        dumper.indented(|dumper| {
+                            for implementation in &conformance.implementations {
+                                dumper.raw_line(&format!(
+                                    "{} -> {}",
+                                    implementation.requirement, implementation.method
+                                ));
+                            }
+                        });
+                    }
+                });
             }
             dumper.heading("Fields");
             dumper.indented(|dumper| {
@@ -563,6 +623,22 @@ impl HirDumper {
                     }
                 });
             }
+            HirExpressionKind::InterfaceCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                self.typed_line(
+                    &format!("InterfaceCall {} {}", target.interface, target.requirement),
+                    expression,
+                );
+                self.indented(|dumper| {
+                    dumper.call_argument(&HirCallArgument::View(receiver.clone()));
+                    for argument in arguments {
+                        dumper.call_argument(argument);
+                    }
+                });
+            }
         }
     }
 
@@ -587,11 +663,17 @@ impl HirDumper {
             HirObjectCallTarget::Method { target, .. } => {
                 format!("method {}", method_target(&target))
             }
+            HirObjectCallTarget::Interface { target, .. } => {
+                format!("interface {} {}", target.interface, target.requirement)
+            }
         };
         self.line(&format!("ObjectCall {target} -> {}", call.class), call.span);
         self.indented(|dumper| {
             if let HirObjectCallTarget::Method { receiver, .. } = &call.target {
                 dumper.method_receiver(receiver);
+            }
+            if let HirObjectCallTarget::Interface { receiver, .. } = &call.target {
+                dumper.call_argument(&HirCallArgument::View(receiver.clone()));
             }
             for argument in &call.arguments {
                 dumper.call_argument(argument);
@@ -612,6 +694,9 @@ impl HirDumper {
             HirCallArgument::View(view) => {
                 let target = match view.target {
                     crate::hir::HirViewTarget::Class(class) => format!("class {class}"),
+                    crate::hir::HirViewTarget::Interface(interface) => {
+                        format!("interface {interface}")
+                    }
                     crate::hir::HirViewTarget::Obj => "Obj".to_owned(),
                 };
                 let access = match view.access {
@@ -788,7 +873,16 @@ fn method_target(target: &HirMethodCallTarget) -> String {
 fn view_target_name(target: HirViewTarget) -> String {
     match target {
         HirViewTarget::Class(class) => format!("class {class}"),
+        HirViewTarget::Interface(interface) => format!("interface {interface}"),
         HirViewTarget::Obj => "Obj".to_owned(),
+    }
+}
+
+const fn parameter_mode_name(mode: HirParameterMode) -> &'static str {
+    match mode {
+        HirParameterMode::Value => "value",
+        HirParameterMode::ReadOnlyAlias => "ref",
+        HirParameterMode::MutableAlias => "mut-ref",
     }
 }
 

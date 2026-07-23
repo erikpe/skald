@@ -1,7 +1,10 @@
 //! Typed scalar expressions, calls, and their arguments.
 
 use crate::{
-    identity::{BindingId, FunctionId, InitializerId, MethodId, VirtualFamilyId, VirtualSlotId},
+    identity::{
+        BindingId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
+        VirtualFamilyId, VirtualSlotId,
+    },
     source::Span,
 };
 
@@ -48,7 +51,18 @@ pub enum HirExpressionKind {
         target: HirMethodCallTarget,
         arguments: Vec<HirCallArgument>,
     },
+    InterfaceCall {
+        receiver: HirObjectView,
+        target: HirInterfaceCallTarget,
+        arguments: Vec<HirCallArgument>,
+    },
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirInterfaceCallTarget {
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

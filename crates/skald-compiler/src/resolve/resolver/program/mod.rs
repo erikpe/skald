@@ -52,12 +52,12 @@ impl<'ast> ProgramResolver<'ast> {
         self.collect_top_levels();
 
         let function_declarations = self.collect_function_declarations();
-        let interfaces = collect_interface_declarations(
+        let interfaces = ResolvedInterfaceDeclarationTable::new(collect_interface_declarations(
             self.ast,
             &self.interface_work,
             &self.top_levels,
             &mut self.diagnostics,
-        );
+        ));
         let (class_declarations, class_symbols, class_work) = self.collect_class_declarations();
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
@@ -84,14 +84,19 @@ impl<'ast> ProgramResolver<'ast> {
             &class_declarations,
             &class_symbols,
             &hierarchy,
+            &interfaces,
         );
         let class_definitions = resolve_class_bodies(
             self.ast,
-            &self.top_levels,
             &class_work,
             &class_declarations,
-            &class_symbols,
-            &hierarchy,
+            BodyResolutionEnvironment::new(
+                &self.top_levels,
+                &class_declarations,
+                &interfaces,
+                &class_symbols,
+                &hierarchy,
+            ),
             &mut self.diagnostics,
         );
         let entry_function = self
@@ -108,7 +113,7 @@ impl<'ast> ProgramResolver<'ast> {
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 classes: class_declarations,
-                interfaces: ResolvedInterfaceDeclarationTable::new(interfaces),
+                interfaces,
                 hierarchy,
                 virtual_families,
                 class_definitions: ResolvedClassDefinitionTable::new(class_definitions),
@@ -277,6 +282,7 @@ impl<'ast> ProgramResolver<'ast> {
         classes: &ResolvedClassDeclarationTable,
         class_symbols: &[ClassSymbols],
         hierarchy: &ResolvedClassHierarchy,
+        interfaces: &ResolvedInterfaceDeclarationTable,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let work = self.function_work.clone();
         work.into_iter()
@@ -298,6 +304,7 @@ impl<'ast> ProgramResolver<'ast> {
                     BodyResolutionEnvironment::new(
                         &self.top_levels,
                         classes,
+                        interfaces,
                         class_symbols,
                         hierarchy,
                     ),

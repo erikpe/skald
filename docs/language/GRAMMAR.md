@@ -188,8 +188,9 @@ name.
 `interface` and `implements` are contextual words. Interface bodies contain
 signatures only: fields, lifecycle declarations, method bodies, inheritance,
 and trailing separators are not part of this grammar. Name resolution
-validates interface names in `implements` lists; conformance checking and
-interface calls are not implemented yet.
+validates interface names in `implements` lists. Type checking validates exact
+conformance, non-owning interface views, and interface calls into HIR. MIR and
+backend interface dispatch are not implemented yet.
 
 ## Blocks and statements
 

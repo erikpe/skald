@@ -106,6 +106,9 @@ impl BodyLowerer<'_> {
             origin: Box::new(self.lower_object_origin(&view.origin)),
             target: match view.target {
                 HirViewTarget::Class(class) => MirViewTarget::Class(class),
+                HirViewTarget::Interface(_) => {
+                    unreachable!("interface HIR rejected before lowering")
+                }
                 HirViewTarget::Obj => MirViewTarget::Obj,
             },
             access: match view.access {
@@ -167,6 +170,7 @@ pub(super) const fn lower_method_target(target: HirMethodCallTarget) -> MirMetho
 const fn lower_view_target(target: HirViewTarget) -> MirViewTarget {
     match target {
         HirViewTarget::Class(class) => MirViewTarget::Class(class),
+        HirViewTarget::Interface(_) => unreachable!(),
         HirViewTarget::Obj => MirViewTarget::Obj,
     }
 }

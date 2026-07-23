@@ -1,8 +1,8 @@
 # Skald Aliases and Ownership
 
 Status: authoritative for executable class and `Obj` aliases. Interface views
-are owned by
-[polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
+follow the same source rules and are validated through HIR; their executable
+boundary is owned by [polymorphism](POLYMORPHISM.md). Shared ownership, borrow anchors, local
 aliases, and aliases into other future value families are not implemented or
 frozen. Their maturity is authoritative in the [status matrix](STATUS.md).
 
@@ -38,16 +38,17 @@ the same read-only source-binding semantics as part of their more specialized
 External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
-The designated type may be one concrete class or `Obj`. Primitive, `unit`,
-shared, optional, array, function, and interface alias parameter types are
-unsupported. `Obj` is a universal non-owning target with no members or inline
-storage. Alias modifiers are not accepted on locals, fields, results, elements,
-statics, or captures.
+The designated type may be one concrete class, one interface, or `Obj`.
+Primitive, `unit`, shared, optional, array, and function alias parameter types
+are unsupported. `Obj` is a universal non-owning target with no members or
+inline storage. Interfaces expose only their declared requirements. Alias
+modifiers are not accepted on locals, fields, results, elements, statics, or
+captures.
 
 ## Eligible argument places
 
 An alias argument must designate an existing, already-live object place or a
-forwarded `Obj` view. Its root may be:
+forwarded interface/`Obj` view. Its root may be:
 
 - an owning exact-class local;
 - an owning exact-class value parameter;
@@ -104,8 +105,10 @@ alias or end the object's lifetime.
 
 Forwarding passes the same complete object into a nested call. A `ref`
 parameter may be forwarded only as `ref`; a `mut ref` parameter may be
-forwarded as either mode. Class-to-ancestor and class-to-`Obj` conversions
-change only the static view target. Grouping does not change these rules.
+forwarded as either mode. Class-to-ancestor, class-to-conforming-interface,
+and class/interface-to-`Obj` conversions change only the static view target.
+An interface may forward to the same interface but does not implicitly
+cross-cast to another interface. Grouping does not change these rules.
 
 An alias name is not an ordinary scalar value. It cannot itself be copied,
 stored, assigned, or returned. The object it designates may still be copied in

@@ -221,15 +221,30 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         }
     }
 
-    fn lower_locals(&self) -> Vec<HirLocal> {
+    fn lower_locals(&mut self) -> Vec<HirLocal> {
         self.locals
             .iter()
-            .map(|local| HirLocal {
-                id: local.id,
-                name: local.name.clone(),
-                name_span: local.name_span,
-                ty: lower_type(&local.type_syntax),
-                span: local.span,
+            .map(|local| {
+                let ty = lower_type(&local.type_syntax);
+                if matches!(ty, Type::Obj | Type::Interface(_)) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            format!("local `{}` cannot store a non-owning view", local.name),
+                        )
+                        .with_primary_label(
+                            local.type_syntax.span,
+                            "`Obj` and interfaces are available only as alias parameters",
+                        ),
+                    );
+                }
+                HirLocal {
+                    id: local.id,
+                    name: local.name.clone(),
+                    name_span: local.name_span,
+                    ty,
+                    span: local.span,
+                }
             })
             .collect()
     }

@@ -62,6 +62,9 @@ impl BodyLowerer<'_> {
                 target,
                 arguments,
             } => self.lower_method_call(expression, receiver, *target, arguments),
+            HirExpressionKind::InterfaceCall { .. } => {
+                unreachable!("interface HIR rejected before MIR lowering")
+            }
         }
     }
 

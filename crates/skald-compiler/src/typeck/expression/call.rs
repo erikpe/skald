@@ -3,11 +3,12 @@
 use super::*;
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirMethodCallTarget,
-        HirMethodReceiver, HirObjectOrigin,
+        HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirInterfaceCallTarget,
+        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource,
+        HirViewTarget,
     },
     identity::BindingId,
-    resolve::{ResolvedMethodDispatch, ResolvedParameter, ResolvedParameterBindingMode},
+    resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
 };
 
 use crate::typeck::program::{
@@ -38,6 +39,82 @@ impl CallableChecker<'_, '_> {
                 arguments,
             },
             ty: lower_type(&target.return_type),
+            span: call.span,
+        })
+    }
+
+    pub(super) fn check_interface_call(
+        &mut self,
+        call: &crate::resolve::ResolvedInterfaceCallExpr,
+    ) -> Option<HirExpression> {
+        let interface = self
+            .program
+            .interface(call.interface)
+            .expect("resolved interface call must reference an interface");
+        let requirement = interface
+            .requirements
+            .get(call.requirement.index())
+            .filter(|requirement| requirement.id == call.requirement)
+            .expect("resolved interface call must reference a requirement");
+        let access = self.binding_access(call.receiver, false, call.receiver_span)?;
+        let required_access = if requirement.mutable {
+            HirAccess::Mutable
+        } else {
+            HirAccess::ReadOnly
+        };
+        if !access.permits(required_access) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    READ_ONLY_RECEIVER,
+                    format!(
+                        "mutable interface requirement `{}` requires mutable receiver access",
+                        requirement.name
+                    ),
+                )
+                .with_primary_label(
+                    call.member_span,
+                    "called through a read-only interface view",
+                )
+                .with_secondary_label(requirement.name_span, "mutable requirement declared here"),
+            );
+            return None;
+        }
+        let arguments = self.check_arguments(
+            &call.arguments,
+            &requirement.parameters,
+            call.member_span,
+            "interface requirement",
+            Some(&requirement.name),
+            Some(requirement.name_span),
+        )?;
+        let receiver = HirObjectView {
+            source: HirViewSource::Forwarded {
+                binding: call.receiver,
+                target: HirViewTarget::Interface(call.interface),
+                access,
+                span: call.receiver_span,
+            },
+            origin: Box::new(HirObjectOrigin::Forwarded {
+                binding: call.receiver,
+                static_target: HirViewTarget::Interface(call.interface),
+                access,
+                dispatch_limit: None,
+                span: call.receiver_span,
+            }),
+            target: HirViewTarget::Interface(call.interface),
+            access,
+            span: call.receiver_span,
+        };
+        Some(HirExpression {
+            kind: HirExpressionKind::InterfaceCall {
+                receiver,
+                target: HirInterfaceCallTarget {
+                    interface: call.interface,
+                    requirement: call.requirement,
+                },
+                arguments,
+            },
+            ty: lower_type(&requirement.return_type),
             span: call.span,
         })
     }
@@ -128,10 +205,10 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    pub(in crate::typeck) fn check_arguments(
+    pub(in crate::typeck) fn check_arguments<P: CallParameter>(
         &mut self,
         source: &[ResolvedExpression],
-        parameters: &[ResolvedParameter],
+        parameters: &[P],
         target_span: Span,
         target_kind: &'static str,
         target_name: Option<&str>,
@@ -175,14 +252,14 @@ impl CallableChecker<'_, '_> {
         valid.then_some(arguments)
     }
 
-    fn check_argument(
+    fn check_argument<P: CallParameter>(
         &mut self,
         source: &ResolvedExpression,
-        parameter: &ResolvedParameter,
+        parameter: &P,
     ) -> Option<HirCallArgument> {
-        match parameter.binding_mode {
+        match parameter.binding_mode() {
             ResolvedParameterBindingMode::Value => {
-                if let Type::Class(class) = lower_type(&parameter.type_syntax) {
+                if let Type::Class(class) = lower_type(parameter.type_syntax()) {
                     let source =
                         self.check_object_source(source, class, "object value argument")?;
                     let Some(operation) = self.copy_capabilities.constructor(class).selected()
@@ -199,7 +276,7 @@ impl CallableChecker<'_, '_> {
                 let argument = self.check_expression(source)?;
                 require_type(
                     argument.ty,
-                    lower_type(&parameter.type_syntax),
+                    lower_type(parameter.type_syntax()),
                     argument.span,
                     "call argument",
                     self.diagnostics,

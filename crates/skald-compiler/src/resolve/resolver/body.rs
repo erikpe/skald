@@ -17,6 +17,7 @@ pub(super) struct ResolvedCallableBody {
 pub(super) struct BodyResolutionEnvironment<'program> {
     top_levels: &'program HashMap<String, TopLevelSymbol>,
     classes: &'program ResolvedClassDeclarationTable,
+    interfaces: &'program ResolvedInterfaceDeclarationTable,
     class_symbols: &'program [ClassSymbols],
     hierarchy: &'program ResolvedClassHierarchy,
 }
@@ -25,12 +26,14 @@ impl<'program> BodyResolutionEnvironment<'program> {
     pub(super) fn new(
         top_levels: &'program HashMap<String, TopLevelSymbol>,
         classes: &'program ResolvedClassDeclarationTable,
+        interfaces: &'program ResolvedInterfaceDeclarationTable,
         class_symbols: &'program [ClassSymbols],
         hierarchy: &'program ResolvedClassHierarchy,
     ) -> Self {
         Self {
             top_levels,
             classes,
+            interfaces,
             class_symbols,
             hierarchy,
         }
@@ -551,6 +554,21 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 arguments,
                 span: call.span,
             }),
+            CallTarget::Interface {
+                receiver,
+                interface,
+                requirement,
+                receiver_span,
+                member_span,
+            } => ResolvedExpression::InterfaceCall(ResolvedInterfaceCallExpr {
+                receiver,
+                interface,
+                requirement,
+                receiver_span,
+                member_span,
+                arguments,
+                span: call.span,
+            }),
         })
     }
 
@@ -629,6 +647,39 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 }
             }
             syntax::Expression::MemberAccess(member) => {
+                if let Some((receiver, interface, receiver_span)) =
+                    self.interface_receiver(&member.receiver)
+                {
+                    let declaration = self
+                        .environment
+                        .interfaces
+                        .get(interface)
+                        .expect("interface binding type must reference a declaration");
+                    let Some(requirement) = declaration
+                        .requirements
+                        .iter()
+                        .find(|requirement| requirement.name == member.member.text)
+                    else {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                UNKNOWN_MEMBER,
+                                format!(
+                                    "interface `{}` has no requirement `{}`",
+                                    declaration.name, member.member.text
+                                ),
+                            )
+                            .with_primary_label(member.member.span, "unknown requirement"),
+                        );
+                        return None;
+                    };
+                    return Some(CallTarget::Interface {
+                        receiver,
+                        interface,
+                        requirement: requirement.id,
+                        receiver_span,
+                        member_span: member.member.span,
+                    });
+                }
                 let receiver = self.resolve_object_place(&member.receiver)?;
                 let selected = self.select_member(receiver.class, &member.member)?;
                 let receiver =
@@ -668,6 +719,25 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 );
                 None
             }
+        }
+    }
+
+    fn interface_receiver(
+        &self,
+        expression: &syntax::Expression,
+    ) -> Option<(BindingId, crate::identity::InterfaceId, Span)> {
+        match expression {
+            syntax::Expression::Identifier(identifier) => {
+                let binding = self.lookup_binding(&identifier.name.text)?;
+                let ResolvedTypeKind::Interface(interface) = binding.ty else {
+                    return None;
+                };
+                Some((binding.id, interface, identifier.span))
+            }
+            syntax::Expression::Grouped(grouped) => self
+                .interface_receiver(&grouped.expression)
+                .map(|(binding, interface, _)| (binding, interface, grouped.span)),
+            _ => None,
         }
     }
 
@@ -839,6 +909,13 @@ enum CallTarget {
     Method {
         receiver: ResolvedObjectPlace,
         method: MethodId,
+        member_span: Span,
+    },
+    Interface {
+        receiver: BindingId,
+        interface: crate::identity::InterfaceId,
+        requirement: crate::identity::InterfaceRequirementId,
+        receiver_span: Span,
         member_span: Span,
     },
 }

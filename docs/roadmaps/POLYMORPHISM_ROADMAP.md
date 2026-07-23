@@ -1,6 +1,6 @@
 # Polymorphism Roadmap
 
-Status: in progress; PM14 is next. The
+Status: in progress; PM15 is next. The
 [archived documentation overhaul](../archive/DOCUMENTATION_OVERHAUL_ROADMAP.md)
 established the focused
 [polymorphism design authority](../language/POLYMORPHISM.md) through DOC8.
@@ -97,7 +97,7 @@ The frozen restricted profile excludes:
 - [x] PM11 — Represent and verify virtual dispatch in MIR
 - [x] PM12 — Lower virtual dispatch on x86-64
 - [x] PM13 — Parse and resolve interfaces and conformance declarations
-- [ ] PM14 — Validate conformance and select interface views in HIR
+- [x] PM14 — Validate conformance and select interface views in HIR
 - [ ] PM15 — Represent and verify interface dispatch in MIR
 - [ ] PM16 — Lower interface dispatch on x86-64
 - [ ] PM17 — Type-check type tests and checked narrowing
@@ -420,16 +420,16 @@ resolution by typed identity while interface-typed calls remain disabled.
 **Purpose:** Make interface compatibility and non-owning conversions explicit
 before lowering them.
 
-- [ ] Validate requirement uniqueness and exact class conformance, including
+- [x] Validate requirement uniqueness and exact class conformance, including
       inherited implementations, receiver mutability, parameters, and results.
-- [ ] Define deterministic requirement-to-method maps for every valid
+- [x] Define deterministic requirement-to-method maps for every valid
       class/interface pair and retain both identities in HIR.
-- [ ] Type-check class-to-interface and interface-to-`Obj` alias conversions,
+- [x] Type-check class-to-interface and interface-to-`Obj` alias conversions,
       forwarding, and interface method calls while preserving access and
       lifetime.
-- [ ] Reject standalone interface/`Obj` inline storage and all unimplemented
+- [x] Reject standalone interface/`Obj` inline storage and all unimplemented
       shared or external forms with focused diagnostics.
-- [ ] Extend HIR dumps and the focused polymorphism and compiler phase
+- [x] Extend HIR dumps and the focused polymorphism and compiler phase
       documentation for the stable conformance boundary.
 
 **Tests:** Add conformance/type-check and HIR dump tests for inherited methods,

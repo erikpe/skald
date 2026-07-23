@@ -4,7 +4,8 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        LocalId, MethodId, ParameterId, VirtualFamilyId, VirtualSlotId,
+        InterfaceId, InterfaceRequirementId, LocalId, MethodId, ParameterId, VirtualFamilyId,
+        VirtualSlotId,
     },
     source::Span,
 };
@@ -18,6 +19,7 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
     pub classes: HirClassDeclarationTable,
+    pub interfaces: HirInterfaceDeclarationTable,
     pub virtual_families: HirVirtualFamilyTable,
     pub class_definitions: HirClassDefinitionTable,
     pub declarations: HirFunctionDeclarationTable,
@@ -29,6 +31,9 @@ pub struct HirProgram {
 impl HirProgram {
     pub fn class(&self, id: ClassId) -> Option<&HirClassDeclaration> {
         self.classes.get(id)
+    }
+    pub fn interface(&self, id: InterfaceId) -> Option<&HirInterfaceDeclaration> {
+        self.interfaces.get(id)
     }
 
     pub fn field(&self, id: FieldId) -> Option<&HirFieldDeclaration> {
@@ -97,6 +102,69 @@ impl HirProgram {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HirInterfaceDeclarationTable {
+    entries: DenseIdTable<InterfaceId, HirInterfaceDeclaration>,
+}
+
+impl HirInterfaceDeclarationTable {
+    pub(crate) fn new(entries: Vec<HirInterfaceDeclaration>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |entry| entry.id),
+        }
+    }
+    pub fn get(&self, id: InterfaceId) -> Option<&HirInterfaceDeclaration> {
+        self.entries.get(id, |entry| entry.id)
+    }
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &HirInterfaceDeclaration> {
+        self.entries.iter()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirInterfaceDeclaration {
+    pub id: InterfaceId,
+    pub name: String,
+    pub name_span: Span,
+    pub requirements: Vec<HirInterfaceRequirement>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirInterfaceRequirement {
+    pub id: InterfaceRequirementId,
+    pub name: String,
+    pub name_span: Span,
+    pub receiver_access: HirAccess,
+    pub parameters: Vec<HirInterfaceParameter>,
+    pub return_type: Type,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirInterfaceParameter {
+    pub mode: HirParameterMode,
+    pub name: String,
+    pub name_span: Span,
+    pub ty: Type,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HirRequirementImplementation {
+    pub requirement: InterfaceRequirementId,
+    pub method: MethodId,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirInterfaceConformance {
+    pub interface: InterfaceId,
+    pub implementations: Vec<HirRequirementImplementation>,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct HirCallableSignature<'hir> {
     pub parameters: &'hir [HirParameter],
@@ -138,6 +206,7 @@ pub struct HirClassDeclaration {
     pub name: String,
     pub name_span: Span,
     pub direct_base: Option<HirDirectBase>,
+    pub conformances: Vec<HirInterfaceConformance>,
     pub fields: Vec<HirFieldDeclaration>,
     pub initializer: HirInitializerDeclaration,
     pub copy_constructor_declaration: Option<HirInitializerDeclaration>,

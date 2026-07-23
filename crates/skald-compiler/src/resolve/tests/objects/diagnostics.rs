@@ -32,7 +32,7 @@ fn diagnoses_invalid_intermediate_and_terminal_nested_members() {
 }
 
 #[test]
-fn diagnoses_unknown_and_non_class_named_field_types() {
+fn diagnoses_unknown_and_non_type_named_field_types() {
     let unknown = resolve_text(concat!(
         "class Holder { value: Missing; init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
@@ -51,7 +51,7 @@ fn diagnoses_unknown_and_non_class_named_field_types() {
     assert_eq!(function.diagnostics.len(), 1);
     let diagnostic = function.diagnostics.iter().next().unwrap();
     assert_eq!(diagnostic.code, UNKNOWN_TYPE);
-    assert!(diagnostic.message.contains("does not name a class"));
+    assert!(diagnostic.message.contains("does not name a type"));
 }
 
 #[test]

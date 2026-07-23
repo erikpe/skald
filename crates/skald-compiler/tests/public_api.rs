@@ -6,8 +6,11 @@ use skald_compiler::{
     backend::{emit_assembly, target_by_name, Target},
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{compile_source_to_assembly, run_cli, Toolchain},
-    hir::{dump_hir, HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection},
-    identity::CallableId,
+    hir::{
+        dump_hir, HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
+        HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection,
+    },
+    identity::{CallableId, InterfaceId, InterfaceRequirementId},
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
     mir::{
@@ -52,6 +55,9 @@ fn intentional_phase_and_dump_paths_compose() {
     let _object_slice: Option<HirObjectSlice> = None;
     let _object_view: Option<HirObjectView> = None;
     let _view_target: Option<HirViewTarget> = None;
+    let _interface: Option<HirInterfaceDeclaration> = None;
+    let _conformance: Option<HirInterfaceConformance> = None;
+    let _interface_call: Option<HirInterfaceCallTarget> = None;
     let mir: MirProgram = lower_hir(hir).unwrap();
     let _mir_base: Option<MirDirectBase> = None;
     let _mir_base_copy: Option<MirBaseCopy<skald_compiler::identity::InitializerId>> = None;
@@ -66,6 +72,8 @@ fn intentional_phase_and_dump_paths_compose() {
     let diagnostics: &Diagnostics = &checked.diagnostics;
     let _diagnostics = render_diagnostics(&sources, diagnostics);
     let _identity_path: Option<CallableId> = None;
+    let _interface_identity: Option<InterfaceId> = None;
+    let _requirement_identity: Option<InterfaceRequirementId> = None;
     let _literal_path: Option<NumericLiteralKind> = None;
 }
 

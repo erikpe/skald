@@ -4,8 +4,9 @@ use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
     hir::{
         HirClassDeclarationTable, HirClassDefinitionTable, HirFunctionDeclaration,
-        HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage, HirParameter,
-        HirParameterMode, HirProgram, HirVirtualFamily, HirVirtualFamilyTable, Type,
+        HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage,
+        HirInterfaceDeclarationTable, HirParameter, HirParameterMode, HirProgram, HirVirtualFamily,
+        HirVirtualFamilyTable, Type,
     },
     identity::FunctionId,
     resolve::{
@@ -20,9 +21,11 @@ use super::{
 };
 
 mod class;
+mod interfaces;
 mod overrides;
 
 use class::{check_class_definitions, lower_class_declarations};
+use interfaces::analyze_interfaces;
 use overrides::validate_override_signatures;
 
 const EXTERNAL_PARAMETER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64", "bool"];
@@ -50,6 +53,8 @@ pub const INVALID_ALIAS_ARGUMENT: &str = "TYP020";
 pub const INSUFFICIENT_ALIAS_ACCESS: &str = "TYP021";
 pub const COPY_OPERATION_UNAVAILABLE: &str = "TYP023";
 pub const INVALID_OVERRIDE_SIGNATURE: &str = "TYP024";
+pub const INVALID_INTERFACE_REQUIREMENT: &str = "TYP025";
+pub const INVALID_INTERFACE_CONFORMANCE: &str = "TYP026";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -71,8 +76,14 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let entry_function = check_entry_point(program, &mut diagnostics);
     validate_containment(program, &mut diagnostics);
     validate_override_signatures(program, &mut diagnostics);
+    let interface_analysis = analyze_interfaces(program, &mut diagnostics);
     let copy_capabilities = CopyCapabilities::compute(program);
-    let classes = lower_class_declarations(program, &copy_capabilities, &mut diagnostics);
+    let classes = lower_class_declarations(
+        program,
+        &copy_capabilities,
+        &interface_analysis.conformances,
+        &mut diagnostics,
+    );
     let declarations = program.declarations.iter().map(lower_declaration).collect();
     let definitions = program
         .declarations
@@ -97,6 +108,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     } else {
         Some(HirProgram {
             classes: HirClassDeclarationTable::new(classes),
+            interfaces: HirInterfaceDeclarationTable::new(interface_analysis.declarations),
             virtual_families: HirVirtualFamilyTable::new(
                 program
                     .virtual_families
@@ -123,11 +135,17 @@ fn check_internal_function_parameters(program: &ResolvedProgram, diagnostics: &m
     for declaration in program.declarations.iter() {
         if matches!(declaration.linkage, ResolvedFunctionLinkage::Internal) {
             validate_parameters(&declaration.parameters, diagnostics, "function");
-            if lower_type(&declaration.return_type) == Type::Obj {
+            if matches!(
+                lower_type(&declaration.return_type),
+                Type::Obj | Type::Interface(_)
+            ) {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
-                        format!("function `{}` cannot return `Obj`", declaration.name),
+                        format!(
+                            "function `{}` cannot return a non-owning view",
+                            declaration.name
+                        ),
                     )
                     .with_primary_label(
                         declaration.return_type.span,
@@ -148,7 +166,9 @@ fn validate_parameters(
     for parameter in parameters {
         let ty = lower_type(&parameter.type_syntax);
         match parameter.binding_mode {
-            ResolvedParameterBindingMode::Value if matches!(ty, Type::Unit | Type::Obj) => {
+            ResolvedParameterBindingMode::Value
+                if matches!(ty, Type::Unit | Type::Obj | Type::Interface(_)) =>
+            {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_DECLARATION,
@@ -159,20 +179,20 @@ fn validate_parameters(
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "`unit` and `Obj` value parameters are unavailable",
+                        "`unit`, `Obj`, and interface value parameters are unavailable",
                     ),
                 );
                 valid = false;
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. }
-                if !matches!(ty, Type::Class(_) | Type::Obj) =>
+                if !matches!(ty, Type::Class(_) | Type::Obj | Type::Interface(_)) =>
             {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a class or `Obj`",
+                            "{owner} alias parameter `{}` must name a class, interface, or `Obj`",
                             parameter.name
                         ),
                     )
@@ -351,5 +371,6 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Unit => Type::Unit,
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
+        ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
     }
 }

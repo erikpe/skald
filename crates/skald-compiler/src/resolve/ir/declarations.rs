@@ -462,6 +462,7 @@ pub enum ResolvedTypeKind {
     Unit,
     Obj,
     Class(ClassId),
+    Interface(InterfaceId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

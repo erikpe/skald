@@ -76,7 +76,8 @@ callable bodies, which permits forward references without making lower phases
 name-dependent.
 
 The resolved program replaces successful name uses with typed identities for
-functions, classes, members, callables, parameters, locals, and bindings.
+functions, classes, interfaces, interface requirements, members, callables,
+parameters, locals, and bindings.
 Optional direct class bases likewise carry `ClassId` rather than source
 spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
@@ -89,7 +90,9 @@ method's declaring owner. Virtual roots allocate deterministic family and slot
 identities; each explicit override records that family, its root, and the
 nearest overridden declaration. Inherited collision checks, override
 resolution, and finite-containment analysis consume the canonical hierarchy
-instead of rebuilding ancestry from declarations.
+instead of rebuilding ancestry from declarations. Interface calls likewise
+select one requirement identity during resolution; later phases do not repeat
+requirement-name lookup.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
@@ -113,6 +116,15 @@ statically selected method. Receivers and alias views retain either an exact
 complete place/dynamic class or a forwarded binding that carries runtime
 complete-object and dynamic-class metadata. Destructor `self` origins also
 record the frozen dispatch limit.
+
+Interfaces cross the typed boundary as declaration tables and deterministic
+requirement-to-method maps for every effective class conformance. Interface
+alias arguments retain their static interface target, access, and exact or
+forwarded complete-object origin. Interface calls name both `InterfaceId` and
+`InterfaceRequirementId`. These operations are intentionally HIR-only until
+MIR gains explicit interface views, calls, and verification; attempting to
+lower a program containing interface declarations returns a structured
+unsupported-lowering error.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling

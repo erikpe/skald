@@ -6,17 +6,15 @@ use crate::resolve::resolver::body::BaseInitializationPolicy;
 
 pub(super) fn resolve_class_bodies(
     ast: &syntax::CompilationUnit,
-    top_levels: &HashMap<String, TopLevelSymbol>,
     work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
-    class_symbols: &[ClassSymbols],
-    hierarchy: &ResolvedClassHierarchy,
+    environment: BodyResolutionEnvironment<'_>,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedClassDefinition> {
     let resolver = ClassBodyResolver {
         ast,
         classes,
-        environment: BodyResolutionEnvironment::new(top_levels, classes, class_symbols, hierarchy),
+        environment,
     };
     work.iter()
         .map(|item| resolver.resolve_class(item, diagnostics))

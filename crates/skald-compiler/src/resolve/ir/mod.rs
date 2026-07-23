@@ -27,8 +27,8 @@ pub use declarations::{
 pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
     ResolvedConstructExpr, ResolvedDirectCallExpr, ResolvedExpression, ResolvedFieldAccessExpr,
-    ResolvedGroupedExpr, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator,
+    ResolvedGroupedExpr, ResolvedInterfaceCallExpr, ResolvedMethodCallExpr,
+    ResolvedNumericLiteralExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use object_place::ResolvedObjectPlace;

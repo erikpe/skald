@@ -23,11 +23,17 @@ mod statement;
 use cleanup::CleanupPlanner;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {}
+pub enum HirLoweringError {
+    InterfacesNotImplemented,
+}
 
 impl fmt::Display for HirLoweringError {
-    fn fmt(&self, _formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {}
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InterfacesNotImplemented => {
+                formatter.write_str("interface HIR lowering is not implemented")
+            }
+        }
     }
 }
 
@@ -36,6 +42,9 @@ impl std::error::Error for HirLoweringError {}
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
+    if !hir.interfaces.is_empty() {
+        return Err(HirLoweringError::InterfacesNotImplemented);
+    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -246,5 +255,6 @@ const fn lower_type(ty: Type) -> MirType {
         Type::Unit => MirType::Unit,
         Type::Obj => MirType::Obj,
         Type::Class(class) => MirType::Class(class),
+        Type::Interface(_) => unreachable!(),
     }
 }

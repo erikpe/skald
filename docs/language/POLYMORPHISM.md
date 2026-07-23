@@ -1,14 +1,16 @@
 # Skald Polymorphism
 
-Status: frozen design under active implementation. Canonical single
+Status: partially implemented frozen design. Canonical single
 inheritance, complete base lifecycle, inherited static member access,
 access-preserving class/`Obj` alias views, and inline slicing execute through
 verified MIR and the x86-64 backend. Contextual `virtual` and `override`
 declarations are accepted, assigned stable families, and checked for exact
 compatibility. Virtual dispatch executes on x86-64 through canonical MIR
-families and a private metadata ABI. Interfaces, type tests, and narrowing
-remain unavailable. The [status matrix](STATUS.md) distinguishes implemented
-virtual dispatch from those later polymorphism stages.
+families and a private metadata ABI. Interface declarations, exact conformance,
+non-owning conversions, forwarding, and calls are validated into typed HIR;
+their MIR and backend execution remain unavailable. Type tests and narrowing
+remain unavailable. The [status matrix](STATUS.md) distinguishes executable
+virtual dispatch from the typed-only interface boundary and later stages.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -25,7 +27,7 @@ profile. It extends, rather than replaces:
 The following EBNF describes the complete surface owned by this profile. The
 optional `extends` clause, `super(...)`, and `Obj` alias target are now part of
 the [implemented grammar](GRAMMAR.md), as are `virtual` and `override` method
-modifiers. Interface declarations, type tests, and narrowing become accepted
+modifiers and interface declarations. Type tests and narrowing become accepted
 only when their corresponding roadmap tasks land.
 
 ```text
@@ -219,14 +221,20 @@ Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
 occur in source evaluation order.
 
-HIR represents every class alias argument as a view with its selected static
+HIR represents every class or interface alias argument as a view with its selected static
 subobject, static target, restricted access, and complete-object origin. An
 exact owning source names its complete place and exact dynamic class. A
 forwarded alias or `self` names the incoming binding that carries both runtime
 components. Selecting a class field begins a new exact complete object;
 selecting a base preserves the enclosing origin.
 
-MIR represents canonical virtual families, direct and virtual method targets,
+Interface HIR additionally retains declarations, exact requirement-to-method
+maps for each effective class conformance, identity-selected interface calls,
+and access-preserving class/interface/`Obj` conversions. It deliberately
+contains no witness layout or target slot. MIR interface views and dispatch
+remain the next executable boundary.
+
+MIR currently represents canonical virtual families, direct and virtual method targets,
 and origin-bearing method receivers and class/`Obj` views. Its verifier checks
 family and slot ownership, exact signature and receiver-access agreement,
 static selection, compatible and live receiver places, and exact or forwarded

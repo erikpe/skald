@@ -52,6 +52,11 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
                 assert_call_argument_is_fully_typed(argument);
             }
         }
+        HirExpressionKind::InterfaceCall { arguments, .. } => {
+            for argument in arguments {
+                assert_call_argument_is_fully_typed(argument);
+            }
+        }
         HirExpressionKind::FieldRead(_) => {}
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
@@ -111,6 +116,7 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod inline_fields;
+mod interfaces;
 mod literals;
 mod object_results;
 mod objects;

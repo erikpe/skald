@@ -75,13 +75,17 @@ fn resolve_type(
                 kind: TopLevelSymbolKind::Class(class),
                 ..
             }) => ResolvedTypeKind::Class(*class),
+            Some(TopLevelSymbol {
+                kind: TopLevelSymbolKind::Interface(interface),
+                ..
+            }) => ResolvedTypeKind::Interface(*interface),
             Some(symbol) => {
                 diagnostics.push(
                     Diagnostic::error(
                         UNKNOWN_TYPE,
-                        format!("`{}` does not name a class", name.text),
+                        format!("`{}` does not name a type", name.text),
                     )
-                    .with_primary_label(name.span, "expected a class type")
+                    .with_primary_label(name.span, "expected a class or interface type")
                     .with_secondary_label(symbol.name_span, "function declared here"),
                 );
                 return None;

@@ -42,7 +42,14 @@ impl CallableChecker<'_, '_> {
                 self.check_field_copy_assignment(target.place.clone(), class, assignment)
             }
             (
-                Type::Bool | Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Unit | Type::Obj,
+                Type::Bool
+                | Type::I64
+                | Type::U64
+                | Type::U8
+                | Type::F64
+                | Type::Unit
+                | Type::Obj
+                | Type::Interface(_),
                 _,
             ) => self.check_primitive_field_assignment(
                 target.place.clone(),

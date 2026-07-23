@@ -1,13 +1,15 @@
 //! Typed object construction, copying, calls, and place operations.
 
 use crate::{
-    identity::{BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId},
+    identity::{
+        BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, InterfaceId,
+    },
     object_path::ObjectPath,
     source::Span,
 };
 
 use super::{
-    expression::{HirCallArgument, HirExpression, HirMethodCallTarget},
+    expression::{HirCallArgument, HirExpression, HirInterfaceCallTarget, HirMethodCallTarget},
     HirAccess,
 };
 
@@ -133,6 +135,10 @@ pub enum HirObjectCallTarget {
     Method {
         receiver: HirMethodReceiver,
         target: HirMethodCallTarget,
+    },
+    Interface {
+        receiver: HirObjectView,
+        target: HirInterfaceCallTarget,
     },
 }
 
@@ -297,6 +303,7 @@ pub struct HirMethodReceiver {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirViewTarget {
     Class(ClassId),
+    Interface(InterfaceId),
     Obj,
 }
 

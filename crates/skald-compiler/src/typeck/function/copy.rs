@@ -278,6 +278,14 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
                     _ => None,
                 }),
+            crate::resolve::ResolvedExpression::InterfaceCall(call) => self
+                .program
+                .interface(call.interface)
+                .and_then(|interface| interface.requirements.get(call.requirement.index()))
+                .and_then(|requirement| match requirement.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }),
             crate::resolve::ResolvedExpression::Grouped(grouped) => {
                 self.resolved_object_class(&grouped.expression)
             }
@@ -401,7 +409,8 @@ impl CallableChecker<'_, '_> {
 fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> bool {
     match expression {
         crate::resolve::ResolvedExpression::DirectCall(_)
-        | crate::resolve::ResolvedExpression::MethodCall(_) => true,
+        | crate::resolve::ResolvedExpression::MethodCall(_)
+        | crate::resolve::ResolvedExpression::InterfaceCall(_) => true,
         crate::resolve::ResolvedExpression::Grouped(grouped) => {
             is_object_call_source(&grouped.expression)
         }
@@ -439,6 +448,16 @@ fn lower_object_call(expression: HirExpression, class: ClassId) -> HirObjectCall
             arguments,
         } => HirObjectCall {
             target: HirObjectCallTarget::Method { receiver, target },
+            arguments,
+            class,
+            span,
+        },
+        HirExpressionKind::InterfaceCall {
+            receiver,
+            target,
+            arguments,
+        } => HirObjectCall {
+            target: HirObjectCallTarget::Interface { receiver, target },
             arguments,
             class,
             span,

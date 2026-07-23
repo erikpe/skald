@@ -1,7 +1,10 @@
 //! Name-resolved expression trees.
 
 use crate::{
-    identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, MethodId},
+    identity::{
+        BindingId, ClassId, FieldId, FunctionId, InitializerId, InterfaceId,
+        InterfaceRequirementId, MethodId,
+    },
     literal::NumericLiteralKind,
     source::Span,
 };
@@ -19,6 +22,7 @@ pub enum ResolvedExpression {
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
     MethodCall(ResolvedMethodCallExpr),
+    InterfaceCall(ResolvedInterfaceCallExpr),
     Construct(ResolvedConstructExpr),
 }
 
@@ -34,9 +38,21 @@ impl ResolvedExpression {
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
             Self::MethodCall(expression) => expression.span,
+            Self::InterfaceCall(expression) => expression.span,
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedInterfaceCallExpr {
+    pub receiver: BindingId,
+    pub interface: InterfaceId,
+    pub requirement: InterfaceRequirementId,
+    pub receiver_span: Span,
+    pub member_span: Span,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -3,7 +3,10 @@
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{HirExpression, Type},
-    resolve::ResolvedExpression,
+    resolve::{
+        ResolvedExpression, ResolvedInterfaceParameter, ResolvedParameter,
+        ResolvedParameterBindingMode, ResolvedType,
+    },
     source::Span,
 };
 
@@ -16,6 +19,36 @@ mod primitive;
 mod receiver;
 
 pub(super) use place::ObjectPlaceUse;
+
+pub(in crate::typeck) trait CallParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode;
+    fn type_syntax(&self) -> &ResolvedType;
+    fn span(&self) -> Span;
+}
+
+impl CallParameter for ResolvedParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode {
+        self.binding_mode
+    }
+    fn type_syntax(&self) -> &ResolvedType {
+        &self.type_syntax
+    }
+    fn span(&self) -> Span {
+        self.span
+    }
+}
+
+impl CallParameter for ResolvedInterfaceParameter {
+    fn binding_mode(&self) -> ResolvedParameterBindingMode {
+        self.binding_mode
+    }
+    fn type_syntax(&self) -> &ResolvedType {
+        &self.type_syntax
+    }
+    fn span(&self) -> Span {
+        self.span
+    }
+}
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_expression(
@@ -32,6 +65,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),
             ResolvedExpression::MethodCall(call) => self.check_method_call(call),
+            ResolvedExpression::InterfaceCall(call) => self.check_interface_call(call),
             ResolvedExpression::Construct(construction) => {
                 self.check_excluded_construction_expression(construction)
             }
@@ -65,7 +99,9 @@ pub(super) fn require_type(
 
 pub(super) fn is_call_through_groups(expression: &ResolvedExpression) -> bool {
     match expression {
-        ResolvedExpression::DirectCall(_) | ResolvedExpression::MethodCall(_) => true,
+        ResolvedExpression::DirectCall(_)
+        | ResolvedExpression::MethodCall(_)
+        | ResolvedExpression::InterfaceCall(_) => true,
         ResolvedExpression::Grouped(grouped) => is_call_through_groups(&grouped.expression),
         _ => false,
     }

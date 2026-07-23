@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use crate::identity::ClassId;
+use crate::identity::{ClassId, InterfaceId};
 pub use crate::object_path::ObjectProjection;
 
 mod body;
@@ -20,13 +20,15 @@ pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
     HirCopyAssignmentDeclaration, HirDestructionPlan, HirDestructionStep, HirDestructorDeclaration,
     HirDirectBase, HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
-    HirFunctionLinkage, HirInitializerDeclaration, HirLocal, HirMethodDeclaration,
-    HirMethodDispatch, HirParameter, HirParameterMode, HirProgram, HirVirtualFamily,
+    HirFunctionLinkage, HirInitializerDeclaration, HirInterfaceConformance,
+    HirInterfaceDeclaration, HirInterfaceDeclarationTable, HirInterfaceParameter,
+    HirInterfaceRequirement, HirLocal, HirMethodDeclaration, HirMethodDispatch, HirParameter,
+    HirParameterMode, HirProgram, HirRequirementImplementation, HirVirtualFamily,
     HirVirtualFamilyTable,
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,
-    HirMethodCallTarget, HirUnaryOperation,
+    HirInterfaceCallTarget, HirMethodCallTarget, HirUnaryOperation,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirConstruction, HirCopyAssignment, HirCopyCapability,
@@ -47,6 +49,7 @@ pub enum Type {
     Unit,
     Obj,
     Class(ClassId),
+    Interface(InterfaceId),
 }
 
 impl Type {
@@ -60,6 +63,7 @@ impl Type {
             Self::Unit => Cow::Borrowed("unit"),
             Self::Obj => Cow::Borrowed("Obj"),
             Self::Class(class) => Cow::Owned(format!("class {class}")),
+            Self::Interface(interface) => Cow::Owned(format!("interface {interface}")),
         }
     }
 
@@ -68,7 +72,13 @@ impl Type {
     pub const fn indefinite_article(self) -> &'static str {
         match self {
             Self::I64 | Self::Obj => "an",
-            Self::U64 | Self::U8 | Self::F64 | Self::Bool | Self::Unit | Self::Class(_) => "a",
+            Self::U64
+            | Self::U8
+            | Self::F64
+            | Self::Bool
+            | Self::Unit
+            | Self::Class(_)
+            | Self::Interface(_) => "a",
         }
     }
 }
