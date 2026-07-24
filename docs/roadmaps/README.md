@@ -14,8 +14,10 @@ Shared-ownership language and implementation contracts are frozen in
 [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md) and
 the
 [Shared-Ownership Compiler and Runtime Contract](../compiler/SHARED_OWNERSHIP.md),
-but no shared implementation roadmap will be created until object casts are
-current. Checked exceptions remain the later exploratory direction because
-they extend cleanup to exceptional control flow. Other unscheduled language
-directions and their maturity are owned by the
+including ordinary allocation and explicit exact-class copy allocation from a
+checked cast place. No shared implementation roadmap will be created until
+object casts are current. Dynamic-type-preserving cloning remains deferred.
+Checked exceptions remain the later exploratory direction because they extend
+cleanup to exceptional control flow. Other unscheduled language directions
+and their maturity are owned by the
 [status matrix](../language/STATUS.md#not-implemented).

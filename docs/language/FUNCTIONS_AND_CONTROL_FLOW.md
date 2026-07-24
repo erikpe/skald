@@ -184,6 +184,12 @@ Postfix calls on a cast result use explicit grouping, for example
 `((Leaf) value).read()`. Cast execution does not reorder receivers or later
 arguments.
 
+The frozen shared copy-allocation form `new T((T) source)` is one such
+consuming context. It evaluates and checks the cast source before allocating
+the copy destination, keeps the source and any anchor live through exact-`T`
+copy construction, and secures the produced owner before full-expression
+cleanup.
+
 ## Unsupported control flow and callability
 
 Loops, `break`, `continue`, iteration, function values, closures, lambda

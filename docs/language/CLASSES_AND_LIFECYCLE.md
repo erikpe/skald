@@ -501,9 +501,13 @@ Their maturity is recorded in the [status matrix](STATUS.md), and the
 Shared fields, heap construction, shared copying and assignment, and dynamic
 last-owner destruction now have a frozen but unimplemented extension in
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). That extension
-preserves the lifecycle order above: shared fields copy in declaration order,
-secure incoming owners before releasing old owners during assignment, and
-release in reverse declaration order during complete-object destruction.
+preserves the lifecycle order above. Its explicit
+`new T((T) source)` copy-allocation form invokes this document's selected
+exact-`T` copy constructor once from a checked `T` place and is not eligible
+for copy elision. Shared fields copy in declaration order, secure incoming
+owners before releasing old owners during assignment, and release in reverse
+declaration order during complete-object destruction. Preserving an arbitrary
+source dynamic class through cloning remains deferred.
 
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment

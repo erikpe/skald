@@ -142,8 +142,10 @@ that dynamic check into an expression-level checked-place operation. HIR will
 retain the source view, target identity, preserved access/origin, static or
 runtime classification, and place-versus-shared-owner result. Plain cast views
 will be bounded by their consuming full expression rather than a narrowed
-alias identity or lexical body. These are planned phase changes, not current
-HIR fields.
+alias identity or lexical body. The later shared extension will consume an
+exact-class checked place in `new T((T) source)` while separately recording
+allocation and selected copy construction; allocation is not an effect of the
+cast node. These are planned phase changes, not current HIR fields.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -210,7 +212,10 @@ checked-place evaluation feeding ordinary receiver, alias-argument, copy,
 assignment, and result operations. Runtime casts still require explicit
 success and unrecoverable failure control-flow edges; static casts become
 verified view projections. Future shared-owner casts add explicit copy/adopt
-ownership operations but no allocation operation.
+ownership operations but no allocation operation. Future copy allocation
+instead composes that checked-place result with an explicit source `new`,
+exact-class allocation, and selected copy-constructor operation after the
+check succeeds.
 
 ## Verification and passes
 

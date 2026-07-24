@@ -186,6 +186,11 @@ at its receiver or argument evaluation position. The complete allocation owner
 also anchors inline subobjects within its payload. Anchors remain live through
 the call and are then released in ordinary reverse temporary order.
 
+An alias still cannot be cast into ownership of its source object. The frozen
+`new T((T) alias)` form may instead use the alias as a checked copy source,
+invoke exact `T` copy construction, and return ownership of a distinct
+allocation before the enclosing alias lifetime ends.
+
 Local alias declarations are also an open design area. Their syntax, eligible
 sources, lexical lifetime, initialization, control-flow joins, interaction
 with relocation, and any anchoring requirement are not frozen. The current

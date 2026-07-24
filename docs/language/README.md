@@ -109,14 +109,17 @@ makes a result source-observable.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes the
-  future non-null shared value, allocation, copy/release, dynamic destruction,
-  cycle, and borrow-anchor semantics without claiming compiler support.
+  future non-null shared value, ordinary and exact-class copy allocation,
+  owner copy/release, dynamic destruction, cycle, and borrow-anchor semantics
+  without claiming compiler support. Dynamic-type-preserving cloning remains
+  deferred.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
   and checked narrowing.
 - [Object casts](OBJECT_CASTS.md) freezes the C-style checked-place and
   shared-owner cast syntax, the complete ownership-direction matrix, and the
-  replacement for implemented `narrow` without claiming compiler support.
+  replacement for implemented `narrow`, including the checked-place source
+  used by future explicit copy allocation, without claiming compiler support.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

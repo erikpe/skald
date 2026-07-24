@@ -24,13 +24,15 @@ Use the authority closest to the behavior:
 - implemented call-scoped alias access and lifetime belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
 - frozen non-null shared values, heap allocation, strong ownership,
-  last-owner destruction, and borrow-anchor semantics belong in
+  exact-class copy allocation, last-owner destruction, and borrow-anchor
+  semantics belong in
   [shared ownership and heap allocation](language/SHARED_OWNERSHIP.md);
 - implemented inheritance, polymorphic views, virtual/interface dispatch,
   type tests, and checked narrowing belong in
   [polymorphism](language/POLYMORPHISM.md);
 - frozen C-style object casts, the complete inline/alias/shared conversion
-  matrix, cast failure, and the planned `narrow` replacement belong in
+  matrix, cast failure, the checked-place copy-allocation source, and the
+  planned `narrow` replacement belong in
   [object casts](language/OBJECT_CASTS.md);
 - the current compilation unit, top-level namespace, entry point, external
   declarations, and future module boundary belong in

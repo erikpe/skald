@@ -244,6 +244,12 @@ view home or forward the checked operands directly, but it must not reconstruct
 metadata, allocate for a cast, retain for a plain place cast, or permit a
 failure edge to continue.
 
+The later `new T((T) source)` copy-allocation path is a consumer of that
+verified checked place, not a cast-side allocation. It must take its failure
+edge before calling the allocator for its destination, keep the source anchor
+live through selected exact-`T` copy construction, and write metadata for `T`
+rather than copying the source's dynamic-class metadata.
+
 ## Instruction selection and cleanup realization
 
 The private target assembly model represents registers, memory operands,
@@ -265,10 +271,10 @@ verified plan through derived bodies, recursively projected fields, and the
 base chain. No path performs implicit allocation, deallocation, or aggregate
 runtime copy.
 
-The frozen shared-ownership extension will add explicit verified allocation,
-copy/adopt/release, and anchor operations. Its one-word handle, allocation
-header, dynamic finalizer, and internal ABI rules are fixed in
-[Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
+The frozen shared-ownership extension will add explicit verified ordinary and
+copy-allocation, owner copy/adopt/release, and anchor operations. Its one-word
+handle, allocation header, dynamic finalizer, and internal ABI rules are fixed
+in [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
 Until that extension is implemented, the current backend continues to reject
 shared MIR and emits no allocation or reference-counting path.
 

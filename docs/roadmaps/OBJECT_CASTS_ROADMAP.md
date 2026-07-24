@@ -29,11 +29,17 @@ final migration task completes.
 - The parser represents the frozen `(shared T) source` target shape well enough
   to diagnose it as unsupported until shared types are implemented. This
   roadmap does not add shared types or execute shared-owner casts.
-- No cast allocates. The later shared implementation must preserve the rule
-  that only `new ConcreteClass(...)` creates a shared allocation.
+- No cast allocates. The later shared implementation may allocate only from
+  the two forms headed by `new`: ordinary `new T(arguments)` and explicit
+  copy allocation `new T((T) source)`.
+- This roadmap establishes the checked-place and exact-class copy source
+  consumed by future copy allocation, but it does not parse or execute either
+  shared `new` form.
 - Local aliases, first-class references, optional casts, primitive casts,
   unsafe reinterpretation, user-defined conversions, and recoverable cast
   failure are non-goals.
+- Dynamic cloning that preserves an arbitrary source dynamic class is deferred
+  and is not inferred from casts or exact-class copying.
 - Removing `narrow` deliberately removes its evaluate-once multi-statement
   binding. A cast view is valid only for its consuming full expression.
 - Existing hierarchy, conformance, copy, cleanup, ABI, diagnostic,
@@ -146,6 +152,9 @@ through the established exact-class lifecycle pipeline.
       views.
 - [ ] Prove produced inline sources remain live through the check and copy
       without introducing local aliases or path-dependent ownership at joins.
+- [ ] Keep the checked-place copy boundary reusable by the later
+      `new T((T) source)` shared copy-allocation consumer without adding
+      allocation or shared-owner operations in this task.
 - [ ] Add focused user/synthesized-copy, self-assignment, slicing, result,
       parameter, temporary, cleanup-order, diagnostic, dump, and native tests.
 
@@ -180,8 +189,8 @@ all retained use cases have a checked expression path.
       guidance, and roadmap/archive indexes to make casts current and
       `narrow` historical.
 - [ ] Confirm `(shared T) source`, shared sources, allocation, reference
-      counting, and hidden shared anchors remain rejected pending a separate
-      shared-ownership implementation roadmap.
+      counting, both `new` allocation forms, and hidden shared anchors remain
+      rejected pending a separate shared-ownership implementation roadmap.
 - [ ] Run the complete repository, MSRV, long robustness, documentation-link,
       deterministic-process, native, and runtime gates.
 
@@ -204,6 +213,7 @@ new current contract.
 
 This roadmap must complete before a shared-ownership implementation roadmap is
 created. Shared work may then extend the cast target and source representation
-with explicit owner copy/adopt and hidden anchors without revisiting plain
-place-cast semantics. Checked exceptions and optional casts remain later,
-independent designs.
+with explicit owner copy/adopt, hidden anchors, ordinary allocation, and
+copy allocation from a checked exact-class place without revisiting plain
+place-cast semantics. Dynamic cloning, checked exceptions, and optional casts
+remain later, independent designs.

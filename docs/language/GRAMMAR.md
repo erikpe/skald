@@ -328,8 +328,12 @@ member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
 [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes future
-`shared T` and `new T(...)` source forms and semantics. Those forms remain
-outside this implemented grammar until compiler support is added.
+`shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
+`new T((T) source)` source forms and semantics. In the copy form, the sole
+initializer expression is an explicit checked place cast to the same concrete
+class named by `new`; grouping around that cast does not change the form.
+These forms remain outside this implemented grammar until compiler support is
+added.
 [Object casts](OBJECT_CASTS.md) freezes future `(T) source` and
 `(shared T) source` forms, precedence, and type-name disambiguation. The
 current grammar continues to accept scoped `narrow` instead until the indexed

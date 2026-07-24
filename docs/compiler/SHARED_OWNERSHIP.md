@@ -32,13 +32,17 @@ dispatch, roots, tracing, safepoints, cycle detection, or borrow analysis.
 
 Resolution assigns the existing class, interface, field, callable, and
 polymorphic identities. `shared T` carries a resolved static target, and
-`new C(...)` carries the exact concrete `ClassId`; lower phases never recover
-either fact from a source name.
+every `new C(...)` carries the exact concrete `ClassId` and either ordinary-
+initializer or explicit copy-allocation mode; lower phases never recover these
+facts from a source name or argument shape.
 
 Typed HIR records:
 
 - shared types and compatible class/interface/`Obj` views;
-- the exact class allocated by every `new`;
+- the exact class and construction mode selected by every `new`;
+- for `new T((T) source)`, the matching explicit cast, selected exact-class
+  copy constructor, source provenance, and any full-expression anchor
+  requirement;
 - whether each owner use copies a named place or adopts a produced owner;
 - shared local, parameter, result, field, and temporary lifetimes;
 - pointee places with their static target, access, complete-object provenance,
@@ -55,8 +59,11 @@ classification.
 MIR makes every ownership effect executable and explicit. Its schema must
 represent, by semantic operation rather than necessarily by these Rust names:
 
-- lower each source `new` to allocation storage for one exact concrete class
-  and initialization of its complete object payload;
+- lower ordinary `new C(arguments)` to allocation storage for exact `C` and
+  invocation of its selected ordinary initializer;
+- lower `new T((T) source)` as source evaluation and anchoring, checked-place
+  selection, allocation storage for exact `T`, invocation of its selected copy
+  constructor, and publication of the produced owner, in that order;
 - create a strong owner by copy, transfer a produced owner by adopt, and end an
   owner by release;
 - perform shared assignment in secure-incoming, release-old, store order;
@@ -93,10 +100,16 @@ The MIR verifier must reject a program unless all of the following hold:
   remain live through the call;
 - a checked cast view ends before its shared anchor is released on every
   normal full-expression exit;
-- allocation names a concrete constructible class and a complete
-  initialization operation and originates from source `new`;
-- no cast, conversion, copy, anchor, call, result, or assignment creates an
-  allocation operation;
+- each ordinary allocation names a concrete constructible class and its
+  selected ordinary initializer;
+- each copy allocation originates from the exact source shape
+  `new T((T) source)`, names concrete copy-constructible `T`, performs any
+  dynamic check before allocating its destination, invokes the selected `T`
+  copy constructor exactly once, and retains its checked source and anchor
+  through completion;
+- every allocation originates from source `new`; no cast, conversion, inline
+  copy, owner copy, anchor, call, result, or assignment independently creates
+  an allocation operation;
 - each dynamic class identifies exactly one compatible complete finalizer; and
 - shared values are absent from external signatures and static storage.
 
@@ -148,8 +161,10 @@ virtual and interface dispatch information. Exact slot offsets remain backend
 private, but descriptor identity continues to serve runtime type tests.
 
 The allocation header always points to the descriptor for the exact class
-named by `new`, even when the handle's static type is an ancestor, interface,
-or `Obj`. Upcasts copy only the header pointer and never replace its metadata.
+named by `new`, for both ordinary and copy allocation, even when the handle's
+static type is an ancestor, interface, or `Obj`. Copy allocation never derives
+this descriptor from the source metadata. Upcasts copy only the header pointer
+and never replace its metadata.
 
 The complete finalizer accepts the complete payload address. It performs the
 ordinary complete-object destruction sequence for its exact class:
@@ -223,8 +238,10 @@ once and establishes any required owner before the dynamic check. An existing
 local or value parameter already supplies a stable owner; a replaceable place
 is copied; and a produced owner remains adopted by its temporary. The success
 edge supplies a non-owning view to its consuming receiver, alias argument, or
-inline copy. The view ends before the owner is released at the full-expression
-boundary. A cast from an existing alias uses its verified outer lifetime and
+inline copy. When the consumer is `new T((T) source)`, that same view and owner
+remain live while exact `T` storage is allocated and its selected copy
+constructor runs; the produced owner is secured before the view and anchor
+end. A cast from an existing alias uses its verified outer lifetime and
 creates no shared owner.
 
 HIR need only record provenance and the required anchor category. MIR owns the
@@ -265,6 +282,16 @@ archive. The header, runtime implementation, every generated process-entry
 marker, direct C harnesses, mismatch tests, and documentation must transition
 together.
 
+The runtime owns neither initializer nor copy-constructor selection nor
+partially constructed object state. For copy allocation, the compiler
+completes the source cast before calling `ska_rt_alloc` for the destination,
+then constructs the exact class named by `new`.
+
+Dynamic cloning is outside this contract. The compiler does not derive a new
+allocation class from source metadata or synthesize a clone path. A future
+`clone()` convention or dedicated syntax requires a separate source and
+lowering design.
+
 ## Safety argument and test obligations
 
 The implementation preserves the source safety contract through four checked
@@ -282,10 +309,12 @@ Focused implementation tests must cover named and produced values in every
 local/field/parameter/result/assignment position; direct and indirect
 self-assignment; cleanup order; dynamic finalization through every static
 target; nested shared fields; strong cycles; call and checked-place cast
-anchors; shared-owner casts; receiver/argument order; overflow and
-allocation failure; malformed MIR; ABI
-version mismatch; deterministic HIR/MIR dumps; assembly acceptance; and native
-execution.
+anchors; ordinary and copy allocation from inline, alias, produced, and
+shared-backed sources; static slicing and checked downcast copies; unavailable
+copy construction; shared-owner casts; receiver/argument order; cast failure
+before destination allocation; overflow and allocation failure; malformed MIR;
+ABI version mismatch; deterministic HIR/MIR dumps; assembly acceptance; and
+native execution.
 
 Strong cycles intentionally remain allocated, so leak detection must
 distinguish that specified behavior from an owner lost by incorrect lowering.

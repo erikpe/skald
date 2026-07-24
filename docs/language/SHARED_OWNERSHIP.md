@@ -42,24 +42,58 @@ shared Drawable
 shared Obj
 
 new Widget(arguments)
+new Widget((Widget) source)
 ```
 
 `shared` and `new` are contextual words in these exact positions. A shared
 target may be a concrete class, an ancestor class, an interface, or `Obj`.
-`new` must name a concrete, constructible class and invokes that class's
-ordinary initializer.
+`new` must name a concrete, constructible class.
 
 Allocation creates one complete object of the named concrete class and returns
 one produced strong owner. The expected type may immediately view that owner
 as the same class, an ancestor, a conformed interface, or `Obj`; this preserves
 the allocation and its complete dynamic class rather than slicing it.
 
-`new ConcreteClass(arguments)` is the only initial-profile source operation
-that creates a shared allocation and constructs a new shared object. Reads,
+There are two allocation forms. `new ConcreteClass(arguments)` invokes the
+named class's ordinary initializer. `new T((T) source)` is explicit copy
+allocation: its sole initializer expression is a matching explicit place cast,
+and it invokes `T`'s selected copy constructor exactly once in the new
+allocation. The matching cast is required even when `source` already has exact
+class `T`; grouping around the cast does not change the copy-allocation form.
+Every other `new T(arguments)` shape remains ordinary initialization rather
+than participating in lifecycle overload resolution. The matching-cast shape
+is reserved for copy allocation even if `T`'s ordinary initializer could
+otherwise accept an exact-`T` value argument.
+
+The copy-allocation target must be concrete and copy-constructible. The source
+may be an existing or produced inline object, a `ref` or `mut ref` alias, or an
+object reached through shared ownership, subject to the checked-place rules in
+[Object Casts](OBJECT_CASTS.md). It executes in this order:
+
+1. evaluate the cast source exactly once and establish any required temporary
+   or hidden owning anchor;
+2. select the exact `T` place, terminating on a required failed dynamic check;
+3. allocate storage for one exact `T`;
+4. copy-construct the payload from that checked place; and
+5. publish the completed allocation as one produced `shared T` owner.
+
+A failed cast therefore does not allocate the copy destination; source
+evaluation may already have performed its own operations. The source view and
+anchor remain live through the copy and until its result owner is secured. The
+explicit copy-constructor operation is not eligible for copy elision.
+
+The named allocation class determines the complete dynamic class. For example,
+`new Animal((Animal) dog)` deliberately copies and slices to an exact
+`Animal`; `new Dog((Dog) animal)` first checks the view and then creates an
+exact `Dog`. To retain a statically known `Dog` while satisfying
+`shared Animal`, use `new Dog((Dog) dog)` and the ordinary shared upcast.
+
+Only source forms headed by `new` create a shared allocation. Reads,
 assignments, calls, results, casts, upcasts, and hidden anchors may create,
 transfer, or end owners of an allocation that already exists, but none creates
 another allocated object. An inline value or alias cannot be converted to a
-shared owner by casting.
+shared owner by casting; it can only be copied into a distinct allocation by
+the explicit copy-allocation form.
 
 Shared types are distinct from inline exact-class values and from non-owning
 aliases. There is no implicit conversion between an inline owning value and a
@@ -86,9 +120,9 @@ explicit ownership primitives available in source.
 Reading a named shared local, parameter, or field as a value copies it. The
 source remains a live owner and the destination becomes another owner.
 
-A produced shared result, including `new T(...)` and a call returning
-`shared T`, already owns its result. A destination adopts that owner rather
-than copying it and immediately releasing a redundant temporary.
+A produced shared result, including either `new` allocation form and a call
+returning `shared T`, already owns its result. A destination adopts that owner
+rather than copying it and immediately releasing a redundant temporary.
 
 For a shared value parameter:
 
@@ -250,9 +284,23 @@ hidden anchor at cast-source evaluation. A produced shared source keeps its
 produced owner through the expression.
 
 The cast view ends before its anchor is released. If the view supplies a method
-receiver, alias argument, or inline copy source, the call or copy completes and
-its result is secured first. Cast failure terminates and makes no remaining
-cleanup guarantee.
+receiver, alias argument, inline copy source, or copy-allocation source, the
+call or copy completes and its result is secured first. Copy allocation
+performs its check before allocating its destination. Any cast failure
+terminates and makes no remaining cleanup guarantee.
+
+## Deferred dynamic cloning
+
+Copy allocation always creates the concrete class named by `new`. It does not
+inspect the source's metadata to choose an allocation class and cannot preserve
+an arbitrary source dynamic class through an ancestor, interface, or `Obj`
+view.
+
+A dynamic cloning facility is deferred beyond the initial shared profile. It
+may eventually use a `clone()` method convention or dedicated syntax, but its
+dispatch, result type, allocation authority, copy behavior, and failure
+contract require a separate design. No cast or current `new` form implies that
+facility.
 
 ## Strong cycles
 
@@ -287,6 +335,7 @@ This frozen profile does not include:
 - explicit early release or user-visible reference counts;
 - raw pointers or unsafe handle construction;
 - casting an inline object or alias into shared ownership;
+- dynamic cloning that preserves an arbitrary source dynamic class;
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;

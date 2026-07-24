@@ -113,6 +113,12 @@ shared  --copy----> inline
 shared  --owner---> shared
 ```
 
+The `X` entries mean that no **cast** performs that direction. The explicit
+copy-allocation form `new T((T) source)` may consume an inline, alias, or
+shared-backed checked place and create a distinct allocation, as described
+below. It is construction rather than a conversion to the original object's
+ownership.
+
 The shared-to-inline direction is not one compound storage conversion. The cast
 first selects a borrowed target-class place; the inline destination then uses
 the existing exact-class copy construction or assignment operation:
@@ -126,11 +132,63 @@ dynamic class is derived from `Leaf`, the operation copies the selected `Leaf`
 subobject into an exact `Leaf` and therefore slices. Shared fields within that
 copy follow ordinary shared copying and retain their allocations.
 
-## Allocation rule
+## Allocation and copy construction
 
-`new ConcreteClass(arguments)` is the only initial-profile source operation
-that creates a new shared allocation and constructs a new shared object. It
-creates the complete concrete object and its initial strong owner together.
+Casts never allocate. The authoritative
+[shared construction contract](SHARED_OWNERSHIP.md#type-and-construction-forms)
+instead provides two forms headed by `new` that create an allocation:
+
+```ska
+new ConcreteClass(arguments)
+new ConcreteClass((ConcreteClass) source)
+```
+
+The first performs ordinary initialization. In the second, the explicit
+matching `(ConcreteClass) source` supplies the checked place from which the
+new exact-class allocation is copy-constructed. The matching cast is required
+even for a same-type source:
+
+```ska
+var dog: shared Dog = new Dog((Dog) source_dog);
+```
+
+The cast source evaluates once and is anchored before its check. A failed
+dynamic check terminates before the enclosing copy allocation allocates its
+destination. On success, the checked place and anchor remain live through
+selected copy construction and until the produced owner is secured. The
+allocation and copy are effects of `new`, not of the cast.
+
+The class named by `new`, not the source's complete dynamic class, determines
+the new allocation's dynamic class. Copying through an ancestor cast therefore
+slices deliberately:
+
+```ska
+fn copy_as_animal(ref dog: Dog) -> shared Animal {
+    return new Animal((Animal) dog);
+}
+
+fn checked_copy_as_dog(ref animal: Animal) -> shared Dog {
+    return new Dog((Dog) animal);
+}
+
+fn copy_inline_as_animal(dog: Dog) -> shared Animal {
+    return new Animal((Animal) dog);
+}
+```
+
+The first and third allocations have exact dynamic class `Animal`. The second
+checks that the source supplies a `Dog` view, then creates an exact `Dog`.
+To preserve a statically known `Dog` while returning `shared Animal`, allocate
+and copy the `Dog`, then use the ordinary shared upcast:
+
+```ska
+return new Dog((Dog) dog);
+```
+
+This does not provide dynamic cloning. An operation that discovers and
+preserves an arbitrary source dynamic class is deferred; a future `clone()`
+method convention or dedicated syntax requires a separate design owned by
+[shared ownership](SHARED_OWNERSHIP.md#deferred-dynamic-cloning).
 
 Every other shared-producing operation works with an allocation that already
 exists:
@@ -151,9 +209,12 @@ var from_inline: shared Leaf = (shared Leaf) inline_leaf;
 var from_alias: shared Leaf = (shared Leaf) borrowed_leaf;
 ```
 
-A future operation for heap-copying an inline object would require explicit
-allocation syntax and a separately frozen construction contract. It is not a
-cast and is not part of this profile.
+The corresponding explicit copies are construction:
+
+```ska
+var from_inline: shared Leaf = new Leaf((Leaf) inline_leaf);
+var from_alias: shared Leaf = new Leaf((Leaf) borrowed_leaf);
+```
 
 ## Same-type, up-, down-, and cross-casts
 
@@ -230,6 +291,7 @@ first-class:
 | Exact-class local or field initialization | Copy-construct exact class `T` |
 | Exact-class value argument or result | Copy into the parameter or result destination |
 | Whole-object assignment to an owning exact `T` destination | Run exact `T` copy assignment |
+| `new T((T) source)` | In the future shared profile, allocate exact `T` and copy-construct it from the checked place |
 
 An interface or `Obj` place cast is valid only in view-consuming contexts
 because neither has standalone inline storage. A class place cast used in an
