@@ -72,8 +72,9 @@ The marker takes exactly one source and does not form an ordinary initializer
 argument. Conversely, `new T(source)` participates only in ordinary
 initializer overload resolution and never falls back to copy construction.
 Ordinary allocation and initializer selection cross typed HIR. The exact-class
-local form also crosses verified target-independent MIR, while its backend
-execution remains deliberately unavailable.
+local form also crosses verified target-independent MIR and executes on the
+current x86-64 backend. Broader owner-producing and consuming contexts remain
+staged implementation work.
 Explicit copy allocation remains a typed diagnostic until its checked source,
 anchor, and copy-constructor operation can be represented together.
 

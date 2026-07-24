@@ -69,10 +69,10 @@ fn lowers_and_verifies_the_first_exact_shared_owner_lifetime() {
         .skip(allocation + 5)
         .any(|instruction| matches!(instruction, MirInstruction::SharedRelease(_))));
     run_mir_pipeline(program.clone()).expect("shared MIR must survive target-independent passes");
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(error
-        .to_string()
-        .contains("shared ownership is not supported by the x86-64 backend yet"));
+    let assembly = emit_assembly(Target::X86_64SysV, &program)
+        .expect("the exact shared lifetime must reach the native backend");
+    assert!(assembly.contains("call ska_rt_alloc"));
+    assert!(assembly.contains("call ska_rt_free"));
 }
 
 #[test]

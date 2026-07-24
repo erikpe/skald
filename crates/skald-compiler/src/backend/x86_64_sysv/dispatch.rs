@@ -24,6 +24,7 @@ pub(super) struct DispatchMetadata {
     tables: Vec<Vec<Option<MethodId>>>,
     /// First table entry for each dense `InterfaceId`.
     interface_starts: Vec<usize>,
+    finalizer_displacement: i32,
 }
 
 impl DispatchMetadata {
@@ -52,9 +53,11 @@ impl DispatchMetadata {
             }
             tables.push(entries);
         }
+        let finalizer_displacement = entry_displacement(entry_count, "complete finalizer table")?;
         Ok(Self {
             tables,
             interface_starts,
+            finalizer_displacement,
         })
     }
 
@@ -98,6 +101,10 @@ impl DispatchMetadata {
         entry_displacement(index, "interface witness table")
     }
 
+    pub(super) const fn finalizer_displacement(&self) -> i32 {
+        self.finalizer_displacement
+    }
+
     pub(super) fn assembly_tables(&self, program: &MirProgram) -> Vec<AssemblyDispatchTable> {
         self.tables
             .iter()
@@ -109,6 +116,7 @@ impl DispatchMetadata {
                     entries: entries
                         .iter()
                         .map(|method| method.map(|method| callable(program, method.into())))
+                        .chain(std::iter::once(Some(symbol::complete_finalizer(class))))
                         .collect(),
                 }
             })
@@ -197,6 +205,7 @@ mod tests {
         let metadata = DispatchMetadata {
             tables: vec![],
             interface_starts: vec![usize::MAX],
+            finalizer_displacement: 0,
         };
         let runner = InterfaceId::new(0);
         let error = metadata

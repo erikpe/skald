@@ -270,12 +270,15 @@ verified plan through derived bodies, recursively projected fields, and the
 base chain. No path performs implicit allocation, deallocation, or aggregate
 runtime copy.
 
-The frozen shared-ownership extension will add explicit verified ordinary and
-copy-allocation, owner copy/adopt/release, and anchor operations. Its one-word
+The shared-ownership extension provides explicit verified exact-class ordinary
+allocation, publication, adoption, and release operations. Its one-word
 handle, allocation header, dynamic finalizer, and internal ABI rules are fixed
 in [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
-Until that extension is implemented, the current backend continues to reject
-shared MIR and emits no allocation or reference-counting path.
+The current backend executes the narrow `shared C = new C(arguments)` local
+profile, including dynamic complete destruction and exact-base deallocation.
+Checked retain selection exists for verified shared-copy MIR; broader source
+copy, assignment, temporary, call, field, polymorphic-view, cast, and anchor
+contexts remain gated by their owning frontend or MIR phases.
 
 ## Symbols and process entry
 

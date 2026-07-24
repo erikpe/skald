@@ -1,8 +1,0 @@
-class Widget {
-    init() {}
-}
-
-fn main() -> i64 {
-    var value: shared Widget = new Widget();
-    return 0;
-}

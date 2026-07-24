@@ -26,9 +26,9 @@ use crate::{
         MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
         MirMemberDefinition, MirMemberDefinitionTable, MirMethodCallTarget, MirMethodDeclaration,
         MirMethodReceiver, MirObjectOrigin, MirParameter, MirParameterMode, MirPlace, MirProgram,
-        MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage,
-        MirStorageKind, MirTerminator, MirType, MirUnaryOperation, MirValue, MirViewTarget,
-        MirVirtualFamilyTable, StorageId, ValueId,
+        MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirSharedCopy,
+        MirSharedRelease, MirSharedTarget, MirStorage, MirStorageKind, MirTerminator, MirType,
+        MirUnaryOperation, MirValue, MirViewTarget, MirVirtualFamilyTable, StorageId, ValueId,
     },
     source::SourceDatabase,
     test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
@@ -58,6 +58,7 @@ mod legality;
 mod native_execution;
 mod object_results;
 mod objects;
+mod shared_ownership;
 mod static_inheritance;
 mod type_operations;
 mod value_parameters;

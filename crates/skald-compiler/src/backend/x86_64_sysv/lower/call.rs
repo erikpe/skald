@@ -5,7 +5,7 @@ use crate::{
     identity::{CallableId, DestructorId},
     mir::{
         MirArgument, MirCall, MirCallableSignature, MirDefinitionRef, MirInitialize, MirPlace,
-        ValueId,
+        MirSharedInitialize, ValueId,
     },
 };
 
@@ -58,6 +58,28 @@ impl InstructionSelector<'_, '_> {
             &initialize.arguments,
             None,
         )
+    }
+
+    pub(super) fn select_shared_initialize(
+        &mut self,
+        initialize: &MirSharedInitialize,
+    ) -> Result<(), BackendError> {
+        let target = CallTarget::direct(initialize.target.into());
+        let signature = target.signature(self.program);
+        let layout = self.marshal_shared_initializer_inputs(
+            signature,
+            initialize.allocation,
+            initialize.target.class(),
+            &initialize.arguments,
+        )?;
+        target.select(self, None)?;
+        self.finish_call(
+            &layout,
+            target.direct_callable(),
+            signature.return_type,
+            None,
+        );
+        Ok(())
     }
 
     pub(super) fn select_destructor_call(

@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; first verified MIR lifetime implemented**.
+Status: **frozen implementation design; first exact native lifetime implemented**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -17,9 +17,10 @@ initializer. MIR implements the first exact-class local profile:
 `shared C = new C(arguments)` has distinct unpublished allocation storage,
 initialization, publication, adoption, a full-expression boundary, and normal
 release. Broader shared uses remain behind a structured lowering gate, and
-the backend deliberately rejects otherwise valid shared MIR until target
-support lands. [Runtime ABI version 5](RUNTIME_ABI.md) provides only checked
-byte allocation and exact-base deallocation; no backend path calls it yet.
+the x86-64 backend executes this exact local profile with the frozen handle,
+header, count-one publication, dynamic complete finalization, and last-owner
+deallocation. [Runtime ABI version 5](RUNTIME_ABI.md) provides only checked
+byte allocation and exact-base deallocation.
 Explicit copy allocation and shared-owner casts remain typed exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
@@ -95,7 +96,7 @@ retain/release policy. Optimization may remove an operation only after MIR
 represents it and only when ownership, destruction timing, and failure behavior
 remain unchanged.
 
-The implemented SO2 state machine separates an allocation storage slot from
+The implemented SO2/SO4 state machine separates an allocation storage slot from
 owner storage:
 
 ```text
@@ -112,6 +113,17 @@ explicit full-expression boundary; normal return requires every local owner
 to have been released. CFG joins require identical shared allocation and owner
 states. These operations are target-independent and carry no handle size,
 header offset, or runtime symbol.
+
+On x86-64, allocation storage and shared-owner storage each receive one
+eight-byte stack home. `SharedAllocate` checks the exact class payload plus
+the 16-byte header before calling `ska_rt_alloc`; initialization receives the
+payload address through the existing receiver ABI; publication writes the
+exact class descriptor and then count one; and adoption transfers the header
+word without retaining it. Release validates the header and positive count,
+selects the complete finalizer from dynamic metadata on the one-to-zero
+transition, and calls `ska_rt_free` only after finalization returns. The
+verified copy operation also has checked retain lowering, although ordinary
+source owner copies remain gated until the next implementation slice.
 
 ## MIR verification
 

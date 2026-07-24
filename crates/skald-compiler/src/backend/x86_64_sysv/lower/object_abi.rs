@@ -282,7 +282,7 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    fn select_metadata_symbol(&mut self, class: ClassId, location: ArgumentLocation) {
+    pub(super) fn select_metadata_symbol(&mut self, class: ClassId, location: ArgumentLocation) {
         let symbol = self.dispatch.table_symbol(class);
         match location {
             ArgumentLocation::IntegerRegister(destination) => {

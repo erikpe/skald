@@ -134,11 +134,14 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             Some(ScalarClass::Integer)
         }
         MirParameterMode::Value => match parameter.ty {
-            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool | MirType::Class(_) => {
-                Some(ScalarClass::Integer)
-            }
+            MirType::I64
+            | MirType::U64
+            | MirType::U8
+            | MirType::Bool
+            | MirType::Class(_)
+            | MirType::Shared(_) => Some(ScalarClass::Integer),
             MirType::F64 => Some(ScalarClass::Sse),
-            MirType::Interface(_) | MirType::Obj | MirType::Shared(_) | MirType::Unit => None,
+            MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
         },
     }
 }
@@ -344,6 +347,20 @@ mod tests {
                 ArgumentLocation::SseRegister(XmmRegister::Xmm0),
             ]
         );
+    }
+
+    #[test]
+    fn classifies_shared_handles_as_one_integer_component() {
+        let layout = CallLayout::classify(&MirParameter::values([MirType::Shared(
+            crate::mir::MirSharedTarget::Obj,
+        )]))
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [ArgumentLocation::IntegerRegister(Register::Rdi)]
+        );
+        assert_eq!(layout.stack_size(), 0);
     }
 
     #[test]

@@ -13,6 +13,9 @@ use crate::{
 use super::abi;
 
 const MAX_ADDRESSABLE_SIZE: usize = i32::MAX as usize;
+pub(super) const SHARED_HANDLE_SIZE: usize = 8;
+pub(super) const SHARED_HANDLE_ALIGNMENT: usize = 8;
+pub(super) const SHARED_HEADER_SIZE: usize = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct TypeLayout {
@@ -83,6 +86,10 @@ impl DataLayout {
                 .map(ClassLayout::ty)
                 .ok_or_else(|| layout_error(format!("class {class} has no target layout"))),
             MirType::Obj => Err(layout_error("`Obj` views have no owning storage layout")),
+            MirType::Interface(_) => Err(layout_error(
+                "interface views have no owning storage layout",
+            )),
+            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
             MirType::Unit => Err(layout_error(
                 "payload-free type `unit` has no storage layout",
             )),
@@ -99,6 +106,29 @@ impl DataLayout {
 
     pub(super) fn field(&self, field: FieldId) -> Option<FieldLayout> {
         self.class(field.class())?.field(field)
+    }
+
+    pub(super) fn shared_allocation_size(&self, class: ClassId) -> Result<u64, BackendError> {
+        let payload = self
+            .class(class)
+            .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
+            .ty();
+        if payload.alignment() > SHARED_HANDLE_ALIGNMENT {
+            return Err(layout_error(format!(
+                "shared payload class {class} requires unsupported alignment {}",
+                payload.alignment()
+            )));
+        }
+        let size = SHARED_HEADER_SIZE
+            .checked_add(payload.size())
+            .filter(|size| *size <= MAX_ADDRESSABLE_SIZE)
+            .ok_or_else(|| {
+                layout_error(format!(
+                    "shared allocation for class {class} exceeds target size limits"
+                ))
+            })?;
+        u64::try_from(size)
+            .map_err(|_| layout_error(format!("shared allocation for class {class} is too large")))
     }
 }
 
@@ -190,6 +220,7 @@ impl<'mir> LayoutBuilder<'mir> {
         primitive_layout(ty).ok_or_else(|| match ty {
             MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
             MirType::Unit => layout_error("field type `unit` has no target layout"),
+            MirType::Shared(_) => layout_error("shared fields are not executable yet"),
             _ => unreachable!("every payload primitive has a target layout"),
         })
     }
@@ -315,7 +346,13 @@ mod tests {
         for ty in [MirType::U8, MirType::Bool] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(1, 1));
         }
+        assert_eq!(
+            data.ty(MirType::Shared(crate::mir::MirSharedTarget::Obj))
+                .unwrap(),
+            TypeLayout::new(8, 8)
+        );
         assert!(data.ty(MirType::Unit).is_err());
+        assert!(data.ty(MirType::Obj).is_err());
     }
 
     #[test]

@@ -8,7 +8,10 @@ use crate::{
     },
 };
 
-use super::{abi, layout::DataLayout};
+use super::{
+    abi,
+    layout::{DataLayout, SHARED_HANDLE_ALIGNMENT, SHARED_HANDLE_SIZE},
+};
 
 const SCALAR_HOME_SIZE: usize = 8;
 const SCALAR_HOME_ALIGNMENT: usize = 8;
@@ -94,6 +97,9 @@ impl FrameLayout {
         let mut object_origins = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
             let (size, alignment) = match (storage.kind, storage.ty) {
+                (MirStorageKind::SharedAllocation, _) | (_, MirType::Shared(_)) => {
+                    (SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)
+                }
                 (
                     MirStorageKind::Return
                     | MirStorageKind::Receiver

@@ -18,7 +18,9 @@ mod assignment;
 mod call;
 mod cleanup;
 mod copy;
+mod finalize;
 mod object_abi;
+mod ownership;
 mod terminator;
 mod type_operations;
 mod value;
@@ -37,6 +39,7 @@ pub(super) fn lower(
             lower_definition(program, data_layout, dispatch, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
+    functions.extend(finalize::lower_all(program, data_layout)?);
     let entry = program
         .declarations
         .get(program.entry_function)
@@ -175,18 +178,16 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_checked_view_binding(binding)?
             }
             MirInstruction::EndCheckedView(_) => {}
-            MirInstruction::SharedAllocate(_)
-            | MirInstruction::SharedInitialize(_)
-            | MirInstruction::SharedPublish(_)
-            | MirInstruction::SharedAdopt(_)
-            | MirInstruction::SharedCopy(_)
-            | MirInstruction::SharedRelease(_) => {
-                return Err(BackendError::new(
-                    crate::backend::Target::X86_64SysV,
-                    Some(self.function.callable()),
-                    "shared ownership is not supported by the x86-64 backend yet",
-                ));
+            MirInstruction::SharedAllocate(allocation) => {
+                self.select_shared_allocate(allocation)?
             }
+            MirInstruction::SharedInitialize(initialize) => {
+                self.select_shared_initialize(initialize)?
+            }
+            MirInstruction::SharedPublish(publish) => self.select_shared_publish(publish)?,
+            MirInstruction::SharedAdopt(adopt) => self.select_shared_adopt(adopt),
+            MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
+            MirInstruction::SharedRelease(release) => self.select_shared_release(release),
         }
         Ok(())
     }

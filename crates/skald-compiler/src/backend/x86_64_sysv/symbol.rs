@@ -47,6 +47,10 @@ pub(super) fn dispatch_table(class: ClassId) -> String {
     format!(".Lska_class_{}_dispatch", class.index())
 }
 
+pub(super) fn complete_finalizer(class: ClassId) -> String {
+    format!(".Lska_class_{}_finalize_complete", class.index())
+}
+
 pub(super) fn local_label_stem(callable: CallableId) -> String {
     match callable {
         CallableId::Function(function) => format!("fn_{}", function.index()),

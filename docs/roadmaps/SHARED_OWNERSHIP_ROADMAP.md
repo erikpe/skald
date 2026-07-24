@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO3 complete, SO4 is next.
+Status: in progress; SO4 complete, SO5 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -34,8 +34,9 @@ and the complete cast direction matrix is
 - MIR represents and verifies the first exact allocated local lifetime with
   distinct unpublished allocation storage, initialization, publication,
   adoption, full-expression boundary, and normal release. Broader shared HIR
-  remains structurally gated, and the x86-64 backend deliberately rejects
-  valid shared MIR until it gains a handle and allocation path.
+  remains structurally gated. The x86-64 backend executes that narrow profile
+  with one-word handles, checked allocation, dynamic complete finalization,
+  and last-owner deallocation.
 - Runtime ABI version 5 retains scalar output and exposes only checked
   nonzero byte allocation and exact-base deallocation. Reference counts,
   object headers, metadata, and finalization remain compiler-owned.
@@ -84,7 +85,7 @@ and the complete cast direction matrix is
 - [x] SO1 — Establish typed shared-owner vocabulary
 - [x] SO2 — Represent and verify the first owner lifetime in MIR
 - [x] SO3 — Upgrade the runtime to the minimal allocation ABI
-- [ ] SO4 — Execute exact-class allocation and last-owner destruction
+- [x] SO4 — Execute exact-class allocation and last-owner destruction
 - [ ] SO5 — Complete local, assignment, and temporary owner semantics
 - [ ] SO6 — Carry shared owners across calls and results
 - [ ] SO7 — Integrate shared fields with class lifecycle
@@ -242,28 +243,28 @@ remain absent from C.
 **Purpose:** Complete the first source-to-native shared lifetime with the
 frozen handle/header representation and dynamic finalization.
 
-- [ ] Extend x86-64 legality, data layout, frames, and internal type
+- [x] Extend x86-64 legality, data layout, frames, and internal type
       classification with one non-null, eight-byte shared handle pointing to a
       16-byte allocation header.
-- [ ] Check header-plus-payload size, alignment, addressability, and overflow
+- [x] Check header-plus-payload size, alignment, addressability, and overflow
       before emitting a runtime allocation call; store count and exact dynamic
       metadata only at the verified publication point.
-- [ ] Add one compiler-generated complete finalizer entry to every executable
+- [x] Add one compiler-generated complete finalizer entry to every executable
       class descriptor without making target offsets visible in HIR or MIR.
-- [ ] Generate finalizers that accept the complete payload address and reuse
+- [x] Generate finalizers that accept the complete payload address and reuse
       the existing user-body, reverse-field, and base destruction plan.
-- [ ] Lower release so count one becomes zero, dynamically calls the exact
+- [x] Lower release so count one becomes zero, dynamically calls the exact
       complete finalizer once, and then calls `ska_rt_free` once; keep the
       allocation live throughout finalization.
-- [ ] Add generated count-overflow and invalid-state termination machinery in
+- [x] Add generated count-overflow and invalid-state termination machinery in
       a cohesive ownership-lowering owner, even if retain first becomes
       source-reachable in the next task.
-- [ ] Keep metadata symbols, finalizer symbols, descriptor entries, and
+- [x] Keep metadata symbols, finalizer symbols, descriptor entries, and
       assembly ordering deterministic and verify malformed metadata before
       instruction selection.
-- [ ] Add assembler, static layout, runtime-call, exact/derived finalizer,
+- [x] Add assembler, static layout, runtime-call, exact/derived finalizer,
       allocation failure, count-overflow fixture, and native lifetime tests.
-- [ ] Update backend and status documentation for the first executable
+- [x] Update backend and status documentation for the first executable
       exact-class allocation boundary.
 
 **Tests:** Focused backend legality/layout/metadata/lowering tests, assembler

@@ -2,10 +2,10 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::CallableId,
+    identity::{CallableId, ClassId},
     mir::{
         MirArgument, MirCallableSignature, MirDefinitionRef, MirFunctionLinkage, MirParameter,
-        MirParameterMode, MirPlace, MirType, ValueId,
+        MirParameterMode, MirPlace, MirType, StorageId, ValueId,
     },
 };
 
@@ -160,6 +160,63 @@ pub(super) fn spill_parameters(
 }
 
 impl InstructionSelector<'_, '_> {
+    pub(super) fn marshal_shared_initializer_inputs(
+        &mut self,
+        signature: MirCallableSignature<'_>,
+        allocation: StorageId,
+        dynamic_class: ClassId,
+        arguments: &[MirArgument],
+    ) -> Result<CallLayout, BackendError> {
+        let layout = classify_call(signature.parameters, true, false).ok_or_else(|| {
+            argument_area_error(
+                self.function,
+                "outgoing shared initializer area exceeds x86-64 limits",
+            )
+        })?;
+        if layout.stack_size() != 0 {
+            self.output
+                .push(Instruction::ReserveStack(layout.stack_size()));
+        }
+        let receiver = layout
+            .receiver_locations()
+            .expect("shared initializer layout has a receiver");
+        self.select_shared_payload_address(allocation, receiver.address());
+        self.select_shared_payload_address(allocation, receiver.complete());
+        self.select_metadata_symbol(dynamic_class, receiver.metadata());
+        for ((argument, parameter), location) in arguments
+            .iter()
+            .zip(signature.parameters)
+            .zip(layout.parameter_locations())
+        {
+            self.marshal_argument(argument, *parameter, *location)?;
+        }
+        Ok(layout)
+    }
+
+    fn select_shared_payload_address(&mut self, allocation: StorageId, location: ArgumentLocation) {
+        let destination = match location {
+            ArgumentLocation::IntegerRegister(register) => register,
+            ArgumentLocation::Stack(_) => Register::Rax,
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("shared payload addresses are integer-class")
+            }
+        };
+        self.output.push(Instruction::Move {
+            source: value::frame_storage(self.frame, allocation),
+            destination: destination.into(),
+        });
+        self.output.push(Instruction::LoadEffectiveAddress {
+            source: value::memory(
+                destination,
+                super::super::super::layout::SHARED_HEADER_SIZE as i32,
+            ),
+            destination,
+        });
+        if let ArgumentLocation::Stack(displacement) = location {
+            value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+        }
+    }
+
     pub(super) fn marshal_call_inputs(
         &mut self,
         signature: MirCallableSignature<'_>,
