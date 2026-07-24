@@ -154,10 +154,10 @@ implemented. The complete source-visible matrix is defined in
 [Object Casts](../language/OBJECT_CASTS.md); compiler phases must consume that
 authority rather than infer ownership from cast syntax.
 
-Ordinary direct-initializer overload selection now belongs to type checking,
-and copy construction has a distinct lifecycle identity. The remaining
-constructor extension applies the same engine to direct bases and adds the
-explicit copy-construction source mode. Its phase boundary is defined in
+Ordinary direct and base-initializer overload selection belongs to type
+checking, and copy construction has a distinct lifecycle identity. The
+remaining constructor extension adds the explicit copy-construction source
+mode. Its phase boundary is defined in
 [Compiler Phases and Intermediate Representations](PHASES_AND_IR.md), and its
 implementation roadmap blocks shared ownership.
 

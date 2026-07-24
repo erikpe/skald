@@ -303,8 +303,7 @@ An ordinary derived initializer must place exactly one `super(arguments);` as
 its first statement. Root initializers cannot contain `super`. The frozen
 constructor contract selects the unique applicable, most-specific ordinary
 initializer from the direct base's overload set using static argument types.
-The current compiler implements that policy for direct construction; reuse by
-`super(arguments)` remains the next constructor-roadmap slice. Arguments
+The same type-checking engine selects direct and base initializers. Arguments
 evaluate left to right and the base is initialized before any derived-field
 initialization. After normal completion, inherited members operate on the live
 base while the enclosing derived `self` remains incomplete until all direct

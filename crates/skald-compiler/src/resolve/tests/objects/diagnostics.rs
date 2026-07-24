@@ -146,7 +146,7 @@ fn diagnoses_invalid_member_kinds_receivers_and_missing_initializers() {
 #[test]
 fn resolves_only_first_statement_super_for_derived_ordinary_initializers() {
     let output = resolve_text(concat!(
-        "class Base { init(value: i64) {} }\n",
+        "class Base { init(value: i64) {} init(value: bool) {} }\n",
         "class Good extends Base { init(value: i64) { super(value); } }\n",
         "class Missing extends Base { value: i64; init() { self.value = 0; } }\n",
         "class Duplicate extends Base { init() { super(0); super(1); } }\n",
@@ -183,7 +183,10 @@ fn resolves_only_first_statement_super_for_derived_ordinary_initializers() {
         panic!("expected resolved base initialization");
     };
     assert_eq!(base.base, ClassId::new(0));
-    assert_eq!(base.initializer, InitializerId::new(ClassId::new(0), 0));
+    assert_eq!(base.arguments.len(), 1);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("BaseInitialization c0"));
+    assert!(!dump.contains("BaseInitialization c0 c0:init"));
 }
 
 #[test]

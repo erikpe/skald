@@ -1,8 +1,11 @@
-error[TYP005]: call argument has type `i64` but `bool` is required
- --> tests/golden/compile_fail/base_initialization_types.ska:9:15
+error[TYP030]: no initializer of base class `Base` matches these arguments
+ --> tests/golden/compile_fail/base_initialization_types.ska:9:9
    |
 9 |         super(1);
-   |               ^ type mismatch
+   |         ^^^^^ supplied (i64)
+   |
+2 |     init(enabled: bool) {}
+   |     ---------------------- candidate init(bool)
 
 error[TYP016]: base subobject of `Derived` is not initialized
  --> tests/golden/compile_fail/base_initialization_types.ska:8:12

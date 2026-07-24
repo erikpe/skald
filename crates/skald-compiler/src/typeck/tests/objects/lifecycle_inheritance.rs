@@ -3,7 +3,10 @@ use crate::{
     hir::{HirBaseCopy, HirDestructionStep, HirObjectSource, HirStatement},
     mir::MirCopyCapability,
     resolve::ResolvedCopyOperation,
-    typeck::{capabilities::CopyPathElement, FIELD_INITIALIZATION, TYPE_MISMATCH},
+    typeck::{
+        capabilities::CopyPathElement, AMBIGUOUS_INITIALIZER, FIELD_INITIALIZATION,
+        NO_MATCHING_INITIALIZER,
+    },
 };
 
 const BASE_AND_DERIVED: &str = concat!(
@@ -247,12 +250,222 @@ fn base_arguments_are_checked_before_derived_field_liveness() {
     assert_eq!(
         codes,
         [
-            TYPE_MISMATCH,
+            NO_MATCHING_INITIALIZER,
             crate::typeck::INVALID_INITIALIZER_BODY,
             FIELD_INITIALIZATION
         ]
     );
     assert!(output.hir.is_none());
+}
+
+#[test]
+fn each_initializer_in_a_deep_chain_selects_its_base_overload_independently() {
+    let output = check_text(concat!(
+        "class Root {\n",
+        "  init(value: i64) {}\n",
+        "  init(value: bool) {}\n",
+        "}\n",
+        "class Middle extends Root {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  init(value: bool) { super(value); }\n",
+        "}\n",
+        "class Leaf extends Middle {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  init(value: bool) { super(value); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var integer: Leaf = Leaf(7);\n",
+        "  var boolean: Leaf = Leaf(true);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    for (class, base) in [
+        (ClassId::new(1), ClassId::new(0)),
+        (ClassId::new(2), ClassId::new(1)),
+    ] {
+        let definition = hir.class_definitions.get(class).unwrap();
+        let selected: Vec<_> = definition
+            .initializers
+            .iter()
+            .map(|initializer| {
+                let HirStatement::BaseInitialization(initialization) =
+                    &initializer.body.statements[0]
+                else {
+                    panic!("derived initializer should begin with base initialization");
+                };
+                assert_eq!(initialization.base, base);
+                initialization.initializer
+            })
+            .collect();
+        assert_eq!(
+            selected,
+            [InitializerId::new(base, 0), InitializerId::new(base, 1)]
+        );
+    }
+    let hir_dump = crate::hir::dump_hir(&hir);
+    for selected in ["c0:init0", "c0:init1", "c1:init0", "c1:init1"] {
+        assert!(hir_dump.contains(&format!("via {selected}")));
+    }
+    assert_eq!(hir_dump, crate::hir::dump_hir(&hir));
+
+    let mir = lower_hir(&hir).expect("overloaded base initialization must lower");
+    verify_mir(&mir).expect("overloaded base initialization must verify");
+    for (class, base) in [
+        (ClassId::new(1), ClassId::new(0)),
+        (ClassId::new(2), ClassId::new(1)),
+    ] {
+        for ordinal in 0..2 {
+            let definition = mir
+                .member_definition(InitializerId::new(class, ordinal).into())
+                .unwrap();
+            assert!(definition.body.blocks.iter().any(|block| {
+                block.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::Initialize(initialization)
+                            if initialization.target == InitializerId::new(base, ordinal)
+                    )
+                })
+            }));
+        }
+    }
+    let mir_dump = crate::mir::dump_mir(&mir);
+    for selected in ["c0:init0", "c0:init1", "c1:init0", "c1:init1"] {
+        assert!(mir_dump.contains(&format!("with {selected}(")));
+    }
+    assert_eq!(mir_dump, crate::mir::dump_mir(&mir));
+}
+
+#[test]
+fn base_selection_uses_static_specificity_for_class_interface_and_obj_views() {
+    let output = check_text(concat!(
+        "interface Named {}\n",
+        "class Animal { init() {} }\n",
+        "class Dog extends Animal implements Named { init() { super(); } }\n",
+        "class Root {\n",
+        "  init(ref value: Obj) {}\n",
+        "  init(ref value: Named) {}\n",
+        "  init(ref value: Animal) {}\n",
+        "  init(ref value: Dog) {}\n",
+        "}\n",
+        "class Derived extends Root {\n",
+        "  init(ref value: Obj) { super(value); }\n",
+        "  init(ref value: Animal) { super(value); }\n",
+        "  init(ref value: Dog) { super(value); }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let definition = hir.class_definitions.get(ClassId::new(3)).unwrap();
+    let selected: Vec<_> = definition
+        .initializers
+        .iter()
+        .map(|initializer| {
+            let HirStatement::BaseInitialization(initialization) = &initializer.body.statements[0]
+            else {
+                panic!("expected base initialization");
+            };
+            initialization.initializer
+        })
+        .collect();
+    assert_eq!(
+        selected,
+        [
+            InitializerId::new(ClassId::new(2), 0),
+            InitializerId::new(ClassId::new(2), 2),
+            InitializerId::new(ClassId::new(2), 3),
+        ]
+    );
+}
+
+#[test]
+fn base_selection_reports_deterministic_ambiguity_and_no_match_candidates() {
+    let output = check_text(concat!(
+        "interface Left {}\n",
+        "interface Right {}\n",
+        "class Both implements Left, Right { init() {} }\n",
+        "class Base {\n",
+        "  init(ref value: Left) {}\n",
+        "  init(ref value: Right) {}\n",
+        "  init(value: i64) {}\n",
+        "}\n",
+        "class Ambiguous extends Base { init(ref value: Both) { super(value); } }\n",
+        "class Missing extends Base { init() { super(true); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let ambiguous = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == AMBIGUOUS_INITIALIZER)
+        .expect("unrelated interfaces should be ambiguous");
+    assert!(ambiguous.message.contains("base initializer call"));
+    assert_eq!(ambiguous.labels.len(), 3);
+    assert!(ambiguous.labels[1].message.contains("init(ref Left)"));
+    assert!(ambiguous.labels[2].message.contains("init(ref Right)"));
+
+    let missing = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == NO_MATCHING_INITIALIZER)
+        .expect("incompatible argument should have no matching base initializer");
+    assert!(missing.message.contains("base class `Base`"));
+    assert_eq!(missing.labels.len(), 4);
+    assert!(missing.labels[0].message.contains("supplied (bool)"));
+}
+
+#[test]
+fn base_value_overloads_copy_and_slice_existing_and_produced_sources() {
+    let output = check_text(concat!(
+        "class ValueBase { init() {} }\n",
+        "class ValueDerived extends ValueBase { init() { super(); } }\n",
+        "class Base {\n",
+        "  init(ref value: Obj) {}\n",
+        "  init(value: ValueBase) {}\n",
+        "}\n",
+        "class FromExisting extends Base {\n",
+        "  init(value: ValueDerived) { super(value); }\n",
+        "}\n",
+        "class FromProduced extends Base {\n",
+        "  init() { super(ValueDerived()); }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    for (class, produced) in [(ClassId::new(3), false), (ClassId::new(4), true)] {
+        let definition = hir.class_definitions.get(class).unwrap();
+        let HirStatement::BaseInitialization(initialization) =
+            &definition.initializers[0].body.statements[0]
+        else {
+            panic!("expected base initialization");
+        };
+        assert_eq!(
+            initialization.initializer,
+            InitializerId::new(ClassId::new(2), 1)
+        );
+        let HirCallArgument::Copy(argument) = &initialization.arguments[0] else {
+            panic!("value overload should retain an owning copy argument");
+        };
+        let HirObjectSource::Slice(slice) = &argument.source else {
+            panic!("derived source should slice into an exact base value");
+        };
+        assert_eq!(slice.target, ClassId::new(0));
+        if produced {
+            assert!(matches!(
+                slice.source.as_ref(),
+                HirObjectSource::Produced(_)
+            ));
+        } else {
+            assert!(matches!(slice.source.as_ref(), HirObjectSource::Place(_)));
+        }
+    }
 }
 
 #[test]

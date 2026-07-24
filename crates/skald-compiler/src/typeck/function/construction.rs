@@ -112,7 +112,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<HirConstruction> {
-        let initializer_id = self.select_initializer(construction)?;
+        let initializer_id = self.select_construction_initializer(construction)?;
         let initializer = self
             .program
             .initializer(initializer_id)

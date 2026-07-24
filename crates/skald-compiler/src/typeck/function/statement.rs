@@ -98,10 +98,13 @@ impl CallableChecker<'_, '_> {
             );
             return CheckedStatement::falls_through(None);
         }
+        let Some(initializer_id) = self.select_base_initializer(statement) else {
+            return CheckedStatement::falls_through(None);
+        };
         let initializer = self
             .program
-            .initializer(statement.initializer)
-            .expect("resolved base initialization must select an initializer");
+            .initializer(initializer_id)
+            .expect("selected base initialization must reference an initializer");
         let arguments = self.check_arguments(
             &statement.arguments,
             &initializer.parameters,
@@ -117,7 +120,7 @@ impl CallableChecker<'_, '_> {
         CheckedStatement::falls_through(Some(HirStatement::BaseInitialization(
             HirBaseInitialization {
                 base: statement.base,
-                initializer: statement.initializer,
+                initializer: initializer_id,
                 arguments,
                 span: statement.span,
             },

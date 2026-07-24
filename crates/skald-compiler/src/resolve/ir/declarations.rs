@@ -205,10 +205,6 @@ impl ResolvedClassDeclaration {
             .filter(|initializer| initializer.id == id)
     }
 
-    pub fn preselected_initializer(&self) -> Option<&ResolvedInitializerDeclaration> {
-        self.initializers.first()
-    }
-
     pub fn copy_constructor_declaration(
         &self,
         id: CopyConstructorId,

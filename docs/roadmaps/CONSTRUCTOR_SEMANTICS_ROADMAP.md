@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM3 complete, CM4 is next.
+Status: in progress; CM4 complete, CM5 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -28,8 +28,8 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - `InitializerId` contains a class-local ordinal, backend symbols include it,
   and MIR stores ordinary initializer declarations in a vector. Copy
   construction now uses the distinct `CopyConstructorId` and callable-symbol
-  namespace introduced by CM0. Direct construction now exercises ordinary
-  initializer ordinals end to end; direct-base selection remains CM4.
+  namespace introduced by CM0. Direct construction and `super(arguments)` now
+  exercise ordinary initializer ordinals end to end.
 - Copy construction, checked object places, slicing, exact-class copy
   capability selection, deterministic cleanup, and verified MIR execution are
   implemented. The migration changes declaration and explicit-selection
@@ -90,7 +90,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - [x] CM1 — Generalize ordinary initializer storage
 - [x] CM2 — Adopt the distinct copy-constructor declaration
 - [x] CM3 — Select ordinary initializer overloads
-- [ ] CM4 — Select overloaded direct-base initialization
+- [x] CM4 — Select overloaded direct-base initialization
 - [ ] CM5 — Execute explicit target-directed copy construction
 - [ ] CM6 — Harden and publish the constructor model
 
@@ -240,22 +240,22 @@ HIR/lower phases contain no unresolved overload choice.
 **Purpose:** Reuse the established overload engine for inheritance without
 duplicating call policy or weakening incomplete-object rules.
 
-- [ ] Resolve `super(arguments)` to the direct base and source-ordered
+- [x] Resolve `super(arguments)` to the direct base and source-ordered
       arguments without selecting an initializer before their static types are
       known.
-- [ ] Use the same applicability, mode-only, specificity, no-match, ambiguity,
+- [x] Use the same applicability, mode-only, specificity, no-match, ambiguity,
       and selected-argument lowering machinery as direct construction.
-- [ ] Record the selected base `InitializerId` in HIR and preserve the existing
+- [x] Record the selected base `InitializerId` in HIR and preserve the existing
       base-first lifecycle, incomplete-`self`, temporary, and statement-
       boundary cleanup rules.
-- [ ] Check every derived ordinary initializer independently; overloads in the
+- [x] Check every derived ordinary initializer independently; overloads in the
       derived class neither inherit nor combine with the base overload set.
-- [ ] Preserve the mandatory first-statement `super(...)`, no implicit
+- [x] Preserve the mandatory first-statement `super(...)`, no implicit
       zero-argument base call, no copy-body `super`, and no initializer
       delegation rules.
-- [ ] Add deterministic candidate diagnostics and exact resolved/HIR/MIR dumps
+- [x] Add deterministic candidate diagnostics and exact resolved/HIR/MIR dumps
       for base selection.
-- [ ] Cover multiple derived overloads selecting different base overloads,
+- [x] Cover multiple derived overloads selecting different base overloads,
       deep inheritance, aliases, slicing/value arguments, ambiguous
       interfaces, source order, and native effects.
 

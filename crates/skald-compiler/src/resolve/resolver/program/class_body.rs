@@ -61,14 +61,7 @@ impl ClassBodyResolver<'_> {
                     declaration
                         .direct_base
                         .map_or(BaseInitializationPolicy::Forbidden, |base| {
-                            BaseInitializationPolicy::Required {
-                                base: base.class,
-                                initializer: self
-                                    .classes
-                                    .get(base.class)
-                                    .and_then(ResolvedClassDeclaration::preselected_initializer)
-                                    .map(|initializer| initializer.id),
-                            }
+                            BaseInitializationPolicy::Required { base: base.class }
                         }),
                     diagnostics,
                 )

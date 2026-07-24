@@ -3,7 +3,7 @@
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId, InitializerId},
+    identity::{BindingId, CallableId, ClassId},
 };
 
 mod call;
@@ -62,10 +62,7 @@ pub(super) fn resolve_callable_body(
 #[derive(Clone, Copy)]
 pub(super) enum BaseInitializationPolicy {
     Forbidden,
-    Required {
-        base: ClassId,
-        initializer: Option<InitializerId>,
-    },
+    Required { base: ClassId },
 }
 
 #[derive(Clone, Copy)]

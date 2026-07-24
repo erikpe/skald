@@ -201,8 +201,9 @@ always ordinary, including `init(ref source: EnclosingClass)`.
 Each class requires one or more `initializer-declaration` members, which form
 an overload set. `Class(arguments)` uses the ordinary argument grammar and
 selects the unique applicable, most-specific initializer from static argument
-types. The copy constructor remains a separate lifecycle slot and is never an
-ordinary initializer candidate.
+types. A derived initializer's leading `super(arguments)` applies the same
+selection to the direct base's overload set. The copy constructor remains a
+separate lifecycle slot and is never an ordinary initializer candidate.
 
 The remaining constructor roadmap extends construction arguments with:
 

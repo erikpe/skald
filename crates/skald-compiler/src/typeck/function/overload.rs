@@ -8,6 +8,7 @@ use crate::{
         ResolvedExpression, ResolvedInitializerDeclaration, ResolvedObjectReceiver,
         ResolvedParameter, ResolvedParameterBindingMode,
     },
+    source::Span,
     typeck::{
         expression::class_provides_view,
         program::{lower_type, AMBIGUOUS_INITIALIZER, NO_MATCHING_INITIALIZER},
@@ -33,6 +34,12 @@ enum ObjectArgumentSource {
     Produced,
 }
 
+#[derive(Clone, Copy)]
+enum InitializerCallSite {
+    DirectConstruction,
+    BaseInitialization,
+}
+
 impl ObjectArgumentSource {
     const fn can_bind_alias(self) -> bool {
         matches!(self, Self::ExistingPlace | Self::CheckedPlace)
@@ -40,16 +47,42 @@ impl ObjectArgumentSource {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(super) fn select_initializer(
+    pub(super) fn select_construction_initializer(
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<crate::identity::InitializerId> {
+        self.select_initializer(
+            construction.class,
+            &construction.arguments,
+            construction.callee_span,
+            InitializerCallSite::DirectConstruction,
+        )
+    }
+
+    pub(super) fn select_base_initializer(
+        &mut self,
+        initialization: &crate::resolve::ResolvedBaseInitialization,
+    ) -> Option<crate::identity::InitializerId> {
+        self.select_initializer(
+            initialization.base,
+            &initialization.arguments,
+            initialization.super_span,
+            InitializerCallSite::BaseInitialization,
+        )
+    }
+
+    fn select_initializer(
+        &mut self,
+        class_id: ClassId,
+        source_arguments: &[ResolvedExpression],
+        callee_span: Span,
+        call_site: InitializerCallSite,
+    ) -> Option<crate::identity::InitializerId> {
         let class = self
             .program
-            .class(construction.class)
-            .expect("resolved construction class must exist");
-        let arguments: Vec<_> = construction
-            .arguments
+            .class(class_id)
+            .expect("resolved initializer owner class must exist");
+        let arguments: Vec<_> = source_arguments
             .iter()
             .map(|argument| self.analyze_argument(argument))
             .collect();
@@ -79,9 +112,21 @@ impl CallableChecker<'_, '_> {
         }
 
         if applicable.is_empty() {
-            self.report_no_matching_initializer(construction, &arguments, &class.initializers);
+            self.report_no_matching_initializer(
+                class_id,
+                callee_span,
+                call_site,
+                &arguments,
+                &class.initializers,
+            );
         } else {
-            self.report_ambiguous_initializer(construction, &arguments, &applicable);
+            self.report_ambiguous_initializer(
+                class_id,
+                callee_span,
+                call_site,
+                &arguments,
+                &applicable,
+            );
         }
         None
     }
@@ -295,23 +340,29 @@ impl CallableChecker<'_, '_> {
 
     fn report_no_matching_initializer(
         &mut self,
-        construction: &crate::resolve::ResolvedConstructExpr,
+        class_id: ClassId,
+        callee_span: Span,
+        call_site: InitializerCallSite,
         arguments: &[ArgumentAnalysis],
         candidates: &[ResolvedInitializerDeclaration],
     ) {
         let class = self
             .program
-            .class(construction.class)
-            .expect("construction class must exist");
+            .class(class_id)
+            .expect("initializer owner class must exist");
+        let owner = match call_site {
+            InitializerCallSite::DirectConstruction => "class",
+            InitializerCallSite::BaseInitialization => "base class",
+        };
         let mut diagnostic = Diagnostic::error(
             NO_MATCHING_INITIALIZER,
             format!(
-                "no initializer of class `{}` matches these arguments",
-                class.name
+                "no initializer of {owner} `{}` matches these arguments",
+                class.name,
             ),
         )
         .with_primary_label(
-            construction.callee_span,
+            callee_span,
             format!("supplied ({})", self.argument_type_list(arguments)),
         );
         for candidate in candidates {
@@ -325,20 +376,26 @@ impl CallableChecker<'_, '_> {
 
     fn report_ambiguous_initializer(
         &mut self,
-        construction: &crate::resolve::ResolvedConstructExpr,
+        class_id: ClassId,
+        callee_span: Span,
+        call_site: InitializerCallSite,
         arguments: &[ArgumentAnalysis],
         candidates: &[&ResolvedInitializerDeclaration],
     ) {
         let class = self
             .program
-            .class(construction.class)
-            .expect("construction class must exist");
+            .class(class_id)
+            .expect("initializer owner class must exist");
+        let call = match call_site {
+            InitializerCallSite::DirectConstruction => "initializer call",
+            InitializerCallSite::BaseInitialization => "base initializer call",
+        };
         let mut diagnostic = Diagnostic::error(
             AMBIGUOUS_INITIALIZER,
-            format!("initializer call for class `{}` is ambiguous", class.name),
+            format!("{call} for class `{}` is ambiguous", class.name),
         )
         .with_primary_label(
-            construction.callee_span,
+            callee_span,
             format!("supplied ({})", self.argument_type_list(arguments)),
         );
         for candidate in candidates {

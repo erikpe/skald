@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId},
+    identity::{CallableId, ClassId, FieldId, FunctionId, LocalId},
     source::Span,
 };
 
@@ -190,7 +190,6 @@ impl ResolvedStatement {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedBaseInitialization {
     pub base: ClassId,
-    pub initializer: InitializerId,
     pub arguments: Vec<ResolvedExpression>,
     pub super_span: Span,
     pub span: Span,

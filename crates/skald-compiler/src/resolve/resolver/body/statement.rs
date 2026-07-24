@@ -86,28 +86,30 @@ impl CallableResolver<'_, '_> {
         first_root_statement: bool,
     ) -> Option<ResolvedBaseInitialization> {
         let target = match self.base_initialization {
-            BaseInitializationPolicy::Required { base, initializer } if first_root_statement => {
-                initializer
-                    .map(|initializer| (base, initializer))
-                    .or_else(|| {
-                        let base_name = &self
-                            .environment
-                            .classes
-                            .get(base)
-                            .expect("resolved direct base must exist")
-                            .name;
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_BASE_INITIALIZATION,
-                                format!("base class `{base_name}` has no ordinary initializer"),
-                            )
-                            .with_primary_label(
-                                statement.super_span,
-                                "this base initialization has no callable target",
+            BaseInitializationPolicy::Required { base } if first_root_statement => {
+                let base_declaration = self
+                    .environment
+                    .classes
+                    .get(base)
+                    .expect("resolved direct base must exist");
+                if base_declaration.initializers.is_empty() {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_BASE_INITIALIZATION,
+                            format!(
+                                "base class `{}` has no ordinary initializer",
+                                base_declaration.name
                             ),
-                        );
-                        None
-                    })
+                        )
+                        .with_primary_label(
+                            statement.super_span,
+                            "this base initialization has no callable target",
+                        ),
+                    );
+                    None
+                } else {
+                    Some(base)
+                }
             }
             BaseInitializationPolicy::Required { .. } | BaseInitializationPolicy::Forbidden => {
                 self.diagnostics.push(
@@ -130,9 +132,8 @@ impl CallableResolver<'_, '_> {
             }
         }
         match (target, valid) {
-            (Some((base, initializer)), true) => Some(ResolvedBaseInitialization {
+            (Some(base), true) => Some(ResolvedBaseInitialization {
                 base,
-                initializer,
                 arguments,
                 super_span: statement.super_span,
                 span: statement.span,

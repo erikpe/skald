@@ -1,0 +1,44 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn observed() -> i64 {
+    ska_rt_println_i64(90);
+    return 7;
+}
+
+class Root {
+    selected: i64;
+
+    init(value: i64) {
+        self.selected = value + 10;
+    }
+
+    init(value: bool) {
+        self.selected = 20;
+    }
+}
+
+class Derived extends Root {
+    marker: i64;
+
+    init() {
+        super(observed());
+        self.marker = 1;
+    }
+
+    init(value: bool) {
+        super(value);
+        self.marker = 2;
+    }
+
+    fn read() -> i64 {
+        return self.selected + self.marker;
+    }
+}
+
+fn main() -> i64 {
+    var integer: Derived = Derived();
+    var boolean: Derived = Derived(true);
+    ska_rt_println_i64(integer.read());
+    ska_rt_println_i64(boolean.read());
+    return 0;
+}

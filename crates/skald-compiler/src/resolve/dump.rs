@@ -383,10 +383,7 @@ impl ResolvedDumper {
         match statement {
             ResolvedStatement::BaseInitialization(statement) => {
                 self.line(
-                    &format!(
-                        "BaseInitialization {} {}",
-                        statement.base, statement.initializer
-                    ),
+                    &format!("BaseInitialization {}", statement.base),
                     statement.span,
                 );
                 self.indented(|dumper| {
