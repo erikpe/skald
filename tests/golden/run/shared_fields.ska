@@ -1,0 +1,64 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value);
+    }
+}
+
+class Inner {
+    child: shared Trace;
+
+    init(child: shared Trace) {
+        self.child = child;
+    }
+
+    destroy {
+        ska_rt_println_i64(30);
+    }
+}
+
+class Root {
+    root: shared Trace;
+
+    init(root: shared Trace) {
+        self.root = root;
+    }
+
+    destroy {
+        ska_rt_println_i64(40);
+    }
+}
+
+class Holder extends Root {
+    inner: Inner;
+    leaf: shared Trace;
+
+    init(root: shared Trace, child: shared Trace, leaf: shared Trace) {
+        super(root);
+        self.inner = Inner(child);
+        self.leaf = leaf;
+    }
+
+    destroy {
+        ska_rt_println_i64(50);
+    }
+
+    mut fn replace(value: shared Trace) -> unit {
+        self.leaf = value;
+    }
+}
+
+fn main() -> i64 {
+    var holder: Holder =
+        Holder(new Trace(1), new Trace(2), new Trace(3));
+    holder.replace(holder.leaf);
+    holder.replace(new Trace(4));
+    return 0;
+}

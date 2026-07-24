@@ -6,24 +6,30 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirSharedAdopt, MirSharedAllocate, MirSharedCopy, MirSharedMove, MirSharedPublish,
-        MirSharedRelease, MirType,
+        MirPlace, MirSharedAdopt, MirSharedAllocate, MirSharedCopy, MirSharedFieldCopy,
+        MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedMove, MirSharedPublish,
+        MirSharedRelease, MirType, StorageId,
     },
 };
 
 use super::{
     super::{
-        layout::SHARED_HEADER_SIZE,
         machine::{Instruction, Label, Register},
         symbol,
     },
     value, InstructionSelector,
 };
 
+mod count;
+
+pub(super) use count::emit_release_loaded_handle;
+use count::emit_retain_loaded_handle;
+
 const STRONG_COUNT_OFFSET: i32 = 0;
 const DYNAMIC_METADATA_OFFSET: i32 = 8;
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
 const RUNTIME_FREE: &str = "ska_rt_free";
+const PRESERVED_HANDLE_STACK_SIZE: u32 = 16;
 
 impl InstructionSelector<'_, '_> {
     pub(super) fn select_shared_allocate(
@@ -95,42 +101,12 @@ impl InstructionSelector<'_, '_> {
     pub(super) fn select_shared_copy(&mut self, copy: &MirSharedCopy) {
         let (failure, complete) = self.ownership_labels("retain");
         self.load_shared_handle(copy.source, Register::Rax);
-        self.output.push(Instruction::Test(Register::Rax));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::Move {
-            source: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
-            destination: Register::Rcx.into(),
-        });
-        self.output.push(Instruction::Test(Register::Rcx));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: u64::MAX,
-            destination: Register::R11,
-        });
-        self.output.push(Instruction::Compare {
-            source: Register::R11,
-            destination: Register::Rcx,
-        });
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: 1,
-            destination: Register::R11,
-        });
-        self.output.push(Instruction::Add {
-            source: Register::R11,
-            destination: Register::Rcx,
-        });
-        self.output.push(Instruction::Move {
-            source: Register::Rcx.into(),
-            destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
-        });
+        emit_retain_loaded_handle(failure.clone(), self.output);
         value::store_rax(
             value::frame_storage(self.frame, copy.destination),
             self.output,
         );
-        self.output.push(Instruction::Jump(complete.clone()));
-        self.output.push(Instruction::Label(failure));
-        self.output.push(Instruction::Trap);
+        emit_trap_block(failure, complete.clone(), self.output);
         self.output.push(Instruction::Label(complete));
     }
 
@@ -149,73 +125,122 @@ impl InstructionSelector<'_, '_> {
         let (failure, complete) = self.ownership_labels("release");
         let last = self.ownership_label("release_last");
         self.load_shared_handle(release.owner, Register::Rax);
-        self.output.push(Instruction::Test(Register::Rax));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::Move {
-            source: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
-            destination: Register::Rcx.into(),
-        });
-        self.output.push(Instruction::Test(Register::Rcx));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: 1,
-            destination: Register::R11,
-        });
-        self.output.push(Instruction::Compare {
-            source: Register::R11,
-            destination: Register::Rcx,
-        });
-        self.output.push(Instruction::JumpIfEqual(last.clone()));
-        self.output.push(Instruction::Subtract {
-            source: Register::R11,
-            destination: Register::Rcx,
-        });
-        self.output.push(Instruction::Move {
-            source: Register::Rcx.into(),
-            destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
-        });
-        self.output.push(Instruction::Jump(complete.clone()));
-
-        self.output.push(Instruction::Label(last));
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: 0,
-            destination: Register::R11,
-        });
-        self.output.push(Instruction::Move {
-            source: Register::R11.into(),
-            destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
-        });
-        self.output.push(Instruction::Move {
-            source: value::memory(Register::Rax, DYNAMIC_METADATA_OFFSET),
-            destination: Register::R11.into(),
-        });
-        self.output.push(Instruction::Test(Register::R11));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::Move {
-            source: value::memory(Register::R11, self.dispatch.finalizer_displacement()),
-            destination: Register::R11.into(),
-        });
-        self.output.push(Instruction::Test(Register::R11));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
-        self.output.push(Instruction::LoadEffectiveAddress {
-            source: value::memory(Register::Rax, SHARED_HEADER_SIZE as i32),
-            destination: Register::Rdi,
-        });
-        self.output.push(Instruction::CallIndirect(Register::R11));
-        self.load_shared_handle(release.owner, Register::Rdi);
-        self.output.push(Instruction::Call(RUNTIME_FREE.to_owned()));
-        self.output.push(Instruction::Jump(complete.clone()));
-
-        self.output.push(Instruction::Label(failure));
-        self.output.push(Instruction::Trap);
+        emit_release_loaded_handle(
+            failure,
+            last,
+            complete.clone(),
+            self.dispatch.finalizer_displacement(),
+            self.output,
+        );
         self.output.push(Instruction::Label(complete));
     }
 
-    fn load_shared_handle(&mut self, storage: crate::mir::StorageId, destination: Register) {
+    pub(super) fn select_shared_field_copy(
+        &mut self,
+        copy: &MirSharedFieldCopy,
+    ) -> Result<(), BackendError> {
+        self.load_shared_place(&copy.source)?;
+        let (failure, complete) = self.ownership_labels("field_retain");
+        emit_retain_loaded_handle(failure.clone(), self.output);
+        value::store_rax(
+            value::frame_storage(self.frame, copy.destination),
+            self.output,
+        );
+        emit_trap_block(failure, complete.clone(), self.output);
+        self.output.push(Instruction::Label(complete));
+        Ok(())
+    }
+
+    pub(super) fn select_shared_field_initialize(
+        &mut self,
+        initialize: &MirSharedFieldInitialize,
+    ) -> Result<(), BackendError> {
+        self.load_shared_handle(initialize.source, Register::Rax);
+        self.store_shared_place(&initialize.destination)
+    }
+
+    pub(super) fn select_shared_field_replace(
+        &mut self,
+        replace: &MirSharedFieldReplace,
+    ) -> Result<(), BackendError> {
+        self.release_shared_place(&replace.destination, "field_replace")?;
+        self.load_shared_handle(replace.source, Register::Rax);
+        self.store_shared_place(&replace.destination)
+    }
+
+    pub(super) fn select_shared_field_construction(
+        &mut self,
+        destination: &MirPlace,
+        source: &MirPlace,
+    ) -> Result<(), BackendError> {
+        self.load_shared_place(source)?;
+        let (failure, complete) = self.ownership_labels("field_copy_construct");
+        emit_retain_loaded_handle(failure.clone(), self.output);
+        self.store_shared_place(destination)?;
+        emit_trap_block(failure, complete.clone(), self.output);
+        self.output.push(Instruction::Label(complete));
+        Ok(())
+    }
+
+    pub(super) fn select_shared_field_assignment(
+        &mut self,
+        destination: &MirPlace,
+        source: &MirPlace,
+    ) -> Result<(), BackendError> {
+        self.load_shared_place(source)?;
+        let (failure, retained) = self.ownership_labels("field_copy_assign_retain");
+        emit_retain_loaded_handle(failure.clone(), self.output);
+        self.output
+            .push(Instruction::ReserveStack(PRESERVED_HANDLE_STACK_SIZE));
+        value::store_rax(value::memory(Register::Rsp, 0), self.output);
+        emit_trap_block(failure, retained.clone(), self.output);
+        self.output.push(Instruction::Label(retained));
+
+        self.release_shared_place(destination, "field_copy_assign_release")?;
+
+        value::load_rax(value::memory(Register::Rsp, 0), self.output);
+        self.output
+            .push(Instruction::ReleaseStack(PRESERVED_HANDLE_STACK_SIZE));
+        self.store_shared_place(destination)
+    }
+
+    pub(super) fn release_shared_place(
+        &mut self,
+        place: &MirPlace,
+        purpose: &str,
+    ) -> Result<(), BackendError> {
+        self.load_shared_place(place)?;
+        let (failure, complete) = self.ownership_labels(purpose);
+        let last = self.ownership_label(&format!("{purpose}_last"));
+        emit_release_loaded_handle(
+            failure,
+            last,
+            complete.clone(),
+            self.dispatch.finalizer_displacement(),
+            self.output,
+        );
+        self.output.push(Instruction::Label(complete));
+        Ok(())
+    }
+
+    fn load_shared_handle(&mut self, storage: StorageId, destination: Register) {
         self.output.push(Instruction::Move {
             source: value::frame_storage(self.frame, storage),
             destination: destination.into(),
         });
+    }
+
+    fn load_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        let (layout, source) = self.frame_place(place)?;
+        debug_assert!(matches!(layout.ty(), MirType::Shared(_)));
+        value::load_rax(source, self.output);
+        Ok(())
+    }
+
+    fn store_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        self.materialize_place_address(place, Register::Rdx)?;
+        value::store_rax(value::memory(Register::Rdx, 0), self.output);
+        Ok(())
     }
 
     fn ownership_labels(&self, operation: &str) -> (Label, Label) {
@@ -237,4 +262,10 @@ impl InstructionSelector<'_, '_> {
     fn ownership_error(&self, message: impl Into<String>) -> BackendError {
         BackendError::new(Target::X86_64SysV, Some(self.function.callable()), message)
     }
+}
+
+fn emit_trap_block(failure: Label, complete: Label, output: &mut Vec<Instruction>) {
+    output.push(Instruction::Jump(complete));
+    output.push(Instruction::Label(failure));
+    output.push(Instruction::Trap);
 }

@@ -59,10 +59,11 @@ impl InstructionSelector<'_, '_> {
                         destination.clone().project_field(field),
                     )?;
                 }
-                MirDestructionStep::SharedField(_) => {
-                    unreachable!(
-                        "shared field destruction is rejected before instruction selection"
-                    )
+                MirDestructionStep::SharedField(field) => {
+                    self.release_shared_place(
+                        &destination.clone().project_field(field),
+                        "cleanup_shared_field",
+                    )?;
                 }
             }
         }

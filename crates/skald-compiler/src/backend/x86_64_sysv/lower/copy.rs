@@ -109,10 +109,11 @@ impl InstructionSelector<'_, '_> {
                                     .ty,
                             )?;
                         }
-                        MirSynthesizedFieldCopy::Shared { .. } => {
-                            unreachable!(
-                                "shared field copying is rejected before instruction selection"
-                            )
+                        MirSynthesizedFieldCopy::Shared { field } => {
+                            self.select_shared_field_construction(
+                                &destination.clone().project_field(field),
+                                &source.clone().project_field(field),
+                            )?;
                         }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_construction_operation(
@@ -190,10 +191,11 @@ impl InstructionSelector<'_, '_> {
                                     .ty,
                             )?;
                         }
-                        MirSynthesizedFieldCopy::Shared { .. } => {
-                            unreachable!(
-                                "shared field assignment is rejected before instruction selection"
-                            )
+                        MirSynthesizedFieldCopy::Shared { field } => {
+                            self.select_shared_field_assignment(
+                                &destination.clone().project_field(field),
+                                &source.clone().project_field(field),
+                            )?;
                         }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_assignment_operation(

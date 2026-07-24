@@ -221,10 +221,10 @@ fn lowers_shared_fields_as_owner_edges_in_lifecycle_order() {
     assert!(dump.contains("Shared c2:field0"));
     assert!(dump.contains("SharedField c2:field2"));
 
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(error
-        .message()
-        .contains("shared fields are not executable yet"));
+    let assembly =
+        emit_assembly(Target::X86_64SysV, &program).expect("verified shared fields must execute");
+    assert!(assembly.contains("ownership_field_replace"));
+    assert!(assembly.contains("field_2_2_release"));
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO7 complete, SO8 is next.
+Status: in progress; SO8 complete, SO9 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -38,10 +38,10 @@ and the complete cast direction matrix is
   initialization, secure replacement, user and synthesized copy lifecycle,
   inheritance, and reverse destruction through explicit projected MIR
   operations. Polymorphic transfers, views, casts, and anchors remain
-  structurally gated. The x86-64 backend executes the field-free profile with
-  one-word handles, checked allocation and retain, secure-before-release
-  assignment, dynamic complete finalization, and last-owner deallocation;
-  shared-field layout remains a structured target rejection.
+  structurally gated. The x86-64 backend executes one-word local and field
+  handles, checked allocation and retain, secure-before-release assignment,
+  recursively generated dynamic complete finalization, and last-owner
+  deallocation.
 - Internal functions, initializers, methods, and interface requirements carry
   same-target shared owners through explicit caller argument consumption,
   callee parameter cleanup, and shared return handoff. The x86-64 ABI uses one
@@ -99,7 +99,7 @@ and the complete cast direction matrix is
 - [x] SO5 — Complete local, assignment, and temporary owner semantics
 - [x] SO6 — Carry shared owners across calls and results
 - [x] SO7 — Integrate shared fields with class lifecycle
-- [ ] SO8 — Execute shared-field layout and lifecycle
+- [x] SO8 — Execute shared-field layout and lifecycle
 - [ ] SO9 — Add polymorphic shared views and dispatch
 - [ ] SO10 — Execute shared-owner casts
 - [ ] SO11 — Anchor shared-backed calls
@@ -398,20 +398,20 @@ owner balance verified before target layout.
 **Purpose:** Realize verified shared owning edges on x86-64 independently of
 the later polymorphic and borrow surfaces.
 
-- [ ] Lay out every shared field as one eight-byte, eight-aligned header handle
+- [x] Lay out every shared field as one eight-byte, eight-aligned header handle
       while retaining existing inline base-prefix and field layout rules.
-- [ ] Lower field initialization, owner copying, replacement, and reverse-order
+- [x] Lower field initialization, owner copying, replacement, and reverse-order
       release mechanically from verified MIR.
-- [ ] Generate complete finalizers that recursively destroy inline fields and
+- [x] Generate complete finalizers that recursively destroy inline fields and
       release shared fields in the already selected derived-to-base order.
-- [ ] Preserve original header identity and dynamic metadata through nested
+- [x] Preserve original header identity and dynamic metadata through nested
       shared-field loads and stores without embedding ownership policy in place
       addressing.
-- [ ] Reject invalid shared field layouts, handle widths, projections, or
+- [x] Reject invalid shared field layouts, handle widths, projections, or
       incomplete finalizer metadata before instruction selection.
-- [ ] Add layout, assembly, native cascade-destruction, inheritance,
+- [x] Add layout, assembly, native cascade-destruction, inheritance,
       self-assignment-through-fields, and mixed inline/shared graph tests.
-- [ ] Update backend documentation for shared fields and finalizer recursion.
+- [x] Update backend documentation for shared fields and finalizer recursion.
 
 **Tests:** Focused layout, place, cleanup, finalizer, legality, assembler,
 native graph, and golden tests, followed by `make check`.

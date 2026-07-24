@@ -39,7 +39,7 @@ pub(super) fn lower(
             lower_definition(program, data_layout, dispatch, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
-    functions.extend(finalize::lower_all(program, data_layout)?);
+    functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
     let entry = program
         .declarations
         .get(program.entry_function)
@@ -189,10 +189,12 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
             MirInstruction::SharedRelease(release) => self.select_shared_release(release),
-            MirInstruction::SharedFieldCopy(_)
-            | MirInstruction::SharedFieldInitialize(_)
-            | MirInstruction::SharedFieldReplace(_) => {
-                unreachable!("shared field operations are rejected before instruction selection")
+            MirInstruction::SharedFieldCopy(copy) => self.select_shared_field_copy(copy)?,
+            MirInstruction::SharedFieldInitialize(initialize) => {
+                self.select_shared_field_initialize(initialize)?
+            }
+            MirInstruction::SharedFieldReplace(replace) => {
+                self.select_shared_field_replace(replace)?
             }
         }
         Ok(())

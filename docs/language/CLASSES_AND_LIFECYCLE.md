@@ -584,13 +584,12 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not yet include target layout and
-execution for shared fields, nullable object references, static members,
-access modifiers, `final`, abstract members, method overloads, reflection, or
-user-defined conversions. Exact shared allocations, owners, calls, and
-results already execute; shared fields are integrated through the
-target-independent class lifecycle and currently stop at structured backend
-rejection. Ordinary direct and base-initializer overloads,
+The implemented executable class model does not yet include nullable object
+references, static members, access modifiers, `final`, abstract members,
+method overloads, reflection, or user-defined conversions. Exact shared
+allocations, owners, calls, results, and owning fields execute; shared fields
+follow the ordinary target layout, copy lifecycle, and derived-to-base
+destruction plan. Ordinary direct and base-initializer overloads,
 the distinct `copy` declaration, and target-directed `T(copy source)`
 construction execute.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,

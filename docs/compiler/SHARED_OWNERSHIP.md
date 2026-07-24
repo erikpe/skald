@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; target-independent shared fields implemented**.
+Status: **frozen implementation design; shared fields execute on x86-64**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -20,11 +20,11 @@ verified operations. Shared call arguments, parameters, return owners, and
 caller results use explicit ownership handoffs across every internal callable
 kind. Shared fields use projected copy, initialization, secure replacement,
 synthesized copy/assignment, and destruction-plan release operations in
-verified MIR. Their x86-64 target layout remains behind structured backend
-rejection. Other broader shared uses remain behind a structured lowering gate,
-and the x86-64 backend executes the field-free profile with the frozen handle,
-header, checked retain, one-word internal ABI, count-one publication, dynamic complete
-finalization, and last-owner deallocation. [Runtime ABI version
+verified MIR and execute as owning graph edges on x86-64. Other broader shared
+uses remain behind a structured lowering gate. The x86-64 backend executes the
+frozen handle, header, checked retain, one-word internal ABI, count-one
+publication, recursively generated complete finalization, and last-owner
+deallocation. [Runtime ABI version
 5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
 deallocation.
 Explicit copy allocation and shared-owner casts remain typed exclusions.
@@ -229,12 +229,11 @@ complete payload address by adding 16 and derives dynamic identity and dispatch
 from the metadata field. Base and field projections are then applied to the
 payload using existing checked target layout.
 
-A shared field will be one eight-byte, eight-aligned handle when target
-execution lands; the current backend rejects such fields before instruction
-selection. Shared
-class/interface/`Obj` parameters and results use one integer-class component;
-the returned handle is in `rax`. These are compiler-private internal calling
-conventions, not external C ABI.
+A shared field is one eight-byte, eight-aligned canonical header handle. It
+follows the ordinary base-prefix and field-padding rules and therefore does not
+change inline projection semantics. Shared class/interface/`Obj` parameters
+and results use one integer-class component; the returned handle is in `rax`.
+These are compiler-private internal calling conventions, not external C ABI.
 
 Allocation size is checked as header size plus complete payload size. Overflow,
 a size not representable by the runtime boundary, or an addressability
@@ -264,9 +263,10 @@ ordinary complete-object destruction sequence for its exact class:
 4. return to the generated last-release path.
 
 The finalizer never frees the header and does not select itself from the
-handle's static target. The last-release path calls it once through the dynamic
-descriptor and then passes the original header pointer to the C deallocator
-once.
+handle's static target. Each nested shared-field release uses that field's
+canonical header and dynamic descriptor. The last-release path preserves the
+original header in an aligned private spill across the recursive finalizer
+call, then passes that exact pointer to the C deallocator once.
 
 ## Generated strong-count operations
 

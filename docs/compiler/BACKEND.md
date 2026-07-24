@@ -4,8 +4,8 @@ Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
 boundary. Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a
-separate contract. The shared-handle/header layout, generated reference-counting
-realization, and pending shared-field target layout are owned by the
+separate contract. The shared-handle/header layout, generated
+reference-counting realization, and executable shared-field layout are owned by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
 the current target profile below.
 
@@ -77,6 +77,7 @@ The x86-64 target layout is:
 | `f64` | 8 | 8 |
 | `u8` | 1 | 1 |
 | `bool` | 1 | 1 |
+| `shared T` | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
 
@@ -94,6 +95,14 @@ identities; target layout turns both into checked byte offsets. Recursive
 inline layouts, undeclared dependencies, inconsistent base metadata,
 arithmetic overflow, and layouts beyond the target's signed 32-bit addressing
 limit are structured errors.
+
+A shared field occupies one aligned machine word containing the canonical
+allocation-header pointer. Field initialization and moves store that word,
+copies retain before storing it, replacement secures the incoming owner before
+releasing the old word, and cleanup releases fields in the verified
+derived-to-base destruction order. Generated complete finalizers recurse
+through inline fields and dynamically finalize shared pointees without adding
+ownership policy to ordinary place-address computation.
 
 These sizes and offsets are implementation contracts for the current target,
 not source-language promises or a portable external object layout. External

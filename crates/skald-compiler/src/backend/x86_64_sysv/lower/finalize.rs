@@ -11,10 +11,12 @@ use crate::{
 };
 
 use super::super::{
+    dispatch::DispatchMetadata,
     layout::DataLayout,
-    machine::{AssemblyFunction, Instruction, Operand, Register},
+    machine::{AssemblyFunction, Instruction, Label, Operand, Register},
     symbol,
 };
+use super::ownership::emit_release_loaded_handle;
 
 const COMPLETE_HOME: i32 = -8;
 const FINALIZER_FRAME_SIZE: u32 = 16;
@@ -22,17 +24,19 @@ const FINALIZER_FRAME_SIZE: u32 = 16;
 pub(super) fn lower_all(
     program: &MirProgram,
     data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
 ) -> Result<Vec<AssemblyFunction>, BackendError> {
     program
         .classes
         .iter()
-        .map(|class| lower_class(program, data_layout, class.id))
+        .map(|class| lower_class(program, data_layout, dispatch, class.id))
         .collect()
 }
 
 fn lower_class(
     program: &MirProgram,
     data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
     class: ClassId,
 ) -> Result<AssemblyFunction, BackendError> {
     let mut instructions = vec![
@@ -47,7 +51,15 @@ fn lower_class(
             destination: memory(Register::Rbp, COMPLETE_HOME),
         },
     ];
-    select_plan(program, data_layout, class, 0, &mut instructions)?;
+    select_plan(
+        program,
+        data_layout,
+        dispatch,
+        class,
+        class,
+        0,
+        &mut instructions,
+    )?;
     instructions.extend([Instruction::Leave, Instruction::Return]);
     Ok(AssemblyFunction {
         symbol: symbol::complete_finalizer(class),
@@ -59,6 +71,8 @@ fn lower_class(
 fn select_plan(
     program: &MirProgram,
     data_layout: &DataLayout,
+    dispatch: &DispatchMetadata,
+    complete_class: ClassId,
     class: ClassId,
     complete_offset: i32,
     output: &mut Vec<Instruction>,
@@ -99,10 +113,49 @@ fn select_plan(
                     .ok_or_else(|| {
                         finalizer_error("finalizer field address exceeds target limits")
                     })?;
-                select_plan(program, data_layout, field_class, field_offset, output)?;
+                select_plan(
+                    program,
+                    data_layout,
+                    dispatch,
+                    complete_class,
+                    field_class,
+                    field_offset,
+                    output,
+                )?;
             }
-            MirDestructionStep::SharedField(_) => {
-                unreachable!("shared fields are rejected before finalizer selection")
+            MirDestructionStep::SharedField(field) => {
+                let field_declaration = program
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
+                if !matches!(field_declaration.ty, MirType::Shared(_)) {
+                    return Err(finalizer_error(format!(
+                        "finalizer for {class} contains non-shared field {field}"
+                    )));
+                }
+                let field_offset = data_layout
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("field {field} has no target layout")))?
+                    .offset;
+                let field_offset = i32::try_from(field_offset)
+                    .ok()
+                    .and_then(|offset| complete_offset.checked_add(offset))
+                    .ok_or_else(|| {
+                        finalizer_error("finalizer shared-field address exceeds target limits")
+                    })?;
+                load_complete_address(field_offset, Register::R11, output);
+                output.push(Instruction::Move {
+                    source: memory(Register::R11, 0),
+                    destination: Register::Rax.into(),
+                });
+                let labels = release_labels(complete_class, field, output.len());
+                emit_release_loaded_handle(
+                    labels.failure,
+                    labels.last,
+                    labels.complete.clone(),
+                    dispatch.finalizer_displacement(),
+                    output,
+                );
+                output.push(Instruction::Label(labels.complete));
             }
             MirDestructionStep::Base(base) => {
                 let base_offset = data_layout
@@ -119,11 +172,43 @@ fn select_plan(
                     .ok_or_else(|| {
                         finalizer_error("finalizer base address exceeds target limits")
                     })?;
-                select_plan(program, data_layout, base, base_offset, output)?;
+                select_plan(
+                    program,
+                    data_layout,
+                    dispatch,
+                    complete_class,
+                    base,
+                    base_offset,
+                    output,
+                )?;
             }
         }
     }
     Ok(())
+}
+
+struct ReleaseLabels {
+    failure: Label,
+    last: Label,
+    complete: Label,
+}
+
+fn release_labels(
+    complete_class: ClassId,
+    field: crate::identity::FieldId,
+    index: usize,
+) -> ReleaseLabels {
+    let stem = format!(
+        ".Lska_class_{}_field_{}_{}_release",
+        complete_class.index(),
+        field.class().index(),
+        field.index(),
+    );
+    ReleaseLabels {
+        failure: Label::new(format!("{stem}_invalid_{index}")),
+        last: Label::new(format!("{stem}_last_{index}")),
+        complete: Label::new(format!("{stem}_complete_{index}")),
+    }
 }
 
 fn load_complete_address(offset: i32, destination: Register, output: &mut Vec<Instruction>) {

@@ -1,5 +1,125 @@
 use super::*;
 
+#[test]
+fn shared_fields_are_one_word_aligned_edges_after_the_inline_base_prefix() {
+    let program = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "class Root { marker: u8; init() { self.marker = 1u8; } }\n",
+        "class Holder extends Root {\n",
+        "  first: shared Item;\n",
+        "  flag: bool;\n",
+        "  second: shared Item;\n",
+        "  init(first: shared Item, second: shared Item) {\n",
+        "    super(); self.first = first; self.flag = true; self.second = second;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let layout = super::super::layout::DataLayout::compute(&program).unwrap();
+    let root = layout.class(ClassId::new(1)).unwrap();
+    let holder = layout.class(ClassId::new(2)).unwrap();
+
+    assert_eq!(root.ty().size(), 1);
+    assert_eq!(holder.base().unwrap().offset, 0);
+    assert_eq!(
+        holder
+            .field(FieldId::new(ClassId::new(2), 0))
+            .unwrap()
+            .offset,
+        8
+    );
+    assert_eq!(
+        holder
+            .field(FieldId::new(ClassId::new(2), 1))
+            .unwrap()
+            .offset,
+        16
+    );
+    assert_eq!(
+        holder
+            .field(FieldId::new(ClassId::new(2), 2))
+            .unwrap()
+            .offset,
+        24
+    );
+    assert_eq!(holder.ty().size(), 32);
+    assert_eq!(holder.ty().alignment(), 8);
+}
+
+#[test]
+fn synthesized_shared_field_copy_and_self_assignment_lower_to_balanced_owners() {
+    let output = assembly(concat!(
+        "class Item { init() {} }\n",
+        "class Holder {\n",
+        "  owner: shared Item;\n",
+        "  init(owner: shared Item) { self.owner = owner; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var first: Holder = Holder(new Item());\n",
+        "  var second: Holder = first;\n",
+        "  second = second;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.contains("field_copy_construct"));
+    assert!(output.contains("field_copy_assign_retain"));
+    assert!(output.contains("field_copy_assign_release"));
+    assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn mixed_inline_shared_inheritance_graph_cascades_in_language_order() {
+    let mut output = assembly(concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn verify() -> unit;\n",
+        "class Trace {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  destroy { observe(self.value); }\n",
+        "}\n",
+        "class Inner {\n",
+        "  child: shared Trace;\n",
+        "  init(child: shared Trace) { self.child = child; }\n",
+        "  destroy { observe(30); }\n",
+        "}\n",
+        "class Root {\n",
+        "  root: shared Trace;\n",
+        "  init(root: shared Trace) { self.root = root; }\n",
+        "  destroy { observe(40); }\n",
+        "}\n",
+        "class Holder extends Root {\n",
+        "  inner: Inner;\n",
+        "  leaf: shared Trace;\n",
+        "  init(root: shared Trace, child: shared Trace, leaf: shared Trace) {\n",
+        "    super(root); self.inner = Inner(child); self.leaf = leaf;\n",
+        "  }\n",
+        "  destroy { observe(50); }\n",
+        "  mut fn replace(value: shared Trace) -> unit { self.leaf = value; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  {\n",
+        "    var holder: Holder = Holder(new Trace(1), new Trace(2), new Trace(3));\n",
+        "    holder.replace(holder.leaf);\n",
+        "    holder.replace(new Trace(4));\n",
+        "  }\n",
+        "  verify();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    output.push_str(native_graph_stubs());
+
+    let result = run_native_assembly_output(&output);
+    assert!(
+        result.status.success(),
+        "shared-field graph failed with {:?}: {}",
+        result.status,
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
+
 const DERIVED_SHARED_SOURCE: &str = concat!(
     "extern fn observe(value: i64) -> unit;\n",
     "class Root {\n",
@@ -176,6 +296,58 @@ fn native_ownership_stubs() -> &'static str {
         ".Lobserve_count:\n",
         "    .quad 0\n",
         ".Lfree_count:\n",
+        "    .quad 0\n",
+    )
+}
+
+fn native_graph_stubs() -> &'static str {
+    concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    inc qword ptr [rip + .Lgraph_free_count]\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    mov rax, qword ptr [rip + .Lgraph_observe_count]\n",
+        "    cmp rax, 7\n",
+        "    jae .Lgraph_failure\n",
+        "    lea rcx, [rip + .Lgraph_expected]\n",
+        "    cmp rdi, qword ptr [rcx + rax * 8]\n",
+        "    jne .Lgraph_failure\n",
+        "    inc rax\n",
+        "    mov qword ptr [rip + .Lgraph_observe_count], rax\n",
+        ".Lgraph_observe_done:\n",
+        "    ret\n",
+        ".globl verify\n",
+        ".type verify, @function\n",
+        "verify:\n",
+        "    cmp qword ptr [rip + .Lgraph_observe_count], 7\n",
+        "    jne .Lgraph_failure\n",
+        "    cmp qword ptr [rip + .Lgraph_free_count], 4\n",
+        "    jne .Lgraph_failure\n",
+        "    ret\n",
+        ".size verify, .-verify\n",
+        ".Lgraph_failure:\n",
+        "    mov rax, 60\n",
+        "    mov rdi, 98\n",
+        "    syscall\n",
+        ".size observe, .-observe\n",
+        ".section .data\n",
+        ".p2align 3\n",
+        ".Lgraph_expected:\n",
+        "    .quad 3, 50, 4, 30, 2, 40, 1\n",
+        ".Lgraph_observe_count:\n",
+        "    .quad 0\n",
+        ".Lgraph_free_count:\n",
         "    .quad 0\n",
     )
 }

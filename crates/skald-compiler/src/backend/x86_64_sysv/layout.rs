@@ -201,7 +201,7 @@ impl<'mir> LayoutBuilder<'mir> {
         for ty in fields {
             let ty = match ty {
                 MirType::Class(dependency) => self.compute_class(dependency)?,
-                primitive => self.primitive(primitive)?,
+                field => self.field(field)?,
             };
             laid_out_fields.push(ty);
         }
@@ -216,13 +216,15 @@ impl<'mir> LayoutBuilder<'mir> {
         Ok(ty)
     }
 
-    fn primitive(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
-        primitive_layout(ty).ok_or_else(|| match ty {
-            MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
-            MirType::Unit => layout_error("field type `unit` has no target layout"),
-            MirType::Shared(_) => layout_error("shared fields are not executable yet"),
-            _ => unreachable!("every payload primitive has a target layout"),
-        })
+    fn field(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
+        match ty {
+            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            _ => primitive_layout(ty).ok_or_else(|| match ty {
+                MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
+                MirType::Unit => layout_error("field type `unit` has no target layout"),
+                _ => unreachable!("every payload primitive has a target layout"),
+            }),
+        }
     }
 }
 
