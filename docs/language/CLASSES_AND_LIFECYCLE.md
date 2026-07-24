@@ -584,10 +584,13 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not yet include shared or
-heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, method overloads, reflection, or
-user-defined conversions. Ordinary direct and base-initializer overloads,
+The implemented executable class model does not yet include target layout and
+execution for shared fields, nullable object references, static members,
+access modifiers, `final`, abstract members, method overloads, reflection, or
+user-defined conversions. Exact shared allocations, owners, calls, and
+results already execute; shared fields are integrated through the
+target-independent class lifecycle and currently stop at structured backend
+rejection. Ordinary direct and base-initializer overloads,
 the distinct `copy` declaration, and target-directed `T(copy source)`
 construction execute.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
@@ -597,15 +600,15 @@ maturity is recorded in the
 [status matrix](STATUS.md), and the
 [polymorphism profile](POLYMORPHISM.md) owns their language contract.
 
-Shared fields, heap construction, shared copying and assignment, and dynamic
-last-owner destruction now have a frozen but unimplemented extension in
-[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). That extension
-preserves the lifecycle order above. Its explicit
+Shared-field semantics and lifecycle are specified by
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Shared edges are
+excluded from finite inline containment, must be initialized exactly once,
+participate in user and synthesized copy operations, and appear as distinct
+reverse-order release steps in target-independent destruction plans. Their
+target layout and execution remain pending. The explicit
 `new T(copy source)` copy-allocation form invokes this document's selected
 exact-`T` copy constructor once from a target-directed checked `T` place and
-is not eligible for copy elision. Shared fields copy in declaration order,
-secure incoming owners before releasing old owners during assignment, and
-release in reverse declaration order during complete-object destruction.
+is not eligible for copy elision.
 Preserving an arbitrary source dynamic class through cloning remains deferred.
 
 This document specifies source-visible class and initialization behavior. It

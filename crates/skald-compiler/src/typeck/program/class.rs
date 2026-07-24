@@ -4,9 +4,10 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
         HirAccess, HirClassDeclaration, HirClassDefinition, HirCopyAssignmentDeclaration,
-        HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructorDeclaration, HirDirectBase,
-        HirFieldDeclaration, HirInitializerDeclaration, HirInterfaceConformance,
-        HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch, Type,
+        HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructionStep,
+        HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration, HirInitializerDeclaration,
+        HirInterfaceConformance, HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch,
+        Type,
     },
     identity::CallableId,
     resolve::{
@@ -133,13 +134,17 @@ fn lower_class_declaration(
         class: base.class,
         span: base.span,
     });
-    let class_field_ids = fields
+    let owning_fields = fields
         .iter()
-        .filter_map(|field| matches!(field.ty, Type::Class(_)).then_some(field.id))
+        .filter_map(|field| match field.ty {
+            Type::Class(_) => Some(HirDestructionStep::Field(field.id)),
+            Type::Shared(_) => Some(HirDestructionStep::SharedField(field.id)),
+            _ => None,
+        })
         .collect::<Vec<_>>();
     let destruction = HirDestructionPlan::new(
         destructor.as_ref().map(|destructor| destructor.id),
-        &class_field_ids,
+        &owning_fields,
         direct_base.as_ref().map(|base| base.class),
     );
     let methods = class

@@ -32,8 +32,11 @@ pub enum MirInstruction {
     SharedPublish(super::shared::MirSharedPublish),
     SharedAdopt(super::shared::MirSharedAdopt),
     SharedCopy(super::shared::MirSharedCopy),
+    SharedFieldCopy(super::shared::MirSharedFieldCopy),
     SharedMove(super::shared::MirSharedMove),
     SharedRelease(super::shared::MirSharedRelease),
+    SharedFieldInitialize(super::shared::MirSharedFieldInitialize),
+    SharedFieldReplace(super::shared::MirSharedFieldReplace),
 }
 
 impl MirInstruction {
@@ -54,8 +57,11 @@ impl MirInstruction {
             Self::SharedPublish(instruction) => instruction.span,
             Self::SharedAdopt(instruction) => instruction.span,
             Self::SharedCopy(instruction) => instruction.span,
+            Self::SharedFieldCopy(instruction) => instruction.span,
             Self::SharedMove(instruction) => instruction.span,
             Self::SharedRelease(instruction) => instruction.span,
+            Self::SharedFieldInitialize(instruction) => instruction.span,
+            Self::SharedFieldReplace(instruction) => instruction.span,
         }
     }
 }

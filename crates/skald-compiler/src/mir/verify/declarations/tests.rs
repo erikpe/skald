@@ -69,7 +69,7 @@ fn rejects_noncanonical_destruction_metadata() {
 
     assert!(messages(&program)
         .iter()
-        .any(|message| message.contains("user body first and class fields in reverse")));
+        .any(|message| message.contains("user body first and owning fields in reverse")));
 }
 
 #[test]

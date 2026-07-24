@@ -182,8 +182,7 @@ fn compute_class<I: Copy>(
                         });
                     }
                     ResolvedTypeKind::Shared(_) => {
-                        failure = Some(vec![CopyPathElement::Field(field.id)]);
-                        break;
+                        fields.push(HirSynthesizedFieldCopy::Shared { field: field.id });
                     }
                     _ => fields.push(HirSynthesizedFieldCopy::Primitive { field: field.id }),
                 }

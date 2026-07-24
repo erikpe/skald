@@ -10,7 +10,7 @@ use crate::{identity::CallableId, lexical_policy::is_source_identifier};
 
 use super::{
     super::model::{
-        MirClassDeclaration, MirCopyCapability, MirDestructionPlan, MirFunctionLinkage,
+        MirClassDeclaration, MirCopyCapability, MirDestructionStep, MirFunctionLinkage,
         MirParameter, MirParameterMode, MirReceiverAccess, MirSynthesizedCopy,
         MirSynthesizedFieldCopy, MirType,
     },
@@ -302,19 +302,27 @@ impl<'mir> Verifier<'mir> {
                     ));
                 }
             }
-            let class_fields: Vec<_> = class
-                .fields
-                .iter()
-                .filter_map(|field| matches!(field.ty, MirType::Class(_)).then_some(field.id))
-                .collect();
-            let expected_plan = MirDestructionPlan::with_base(
-                class.destruction.destructor.clone(),
-                &class_fields,
-                class.direct_base.map(|base| base.class),
+            let mut expected_steps = Vec::new();
+            if let Some(destructor) = &class.destruction.destructor {
+                expected_steps.push(MirDestructionStep::UserBody(destructor.id));
+            }
+            expected_steps.extend(
+                class
+                    .fields
+                    .iter()
+                    .rev()
+                    .filter_map(|field| match field.ty {
+                        MirType::Class(_) => Some(MirDestructionStep::Field(field.id)),
+                        MirType::Shared(_) => Some(MirDestructionStep::SharedField(field.id)),
+                        _ => None,
+                    }),
             );
-            if class.destruction.steps != expected_plan.steps {
+            if let Some(base) = class.direct_base {
+                expected_steps.push(MirDestructionStep::Base(base.class));
+            }
+            if class.destruction.steps != expected_steps {
                 self.program_error(format!(
-                    "class {} destruction plan must run its user body first and class fields in reverse declaration order, then its direct base",
+                    "class {} destruction plan must run its user body first and owning fields in reverse declaration order, then its direct base",
                     class.id
                 ));
             }
@@ -504,6 +512,9 @@ impl<'mir> Verifier<'mir> {
                 (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
                     *id == field.id
                 }
+                (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
+                    *id == field.id
+                }
                 _ => false,
             };
             if !valid {
@@ -545,6 +556,9 @@ impl<'mir> Verifier<'mir> {
                             == Some(*operation)
                 }
                 (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
+                    *id == field.id
+                }
+                (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
                 _ => false,

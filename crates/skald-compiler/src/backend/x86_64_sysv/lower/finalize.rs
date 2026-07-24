@@ -101,6 +101,9 @@ fn select_plan(
                     })?;
                 select_plan(program, data_layout, field_class, field_offset, output)?;
             }
+            MirDestructionStep::SharedField(_) => {
+                unreachable!("shared fields are rejected before finalizer selection")
+            }
             MirDestructionStep::Base(base) => {
                 let base_offset = data_layout
                     .class(class)

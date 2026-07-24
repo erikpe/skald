@@ -189,6 +189,11 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
             MirInstruction::SharedRelease(release) => self.select_shared_release(release),
+            MirInstruction::SharedFieldCopy(_)
+            | MirInstruction::SharedFieldInitialize(_)
+            | MirInstruction::SharedFieldReplace(_) => {
+                unreachable!("shared field operations are rejected before instruction selection")
+            }
         }
         Ok(())
     }

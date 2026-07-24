@@ -252,24 +252,18 @@ pub struct HirDestructionPlan {
 impl HirDestructionPlan {
     pub(crate) fn new(
         destructor: Option<DestructorId>,
-        class_fields: &[FieldId],
+        owning_fields: &[HirDestructionStep],
         direct_base: Option<ClassId>,
     ) -> Self {
         let mut steps = Vec::with_capacity(
             usize::from(destructor.is_some())
-                + class_fields.len()
+                + owning_fields.len()
                 + usize::from(direct_base.is_some()),
         );
         if let Some(destructor) = destructor {
             steps.push(HirDestructionStep::UserBody(destructor));
         }
-        steps.extend(
-            class_fields
-                .iter()
-                .rev()
-                .copied()
-                .map(HirDestructionStep::Field),
-        );
+        steps.extend(owning_fields.iter().rev().copied());
         if let Some(base) = direct_base {
             steps.push(HirDestructionStep::Base(base));
         }
@@ -281,6 +275,7 @@ impl HirDestructionPlan {
 pub enum HirDestructionStep {
     UserBody(DestructorId),
     Field(FieldId),
+    SharedField(FieldId),
     Base(ClassId),
 }
 

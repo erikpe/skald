@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; local and internal callable owners implemented**.
+Status: **frozen implementation design; target-independent shared fields implemented**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -18,9 +18,12 @@ publication, adoption, named-owner copying, secure-before-release assignment,
 full-expression temporary cleanup, and normal local release are distinct
 verified operations. Shared call arguments, parameters, return owners, and
 caller results use explicit ownership handoffs across every internal callable
-kind. Broader shared uses remain behind a structured lowering gate, and the
-x86-64 backend executes this profile with the frozen handle, header, checked
-retain, one-word internal ABI, count-one publication, dynamic complete
+kind. Shared fields use projected copy, initialization, secure replacement,
+synthesized copy/assignment, and destruction-plan release operations in
+verified MIR. Their x86-64 target layout remains behind structured backend
+rejection. Other broader shared uses remain behind a structured lowering gate,
+and the x86-64 backend executes the field-free profile with the frozen handle,
+header, checked retain, one-word internal ABI, count-one publication, dynamic complete
 finalization, and last-owner deallocation. [Runtime ABI version
 5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
 deallocation.
@@ -226,7 +229,9 @@ complete payload address by adding 16 and derives dynamic identity and dispatch
 from the metadata field. Base and field projections are then applied to the
 payload using existing checked target layout.
 
-A shared field is one eight-byte, eight-aligned handle. Shared
+A shared field will be one eight-byte, eight-aligned handle when target
+execution lands; the current backend rejects such fields before instruction
+selection. Shared
 class/interface/`Obj` parameters and results use one integer-class component;
 the returned handle is in `rax`. These are compiler-private internal calling
 conventions, not external C ABI.

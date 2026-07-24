@@ -13,15 +13,6 @@ use crate::{
 };
 
 pub(super) fn first_unsupported_shared_span(hir: &HirProgram) -> Option<Span> {
-    for class in hir.classes.iter() {
-        if let Some(field) = class
-            .fields
-            .iter()
-            .find(|field| matches!(field.ty, Type::Shared(_)))
-        {
-            return Some(field.span);
-        }
-    }
     for definition in hir.definitions.iter() {
         if let Some(span) = validate_definition(&definition.locals, &definition.body) {
             return Some(span);
@@ -125,7 +116,9 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
             HirStatement::CopyAssignment(copy) if !source_supports_shared(&copy.source) => {
                 return Some(copy.span);
             }
-            HirStatement::SharedFieldWrite(write) => return Some(write.span),
+            HirStatement::SharedFieldWrite(write) if !supports_exact_transfer(&write.value) => {
+                return Some(write.span);
+            }
             HirStatement::SharedAssignment(assignment) => {
                 if !matches!(
                     assignment.destination,
@@ -158,7 +151,8 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
             | HirStatement::FieldConstruction(_)
             | HirStatement::FieldCopyConstruction(_)
             | HirStatement::FieldCopyAssignment(_)
-            | HirStatement::CopyAssignment(_) => {}
+            | HirStatement::CopyAssignment(_)
+            | HirStatement::SharedFieldWrite(_) => {}
         }
     }
     None
@@ -183,7 +177,9 @@ fn supports_exact_transfer(transfer: &HirSharedTransfer) -> bool {
                 && transfer.target == transfer.source.target()
                 && expression_supports_shared(call)
         }
-        HirSharedSource::Place(HirSharedPlace::Field { .. }) => false,
+        HirSharedSource::Place(HirSharedPlace::Field { target, .. }) => {
+            transfer.operation == HirOwnerTransfer::Copy && transfer.target == *target
+        }
     }
 }
 

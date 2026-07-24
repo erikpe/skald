@@ -73,6 +73,9 @@ pub enum HirSynthesizedFieldCopy<I> {
     Primitive {
         field: FieldId,
     },
+    Shared {
+        field: FieldId,
+    },
     Class {
         field: FieldId,
         operation: HirSelectedCopyOperation<I>,
@@ -82,7 +85,9 @@ pub enum HirSynthesizedFieldCopy<I> {
 impl<I> HirSynthesizedFieldCopy<I> {
     pub const fn field(&self) -> FieldId {
         match self {
-            Self::Primitive { field } | Self::Class { field, .. } => *field,
+            Self::Primitive { field } | Self::Shared { field } | Self::Class { field, .. } => {
+                *field
+            }
         }
     }
 }

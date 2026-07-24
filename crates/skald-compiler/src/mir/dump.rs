@@ -120,6 +120,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 MirDestructionStep::Field(field) => {
                     let _ = writeln!(output, "        Field {field}");
                 }
+                MirDestructionStep::SharedField(field) => {
+                    let _ = writeln!(output, "        SharedField {field}");
+                }
                 MirDestructionStep::Base(base) => {
                     let _ = writeln!(output, "        Base {base}");
                 }
@@ -155,6 +158,9 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
                 match field {
                     MirSynthesizedFieldCopy::Primitive { field } => {
                         let _ = writeln!(output, "          Primitive {field}");
+                    }
+                    MirSynthesizedFieldCopy::Shared { field } => {
+                        let _ = writeln!(output, "          Shared {field}");
                     }
                     MirSynthesizedFieldCopy::Class { field, operation } => {
                         let _ = write!(output, "          Class {field} via ");
@@ -471,6 +477,11 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 );
                 write_span(output, copy.span);
             }
+            MirInstruction::SharedFieldCopy(copy) => {
+                let _ = write!(output, "shared-field-copy {} from ", copy.destination);
+                dump_place(output, &copy.source);
+                write_span(output, copy.span);
+            }
             MirInstruction::SharedMove(transfer) => {
                 let _ = write!(
                     output,
@@ -482,6 +493,18 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             MirInstruction::SharedRelease(release) => {
                 let _ = write!(output, "shared-release {}", release.owner);
                 write_span(output, release.span);
+            }
+            MirInstruction::SharedFieldInitialize(initialize) => {
+                output.push_str("shared-field-initialize ");
+                dump_place(output, &initialize.destination);
+                let _ = write!(output, " from {}", initialize.source);
+                write_span(output, initialize.span);
+            }
+            MirInstruction::SharedFieldReplace(replace) => {
+                output.push_str("shared-field-replace ");
+                dump_place(output, &replace.destination);
+                let _ = write!(output, " from {}", replace.source);
+                write_span(output, replace.span);
             }
         }
         output.push('\n');

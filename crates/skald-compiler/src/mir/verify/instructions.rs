@@ -94,11 +94,20 @@ impl Verifier<'_> {
             }
             MirInstruction::SharedAdopt(adopt) => self.verify_shared_adopt(function, block, adopt),
             MirInstruction::SharedCopy(copy) => self.verify_shared_copy(function, block, copy),
+            MirInstruction::SharedFieldCopy(copy) => {
+                self.verify_shared_field_copy(function, block, copy)
+            }
             MirInstruction::SharedMove(transfer) => {
                 self.verify_shared_move(function, block, transfer)
             }
             MirInstruction::SharedRelease(release) => {
                 self.verify_shared_release(function, block, release)
+            }
+            MirInstruction::SharedFieldInitialize(initialize) => {
+                self.verify_shared_field_initialize(function, block, initialize)
+            }
+            MirInstruction::SharedFieldReplace(replace) => {
+                self.verify_shared_field_replace(function, block, replace)
             }
         }
     }

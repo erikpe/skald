@@ -429,6 +429,9 @@ pub enum MirSynthesizedFieldCopy<I> {
     Primitive {
         field: FieldId,
     },
+    Shared {
+        field: FieldId,
+    },
     Class {
         field: FieldId,
         operation: MirSelectedCopyOperation<I>,
@@ -438,7 +441,9 @@ pub enum MirSynthesizedFieldCopy<I> {
 impl<I> MirSynthesizedFieldCopy<I> {
     pub const fn field(&self) -> FieldId {
         match self {
-            Self::Primitive { field } | Self::Class { field, .. } => *field,
+            Self::Primitive { field } | Self::Shared { field } | Self::Class { field, .. } => {
+                *field
+            }
         }
     }
 }
@@ -500,6 +505,7 @@ impl MirDestructionPlan {
 pub enum MirDestructionStep {
     UserBody(DestructorId),
     Field(FieldId),
+    SharedField(FieldId),
     Base(ClassId),
 }
 

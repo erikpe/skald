@@ -59,6 +59,11 @@ impl InstructionSelector<'_, '_> {
                         destination.clone().project_field(field),
                     )?;
                 }
+                MirDestructionStep::SharedField(_) => {
+                    unreachable!(
+                        "shared field destruction is rejected before instruction selection"
+                    )
+                }
             }
         }
         Ok(())

@@ -38,6 +38,33 @@ fn propagates_the_first_unavailable_field_path_without_affecting_the_other_opera
 }
 
 #[test]
+fn shared_edges_do_not_require_the_pointee_copy_capability() {
+    let mut resolved = resolve_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent {\n",
+        "  child: shared Child;\n",
+        "  init(child: shared Child) { self.child = child; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    resolved.classes.entries_mut_for_test()[0].copy_assignment = ResolvedCopyOperation::Unavailable;
+
+    let capabilities = CopyCapabilities::compute(&resolved);
+    assert!(matches!(
+        capabilities.constructor(ClassId::new(1)),
+        HirCopyCapability::Synthesized(_)
+    ));
+    assert!(matches!(
+        capabilities.assignment(ClassId::new(1)),
+        HirCopyCapability::Synthesized(_)
+    ));
+    assert_eq!(capabilities.constructor_failure(ClassId::new(1)), None);
+    assert_eq!(capabilities.assignment_failure(ClassId::new(1)), None);
+}
+
+#[test]
 fn diagnoses_a_required_but_unavailable_nested_copy_operation() {
     let mut resolved = resolve_text(concat!(
         "class Child { init() {} }\n",

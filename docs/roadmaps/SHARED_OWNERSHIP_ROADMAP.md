@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO6 complete, SO7 is next.
+Status: in progress; SO7 complete, SO8 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -34,10 +34,14 @@ and the complete cast direction matrix is
 - MIR represents and verifies exact-class local owner initialization and
   assignment with distinct unpublished allocation storage, initialization,
   publication, adoption, named-owner copy, ownership move, release,
-  full-expression boundary, and normal cleanup. Broader shared HIR remains
-  structurally gated. The x86-64 backend executes that profile with one-word
-  handles, checked allocation and retain, secure-before-release assignment,
-  dynamic complete finalization, and last-owner deallocation.
+  full-expression boundary, and normal cleanup. Shared fields participate in
+  initialization, secure replacement, user and synthesized copy lifecycle,
+  inheritance, and reverse destruction through explicit projected MIR
+  operations. Polymorphic transfers, views, casts, and anchors remain
+  structurally gated. The x86-64 backend executes the field-free profile with
+  one-word handles, checked allocation and retain, secure-before-release
+  assignment, dynamic complete finalization, and last-owner deallocation;
+  shared-field layout remains a structured target rejection.
 - Internal functions, initializers, methods, and interface requirements carry
   same-target shared owners through explicit caller argument consumption,
   callee parameter cleanup, and shared return handoff. The x86-64 ABI uses one
@@ -94,7 +98,7 @@ and the complete cast direction matrix is
 - [x] SO4 — Execute exact-class allocation and last-owner destruction
 - [x] SO5 — Complete local, assignment, and temporary owner semantics
 - [x] SO6 — Carry shared owners across calls and results
-- [ ] SO7 — Integrate shared fields with class lifecycle
+- [x] SO7 — Integrate shared fields with class lifecycle
 - [ ] SO8 — Execute shared-field layout and lifecycle
 - [ ] SO9 — Add polymorphic shared views and dispatch
 - [ ] SO10 — Execute shared-owner casts
@@ -357,28 +361,28 @@ under register and stack pressure.
 **Purpose:** Make shared edges first-class owning fields in the
 target-independent lifecycle before assigning them target layout.
 
-- [ ] Require every shared field to be initialized exactly once from a
+- [x] Require every shared field to be initialized exactly once from a
       compatible shared expression during ordinary initialization.
-- [ ] Permit shared field replacement through mutable owning roots and
+- [x] Permit shared field replacement through mutable owning roots and
       `self`, securing the incoming owner before releasing the old field.
-- [ ] Apply shallow read-only access: enclosing read-only access prevents
+- [x] Apply shallow read-only access: enclosing read-only access prevents
       handle replacement but does not make the separately allocated pointee
       read-only.
-- [ ] Exclude shared edges from finite inline-containment analysis while
+- [x] Exclude shared edges from finite inline-containment analysis while
       retaining normal class/interface target validation.
-- [ ] Extend user and synthesized copy construction, assignment, capability
+- [x] Extend user and synthesized copy construction, assignment, capability
       computation, and destruction with declaration-ordered copies/assignments
       and reverse-declaration releases.
-- [ ] Extend MIR field projections, owner verification, target-independent
+- [x] Extend MIR field projections, owner verification, target-independent
       destruction plans with explicit shared owner operations rather than
       inline payload containment.
-- [ ] Preserve inherited lifecycle composition and dynamic last-owner
+- [x] Preserve inherited lifecycle composition and dynamic last-owner
       destruction for graphs containing shared and inline fields.
-- [ ] Keep backend rejection structured until shared-field target layout lands.
-- [ ] Add nested field, replacement, unavailable capability, shallow access,
+- [x] Keep backend rejection structured until shared-field target layout lands.
+- [x] Add nested field, replacement, unavailable capability, shallow access,
       base composition, exact HIR/MIR lifecycle order, and verifier-corruption
       tests.
-- [ ] Update class/lifecycle and phase documentation without duplicating the
+- [x] Update class/lifecycle and phase documentation without duplicating the
       shared authority.
 
 **Tests:** Focused containment, initialization, capability, lifecycle,

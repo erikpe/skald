@@ -45,8 +45,9 @@ impl BodyLowerer<'_> {
                 self.lower_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
-            HirStatement::SharedFieldWrite(_) => {
-                unreachable!("shared fields are rejected before MIR lowering")
+            HirStatement::SharedFieldWrite(write) => {
+                self.lower_shared_field_write(write);
+                self.finish_full_expression(write.span);
             }
         }
     }

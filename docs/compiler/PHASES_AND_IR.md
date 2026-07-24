@@ -216,9 +216,15 @@ parameters and results. Named sources copy, produced sources adopt, calls
 consume caller argument owners, callees normally release parameter owners, and
 shared returns escape through one dedicated result owner after cleanup.
 Assignment secures an owning temporary before releasing its destination and
-moves that temporary into the destination. A structured
-`HirLoweringError::UnsupportedSharedOwnership` gate remains for shared fields,
-polymorphic transfers and views, casts, and anchors.
+moves that temporary into the destination. Shared field initialization or
+replacement similarly secures a temporary owner before installing it. MIR
+distinguishes field-owner copying, initialization, replacement, synthesized
+shared-field copy steps, and reverse-order shared-field destruction from
+inline containment. The verifier checks field type, access, transfer
+ownership, exact initialization on normal initializer returns, lifecycle
+metadata, and control-flow agreement. A structured
+`HirLoweringError::UnsupportedSharedOwnership` gate remains for polymorphic
+transfers and views, casts, and anchors.
 
 ## MIR
 
@@ -245,7 +251,9 @@ explicit:
 - distinct unpublished shared-allocation storage plus explicit exact
   allocation, initialization, publication, produced-owner adoption,
   named-owner copy, temporary-to-local owner move, release, and ownership
-  full-expression boundaries; and
+  full-expression boundaries;
+- projected shared-field copy, initialization, secure replacement, synthesized
+  lifecycle steps, and reverse-order destruction-plan releases; and
 - basic blocks with explicit return, jump, boolean-branch, checked-cast, and
   unrecoverable-failure terminators.
 

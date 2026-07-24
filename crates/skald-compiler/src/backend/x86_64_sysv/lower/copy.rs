@@ -109,6 +109,11 @@ impl InstructionSelector<'_, '_> {
                                     .ty,
                             )?;
                         }
+                        MirSynthesizedFieldCopy::Shared { .. } => {
+                            unreachable!(
+                                "shared field copying is rejected before instruction selection"
+                            )
+                        }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_construction_operation(
                                 operation,
@@ -184,6 +189,11 @@ impl InstructionSelector<'_, '_> {
                                     .expect("verified copy field must exist")
                                     .ty,
                             )?;
+                        }
+                        MirSynthesizedFieldCopy::Shared { .. } => {
+                            unreachable!(
+                                "shared field assignment is rejected before instruction selection"
+                            )
                         }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_assignment_operation(

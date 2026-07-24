@@ -7,9 +7,10 @@ use crate::identity::CallableId;
 use super::{
     super::model::{
         BlockId, MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
-        MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy, MirSharedInitialize,
-        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
-        MirTerminator, MirType, StorageId, ValueId,
+        MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy, MirSharedFieldCopy,
+        MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
+        MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind, MirTerminator,
+        MirType, StorageId, ValueId,
     },
     context::Verifier,
 };
@@ -215,6 +216,113 @@ impl<'mir> Verifier<'mir> {
         }
     }
 
+    pub(super) fn verify_shared_field_copy(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        copy: &MirSharedFieldCopy,
+    ) {
+        let destination = function.storage(copy.destination);
+        let source = self.verify_place(function, block, &copy.source);
+        if !matches!(
+            (destination, source),
+            (Some(destination), Some(source))
+                if matches!(
+                    destination.kind,
+                    MirStorageKind::Local
+                        | MirStorageKind::Temporary
+                        | MirStorageKind::Argument
+                        | MirStorageKind::Return
+                )
+                    && matches!(destination.ty, MirType::Shared(_))
+                    && destination.ty == source.ty
+                    && matches!(
+                        copy.source.projections.last(),
+                        Some(super::super::model::MirPlaceProjection::Field(_))
+                    )
+        ) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared field copy requires a matching shared field and fresh owner storage",
+            );
+        }
+    }
+
+    pub(super) fn verify_shared_field_initialize(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        initialize: &MirSharedFieldInitialize,
+    ) {
+        self.verify_shared_field_destination(
+            function,
+            block,
+            &initialize.destination,
+            initialize.source,
+            true,
+        );
+    }
+
+    pub(super) fn verify_shared_field_replace(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        replace: &MirSharedFieldReplace,
+    ) {
+        self.verify_shared_field_destination(
+            function,
+            block,
+            &replace.destination,
+            replace.source,
+            false,
+        );
+    }
+
+    fn verify_shared_field_destination(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        destination: &super::super::model::MirPlace,
+        source: StorageId,
+        initialization: bool,
+    ) {
+        let field = self.verify_place(function, block, destination);
+        let source = function.storage(source);
+        let is_direct_field = matches!(
+            destination.projections.last(),
+            Some(super::super::model::MirPlaceProjection::Field(_))
+        );
+        let receiver_initialization = function.receiver() == Some(destination.base.storage())
+            && matches!(
+                function.callable(),
+                CallableId::Initializer(_) | CallableId::CopyConstructor(_)
+            );
+        let valid = matches!(
+            (field, source),
+            (Some(field), Some(source))
+                if is_direct_field
+                    && field.access == super::super::model::MirAliasAccess::Mutable
+                    && matches!(field.ty, MirType::Shared(_))
+                    && field.ty == source.ty
+                    && source.kind == MirStorageKind::Temporary
+        );
+        if !valid
+            || (initialization && !receiver_initialization)
+            || (!initialization && receiver_initialization)
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                if initialization {
+                    "shared field initialization requires a mutable receiver field and matching temporary owner"
+                } else {
+                    "shared field replacement requires a mutable shared field and matching temporary owner"
+                },
+            );
+        }
+    }
+
     pub(super) fn verify_shared_release(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -293,6 +401,7 @@ struct SharedState {
     live_owners: HashSet<StorageId>,
     owner_origins: HashMap<StorageId, StorageId>,
     released_owners: HashSet<StorageId>,
+    initialized_fields: HashSet<super::super::model::MirPlace>,
     pending_full_expression_boundary: bool,
 }
 
@@ -443,6 +552,19 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                     state.pending_full_expression_boundary = source_origin.is_some();
                 }
+                MirInstruction::SharedFieldCopy(copy) => {
+                    if state.live_owners.contains(&copy.destination)
+                        || state.released_owners.contains(&copy.destination)
+                    {
+                        self.error(block.id, "shared copy destination is already initialized");
+                    } else {
+                        state.live_owners.insert(copy.destination);
+                        state
+                            .owner_origins
+                            .insert(copy.destination, copy.destination);
+                    }
+                    state.pending_full_expression_boundary = true;
+                }
                 MirInstruction::SharedMove(transfer) => {
                     let source_origin = state.owner_origins.get(&transfer.source).copied();
                     if source_origin.is_none() || !state.live_owners.remove(&transfer.source) {
@@ -470,6 +592,18 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         state.owner_origins.remove(&release.owner);
                         state.released_owners.insert(release.owner);
                     }
+                }
+                MirInstruction::SharedFieldInitialize(initialize) => {
+                    self.consume_field_transfer_source(block.id, state, initialize.source);
+                    if !state
+                        .initialized_fields
+                        .insert(initialize.destination.clone())
+                    {
+                        self.error(block.id, "shared field is initialized more than once");
+                    }
+                }
+                MirInstruction::SharedFieldReplace(replace) => {
+                    self.consume_field_transfer_source(block.id, state, replace.source);
                 }
                 MirInstruction::EndFullExpression(_) => {
                     if state.live_owners.iter().any(|owner| {
@@ -516,6 +650,20 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     state.pending_full_expression_boundary |= transferred;
                 }
             }
+        }
+    }
+
+    fn consume_field_transfer_source(
+        &mut self,
+        block: BlockId,
+        state: &mut SharedState,
+        source: StorageId,
+    ) {
+        if !state.live_owners.remove(&source) {
+            self.error(block, "shared field transfer source is not a live owner");
+        } else {
+            state.owner_origins.remove(&source);
+            state.released_owners.insert(source);
         }
     }
 
@@ -583,6 +731,36 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 "shared allocation is not published and adopted on normal return",
             );
         }
+        if matches!(
+            self.function.callable(),
+            CallableId::Initializer(_) | CallableId::CopyConstructor(_)
+        ) {
+            let mut expected = HashSet::new();
+            if let Some(receiver) = self.function.receiver() {
+                if let Some(MirType::Class(class)) =
+                    self.function.storage(receiver).map(|storage| storage.ty)
+                {
+                    if let Some(class) = self.verifier.program.class(class) {
+                        expected.extend(
+                            class
+                                .fields
+                                .iter()
+                                .filter(|field| matches!(field.ty, MirType::Shared(_)))
+                                .map(|field| {
+                                    super::super::model::MirPlace::base(receiver)
+                                        .project_field(field.id)
+                                }),
+                        );
+                    }
+                }
+            }
+            if state.initialized_fields != expected {
+                self.error(
+                    block.id,
+                    "shared receiver fields are not initialized exactly once on normal return",
+                );
+            }
+        }
     }
 
     fn merge(
@@ -632,6 +810,7 @@ impl SharedState {
         self.allocations == other.allocations
             && self.live_owners == other.live_owners
             && self.owner_origins == other.owner_origins
+            && self.initialized_fields == other.initialized_fields
             && self.pending_full_expression_boundary == other.pending_full_expression_boundary
     }
 }

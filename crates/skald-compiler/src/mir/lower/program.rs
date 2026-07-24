@@ -115,6 +115,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                     MirDestructionStep::UserBody(destructor)
                 }
                 HirDestructionStep::Field(field) => MirDestructionStep::Field(field),
+                HirDestructionStep::SharedField(field) => MirDestructionStep::SharedField(field),
                 HirDestructionStep::Base(base) => MirDestructionStep::Base(base),
             })
             .collect(),
@@ -241,6 +242,9 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                     .map(|field| match *field {
                         HirSynthesizedFieldCopy::Primitive { field } => {
                             MirSynthesizedFieldCopy::Primitive { field }
+                        }
+                        HirSynthesizedFieldCopy::Shared { field } => {
+                            MirSynthesizedFieldCopy::Shared { field }
                         }
                         HirSynthesizedFieldCopy::Class { field, operation } => {
                             MirSynthesizedFieldCopy::Class {

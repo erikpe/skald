@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; exact-target local and callable owners implemented**. This
+Status: **frozen design; exact-target owners and target-independent shared fields implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -13,8 +13,11 @@ secure-before-release assignment, full-expression ownership boundaries, and
 normal cleanup through verified MIR and native execution. Same-target shared
 parameters and results now transfer owners through internal functions,
 initializers, methods, and interface requirements, including produced
-arguments and results. Shared fields and polymorphic views, explicit copy
-allocation, shared-owner casts, and anchors remain unavailable.
+arguments and results. Shared fields participate in initialization, field
+replacement, copying, assignment, and destruction in typed HIR and verified
+MIR, but their x86-64 layout and execution are not implemented yet.
+Polymorphic views, explicit copy allocation, shared-owner casts, and anchors
+remain unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix

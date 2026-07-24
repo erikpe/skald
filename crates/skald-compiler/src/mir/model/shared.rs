@@ -7,7 +7,7 @@ use crate::{
     source::Span,
 };
 
-use super::{ids::StorageId, instruction::MirArgument};
+use super::{ids::StorageId, instruction::MirArgument, value::MirPlace};
 
 /// The static object view carried by a non-null shared owner.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -72,6 +72,14 @@ pub struct MirSharedCopy {
     pub span: Span,
 }
 
+/// Copies one live owner stored in an object field into fresh owner storage.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedFieldCopy {
+    pub destination: StorageId,
+    pub source: MirPlace,
+    pub span: Span,
+}
+
 /// Consumes one live owner and installs it without changing the strong count.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedMove {
@@ -83,5 +91,22 @@ pub struct MirSharedMove {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedRelease {
     pub owner: StorageId,
+    pub span: Span,
+}
+
+/// Consumes a fresh owner and initializes one previously uninitialized field.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedFieldInitialize {
+    pub destination: MirPlace,
+    pub source: StorageId,
+    pub span: Span,
+}
+
+/// Consumes a secured owner, releases the old field owner, then installs the
+/// secured owner without exposing an empty destination.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedFieldReplace {
+    pub destination: MirPlace,
+    pub source: StorageId,
     pub span: Span,
 }

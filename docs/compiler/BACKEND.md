@@ -4,8 +4,8 @@ Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
 boundary. Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a
-separate contract. The frozen future shared-handle/header layout and generated
-reference-counting realization are owned by the
+separate contract. The shared-handle/header layout, generated reference-counting
+realization, and pending shared-field target layout are owned by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
 the current target profile below.
 

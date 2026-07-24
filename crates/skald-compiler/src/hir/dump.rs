@@ -192,6 +192,9 @@ impl HirDumper {
                             HirDestructionStep::Field(field) => {
                                 dumper.raw_line(&format!("Field {field}"));
                             }
+                            HirDestructionStep::SharedField(field) => {
+                                dumper.raw_line(&format!("SharedField {field}"));
+                            }
                             HirDestructionStep::Base(base) => {
                                 dumper.raw_line(&format!("Base {base}"));
                             }
@@ -295,6 +298,9 @@ impl HirDumper {
                         match field {
                             HirSynthesizedFieldCopy::Primitive { field } => {
                                 dumper.raw_line(&format!("Primitive {field}"));
+                            }
+                            HirSynthesizedFieldCopy::Shared { field } => {
+                                dumper.raw_line(&format!("Shared {field}"));
                             }
                             HirSynthesizedFieldCopy::Class { field, operation } => {
                                 let selected = match operation {

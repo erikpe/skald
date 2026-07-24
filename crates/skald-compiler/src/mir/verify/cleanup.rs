@@ -337,6 +337,20 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.check_borrowed_arguments(block, state, &initialize.arguments);
                     self.consume_owned_arguments(block, state, &initialize.arguments);
                 }
+                MirInstruction::SharedFieldCopy(copy) => {
+                    self.require_live_place(block, state, &copy.source, "shared field copy source");
+                }
+                MirInstruction::SharedFieldInitialize(initialize) => {
+                    self.initialize_place(block, state, &initialize.destination);
+                }
+                MirInstruction::SharedFieldReplace(replace) => {
+                    self.require_live_place(
+                        block,
+                        state,
+                        &replace.destination,
+                        "shared field replacement destination",
+                    );
+                }
                 MirInstruction::CopyConstruct(copy)
                     if self.is_owning_class_place(&copy.destination, copy.class) =>
                 {

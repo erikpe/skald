@@ -2,8 +2,9 @@
 
 use super::*;
 use crate::hir::{
-    HirOwnerTransfer, HirSharedAllocation, HirSharedAssignment, HirSharedPlace, HirSharedProducer,
-    HirSharedSource, HirSharedTarget, HirSharedTransfer,
+    HirOwnerTransfer, HirSharedAllocation, HirSharedAssignment, HirSharedFieldWrite,
+    HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget,
+    HirSharedTransfer,
 };
 
 impl BodyLowerer<'_> {
@@ -33,6 +34,30 @@ impl BodyLowerer<'_> {
         self.full_expression_has_shared_effect = true;
     }
 
+    pub(super) fn lower_shared_field_write(&mut self, write: &HirSharedFieldWrite) {
+        let secured = self.new_shared_temporary(write.value.target, write.span);
+        self.lower_shared_transfer(secured, &write.value);
+        self.consume_shared_temporary(secured);
+        let destination = self.lower_field_place(&write.place);
+        self.emit(match write.kind {
+            HirSharedFieldWriteKind::Initialize => {
+                MirInstruction::SharedFieldInitialize(MirSharedFieldInitialize {
+                    destination,
+                    source: secured,
+                    span: write.span,
+                })
+            }
+            HirSharedFieldWriteKind::Assign => {
+                MirInstruction::SharedFieldReplace(MirSharedFieldReplace {
+                    destination,
+                    source: secured,
+                    span: write.span,
+                })
+            }
+        });
+        self.full_expression_has_shared_effect = true;
+    }
+
     pub(super) fn lower_shared_transfer(
         &mut self,
         destination: StorageId,
@@ -55,8 +80,14 @@ impl BodyLowerer<'_> {
                 debug_assert_eq!(transfer.operation, HirOwnerTransfer::Adopt);
                 self.lower_shared_call(call, destination);
             }
-            HirSharedSource::Place(HirSharedPlace::Field { .. }) => {
-                unreachable!("broader shared sources are rejected before MIR lowering")
+            HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
+                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Copy);
+                let source = self.lower_field_place(place);
+                self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {
+                    destination,
+                    source,
+                    span: transfer.span,
+                }));
             }
         }
         self.full_expression_has_shared_effect = true;
