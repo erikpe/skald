@@ -186,17 +186,21 @@ impl Parser<'_> {
     }
 
     fn finish_call(&mut self, callee: Expression) -> Option<Expression> {
-        let (arguments, end_span) = if self.at_contextual_copy_arguments() {
-            self.parse_copy_call_arguments()?
-        } else {
-            let (arguments, end_span) = self.parse_call_arguments()?;
-            (CallArguments::Ordinary(arguments), end_span)
-        };
+        let (arguments, end_span) = self.parse_construction_arguments()?;
         Some(Expression::Call(CallExpr {
             span: self.cover(callee.span(), end_span),
             callee: Box::new(callee),
             arguments,
         }))
+    }
+
+    fn parse_construction_arguments(&mut self) -> Option<(CallArguments, Span)> {
+        if self.at_contextual_copy_arguments() {
+            self.parse_copy_call_arguments()
+        } else {
+            self.parse_call_arguments()
+                .map(|(arguments, span)| (CallArguments::Ordinary(arguments), span))
+        }
     }
 
     fn at_contextual_copy_arguments(&self) -> bool {
@@ -305,6 +309,13 @@ impl Parser<'_> {
     }
 
     fn parse_primary(&mut self) -> Option<Expression> {
+        if self.at_contextual("new")
+            && self.peek_ahead(1).kind == TokenKind::Identifier
+            && self.peek_ahead(2).kind == TokenKind::LeftParen
+        {
+            return self.parse_allocation();
+        }
+
         if let Some(token) = self.consume(TokenKind::Identifier) {
             let name = Name {
                 text: self.lexeme(token).to_owned(),
@@ -370,5 +381,20 @@ impl Parser<'_> {
             "expected an identifier, literal, `self`, unary `-`, or `(`",
         );
         None
+    }
+
+    fn parse_allocation(&mut self) -> Option<Expression> {
+        let new_token = self.advance();
+        debug_assert_eq!(self.lexeme(new_token), "new");
+        let target = self.parse_name("expected a concrete class after `new`")?;
+        let left_paren = self.peek().span;
+        let (arguments, end_span) =
+            self.with_syntax_nesting(left_paren, |parser| parser.parse_construction_arguments())?;
+        Some(Expression::Allocation(AllocationExpr {
+            new_span: new_token.span,
+            span: self.cover(new_token.span, end_span),
+            target,
+            arguments,
+        }))
     }
 }

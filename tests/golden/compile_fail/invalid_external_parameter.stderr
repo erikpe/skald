@@ -1,5 +1,5 @@
-error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool` or a named class type
+error[PAR002]: expected the parameter type `i64`, `u64`, `u8`, `f64`, or `bool`, a named class type, or a shared object type
  --> tests/golden/compile_fail/invalid_external_parameter.ska:1:23
    |
 1 | extern fn emit(value: unit) -> unit;
-   |                       ^^^^ value parameters must have type `i64`, `u64`, `u8`, `f64`, or `bool` or a named class type
+   |                       ^^^^ value parameters must have type `i64`, `u64`, `u8`, `f64`, or `bool`, a named class type, or a shared object type

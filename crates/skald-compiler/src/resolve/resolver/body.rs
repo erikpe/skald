@@ -6,6 +6,7 @@ use crate::{
     identity::{BindingId, CallableId, ClassId},
 };
 
+mod allocation;
 mod call;
 mod place;
 mod statement;
@@ -247,6 +248,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                     _ => None,
                 }
             }
+            syntax::Expression::Allocation(allocation) => self.resolve_allocation(allocation),
             syntax::Expression::Call(call) => self.resolve_call(call),
             syntax::Expression::Grouped(grouped) => {
                 let expression = self.resolve_expression(&grouped.expression)?;

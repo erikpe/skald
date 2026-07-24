@@ -218,7 +218,7 @@ impl Parser<'_> {
         let type_syntax = self.parse_type(
             TypeContext::Field,
             format!(
-                "expected a field type {} or a class name",
+                "expected a field type {}, a class name, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         )?;

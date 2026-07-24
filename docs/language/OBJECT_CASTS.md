@@ -46,7 +46,9 @@ cast operand.
 
 The [implemented grammar](GRAMMAR.md) is authoritative for current acceptance.
 `(shared T) source` is retained syntactically but currently produces a focused
-unsupported-feature diagnostic before shared semantic types are introduced.
+unsupported-feature diagnostic before shared semantic types reach typed HIR.
+Stored `shared T` types and both `new T(...)` allocation modes likewise cross
+syntax and name resolution before the frontend-only ownership gate.
 
 ## Two cast results
 

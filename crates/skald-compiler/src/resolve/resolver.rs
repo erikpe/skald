@@ -35,6 +35,7 @@ pub const INHERITED_MEMBER_COLLISION: &str = "RES015";
 pub const INVALID_BASE_INITIALIZATION: &str = "RES016";
 pub const INVALID_OVERRIDE: &str = "RES017";
 pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
+pub const UNSUPPORTED_SHARED_OWNERSHIP: &str = "RES019";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -69,6 +70,63 @@ fn resolve_type(
         syntax::TypeKind::F64 => ResolvedTypeKind::F64,
         syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
         syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
+        syntax::TypeKind::Shared {
+            shared_span,
+            target,
+        } => {
+            let target_kind = if target.text == "Obj" {
+                ResolvedSharedTarget::Obj
+            } else {
+                match top_levels.get(&target.text) {
+                    Some(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::Class(class),
+                        ..
+                    }) => ResolvedSharedTarget::Class(*class),
+                    Some(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::Interface(interface),
+                        ..
+                    }) => ResolvedSharedTarget::Interface(*interface),
+                    Some(symbol) => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                UNKNOWN_TYPE,
+                                format!("`{}` does not name a shared object type", target.text),
+                            )
+                            .with_primary_label(
+                                target.span,
+                                "expected a class, interface, or `Obj`",
+                            )
+                            .with_secondary_label(symbol.name_span, "function declared here"),
+                        );
+                        return None;
+                    }
+                    None => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                UNKNOWN_TYPE,
+                                format!("unknown shared target `{}`", target.text),
+                            )
+                            .with_primary_label(
+                                target.span,
+                                "no class or interface with this name is declared",
+                            ),
+                        );
+                        return None;
+                    }
+                }
+            };
+            diagnostics.push(
+                Diagnostic::error(
+                    UNSUPPORTED_SHARED_OWNERSHIP,
+                    "shared ownership is not implemented below name resolution",
+                )
+                .with_primary_label(*shared_span, "shared type resolved here")
+                .with_note(
+                    "the frontend retains this target for the shared-ownership implementation",
+                ),
+            );
+            ResolvedTypeKind::Shared(target_kind)
+        }
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
         syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
             Some(TopLevelSymbol {

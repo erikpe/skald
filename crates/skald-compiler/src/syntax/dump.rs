@@ -211,6 +211,13 @@ impl AstDumper {
             TypeKind::F64 => "F64",
             TypeKind::Bool => "Bool",
             TypeKind::Unit => "Unit",
+            TypeKind::Shared { target, .. } => {
+                self.line("Type Shared", type_syntax.span);
+                self.indented(|dumper| {
+                    dumper.named("Target", &target.text, target.span);
+                });
+                return;
+            }
             TypeKind::Named(name) => {
                 self.named("Type Named", &name.text, type_syntax.span);
                 return;
@@ -371,6 +378,28 @@ impl AstDumper {
                     dumper.named("Target", &cast.target.text, cast.target.span);
                     dumper.heading("Source");
                     dumper.indented(|dumper| dumper.expression(&cast.source));
+                });
+            }
+            Expression::Allocation(allocation) => {
+                self.line("Allocation", allocation.span);
+                self.indented(|dumper| {
+                    dumper.line("New", allocation.new_span);
+                    dumper.named("Target", &allocation.target.text, allocation.target.span);
+                    match &allocation.arguments {
+                        CallArguments::Ordinary(arguments) => {
+                            dumper.heading("Arguments");
+                            dumper.indented(|dumper| {
+                                for argument in arguments {
+                                    dumper.expression(argument);
+                                }
+                            });
+                        }
+                        CallArguments::Copy { copy_span, source } => {
+                            dumper.line("Copy", *copy_span);
+                            dumper.heading("Source");
+                            dumper.indented(|dumper| dumper.expression(source));
+                        }
+                    }
                 });
             }
             Expression::Call(call) => {

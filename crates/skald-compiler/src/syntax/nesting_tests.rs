@@ -98,6 +98,13 @@ fn unary_and_postfix_recursion_use_the_same_nesting_budget() {
         ")".repeat(MAX_SYNTAX_NESTING)
     );
     assert_single_nesting_error(&parse_text(source_with_return(&calls)));
+
+    let allocations = format!(
+        "{}1{}",
+        "new Thing(".repeat(MAX_SYNTAX_NESTING),
+        ")".repeat(MAX_SYNTAX_NESTING)
+    );
+    assert_single_nesting_error(&parse_text(source_with_return(&allocations)));
 }
 
 #[test]

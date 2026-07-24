@@ -105,6 +105,13 @@ Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
 
+Shared type syntax resolves to an explicit class, interface, or `Obj` target.
+Allocation syntax resolves to an exact concrete `ClassId` and retains ordinary
+arguments or the explicit copy source as the existing distinct construction
+modes. Resolution currently emits a frontend-only diagnostic after preserving
+these facts, so shared syntax cannot cross into HIR until typed owner support
+lands.
+
 Ordinary construction and copy construction have type-distinct identities
 through every semantic phase. `InitializerId` names only an ordinary `init`
 candidate; `CopyConstructorId` names the separate copy lifecycle slot, and
@@ -133,8 +140,8 @@ Syntax and resolved IR retain ordinary arguments and explicit-copy source as
 different construction modes. HIR replaces the former with one selected
 `InitializerId` and typed arguments, or the latter with one selected
 copy-constructor operation and checked object source. This
-destination-oriented representation can be reused by future `new T(...)`
-lowering without inspecting source expression shape.
+destination-oriented representation is also used by resolved `new T(...)`;
+later typed lowering does not need to inspect source expression shape.
 
 ## Typed HIR
 

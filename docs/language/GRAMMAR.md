@@ -78,6 +78,9 @@ identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
 `implements`, `interface`, and `is` are likewise contextual in the
 exact forms below. None is reserved by the lexer.
+`shared` is contextual before an object target in stored and result types and
+inside a cast target. `new` is contextual before a class name and allocation
+argument list. Both remain ordinary identifiers elsewhere.
 
 ## Punctuation
 
@@ -141,15 +144,19 @@ alias-target                  = identifier | "Obj"
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
 named-type                    = identifier
-storage-type                  = primitive-type | named-type
+shared-target                 = identifier | "Obj"
+shared-type                   = "shared" shared-target
+storage-type                  = primitive-type | named-type | shared-type
 result-type                   = storage-type | "unit"
 ```
 
 Parameter and argument lists do not accept trailing commas. Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
-named types are legal. `Obj` is legal only for non-owning internal alias
-parameters. `unit` is syntactically restricted to result positions.
+named types are legal. Alias targets retain their separate
+`identifier | "Obj"` grammar and do not accept `shared T`. `Obj` is otherwise
+legal as the target of `shared Obj`. `unit` is syntactically restricted to
+result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
 defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
@@ -212,8 +219,7 @@ copy-construction-arguments  = "(" "copy" expression ")"
 
 `Class(copy source)` uses `copy-construction-arguments`;
 `Class(arguments)` never falls back to copy construction. The same distinction
-applies to the future `new Class(copy source)` and
-`new Class(arguments)`.
+applies to `new Class(copy source)` and `new Class(arguments)`.
 
 The marker is contextual only immediately after the opening `(` and only when
 followed by an expression. Consequently `Class(copy)` and
@@ -305,7 +311,14 @@ primary-expression
                  = identifier
                  | literal
                  | "self"
+                 | allocation-expression
                  | "(" expression ")"
+
+allocation-expression
+                 = "new" identifier allocation-arguments
+allocation-arguments
+                 = "(" [argument-list] ")"
+                 | copy-construction-arguments
 ```
 
 From tightest to loosest binding, precedence is:
@@ -319,16 +332,19 @@ From tightest to loosest binding, precedence is:
 Postfix and binary operators associate left to right. Unary `-` associates
 right to left. `is` is non-associative, so chained tests are syntax errors.
 Grouping overrides precedence and remains represented in the source-shaped
-syntax tree. Calls and member access may be interleaved in one postfix chain;
-declaration selection and call legality are semantic concerns.
+syntax tree. Allocation is a primary expression, so calls and member access
+may follow it in the same postfix chain. Declaration selection and call
+legality are semantic concerns.
 
 A parenthesized identifier followed by an adjacent expression is an object-cast
 candidate. Cast syntax deliberately wins over grouped callable spelling:
 `(f)(argument)` is resolved as a cast candidate, while direct calls use
 `f(argument)`. Empty `()` is not an expression operand, and `(value) - other`
 remains grouped subtraction. Postfix use of a cast requires grouping, as in
-`((Leaf) value).read()`. `shared` is contextual only in the cast-target
-position.
+`((Leaf) value).read()`. `shared` is contextual in cast targets and
+stored/result types. `new` is contextual only when followed by an identifier
+and allocation argument list; `new()` remains an ordinary call to a binding
+named `new`.
 
 ## Syntax errors and nesting
 
@@ -373,12 +389,12 @@ scope, statement, return, and evaluation-order semantics.
 member rules, containment, receivers, initialization, and object places.
 [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) owns alias eligibility,
 access, forwarding, overlap, and lifetime.
-[Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes future
+[Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines
 `shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
-`new T(copy source)` source forms and semantics. The copy marker selects the
-named class's copy constructor and target-directed checked source; it is not
-an ordinary initializer argument. These forms remain outside this implemented
-grammar until compiler support is added.
+`new T(copy source)` semantics. The parser accepts these forms and resolution
+retains their object identities and construction modes, then issues a focused
+frontend-only diagnostic until typed ownership support is implemented. The
+copy marker is not an ordinary initializer argument.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus

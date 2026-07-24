@@ -71,7 +71,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) | **Frozen design** | Non-null `shared T`, ordinary and explicit exact-class copy allocation only through concrete `new`, copy/adopt/release value semantics, non-atomic `u64` strong counts, dynamic complete-object destruction, hidden call/cast anchors, permitted strong-cycle leaks, and a minimal allocation ABI are settled but not implemented. Dynamic-type-preserving cloning is deferred. |
+| [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) | **Frozen design** | The parser and resolver accept stored/result `shared T` types and ordinary or explicit-copy `new T(...)`, retain resolved class/interface/`Obj` targets and exact allocation classes, and then issue a focused frontend-only diagnostic. Typed owners, allocation execution, copy/adopt/release, dynamic destruction, anchors, and the minimal allocation ABI remain unimplemented. Dynamic-type-preserving cloning is deferred. |
 | [Shared object-cast extension](OBJECT_CASTS.md) | **Frozen design** | `(shared T) source` and future copy allocation through `new T(copy source)` remain planned. Plain casts and their implemented owning consumers never allocate. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |

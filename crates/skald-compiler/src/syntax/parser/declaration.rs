@@ -31,23 +31,27 @@ impl TypeContext {
         !matches!(self, Self::AliasParameter)
     }
 
+    const fn accepts_shared(self) -> bool {
+        !matches!(self, Self::AliasParameter)
+    }
+
     fn expected_label(self) -> String {
         match self {
             Self::Result => format!(
-                "expected {} or a named class type",
+                "expected {}, a named class type, or a shared object type",
                 format_type_list(RESULT_TYPE_NAMES)
             ),
             Self::ValueParameter => format!(
-                "value parameters must have type {} or a named class type",
+                "value parameters must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
             Self::AliasParameter => "alias parameters must name an inline class type".to_owned(),
             Self::LocalValue => format!(
-                "locals must have type {} or a named class type",
+                "locals must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
             Self::Field => format!(
-                "fields must have type {} or a named class type",
+                "fields must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         }
@@ -182,7 +186,7 @@ impl Parser<'_> {
                 "expected a class name as the alias parameter type".to_owned()
             } else {
                 format!(
-                    "expected the parameter type {} or a named class type",
+                    "expected the parameter type {}, a named class type, or a shared object type",
                     format_type_list(STORED_TYPE_NAMES)
                 )
             },
@@ -264,6 +268,21 @@ impl Parser<'_> {
         message: impl Into<String>,
     ) -> Option<TypeSyntax> {
         let token = self.peek();
+        if context.accepts_shared()
+            && self.at_contextual("shared")
+            && self.peek_ahead(1).kind == TokenKind::Identifier
+        {
+            let shared = self.advance();
+            let target = self.parse_name("expected a class, interface, or `Obj` after `shared`")?;
+            return Some(TypeSyntax {
+                span: self.cover(shared.span, target.span),
+                kind: TypeKind::Shared {
+                    shared_span: shared.span,
+                    target,
+                },
+            });
+        }
+
         if let Some(kind) = token_type_kind(token.kind) {
             if context.accepts_primitive() && (kind != TypeKind::Unit || context.accepts_unit()) {
                 self.advance();

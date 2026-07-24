@@ -40,4 +40,5 @@ mod dumps;
 mod expressions;
 mod interfaces;
 mod objects;
+mod shared_ownership;
 mod type_operations;

@@ -11,14 +11,14 @@ mod dump;
 mod parser;
 
 pub use ast::{
-    BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, CallArguments,
-    CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm, ConditionalStatement,
-    CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement,
-    ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
-    IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl, MethodModifier, Name,
-    NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode, Parameter,
-    ParameterBindingMode, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
-    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
+    AllocationExpr, BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr,
+    CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm,
+    ConditionalStatement, CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression,
+    ExpressionStatement, ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl,
+    GroupedExpr, IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl,
+    MethodModifier, Name, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
+    ObjectCastTargetMode, Parameter, ParameterBindingMode, ReturnStatement, SelfExpr, Statement,
+    TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

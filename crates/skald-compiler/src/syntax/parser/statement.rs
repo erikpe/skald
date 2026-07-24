@@ -265,7 +265,7 @@ impl Parser<'_> {
         let type_syntax = self.parse_type(
             TypeContext::LocalValue,
             format!(
-                "expected the local type {}",
+                "expected the local type {}, a class name, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
         );
@@ -378,6 +378,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         | Expression::Unary(_)
         | Expression::Binary(_)
         | Expression::TypeTest(_)
+        | Expression::Allocation(_)
         | Expression::Call(_) => false,
         Expression::ObjectCast(_) => true,
     }

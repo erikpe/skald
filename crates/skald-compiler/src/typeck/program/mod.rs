@@ -377,5 +377,10 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
+        // Resolution deliberately gates shared programs during the frontend-
+        // only implementation slice. This placeholder keeps the public
+        // type-check entry point total for manually supplied resolved IR;
+        // canonical shared HIR types replace it in the next ownership task.
+        ResolvedTypeKind::Shared(_) => Type::Unit,
     }
 }

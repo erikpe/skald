@@ -695,9 +695,10 @@ fn unit_remains_invalid_as_a_field_type() {
     let diagnostic = output.diagnostics.iter().next().unwrap();
     assert_eq!(diagnostic.code, EXPECTED_TOKEN);
     assert!(diagnostic.message.contains("expected a field type"));
+    assert!(diagnostic.labels[0].message.contains("a named class type"));
     assert!(diagnostic.labels[0]
         .message
-        .contains("or a named class type"));
+        .contains("a shared object type"));
 }
 
 #[test]

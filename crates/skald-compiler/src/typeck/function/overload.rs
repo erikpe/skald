@@ -181,6 +181,7 @@ impl CallableChecker<'_, '_> {
                 .and_then(|interface| interface.requirements.get(call.requirement.index()))
                 .map(|requirement| lower_type(&requirement.return_type))
                 .expect("resolved interface call must reference a requirement"),
+            ResolvedExpression::Allocation(_) => Type::Unit,
             ResolvedExpression::Construct(construction) => Type::Class(construction.class),
         }
     }

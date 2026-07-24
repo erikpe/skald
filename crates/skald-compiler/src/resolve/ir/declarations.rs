@@ -482,6 +482,14 @@ pub enum ResolvedTypeKind {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Shared(ResolvedSharedTarget),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedSharedTarget {
+    Obj,
+    Class(ClassId),
+    Interface(InterfaceId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

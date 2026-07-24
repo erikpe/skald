@@ -19,6 +19,7 @@ pub enum ResolvedExpression {
     Binary(ResolvedBinaryExpr),
     TypeTest(ResolvedTypeTestExpr),
     ObjectCast(ResolvedObjectCastExpr),
+    Allocation(ResolvedAllocationExpr),
     DirectCall(ResolvedDirectCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
@@ -37,6 +38,7 @@ impl ResolvedExpression {
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
+            Self::Allocation(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
@@ -45,6 +47,15 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedAllocationExpr {
+    pub class: ClassId,
+    pub new_span: Span,
+    pub target_span: Span,
+    pub mode: ResolvedConstructionMode,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

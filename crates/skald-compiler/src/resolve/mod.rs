@@ -9,11 +9,11 @@ mod resolver;
 
 pub use dump::dump_resolved;
 pub use ir::{
-    ResolvedBaseInitialization, ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr,
-    ResolvedBlock, ResolvedBooleanExpr, ResolvedClassDeclaration, ResolvedClassDeclarationTable,
-    ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedClassHierarchy,
-    ResolvedClassMember, ResolvedConditional, ResolvedConditionalArm, ResolvedConstructExpr,
-    ResolvedConstructionMode, ResolvedCopyAssignmentDeclaration,
+    ResolvedAllocationExpr, ResolvedBaseInitialization, ResolvedBinaryExpr, ResolvedBinaryOperator,
+    ResolvedBindingExpr, ResolvedBlock, ResolvedBooleanExpr, ResolvedClassDeclaration,
+    ResolvedClassDeclarationTable, ResolvedClassDefinition, ResolvedClassDefinitionTable,
+    ResolvedClassHierarchy, ResolvedClassMember, ResolvedConditional, ResolvedConditionalArm,
+    ResolvedConstructExpr, ResolvedConstructionMode, ResolvedCopyAssignmentDeclaration,
     ResolvedCopyConstructorDeclaration, ResolvedCopyOperation, ResolvedDestructorDeclaration,
     ResolvedDirectBase, ResolvedDirectCallExpr, ResolvedExpression, ResolvedExpressionStatement,
     ResolvedFieldAccessExpr, ResolvedFieldAssignment, ResolvedFieldDeclaration,
@@ -26,9 +26,9 @@ pub use ir::{
     ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedNumericLiteralExpr,
     ResolvedObjectAssignment, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
     ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedParameter, ResolvedParameterBindingMode,
-    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType,
-    ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
-    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedSharedTarget,
+    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr,
+    ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,
@@ -36,6 +36,7 @@ pub use resolver::{
     INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET, INVALID_INTERFACE_CLAIM,
     INVALID_LIFECYCLE_SIGNATURE, INVALID_MEMBER_SELECTION, INVALID_OVERRIDE, SELF_OUTSIDE_MEMBER,
     TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
+    UNSUPPORTED_SHARED_OWNERSHIP,
 };
 
 #[cfg(test)]

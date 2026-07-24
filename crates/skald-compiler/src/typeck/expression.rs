@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     function::CallableChecker,
-    program::{INVALID_OBJECT_CAST, TYPE_MISMATCH},
+    program::{INVALID_OBJECT_CAST, INVALID_OBJECT_CONTEXT, TYPE_MISMATCH},
 };
 
 mod alias;
@@ -81,6 +81,19 @@ impl CallableChecker<'_, '_> {
                         ),
                     );
                 }
+                None
+            }
+            ResolvedExpression::Allocation(allocation) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "shared allocation is not implemented in typed HIR",
+                    )
+                    .with_primary_label(
+                        allocation.new_span,
+                        "allocation cannot cross type checking yet",
+                    ),
+                );
                 None
             }
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),

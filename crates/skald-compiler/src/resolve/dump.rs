@@ -366,6 +366,13 @@ impl ResolvedDumper {
                 self.line(&format!("Type Interface {interface}"), type_syntax.span);
                 return;
             }
+            ResolvedTypeKind::Shared(target) => {
+                self.line(
+                    &format!("Type Shared {}", render_shared_target(target)),
+                    type_syntax.span,
+                );
+                return;
+            }
         };
         self.line(&format!("Type {name}"), type_syntax.span);
     }
@@ -518,6 +525,25 @@ impl ResolvedDumper {
                 );
                 self.indented(|dumper| dumper.expression(&cast.source));
             }
+            ResolvedExpression::Allocation(allocation) => {
+                let mode = match &allocation.mode {
+                    ResolvedConstructionMode::Initialize { .. } => "Allocate",
+                    ResolvedConstructionMode::Copy { .. } => "CopyAllocate",
+                };
+                self.line(&format!("{mode} {}", allocation.class), allocation.span);
+                self.indented(|dumper| match &allocation.mode {
+                    ResolvedConstructionMode::Initialize { arguments } => {
+                        for argument in arguments {
+                            dumper.expression(argument);
+                        }
+                    }
+                    ResolvedConstructionMode::Copy { copy_span, source } => {
+                        dumper.line("Copy", *copy_span);
+                        dumper.heading("Source");
+                        dumper.indented(|dumper| dumper.expression(source));
+                    }
+                });
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.line(&format!("DirectCall {}", call.function), call.span);
                 self.indented(|dumper| {
@@ -668,5 +694,14 @@ fn render_type_kind(kind: ResolvedTypeKind) -> String {
         ResolvedTypeKind::Obj => "Obj".to_owned(),
         ResolvedTypeKind::Class(class) => format!("class {class}"),
         ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
+        ResolvedTypeKind::Shared(target) => format!("shared {}", render_shared_target(target)),
+    }
+}
+
+fn render_shared_target(target: ResolvedSharedTarget) -> String {
+    match target {
+        ResolvedSharedTarget::Obj => "Obj".to_owned(),
+        ResolvedSharedTarget::Class(class) => format!("class {class}"),
+        ResolvedSharedTarget::Interface(interface) => format!("interface {interface}"),
     }
 }

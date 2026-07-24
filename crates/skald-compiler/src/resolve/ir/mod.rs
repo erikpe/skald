@@ -21,13 +21,13 @@ pub use declarations::{
     ResolvedInterfaceClaim, ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable,
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
     ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedType,
-    ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
+    ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
-    ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
-    ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDirectCallExpr, ResolvedExpression,
-    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
+    ResolvedAllocationExpr, ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr,
+    ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDirectCallExpr,
+    ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr, ResolvedUnaryExpr,
     ResolvedUnaryOperator,

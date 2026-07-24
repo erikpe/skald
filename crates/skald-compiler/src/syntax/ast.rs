@@ -204,6 +204,7 @@ pub enum TypeKind {
     Bool,
     Unit,
     Named(Name),
+    Shared { shared_span: Span, target: Name },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -312,6 +313,7 @@ pub enum Expression {
     Binary(BinaryExpr),
     TypeTest(TypeTestExpr),
     ObjectCast(ObjectCastExpr),
+    Allocation(AllocationExpr),
     Call(CallExpr),
     Grouped(GroupedExpr),
     SelfValue(SelfExpr),
@@ -328,12 +330,21 @@ impl Expression {
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
+            Self::Allocation(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::SelfValue(expression) => expression.span,
             Self::MemberAccess(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllocationExpr {
+    pub new_span: Span,
+    pub target: Name,
+    pub arguments: CallArguments,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

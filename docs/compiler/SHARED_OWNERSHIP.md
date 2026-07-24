@@ -8,9 +8,11 @@ source-visible contract is [Shared Ownership and Heap Allocation](../language/SH
 Object cast legality and consuming contexts are owned by
 [Object Casts](../language/OBJECT_CASTS.md).
 
-The current compiler IR has no shared types or operations, and the current
-[runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation functions.
-Those facts change only during a separately approved implementation roadmap.
+Source AST and resolved IR now retain shared targets, exact allocation class
+identities, and ordinary-versus-copy allocation modes behind a frontend-only
+diagnostic. Typed HIR, MIR, and the backend still have no shared types or
+operations, and the current [runtime ABI](RUNTIME_ABI.md) remains version 4
+with no allocation functions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy

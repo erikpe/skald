@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: planned; prerequisites complete, SO0 is next.
+Status: in progress; SO0 complete, SO1 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -25,11 +25,12 @@ and the complete cast direction matrix is
   target-directed `T(copy source)`.
 - Class/interface/`Obj` views, virtual and interface dispatch, type tests, and
   plain checked-place casts preserve complete-object and metadata provenance.
-- `(shared T) source` is parsed only far enough to issue an unsupported-feature
-  diagnostic. Storage types do not yet accept `shared T`, and `new` has no
-  allocation meaning.
-- No phase product represents shared types, owners, allocation, anchors, or
-  release. The x86-64 backend has no shared handle or allocation path.
+- The parser and resolver retain `(shared T) source`, stored/result `shared T`
+  targets, and both `new T(...)` allocation modes behind a focused
+  frontend-only diagnostic.
+- Typed HIR and lower phase products do not yet represent shared owners,
+  allocation, anchors, or release. The x86-64 backend has no shared handle or
+  allocation path.
 - Runtime ABI version 4 exposes scalar output only; it has no allocation or
   deallocation entry points.
 
@@ -73,7 +74,7 @@ and the complete cast direction matrix is
 
 ## Progress
 
-- [ ] SO0 — Parse and resolve shared types and allocation forms
+- [x] SO0 — Parse and resolve shared types and allocation forms
 - [ ] SO1 — Establish typed shared-owner vocabulary
 - [ ] SO2 — Represent and verify the first owner lifetime in MIR
 - [ ] SO3 — Upgrade the runtime to the minimal allocation ABI
@@ -96,25 +97,25 @@ and the complete cast direction matrix is
 **Purpose:** Give all later phases one source-shaped, identity-based frontend
 contract before ownership decisions enter typed IR.
 
-- [ ] Extend storage and result type syntax with contextual `shared` followed
+- [x] Extend storage and result type syntax with contextual `shared` followed
       by a class, interface, or `Obj` target, preserving exact spans and
       existing `ref`/`mut ref` parameter grammar.
-- [ ] Parse contextual `new C(arguments)` at expression precedence compatible
+- [x] Parse contextual `new C(arguments)` at expression precedence compatible
       with current construction, postfix selection, calls, casts, and the
       shared syntax-nesting budget.
-- [ ] Reuse the prerequisite construction-mode representation so
+- [x] Reuse the prerequisite construction-mode representation so
       `new T(copy source)` retains explicit copy-allocation mode while
       `new T(arguments)` retains ordinary overload mode; do not reconstruct
       the distinction from argument count or type below the frontend.
-- [ ] Resolve each shared target and allocation class to existing typed
+- [x] Resolve each shared target and allocation class to existing typed
       identities. Record ordinary versus copy-allocation mode without
       repeating source-shape inspection below resolution.
-- [ ] Reject unknown targets, `new` of interfaces/`Obj`, and malformed or
+- [x] Reject unknown targets, `new` of interfaces/`Obj`, and malformed or
       non-constructible targets with deterministic source diagnostics while
       keeping semantic execution gated until typed support lands.
-- [ ] Add focused lexer/contextual-word, parser recovery, AST/resolved identity,
+- [x] Add focused lexer/contextual-word, parser recovery, AST/resolved identity,
       exact-span, precedence, nesting, and deterministic-dump tests.
-- [ ] Update the implemented grammar and status wording for the newly accepted
+- [x] Update the implemented grammar and status wording for the newly accepted
       syntax without claiming executable shared ownership.
 
 **Tests:** Focused syntax and resolution suites, frontend robustness cases,

@@ -1,11 +1,13 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; not implemented**. This document is authoritative for
-the future source-visible semantics of `shared T`, heap allocation, shared
-copying and assignment, deterministic last-owner destruction, borrowing from
-shared storage, and strong cycles. The
-[status matrix](STATUS.md) remains authoritative for current compiler support,
-and the [implemented grammar](GRAMMAR.md) does not yet accept these forms.
+Status: **frozen design; frontend syntax and resolution implemented**. This
+document is authoritative for the source-visible semantics of `shared T`,
+heap allocation, shared copying and assignment, deterministic last-owner
+destruction, borrowing from shared storage, and strong cycles. The
+[status matrix](STATUS.md) remains authoritative for current compiler support.
+The [implemented grammar](GRAMMAR.md) accepts these forms, and resolution
+retains stable targets and allocation modes, but typed ownership and execution
+remain unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
