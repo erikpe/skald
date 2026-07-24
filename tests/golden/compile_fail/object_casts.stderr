@@ -7,12 +7,13 @@ error[TYP029]: object cast can never succeed
 12 |     ((Unrelated) root).touch();
     |                  ---- source view
 
-error[TYP029]: shared-owner casts are not implemented
+error[TYP029]: a shared-owner cast must be consumed as a shared value
  --> tests/golden/compile_fail/object_casts.ska:13:7
     |
 13 |     ((shared Root) root).touch();
-    |       ^^^^^^ owner-preserving shared casts are not available in typed HIR yet
-  = note: plain `(T) source` casts produce only a bounded borrowed place
+    |       ^^^^^^ this context requires a non-owning place
+  = note: store, pass, or return `(shared T) source` as `shared T`
+  = note: plain `(T) source` casts produce a bounded borrowed place
 
 error[TYP014]: owning copy source requires a class cast
  --> tests/golden/compile_fail/object_casts.ska:14:29

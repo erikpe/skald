@@ -5,7 +5,7 @@ use crate::{hir::HirViewTarget, identity::ClassId, resolve::ResolvedProgram};
 /// The compile-time outcome of asking whether one object source supplies a
 /// target view.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum ObjectViewRelation {
+pub(in crate::typeck) enum ObjectViewRelation {
     StaticSuccess,
     StaticFailure,
     Runtime,
@@ -13,14 +13,14 @@ pub(super) enum ObjectViewRelation {
 
 /// The dynamic-class knowledge available at one object-view operation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum ObjectViewSource {
+pub(in crate::typeck) enum ObjectViewSource {
     /// Inline owning storage and inline subobjects have one exact class.
     ExactClass(ClassId),
     /// Forwarded aliases retain a static view and runtime dynamic metadata.
     Dynamic(HirViewTarget),
 }
 
-pub(super) fn classify_object_view_relation(
+pub(in crate::typeck) fn classify_object_view_relation(
     program: &ResolvedProgram,
     source: ObjectViewSource,
     target: HirViewTarget,

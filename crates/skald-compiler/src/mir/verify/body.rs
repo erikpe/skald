@@ -522,6 +522,18 @@ impl<'mir> Verifier<'mir> {
                 *success_target,
                 *failure_target,
             ),
+            Some(MirTerminator::SharedCast {
+                cast,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_shared_cast_terminator(
+                function,
+                block,
+                cast,
+                *success_target,
+                *failure_target,
+            ),
             Some(MirTerminator::Terminate { .. }) => {}
             None => self.block_error(function.callable(), block.id, "block has no terminator"),
         }

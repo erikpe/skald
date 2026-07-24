@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO9 complete, SO10 is next.
+Status: in progress; SO10 complete, SO11 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -28,16 +28,16 @@ and the complete cast direction matrix is
 - The parser and resolver retain `(shared T) source`, stored/result `shared T`
   targets, and both `new T(...)` allocation modes.
 - Typed HIR represents canonical shared targets, named and produced owner
-  provenance, explicit copy/adopt transfers, and ordinary allocation with one
-  selected initializer. Explicit copy allocation and shared-owner casts remain
-  typed exclusions.
+  provenance, explicit copy/adopt transfers, ordinary allocation with one
+  selected initializer, and static/runtime owner-preserving casts. Explicit
+  copy allocation remains a typed exclusion.
 - MIR represents and verifies exact-class local owner initialization and
   assignment with distinct unpublished allocation storage, initialization,
   publication, adoption, named-owner copy, ownership move, release,
   full-expression boundary, and normal cleanup. Shared fields participate in
   initialization, secure replacement, user and synthesized copy lifecycle,
   inheritance, and reverse destruction through explicit projected MIR
-  operations. Polymorphic transfers, views, casts, and anchors remain
+  operations. Polymorphic transfers, views, and casts execute; anchors remain
   structurally gated. The x86-64 backend executes one-word local and field
   handles, checked allocation and retain, secure-before-release assignment,
   recursively generated dynamic complete finalization, and last-owner
@@ -101,7 +101,7 @@ and the complete cast direction matrix is
 - [x] SO7 — Integrate shared fields with class lifecycle
 - [x] SO8 — Execute shared-field layout and lifecycle
 - [x] SO9 — Add polymorphic shared views and dispatch
-- [ ] SO10 — Execute shared-owner casts
+- [x] SO10 — Execute shared-owner casts
 - [ ] SO11 — Anchor shared-backed calls
 - [ ] SO12 — Anchor shared-backed checked places
 - [ ] SO13 — Add explicit exact-class copy allocation
@@ -461,25 +461,25 @@ lowering path.
 **Purpose:** Complete the owner-preserving cast direction without conflating it
 with plain borrowed casts or allocation.
 
-- [ ] Type-check `(shared T) source` only from compatible shared
+- [x] Type-check `(shared T) source` only from compatible shared
       class/interface/`Obj` sources using the existing static-success,
       runtime-check, and static-failure relation.
-- [ ] Copy a named source owner and transfer a produced source owner after any
+- [x] Copy a named source owner and transfer a produced source owner after any
       required check; preserve the original header, payload, and dynamic
       metadata.
-- [ ] Reject inline and alias sources through focused ownership diagnostics and
+- [x] Reject inline and alias sources through focused ownership diagnostics and
       prove no cast path allocates or invokes a payload copy operation.
-- [ ] Represent static and runtime shared casts with explicit result ownership,
+- [x] Represent static and runtime shared casts with explicit result ownership,
       success/failure control flow, and source lifetime through result securing.
-- [ ] Extend MIR verification for source target, owner provenance,
+- [x] Extend MIR verification for source target, owner provenance,
       copy-versus-adopt, result compatibility, terminating failure, and absence
       of allocation.
-- [ ] Reuse backend metadata membership checks and unrecoverable failure
+- [x] Reuse backend metadata membership checks and unrecoverable failure
       lowering, then perform the verified retain or transfer on success.
-- [ ] Add same/up/down/cross class/interface/`Obj`, named/produced,
+- [x] Add same/up/down/cross class/interface/`Obj`, named/produced,
       static-impossible, invalid-source, count, failure-order, dump, assembly,
       and native tests.
-- [ ] Update the object-cast authority and status matrix for the implemented
+- [x] Update the object-cast authority and status matrix for the implemented
       shared-owner column.
 
 **Tests:** Focused type-operation tests from resolution through backend,
@@ -658,7 +658,7 @@ allocation/finalization vertical slice.
 SO5 completes intraprocedural owner semantics before SO6 carries owners across
 calls. SO7 adds owning graph edges only after both storage and call transfer
 are stable, and SO8 realizes those edges independently on x86-64. SO9
-establishes ordinary polymorphic shared views before SO10 adds checked
+established ordinary polymorphic shared views before SO10 added checked
 owner-preserving casts.
 
 SO11 introduces direct call anchors before SO12 composes them with checked

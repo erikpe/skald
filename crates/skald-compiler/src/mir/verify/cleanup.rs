@@ -204,6 +204,20 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::SharedCast {
+                    cast,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    if let super::super::model::MirSharedCastSource::Field { place, .. } =
+                        &cast.source
+                    {
+                        self.require_live_place(block, &state, place, "shared-cast field source");
+                    }
+                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::Return { .. }) | Some(MirTerminator::ReturnShared { .. }) => {
                     self.check_normal_return(block, &state)
                 }
@@ -339,6 +353,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 }
                 MirInstruction::SharedFieldCopy(copy) => {
                     self.require_live_place(block, state, &copy.source, "shared field copy source");
+                }
+                MirInstruction::SharedCast(cast) => {
+                    if let super::super::model::MirSharedCastSource::Field { place, .. } =
+                        &cast.source
+                    {
+                        self.require_live_place(block, state, place, "shared-cast field source");
+                    }
                 }
                 MirInstruction::SharedFieldInitialize(initialize) => {
                     self.initialize_place(block, state, &initialize.destination);

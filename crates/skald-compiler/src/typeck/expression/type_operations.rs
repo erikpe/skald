@@ -89,13 +89,11 @@ impl CallableChecker<'_, '_> {
             self.diagnostics.push(
                 Diagnostic::error(
                     INVALID_OBJECT_CAST,
-                    "shared-owner casts are not implemented",
+                    "a shared-owner cast must be consumed as a shared value",
                 )
-                .with_primary_label(
-                    shared_span,
-                    "owner-preserving shared casts are not available in typed HIR yet",
-                )
-                .with_note("plain `(T) source` casts produce only a bounded borrowed place"),
+                .with_primary_label(shared_span, "this context requires a non-owning place")
+                .with_note("store, pass, or return `(shared T) source` as `shared T`")
+                .with_note("plain `(T) source` casts produce a bounded borrowed place"),
             );
             return None;
         }
@@ -183,7 +181,7 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn check_view_target(
+    pub(in crate::typeck) fn check_view_target(
         &mut self,
         target: &ResolvedType,
         span: Span,

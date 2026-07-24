@@ -11,7 +11,7 @@ use super::{
 };
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-enum TypeRelation {
+pub(super) enum TypeRelation {
     StaticSuccess,
     StaticFailure,
     Runtime,
@@ -215,7 +215,11 @@ impl Verifier<'_> {
         }
     }
 
-    fn classify_type_relation(&self, source: MirType, target: MirViewTarget) -> TypeRelation {
+    pub(super) fn classify_type_relation(
+        &self,
+        source: MirType,
+        target: MirViewTarget,
+    ) -> TypeRelation {
         if target == MirViewTarget::Obj {
             return TypeRelation::StaticSuccess;
         }
@@ -250,7 +254,11 @@ impl Verifier<'_> {
         }
     }
 
-    fn class_can_inhabit_type(&self, class: crate::identity::ClassId, source: MirType) -> bool {
+    pub(super) fn class_can_inhabit_type(
+        &self,
+        class: crate::identity::ClassId,
+        source: MirType,
+    ) -> bool {
         match source {
             MirType::Class(target) => class == target || self.program.is_ancestor(target, class),
             MirType::Interface(interface) => self.program.conformance(class, interface).is_some(),
@@ -259,7 +267,11 @@ impl Verifier<'_> {
         }
     }
 
-    fn class_provides_view(&self, class: crate::identity::ClassId, target: MirViewTarget) -> bool {
+    pub(super) fn class_provides_view(
+        &self,
+        class: crate::identity::ClassId,
+        target: MirViewTarget,
+    ) -> bool {
         match target {
             MirViewTarget::Class(target) => {
                 class == target || self.program.is_ancestor(target, class)

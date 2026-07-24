@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; polymorphic shared views execute on x86-64**.
+Status: **frozen implementation design; shared-owner casts execute on x86-64**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -24,14 +24,17 @@ verified MIR and execute as owning graph edges on x86-64. Compatible owner
 up-views and stable local/parameter pointee places retain canonical header,
 complete-payload, static-target, access, and metadata provenance through HIR
 and MIR. Direct, virtual, and interface calls, inherited projections, mutable
-pointee access, and `is` use those places on x86-64. Other broader shared uses
-remain behind a structured lowering gate. The x86-64 backend executes the
+pointee access, and `is` use those places on x86-64. Shared casts retain a
+named owner or transfer a produced owner only on the statically guaranteed or
+runtime-checked success path; failure terminates and no cast allocates or
+copies payload. Other broader shared uses remain behind a structured lowering
+gate. The x86-64 backend executes the
 frozen handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
 deallocation. [Runtime ABI version
 5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
 deallocation.
-Explicit copy allocation and shared-owner casts remain typed exclusions.
+Explicit copy allocation remains a typed exclusion.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy

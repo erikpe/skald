@@ -42,9 +42,9 @@ pub use object::{
     HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 pub use shared::{
-    HirOwnerTransfer, HirSharedAllocation, HirSharedAssignment, HirSharedFieldWrite,
-    HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget,
-    HirSharedTransfer,
+    HirOwnerTransfer, HirSharedAllocation, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
+    HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,
+    HirSharedSource, HirSharedTarget, HirSharedTransfer,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

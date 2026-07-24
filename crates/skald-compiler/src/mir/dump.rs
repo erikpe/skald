@@ -482,6 +482,11 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &copy.source);
                 write_span(output, copy.span);
             }
+            MirInstruction::SharedCast(cast) => {
+                output.push_str("shared-cast-static ");
+                dump_shared_cast(output, cast);
+                write_span(output, cast.span);
+            }
             MirInstruction::SharedMove(transfer) => {
                 let _ = write!(
                     output,
@@ -552,6 +557,20 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::SharedCast {
+            cast,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            output.push_str("shared-cast-runtime ");
+            dump_shared_cast(output, cast);
+            let _ = write!(
+                output,
+                ", success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::Terminate { reason, span }) => {
             let reason = match reason {
                 MirTerminationReason::ObjectCastFailure => "object-cast-failure",
@@ -562,6 +581,26 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
         None => output.push_str("<unterminated>"),
     }
     output.push('\n');
+}
+
+fn dump_shared_cast(output: &mut String, cast: &MirSharedCast) {
+    let transfer = match cast.transfer {
+        MirSharedCastTransfer::Copy => "copy",
+        MirSharedCastTransfer::Adopt => "adopt",
+    };
+    let _ = write!(output, "{} = {transfer} ", cast.destination,);
+    match &cast.source {
+        MirSharedCastSource::Owner {
+            storage, target, ..
+        } => {
+            let _ = write!(output, "{storage}: shared {target}");
+        }
+        MirSharedCastSource::Field { place, target } => {
+            dump_place(output, place);
+            let _ = write!(output, ": shared {target}");
+        }
+    }
+    let _ = write!(output, " -> shared {}", cast.target);
 }
 
 fn dump_object_origin(output: &mut String, origin: &MirObjectOrigin) {

@@ -7,10 +7,11 @@ use crate::identity::CallableId;
 use super::{
     super::model::{
         BlockId, MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
-        MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy, MirSharedFieldCopy,
-        MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
-        MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind, MirTerminator,
-        MirType, StorageId, ValueId,
+        MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCast, MirSharedCastSource,
+        MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize,
+        MirSharedFieldReplace, MirSharedInitialize, MirSharedMove, MirSharedPublish,
+        MirSharedRelease, MirSharedTarget, MirStorageKind, MirTerminator, MirType, MirViewTarget,
+        StorageId, ValueId,
     },
     context::Verifier,
 };
@@ -285,6 +286,145 @@ impl<'mir> Verifier<'mir> {
         }
     }
 
+    pub(super) fn verify_shared_cast(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        cast: &MirSharedCast,
+        runtime: bool,
+    ) {
+        let destination = function.storage(cast.destination);
+        if !destination.is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Local
+                    | MirStorageKind::Temporary
+                    | MirStorageKind::Argument
+                    | MirStorageKind::Return
+            ) && storage.ty == MirType::Shared(cast.target)
+        }) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared cast requires matching fresh owner destination storage",
+            );
+        }
+        self.verify_shared_target_declared(function.callable(), cast.target);
+        let source_target = cast.source.target();
+        let valid_source = match &cast.source {
+            MirSharedCastSource::Owner { storage, target } => {
+                function.storage(*storage).is_some_and(|source| {
+                    source.ty == MirType::Shared(*target)
+                        && match cast.transfer {
+                            MirSharedCastTransfer::Copy => {
+                                matches!(
+                                    source.kind,
+                                    MirStorageKind::Local | MirStorageKind::Parameter
+                                ) && cast.exact_dynamic_class.is_none()
+                            }
+                            MirSharedCastTransfer::Adopt => {
+                                source.kind == MirStorageKind::Temporary
+                            }
+                        }
+                })
+            }
+            MirSharedCastSource::Field { place, target } => {
+                cast.transfer == MirSharedCastTransfer::Copy
+                    && cast.exact_dynamic_class.is_none()
+                    && self
+                        .verify_place(function, block, place)
+                        .is_some_and(|source| {
+                            source.ty == MirType::Shared(*target)
+                                && matches!(
+                                    place.projections.last(),
+                                    Some(super::super::model::MirPlaceProjection::Field(_))
+                                )
+                        })
+            }
+        };
+        if !valid_source {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared cast source provenance or copy/adopt operation is invalid",
+            );
+        }
+        self.verify_shared_target_declared(function.callable(), source_target);
+        let target = shared_view_target(cast.target);
+        let relation = cast.exact_dynamic_class.map_or_else(
+            || self.classify_type_relation(source_target.ty(), target),
+            |class| {
+                if self.class_provides_view(class, target) {
+                    super::type_operations::TypeRelation::StaticSuccess
+                } else {
+                    super::type_operations::TypeRelation::StaticFailure
+                }
+            },
+        );
+        let expected = if runtime {
+            super::type_operations::TypeRelation::Runtime
+        } else {
+            super::type_operations::TypeRelation::StaticSuccess
+        };
+        if relation != expected {
+            self.block_error(
+                function.callable(),
+                block.id,
+                if runtime {
+                    "shared cast does not require a runtime metadata check"
+                } else {
+                    "static shared cast is not guaranteed to succeed"
+                },
+            );
+        }
+        if let Some(class) = cast.exact_dynamic_class {
+            if self.program.class(class).is_none()
+                || !self.class_can_inhabit_type(class, source_target.ty())
+            {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "shared cast exact dynamic provenance cannot inhabit its source target",
+                );
+            }
+        }
+    }
+
+    pub(super) fn verify_shared_cast_terminator(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        cast: &MirSharedCast,
+        success_target: BlockId,
+        failure_target: BlockId,
+    ) {
+        self.verify_shared_cast(function, block, cast, true);
+        self.verify_block_target(function, block, success_target);
+        self.verify_block_target(function, block, failure_target);
+        if success_target == failure_target {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared cast success and failure edges must differ",
+            );
+        }
+        if !function.block(failure_target).is_some_and(|failure| {
+            matches!(
+                failure.terminator,
+                Some(MirTerminator::Terminate {
+                    reason: super::super::model::MirTerminationReason::ObjectCastFailure,
+                    ..
+                })
+            )
+        }) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared cast failure edge must terminate with object-cast failure",
+            );
+        }
+    }
+
     pub(super) fn verify_shared_field_initialize(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -500,6 +640,18 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     self.merge(*true_target, &state, &mut incoming, &mut pending);
                     self.merge(*false_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::SharedCast {
+                    cast,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.require_shared_cast_source(block.id, &state, cast);
+                    let mut success = state.clone();
+                    self.apply_shared_cast(block.id, &mut success, cast);
+                    self.merge(*success_target, &success, &mut incoming, &mut pending);
+                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
                 Some(MirTerminator::ReturnShared { owner, .. }) => {
                     self.check_return(block, &state, Some(*owner))
@@ -602,6 +754,10 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                     state.pending_full_expression_boundary = true;
                 }
+                MirInstruction::SharedCast(cast) => {
+                    self.require_shared_cast_source(block.id, state, cast);
+                    self.apply_shared_cast(block.id, state, cast);
+                }
                 MirInstruction::SharedMove(transfer) => {
                     let source_origin = state.owner_origins.get(&transfer.source).copied();
                     if source_origin.is_none() || !state.live_owners.remove(&transfer.source) {
@@ -688,6 +844,69 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 }
             }
         }
+    }
+
+    fn require_shared_cast_source(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        cast: &MirSharedCast,
+    ) {
+        match &cast.source {
+            MirSharedCastSource::Owner { storage, .. } => {
+                if !state.live_owners.contains(storage)
+                    || !state.owner_origins.contains_key(storage)
+                {
+                    self.error(block, "shared cast source is not a live owner");
+                }
+                if let Some(class) = cast.exact_dynamic_class {
+                    let exact_origin = state
+                        .owner_origins
+                        .get(storage)
+                        .and_then(|origin| self.function.storage(*origin))
+                        .is_some_and(|origin| origin.ty == MirType::Class(class));
+                    if !exact_origin {
+                        self.error(
+                            block,
+                            "shared cast exact dynamic provenance does not match its allocation",
+                        );
+                    }
+                }
+            }
+            MirSharedCastSource::Field { place, .. } => {
+                self.require_live_pointee(block, state, place);
+            }
+        }
+    }
+
+    fn apply_shared_cast(&mut self, block: BlockId, state: &mut SharedState, cast: &MirSharedCast) {
+        let origin = match (&cast.source, cast.transfer) {
+            (MirSharedCastSource::Owner { storage, .. }, MirSharedCastTransfer::Copy) => {
+                state.owner_origins.get(storage).copied()
+            }
+            (MirSharedCastSource::Owner { storage, .. }, MirSharedCastTransfer::Adopt) => {
+                let origin = state.owner_origins.remove(storage);
+                if !state.live_owners.remove(storage) {
+                    self.error(block, "shared cast transfer source is not live");
+                } else {
+                    state.released_owners.insert(*storage);
+                }
+                origin
+            }
+            (MirSharedCastSource::Field { .. }, MirSharedCastTransfer::Copy) => {
+                Some(cast.destination)
+            }
+            (MirSharedCastSource::Field { .. }, MirSharedCastTransfer::Adopt) => None,
+        };
+        if state.live_owners.contains(&cast.destination)
+            || state.released_owners.contains(&cast.destination)
+        {
+            self.error(block, "shared cast destination is already initialized");
+        } else if let Some(origin) = origin {
+            state.live_owners.insert(cast.destination);
+            state.owner_origins.insert(cast.destination, origin);
+        }
+        state.pending_full_expression_boundary = origin.is_some();
     }
 
     fn check_pointee_uses(
@@ -932,5 +1151,13 @@ impl SharedState {
             && self.owner_origins == other.owner_origins
             && self.initialized_fields == other.initialized_fields
             && self.pending_full_expression_boundary == other.pending_full_expression_boundary
+    }
+}
+
+const fn shared_view_target(target: MirSharedTarget) -> MirViewTarget {
+    match target {
+        MirSharedTarget::Obj => MirViewTarget::Obj,
+        MirSharedTarget::Class(class) => MirViewTarget::Class(class),
+        MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
     }
 }

@@ -289,6 +289,49 @@ fn shared_views_execute_deep_virtual_interface_and_mutable_member_access() {
 }
 
 #[test]
+fn shared_casts_execute_named_retain_produced_transfer_and_cross_view_checks() {
+    let mut output = assembly(concat!(
+        "interface Left { fn value() -> i64; }\n",
+        "interface Right { fn value() -> i64; }\n",
+        "class Root { init() {} virtual fn value() -> i64 { return 1; } }\n",
+        "class Leaf extends Root implements Left, Right {\n",
+        "  init() { super(); }\n",
+        "  override fn value() -> i64 { return 7; }\n",
+        "}\n",
+        "class LeftOnly implements Left {\n",
+        "  init() {}\n",
+        "  fn value() -> i64 { return 3; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var erased: shared Obj = new Leaf();\n",
+        "  var leaf: shared Leaf = (shared Leaf) erased;\n",
+        "  var left: shared Left = leaf;\n",
+        "  var right: shared Right = (shared Right) left;\n",
+        "  var root: shared Root = (shared Root) new Leaf();\n",
+        "  return leaf.value() + right.value() + root.value();\n",
+        "}\n",
+    ));
+    output.push_str(simple_ownership_stubs());
+    assert_eq!(run_native_assembly(&output).code(), Some(21));
+}
+
+#[test]
+fn failed_shared_cast_terminates_before_establishing_a_result_owner() {
+    let mut output = assembly(concat!(
+        "class Root { init() {} }\n",
+        "class Leaf extends Root { init() { super(); } }\n",
+        "class Other { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var erased: shared Obj = new Other();\n",
+        "  var leaf: shared Leaf = (shared Leaf) erased;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    output.push_str(simple_ownership_stubs());
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn intentional_strong_cycle_leaks_while_acyclic_controls_finalize() {
     let mut output = assembly(concat!(
         "extern fn observe(value: i64) -> unit;\n",

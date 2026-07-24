@@ -207,7 +207,8 @@ copy or adopt. Ordinary `new C(arguments)` retains exact `C`, its selected
 parameters, results, and fields use this vocabulary, including compatible
 implicit up-views. Inline values and aliases do not implicitly manufacture an
 owner, external shared signatures remain invalid, and explicit copy allocation
-and shared-owner casts remain structured typed exclusions.
+remains a structured typed exclusion. Shared casts record their source
+provenance, static or runtime relation, target, and copy/adopt result ownership.
 
 MIR lowering accepts compatible shared local initialization and assignment
 from named owners and ordinary allocations. It also carries compatible shared
@@ -227,8 +228,8 @@ parameters lower to explicit shared-pointee places and shared object origins
 for inherited projection, mutable member access, virtual/interface dispatch,
 and `is`. The verifier ties every such place to a live owner and compatible
 header metadata. A structured `HirLoweringError::UnsupportedSharedOwnership`
-gate remains for shared-owner casts, shared-backed alias borrowing, anchors,
-and explicit copy allocation.
+gate remains for shared-backed alias borrowing, anchors, and explicit copy
+allocation.
 
 ## MIR
 
@@ -304,8 +305,9 @@ sources use the same bounded carrier when a typed indirect home is required.
 Scalar values that must survive a cast edge are explicitly spilled so MIR's
 transient values remain block-local. The verifier checks target relation,
 access, provenance, single definition, carrier liveness, failure termination,
-and consumer compatibility. Shared-owner casts will add explicit copy/adopt
-ownership operations but no allocation operation. Future copy allocation
+and consumer compatibility. Shared-owner casts use explicit static
+instructions or runtime success/failure terminators, with copy/adopt ownership
+performed only on success and no allocation operation. Future copy allocation
 instead composes a target-directed checked source with explicit source `new`,
 exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.

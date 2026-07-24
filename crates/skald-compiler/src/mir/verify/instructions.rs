@@ -97,6 +97,9 @@ impl Verifier<'_> {
             MirInstruction::SharedFieldCopy(copy) => {
                 self.verify_shared_field_copy(function, block, copy)
             }
+            MirInstruction::SharedCast(cast) => {
+                self.verify_shared_cast(function, block, cast, false)
+            }
             MirInstruction::SharedMove(transfer) => {
                 self.verify_shared_move(function, block, transfer)
             }

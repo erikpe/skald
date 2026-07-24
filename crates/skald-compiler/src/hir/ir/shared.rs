@@ -49,6 +49,7 @@ impl HirSharedPlace {
 pub enum HirSharedProducer {
     Allocation(HirSharedAllocation),
     Call(Box<HirExpression>),
+    Cast(Box<HirSharedCast>),
 }
 
 impl HirSharedProducer {
@@ -59,6 +60,7 @@ impl HirSharedProducer {
                 Type::Shared(target) => target,
                 _ => unreachable!("shared call producer must have a shared result"),
             },
+            Self::Cast(cast) => cast.target,
         }
     }
 
@@ -66,8 +68,27 @@ impl HirSharedProducer {
         match self {
             Self::Allocation(allocation) => allocation.span,
             Self::Call(call) => call.span,
+            Self::Cast(cast) => cast.span,
         }
     }
+}
+
+/// An owner-preserving checked view of one existing shared allocation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirSharedCast {
+    pub source: HirSharedSource,
+    pub target: HirSharedTarget,
+    pub kind: HirSharedCastKind,
+    /// Exact dynamic knowledge retained from a produced allocation. Casts
+    /// never change it; named and call-produced owners remain dynamic.
+    pub exact_dynamic_class: Option<ClassId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirSharedCastKind {
+    Static,
+    RuntimeTerminate,
 }
 
 /// The ownership provenance of a shared value before a consuming boundary.

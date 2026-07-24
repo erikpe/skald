@@ -45,7 +45,9 @@ pub(super) fn select(
             output.push(Instruction::JumpIfNotZero(block_label(*true_target)));
             output.push(Instruction::Jump(block_label(*false_target)));
         }
-        MirTerminator::CheckedCast { .. } | MirTerminator::Terminate { .. } => {
+        MirTerminator::CheckedCast { .. }
+        | MirTerminator::SharedCast { .. }
+        | MirTerminator::Terminate { .. } => {
             unreachable!("type-operation terminators use their dedicated selector")
         }
     }

@@ -1,0 +1,47 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Left {
+    fn value() -> i64;
+}
+
+interface Right {
+    fn value() -> i64;
+}
+
+class Root {
+    init() {}
+
+    virtual fn value() -> i64 {
+        return 1;
+    }
+}
+
+class Leaf extends Root implements Left, Right {
+    init() {
+        super();
+    }
+
+    override fn value() -> i64 {
+        return 7;
+    }
+}
+
+class LeftOnly implements Left {
+    init() {}
+
+    fn value() -> i64 {
+        return 3;
+    }
+}
+
+fn main() -> i64 {
+    var erased: shared Obj = new Leaf();
+    var leaf: shared Leaf = (shared Leaf) erased;
+    var left: shared Left = leaf;
+    var right: shared Right = (shared Right) left;
+    var root: shared Root = (shared Root) new Leaf();
+    ska_rt_println_i64(leaf.value());
+    ska_rt_println_i64(right.value());
+    ska_rt_println_i64(root.value());
+    return 0;
+}

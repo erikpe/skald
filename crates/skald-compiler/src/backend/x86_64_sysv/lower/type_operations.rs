@@ -86,6 +86,23 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::Jump(block_label(*success_target)));
                 Ok(true)
             }
+            MirTerminator::SharedCast {
+                cast,
+                success_target,
+                failure_target,
+                ..
+            } => {
+                let matched = cast_match_label(self.function.callable(), block);
+                self.load_shared_cast_metadata(&cast.source)?;
+                self.emit_metadata_membership_branches(shared_target_view(cast.target), &matched);
+                self.output
+                    .push(Instruction::Jump(block_label(*failure_target)));
+                self.output.push(Instruction::Label(matched));
+                self.select_shared_cast(cast)?;
+                self.output
+                    .push(Instruction::Jump(block_label(*success_target)));
+                Ok(true)
+            }
             MirTerminator::Terminate {
                 reason: MirTerminationReason::ObjectCastFailure,
                 ..
@@ -104,6 +121,10 @@ impl InstructionSelector<'_, '_> {
         matched: &Label,
     ) {
         self.load_origin_metadata(ObjectOriginOperand::Mir(origin), Register::R11);
+        self.emit_metadata_membership_branches(target, matched);
+    }
+
+    fn emit_metadata_membership_branches(&mut self, target: MirViewTarget, matched: &Label) {
         let classes = self.dispatch.classes_providing_view(self.program, target);
         debug_assert!(!classes.is_empty(), "verified runtime target can succeed");
         for class in classes {
@@ -117,6 +138,14 @@ impl InstructionSelector<'_, '_> {
             });
             self.output.push(Instruction::JumpIfEqual(matched.clone()));
         }
+    }
+}
+
+const fn shared_target_view(target: crate::mir::MirSharedTarget) -> MirViewTarget {
+    match target {
+        crate::mir::MirSharedTarget::Obj => MirViewTarget::Obj,
+        crate::mir::MirSharedTarget::Class(class) => MirViewTarget::Class(class),
+        crate::mir::MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
     }
 }
 

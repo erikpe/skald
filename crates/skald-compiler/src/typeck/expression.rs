@@ -23,7 +23,9 @@ mod primitive;
 mod receiver;
 mod type_operations;
 
-pub(in crate::typeck) use object_view_relation::class_provides_view;
+pub(in crate::typeck) use object_view_relation::{
+    class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
+};
 pub(super) use place::ObjectPlaceUse;
 
 pub(in crate::typeck) trait CallParameter {

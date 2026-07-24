@@ -58,8 +58,9 @@ owning slices, class/interface/`Obj` alias views, virtual-family calls, and
 interface calls. Runtime class/interface tests compare the forwarded dynamic
 class metadata identity against the verified target set. Checked object casts
 use the same check, materialize a successful full-expression view, and emit an
-illegal-instruction trap on failure. Shared-owner casts later preserve the
-existing allocation header and never call the allocator.
+illegal-instruction trap on failure. Shared-owner casts use the same metadata
+membership test, retain or transfer the source handle on success, preserve the
+existing allocation header, and never call the allocator.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -294,8 +295,9 @@ initializers, methods, interface calls, recursion, and mixed argument pressure
 all use this same call facade. Stable shared local/parameter pointee places
 derive their complete payload at header offset 16 and dynamic metadata at
 offset 8, then reuse ordinary field layout, virtual/interface dispatch, and
-type-test machinery. Shared-backed alias, cast, and anchor contexts remain
-gated by their owning frontend or MIR phases.
+type-test machinery. Shared-owner casts execute from owner storage and shared
+fields. Shared-backed alias and anchor contexts remain gated by their owning
+frontend or MIR phases.
 
 ## Symbols and process entry
 

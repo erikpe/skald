@@ -65,8 +65,29 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
                 expression_contains_runtime_cast(call)
             }
+            HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+                cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
+                    || shared_source_contains_runtime_cast(&cast.source)
+            }
             HirSharedSource::Place(_) => false,
         },
+    }
+}
+
+fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
+    match source {
+        HirSharedSource::Place(_) => false,
+        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => allocation
+            .arguments
+            .iter()
+            .any(call_argument_contains_runtime_cast),
+        HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+            expression_contains_runtime_cast(call)
+        }
+        HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+            cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
+                || shared_source_contains_runtime_cast(&cast.source)
+        }
     }
 }
 

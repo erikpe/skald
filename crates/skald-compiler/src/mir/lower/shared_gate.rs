@@ -170,8 +170,26 @@ fn supports_transfer(transfer: &HirSharedTransfer) -> bool {
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
             transfer.operation == HirOwnerTransfer::Adopt && expression_supports_shared(call)
         }
+        HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+            transfer.operation == HirOwnerTransfer::Adopt && supports_shared_source(&cast.source)
+        }
         HirSharedSource::Place(HirSharedPlace::Field { .. }) => {
             transfer.operation == HirOwnerTransfer::Copy
+        }
+    }
+}
+
+fn supports_shared_source(source: &HirSharedSource) -> bool {
+    match source {
+        HirSharedSource::Place(_) => true,
+        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+            arguments_support_shared(&allocation.arguments)
+        }
+        HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+            expression_supports_shared(call)
+        }
+        HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+            supports_shared_source(&cast.source)
         }
     }
 }

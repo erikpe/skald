@@ -153,6 +153,60 @@ fn shared_polymorphic_consumers_keep_static_targets_and_header_origins() {
 }
 
 #[test]
+fn shared_casts_classify_static_runtime_and_produced_owner_transfer() {
+    let output = type_check_source(concat!(
+        "interface Tagged {}\n",
+        "class Root { init() {} }\n",
+        "class Leaf extends Root implements Tagged { init() { super(); } }\n",
+        "fn cast(value: shared Obj) -> shared Leaf {\n",
+        "  var leaf: shared Leaf = (shared Leaf) value;\n",
+        "  return leaf;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var tagged: shared Tagged = (shared Tagged) new Leaf();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output.hir.expect("valid shared casts must produce HIR");
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("SharedCast runtime-terminate -> shared class c1"));
+    assert!(dump.contains("SharedCast static -> shared interface i0"));
+    assert!(dump.contains("SharedTransfer Adopt"));
+    let mir = lower_hir(&hir).expect("shared casts must lower");
+    verify_mir(&mir).expect("shared cast MIR must verify");
+}
+
+#[test]
+fn shared_casts_reject_nonowners_and_statically_impossible_targets() {
+    let output = type_check_source(concat!(
+        "class Left { init() {} }\n",
+        "class Right { init() {} }\n",
+        "fn from_alias(ref value: Left) -> unit {\n",
+        "  var invalid: shared Left = (shared Left) value;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var inline: Left = Left();\n",
+        "  var invalid_inline: shared Left = (shared Left) inline;\n",
+        "  var impossible: shared Right = (shared Right) new Left();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let cast_errors: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::typeck::program::INVALID_OBJECT_CAST)
+        .collect();
+    assert_eq!(cast_errors.len(), 3, "{:?}", output.diagnostics);
+    assert!(cast_errors.iter().any(|diagnostic| diagnostic
+        .message
+        .contains("requires an existing or produced shared owner")));
+    assert!(cast_errors
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("never succeed")));
+}
+
+#[test]
 fn shared_fields_are_non_containing_edges_with_complete_initialization_rules() {
     let valid = type_check_source(concat!(
         "class Left {\n",

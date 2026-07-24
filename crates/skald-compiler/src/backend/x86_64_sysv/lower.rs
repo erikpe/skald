@@ -190,6 +190,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
             MirInstruction::SharedRelease(release) => self.select_shared_release(release),
             MirInstruction::SharedFieldCopy(copy) => self.select_shared_field_copy(copy)?,
+            MirInstruction::SharedCast(cast) => self.select_shared_cast(cast)?,
             MirInstruction::SharedFieldInitialize(initialize) => {
                 self.select_shared_field_initialize(initialize)?
             }

@@ -1,13 +1,13 @@
 # Object Casts
 
-Status: **plain checked-place casts implemented; shared-owner casts planned**.
+Status: **plain checked-place and shared-owner casts implemented**.
 This document is authoritative for C-style cast syntax and the complete
 conversion matrix between inline class places, non-owning aliases, and shared
 owners. The current compiler implements plain checked-place casts for method
 receivers, alias arguments, field access, exact-class copy construction and
 assignment, value parameters, results, and owning slicing. Produced inline
-sources use owning full-expression temporaries. Shared-owner casts remain
-planned.
+sources use owning full-expression temporaries. Shared-owner casts execute in
+target-directed owning contexts.
 
 Primitive conversions, optional casts, unsafe reinterpretation, user-defined
 conversions, and external object ABI are outside this profile.
@@ -45,9 +45,8 @@ the token after the closing parenthesis is a binary operator, not an adjacent
 cast operand.
 
 The [implemented grammar](GRAMMAR.md) is authoritative for current acceptance.
-`(shared T) source` crosses syntax and resolution but currently produces a
-focused typed-HIR exclusion. Stored `shared T` types and ordinary
-`new T(arguments)` cross typed HIR; explicit copy allocation remains excluded
+`(shared T) source` crosses every compiler phase. Stored `shared T` types and
+ordinary `new T(arguments)` execute; explicit copy allocation remains excluded
 until its checked source and anchor are implemented together.
 
 ## Two cast results
@@ -359,6 +358,6 @@ one.
 
 Local aliases remain a separate future design. The cast profile does not
 implicitly introduce `ref` locals, reference values, alias assignment, or
-escaping borrows. Shared storage and ordinary allocation are typed separately;
-shared-owner casts remain unavailable until owner-preserving cast execution is
-implemented.
+escaping borrows. Shared storage and ordinary allocation are typed separately.
+A shared-owner cast is a shared value in a target-directed owning context;
+immediately borrowing that produced owner still depends on hidden anchors.

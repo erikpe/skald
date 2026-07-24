@@ -803,12 +803,16 @@ impl HirDumper {
             ),
             value.span,
         );
-        self.indented(|dumper| match &value.source {
+        self.indented(|dumper| dumper.shared_source(&value.source));
+    }
+
+    fn shared_source(&mut self, source: &HirSharedSource) {
+        match source {
             HirSharedSource::Place(HirSharedPlace::Binding {
                 binding,
                 target,
                 span,
-            }) => dumper.line(
+            }) => self.line(
                 &format!("SharedBinding {binding} : {}", shared_target_name(*target)),
                 *span,
             ),
@@ -817,7 +821,7 @@ impl HirDumper {
                 target,
                 span,
             }) => {
-                dumper.line(
+                self.line(
                     &format!(
                         "SharedField {} : {}",
                         place.field,
@@ -825,27 +829,38 @@ impl HirDumper {
                     ),
                     *span,
                 );
-                dumper.indented(|dumper| dumper.object_place(&place.receiver));
+                self.indented(|dumper| dumper.object_place(&place.receiver));
             }
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-                dumper.line(
+                self.line(
                     &format!(
                         "SharedAllocation {} via {}",
                         allocation.class, allocation.initializer
                     ),
                     allocation.span,
                 );
-                dumper.indented(|dumper| {
+                self.indented(|dumper| {
                     for argument in &allocation.arguments {
                         dumper.call_argument(argument);
                     }
                 });
             }
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
-                dumper.line("SharedCallResult", call.span);
-                dumper.indented(|dumper| dumper.expression(call));
+                self.line("SharedCallResult", call.span);
+                self.indented(|dumper| dumper.expression(call));
             }
-        });
+            HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+                let kind = match cast.kind {
+                    crate::hir::HirSharedCastKind::Static => "static",
+                    crate::hir::HirSharedCastKind::RuntimeTerminate => "runtime-terminate",
+                };
+                self.line(
+                    &format!("SharedCast {kind} -> {}", shared_target_name(cast.target)),
+                    cast.span,
+                );
+                self.indented(|dumper| dumper.shared_source(&cast.source));
+            }
+        }
     }
 
     fn object_view(&mut self, label: &str, view: &HirObjectView) {

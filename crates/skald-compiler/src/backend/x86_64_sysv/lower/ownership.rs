@@ -6,9 +6,10 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirPlace, MirSharedAdopt, MirSharedAllocate, MirSharedCopy, MirSharedFieldCopy,
-        MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedMove, MirSharedPublish,
-        MirSharedRelease, MirType, StorageId,
+        MirPlace, MirSharedAdopt, MirSharedAllocate, MirSharedCast, MirSharedCastSource,
+        MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize,
+        MirSharedFieldReplace, MirSharedMove, MirSharedPublish, MirSharedRelease, MirType,
+        StorageId,
     },
 };
 
@@ -108,6 +109,51 @@ impl InstructionSelector<'_, '_> {
         );
         emit_trap_block(failure, complete.clone(), self.output);
         self.output.push(Instruction::Label(complete));
+    }
+
+    pub(super) fn select_shared_cast(&mut self, cast: &MirSharedCast) -> Result<(), BackendError> {
+        self.load_shared_cast_source(&cast.source)?;
+        if cast.transfer == MirSharedCastTransfer::Copy {
+            let (failure, complete) = self.ownership_labels("cast_retain");
+            emit_retain_loaded_handle(failure.clone(), self.output);
+            value::store_rax(
+                value::frame_storage(self.frame, cast.destination),
+                self.output,
+            );
+            emit_trap_block(failure, complete.clone(), self.output);
+            self.output.push(Instruction::Label(complete));
+        } else {
+            value::store_rax(
+                value::frame_storage(self.frame, cast.destination),
+                self.output,
+            );
+        }
+        Ok(())
+    }
+
+    pub(super) fn load_shared_cast_metadata(
+        &mut self,
+        source: &MirSharedCastSource,
+    ) -> Result<(), BackendError> {
+        self.load_shared_cast_source(source)?;
+        self.output.push(Instruction::Move {
+            source: value::memory(Register::Rax, SHARED_DYNAMIC_METADATA_OFFSET),
+            destination: Register::R11.into(),
+        });
+        Ok(())
+    }
+
+    fn load_shared_cast_source(
+        &mut self,
+        source: &MirSharedCastSource,
+    ) -> Result<(), BackendError> {
+        match source {
+            MirSharedCastSource::Owner { storage, .. } => {
+                self.load_shared_handle(*storage, Register::Rax);
+                Ok(())
+            }
+            MirSharedCastSource::Field { place, .. } => self.load_shared_place(place),
+        }
     }
 
     pub(super) fn select_shared_move(&mut self, transfer: &MirSharedMove) {

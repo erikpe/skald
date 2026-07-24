@@ -3,18 +3,24 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirExpressionKind, HirSharedAllocation, HirSharedPlace, HirSharedProducer, HirSharedSource,
-        HirSharedTarget, HirSharedTransfer, HirViewTarget, Type,
+        HirExpressionKind, HirSharedAllocation, HirSharedCast, HirSharedCastKind, HirSharedPlace,
+        HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer, HirViewTarget,
+        Type,
     },
     resolve::{
-        ResolvedAllocationExpr, ResolvedConstructionMode, ResolvedExpression, ResolvedSharedTarget,
+        ResolvedAllocationExpr, ResolvedConstructionMode, ResolvedExpression,
+        ResolvedObjectCastExpr, ResolvedSharedTarget,
     },
 };
 
 use super::{
-    expression::class_provides_view,
+    expression::{
+        class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
+    },
     function::CallableChecker,
-    program::{lower_type, INVALID_SHARED_CONVERSION, UNSUPPORTED_SHARED_OPERATION},
+    program::{
+        lower_type, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION, UNSUPPORTED_SHARED_OPERATION,
+    },
 };
 
 pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
@@ -56,7 +62,7 @@ impl CallableChecker<'_, '_> {
         target: HirSharedTarget,
         context: &'static str,
     ) -> Option<HirSharedTransfer> {
-        let source = self.check_shared_source(expression)?;
+        let source = self.check_shared_source(expression, false)?;
         let actual = source.target();
         if !target_accepts(self.program, target, actual) {
             self.diagnostics.push(
@@ -86,11 +92,15 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn check_shared_source(&mut self, expression: &ResolvedExpression) -> Option<HirSharedSource> {
+    fn check_shared_source(
+        &mut self,
+        expression: &ResolvedExpression,
+        cast_source: bool,
+    ) -> Option<HirSharedSource> {
         match expression {
             ResolvedExpression::Binding(binding) => {
                 let Type::Shared(target) = self.binding_type(binding.binding) else {
-                    self.report_non_shared_source(expression);
+                    self.report_non_shared_source(expression, cast_source);
                     return None;
                 };
                 Some(HirSharedSource::Place(HirSharedPlace::Binding {
@@ -102,7 +112,7 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => {
                 let checked = self.check_field_read(access)?;
                 let Type::Shared(target) = checked.ty else {
-                    self.report_non_shared_source(expression);
+                    self.report_non_shared_source(expression, cast_source);
                     return None;
                 };
                 let HirExpressionKind::FieldRead(place) = checked.kind else {
@@ -123,31 +133,26 @@ impl CallableChecker<'_, '_> {
             | ResolvedExpression::InterfaceCall(_) => {
                 let call = self.check_expression(expression)?;
                 if !matches!(call.ty, Type::Shared(_)) {
-                    self.report_non_shared_source(expression);
+                    self.report_non_shared_source(expression, cast_source);
                     return None;
                 }
                 Some(HirSharedSource::Produced(HirSharedProducer::Call(
                     Box::new(call),
                 )))
             }
-            ResolvedExpression::Grouped(grouped) => self.check_shared_source(&grouped.expression),
+            ResolvedExpression::Grouped(grouped) => {
+                self.check_shared_source(&grouped.expression, cast_source)
+            }
             ResolvedExpression::ObjectCast(cast)
                 if matches!(
                     cast.target_mode,
                     crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
                 ) =>
             {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        UNSUPPORTED_SHARED_OPERATION,
-                        "shared-owner casts are not available in typed HIR yet",
-                    )
-                    .with_primary_label(
-                        cast.span,
-                        "owner-preserving casts are implemented by a later ownership slice",
-                    ),
-                );
-                None
+                self.check_shared_cast(cast)
+                    .map(Box::new)
+                    .map(HirSharedProducer::Cast)
+                    .map(HirSharedSource::Produced)
             }
             ResolvedExpression::ObjectCast(cast) => {
                 self.diagnostics.push(
@@ -167,10 +172,44 @@ impl CallableChecker<'_, '_> {
             }
             _ => {
                 let _ = self.check_expression(expression);
-                self.report_non_shared_source(expression);
+                self.report_non_shared_source(expression, cast_source);
                 None
             }
         }
+    }
+
+    fn check_shared_cast(&mut self, cast: &ResolvedObjectCastExpr) -> Option<HirSharedCast> {
+        let source = self.check_shared_source(&cast.source, true)?;
+        let target_view =
+            self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
+        let target = shared_target_from_view(target_view);
+        let exact_dynamic_class = shared_source_exact_dynamic_class(&source);
+        let relation_source = exact_dynamic_class.map_or_else(
+            || ObjectViewSource::Dynamic(shared_target_view(source.target())),
+            ObjectViewSource::ExactClass,
+        );
+        let kind = match classify_object_view_relation(self.program, relation_source, target_view) {
+            ObjectViewRelation::StaticSuccess => HirSharedCastKind::Static,
+            ObjectViewRelation::Runtime => HirSharedCastKind::RuntimeTerminate,
+            ObjectViewRelation::StaticFailure => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_OBJECT_CAST, "shared-owner cast can never succeed")
+                        .with_primary_label(
+                            cast.target_span,
+                            "no possible dynamic class provides this shared view",
+                        )
+                        .with_secondary_label(source.span(), "shared source"),
+                );
+                return None;
+            }
+        };
+        Some(HirSharedCast {
+            source,
+            target,
+            kind,
+            exact_dynamic_class,
+            span: cast.span,
+        })
     }
 
     fn check_shared_allocation(
@@ -211,12 +250,20 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn report_non_shared_source(&mut self, expression: &ResolvedExpression) {
+    fn report_non_shared_source(&mut self, expression: &ResolvedExpression, cast_source: bool) {
         let actual = self.static_expression_type_for_diagnostic(expression);
         self.diagnostics.push(
             Diagnostic::error(
-                INVALID_SHARED_CONVERSION,
-                "shared ownership requires an existing or produced shared owner",
+                if cast_source {
+                    INVALID_OBJECT_CAST
+                } else {
+                    INVALID_SHARED_CONVERSION
+                },
+                if cast_source {
+                    "shared-owner cast requires an existing or produced shared owner"
+                } else {
+                    "shared ownership requires an existing or produced shared owner"
+                },
             )
             .with_primary_label(
                 expression.span(),
@@ -256,5 +303,31 @@ impl CallableChecker<'_, '_> {
                 .unwrap_or_else(|| interface.to_string()),
         };
         format!("shared {name}")
+    }
+}
+
+const fn shared_target_from_view(target: HirViewTarget) -> HirSharedTarget {
+    match target {
+        HirViewTarget::Obj => HirSharedTarget::Obj,
+        HirViewTarget::Class(class) => HirSharedTarget::Class(class),
+        HirViewTarget::Interface(interface) => HirSharedTarget::Interface(interface),
+    }
+}
+
+const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
+    match target {
+        HirSharedTarget::Obj => HirViewTarget::Obj,
+        HirSharedTarget::Class(class) => HirViewTarget::Class(class),
+        HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
+    }
+}
+
+fn shared_source_exact_dynamic_class(source: &HirSharedSource) -> Option<crate::identity::ClassId> {
+    match source {
+        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+            Some(allocation.class)
+        }
+        HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
+        HirSharedSource::Place(_) | HirSharedSource::Produced(HirSharedProducer::Call(_)) => None,
     }
 }

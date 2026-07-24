@@ -90,6 +90,44 @@ pub struct MirSharedFieldCopy {
     pub span: Span,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirSharedCastSource {
+    Owner {
+        storage: StorageId,
+        target: MirSharedTarget,
+    },
+    Field {
+        place: MirPlace,
+        target: MirSharedTarget,
+    },
+}
+
+impl MirSharedCastSource {
+    pub const fn target(&self) -> MirSharedTarget {
+        match self {
+            Self::Owner { target, .. } | Self::Field { target, .. } => *target,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirSharedCastTransfer {
+    Copy,
+    Adopt,
+}
+
+/// An owner-preserving cast. Runtime forms establish `destination` only on the
+/// success edge; neither form changes the allocation or its metadata.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedCast {
+    pub destination: StorageId,
+    pub source: MirSharedCastSource,
+    pub target: MirSharedTarget,
+    pub transfer: MirSharedCastTransfer,
+    pub exact_dynamic_class: Option<ClassId>,
+    pub span: Span,
+}
+
 /// Consumes one live owner and installs it without changing the strong count.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedMove {

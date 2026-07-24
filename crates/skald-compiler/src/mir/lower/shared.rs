@@ -2,9 +2,9 @@
 
 use super::*;
 use crate::hir::{
-    HirOwnerTransfer, HirSharedAllocation, HirSharedAssignment, HirSharedFieldWrite,
-    HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget,
-    HirSharedTransfer,
+    HirSharedAllocation, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
+    HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,
+    HirSharedSource, HirSharedTarget, HirSharedTransfer,
 };
 
 impl BodyLowerer<'_> {
@@ -63,34 +63,108 @@ impl BodyLowerer<'_> {
         destination: StorageId,
         transfer: &HirSharedTransfer,
     ) {
-        match &transfer.source {
+        self.lower_shared_source(destination, &transfer.source, transfer.span);
+        self.full_expression_has_shared_effect = true;
+    }
+
+    fn lower_shared_source(
+        &mut self,
+        destination: StorageId,
+        source: &HirSharedSource,
+        span: crate::source::Span,
+    ) {
+        match source {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
-                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Copy);
                 self.emit(MirInstruction::SharedCopy(MirSharedCopy {
                     destination,
                     source: self.storage_for_binding(*binding),
-                    span: transfer.span,
+                    span,
                 }));
             }
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Adopt);
                 self.lower_shared_allocation(destination, allocation);
             }
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
-                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Adopt);
                 self.lower_shared_call(call, destination);
             }
+            HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
+                self.lower_shared_cast(destination, cast);
+            }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
-                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Copy);
                 let source = self.lower_field_place(place);
                 self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {
                     destination,
                     source,
-                    span: transfer.span,
+                    span,
                 }));
             }
         }
-        self.full_expression_has_shared_effect = true;
+    }
+
+    fn lower_shared_cast(&mut self, destination: StorageId, cast: &HirSharedCast) {
+        let (source, transfer) = match &cast.source {
+            HirSharedSource::Place(HirSharedPlace::Binding {
+                binding, target, ..
+            }) => (
+                MirSharedCastSource::Owner {
+                    storage: self.storage_for_binding(*binding),
+                    target: lower_shared_target(*target),
+                },
+                MirSharedCastTransfer::Copy,
+            ),
+            HirSharedSource::Place(HirSharedPlace::Field { place, target, .. }) => (
+                MirSharedCastSource::Field {
+                    place: self.lower_field_place(place),
+                    target: lower_shared_target(*target),
+                },
+                MirSharedCastTransfer::Copy,
+            ),
+            produced @ HirSharedSource::Produced(_) => {
+                let temporary = self.new_shared_temporary(produced.target(), produced.span());
+                self.lower_shared_source(temporary, produced, produced.span());
+                self.consume_shared_temporary(temporary);
+                (
+                    MirSharedCastSource::Owner {
+                        storage: temporary,
+                        target: lower_shared_target(produced.target()),
+                    },
+                    MirSharedCastTransfer::Adopt,
+                )
+            }
+        };
+        let mir_cast = MirSharedCast {
+            destination,
+            source,
+            target: lower_shared_target(cast.target),
+            transfer,
+            exact_dynamic_class: cast.exact_dynamic_class,
+            span: cast.span,
+        };
+        match cast.kind {
+            HirSharedCastKind::Static => {
+                self.emit(MirInstruction::SharedCast(mir_cast));
+            }
+            HirSharedCastKind::RuntimeTerminate => {
+                let success = self.body.allocate_block(cast.span);
+                let failure = self.body.allocate_block(cast.span);
+                self.terminate(MirTerminator::SharedCast {
+                    cast: mir_cast,
+                    success_target: success,
+                    failure_target: failure,
+                    span: cast.span,
+                });
+                self.body
+                    .select_block(failure)
+                    .expect("allocated shared-cast failure block must be selectable");
+                self.terminate(MirTerminator::Terminate {
+                    reason: MirTerminationReason::ObjectCastFailure,
+                    span: cast.span,
+                });
+                self.body
+                    .select_block(success)
+                    .expect("allocated shared-cast success block must be selectable");
+            }
+        }
     }
 
     fn lower_shared_allocation(
@@ -156,5 +230,13 @@ impl BodyLowerer<'_> {
             .rposition(|candidate| *candidate == storage)
             .expect("consumed shared temporary must belong to the current full expression");
         self.full_expression_shared_temporaries.remove(index);
+    }
+}
+
+const fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
+    match target {
+        HirSharedTarget::Obj => MirSharedTarget::Obj,
+        HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
+        HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
     }
 }
