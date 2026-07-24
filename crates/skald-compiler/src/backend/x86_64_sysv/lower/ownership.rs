@@ -6,8 +6,8 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirSharedAdopt, MirSharedAllocate, MirSharedCopy, MirSharedPublish, MirSharedRelease,
-        MirType,
+        MirSharedAdopt, MirSharedAllocate, MirSharedCopy, MirSharedMove, MirSharedPublish,
+        MirSharedRelease, MirType,
     },
 };
 
@@ -132,6 +132,17 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::Label(failure));
         self.output.push(Instruction::Trap);
         self.output.push(Instruction::Label(complete));
+    }
+
+    pub(super) fn select_shared_move(&mut self, transfer: &MirSharedMove) {
+        value::load_rax(
+            value::frame_storage(self.frame, transfer.source),
+            self.output,
+        );
+        value::store_rax(
+            value::frame_storage(self.frame, transfer.destination),
+            self.output,
+        );
     }
 
     pub(super) fn select_shared_release(&mut self, release: &MirSharedRelease) {

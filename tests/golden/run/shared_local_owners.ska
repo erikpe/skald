@@ -1,0 +1,25 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn main() -> i64 {
+    var first: shared Trace = new Trace(1);
+    var alias: shared Trace = first;
+    {
+        var scoped: shared Trace = first;
+    }
+    first = first;
+    first = new Trace(2);
+    alias = first;
+    return 0;
+}

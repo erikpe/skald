@@ -5,7 +5,8 @@ use std::collections::HashSet;
 use crate::{
     hir::{
         HirBlock, HirCallArgument, HirLocal, HirLocalInitializer, HirOwnerTransfer, HirProgram,
-        HirReturnValue, HirSharedProducer, HirSharedSource, HirSharedTarget, HirStatement, Type,
+        HirReturnValue, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget,
+        HirSharedTransfer, HirStatement, Type,
     },
     identity::LocalId,
     source::Span,
@@ -110,18 +111,7 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
             HirStatement::Local(local) => match &local.initializer {
                 HirLocalInitializer::Shared(transfer) => {
                     pending.remove(&local.local);
-                    let HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) =
-                        &transfer.source
-                    else {
-                        return Some(transfer.span);
-                    };
-                    if transfer.operation != HirOwnerTransfer::Adopt
-                        || transfer.target != HirSharedTarget::Class(allocation.class)
-                        || allocation
-                            .arguments
-                            .iter()
-                            .any(|argument| matches!(argument, HirCallArgument::Shared(_)))
-                    {
+                    if !supports_exact_local_transfer(transfer) {
                         return Some(transfer.span);
                     }
                 }
@@ -135,6 +125,13 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
                 return Some(result.span);
             }
             HirStatement::SharedFieldWrite(write) => return Some(write.span),
+            HirStatement::SharedAssignment(assignment) => {
+                if !matches!(assignment.destination, crate::identity::BindingId::Local(_))
+                    || !supports_exact_local_transfer(&assignment.value)
+                {
+                    return Some(assignment.span);
+                }
+            }
             HirStatement::Conditional(conditional) => {
                 for arm in &conditional.arms {
                     if let Some(span) = validate_block(&arm.body, pending) {
@@ -163,4 +160,22 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
         }
     }
     None
+}
+
+fn supports_exact_local_transfer(transfer: &HirSharedTransfer) -> bool {
+    match &transfer.source {
+        HirSharedSource::Place(HirSharedPlace::Binding { target, .. }) => {
+            transfer.operation == HirOwnerTransfer::Copy && transfer.target == *target
+        }
+        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+            transfer.operation == HirOwnerTransfer::Adopt
+                && transfer.target == HirSharedTarget::Class(allocation.class)
+                && allocation
+                    .arguments
+                    .iter()
+                    .all(|argument| !matches!(argument, HirCallArgument::Shared(_)))
+        }
+        HirSharedSource::Place(HirSharedPlace::Field { .. })
+        | HirSharedSource::Produced(HirSharedProducer::Call(_)) => false,
+    }
 }

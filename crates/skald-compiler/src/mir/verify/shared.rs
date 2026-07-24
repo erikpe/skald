@@ -8,8 +8,8 @@ use super::{
     super::model::{
         BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
         MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy, MirSharedInitialize,
-        MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind, MirTerminator,
-        MirType, StorageId, ValueId,
+        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
+        MirTerminator, MirType, StorageId, ValueId,
     },
     context::Verifier,
 };
@@ -126,15 +126,16 @@ impl<'mir> Verifier<'mir> {
             );
         }
         if !destination.is_some_and(|storage| {
-            storage.kind == MirStorageKind::Local
-                && allocation_class.is_some_and(|class| {
-                    storage.ty == MirType::Shared(MirSharedTarget::Class(class))
-                })
+            matches!(
+                storage.kind,
+                MirStorageKind::Local | MirStorageKind::Temporary
+            ) && allocation_class
+                .is_some_and(|class| storage.ty == MirType::Shared(MirSharedTarget::Class(class)))
         }) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared adoption requires compatible exact-class owner storage",
+                "shared adoption requires compatible exact-class local or temporary owner storage",
             );
         }
     }
@@ -158,15 +159,39 @@ impl<'mir> Verifier<'mir> {
         if !matches!(
             (destination, source),
             (Some(destination), Some(source))
-                if destination.kind == MirStorageKind::Local
-                    && source.kind == MirStorageKind::Local
+                if matches!(destination.kind, MirStorageKind::Local | MirStorageKind::Temporary)
+                    && matches!(source.kind, MirStorageKind::Local | MirStorageKind::Temporary)
                     && matches!(destination.ty, MirType::Shared(MirSharedTarget::Class(_)))
                     && destination.ty == source.ty
         ) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared copy requires matching exact-class owner storage",
+                "shared copy requires matching exact-class local or temporary owner storage",
+            );
+        }
+    }
+
+    pub(super) fn verify_shared_move(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        transfer: &MirSharedMove,
+    ) {
+        let destination = function.storage(transfer.destination);
+        let source = function.storage(transfer.source);
+        if !matches!(
+            (destination, source),
+            (Some(destination), Some(source))
+                if destination.kind == MirStorageKind::Local
+                    && source.kind == MirStorageKind::Temporary
+                    && matches!(destination.ty, MirType::Shared(MirSharedTarget::Class(_)))
+                    && destination.ty == source.ty
+        ) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "shared move requires a matching exact-class temporary and local destination",
             );
         }
     }
@@ -178,12 +203,15 @@ impl<'mir> Verifier<'mir> {
         release: &MirSharedRelease,
     ) {
         if !function.storage(release.owner).is_some_and(|storage| {
-            storage.kind == MirStorageKind::Local && matches!(storage.ty, MirType::Shared(_))
+            matches!(
+                storage.kind,
+                MirStorageKind::Local | MirStorageKind::Temporary
+            ) && matches!(storage.ty, MirType::Shared(_))
         }) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared release requires local owner storage",
+                "shared release requires local or temporary owner storage",
             );
         }
     }
@@ -306,7 +334,17 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
     fn apply_block(&mut self, block: &MirBasicBlock, state: &mut SharedState) {
         for instruction in &block.instructions {
             if state.pending_full_expression_boundary
-                && !matches!(instruction, MirInstruction::EndFullExpression(_))
+                && !matches!(
+                    instruction,
+                    MirInstruction::EndFullExpression(_)
+                        | MirInstruction::SharedAllocate(_)
+                        | MirInstruction::SharedInitialize(_)
+                        | MirInstruction::SharedPublish(_)
+                        | MirInstruction::SharedAdopt(_)
+                        | MirInstruction::SharedCopy(_)
+                        | MirInstruction::SharedMove(_)
+                        | MirInstruction::SharedRelease(_)
+                )
             {
                 self.error(
                     block.id,
@@ -390,6 +428,26 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                     state.pending_full_expression_boundary = source_origin.is_some();
                 }
+                MirInstruction::SharedMove(transfer) => {
+                    let source_origin = state.owner_origins.get(&transfer.source).copied();
+                    if source_origin.is_none() || !state.live_owners.remove(&transfer.source) {
+                        self.error(block.id, "shared move source is not a live owner");
+                    } else {
+                        state.owner_origins.remove(&transfer.source);
+                        state.released_owners.insert(transfer.source);
+                    }
+                    if state.live_owners.contains(&transfer.destination) {
+                        self.error(block.id, "shared move destination is still live");
+                    } else if !state.released_owners.remove(&transfer.destination) {
+                        self.error(
+                            block.id,
+                            "shared move destination was not released before replacement",
+                        );
+                    } else if let Some(origin) = source_origin {
+                        state.live_owners.insert(transfer.destination);
+                        state.owner_origins.insert(transfer.destination, origin);
+                    }
+                }
                 MirInstruction::SharedRelease(release) => {
                     if !state.live_owners.remove(&release.owner) {
                         self.error(block.id, "shared owner is released without being live");
@@ -399,6 +457,16 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                 }
                 MirInstruction::EndFullExpression(_) => {
+                    if state.live_owners.iter().any(|owner| {
+                        self.function
+                            .storage(*owner)
+                            .is_some_and(|storage| storage.kind == MirStorageKind::Temporary)
+                    }) {
+                        self.error(
+                            block.id,
+                            "shared temporary remains live at full-expression boundary",
+                        );
+                    }
                     state.pending_full_expression_boundary = false;
                 }
                 MirInstruction::Assign(_)

@@ -525,6 +525,13 @@ impl HirDumper {
                     dumper.shared_transfer(&statement.value);
                 });
             }
+            HirStatement::SharedAssignment(assignment) => {
+                self.line(
+                    &format!("SharedAssignment {}", assignment.destination),
+                    assignment.span,
+                );
+                self.indented(|dumper| dumper.shared_transfer(&assignment.value));
+            }
         }
     }
 

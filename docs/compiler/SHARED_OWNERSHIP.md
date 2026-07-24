@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; first exact native lifetime implemented**.
+Status: **frozen implementation design; exact-class local owners implemented**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -13,14 +13,14 @@ Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
 class/interface/`Obj` shared targets, named-place and produced-owner sources,
 explicit copy/adopt transfers, and ordinary allocation with one selected
-initializer. MIR implements the first exact-class local profile:
-`shared C = new C(arguments)` has distinct unpublished allocation storage,
-initialization, publication, adoption, a full-expression boundary, and normal
-release. Broader shared uses remain behind a structured lowering gate, and
-the x86-64 backend executes this exact local profile with the frozen handle,
-header, count-one publication, dynamic complete finalization, and last-owner
-deallocation. [Runtime ABI version 5](RUNTIME_ABI.md) provides only checked
-byte allocation and exact-base deallocation.
+initializer. MIR implements exact-class local owner semantics: allocation,
+publication, adoption, named-owner copying, secure-before-release assignment,
+full-expression temporary cleanup, and normal local release are distinct
+verified operations. Broader shared uses remain behind a structured lowering
+gate, and the x86-64 backend executes this profile with the frozen handle,
+header, checked retain, count-one publication, dynamic complete finalization,
+and last-owner deallocation. [Runtime ABI version 5](RUNTIME_ABI.md) provides
+only checked byte allocation and exact-base deallocation.
 Explicit copy allocation and shared-owner casts remain typed exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
@@ -96,8 +96,8 @@ retain/release policy. Optimization may remove an operation only after MIR
 represents it and only when ownership, destruction timing, and failure behavior
 remain unchanged.
 
-The implemented SO2/SO4 state machine separates an allocation storage slot from
-owner storage:
+The implemented local-owner state machine separates an allocation storage slot
+from owner storage:
 
 ```text
 new -> allocated -> initialized -> published -> adopted owner
@@ -108,22 +108,35 @@ new -> allocated -> initialized -> published -> adopted owner
 
 Only the publication transition creates count-one ownership. The allocation
 slot remains compiler-owned construction provenance and cannot be used as a
-place, view, receiver, or call argument. Adoption must be followed by its
-explicit full-expression boundary; normal return requires every local owner
-to have been released. CFG joins require identical shared allocation and owner
-states. These operations are target-independent and carry no handle size,
-header offset, or runtime symbol.
+place, view, receiver, or call argument. A named source is secured with
+`SharedCopy`; a produced allocation is secured with `SharedAdopt`. Assignment
+first secures either source into an owning temporary, then releases the old
+local, and finally consumes the temporary with `SharedMove` into the still
+live destination. This makes direct and allocation-alias self-assignment safe
+without exposing an empty owner. Any unconsumed owning temporaries are
+released in reverse creation order before the explicit full-expression
+boundary.
+
+The verifier requires every move source to be live and temporary, requires the
+destination's old owner to have just been released, consumes the source
+exactly once, and rejects a full-expression boundary with a live owning
+temporary. Normal return requires every local owner to have been released.
+CFG joins require identical shared allocation and owner states. These
+operations are target-independent and carry no handle size, header offset, or
+runtime symbol.
 
 On x86-64, allocation storage and shared-owner storage each receive one
 eight-byte stack home. `SharedAllocate` checks the exact class payload plus
 the 16-byte header before calling `ska_rt_alloc`; initialization receives the
 payload address through the existing receiver ABI; publication writes the
-exact class descriptor and then count one; and adoption transfers the header
-word without retaining it. Release validates the header and positive count,
+exact class descriptor and then count one; and adoption and move transfer the
+header word without retaining it. Named-owner copy performs the checked
+non-atomic `u64` retain. Release validates the header and positive count,
 selects the complete finalizer from dynamic metadata on the one-to-zero
 transition, and calls `ska_rt_free` only after finalization returns. The
-verified copy operation also has checked retain lowering, although ordinary
-source owner copies remain gated until the next implementation slice.
+verified copy operation uses the same checked retain lowering in source
+programs. Assignment mechanically follows the verified copy-or-adopt, release,
+move order.
 
 ## MIR verification
 

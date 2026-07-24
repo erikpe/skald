@@ -41,6 +41,10 @@ impl BodyLowerer<'_> {
                 self.lower_field_copy_assignment(statement)
             }
             HirStatement::CopyAssignment(statement) => self.lower_copy_assignment(statement),
+            HirStatement::SharedAssignment(assignment) => {
+                self.lower_shared_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
             HirStatement::SharedFieldWrite(_) => {
                 unreachable!("shared HIR is rejected before MIR lowering")
             }
@@ -96,7 +100,7 @@ impl BodyLowerer<'_> {
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::Shared(transfer) => {
-                self.lower_exact_shared_allocation_local(storage, transfer);
+                self.lower_shared_local(storage, transfer);
                 self.cleanup.register_shared(storage);
                 self.finish_full_expression(local.span);
             }

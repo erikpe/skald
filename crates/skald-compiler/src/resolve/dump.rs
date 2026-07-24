@@ -440,6 +440,16 @@ impl ResolvedDumper {
                     dumper.indented(|dumper| dumper.expression(&assignment.source));
                 });
             }
+            ResolvedStatement::SharedAssignment(assignment) => {
+                self.line(
+                    &format!("SharedAssignment {}", assignment.destination),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.expression(&assignment.source);
+                });
+            }
         }
     }
 

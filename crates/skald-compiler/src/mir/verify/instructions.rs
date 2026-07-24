@@ -94,6 +94,9 @@ impl Verifier<'_> {
             }
             MirInstruction::SharedAdopt(adopt) => self.verify_shared_adopt(function, block, adopt),
             MirInstruction::SharedCopy(copy) => self.verify_shared_copy(function, block, copy),
+            MirInstruction::SharedMove(transfer) => {
+                self.verify_shared_move(function, block, transfer)
+            }
             MirInstruction::SharedRelease(release) => {
                 self.verify_shared_release(function, block, release)
             }

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO4 complete, SO5 is next.
+Status: in progress; SO5 complete, SO6 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -31,12 +31,13 @@ and the complete cast direction matrix is
   provenance, explicit copy/adopt transfers, and ordinary allocation with one
   selected initializer. Explicit copy allocation and shared-owner casts remain
   typed exclusions.
-- MIR represents and verifies the first exact allocated local lifetime with
-  distinct unpublished allocation storage, initialization, publication,
-  adoption, full-expression boundary, and normal release. Broader shared HIR
-  remains structurally gated. The x86-64 backend executes that narrow profile
-  with one-word handles, checked allocation, dynamic complete finalization,
-  and last-owner deallocation.
+- MIR represents and verifies exact-class local owner initialization and
+  assignment with distinct unpublished allocation storage, initialization,
+  publication, adoption, named-owner copy, ownership move, release,
+  full-expression boundary, and normal cleanup. Broader shared HIR remains
+  structurally gated. The x86-64 backend executes that profile with one-word
+  handles, checked allocation and retain, secure-before-release assignment,
+  dynamic complete finalization, and last-owner deallocation.
 - Runtime ABI version 5 retains scalar output and exposes only checked
   nonzero byte allocation and exact-base deallocation. Reference counts,
   object headers, metadata, and finalization remain compiler-owned.
@@ -86,7 +87,7 @@ and the complete cast direction matrix is
 - [x] SO2 — Represent and verify the first owner lifetime in MIR
 - [x] SO3 — Upgrade the runtime to the minimal allocation ABI
 - [x] SO4 — Execute exact-class allocation and last-owner destruction
-- [ ] SO5 — Complete local, assignment, and temporary owner semantics
+- [x] SO5 — Complete local, assignment, and temporary owner semantics
 - [ ] SO6 — Carry shared owners across calls and results
 - [ ] SO7 — Integrate shared fields with class lifecycle
 - [ ] SO8 — Execute shared-field layout and lifecycle
@@ -280,25 +281,25 @@ x86-64 with no ownership policy in the runtime.
 **Purpose:** Implement the core copy/adopt/release value rules before owners
 cross callable or object-field boundaries.
 
-- [ ] Enable same-target shared local initialization from named and produced
+- [x] Enable same-target shared local initialization from named and produced
       sources, copying named owners and adopting produced owners without
       redundant retain/release pairs; broader polymorphic compatibility lands
       with shared views.
-- [ ] Implement shared local assignment as
+- [x] Implement shared local assignment as
       evaluate-once, secure incoming, release old, store incoming, including
       direct and indirect self-assignment.
-- [ ] Materialize unadopted produced owners as full-expression temporaries and
+- [x] Materialize unadopted produced owners as full-expression temporaries and
       release them in reverse completion order after the consuming result is
       secured.
-- [ ] Extend HIR and MIR dumps so copy, adopt, release, assignment order, and
+- [x] Extend HIR and MIR dumps so copy, adopt, release, assignment order, and
       temporary ownership are explicit and distinct.
-- [ ] Extend ownership verification across blocks and normal returns for
+- [x] Extend ownership verification across blocks and normal returns for
       exactly one owner per live storage or temporary and no use after release.
-- [ ] Lower retain with checked non-atomic `u64` overflow and lower assignment
+- [x] Lower retain with checked non-atomic `u64` overflow and lower assignment
       mechanically from verified MIR order.
-- [ ] Preserve source-visible destruction timing; do not eliminate or merge
+- [x] Preserve source-visible destruction timing; do not eliminate or merge
       owner operations as an optimization in this roadmap.
-- [ ] Add named/produced initialization, chained temporaries, self-assignment,
+- [x] Add named/produced initialization, chained temporaries, self-assignment,
       aliasing assignment, scope/return cleanup, overflow, diagnostic, dump,
       and native tests.
 

@@ -90,6 +90,91 @@ fn shared_lifetime_dump_is_exact_and_deterministic() {
 }
 
 #[test]
+fn lowers_local_copy_and_secure_release_move_assignment_explicitly() {
+    let program = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var source: shared Item = new Item();\n",
+        "  var destination: shared Item = source;\n",
+        "  destination = destination;\n",
+        "  destination = new Item();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    verify_mir(&program).expect("local owner operations must verify");
+    let instructions = main_instructions(&program);
+    assert!(instructions.windows(2).any(|window| matches!(
+        window,
+        [
+            MirInstruction::SharedCopy(_),
+            MirInstruction::EndFullExpression(_)
+        ]
+    )));
+    assert!(instructions.windows(4).any(|window| matches!(
+        window,
+        [
+            MirInstruction::SharedCopy(_),
+            MirInstruction::SharedRelease(_),
+            MirInstruction::SharedMove(_),
+            MirInstruction::EndFullExpression(_),
+        ]
+    )));
+    assert!(instructions.windows(7).any(|window| matches!(
+        window,
+        [
+            MirInstruction::SharedAllocate(_),
+            MirInstruction::SharedInitialize(_),
+            MirInstruction::SharedPublish(_),
+            MirInstruction::SharedAdopt(_),
+            MirInstruction::SharedRelease(_),
+            MirInstruction::SharedMove(_),
+            MirInstruction::EndFullExpression(_),
+        ]
+    )));
+
+    let dump = dump_mir(&program);
+    assert!(dump.contains("temporary <temporary>"));
+    assert!(dump.contains(": shared class c0"));
+    assert!(dump.contains("shared-copy"));
+    assert!(dump.contains("shared-release"));
+    assert!(dump.contains("shared-move"));
+}
+
+#[test]
+fn rejects_move_before_release_and_live_full_expression_temporaries() {
+    let program = lower_text(concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var source: shared Item = new Item();\n",
+        "  var destination: shared Item = source;\n",
+        "  destination = source;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    let mut early_move = program.clone();
+    let instructions = main_instructions_mut(&mut early_move);
+    let release = instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::SharedRelease(_)))
+        .unwrap();
+    let transfer = instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::SharedMove(_)))
+        .unwrap();
+    instructions.swap(release, transfer);
+    assert!(has_error(&early_move, "destination is still live"));
+
+    let mut live_temporary = program;
+    main_instructions_mut(&mut live_temporary)
+        .retain(|instruction| !matches!(instruction, MirInstruction::SharedMove(_)));
+    assert!(has_error(
+        &live_temporary,
+        "temporary remains live at full-expression boundary"
+    ));
+}
+
+#[test]
 fn fully_released_branch_local_owner_does_not_escape_to_the_join() {
     let program = lower_text(concat!(
         "class Widget { init() {} }\n",
@@ -175,7 +260,7 @@ fn rejects_wrong_target_and_non_new_allocation() {
     owner.ty = MirType::Shared(MirSharedTarget::Class(ClassId::new(99)));
     assert!(has_error(
         &wrong_target,
-        "requires compatible exact-class owner storage"
+        "requires compatible exact-class local or temporary owner storage"
     ));
 
     let mut non_new = exact_owner_program();

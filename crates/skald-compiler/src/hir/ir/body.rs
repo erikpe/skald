@@ -14,7 +14,7 @@ use super::{
         HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction,
         HirObjectInitialization, HirObjectReturn,
     },
-    shared::{HirSharedFieldWrite, HirSharedTransfer},
+    shared::{HirSharedAssignment, HirSharedFieldWrite, HirSharedTransfer},
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -199,6 +199,7 @@ pub enum HirStatement {
     FieldCopyAssignment(HirFieldCopyAssignment),
     CopyAssignment(HirCopyAssignment),
     SharedFieldWrite(HirSharedFieldWrite),
+    SharedAssignment(HirSharedAssignment),
 }
 
 impl HirStatement {
@@ -216,6 +217,7 @@ impl HirStatement {
             Self::FieldCopyAssignment(statement) => statement.span,
             Self::CopyAssignment(statement) => statement.span,
             Self::SharedFieldWrite(statement) => statement.span,
+            Self::SharedAssignment(statement) => statement.span,
         }
     }
 }

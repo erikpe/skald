@@ -116,6 +116,14 @@ pub struct HirSharedTransfer {
     pub span: Span,
 }
 
+/// Replacement of one live shared owner after its incoming owner is secured.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirSharedAssignment {
+    pub destination: BindingId,
+    pub value: HirSharedTransfer,
+    pub span: Span,
+}
+
 /// Ordinary exact-class allocation and its selected initializer.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirSharedAllocation {

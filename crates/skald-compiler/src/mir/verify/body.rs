@@ -163,7 +163,7 @@ impl<'mir> Verifier<'mir> {
             if matches!(
                 storage.kind,
                 MirStorageKind::Return | MirStorageKind::Argument | MirStorageKind::Temporary
-            ) && !matches!(storage.ty, MirType::Class(_))
+            ) && !matches!(storage.ty, MirType::Class(_) | MirType::Shared(_))
             {
                 self.function_error(
                     function.callable(),
@@ -181,10 +181,18 @@ impl<'mir> Verifier<'mir> {
                     ),
                 );
             }
-            if matches!(storage.ty, MirType::Shared(_)) && storage.kind != MirStorageKind::Local {
+            if matches!(storage.ty, MirType::Shared(_))
+                && !matches!(
+                    storage.kind,
+                    MirStorageKind::Local | MirStorageKind::Temporary
+                )
+            {
                 self.function_error(
                     function.callable(),
-                    format!("SO2 shared owner storage {} must be a local", storage.id),
+                    format!(
+                        "shared owner storage {} must be a local or temporary",
+                        storage.id
+                    ),
                 );
             }
             if let MirType::Class(class) = storage.ty {

@@ -36,7 +36,7 @@ pub use interface::{
 };
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy,
-    MirSharedInitialize, MirSharedPublish, MirSharedRelease, MirSharedTarget,
+    MirSharedInitialize, MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,

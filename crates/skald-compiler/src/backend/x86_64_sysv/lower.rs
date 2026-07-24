@@ -187,6 +187,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::SharedPublish(publish) => self.select_shared_publish(publish)?,
             MirInstruction::SharedAdopt(adopt) => self.select_shared_adopt(adopt),
             MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
+            MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
             MirInstruction::SharedRelease(release) => self.select_shared_release(release),
         }
         Ok(())

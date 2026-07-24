@@ -16,7 +16,10 @@ impl BodyLowerer<'_> {
                 span,
             }));
         }
-        if self.full_expression_temporaries.is_empty() && !self.full_expression_has_shared_effect {
+        if self.full_expression_temporaries.is_empty()
+            && self.full_expression_shared_temporaries.is_empty()
+            && !self.full_expression_has_shared_effect
+        {
             return;
         }
         let temporaries = self
@@ -28,6 +31,17 @@ impl BodyLowerer<'_> {
                 cleanup
             })
             .collect();
+        let shared_temporaries: Vec<_> = self
+            .full_expression_shared_temporaries
+            .drain(..)
+            .rev()
+            .collect();
+        for owner in shared_temporaries {
+            self.emit(MirInstruction::SharedRelease(MirSharedRelease {
+                owner,
+                span,
+            }));
+        }
         self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
             temporaries,
             span,

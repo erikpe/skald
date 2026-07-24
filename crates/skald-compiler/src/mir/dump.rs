@@ -469,6 +469,14 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 );
                 write_span(output, copy.span);
             }
+            MirInstruction::SharedMove(transfer) => {
+                let _ = write!(
+                    output,
+                    "shared-move {} from {}",
+                    transfer.destination, transfer.source
+                );
+                write_span(output, transfer.span);
+            }
             MirInstruction::SharedRelease(release) => {
                 let _ = write!(output, "shared-release {}", release.owner);
                 write_span(output, release.span);

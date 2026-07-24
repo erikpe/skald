@@ -26,9 +26,9 @@ pub use ir::{
     ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedNumericLiteralExpr,
     ResolvedObjectAssignment, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
     ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedParameter, ResolvedParameterBindingMode,
-    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedSharedTarget,
-    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedSharedAssignment,
+    ResolvedSharedTarget, ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr,
+    ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,

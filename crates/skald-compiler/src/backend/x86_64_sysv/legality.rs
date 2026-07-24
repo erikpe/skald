@@ -102,6 +102,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     MirInstruction::SharedPublish(_)
                     | MirInstruction::SharedAdopt(_)
                     | MirInstruction::SharedCopy(_)
+                    | MirInstruction::SharedMove(_)
                     | MirInstruction::SharedRelease(_) => {}
                 }
             }

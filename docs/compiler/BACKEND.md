@@ -271,14 +271,15 @@ base chain. No path performs implicit allocation, deallocation, or aggregate
 runtime copy.
 
 The shared-ownership extension provides explicit verified exact-class ordinary
-allocation, publication, adoption, and release operations. Its one-word
+allocation, publication, adoption, named-owner copy, ownership move, and
+release operations. Its one-word
 handle, allocation header, dynamic finalizer, and internal ABI rules are fixed
 in [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
-The current backend executes the narrow `shared C = new C(arguments)` local
-profile, including dynamic complete destruction and exact-base deallocation.
-Checked retain selection exists for verified shared-copy MIR; broader source
-copy, assignment, temporary, call, field, polymorphic-view, cast, and anchor
-contexts remain gated by their owning frontend or MIR phases.
+The current backend executes exact-class shared local initialization and
+assignment from named owners and ordinary allocations, including checked
+retain, secure-before-release replacement, dynamic complete destruction, and
+exact-base deallocation. Call, result, field, polymorphic-view, cast, and
+anchor contexts remain gated by their owning frontend or MIR phases.
 
 ## Symbols and process entry
 

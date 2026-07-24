@@ -268,6 +268,23 @@ impl CallableResolver<'_, '_> {
                 .map(ResolvedStatement::FieldAssignment);
         }
 
+        if let Some(identifier) = binding_identifier_through_groups(&assignment.place) {
+            if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+                if let ResolvedTypeKind::Shared(target) = binding.ty {
+                    let source = self.resolve_expression(&assignment.value)?;
+                    return Some(ResolvedStatement::SharedAssignment(
+                        ResolvedSharedAssignment {
+                            destination: binding.id,
+                            target,
+                            equal_span: assignment.equal_span,
+                            source,
+                            span: assignment.span,
+                        },
+                    ));
+                }
+            }
+        }
+
         let destination = self.resolve_object_place(&assignment.place);
         let source = self.resolve_expression(&assignment.value);
         match (destination, source) {
@@ -306,6 +323,18 @@ impl CallableResolver<'_, '_> {
         }
         scope.insert(name.to_owned(), symbol);
         true
+    }
+}
+
+fn binding_identifier_through_groups(
+    expression: &syntax::Expression,
+) -> Option<&syntax::IdentifierExpr> {
+    match expression {
+        syntax::Expression::Identifier(identifier) => Some(identifier),
+        syntax::Expression::Grouped(grouped) => {
+            binding_identifier_through_groups(&grouped.expression)
+        }
+        _ => None,
     }
 }
 

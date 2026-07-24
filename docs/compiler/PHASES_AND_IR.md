@@ -209,10 +209,13 @@ implicit up-views. Inline values and aliases do not implicitly manufacture an
 owner, external shared signatures remain invalid, and explicit copy allocation
 and shared-owner casts remain structured typed exclusions.
 
-MIR lowering accepts the first exact local lifetime,
-`var value: shared C = new C(arguments)`, and retains a structured
-`HirLoweringError::UnsupportedSharedOwnership` gate for broader shared
-signatures, fields, transfers, views, and results.
+MIR lowering accepts exact-class shared local initialization and assignment
+from named owners and ordinary allocations. Named sources copy, produced
+sources adopt, assignment secures an owning temporary before releasing its
+destination and moves that temporary into the destination, and
+full-expression cleanup releases any remaining owning temporaries in reverse
+order. A structured `HirLoweringError::UnsupportedSharedOwnership` gate remains
+for shared signatures, fields, polymorphic transfers and views, and results.
 
 ## MIR
 
@@ -238,7 +241,8 @@ explicit:
 - object-result destinations and full-expression temporary boundaries; and
 - distinct unpublished shared-allocation storage plus explicit exact
   allocation, initialization, publication, produced-owner adoption,
-  named-owner copy, release, and ownership full-expression boundaries; and
+  named-owner copy, temporary-to-local owner move, release, and ownership
+  full-expression boundaries; and
 - basic blocks with explicit return, jump, boolean-branch, checked-cast, and
   unrecoverable-failure terminators.
 

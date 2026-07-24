@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FieldId, FunctionId, LocalId},
+    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId},
     source::Span,
 };
 
@@ -170,6 +170,7 @@ pub enum ResolvedStatement {
     Block(ResolvedBlock),
     FieldAssignment(ResolvedFieldAssignment),
     ObjectAssignment(ResolvedObjectAssignment),
+    SharedAssignment(ResolvedSharedAssignment),
 }
 
 impl ResolvedStatement {
@@ -183,8 +184,18 @@ impl ResolvedStatement {
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
+            Self::SharedAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedSharedAssignment {
+    pub destination: BindingId,
+    pub target: super::ResolvedSharedTarget,
+    pub equal_span: Span,
+    pub source: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

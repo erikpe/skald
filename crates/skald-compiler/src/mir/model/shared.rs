@@ -72,6 +72,14 @@ pub struct MirSharedCopy {
     pub span: Span,
 }
 
+/// Consumes one live owner and installs it without changing the strong count.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedMove {
+    pub destination: StorageId,
+    pub source: StorageId,
+    pub span: Span,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedRelease {
     pub owner: StorageId,

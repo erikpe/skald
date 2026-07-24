@@ -5,7 +5,7 @@ use crate::{
     hir::{
         BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
         HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn, HirReturn,
-        HirReturnValue, HirStatement, Type,
+        HirReturnValue, HirSharedAssignment, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -76,7 +76,26 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::ObjectAssignment(assignment) => {
                 self.check_object_assignment(assignment)
             }
+            ResolvedStatement::SharedAssignment(assignment) => {
+                self.check_shared_assignment(assignment)
+            }
         }
+    }
+
+    fn check_shared_assignment(
+        &mut self,
+        assignment: &crate::resolve::ResolvedSharedAssignment,
+    ) -> CheckedStatement {
+        let target = crate::typeck::shared::lower_shared_target(assignment.target);
+        let value =
+            self.check_shared_transfer(&assignment.source, target, "shared local assignment");
+        CheckedStatement::falls_through(value.map(|value| {
+            HirStatement::SharedAssignment(HirSharedAssignment {
+                destination: assignment.destination,
+                value,
+                span: assignment.span,
+            })
+        }))
     }
 
     fn check_base_initialization(

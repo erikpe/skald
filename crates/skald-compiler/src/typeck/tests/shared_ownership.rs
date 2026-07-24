@@ -170,6 +170,43 @@ fn shared_calls_record_copy_and_adopt_at_argument_and_result_boundaries() {
 }
 
 #[test]
+fn records_named_and_produced_shared_local_assignment() {
+    let output = type_check_source(concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var source: shared Item = new Item();\n",
+        "  var destination: shared Item = source;\n",
+        "  destination = source;\n",
+        "  destination = new Item();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(FunctionId::new(0)).unwrap();
+
+    let HirStatement::SharedAssignment(named) = &main.body.statements[2] else {
+        panic!("expected named shared assignment");
+    };
+    assert_eq!(named.value.operation, HirOwnerTransfer::Copy);
+    assert!(matches!(named.value.source, HirSharedSource::Place(_)));
+
+    let HirStatement::SharedAssignment(produced) = &main.body.statements[3] else {
+        panic!("expected produced shared assignment");
+    };
+    assert_eq!(produced.value.operation, HirOwnerTransfer::Adopt);
+    assert!(matches!(
+        produced.value.source,
+        HirSharedSource::Produced(HirSharedProducer::Allocation(_))
+    ));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("SharedAssignment f0:l1"));
+    assert!(dump.contains("SharedTransfer Copy -> shared class c0"));
+    assert!(dump.contains("SharedTransfer Adopt -> shared class c0"));
+}
+
+#[test]
 fn rejects_implicit_inline_downcast_and_external_shared_conversions() {
     let output = type_check_source(concat!(
         "class Base { init() {} }\n",
@@ -184,6 +221,8 @@ fn rejects_implicit_inline_downcast_and_external_shared_conversions() {
         "  var invalid_owner: shared Base = inline;\n",
         "  var base: shared Base = new Base();\n",
         "  var invalid_downcast: shared Dog = base;\n",
+        "  var dog: shared Dog = new Dog();\n",
+        "  dog = base;\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -199,7 +238,7 @@ fn rejects_implicit_inline_downcast_and_external_shared_conversions() {
             .iter()
             .filter(|code| **code == INVALID_SHARED_CONVERSION)
             .count(),
-        3
+        4
     );
     assert!(output.hir.is_none());
 }

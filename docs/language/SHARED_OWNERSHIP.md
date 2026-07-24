@@ -1,17 +1,18 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; first exact local lifetime represented in MIR**. This
+Status: **frozen design; exact-class local owner semantics implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
 [status matrix](STATUS.md) remains authoritative for current compiler support.
 The [implemented grammar](GRAMMAR.md) accepts these forms. Resolution retains
 stable targets and allocation modes, and typed HIR records shared targets,
-ordinary allocation, and copy-versus-adopt owner provenance. MIR now
-represents and verifies the complete normal lifetime of the narrow
-`shared C = new C(arguments)` local profile. Native execution, broader owner
-contexts, explicit copy allocation, shared-owner casts, and anchors remain
-unavailable.
+ordinary allocation, and copy-versus-adopt owner provenance. Exact-class
+shared locals now support ordinary allocation, named-owner copying,
+secure-before-release assignment, full-expression ownership boundaries, and
+normal cleanup through verified MIR and native execution. Owners crossing
+calls or results, shared fields and polymorphic views, explicit copy
+allocation, shared-owner casts, and anchors remain unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
@@ -71,10 +72,11 @@ selects `T`'s copy-constructor capability exactly once in the new allocation.
 The marker takes exactly one source and does not form an ordinary initializer
 argument. Conversely, `new T(source)` participates only in ordinary
 initializer overload resolution and never falls back to copy construction.
-Ordinary allocation and initializer selection cross typed HIR. The exact-class
-local form also crosses verified target-independent MIR and executes on the
-current x86-64 backend. Broader owner-producing and consuming contexts remain
-staged implementation work.
+Ordinary allocation and initializer selection cross typed HIR. Exact-class
+local initialization and assignment from both named and newly allocated
+owners also cross verified target-independent MIR and execute on the current
+x86-64 backend. Broader owner-producing and consuming contexts remain staged
+implementation work.
 Explicit copy allocation remains a typed diagnostic until its checked source,
 anchor, and copy-constructor operation can be represented together.
 
