@@ -63,10 +63,9 @@ impl CallableResolver<'_, '_> {
                     span: call.span,
                 })
             }
-            CallTarget::Constructor { class, initializer } => {
+            CallTarget::Constructor { class } => {
                 ResolvedExpression::Construct(ResolvedConstructExpr {
                     class,
-                    initializer,
                     callee_span: call.callee.span(),
                     arguments,
                     span: call.span,
@@ -129,25 +128,25 @@ impl CallableResolver<'_, '_> {
                         kind: TopLevelSymbolKind::Class(class),
                         ..
                     }) => {
-                        let initializer = self.environment.class_symbols[class.index()]
-                            .preselected_initializer()
-                            .or_else(|| {
-                                self.diagnostics.push(
-                                    Diagnostic::error(
-                                        INVALID_CONSTRUCTION_TARGET,
-                                        format!(
-                                            "class `{}` has no initializer",
-                                            identifier.name.text
-                                        ),
-                                    )
-                                    .with_primary_label(
-                                        identifier.span,
-                                        "construction requires an explicit `init` declaration",
-                                    ),
-                                );
-                                None
-                            })?;
-                        Some(CallTarget::Constructor { class, initializer })
+                        if self
+                            .environment
+                            .classes
+                            .get(class)
+                            .is_none_or(|class| class.initializers.is_empty())
+                        {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_CONSTRUCTION_TARGET,
+                                    format!("class `{}` has no initializer", identifier.name.text),
+                                )
+                                .with_primary_label(
+                                    identifier.span,
+                                    "construction requires an explicit `init` declaration",
+                                ),
+                            );
+                            return None;
+                        }
+                        Some(CallTarget::Constructor { class })
                     }
                     Some(TopLevelSymbol {
                         kind: TopLevelSymbolKind::Interface(_),
@@ -331,7 +330,6 @@ enum CallTarget {
     Function(FunctionId),
     Constructor {
         class: ClassId,
-        initializer: InitializerId,
     },
     Method {
         receiver: ResolvedObjectReceiver,

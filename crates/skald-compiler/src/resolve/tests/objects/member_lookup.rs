@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn top_level_and_member_namespaces_reject_cross_kind_duplicates() {
+fn top_level_and_ordinary_member_namespaces_reject_cross_kind_duplicates() {
     let output = resolve_text(concat!(
         "class Same { init() {} }\n",
         "fn Same() -> unit {}\n",
@@ -23,12 +23,7 @@ fn top_level_and_member_namespaces_reject_cross_kind_duplicates() {
         .collect();
     assert_eq!(
         codes,
-        [
-            DUPLICATE_TOP_LEVEL,
-            DUPLICATE_MEMBER,
-            DUPLICATE_MEMBER,
-            DUPLICATE_MEMBER,
-        ]
+        [DUPLICATE_TOP_LEVEL, DUPLICATE_MEMBER, DUPLICATE_MEMBER,]
     );
     assert_eq!(output.program.declarations.len(), 1);
     assert_eq!(output.program.classes.len(), 2);

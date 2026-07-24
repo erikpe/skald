@@ -20,7 +20,6 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     top_levels: &'program HashMap<String, TopLevelSymbol>,
     classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
-    class_symbols: &'program [ClassSymbols],
     hierarchy: &'program ResolvedClassHierarchy,
 }
 
@@ -29,14 +28,12 @@ impl<'program> BodyResolutionEnvironment<'program> {
         top_levels: &'program HashMap<String, TopLevelSymbol>,
         classes: &'program ResolvedClassDeclarationTable,
         interfaces: &'program ResolvedInterfaceDeclarationTable,
-        class_symbols: &'program [ClassSymbols],
         hierarchy: &'program ResolvedClassHierarchy,
     ) -> Self {
         Self {
             top_levels,
             classes,
             interfaces,
-            class_symbols,
             hierarchy,
         }
     }

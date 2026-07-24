@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM2 complete, CM3 is next.
+Status: in progress; CM3 complete, CM4 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -19,18 +19,17 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 ## Current baseline
 
 - The parser and resolver represent `copy(ref source: T)` as the distinct copy
-  lifecycle slot. Every `init(...)` is ordinary, and source collection still
-  rejects a second ordinary initializer.
+  lifecycle slot. Every `init(...)` is ordinary, and each class owns a dense,
+  source-ordered ordinary-initializer overload set.
 - Resolved and HIR class declarations and definitions store dense,
   source-ordered ordinary-initializer vectors, and MIR lowers every entry.
-  Source collection still rejects a second ordinary initializer. Calls
-  preselect the sole accepted initializer during name resolution, before
-  argument compatibility is known.
+  Direct construction retains its class and arguments through resolution;
+  type checking selects and records exactly one initializer before HIR.
 - `InitializerId` contains a class-local ordinal, backend symbols include it,
   and MIR stores ordinary initializer declarations in a vector. Copy
   construction now uses the distinct `CopyConstructorId` and callable-symbol
-  namespace introduced by CM0. The singular assumptions above MIR still
-  prevent ordinary initializer ordinals from being used source-side.
+  namespace introduced by CM0. Direct construction now exercises ordinary
+  initializer ordinals end to end; direct-base selection remains CM4.
 - Copy construction, checked object places, slicing, exact-class copy
   capability selection, deterministic cleanup, and verified MIR execution are
   implemented. The migration changes declaration and explicit-selection
@@ -90,7 +89,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - [x] CM0 — Give copy construction a distinct identity
 - [x] CM1 — Generalize ordinary initializer storage
 - [x] CM2 — Adopt the distinct copy-constructor declaration
-- [ ] CM3 — Select ordinary initializer overloads
+- [x] CM3 — Select ordinary initializer overloads
 - [ ] CM4 — Select overloaded direct-base initialization
 - [ ] CM5 — Execute explicit target-directed copy construction
 - [ ] CM6 — Harden and publish the constructor model
@@ -197,32 +196,32 @@ lifecycle kind from an initializer signature.
 **Purpose:** Enable direct class construction through one reusable,
 diagnostic-quality overload engine.
 
-- [ ] Accept one or more ordinary initializers per class and require at least
+- [x] Accept one or more ordinary initializers per class and require at least
       one even for an empty class; assign dense `InitializerId` ordinals in
       ordinary-initializer source order.
-- [ ] Reject duplicate signatures and same-parameter-type sequences that
+- [x] Reject duplicate signatures and same-parameter-type sequences that
       differ only by binding mode. Parameter names remain irrelevant.
-- [ ] Change resolved construction from one preselected initializer to the
+- [x] Change resolved construction from one preselected initializer to the
       resolved class, source-ordered arguments, and stable candidate set or
       class-owned lookup needed by type checking.
-- [ ] Analyze each argument once into reusable static type, access, place,
+- [x] Analyze each argument once into reusable static type, access, place,
       provenance, and production facts. Probe candidate applicability without
       emitting final diagnostics or constructing candidate-specific HIR.
-- [ ] Centralize applicability over the existing value, copy, `ref`, and
+- [x] Centralize applicability over the existing value, copy, `ref`, and
       `mut ref` binding rules. Do not add implicit downcasts, primitive
       conversions, or ownership conversions.
-- [ ] Implement the unique most-specific static parameter-type relation using
+- [x] Implement the unique most-specific static parameter-type relation using
       the canonical class/interface/`Obj` hierarchy. Never use binding mode or
       runtime dynamic class as a tiebreaker.
-- [ ] After selection, check and lower the arguments exactly once against the
+- [x] After selection, check and lower the arguments exactly once against the
       selected parameters and record one initializer identity in HIR.
-- [ ] Apply selection to every ordinary inline construction consumer,
+- [x] Apply selection to every ordinary inline construction consumer,
       including locals, direct class fields, temporaries, value arguments,
       results, and the existing permitted elision destinations.
-- [ ] Report deterministic no-match and ambiguity diagnostics with supplied
+- [x] Report deterministic no-match and ambiguity diagnostics with supplied
       static types, candidate signatures, declaration spans, and focused
       per-argument reasons where useful.
-- [ ] Extend resolved/HIR/MIR dumps and verifier coverage for candidate
+- [x] Extend resolved/HIR/MIR dumps and verifier coverage for candidate
       ownership and selected identity without preserving unresolved overloads
       below type checking.
 

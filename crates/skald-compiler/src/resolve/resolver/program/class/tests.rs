@@ -207,17 +207,13 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
     ));
 
     let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-    assert_eq!(diagnostics.len(), 7);
+    assert_eq!(diagnostics.len(), 6);
     assert_eq!(
-        diagnostics[..4]
+        diagnostics[..3]
             .iter()
             .map(|diagnostic| (diagnostic.code, diagnostic.message.as_str()))
             .collect::<Vec<_>>(),
         [
-            (
-                DUPLICATE_MEMBER,
-                "duplicate ordinary initializer in class `Duplicate`"
-            ),
             (
                 DUPLICATE_MEMBER,
                 "duplicate copy constructor in class `Duplicate`"
@@ -232,11 +228,11 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
             ),
         ]
     );
-    assert!(diagnostics[..4].iter().all(|diagnostic| {
+    assert!(diagnostics[..3].iter().all(|diagnostic| {
         diagnostic.labels[0].message == "redeclared here"
             && diagnostic.labels[1].message == "first declared here"
     }));
-    assert!(diagnostics[4..]
+    assert!(diagnostics[3..]
         .iter()
         .all(|diagnostic| diagnostic.code == INVALID_LIFECYCLE_SIGNATURE));
     for class_index in 2..=4 {
@@ -253,6 +249,7 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
 
     let duplicate = output.program.classes.get(ClassId::new(1)).unwrap();
     let definitions = output.program.class_definitions.get(duplicate.id).unwrap();
+    assert_eq!(definitions.initializers.len(), 2);
     assert_eq!(
         definitions
             .initializers
@@ -332,6 +329,52 @@ fn copy_declarations_have_exact_signatures_and_init_never_infers_copy_intent() {
             ResolvedCopyOperation::Unavailable
         );
     }
+}
+
+#[test]
+fn initializer_overloads_use_dense_source_order_and_reject_type_sequence_duplicates() {
+    let output = resolve_source(concat!(
+        "class Source { init() {} }\n",
+        "class Overloaded {\n",
+        "  init(value: i64) {}\n",
+        "  init(flag: bool) {}\n",
+        "  init(other_name: i64) {}\n",
+        "  init(ref source: Source) {}\n",
+        "  init(mut ref renamed: Source) {}\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(diagnostics.iter().all(|diagnostic| {
+        diagnostic.code == DUPLICATE_MEMBER
+            && diagnostic.message == "duplicate ordinary initializer signature"
+    }));
+    let class = output.program.classes.get(ClassId::new(1)).unwrap();
+    assert_eq!(class.initializers.len(), 3);
+    assert_eq!(
+        class
+            .initializers
+            .iter()
+            .map(|initializer| initializer.id)
+            .collect::<Vec<_>>(),
+        [
+            InitializerId::new(class.id, 0),
+            InitializerId::new(class.id, 1),
+            InitializerId::new(class.id, 2),
+        ]
+    );
+    assert_eq!(
+        output
+            .program
+            .class_definitions
+            .get(class.id)
+            .unwrap()
+            .initializers
+            .len(),
+        3
+    );
 }
 
 #[test]

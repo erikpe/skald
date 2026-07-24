@@ -1,10 +1,10 @@
 # Skald Classes and Lifecycle
 
-Status: authoritative for implemented inline class behavior and the frozen,
-not-yet-implemented constructor-overload and explicit-copy source model.
-Executable base-subobject lifecycle composition is implemented. The
-[status matrix](STATUS.md) distinguishes the current compiler boundary from
-the frozen constructor extension.
+Status: authoritative for implemented inline class behavior and ordinary
+direct-initializer overloads, plus the frozen explicit-copy and direct-base
+overload source model. Executable base-subobject lifecycle composition is
+implemented. The [status matrix](STATUS.md) distinguishes the current compiler
+boundary from the remaining constructor extension.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -58,11 +58,11 @@ elsewhere.
 Every class has one or more explicit ordinary `init` declarations, including
 an empty class. Those declarations form one class-owned overload set. Copy
 construction instead occupies the separate `copy` lifecycle slot; an
-`init(ref source: T)` declaration is an ordinary initializer. The current
-compiler accepts the distinct `copy` declaration but still restricts each
-class to one ordinary initializer; the
-[constructor-overload and explicit-copy roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
-tracks overload selection and explicit copy-construction expressions.
+`init(ref source: T)` declaration is an ordinary initializer. Direct
+construction implements overload selection. The
+[constructor roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md) tracks
+reuse of that engine for direct-base initialization and explicit
+copy-construction expressions.
 
 All executable exact-class fields and methods are accessible wherever the
 receiver is available. Static members and access modifiers are not
@@ -166,13 +166,15 @@ conditionals, call statements, explicit returns, or assignment through
 another root or a deeper destination. Grouping around `self` does not change
 the direct destination.
 
-The base call selects one applicable ordinary initializer from the direct
-base's overload set and records its stable identity. Arguments evaluate left
-to right and may use initializer parameters and ordinary expressions, but
-cannot read or alias incomplete `self`. The base becomes live only after a
-valid call; direct derived fields cannot be initialized first. Argument
-temporaries remain explicit call arguments and end at the `super(...)`
-statement boundary.
+The frozen contract has the base call select one applicable ordinary
+initializer from the direct base's overload set and record its stable identity.
+The current compiler has not yet moved `super(arguments)` through the direct
+construction overload engine; that is the next constructor-roadmap slice.
+Arguments evaluate left to right and may use initializer parameters and
+ordinary expressions, but cannot read or alias incomplete `self`. The base
+becomes live only after a valid call; direct derived fields cannot be
+initialized first. Argument temporaries remain explicit call arguments and end
+at the `super(...)` statement boundary.
 
 Every direct field must be initialized exactly once. Fields may be initialized
 in any source order. A field becomes initialized only after its complete,
@@ -589,12 +591,13 @@ deallocation or any particular storage operation.
 
 The implemented executable class model does not yet include shared or
 heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, ordinary initializer overloads, the
-distinct `copy` declaration/construction marker, method overloads, reflection,
-or user-defined conversions. Direct-base syntax, hierarchy validation,
-inherited selection and lifecycle, class/interface/`Obj` alias views, slicing,
-virtual dispatch, interface dispatch, type tests, and checked object casts
-execute on x86-64. Their maturity is recorded in the
+modifiers, `final`, abstract members, explicit `T(copy source)` construction,
+method overloads, reflection, or user-defined conversions. Ordinary direct
+initializer overloads and the distinct `copy` declaration execute; overloaded
+direct-base selection remains roadmap work. Direct-base syntax, hierarchy
+validation, inherited selection and lifecycle, class/interface/`Obj` alias
+views, slicing, virtual dispatch, interface dispatch, type tests, and checked
+object casts execute on x86-64. Their maturity is recorded in the
 [status matrix](STATUS.md), and the
 [polymorphism profile](POLYMORPHISM.md) owns their language contract.
 

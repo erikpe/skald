@@ -114,18 +114,19 @@ class member, and resolution validates its exact-class read-only source
 directly into the copy slot. No phase infers lifecycle intent from an `init`
 signature.
 
-The frozen constructor extension deliberately moves ordinary initializer
-selection below name resolution. Resolution will retain the construction class
-identity, source-ordered arguments, and candidate initializer identities.
-Type checking will determine applicability from the existing argument-binding
-relation, reject mode-only overload pairs, select the unique most-specific
-static parameter-type sequence, and record exactly one `InitializerId`.
-`super(arguments)` follows the same boundary for the direct base. The current
-resolved IR and HIR already store dense, source-ordered initializer declaration
-and definition vectors, and MIR lowers, verifies, dumps, and emits every entry.
-Source collection still accepts only one ordinary initializer, and the current
-resolver preselects that entry before checking arguments; this narrow selection
-path is transitional.
+Ordinary direct construction selects initializers below name resolution.
+Resolution retains the construction class identity and source-ordered
+arguments, while the class owns the stable, source-ordered candidate set. Type
+checking analyzes each argument once, determines applicability from the
+existing argument-binding relation, selects the unique most-specific static
+parameter-type sequence, and records exactly one `InitializerId`. HIR and MIR
+therefore contain no unresolved overload choice. Both IRs store dense,
+source-ordered initializer declaration and definition vectors, and MIR lowers,
+verifies, dumps, and emits every entry.
+
+Direct-base `super(arguments)` still uses the transitional resolution path.
+Moving it to the same type-directed overload boundary is the next constructor
+roadmap slice; no other consumer should reproduce that temporary path.
 
 The distinct `copy(ref source: T)` declaration is a separate lifecycle
 capability rather than an initializer candidate. `T(copy source)` selects that

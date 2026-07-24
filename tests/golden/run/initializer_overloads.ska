@@ -1,0 +1,68 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn observed() -> i64 {
+    ska_rt_println_i64(90);
+    return 7;
+}
+
+class Source {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Choice {
+    selected: i64;
+
+    init(value: i64) {
+        self.selected = value + 10;
+    }
+
+    init(value: bool) {
+        self.selected = 20;
+    }
+
+    init(ref source: Source) {
+        self.selected = source.value + 30;
+    }
+
+    fn read() -> i64 {
+        return self.selected;
+    }
+}
+
+class Holder {
+    choice: Choice;
+
+    init(flag: bool) {
+        self.choice = Choice(flag);
+    }
+
+    fn read() -> i64 {
+        return self.choice.read();
+    }
+}
+
+fn make(flag: bool) -> Choice {
+    return Choice(flag);
+}
+
+fn consume(value: Choice) -> i64 {
+    return value.read();
+}
+
+fn main() -> i64 {
+    var source: Source = Source(5);
+    var scalar: Choice = Choice(observed());
+    var alias: Choice = Choice(source);
+    var holder: Holder = Holder(true);
+    var produced: Choice = make(true);
+    ska_rt_println_i64(scalar.read());
+    ska_rt_println_i64(alias.read());
+    ska_rt_println_i64(holder.read());
+    ska_rt_println_i64(produced.read());
+    ska_rt_println_i64(consume(Choice(2)));
+    return 0;
+}

@@ -42,7 +42,7 @@ receiver is evaluated before its explicit arguments.
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
-| **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. The current compiler accepts the distinct `copy` spelling but not yet overloaded `init`. |
+| **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
 
 ## Values, places, and mutation
 

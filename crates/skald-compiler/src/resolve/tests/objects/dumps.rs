@@ -138,7 +138,7 @@ fn resolved_object_dump_is_exact_and_identity_based() {
             "          Type Class c0 @134..137\n",
             "      Block @123..167\n",
             "        LocalDeclaration f0:l0 @125..147\n",
-            "          Construct c0 with c0:init0 @140..146\n",
+            "          Construct c0 @140..146\n",
             "            Integer \"1\" @144..145\n",
             "        Return @148..165\n",
             "          MethodCall c0:method0 @155..164\n",

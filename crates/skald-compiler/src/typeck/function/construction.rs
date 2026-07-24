@@ -112,10 +112,11 @@ impl CallableChecker<'_, '_> {
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<HirConstruction> {
+        let initializer_id = self.select_initializer(construction)?;
         let initializer = self
             .program
-            .initializer(construction.initializer)
-            .expect("resolved construction must reference an initializer");
+            .initializer(initializer_id)
+            .expect("selected construction must reference an initializer");
         let arguments = self.check_arguments(
             &construction.arguments,
             &initializer.parameters,
@@ -126,7 +127,7 @@ impl CallableChecker<'_, '_> {
         )?;
         Some(HirConstruction {
             class: construction.class,
-            initializer: construction.initializer,
+            initializer: initializer_id,
             arguments,
             span: construction.span,
         })

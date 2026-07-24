@@ -570,13 +570,7 @@ impl ResolvedDumper {
                 });
             }
             ResolvedExpression::Construct(construct) => {
-                self.line(
-                    &format!(
-                        "Construct {} with {}",
-                        construct.class, construct.initializer
-                    ),
-                    construct.span,
-                );
+                self.line(&format!("Construct {}", construct.class), construct.span);
                 self.indented(|dumper| {
                     for argument in &construct.arguments {
                         dumper.expression(argument);

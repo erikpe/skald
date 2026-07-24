@@ -86,27 +86,36 @@ impl ClassCollectionState {
         &mut self,
         member_index: usize,
         source: &syntax::InitializerDecl,
-        class_name: &str,
         top_levels: &HashMap<String, TopLevelSymbol>,
         diagnostics: &mut Diagnostics,
     ) {
-        if report_duplicate_lifecycle(
-            self.symbols.initializer_span,
-            source.introducer_span,
-            "ordinary initializer",
-            class_name,
-            diagnostics,
-        ) {
-            return;
-        }
         let id = InitializerId::new(self.id, self.lifecycle.initializers.len());
         let declaration = ResolvedInitializerDeclaration {
             id,
             parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
             span: source.span,
         };
-        self.symbols.initializers.push(declaration.id);
-        self.symbols.initializer_span = Some(source.introducer_span);
+        if declaration.parameters.len() == source.parameters.len() {
+            if let Some(previous) = self
+                .lifecycle
+                .initializers
+                .iter()
+                .find(|previous| same_parameter_types(previous, &declaration))
+            {
+                diagnostics.push(
+                    Diagnostic::error(
+                        DUPLICATE_MEMBER,
+                        "duplicate ordinary initializer signature",
+                    )
+                    .with_primary_label(source.introducer_span, "redeclared here")
+                    .with_secondary_label(previous.span, "first declared here")
+                    .with_note(
+                        "parameter names and binding modes do not distinguish initializer overloads",
+                    ),
+                );
+                return;
+            }
+        }
         self.lifecycle.initializers.push(declaration);
         self.work
             .initializer_members
@@ -320,13 +329,9 @@ pub(super) fn collect_class(
             syntax::ClassMember::Field(field) => {
                 state.collect_field(field, top_levels, diagnostics)
             }
-            syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
-                member_index,
-                initializer,
-                &class.name.text,
-                top_levels,
-                diagnostics,
-            ),
+            syntax::ClassMember::Initializer(initializer) => {
+                state.collect_initializer(member_index, initializer, top_levels, diagnostics)
+            }
             syntax::ClassMember::CopyConstructor(constructor) => state.collect_copy_constructor(
                 member_index,
                 constructor,
@@ -350,6 +355,18 @@ pub(super) fn collect_class(
         }
     }
     state.finish(class)
+}
+
+fn same_parameter_types(
+    left: &ResolvedInitializerDeclaration,
+    right: &ResolvedInitializerDeclaration,
+) -> bool {
+    left.parameters.len() == right.parameters.len()
+        && left
+            .parameters
+            .iter()
+            .zip(&right.parameters)
+            .all(|(left, right)| left.type_syntax.kind == right.type_syntax.kind)
 }
 
 fn resolve_direct_base(

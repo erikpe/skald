@@ -300,16 +300,16 @@ direct fields. The base is part of the same complete-object lifetime and never
 has an independent lexical cleanup registration.
 
 An ordinary derived initializer must place exactly one `super(arguments);` as
-its first statement. Root initializers cannot contain `super`. Under the
-frozen constructor-overload extension, the call selects the unique applicable,
-most-specific ordinary initializer from the direct base's overload set using
-static argument types. The current compiler has only one candidate. In either
-case, arguments evaluate left to right and the base is initialized before any
-derived-field initialization. After normal completion, inherited members
-operate on the live base while the enclosing derived `self` remains incomplete
-until all direct fields are initialized. Missing, duplicate, later, unmatched,
-or ambiguous `super` calls are invalid. There is no implicit zero-argument base
-call.
+its first statement. Root initializers cannot contain `super`. The frozen
+constructor contract selects the unique applicable, most-specific ordinary
+initializer from the direct base's overload set using static argument types.
+The current compiler implements that policy for direct construction; reuse by
+`super(arguments)` remains the next constructor-roadmap slice. Arguments
+evaluate left to right and the base is initialized before any derived-field
+initialization. After normal completion, inherited members operate on the live
+base while the enclosing derived `self` remains incomplete until all direct
+fields are initialized. Missing, duplicate, later, unmatched, or ambiguous
+`super` calls are invalid. There is no implicit zero-argument base call.
 
 Because `super(...)` is first, its arguments may use initializer parameters and
 other ordinary expressions but cannot read or alias any part of incomplete

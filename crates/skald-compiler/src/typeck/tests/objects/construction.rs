@@ -341,7 +341,7 @@ fn failed_constructor_arguments_do_not_make_a_class_field_live() {
     assert!(output
         .diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+        .any(|diagnostic| diagnostic.code == NO_MATCHING_INITIALIZER));
     assert!(output.diagnostics.iter().any(|diagnostic| {
         diagnostic.code == FIELD_INITIALIZATION
             && diagnostic.message.contains("used before initialization")
@@ -371,14 +371,299 @@ fn validates_exact_direct_construction_and_constructor_arguments() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION));
-    assert!(output
-        .diagnostics
+    assert!(
+        output
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == NO_MATCHING_INITIALIZER)
+            .count()
+            >= 2
+    );
+}
+
+#[test]
+fn selects_exact_primitive_initializer_overloads_into_hir() {
+    let output = check_text(concat!(
+        "class Choice {\n",
+        "  selected: i64;\n",
+        "  init(value: i64) { self.selected = 1; }\n",
+        "  init(value: bool) { self.selected = 2; }\n",
+        "  init(value: i64, flag: bool) { self.selected = 3; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var integer: Choice = Choice(7);\n",
+        "  var boolean: Choice = Choice(true);\n",
+        "  var pair: Choice = Choice(7, true);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let selected: Vec<_> = main
+        .body
+        .statements
         .iter()
-        .any(|diagnostic| diagnostic.code == WRONG_ARGUMENT_COUNT));
-    assert!(output
-        .diagnostics
+        .filter_map(|statement| {
+            let HirStatement::Local(local) = statement else {
+                return None;
+            };
+            let HirLocalInitializer::Object(initialization) = &local.initializer else {
+                panic!("expected object construction");
+            };
+            let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer
+            else {
+                panic!("expected constructor producer");
+            };
+            Some(construction.initializer)
+        })
+        .collect();
+    assert_eq!(
+        selected,
+        [
+            InitializerId::new(ClassId::new(0), 0),
+            InitializerId::new(ClassId::new(0), 1),
+            InitializerId::new(ClassId::new(0), 2),
+        ]
+    );
+
+    let mir = lower_hir(&hir).unwrap();
+    assert!(verify_mir(&mir).is_ok());
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    let lowered: Vec<_> = main
+        .body
+        .blocks
         .iter()
-        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+        .flat_map(|block| &block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize)
+                if initialize.target.class() == ClassId::new(0) =>
+            {
+                Some(initialize.target)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(lowered, selected);
+}
+
+#[test]
+fn selects_the_unique_most_specific_object_parameter_types() {
+    let output = check_text(concat!(
+        "interface Named {}\n",
+        "class Animal { init() {} }\n",
+        "class Dog extends Animal implements Named { init() { super(); } }\n",
+        "class Choice {\n",
+        "  init(ref value: Obj) {}\n",
+        "  init(ref value: Named) {}\n",
+        "  init(ref value: Animal) {}\n",
+        "  init(ref value: Dog) {}\n",
+        "}\n",
+        "fn from_obj(ref value: Obj) -> Choice { return Choice(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var dog: Dog = Dog();\n",
+        "  var animal: Animal = Animal();\n",
+        "  var exact: Choice = Choice(dog);\n",
+        "  var base: Choice = Choice(animal);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let selected: Vec<_> = main
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| {
+            let HirStatement::Local(local) = statement else {
+                return None;
+            };
+            let HirLocalInitializer::Object(initialization) = &local.initializer else {
+                return None;
+            };
+            let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer
+            else {
+                return None;
+            };
+            (construction.class == ClassId::new(2)).then_some(construction.initializer)
+        })
+        .collect();
+    assert_eq!(
+        selected,
+        [
+            InitializerId::new(ClassId::new(2), 3),
+            InitializerId::new(ClassId::new(2), 2),
+        ]
+    );
+}
+
+#[test]
+fn reports_deterministic_missing_and_ambiguous_initializer_candidates() {
+    let output = check_text(concat!(
+        "interface Left {}\n",
+        "interface Right {}\n",
+        "class Both implements Left, Right { init() {} }\n",
+        "class Choice {\n",
+        "  init(ref value: Left) {}\n",
+        "  init(ref value: Right) {}\n",
+        "  init(value: i64) {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var both: Both = Both();\n",
+        "  var ambiguous: Choice = Choice(both);\n",
+        "  var missing: Choice = Choice(true);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == AMBIGUOUS_INITIALIZER)
+            .count(),
+        1
+    );
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == NO_MATCHING_INITIALIZER)
+            .count(),
+        1
+    );
+    let ambiguous = diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == AMBIGUOUS_INITIALIZER)
+        .unwrap();
+    assert_eq!(ambiguous.labels.len(), 3);
+    assert!(ambiguous.labels[1].message.contains("init(ref Left)"));
+    assert!(ambiguous.labels[2].message.contains("init(ref Right)"));
+    let missing = diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == NO_MATCHING_INITIALIZER)
+        .unwrap();
+    assert_eq!(missing.labels.len(), 4);
+    assert!(missing.labels[0].message.contains("supplied (bool)"));
+}
+
+#[test]
+fn alias_access_filters_candidates_before_type_specificity() {
+    let output = check_text(concat!(
+        "class Animal { init() {} }\n",
+        "class Dog extends Animal { init() { super(); } }\n",
+        "class Choice {\n",
+        "  init(ref value: Animal) {}\n",
+        "  init(mut ref value: Dog) {}\n",
+        "}\n",
+        "fn readonly(ref value: Dog) -> Choice { return Choice(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var dog: Dog = Dog();\n",
+        "  var mutable: Choice = Choice(dog);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let readonly = hir
+        .definitions
+        .iter()
+        .find(|definition| definition.function == FunctionId::new(0))
+        .unwrap();
+    let HirStatement::Return(result) = &readonly.body.statements[0] else {
+        panic!("expected return");
+    };
+    let Some(crate::hir::HirReturnValue::Object(crate::hir::HirObjectReturn::Construct {
+        construction,
+        ..
+    })) = &result.value
+    else {
+        panic!("expected returned construction");
+    };
+    assert_eq!(
+        construction.initializer,
+        InitializerId::new(ClassId::new(2), 0)
+    );
+
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::Local(local) = &main.body.statements[1] else {
+        panic!("expected choice local");
+    };
+    let HirLocalInitializer::Object(initialization) = &local.initializer else {
+        panic!("expected choice construction");
+    };
+    let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer else {
+        panic!("expected constructor producer");
+    };
+    assert_eq!(
+        construction.initializer,
+        InitializerId::new(ClassId::new(2), 1)
+    );
+}
+
+#[test]
+fn value_copy_applicability_competes_with_alias_views_for_existing_and_produced_sources() {
+    let output = check_text(concat!(
+        "class Source { init() {} }\n",
+        "class Derived extends Source { init() { super(); } }\n",
+        "class Choice {\n",
+        "  init(ref value: Obj) {}\n",
+        "  init(value: Source) {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var source: Derived = Derived();\n",
+        "  var existing: Choice = Choice(source);\n",
+        "  var produced: Choice = Choice(Derived());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let constructions: Vec<_> = main
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| {
+            let HirStatement::Local(local) = statement else {
+                return None;
+            };
+            let HirLocalInitializer::Object(initialization) = &local.initializer else {
+                return None;
+            };
+            let crate::hir::HirObjectProducer::Construct(construction) = &initialization.producer
+            else {
+                return None;
+            };
+            (construction.class == ClassId::new(2)).then_some(construction)
+        })
+        .collect();
+
+    assert_eq!(constructions.len(), 2);
+    for construction in &constructions {
+        assert_eq!(
+            construction.initializer,
+            InitializerId::new(ClassId::new(2), 1)
+        );
+        assert!(matches!(
+            construction.arguments.as_slice(),
+            [crate::hir::HirCallArgument::Copy(_)]
+        ));
+    }
+    let crate::hir::HirCallArgument::Copy(produced) = &constructions[1].arguments[0] else {
+        unreachable!();
+    };
+    let crate::hir::HirObjectSource::Slice(slice) = &produced.source else {
+        panic!("derived value argument should slice to the selected value parameter type");
+    };
+    assert!(matches!(
+        slice.source.as_ref(),
+        crate::hir::HirObjectSource::Produced(_)
+    ));
 }
 
 #[test]

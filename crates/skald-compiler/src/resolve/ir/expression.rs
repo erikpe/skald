@@ -2,8 +2,7 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, FieldId, FunctionId, InitializerId, InterfaceId,
-        InterfaceRequirementId, MethodId,
+        BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId, MethodId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -108,7 +107,6 @@ pub struct ResolvedMethodCallExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedConstructExpr {
     pub class: ClassId,
-    pub initializer: InitializerId,
     pub callee_span: Span,
     pub arguments: Vec<ResolvedExpression>,
     pub span: Span,

@@ -190,7 +190,7 @@ only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
 name.
 
-### Frozen construction-selection syntax
+### Construction-selection syntax
 
 The implemented `copy` declaration occupies a separate lifecycle slot. Its
 required semantic shape is `copy(ref source: EnclosingClass) { ... }`; parsing
@@ -198,25 +198,26 @@ retains the general parameter-list shape so resolution can diagnose wrong
 arity, binding mode, and target type precisely. An `init` declaration is
 always ordinary, including `init(ref source: EnclosingClass)`.
 
-The planned constructor model additionally extends construction arguments
-with:
+Each class requires one or more `initializer-declaration` members, which form
+an overload set. `Class(arguments)` uses the ordinary argument grammar and
+selects the unique applicable, most-specific initializer from static argument
+types. The copy constructor remains a separate lifecycle slot and is never an
+ordinary initializer candidate.
+
+The remaining constructor roadmap extends construction arguments with:
 
 ```text
 copy-construction-arguments  = "(" "copy" expression ")"
 ```
 
-Each class will require one or more `initializer-declaration` members, which
-form an overload set. A `copy-constructor-declaration` occupies one separate
-lifecycle slot. `Class(copy source)` uses
-`copy-construction-arguments`; `Class(arguments)` retains the ordinary call
-argument grammar and never falls back to copy construction. The same
-distinction will apply to future `new Class(copy source)` and
+`Class(copy source)` will use `copy-construction-arguments`;
+`Class(arguments)` never falls back to copy construction. The same distinction
+will apply to future `new Class(copy source)` and
 `new Class(arguments)`.
 
 `copy-construction-arguments` is a frozen future source contract, not syntax
-accepted by the current compiler. The compiler currently accepts one ordinary
-`init`; initializer overloading and explicit `Class(copy source)` selection
-remain later constructor-roadmap work.
+accepted by the current compiler. Explicit `Class(copy source)` selection
+remains later constructor-roadmap work.
 
 `interface` and `implements` are contextual words. Interface bodies contain
 signatures only: fields, lifecycle declarations, method bodies, inheritance,

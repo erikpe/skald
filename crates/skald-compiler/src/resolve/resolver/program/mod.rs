@@ -82,7 +82,6 @@ impl<'ast> ProgramResolver<'ast> {
         let function_definitions = self.resolve_function_bodies(
             &function_declarations,
             &class_declarations,
-            &class_symbols,
             &hierarchy,
             &interfaces,
         );
@@ -94,7 +93,6 @@ impl<'ast> ProgramResolver<'ast> {
                 &self.top_levels,
                 &class_declarations,
                 &interfaces,
-                &class_symbols,
                 &hierarchy,
             ),
             &mut self.diagnostics,
@@ -280,7 +278,6 @@ impl<'ast> ProgramResolver<'ast> {
         &mut self,
         functions: &ResolvedFunctionDeclarationTable,
         classes: &ResolvedClassDeclarationTable,
-        class_symbols: &[ClassSymbols],
         hierarchy: &ResolvedClassHierarchy,
         interfaces: &ResolvedInterfaceDeclarationTable,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
@@ -305,7 +302,6 @@ impl<'ast> ProgramResolver<'ast> {
                         &self.top_levels,
                         classes,
                         interfaces,
-                        class_symbols,
                         hierarchy,
                     ),
                     &mut self.diagnostics,

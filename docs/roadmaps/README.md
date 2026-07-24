@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
   **in progress**; establishes the distinct `copy` lifecycle operation, adds target-directed
   `T(copy source)`, and enables compile-time most-specific ordinary `init`
   overloads including `super(...)`. The declaration and internal identity are
-  distinct; next is ordinary initializer overload selection. It depends on
-  the completed lifecycle, polymorphism, and
+  distinct; direct construction overloads are implemented, and direct-base
+  selection is next. It depends on the completed lifecycle, polymorphism, and
   object-cast profiles.
 - [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md) —
   **planned, blocked**; implements non-null strong owners, explicit ordinary

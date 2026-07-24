@@ -28,6 +28,7 @@ use super::{
 mod construction;
 mod copy;
 mod initializer;
+mod overload;
 mod statement;
 
 use statement::CheckedStatement;

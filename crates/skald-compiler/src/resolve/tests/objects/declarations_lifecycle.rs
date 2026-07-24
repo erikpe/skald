@@ -81,7 +81,7 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
         panic!("expected construction");
     };
     assert_eq!(construct.class, counter.id);
-    assert_eq!(construct.initializer, counter.initializers[0].id);
+    assert_eq!(construct.arguments.len(), 1);
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
     else {
         panic!("expected ordinary construction");
     };
-    assert_eq!(construct.initializer, ordinary.id);
+    assert_eq!(construct.class, value.id);
 
     let empty = class(&output, 1);
     assert_eq!(

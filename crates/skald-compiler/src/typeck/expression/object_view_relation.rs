@@ -63,7 +63,7 @@ pub(super) fn classify_object_view_relation(
     }
 }
 
-pub(super) fn class_provides_view(
+pub(in crate::typeck) fn class_provides_view(
     program: &ResolvedProgram,
     class: ClassId,
     target: HirViewTarget,
