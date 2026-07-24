@@ -4,7 +4,7 @@ use crate::source::Span;
 
 use super::{
     ids::{BlockId, ValueId},
-    instruction::{MirCheckedViewBinding, MirInstruction, MirNarrowedAliasBinding},
+    instruction::{MirCheckedViewBinding, MirInstruction},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,13 +39,6 @@ pub enum MirTerminator {
         false_target: BlockId,
         span: Span,
     },
-    /// Performs a metadata check and establishes `binding` only on success.
-    CheckedNarrow {
-        binding: MirNarrowedAliasBinding,
-        success_target: BlockId,
-        failure_target: BlockId,
-        span: Span,
-    },
     /// Performs a metadata check and establishes one full-expression cast
     /// carrier only on success.
     CheckedCast {
@@ -63,7 +56,6 @@ pub enum MirTerminator {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirTerminationReason {
-    NarrowingFailure,
     ObjectCastFailure,
 }
 
@@ -73,7 +65,6 @@ impl MirTerminator {
             Self::Return { span, .. }
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
-            | Self::CheckedNarrow { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::Terminate { span, .. } => *span,
         }
@@ -90,11 +81,6 @@ impl MirTerminator {
                 false_target,
                 ..
             } => [Some(*true_target), Some(*false_target)],
-            Self::CheckedNarrow {
-                success_target,
-                failure_target,
-                ..
-            } => [Some(*success_target), Some(*failure_target)],
             Self::CheckedCast {
                 success_target,
                 failure_target,

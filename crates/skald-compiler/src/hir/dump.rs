@@ -404,22 +404,6 @@ impl HirDumper {
                     }
                 });
             }
-            HirStatement::Narrowing(statement) => {
-                let kind = match statement.kind {
-                    HirNarrowingKind::Static => "static",
-                    HirNarrowingKind::Runtime {
-                        failure: HirNarrowingFailure::Terminate,
-                    } => "runtime failure=terminate",
-                };
-                self.line(
-                    &format!("Narrowing {} {kind}", statement.binding),
-                    statement.span,
-                );
-                self.indented(|dumper| {
-                    dumper.object_view("ObjectView", &statement.view);
-                    dumper.block(&statement.body);
-                });
-            }
             HirStatement::Local(local) => {
                 self.line(&format!("LocalDeclaration {}", local.local), local.span);
                 self.indented(|dumper| match &local.initializer {

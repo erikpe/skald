@@ -8,7 +8,7 @@ pub(super) fn type_operation_mir() -> MirProgram {
          fn take(ref value: Derived) -> unit {}\n\
          fn inspect(ref erased: Obj) -> bool {\n\
            var result: bool = erased is Derived;\n\
-           narrow ref selected: Derived = erased { take(selected); }\n\
+           take((Derived) erased);\n\
            return result;\n\
          }\n\
          fn main() -> i64 { return 0; }\n",

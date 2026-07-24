@@ -129,7 +129,7 @@ fn recognizes_object_and_alias_keywords_without_reserving_prefixes() {
 #[test]
 fn leaves_polymorphism_words_contextual() {
     let (_, _, output) = lex_text(
-        "extends implements interface virtual override super is narrow Obj polymorphism_value",
+        "extends implements interface virtual override super is cast Obj polymorphism_value",
     );
 
     assert!(output.tokens[..output.tokens.len() - 1]

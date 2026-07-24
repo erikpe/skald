@@ -27,12 +27,12 @@ pub use model::{
     MirInstruction, MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration,
     MirInterfaceDeclarationTable, MirInterfaceRequirement, MirMemberDefinition,
     MirMemberDefinitionTable, MirMethodCallTarget, MirMethodDeclaration, MirMethodReceiver,
-    MirNarrowedAliasBinding, MirNarrowedAliasEnd, MirObjectOrigin, MirObjectView, MirParameter,
-    MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirReceiverAccess,
-    MirRequirementImplementation, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirStorage,
-    MirStorageKind, MirStore, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminationReason,
-    MirTerminator, MirType, MirUnaryOperation, MirUserCopy, MirValue, MirViewTarget,
-    MirVirtualFamily, MirVirtualFamilyTable, StorageId, ValueId,
+    MirObjectOrigin, MirObjectView, MirParameter, MirParameterMode, MirPlace, MirPlaceBase,
+    MirPlaceProjection, MirProgram, MirReceiverAccess, MirRequirementImplementation, MirRvalue,
+    MirRvalueKind, MirSelectedCopyOperation, MirStorage, MirStorageKind, MirStore,
+    MirSynthesizedCopy, MirSynthesizedFieldCopy, MirTerminationReason, MirTerminator, MirType,
+    MirUnaryOperation, MirUserCopy, MirValue, MirViewTarget, MirVirtualFamily,
+    MirVirtualFamilyTable, StorageId, ValueId,
 };
 pub use verify::{verify_mir, MirVerificationError, MirVerificationErrors};
 

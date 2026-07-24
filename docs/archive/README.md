@@ -35,6 +35,7 @@ Archived plans:
 - [Compiler maintainability cleanup](MAINTAINABILITY_ROADMAP.md)
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md)
 - [Restricted polymorphism](POLYMORPHISM_ROADMAP.md)
+- [Object casts](OBJECT_CASTS_ROADMAP.md)
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
 
 Supporting records for the documentation overhaul:

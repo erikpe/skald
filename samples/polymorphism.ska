@@ -35,9 +35,7 @@ fn print_readable(ref value: Readable) -> unit {
 
 fn inspect(ref value: Obj) -> unit {
     if (value is Decorated) {
-        narrow ref decorated: Decorated = value {
-            ska_rt_println_i64(decorated.read());
-        }
+        ska_rt_println_i64(((Decorated) value).read());
     }
 }
 

@@ -44,8 +44,8 @@ or may terminate the process. Such behavior lies beyond the guarantees of the
 trusted [foreign-interoperation boundary](MODULES_AND_INTEROP.md#external-function-declarations).
 
 The implemented
-[checked-narrowing profile](POLYMORPHISM.md#checked-narrowing) has one
-unrecoverable runtime failure. A failed dynamic narrowing terminates
+[checked-cast profile](POLYMORPHISM.md#checked-object-casts) has one
+unrecoverable runtime failure. A failed dynamic cast terminates
 unsuccessfully without returning to Skald or guaranteeing remaining
 source-level cleanup. It does not introduce a catchable exception or settle a
 general panic facility.
@@ -62,13 +62,12 @@ release are compiler/runtime defects rather than source-level failures. These
 rules do not change current compiler support or establish a general panic
 facility.
 
-The implemented [object-cast design](OBJECT_CASTS.md#failure) carries the
-checked-narrowing failure boundary forward: a dynamically unsuccessful cast
+The implemented [object-cast design](OBJECT_CASTS.md#failure) defines that a
+dynamically unsuccessful cast
 terminates without producing a null or invalid view and without guaranteeing
 remaining cleanup. A statically impossible cast is rejected at compile time.
-This currently applies to plain casts consumed directly as receivers, alias
-arguments, field reads, or supported field mutation; shared-owner and owning
-inline cast consumers remain unimplemented.
+This applies to plain casts consumed directly and by owning inline copy
+operations. Shared-owner casts remain unimplemented.
 
 ## Cleanup and abrupt termination
 

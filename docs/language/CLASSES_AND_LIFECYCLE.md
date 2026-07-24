@@ -413,7 +413,7 @@ completed first, then expression temporaries are destroyed, followed by
 lexical locals and owning value parameters.
 
 Grouping does not change an existing place, but it does change whether a fresh
-construction matches the narrow elision forms below. The current language has
+construction matches the restricted elision forms below. The current language has
 no path-dependent temporary ownership at a conditional join.
 
 ## Permitted copy elision
@@ -494,7 +494,7 @@ heap-backed objects, `new`, nullable object references, static members, access
 modifiers, `final`, abstract members, overloads, reflection, or user-defined
 conversions. Direct-base syntax, hierarchy validation, inherited selection and
 lifecycle, class/interface/`Obj` alias views, slicing, virtual dispatch, and
-interface dispatch, type tests, and checked narrowing execute on x86-64.
+interface dispatch, type tests, and checked object casts execute on x86-64.
 Their maturity is recorded in the [status matrix](STATUS.md), and the
 [polymorphism profile](POLYMORPHISM.md) owns their language contract.
 

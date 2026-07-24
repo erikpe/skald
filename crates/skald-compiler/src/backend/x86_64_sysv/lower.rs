@@ -171,10 +171,6 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::CopyConstruct(copy) => self.select_copy_construction(copy)?,
             MirInstruction::CopyAssign(copy) => self.select_copy_assignment(copy)?,
             MirInstruction::EndFullExpression(end) => self.select_end_full_expression(end)?,
-            MirInstruction::BindNarrowedAlias(binding) => {
-                self.select_narrowed_alias_binding(binding)?
-            }
-            MirInstruction::EndNarrowedAlias(_) => {}
             MirInstruction::BindCheckedView(binding) => {
                 self.select_checked_view_binding(binding)?
             }

@@ -1,10 +1,10 @@
-//! Runtime type tests and scoped checked-narrowing lowering.
+//! Runtime type tests and checked object-cast lowering.
 
 use crate::{
     backend::BackendError,
     mir::{
-        BlockId, MirCheckedViewBinding, MirNarrowedAliasBinding, MirObjectOrigin, MirObjectView,
-        MirTerminationReason, MirTerminator, MirType, MirViewTarget, ValueId,
+        BlockId, MirCheckedViewBinding, MirObjectOrigin, MirObjectView, MirTerminationReason,
+        MirTerminator, MirType, MirViewTarget, ValueId,
     },
 };
 
@@ -46,24 +46,6 @@ impl InstructionSelector<'_, '_> {
         self.output.push(Instruction::Label(finished));
     }
 
-    pub(super) fn select_narrowed_alias_binding(
-        &mut self,
-        binding: &MirNarrowedAliasBinding,
-    ) -> Result<(), BackendError> {
-        self.select_place_address(
-            &binding.view.source,
-            ArgumentLocation::IntegerRegister(Register::Rax),
-        )?;
-        value::store_rax(
-            value::memory(Register::Rbp, self.frame.storage(binding.destination)),
-            self.output,
-        );
-        self.store_object_origin(
-            ObjectOriginOperand::Mir(&binding.view.origin),
-            binding.destination,
-        )
-    }
-
     pub(super) fn select_checked_view_binding(
         &mut self,
         binding: &MirCheckedViewBinding,
@@ -88,22 +70,6 @@ impl InstructionSelector<'_, '_> {
         block: BlockId,
     ) -> Result<bool, BackendError> {
         match terminator {
-            MirTerminator::CheckedNarrow {
-                binding,
-                success_target,
-                failure_target,
-                ..
-            } => {
-                let matched = narrowing_match_label(self.function.callable(), block);
-                self.emit_membership_branches(&binding.view.origin, binding.view.target, &matched);
-                self.output
-                    .push(Instruction::Jump(block_label(*failure_target)));
-                self.output.push(Instruction::Label(matched));
-                self.select_narrowed_alias_binding(binding)?;
-                self.output
-                    .push(Instruction::Jump(block_label(*success_target)));
-                Ok(true)
-            }
             MirTerminator::CheckedCast {
                 binding,
                 success_target,
@@ -121,8 +87,7 @@ impl InstructionSelector<'_, '_> {
                 Ok(true)
             }
             MirTerminator::Terminate {
-                reason:
-                    MirTerminationReason::NarrowingFailure | MirTerminationReason::ObjectCastFailure,
+                reason: MirTerminationReason::ObjectCastFailure,
                 ..
             } => {
                 self.output.push(Instruction::Trap);
@@ -169,13 +134,5 @@ fn type_test_label(result: ValueId, suffix: &str) -> Label {
         symbol::local_label_stem(result.callable()),
         result.index(),
         suffix
-    ))
-}
-
-fn narrowing_match_label(callable: crate::identity::CallableId, block: BlockId) -> Label {
-    Label::new(format!(
-        ".Lska_{}_narrow_{}_matched",
-        symbol::local_label_stem(callable),
-        block.index()
     ))
 }

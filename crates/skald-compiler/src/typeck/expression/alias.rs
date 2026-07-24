@@ -11,7 +11,7 @@ use crate::{
     source::Span,
     typeck::program::{
         lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
-        INVALID_NARROWING, INVALID_TYPE_TEST,
+        INVALID_TYPE_TEST,
     },
 };
 
@@ -19,7 +19,6 @@ use crate::{
 pub(super) enum ViewSourceUse {
     AliasArgument,
     TypeTest,
-    Narrowing,
     Cast,
 }
 
@@ -28,7 +27,6 @@ impl ViewSourceUse {
         match self {
             Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
             Self::TypeTest => INVALID_TYPE_TEST,
-            Self::Narrowing => INVALID_NARROWING,
             Self::Cast => crate::typeck::program::INVALID_OBJECT_CAST,
         }
     }
@@ -37,7 +35,6 @@ impl ViewSourceUse {
         match self {
             Self::AliasArgument => "alias argument must designate an object",
             Self::TypeTest => "type-test source must designate an object",
-            Self::Narrowing => "checked-narrowing source must designate an object",
             Self::Cast => "object-cast source must designate an object",
         }
     }
@@ -46,7 +43,6 @@ impl ViewSourceUse {
         match self {
             Self::AliasArgument => "alias argument must be an existing object place",
             Self::TypeTest => "type-test source must be an existing object place",
-            Self::Narrowing => "checked-narrowing source must be an existing object place",
             Self::Cast => "object-cast source must be an existing object place",
         }
     }
@@ -529,7 +525,7 @@ impl CallableChecker<'_, '_> {
                     "Obj",
                     &target_name,
                     span,
-                    "an `Obj` view cannot implicitly narrow to a class",
+                    "an `Obj` view cannot convert implicitly to a class",
                 ));
                 None
             }
@@ -575,7 +571,7 @@ impl CallableChecker<'_, '_> {
                     "interface view",
                     target_name,
                     span,
-                    "an interface view cannot implicitly narrow to a class",
+                    "an interface view cannot convert implicitly to a class",
                 ));
                 None
             }
@@ -600,7 +596,7 @@ impl CallableChecker<'_, '_> {
                     "Obj",
                     &format!("interface {expected}"),
                     span,
-                    "an `Obj` view cannot implicitly narrow to an interface",
+                    "an `Obj` view cannot convert implicitly to an interface",
                 ));
                 None
             }

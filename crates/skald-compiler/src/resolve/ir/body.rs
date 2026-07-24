@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId, NarrowedAliasId},
+    identity::{CallableId, ClassId, FieldId, FunctionId, InitializerId, LocalId},
     source::Span,
 };
 
@@ -83,7 +83,6 @@ impl ResolvedClassDefinition {
 pub struct ResolvedMemberDefinition {
     pub callable: CallableId,
     pub locals: Vec<ResolvedLocal>,
-    pub narrowed_aliases: Vec<ResolvedNarrowedAlias>,
     pub body: ResolvedBlock,
     pub span: Span,
 }
@@ -138,7 +137,6 @@ impl ResolvedFunctionDefinitionTable {
 pub struct ResolvedFunctionDefinition {
     pub function: FunctionId,
     pub locals: Vec<ResolvedLocal>,
-    pub narrowed_aliases: Vec<ResolvedNarrowedAlias>,
     pub body: ResolvedBlock,
     pub span: Span,
 }
@@ -161,7 +159,6 @@ pub struct ResolvedBlock {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedStatement {
     BaseInitialization(ResolvedBaseInitialization),
-    Narrowing(ResolvedNarrowing),
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
     Expression(ResolvedExpressionStatement),
@@ -175,7 +172,6 @@ impl ResolvedStatement {
     pub const fn span(&self) -> Span {
         match self {
             Self::BaseInitialization(statement) => statement.span,
-            Self::Narrowing(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
@@ -185,24 +181,6 @@ impl ResolvedStatement {
             Self::ObjectAssignment(statement) => statement.span,
         }
     }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedNarrowing {
-    pub binding: NarrowedAliasId,
-    pub source: ResolvedExpression,
-    pub body: ResolvedBlock,
-    pub span: Span,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ResolvedNarrowedAlias {
-    pub id: NarrowedAliasId,
-    pub name: String,
-    pub name_span: Span,
-    pub target: super::ResolvedType,
-    pub mutable: bool,
-    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

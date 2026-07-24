@@ -76,7 +76,7 @@ hidden owning anchors for borrows from replaceable shared storage. Shared
 allocation is not a current compiler feature. Optionals and exceptional
 control flow also remain unimplemented, and their final rules are not frozen.
 
-External function declarations are trusted ABI assertions. They form a narrow
+External function declarations are trusted ABI assertions. They form a focused
 interoperation boundary rather than a proof that foreign code satisfies Skald
 ownership or safety rules.
 
@@ -115,11 +115,10 @@ makes a result source-observable.
   deferred.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
-  and checked narrowing.
+  and checked object casts.
 - [Object casts](OBJECT_CASTS.md) defines the implemented C-style plain
   checked-place profile, including owning inline copy consumers, and freezes
-  the remaining shared-owner syntax, complete ownership-direction matrix, and
-  final replacement for implemented `narrow`.
+  the remaining shared-owner syntax and complete ownership-direction matrix.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
   external-function boundary, and records future modules as open design.

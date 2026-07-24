@@ -12,7 +12,6 @@ mod statement;
 
 pub(super) struct ResolvedCallableBody {
     pub(super) locals: Vec<ResolvedLocal>,
-    pub(super) narrowed_aliases: Vec<ResolvedNarrowedAlias>,
     pub(super) body: ResolvedBlock,
 }
 
@@ -87,7 +86,6 @@ struct CallableResolver<'program, 'diagnostics> {
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
-    narrowed_aliases: Vec<ResolvedNarrowedAlias>,
 }
 
 impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
@@ -120,7 +118,6 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             base_initialization,
             scopes: vec![parameters],
             locals: Vec::new(),
-            narrowed_aliases: Vec::new(),
         }
     }
 
@@ -149,7 +146,6 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         let body = self.resolve_block(body, false);
         ResolvedCallableBody {
             locals: self.locals,
-            narrowed_aliases: self.narrowed_aliases,
             body,
         }
     }

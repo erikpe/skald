@@ -56,16 +56,10 @@ callable being lowered.
 The target accepts verified static single inheritance, base projections,
 owning slices, class/interface/`Obj` alias views, virtual-family calls, and
 interface calls. Runtime class/interface tests compare the forwarded dynamic
-class metadata identity against the verified target set. Checked narrowing
-uses the same check, materializes the successful scoped view under the
-ordinary alias ABI, and emits an illegal-instruction trap on failure.
-
-The frozen [object-cast design](../language/OBJECT_CASTS.md) will reuse this
-metadata-membership and failure machinery for expression-level checked places.
-Its implementation roadmap removes scoped narrowed-alias storage only after
-receiver, argument, inline-copy, assignment, and result consumers execute
-through verified cast views. Shared-owner casts later preserve the existing
-allocation header and never call the allocator.
+class metadata identity against the verified target set. Checked object casts
+use the same check, materialize a successful full-expression view, and emit an
+illegal-instruction trap on failure. Shared-owner casts later preserve the
+existing allocation header and never call the allocator.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
@@ -234,13 +228,8 @@ selected place.
 Runtime membership checks compare the forwarded table address with the
 deterministic set of declared classes that provide the requested class or
 interface view. They do not inspect object bytes or traverse the class graph at
-runtime. A successful narrowing stores the selected address, complete-object
-address, and unchanged metadata address in scoped alias frame homes. Failure
-executes `ud2`; it does not return or run remaining source cleanup.
-
-Expression-level object casts use the same comparisons and selected-address
-derivation. Runtime casts and forwarded static views use bounded temporary view
-homes containing the selected address, complete-object address, and unchanged
+runtime. Runtime object casts and forwarded static views use bounded temporary
+view homes containing the selected address, complete-object address, and unchanged
 metadata; concrete static sources project directly. Cast failure executes the
 same non-returning `ud2` boundary. The backend does not call a runtime cast
 helper, reconstruct metadata, allocate for a cast, retain for a plain place

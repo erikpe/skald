@@ -132,25 +132,22 @@ forwarded complete-object origin. Interface calls name both `InterfaceId` and
 
 Type tests retain their class/interface/`Obj` target, selected non-owning
 source view, and static-success, static-failure, or runtime classification.
-Checked narrowing retains a callable-owned alias identity, access-preserving
-result view, lexical body, and either a static conversion or runtime check with
-explicit terminating failure. Narrowed aliases are views, not locals or owning
-storage.
+Checked object casts retain an access-preserving result view and either a
+static conversion or runtime check with explicit terminating failure.
 
 Type checking derives both operations from one identity-based, closed-world
 object-view relation. Exact inline objects resolve against their known dynamic
 class; forwarded class, interface, and `Obj` views resolve against the declared
 classes that can inhabit the source view. Checked-view selection then preserves
 access, projects statically selected class targets, and records terminating
-runtime failure before the narrowing-specific layer adds its alias identity
-and lexical body.
+runtime failure.
 
-The implemented [object-cast replacement](../language/OBJECT_CASTS.md) also
-uses an expression-level checked-place operation. HIR retains the source view,
+The implemented [object-cast profile](../language/OBJECT_CASTS.md) uses an
+expression-level checked-place operation. HIR retains the source view,
 target identity, preserved access/origin, static or runtime classification,
 post-cast projections, and immediate consumer target/access. Plain cast views
-are bounded by their consuming full expression rather than a narrowed-alias
-identity or lexical body. Consumers include receivers, alias arguments, field
+are bounded by their consuming full expression. Consumers include receivers,
+alias arguments, field
 access and mutation, and exact-class owning copy construction, assignment,
 value arguments, and results. An owning HIR source wraps the checked view and
 may add the ordinary exact-ancestor slice path; it does not introduce another
@@ -184,8 +181,8 @@ explicit:
   carrier lifetime across any runtime selection;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
-- basic blocks with explicit return, jump, boolean-branch, checked-narrowing,
-  checked-cast, and unrecoverable-failure terminators.
+- basic blocks with explicit return, jump, boolean-branch, checked-cast, and
+  unrecoverable-failure terminators.
 
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values. Field
@@ -215,11 +212,11 @@ implementing method for each class and requirement. MIR deliberately contains
 no backend witness layout, byte offset, or requirement slot.
 
 Static type tests become boolean constants; runtime tests retain an explicit
-source view and target identity. Narrowed aliases use dedicated indirect
-storage established only by a static binding or a checked-narrowing success
-edge and ended explicitly on lexical fallthrough. The verifier checks legal
-static/runtime relations, declared targets, view access and provenance,
-single definition, scoped liveness, and the terminating failure edge.
+source view and target identity. Runtime checked casts use dedicated indirect
+carrier storage established only on the success edge and ended at the
+full-expression boundary. The verifier checks legal static/runtime relations,
+declared targets, view access and provenance, single definition, bounded
+liveness, and the terminating failure edge.
 
 Plain casts feed ordinary receiver, alias-argument, field access and mutation,
 copy construction, copy assignment, value-argument, and result operations.

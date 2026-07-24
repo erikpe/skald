@@ -73,7 +73,6 @@ struct BodyLowerer<'hir> {
     receiver_storage: Option<StorageId>,
     parameter_storage: Vec<StorageId>,
     local_storage: Vec<StorageId>,
-    narrowed_alias_storage: Vec<StorageId>,
     storage: Vec<MirStorage>,
     values: Vec<MirValue>,
     body: MirBodyBuilder,
@@ -87,7 +86,6 @@ impl<'hir> BodyLowerer<'hir> {
         let mut lowerer = Self {
             parameter_storage: Vec::with_capacity(input.parameters.len()),
             local_storage: Vec::with_capacity(input.locals.len()),
-            narrowed_alias_storage: Vec::new(),
             storage: Vec::with_capacity(
                 input.parameters.len()
                     + input.locals.len()
@@ -196,23 +194,6 @@ impl<'hir> BodyLowerer<'hir> {
                 kind: MirStorageKind::Local,
                 ty: lower_type(local.ty),
                 span: local.span,
-            });
-        }
-        let aliases = type_operations::collect_narrowed_aliases(self.input.source_body);
-        self.narrowed_alias_storage.reserve(aliases.len());
-        for narrowing in aliases {
-            debug_assert_eq!(narrowing.binding.index(), self.narrowed_alias_storage.len());
-            let id = StorageId::new(self.input.callable, self.storage.len());
-            self.narrowed_alias_storage.push(id);
-            self.storage.push(MirStorage {
-                id,
-                source: Some(BindingId::NarrowedAlias(narrowing.binding)),
-                name: format!("narrow#{}", narrowing.binding.index()),
-                kind: MirStorageKind::NarrowedAlias(type_operations::lower_access(
-                    narrowing.view.access,
-                )),
-                ty: type_operations::lower_view_target(narrowing.view.target).ty(),
-                span: narrowing.span,
             });
         }
     }

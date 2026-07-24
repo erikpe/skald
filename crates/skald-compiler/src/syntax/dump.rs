@@ -234,34 +234,6 @@ impl AstDumper {
                     });
                 });
             }
-            Statement::Narrowing(statement) => {
-                self.line("Narrowing", statement.span);
-                self.indented(|dumper| {
-                    dumper.line(
-                        if statement.binding.mut_span.is_some() {
-                            "Binding Mutable"
-                        } else {
-                            "Binding ReadOnly"
-                        },
-                        statement.binding.span,
-                    );
-                    dumper.indented(|dumper| {
-                        dumper.named(
-                            "Name",
-                            &statement.binding.name.text,
-                            statement.binding.name.span,
-                        );
-                        dumper.named(
-                            "Target",
-                            &statement.binding.target.text,
-                            statement.binding.target.span,
-                        );
-                    });
-                    dumper.heading("Source");
-                    dumper.indented(|dumper| dumper.expression(&statement.source));
-                    dumper.block(&statement.body);
-                });
-            }
             Statement::Local(local) => {
                 self.line("Local", local.span);
                 self.indented(|dumper| {

@@ -1,4 +1,4 @@
-//! Narrow, typed storage for dense global-ID tables and sparse function slots.
+//! Focused typed storage for dense global-ID tables and sparse function slots.
 //!
 //! Phase modules retain their own public table and record types. These two
 //! containers only centralize the dense and optional-slot invariants shared by

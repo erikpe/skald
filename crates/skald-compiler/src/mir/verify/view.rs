@@ -36,7 +36,7 @@ impl Verifier<'_> {
         self.verify_object_view_conversion(function, block, view, kind, false)
     }
 
-    pub(super) fn verify_narrowing_view(
+    pub(super) fn verify_checked_object_view(
         &mut self,
         function: MirDefinitionRef<'_>,
         block: &MirBasicBlock,
@@ -196,7 +196,6 @@ impl Verifier<'_> {
                 storage.kind,
                 MirStorageKind::Receiver
                     | MirStorageKind::AliasParameter(_)
-                    | MirStorageKind::NarrowedAlias(_)
                     | MirStorageKind::CheckedView(_)
             )
         });
@@ -253,9 +252,7 @@ impl Verifier<'_> {
         };
         let carrier_access = match storage.kind {
             MirStorageKind::Receiver => self.storage_access(site.function, storage),
-            MirStorageKind::AliasParameter(access)
-            | MirStorageKind::NarrowedAlias(access)
-            | MirStorageKind::CheckedView(access) => access,
+            MirStorageKind::AliasParameter(access) | MirStorageKind::CheckedView(access) => access,
             _ => {
                 self.block_error(
                     site.function.callable(),
@@ -268,7 +265,6 @@ impl Verifier<'_> {
         let expected_base = match storage.kind {
             MirStorageKind::Receiver => MirPlaceBase::Storage(carrier),
             MirStorageKind::AliasParameter(_) => MirPlaceBase::AliasParameter(carrier),
-            MirStorageKind::NarrowedAlias(_) => MirPlaceBase::NarrowedAlias(carrier),
             MirStorageKind::CheckedView(_) => MirPlaceBase::CheckedView(carrier),
             _ => unreachable!("origin carrier kind checked above"),
         };

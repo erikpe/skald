@@ -1,7 +1,7 @@
 //! Statement sequencing, lexical scopes, and binding declarations.
 
 use super::*;
-use crate::identity::{LocalId, NarrowedAliasId};
+use crate::identity::LocalId;
 
 impl CallableResolver<'_, '_> {
     pub(super) fn resolve_block(&mut self, block: &syntax::Block, nested: bool) -> ResolvedBlock {
@@ -45,9 +45,6 @@ impl CallableResolver<'_, '_> {
             syntax::Statement::BaseInitialization(statement) => self
                 .resolve_base_initialization(statement, first_root_statement)
                 .map(ResolvedStatement::BaseInitialization),
-            syntax::Statement::Narrowing(statement) => self
-                .resolve_narrowing(statement)
-                .map(ResolvedStatement::Narrowing),
             syntax::Statement::Local(local) => {
                 self.resolve_local(local).map(ResolvedStatement::Local)
             }
@@ -81,45 +78,6 @@ impl CallableResolver<'_, '_> {
                 self.resolve_object_assignment(assignment)
             }
         }
-    }
-
-    fn resolve_narrowing(
-        &mut self,
-        statement: &syntax::NarrowingStatement,
-    ) -> Option<ResolvedNarrowing> {
-        let target = self.resolve_view_target(&statement.binding.target);
-        let source = self.resolve_expression(&statement.source);
-        let id = NarrowedAliasId::new(self.callable, self.narrowed_aliases.len());
-
-        self.scopes.push(HashMap::new());
-        if let Some(target) = &target {
-            let symbol = BindingSymbol {
-                id: BindingId::NarrowedAlias(id),
-                ty: target.kind,
-                name_span: statement.binding.name.span,
-            };
-            self.declare_binding(&statement.binding.name.text, symbol, "narrowed alias");
-            self.narrowed_aliases.push(ResolvedNarrowedAlias {
-                id,
-                name: statement.binding.name.text.clone(),
-                name_span: statement.binding.name.span,
-                target: target.clone(),
-                mutable: statement.binding.mut_span.is_some(),
-                span: statement.binding.span,
-            });
-        }
-        let body = self.resolve_block_in_current_scope(&statement.body, false);
-        self.scopes
-            .pop()
-            .expect("narrowing body must have a lexical scope");
-
-        target?;
-        Some(ResolvedNarrowing {
-            binding: id,
-            source: source?,
-            body,
-            span: statement.span,
-        })
     }
 
     fn resolve_base_initialization(

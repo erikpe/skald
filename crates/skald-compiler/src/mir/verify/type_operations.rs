@@ -1,12 +1,11 @@
-//! Verification of runtime type tests and scoped checked narrowing.
+//! Verification of runtime type tests and checked object casts.
 
 use std::collections::HashSet;
 
 use super::{
     super::model::{
         MirBasicBlock, MirCheckedViewBinding, MirCheckedViewEnd, MirDefinitionRef, MirInstruction,
-        MirNarrowedAliasBinding, MirNarrowedAliasEnd, MirRvalue, MirStorageKind, MirTerminator,
-        MirType, MirViewTarget,
+        MirRvalue, MirStorageKind, MirTerminator, MirType, MirViewTarget,
     },
     context::Verifier,
 };
@@ -47,90 +46,6 @@ impl Verifier<'_> {
         }
     }
 
-    pub(super) fn verify_narrowed_alias_binding(
-        &mut self,
-        function: MirDefinitionRef<'_>,
-        block: &MirBasicBlock,
-        binding: &MirNarrowedAliasBinding,
-        runtime: bool,
-    ) {
-        let Some(storage) = function.storage(binding.destination) else {
-            self.block_error(
-                function.callable(),
-                block.id,
-                format!(
-                    "narrowed alias destination {} is not declared",
-                    binding.destination
-                ),
-            );
-            return;
-        };
-        let access = match storage.kind {
-            MirStorageKind::NarrowedAlias(access) => access,
-            _ => {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    "narrowed alias binding destination has the wrong storage kind",
-                );
-                return;
-            }
-        };
-        let source =
-            self.verify_narrowing_view(function, block, &binding.view, "narrowed alias view");
-        self.verify_view_target_declared(function, block, binding.view.target, "narrowed alias");
-        if binding.view.target == MirViewTarget::Obj {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "checked narrowing cannot select `Obj`",
-            );
-        }
-        if storage.ty != binding.view.target.ty() || access != binding.view.access {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "narrowed alias storage does not match its selected view",
-            );
-        }
-        if let Some(source) = source {
-            let expected = if runtime {
-                TypeRelation::Runtime
-            } else {
-                TypeRelation::StaticSuccess
-            };
-            if self.classify_type_relation(source.ty, binding.view.target) != expected {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    if runtime {
-                        "checked narrowing does not require a runtime check"
-                    } else {
-                        "static narrowed alias binding is not guaranteed to succeed"
-                    },
-                );
-            }
-        }
-    }
-
-    pub(super) fn verify_narrowed_alias_end(
-        &mut self,
-        function: MirDefinitionRef<'_>,
-        block: &MirBasicBlock,
-        end: &MirNarrowedAliasEnd,
-    ) {
-        if !function
-            .storage(end.alias)
-            .is_some_and(|storage| matches!(storage.kind, MirStorageKind::NarrowedAlias(_)))
-        {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "narrowed alias end does not name narrowed alias storage",
-            );
-        }
-    }
-
     pub(super) fn verify_checked_view_binding(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -161,7 +76,7 @@ impl Verifier<'_> {
             }
         };
         let source =
-            self.verify_narrowing_view(function, block, &binding.view, "checked-cast view");
+            self.verify_checked_object_view(function, block, &binding.view, "checked-cast view");
         self.verify_view_target_declared(function, block, binding.view.target, "checked cast");
         if storage.ty != binding.view.target.ty() || access != binding.view.access {
             self.block_error(
@@ -208,29 +123,9 @@ impl Verifier<'_> {
         }
     }
 
-    pub(super) fn verify_narrowed_alias_definitions(&mut self, function: MirDefinitionRef<'_>) {
+    pub(super) fn verify_checked_view_definitions(&mut self, function: MirDefinitionRef<'_>) {
         let mut definitions = HashSet::new();
         for block in &function.body().blocks {
-            for instruction in &block.instructions {
-                if let MirInstruction::BindNarrowedAlias(binding) = instruction {
-                    if !definitions.insert(binding.destination) {
-                        self.block_error(
-                            function.callable(),
-                            block.id,
-                            "narrowed alias is defined more than once",
-                        );
-                    }
-                }
-            }
-            if let Some(MirTerminator::CheckedNarrow { binding, .. }) = &block.terminator {
-                if !definitions.insert(binding.destination) {
-                    self.block_error(
-                        function.callable(),
-                        block.id,
-                        "narrowed alias is defined more than once",
-                    );
-                }
-            }
             if let Some(MirTerminator::CheckedCast { binding, .. }) = &block.terminator {
                 if !definitions.insert(binding.destination) {
                     self.block_error(
@@ -261,51 +156,6 @@ impl Verifier<'_> {
                     format!("checked-view storage {} has no definition", storage.id),
                 );
             }
-        }
-        for storage in function.storage_entries() {
-            if matches!(storage.kind, MirStorageKind::NarrowedAlias(_))
-                && !definitions.contains(&storage.id)
-            {
-                self.function_error(
-                    function.callable(),
-                    format!("narrowed alias storage {} has no definition", storage.id),
-                );
-            }
-        }
-    }
-
-    pub(super) fn verify_checked_narrow_terminator(
-        &mut self,
-        function: MirDefinitionRef<'_>,
-        block: &MirBasicBlock,
-        binding: &MirNarrowedAliasBinding,
-        success_target: super::super::model::BlockId,
-        failure_target: super::super::model::BlockId,
-    ) {
-        self.verify_narrowed_alias_binding(function, block, binding, true);
-        self.verify_block_target(function, block, success_target);
-        self.verify_block_target(function, block, failure_target);
-        if success_target == failure_target {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "checked narrowing success and failure edges must differ",
-            );
-        }
-        if !function.block(failure_target).is_some_and(|failure| {
-            matches!(
-                failure.terminator,
-                Some(MirTerminator::Terminate {
-                    reason: super::super::model::MirTerminationReason::NarrowingFailure,
-                    ..
-                })
-            )
-        }) {
-            self.block_error(
-                function.callable(),
-                block.id,
-                "checked narrowing failure edge must terminate with narrowing failure",
-            );
         }
     }
 

@@ -11,4 +11,4 @@ Small Skald programs used for language bring-up and manual experimentation belon
   internal object parameters/results, bounded produced-object temporaries,
   deterministic cleanup, and the direct constructor-elision cases.
 - `polymorphism.ska` demonstrates inheritance, virtual and interface dispatch,
-  an `Obj` type test, and scoped checked narrowing.
+  an `Obj` type test, and checked object casts.

@@ -200,11 +200,10 @@ Optional payloads and array elements are not alias sources because neither
 value family is implemented. Any future design must define how a conditional
 payload or element remains present and at a stable location while aliased;
 the current parameter model does not settle those constraints. Implemented
-polymorphic alias conversions and scoped narrowing are defined by
-[polymorphism](POLYMORPHISM.md). The frozen
-[object-cast replacement](OBJECT_CASTS.md) removes scoped narrowing and permits
-checked places only for one consuming full expression; it does not introduce
-local aliases.
+polymorphic alias conversions and checked casts are defined by
+[polymorphism](POLYMORPHISM.md) and
+[object casts](OBJECT_CASTS.md). Checked places exist only for one consuming
+full expression; they do not introduce local aliases.
 
 ## Implementation boundary
 

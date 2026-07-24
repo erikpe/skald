@@ -22,12 +22,12 @@ pub use ir::{
     ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
     ResolvedInterfaceReceiver, ResolvedInterfaceRequirement, ResolvedLocal, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedMethodCallExpr, ResolvedMethodDeclaration,
-    ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedNarrowedAlias, ResolvedNarrowing,
-    ResolvedNumericLiteralExpr, ResolvedObjectAssignment, ResolvedObjectCastExpr,
-    ResolvedObjectCastTargetMode, ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn,
-    ResolvedStatement, ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedNumericLiteralExpr,
+    ResolvedObjectAssignment, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
+    ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedParameter, ResolvedParameterBindingMode,
+    ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedStatement, ResolvedType,
+    ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use resolver::{
     resolve, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER, DUPLICATE_TOP_LEVEL,

@@ -8,28 +8,16 @@ use super::{
 use crate::{
     hir::{
         HirAccess, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpressionKind,
-        HirNarrowingFailure, HirNarrowingKind, HirObjectView, HirTypeTest, HirTypeTestKind,
-        HirViewTarget,
+        HirObjectView, HirTypeTest, HirTypeTestKind, HirViewTarget,
     },
-    resolve::{
-        ResolvedNarrowing, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
-        ResolvedTypeTestExpr,
-    },
-    typeck::program::{
-        lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_NARROWING, INVALID_OBJECT_CAST,
-        INVALID_TYPE_TEST,
-    },
+    resolve::{ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr},
+    typeck::program::{lower_type, INVALID_OBJECT_CAST, INVALID_TYPE_TEST},
 };
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CheckedViewFailure {
-    Terminate,
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CheckedViewKind {
     Static,
-    Runtime { failure: CheckedViewFailure },
+    Runtime,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -109,7 +97,7 @@ impl CallableChecker<'_, '_> {
             consumer_access: access,
             kind: match operation.kind {
                 CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
-                CheckedViewKind::Runtime { .. } => HirCheckedObjectViewKind::RuntimeTerminate,
+                CheckedViewKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
             },
             projections,
             span: cast.span,
@@ -137,70 +125,6 @@ impl CallableChecker<'_, '_> {
             ty: Type::Bool,
             span: test.span,
         })
-    }
-
-    pub(in crate::typeck) fn check_narrowing_operation(
-        &mut self,
-        narrowing: &ResolvedNarrowing,
-    ) -> Option<(HirObjectView, HirNarrowingKind)> {
-        let source = self.check_object_view_source(&narrowing.source, ViewSourceUse::Narrowing)?;
-        let alias = self.narrowed_alias(narrowing.binding);
-        let target_syntax = alias.target.clone();
-        let target_span = alias.target.span;
-        let name_span = alias.name_span;
-        let mutable = alias.mutable;
-        let target = self.check_view_target(&target_syntax, target_span, INVALID_NARROWING)?;
-        if target == HirViewTarget::Obj {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_NARROWING,
-                    "checked narrowing must select a class or interface view",
-                )
-                .with_primary_label(target_span, "`Obj` does not narrow an object view"),
-            );
-            return None;
-        }
-
-        let access = if mutable {
-            HirAccess::Mutable
-        } else {
-            HirAccess::ReadOnly
-        };
-        let source_span = source.span();
-        let operation = match self.select_checked_view(source, target, access) {
-            Ok(operation) => operation,
-            Err(CheckedViewRejection::StaticFailure) => {
-                self.diagnostics.push(
-                    Diagnostic::error(INVALID_NARROWING, "checked narrowing can never succeed")
-                        .with_primary_label(
-                            target_span,
-                            "no possible dynamic class provides this view",
-                        )
-                        .with_secondary_label(source_span, "source view"),
-                );
-                return None;
-            }
-            Err(CheckedViewRejection::InsufficientAccess) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        INSUFFICIENT_ALIAS_ACCESS,
-                        "checked narrowing cannot increase alias access",
-                    )
-                    .with_primary_label(source_span, "this source provides read-only access")
-                    .with_secondary_label(name_span, "mutable narrowed alias requested here"),
-                );
-                return None;
-            }
-        };
-        let kind = match operation.kind {
-            CheckedViewKind::Static => HirNarrowingKind::Static,
-            CheckedViewKind::Runtime {
-                failure: CheckedViewFailure::Terminate,
-            } => HirNarrowingKind::Runtime {
-                failure: HirNarrowingFailure::Terminate,
-            },
-        };
-        Some((operation.view, kind))
     }
 
     fn check_view_target(
@@ -262,9 +186,7 @@ impl CallableChecker<'_, '_> {
         };
         let kind = match relation {
             ObjectViewRelation::StaticSuccess => CheckedViewKind::Static,
-            ObjectViewRelation::Runtime => CheckedViewKind::Runtime {
-                failure: CheckedViewFailure::Terminate,
-            },
+            ObjectViewRelation::Runtime => CheckedViewKind::Runtime,
             ObjectViewRelation::StaticFailure => {
                 unreachable!("statically impossible views returned above")
             }

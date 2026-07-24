@@ -29,8 +29,8 @@ fn emits_unique_class_metadata_membership_checks_and_failure_traps() {
     let output = assembly(&format!(
         "{TYPE_OPERATION_TYPES}\
          fn inspect(ref any: Obj) -> bool {{ return any is Leaf; }}\n\
-         fn narrow_value(ref any: Obj) -> i64 {{\n\
-           narrow ref leaf: Leaf = any {{ return leaf.total(1, 2, 3, 4, 5, 6, 7, 1.0, 2.0); }}\n\
+         fn cast_value(ref any: Obj) -> i64 {{\n\
+           return ((Leaf) any).total(1, 2, 3, 4, 5, 6, 7, 1.0, 2.0);\n\
          }}\n\
          fn main() -> i64 {{ return 0; }}\n"
     ));
@@ -76,25 +76,23 @@ fn executes_class_interface_and_obj_tests_across_deep_and_multiple_views() {
 }
 
 #[test]
-fn materializes_class_and_interface_narrowing_through_nested_stack_pressure() {
+fn materializes_class_and_interface_casts_through_nested_stack_pressure() {
     let source = format!(
         "{TYPE_OPERATION_TYPES}\
-         fn narrow_leaf(ref any: Obj, a: i64, b: i64, c: i64, d: i64,\n\
+         fn cast_leaf(ref any: Obj, a: i64, b: i64, c: i64, d: i64,\n\
              e: i64, f: i64, g: i64, x: f64, y: f64) -> i64 {{\n\
-           narrow ref leaf: Leaf = any {{\n\
-             return leaf.total(a, b, c, d, e, f, g, x, y);\n\
-           }}\n\
+           return ((Leaf) any).total(a, b, c, d, e, f, g, x, y);\n\
          }}\n\
-         fn narrow_marker(ref any: Obj) -> i64 {{\n\
-           narrow ref marker: Marker = any {{ return marker.mark(); }}\n\
+         fn cast_marker(ref any: Obj) -> i64 {{\n\
+           return ((Marker) any).mark();\n\
          }}\n\
-         fn static_narrow(ref leaf: Leaf) -> i64 {{\n\
-           narrow ref root: Root = leaf {{ return root.mark(); }}\n\
+         fn static_cast(ref leaf: Leaf) -> i64 {{\n\
+           return ((Root) leaf).mark();\n\
          }}\n\
          fn main() -> i64 {{\n\
            var leaf: Leaf = Leaf();\n\
-           return narrow_leaf(leaf, 1, 2, 3, 4, 5, 6, 7, 1.0, 2.0)\n\
-               + narrow_marker(leaf) + static_narrow(leaf);\n\
+           return cast_leaf(leaf, 1, 2, 3, 4, 5, 6, 7, 1.0, 2.0)\n\
+               + cast_marker(leaf) + static_cast(leaf);\n\
          }}\n"
     );
 
@@ -105,7 +103,7 @@ fn materializes_class_and_interface_narrowing_through_nested_stack_pressure() {
 }
 
 #[test]
-fn successful_narrowing_preserves_temporary_cleanup_order() {
+fn successful_cast_preserves_temporary_cleanup_order() {
     let source = format!(
         "{TYPE_OPERATION_TYPES}\
          extern fn ska_rt_println_i64(value: i64) -> unit;\n\
@@ -115,13 +113,11 @@ fn successful_narrowing_preserves_temporary_cleanup_order() {
            destroy {{ ska_rt_println_i64(self.value); }}\n\
          }}\n\
          fn consume(value: Token) -> unit {{}}\n\
-         fn narrow_leaf(ref any: Obj) -> i64 {{\n\
-           narrow ref leaf: Leaf = any {{\n\
-             consume(Token(42));\n\
-             return leaf.total(1, 2, 3, 4, 5, 6, 7, 1.0, 2.0);\n\
-           }}\n\
+         fn cast_leaf(ref any: Obj) -> i64 {{\n\
+           consume(Token(42));\n\
+           return ((Leaf) any).total(1, 2, 3, 4, 5, 6, 7, 1.0, 2.0);\n\
          }}\n\
-         fn main() -> i64 {{ var leaf: Leaf = Leaf(); return narrow_leaf(leaf); }}\n"
+         fn main() -> i64 {{ var leaf: Leaf = Leaf(); return cast_leaf(leaf); }}\n"
     );
     let mut output = assembly(&source);
     output.push_str(println_i64_stub());
@@ -129,29 +125,6 @@ fn successful_narrowing_preserves_temporary_cleanup_order() {
     let result = run_native_assembly_output(&output);
     assert_eq!(result.status.code(), Some(28));
     assert_eq!(result.stdout, b"42\n42\n");
-    assert!(result.stderr.is_empty());
-}
-
-#[test]
-fn failed_checked_narrowing_terminates_without_returning_or_cleanup() {
-    let source = "\
-         extern fn ska_rt_println_i64(value: i64) -> unit;\n\
-         class Leaf { init() {} }\n\
-         class Other {\n\
-           init() {}\n\
-           destroy { ska_rt_println_i64(99); }\n\
-         }\n\
-         fn fail(ref any: Obj) -> i64 {\n\
-           narrow ref leaf: Leaf = any { return 7; }\n\
-         }\n\
-         fn main() -> i64 { var other: Other = Other(); return fail(other); }\n";
-    let mut output = assembly(source);
-    output.push_str(println_i64_stub());
-
-    let result = run_native_assembly_output(&output);
-    assert!(!result.status.success());
-    assert_eq!(result.status.signal(), Some(4));
-    assert!(result.stdout.is_empty());
     assert!(result.stderr.is_empty());
 }
 

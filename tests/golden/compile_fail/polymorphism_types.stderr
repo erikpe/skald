@@ -17,23 +17,21 @@ error[TYP026]: class `Bad` does not implement requirement `Shape.area`
 3 |     fn area() -> u64;
    |        ---- requirement declared here
 
-error[TYP021]: checked narrowing cannot increase alias access
- --> tests/golden/compile_fail/polymorphism_types.ska:27:35
+error[TYP029]: shared-owner casts are not implemented
+ --> tests/golden/compile_fail/polymorphism_types.ska:27:6
     |
-27 |     narrow mut ref mutable: Bad = erased {}
-    |                                   ^^^^^^ this source provides read-only access
-    |
-27 |     narrow mut ref mutable: Bad = erased {}
-    |                    ------- mutable narrowed alias requested here
+27 |     (shared Bad) erased;
+    |      ^^^^^^ `shared T` is reserved for a future ownership slice
+  = note: plain `(T) source` casts produce only a bounded borrowed place
 
-error[TYP028]: checked narrowing can never succeed
- --> tests/golden/compile_fail/polymorphism_types.ska:28:28
+error[TYP029]: object cast can never succeed
+ --> tests/golden/compile_fail/polymorphism_types.ska:28:7
     |
-28 |     narrow ref impossible: Root = other {}
-    |                            ^^^^ no possible dynamic class provides this view
+28 |     ((Root) other).dynamic();
+    |       ^^^^ no possible dynamic class provides this view
     |
-28 |     narrow ref impossible: Root = other {}
-    |                                   ----- source view
+28 |     ((Root) other).dynamic();
+    |             ----- source view
 
 error[TYP027]: type-test source must designate an object
  --> tests/golden/compile_fail/polymorphism_types.ska:29:30

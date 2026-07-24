@@ -44,7 +44,6 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::Conditional(_) => {}
                 HirStatement::Block(_) => {}
                 HirStatement::BaseInitialization(_)
-                | HirStatement::Narrowing(_)
                 | HirStatement::FieldAssignment(_)
                 | HirStatement::FieldConstruction(_)
                 | HirStatement::FieldCopyConstruction(_)

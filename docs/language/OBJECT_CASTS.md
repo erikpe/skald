@@ -7,8 +7,7 @@ owners. The current compiler implements plain checked-place casts for method
 receivers, alias arguments, field access, exact-class copy construction and
 assignment, value parameters, results, and owning slicing. Produced inline
 sources use owning full-expression temporaries. Shared-owner casts remain
-planned. Scoped `narrow` also remains implemented during the staged migration
-owned by the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md).
+planned.
 
 Primitive conversions, optional casts, unsafe reinterpretation, user-defined
 conversions, and external object ABI are outside this profile.
@@ -327,8 +326,8 @@ temporaries are released in reverse completion order.
 The initial cast profile has no local alias declarations. A place cast cannot
 be stored for reuse across statements. Repeating a cast repeats source
 evaluation and any required dynamic check. This is a deliberate simplification
-when removing `narrow`, not permission for a compiler to extend the temporary
-view beyond its full expression.
+in the expression-only profile, not permission for a compiler to extend the
+temporary view beyond its full expression.
 
 ## Failure
 
@@ -341,20 +340,14 @@ There is no null result and no unchecked object cast. A future optional cast
 must be designed together with explicit optional values; recoverable cast
 exceptions likewise belong to the future exception design.
 
-## Removal of `narrow`
+## Expression-only cast profile
 
-The final cast profile contains no `narrow` statement or narrowed-alias binding.
 Immediate receiver, argument, field, copying, assignment, and return uses
 consume a place cast directly. Multi-statement reuse requires repeating the
 cast or creating an independent inline/shared owner where the program intends
 one.
 
-Local aliases remain a separate future design. Removing `narrow` does not
+Local aliases remain a separate future design. The cast profile does not
 implicitly introduce `ref` locals, reference values, alias assignment, or
-escaping borrows.
-
-During the cast-roadmap transition, the compiler accepts both scoped `narrow`
-and the implemented plain checked-place profile. It diagnoses `shared T` as
-unsupported until shared ownership is implemented. The remaining cast-roadmap
-work removes `narrow` and its statement-specific compiler representation; it
-does not broaden the plain cast matrix.
+escaping borrows. The compiler diagnoses `shared T` as unsupported until
+shared ownership is implemented.

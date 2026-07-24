@@ -60,11 +60,11 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_virtual_receiver_origin(),
         mutate_interface_requirement(),
         mutate_type_operation_target(),
-        mutate_narrowing_failure_edge(),
+        mutate_cast_failure_edge(),
     ]
 }
 
-fn mutate_narrowing_failure_edge() -> Mutation {
+fn mutate_cast_failure_edge() -> Mutation {
     let mut program = type_operation_mir();
     let definition = program
         .definitions
@@ -75,17 +75,17 @@ fn mutate_narrowing_failure_edge() -> Mutation {
         .blocks
         .iter_mut()
         .find_map(|block| match block.terminator.as_mut() {
-            Some(MirTerminator::CheckedNarrow {
+            Some(MirTerminator::CheckedCast {
                 success_target,
                 failure_target,
                 ..
             }) => Some((*success_target, failure_target)),
             _ => None,
         })
-        .expect("type-operation fixture must contain checked narrowing");
+        .expect("type-operation fixture must contain a checked cast");
     *failure_target = success_target;
     Mutation {
-        name: "checked-narrowing failure edge",
+        name: "checked-cast failure edge",
         expected_message: "success and failure edges must differ",
         program,
     }

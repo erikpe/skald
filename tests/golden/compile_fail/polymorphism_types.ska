@@ -24,8 +24,8 @@ class Other {
 }
 
 fn invalid(ref erased: Obj, ref other: Other, scalar: i64) -> unit {
-    narrow mut ref mutable: Bad = erased {}
-    narrow ref impossible: Root = other {}
+    (shared Bad) erased;
+    ((Root) other).dynamic();
     var invalid_test: bool = scalar is Shape;
 }
 

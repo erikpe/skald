@@ -131,11 +131,11 @@ fn polymorphism_words_remain_ordinary_names_outside_their_contextual_forms() {
     let (_, output) = parse_text(concat!(
         "class Names {\n",
         "    extends: i64; implements: i64; interface: i64; virtual: i64;\n",
-        "    override: i64; super: i64; is: i64; narrow: i64; Obj: i64;\n",
+        "    override: i64; super: i64; is: i64; select: i64; Obj: i64;\n",
         "    init() {\n",
         "        self.extends = 0; self.implements = 0; self.interface = 0;\n",
         "        self.virtual = 0; self.override = 0; self.super = 0;\n",
-        "        self.is = 0; self.narrow = 0; self.Obj = 0;\n",
+        "        self.is = 0; self.select = 0; self.Obj = 0;\n",
         "    }\n",
         "    fn virtual(override: i64) -> i64 {\n",
         "        var super: i64 = override; return super;\n",
@@ -143,7 +143,7 @@ fn polymorphism_words_remain_ordinary_names_outside_their_contextual_forms() {
         "}\n",
         "fn interface(implements: i64) -> i64 {\n",
         "    var Obj: i64 = implements; var is: i64 = Obj;\n",
-        "    var narrow: i64 = is; return narrow;\n",
+        "    var select: i64 = is; return select;\n",
         "}\n",
     ));
 

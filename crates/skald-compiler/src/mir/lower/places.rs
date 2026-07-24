@@ -17,7 +17,6 @@ impl BodyLowerer<'_> {
         let storage = self.storage_for_binding(place.root());
         let root = match self.storage[storage.index()].kind {
             MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
-            MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(storage),
             MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
             MirStorageKind::Return
             | MirStorageKind::Receiver
@@ -48,7 +47,6 @@ impl BodyLowerer<'_> {
                 .expect("receiver binding requires member receiver storage"),
             BindingId::Parameter(id) => self.parameter_storage[id.index()],
             BindingId::Local(id) => self.local_storage[id.index()],
-            BindingId::NarrowedAlias(id) => self.narrowed_alias_storage[id.index()],
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Source text to token-stream lowering.
 //!
-//! The lexer accepts the deliberately narrow token set documented in
+//! The lexer accepts the deliberately restricted token set documented in
 //! `docs/language/GRAMMAR.md`. It recovers after invalid characters and
 //! malformed decimal spellings, returning tokens and structured diagnostics
 //! together.

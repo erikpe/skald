@@ -70,13 +70,6 @@ impl Parser<'_> {
     }
 
     fn parse_statement(&mut self) -> Option<Statement> {
-        if self.at_contextual("narrow")
-            && (matches!(self.peek_ahead(1).kind, TokenKind::Mut | TokenKind::Ref)
-                || (self.peek_ahead(1).kind == TokenKind::Identifier
-                    && self.peek_ahead(2).kind == TokenKind::Colon))
-        {
-            return self.parse_narrowing().map(Statement::Narrowing);
-        }
         if self.at_contextual("super") && self.peek_ahead(1).kind == TokenKind::LeftParen {
             return self
                 .parse_base_initialization()
@@ -120,50 +113,6 @@ impl Parser<'_> {
             "expected `var`, `return`, `if`, an expression, a field assignment, or a nested block",
         );
         None
-    }
-
-    fn parse_narrowing(&mut self) -> Option<NarrowingStatement> {
-        let narrow = self.advance();
-        let mut_span = self.consume(TokenKind::Mut).map(|token| token.span);
-        let ref_token = if self.at(TokenKind::Ref) {
-            Some(self.advance())
-        } else {
-            self.report(
-                INVALID_NARROWING,
-                "checked narrowing requires a `ref` binding",
-                self.peek().span,
-                "expected `ref` or `mut ref` here",
-            );
-            None
-        };
-        let name = self.parse_name("expected a narrowed alias name");
-        self.expect(TokenKind::Colon, "`:` after the narrowed alias name");
-        let target = self.parse_name("expected a class or interface narrowing target");
-        self.expect(TokenKind::Equal, "`=` before the narrowing source");
-        let source = self.parse_expression();
-        let body = self.parse_block();
-
-        let (ref_token, name, target, source, body) = match (ref_token, name, target, source, body)
-        {
-            (Some(ref_token), Some(name), Some(target), Some(source), Some(body)) => {
-                (ref_token, name, target, source, body)
-            }
-            _ => return None,
-        };
-        let binding_start = mut_span.unwrap_or(ref_token.span);
-        let binding = NarrowedAliasBinding {
-            mut_span,
-            ref_span: ref_token.span,
-            span: self.cover(binding_start, target.span),
-            name,
-            target,
-        };
-        Some(NarrowingStatement {
-            span: self.cover(narrow.span, body.span),
-            binding,
-            source,
-            body,
-        })
     }
 
     fn parse_base_initialization(&mut self) -> Option<BaseInitializationStatement> {

@@ -174,7 +174,6 @@ impl BodyLowerer<'_> {
                 let storage = self.storage_for_binding(*binding);
                 match self.storage[storage.index()].kind {
                     MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
-                    MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(storage),
                     MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
                     _ => unreachable!("forwarded HIR views require indirect storage"),
                 }

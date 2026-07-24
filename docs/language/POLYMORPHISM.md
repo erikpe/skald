@@ -3,13 +3,12 @@
 Status: implemented restricted contract. Canonical single inheritance,
 complete base lifecycle, inherited member access, class/interface/`Obj` views,
 inline slicing, opt-in virtual dispatch, interface dispatch, type tests, and
-checked narrowing execute through verified MIR on the x86-64 backend. The
+checked object casts execute through verified MIR on the x86-64 backend. The
 [status matrix](STATUS.md) owns the compiler-support boundary.
 
-The frozen [object-cast design](OBJECT_CASTS.md) is being implemented in
-stages. Plain checked-place casts now support non-owning consumers and owning
-inline copy operations. This document remains authoritative for the
-still-supported scoped `narrow` form until its removal stage completes.
+The frozen [object-cast design](OBJECT_CASTS.md) is implemented for plain
+checked-place casts across non-owning consumers and owning inline copy
+operations.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:
@@ -43,13 +42,10 @@ method-modifier         = "virtual" | "override"
 base-initialization     = "super" "(" [argument-list] ")" ";"
 type-test-expression    = additive-expression ["is" view-target]
 view-target             = identifier | "Obj"
-
-narrowing-statement     = "narrow" alias-binding "=" object-place block
-alias-binding           = ["mut"] "ref" identifier ":" view-target
 ```
 
-`extends`, `implements`, `interface`, `virtual`, `override`, `super`, `is`, and
-`narrow` are contextual words. `Obj` is a contextually recognized type name.
+`extends`, `implements`, `interface`, `virtual`, `override`, `super`, and `is`
+are contextual words. `Obj` is a contextually recognized type name.
 All remain ordinary identifiers outside the exact forms above; the lexer does
 not reserve them. A class header always places `extends` before `implements`.
 Modifier order is `virtual` or `override`, then optional `mut`, then `fn`.
@@ -62,8 +58,6 @@ ordinary field, method, parameter, or local name where a type is not expected.
 `is` is non-associative and binds less tightly than arithmetic. Thus
 `value + offset is T` groups the addition before the test, though semantic
 typing normally rejects a primitive source. A type test cannot be chained.
-`narrow` is a statement and its trailing block is the only scope of the new
-alias binding.
 
 ## Hierarchies and declaration namespaces
 
@@ -173,7 +167,7 @@ A polymorphic view has these target-independent semantic components:
 
 The static target controls available members and conversions. The complete
 object and dynamic class control virtual/interface dispatch, type tests, and
-narrowing. A class target additionally identifies its unique base subobject
+checked casts. A class target additionally identifies its unique base subobject
 within the complete object. No conversion changes ownership, begins a
 lifetime, registers cleanup, or creates a separately storable reference value.
 
@@ -240,12 +234,10 @@ target-specific requirement slot.
 
 Static type-test outcomes lower to boolean constants. Runtime tests retain
 their source view and target identity as a metadata-query rvalue. Checked
-narrowing uses indirect scoped alias storage: a static success emits an
-explicit binding, while a runtime case terminates its source block with
-separate success and unrecoverable-failure edges. Both forms explicitly end a
-falling-through alias scope. Verification checks the type relation, target,
-view access and provenance, unique alias definition, scope liveness, and the
-required terminating failure edge before backend selection.
+casts use bounded indirect carrier storage only when a runtime check crosses
+control-flow blocks. Verification checks the type relation, target, view
+access and provenance, unique carrier definition, full-expression liveness,
+and the required terminating failure edge before backend selection.
 
 The x86-64 backend derives deterministic per-class dispatch tables from MIR
 virtual-family, interface, and requirement identities. Internal receivers and
@@ -257,10 +249,10 @@ pipeline. Interface witness layout remains target-private. Exact and sliced
 values retain direct static selection.
 
 Runtime type checks use the dynamic class metadata already carried by aliases;
-they do not inspect object storage. Successful narrowing preserves the static
-address, complete-object address, dynamic metadata, and access in ordinary
-scoped alias homes. The x86-64 failure implementation traps and does not
-return, matching the unrecoverable language contract.
+they do not inspect object storage. Successful checked casts preserve the
+static address, complete-object address, dynamic metadata, and access in a
+full-expression-bounded view. The x86-64 failure implementation traps and does
+not return, matching the unrecoverable language contract.
 
 ## Inline slicing
 
@@ -370,45 +362,9 @@ effective conformance map. Static cases still evaluate the source place but
 need no metadata query. `is` has no binding side effect and cannot test
 primitive, `unit`, function, or owning interface/`Obj` values.
 
-## Checked narrowing
+## Checked object casts
 
-Checked narrowing has one scoped statement form:
-
-```ska
-narrow ref dog: Dog = value {
-    dog.speak();
-}
-
-narrow mut ref editable: Editable = value {
-    editable.update();
-}
-```
-
-The source is evaluated once before the new name is in scope. The source and
-target use the same class/interface/`Obj` compatibility relation as `is`.
-The target must be a class or interface; narrowing to `Obj` is an ordinary
-upcast. A statically impossible narrowing is a compile-time error. A static
-success creates the view without a runtime test. Otherwise execution checks
-the dynamic class and either enters the block with the new alias or terminates
-the process unsuccessfully.
-
-Runtime narrowing failure is unrecoverable in this profile. It does not return
-to Skald, does not run remaining source-level cleanup, and exposes no catchable
-value. Exact diagnostic text, exit status, signal, and whether the backend uses
-an inline trap or runtime helper are implementation contracts, not portable
-language behavior.
-
-The narrowed alias preserves the original complete object and dynamic class.
-It may retain or reduce source access but never increase it. Its binding exists
-only in the trailing block, may shadow an enclosing binding under ordinary
-scope rules, cannot escape through a return or stored value, owns no cleanup,
-and cannot outlive the source call-scoped alias. Forwarding from the block uses
-the normal polymorphic view rules.
-
-## Frozen cast replacement
-
-The final object-conversion profile removes the `narrow` statement and
-narrowed-alias binding. `(Target) source` instead selects a checked, non-owning
+`(Target) source` selects a checked, non-owning
 place for one consuming full expression:
 
 ```ska
@@ -418,17 +374,12 @@ fn read_leaf(ref value: Obj) -> i64 {
 ```
 
 The cast uses the same static-success, static-impossibility, or runtime
-classification as checked narrowing and `is`. It preserves complete-object
+classification as `is`. It preserves complete-object
 identity, dynamic metadata, and source access. Failure retains the current
 unrecoverable behavior. Inline owning contexts may copy from a class cast
 place; future `(shared Target)` casts preserve an existing shared allocation.
 The complete direction, slicing, lifetime, anchor, and allocation rules belong
 to [Object Casts](OBJECT_CASTS.md).
-
-The [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md) introduces the
-expression pipeline before deleting current narrowed-alias identities and
-control flow. This section describes the frozen replacement, not current
-compiler acceptance.
 
 ## Deterministic validation order
 
@@ -444,7 +395,7 @@ within each dependency group is deterministic:
 5. validate each class's direct conformance list in source order and each
    interface's requirements in declaration order; and
 6. resolve and type-check body uses in existing source evaluation order,
-   checking a receiver or narrowing source before later explicit arguments or
+   checking a receiver or cast source before later explicit arguments or
    nested body work.
 
 An earlier invalid dependency does not authorize lower phases to invent a

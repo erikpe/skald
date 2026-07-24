@@ -93,10 +93,8 @@ fn classify_interface(ref value: Readable) -> i64 {
     return classify(value);
 }
 
-fn narrow_read(ref value: Obj) -> i64 {
-    narrow ref leaf: Leaf = value {
-        return leaf.read();
-    }
+fn cast_read(ref value: Obj) -> i64 {
+    return ((Leaf) value).read();
 }
 
 fn slice(ref value: Leaf) -> Root {
@@ -110,7 +108,7 @@ fn main() -> i64 {
     ska_rt_println_i64(adjust_interface(leaf, 2));
     ska_rt_println_i64(leaf.read_through_self());
     ska_rt_println_i64(classify_interface(leaf));
-    ska_rt_println_i64(narrow_read(leaf));
+    ska_rt_println_i64(cast_read(leaf));
 
     var sliced: Root = slice(leaf);
     ska_rt_println_i64(read_root(sliced));

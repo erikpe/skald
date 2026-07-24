@@ -79,13 +79,6 @@ impl MirPlace {
         }
     }
 
-    pub fn narrowed_alias(base: StorageId) -> Self {
-        Self {
-            base: MirPlaceBase::NarrowedAlias(base),
-            projections: Vec::new(),
-        }
-    }
-
     pub fn checked_view(base: StorageId) -> Self {
         Self {
             base: MirPlaceBase::CheckedView(base),
@@ -108,17 +101,15 @@ impl MirPlace {
 pub enum MirPlaceBase {
     Storage(StorageId),
     AliasParameter(StorageId),
-    NarrowedAlias(StorageId),
     CheckedView(StorageId),
 }
 
 impl MirPlaceBase {
     pub const fn storage(self) -> StorageId {
         match self {
-            Self::Storage(storage)
-            | Self::AliasParameter(storage)
-            | Self::NarrowedAlias(storage)
-            | Self::CheckedView(storage) => storage,
+            Self::Storage(storage) | Self::AliasParameter(storage) | Self::CheckedView(storage) => {
+                storage
+            }
         }
     }
 }

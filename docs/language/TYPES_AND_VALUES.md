@@ -81,8 +81,8 @@ Unary negation can turn positive zero into negative zero.
 
 ## Exact-type requirements
 
-The implemented language performs no implicit conversion, promotion,
-narrowing, or expected-type literal inference. These boundaries require the
+The implemented language performs no implicit conversion, promotion, or
+expected-type literal inference. These boundaries require the
 actual and expected types to be identical:
 
 - primitive local initialization;
@@ -176,7 +176,7 @@ implemented, but its non-null value type, compatible views, and
 copy/adopt/release behavior are frozen in
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Their current
 maturity is recorded in the [status matrix](STATUS.md#not-implemented).
-Implemented polymorphic views, slicing, tests, and narrowing are separated
+Implemented polymorphic views, slicing, tests, and checked casts are separated
 into the [polymorphism profile](POLYMORPHISM.md). Legacy examples are not
 usable syntax or settled semantics.
 

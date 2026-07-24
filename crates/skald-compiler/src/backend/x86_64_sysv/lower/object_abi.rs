@@ -197,7 +197,7 @@ impl InstructionSelector<'_, '_> {
         let homes = self
             .frame
             .object_origin(destination)
-            .expect("narrowed aliases carry object-origin homes");
+            .expect("indirect object-view carriers have origin homes");
         self.select_origin_complete(origin, ArgumentLocation::IntegerRegister(Register::Rax))?;
         value::store_rax(value::memory(Register::Rbp, homes.complete()), self.output);
         self.load_origin_metadata(origin, Register::Rax);

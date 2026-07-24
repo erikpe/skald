@@ -56,7 +56,6 @@ pub const INVALID_OVERRIDE_SIGNATURE: &str = "TYP024";
 pub const INVALID_INTERFACE_REQUIREMENT: &str = "TYP025";
 pub const INVALID_INTERFACE_CONFORMANCE: &str = "TYP026";
 pub const INVALID_TYPE_TEST: &str = "TYP027";
-pub const INVALID_NARROWING: &str = "TYP028";
 pub const INVALID_OBJECT_CAST: &str = "TYP029";
 
 #[derive(Debug)]

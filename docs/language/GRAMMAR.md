@@ -25,7 +25,7 @@ token. An explicit `EOF` denotes the end of the source file.
 ## Source text and trivia
 
 Source files are UTF-8. Identifiers and whitespace currently use deliberately
-narrow ASCII rules:
+restricted ASCII rules:
 
 ```text
 ascii-whitespace     = " " | "\t" | "\r" | "\n"
@@ -72,7 +72,7 @@ initializer. Both spellings remain ordinary identifiers outside those shapes.
 alias-parameter and type-operation target positions; it remains an ordinary
 identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
-`implements`, `interface`, `is`, and `narrow` are likewise contextual in the
+`implements`, `interface`, and `is` are likewise contextual in the
 exact forms below. None is reserved by the lexer.
 
 ## Punctuation
@@ -198,7 +198,6 @@ block                 = "{" {statement} "}"
 
 statement             = local-declaration
                       | base-initialization
-                      | narrowing-statement
                       | return-statement
                       | conditional-statement
                       | assignment-statement
@@ -208,8 +207,6 @@ statement             = local-declaration
 local-declaration     = "var" identifier ":" storage-type
                         "=" expression ";"
 base-initialization   = "super" argument-list ";"
-narrowing-statement   = "narrow" alias-binding "=" expression block
-alias-binding         = ["mut"] "ref" identifier ":" view-target
 return-statement      = "return" [expression] ";"
 expression-statement  = expression ";"
 
@@ -236,11 +233,6 @@ mutability.
 `elif` is its own keyword and continuation form. `else if` and standalone
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
 parenthesized expression and a block.
-
-The source expression of a narrowing is parsed before its trailing block. The
-new alias is semantically visible only in that block. Type checking restricts
-the source to an existing object place or alias view and the target to a class
-or interface.
 
 ## Expressions
 
@@ -354,6 +346,5 @@ forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus
 owning inline copy construction, assignment, value arguments, results, and
 slicing. `shared T` is parsed for a focused unsupported-feature diagnostic.
-Scoped `narrow` remains accepted during the staged replacement.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
-type tests, and checked-narrowing semantics.
+type tests, and checked-cast semantics.

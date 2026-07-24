@@ -61,7 +61,7 @@ release or roadmap closeout when requested.
 
 ## Change validation
 
-During implementation, run the narrow test or check that owns the changed
+During implementation, run the focused test or check that owns the changed
 behavior. Before handing off a completed change, run `make check` and
 `git diff --check`. Add `make msrv-check` under the conditions above. The
 [driver guide](../compiler/DRIVER_AND_ARTIFACTS.md) documents compiler/toolchain

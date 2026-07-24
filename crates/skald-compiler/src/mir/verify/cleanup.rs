@@ -35,9 +35,7 @@ impl<'mir> Verifier<'mir> {
         let destination = self.verify_place(function, block, &cleanup.destination);
         if matches!(
             cleanup.destination.base,
-            MirPlaceBase::AliasParameter(_)
-                | MirPlaceBase::NarrowedAlias(_)
-                | MirPlaceBase::CheckedView(_)
+            MirPlaceBase::AliasParameter(_) | MirPlaceBase::CheckedView(_)
         ) {
             self.block_error(
                 function.callable(),
@@ -137,7 +135,6 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     place
                 }
                 MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
-                MirStorageKind::NarrowedAlias(_) => continue,
                 MirStorageKind::CheckedView(_) => continue,
                 MirStorageKind::Receiver
                 | MirStorageKind::Return
@@ -177,31 +174,6 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     for target in [*true_target, *false_target] {
                         self.merge_state(target, &state, &mut incoming, &mut pending);
                     }
-                }
-                Some(MirTerminator::CheckedNarrow {
-                    binding,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.require_live_place(
-                        block,
-                        &state,
-                        &binding.view.source,
-                        "checked narrowing source",
-                    );
-                    self.require_live_origin(
-                        block,
-                        &state,
-                        &binding.view.origin,
-                        "checked narrowing origin",
-                    );
-                    let mut success_state = state.clone();
-                    success_state
-                        .live
-                        .insert(MirPlace::narrowed_alias(binding.destination));
-                    self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
                 Some(MirTerminator::CheckedCast {
                     binding,
@@ -465,7 +437,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 }
                 MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
                     super::super::model::MirRvalueKind::Load(place) => {
-                        self.require_narrowed_alias_live(block, state, place, "load source");
+                        self.require_indirect_carrier_live(block, state, place, "load source");
                     }
                     super::super::model::MirRvalueKind::TypeTest { source, .. } => {
                         self.require_live_place(block, state, &source.source, "type-test source");
@@ -473,39 +445,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     }
                     _ => {}
                 },
-                MirInstruction::Store(store) => self.require_narrowed_alias_live(
+                MirInstruction::Store(store) => self.require_indirect_carrier_live(
                     block,
                     state,
                     &store.destination,
                     "store destination",
                 ),
-                MirInstruction::BindNarrowedAlias(binding) => {
-                    self.require_live_place(
-                        block,
-                        state,
-                        &binding.view.source,
-                        "narrowed alias source",
-                    );
-                    self.require_live_origin(
-                        block,
-                        state,
-                        &binding.view.origin,
-                        "narrowed alias origin",
-                    );
-                    let alias = MirPlace::narrowed_alias(binding.destination);
-                    if self.place_is_live(state, &alias) {
-                        self.block_error(block.id, "narrowed alias is already live");
-                    } else {
-                        state.live.insert(alias);
-                    }
-                }
-                MirInstruction::EndNarrowedAlias(end) => {
-                    let alias = MirPlace::narrowed_alias(end.alias);
-                    if !self.place_is_live(state, &alias) {
-                        self.block_error(block.id, "narrowed alias is not live at scope end");
-                    }
-                    state.live.remove(&alias);
-                }
                 MirInstruction::BindCheckedView(binding) => {
                     self.require_live_place(
                         block,
@@ -621,7 +566,6 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 match storage.kind {
                     MirStorageKind::Receiver => MirPlace::base(*carrier),
                     MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(*carrier),
-                    MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(*carrier),
                     MirStorageKind::CheckedView(_) => MirPlace::checked_view(*carrier),
                     _ => return,
                 }
@@ -642,17 +586,14 @@ impl CleanupLivenessAnalysis<'_, '_> {
         }
     }
 
-    fn require_narrowed_alias_live(
+    fn require_indirect_carrier_live(
         &mut self,
         block: &MirBasicBlock,
         state: &ObjectState,
         place: &MirPlace,
         kind: &str,
     ) {
-        if matches!(
-            place.base,
-            MirPlaceBase::NarrowedAlias(_) | MirPlaceBase::CheckedView(_)
-        ) {
+        if matches!(place.base, MirPlaceBase::CheckedView(_)) {
             self.require_live_place(block, state, place, kind);
         }
     }

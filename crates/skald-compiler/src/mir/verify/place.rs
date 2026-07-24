@@ -35,9 +35,7 @@ impl Verifier<'_> {
         let access = match (place.base, storage.kind) {
             (
                 MirPlaceBase::Storage(_),
-                MirStorageKind::AliasParameter(_)
-                | MirStorageKind::NarrowedAlias(_)
-                | MirStorageKind::CheckedView(_),
+                MirStorageKind::AliasParameter(_) | MirStorageKind::CheckedView(_),
             ) => {
                 self.block_error(
                     function.callable(),
@@ -52,15 +50,6 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("indirect alias base {storage_id} is not alias parameter storage"),
-                );
-                return None;
-            }
-            (MirPlaceBase::NarrowedAlias(_), MirStorageKind::NarrowedAlias(access)) => access,
-            (MirPlaceBase::NarrowedAlias(_), _) => {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    format!("narrowed alias base {storage_id} is not narrowed alias storage"),
                 );
                 return None;
             }

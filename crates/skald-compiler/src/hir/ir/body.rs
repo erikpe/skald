@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FunctionId, LocalId, NarrowedAliasId},
+    identity::{CallableId, ClassId, FunctionId, LocalId},
     source::Span,
 };
 
@@ -12,7 +12,7 @@ use super::{
     object::{
         HirBaseInitialization, HirCopyAssignment, HirCopyConstruction, HirFieldAssignment,
         HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction,
-        HirObjectInitialization, HirObjectReturn, HirObjectView,
+        HirObjectInitialization, HirObjectReturn,
     },
 };
 
@@ -181,7 +181,6 @@ pub struct HirBlock {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirStatement {
     BaseInitialization(HirBaseInitialization),
-    Narrowing(HirNarrowing),
     Local(HirLocalDecl),
     Return(HirReturn),
     Call(HirCallStatement),
@@ -198,7 +197,6 @@ impl HirStatement {
     pub const fn span(&self) -> Span {
         match self {
             Self::BaseInitialization(statement) => statement.span,
-            Self::Narrowing(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Call(statement) => statement.span,
@@ -211,26 +209,6 @@ impl HirStatement {
             Self::CopyAssignment(statement) => statement.span,
         }
     }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirNarrowing {
-    pub binding: NarrowedAliasId,
-    pub view: HirObjectView,
-    pub kind: HirNarrowingKind,
-    pub body: HirBlock,
-    pub span: Span,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirNarrowingKind {
-    Static,
-    Runtime { failure: HirNarrowingFailure },
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirNarrowingFailure {
-    Terminate,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

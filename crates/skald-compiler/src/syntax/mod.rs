@@ -16,16 +16,15 @@ pub use ast::{
     CopyAssignmentDecl, DestructorDecl, Expression, ExpressionStatement, ExternalFunctionDecl,
     FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr, IdentifierExpr,
     InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl, MethodModifier, Name,
-    NarrowedAliasBinding, NarrowingStatement, NumericLiteralExpr, ObjectAssignmentStatement,
-    ObjectCastExpr, ObjectCastTargetMode, Parameter, ParameterBindingMode, ReturnStatement,
-    SelfExpr, Statement, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr,
-    UnaryOperator,
+    NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode, Parameter,
+    ParameterBindingMode, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
+    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
     EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_HEADER, INVALID_CLASS_MEMBER,
-    INVALID_NARROWING, INVALID_TYPE_TEST, MAX_SYNTAX_NESTING,
+    INVALID_TYPE_TEST, MAX_SYNTAX_NESTING,
 };
 
 #[cfg(test)]

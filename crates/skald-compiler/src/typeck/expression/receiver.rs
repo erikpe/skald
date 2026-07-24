@@ -80,7 +80,6 @@ impl CallableChecker<'_, '_> {
                 ResolvedParameterBindingMode::Value
             ),
             BindingId::Local(_) => false,
-            BindingId::NarrowedAlias(_) => true,
         }
     }
 }

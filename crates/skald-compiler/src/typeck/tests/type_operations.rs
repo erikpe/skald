@@ -1,9 +1,8 @@
 use super::*;
 use crate::{
     hir::{
-        HirAccess, HirExpressionKind, HirLocalInitializer, HirNarrowingFailure, HirNarrowingKind,
-        HirObjectReturn, HirObjectSource, HirReturnValue, HirTypeTestKind, HirViewSource,
-        HirViewTarget,
+        HirExpressionKind, HirLocalInitializer, HirObjectReturn, HirObjectSource, HirReturnValue,
+        HirTypeTestKind, HirViewSource, HirViewTarget,
     },
     identity::{ClassId, FunctionId, InterfaceId},
     mir::{dump_mir, lower_hir, verify_mir},
@@ -298,99 +297,7 @@ fn classifies_type_tests_from_exact_and_forwarded_class_obj_and_interface_views(
 }
 
 #[test]
-fn checked_narrowing_records_view_identity_access_failure_and_scoped_aliases() {
-    let output = check_text(&format!(
-        "{TYPES}\
-         fn take(ref value: Derived) -> unit {{}}\n\
-         fn narrowings(ref erased: Obj, ref tag: Tag, ref derived: Derived) -> unit {{\n\
-           narrow ref from_obj: Derived = (erased) {{ take((from_obj)); }}\n\
-           narrow ref from_interface: Derived = tag {{ take(from_interface); }}\n\
-           narrow ref as_base: Base = derived {{}}\n\
-         }}\n\
-         fn main() -> i64 {{ return 0; }}\n"
-    ));
-
-    assert!(!output.has_errors(), "{:?}", output.diagnostics);
-    let hir = output.hir.unwrap();
-    let definition = hir.definitions.get(FunctionId::new(1)).unwrap();
-    assert_eq!(definition.body.statements.len(), 3);
-    let expected = [
-        (
-            HirViewTarget::Class(ClassId::new(1)),
-            HirNarrowingKind::Runtime {
-                failure: HirNarrowingFailure::Terminate,
-            },
-        ),
-        (
-            HirViewTarget::Class(ClassId::new(1)),
-            HirNarrowingKind::Runtime {
-                failure: HirNarrowingFailure::Terminate,
-            },
-        ),
-        (
-            HirViewTarget::Class(ClassId::new(0)),
-            HirNarrowingKind::Static,
-        ),
-    ];
-    for (statement, (target, kind)) in definition.body.statements.iter().zip(expected) {
-        let HirStatement::Narrowing(narrowing) = statement else {
-            panic!("expected narrowing HIR");
-        };
-        assert_eq!(narrowing.view.target, target);
-        assert_eq!(narrowing.view.access, HirAccess::ReadOnly);
-        assert_eq!(narrowing.kind, kind);
-    }
-    let HirStatement::Narrowing(static_upcast) = &definition.body.statements[2] else {
-        panic!("expected static narrowing");
-    };
-    assert!(matches!(
-        static_upcast.view.source,
-        HirViewSource::Place(ref place) if place.class() == ClassId::new(0)
-    ));
-
-    let dump = dump_hir(&hir);
-    assert!(dump.contains("Narrowing f1:narrow0 runtime failure=terminate"));
-    assert!(!dump.contains("TypeTest"));
-    assert!(dump.contains("ObjectView -> class c1 readonly"));
-    assert!(dump.contains("ForwardedView f1:p0 : Obj readonly"));
-}
-
-#[test]
-fn rejects_impossible_invalid_and_access_increasing_narrowing() {
-    let output = check_text(&format!(
-        "{TYPES}\
-         fn invalid(ref erased: Obj, ref other: Other, scalar: i64) -> unit {{\n\
-           narrow mut ref mutable: Derived = erased {{}}\n\
-           narrow ref impossible: Base = other {{}}\n\
-           narrow ref erased_again: Obj = erased {{}}\n\
-           narrow ref bad_source_narrow: Base = scalar {{}}\n\
-           var bad_source: bool = scalar is Base;\n\
-         }}\n\
-         fn main() -> i64 {{ return 0; }}\n"
-    ));
-
-    assert!(output.hir.is_none());
-    let codes: Vec<_> = output
-        .diagnostics
-        .iter()
-        .map(|diagnostic| diagnostic.code)
-        .collect();
-    assert!(codes.contains(&INSUFFICIENT_ALIAS_ACCESS));
-    assert_eq!(
-        codes
-            .iter()
-            .filter(|&&code| code == INVALID_NARROWING)
-            .count(),
-        3
-    );
-    assert_eq!(
-        codes
-            .iter()
-            .filter(|&&code| code == INVALID_TYPE_TEST)
-            .count(),
-        1
-    );
-
+fn rejects_invalid_type_operation_targets_after_resolution() {
     let mut resolved = resolve_text(&format!(
         "{TYPES}\
          fn corrupt(ref erased: Obj) -> bool {{ return erased is Derived; }}\n\

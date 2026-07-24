@@ -1,6 +1,6 @@
 # Object Casts and Narrow Removal Roadmap
 
-Status: in progress; **OC3** is next.
+Status: complete.
 
 This roadmap replaces the implemented scoped `narrow` statement with
 expression-level C-style object casts. It establishes the checked-place
@@ -56,7 +56,7 @@ runtime cast service.
 - [x] OC0 — Extract reusable object-view relation and failure semantics
 - [x] OC1 — Add checked-place cast syntax and direct view consumers
 - [x] OC2 — Integrate casts with owning inline operations
-- [ ] OC3 — Remove `narrow` and publish the cast profile
+- [x] OC3 — Remove `narrow` and publish the cast profile
 
 ## PR-sized implementation sequence
 
@@ -170,28 +170,28 @@ source lifetime and deterministic cleanup.
 **Purpose:** Delete the superseded statement-specific vertical slice only after
 all retained use cases have a checked expression path.
 
-- [ ] Migrate native, compile-fail, phase, verifier, dump, robustness, and
+- [x] Migrate native, compile-fail, phase, verifier, dump, robustness, and
       public-facade tests from scoped narrowing to expression casts.
-- [ ] Remove the contextual `narrow` grammar, parser statement/binding nodes,
+- [x] Remove the contextual `narrow` grammar, parser statement/binding nodes,
       resolved narrowed aliases, `NarrowedAliasId`, HIR narrowing body/kind,
       MIR narrowed-alias storage and bind/end instructions, checked-narrow
       terminator vocabulary, verifier branches, frame homes, and backend
       statement lowering.
-- [ ] Retain reusable dynamic-membership, view projection, explicit failure
+- [x] Retain reusable dynamic-membership, view projection, explicit failure
       control flow, and trap lowering under cast-oriented names.
-- [ ] Make former `narrow` source fail as unsupported syntax rather than
+- [x] Make former `narrow` source fail as unsupported syntax rather than
       retaining a compatibility alias or deprecation period.
-- [ ] Audit diagnostics and deterministic dumps so living vocabulary contains
+- [x] Audit diagnostics and deterministic dumps so living vocabulary contains
       casts, checked places, and cast failure rather than roadmap codes or
       narrowed aliases.
-- [ ] Update the implemented grammar, status matrix, language overview,
+- [x] Update the implemented grammar, status matrix, language overview,
       polymorphism, aliases, errors, phases, backend, debugging/testing
       guidance, and roadmap/archive indexes to make casts current and
       `narrow` historical.
-- [ ] Confirm `(shared T) source`, shared sources, allocation, reference
+- [x] Confirm `(shared T) source`, shared sources, allocation, reference
       counting, both `new` allocation forms, and hidden shared anchors remain
       rejected pending a separate shared-ownership implementation roadmap.
-- [ ] Run the complete repository, MSRV, long robustness, documentation-link,
+- [x] Run the complete repository, MSRV, long robustness, documentation-link,
       deterministic-process, native, and runtime gates.
 
 **Tests:** `make check`, `make msrv-check`, and `make robustness-long`, plus

@@ -13,7 +13,7 @@ The current implementation accepts one UTF-8 source file and supports
 primitive values, functions, lexical control flow, exact nominal inline
 classes, deterministic copying and destruction, owning class parameters and
 results, call-scoped object views, single inheritance, virtual/interface
-dispatch, type tests, and checked narrowing. The
+dispatch, type tests, and checked object casts. The
 compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and
 whole-object assignment contexts. The
