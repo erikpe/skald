@@ -142,9 +142,15 @@ impl OrdinaryMemberSymbolKind {
 #[derive(Clone, Debug, Default)]
 pub(super) struct ClassSymbols {
     pub(super) ordinary: HashMap<String, OrdinaryMemberSymbol>,
-    pub(super) initializer: Option<InitializerId>,
+    pub(super) initializers: Vec<InitializerId>,
     pub(super) initializer_span: Option<Span>,
     pub(super) copy_constructor_span: Option<Span>,
     pub(super) copy_assignment_span: Option<Span>,
     pub(super) destructor_span: Option<Span>,
+}
+
+impl ClassSymbols {
+    pub(super) fn preselected_initializer(&self) -> Option<InitializerId> {
+        self.initializers.first().copied()
+    }
 }

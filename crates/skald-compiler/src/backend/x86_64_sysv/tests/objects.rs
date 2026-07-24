@@ -219,6 +219,10 @@ fn alias_homes_are_pointer_sized_and_indirect_places_lower_deterministically() {
     assert!(first.contains("mov qword ptr [rbp - 8], rdi"));
     assert!(first.contains("mov rdi, qword ptr [rbp - 8]"));
     assert!(first.contains("call .Lska_fn_3"));
+    assert!(first.contains(".Lska_class_0_init_0:"));
+    assert!(first.contains(".Lska_class_0_init_1:"));
+    assert!(first.contains(".Lska_class_0_init_0_block_0:"));
+    assert!(first.contains(".Lska_class_0_init_1_block_0:"));
     assert!(first.contains("call .Lska_class_0_init_1"));
     assert!(first.contains("call .Lska_class_0_method_3"));
     assert_system_assembler_accepts(&format!("{first}\n{}", println_i64_stub()));

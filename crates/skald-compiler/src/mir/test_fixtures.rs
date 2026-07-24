@@ -5,16 +5,16 @@
 //! that participates in the contract under examination.
 
 use crate::{
-    identity::{BindingId, CallableId, ClassId, FunctionId},
+    identity::{BindingId, CallableId, ClassId, FunctionId, ParameterId},
     source::Span,
 };
 
 use super::{
-    BlockId, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall, MirCallTarget,
-    MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage, MirInstruction,
-    MirMemberDefinition, MirMethodReceiver, MirParameter, MirParameterMode, MirPlace, MirRvalue,
-    MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator, MirType, MirValue,
-    StorageId, ValueId,
+    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock, MirBody, MirCall,
+    MirCallTarget, MirFunctionDeclaration, MirFunctionDefinition, MirFunctionLinkage,
+    MirInstruction, MirMemberDefinition, MirMethodReceiver, MirParameter, MirParameterMode,
+    MirPlace, MirRvalue, MirRvalueKind, MirStorage, MirStorageKind, MirStore, MirTerminator,
+    MirType, MirValue, StorageId, ValueId,
 };
 
 pub(crate) const fn parameter(mode: MirParameterMode, ty: MirType) -> MirParameter {
@@ -64,6 +64,61 @@ pub(crate) fn receiver_storage(id: StorageId, class: ClassId, span: Span) -> Mir
         "self",
         MirStorageKind::Receiver,
         MirType::Class(class),
+        span,
+    )
+}
+
+pub(crate) fn empty_member_definition(
+    callable: CallableId,
+    class: ClassId,
+    parameters: &[MirParameter],
+    span: Span,
+) -> MirMemberDefinition {
+    let receiver = StorageId::new(callable, 0);
+    let mut storage = vec![receiver_storage(receiver, class, span)];
+    storage.extend(
+        parameters
+            .iter()
+            .enumerate()
+            .map(|(index, parameter)| storage_for_parameter(callable, index, *parameter, span)),
+    );
+    MirMemberDefinition {
+        callable,
+        return_storage: None,
+        receiver,
+        parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
+        storage,
+        values: vec![],
+        body: one_block_body(
+            callable,
+            vec![],
+            Some(MirTerminator::Return { value: None, span }),
+            span,
+        ),
+        span,
+    }
+}
+
+fn storage_for_parameter(
+    callable: CallableId,
+    index: usize,
+    parameter: MirParameter,
+    span: Span,
+) -> MirStorage {
+    storage(
+        StorageId::new(callable, index + 1),
+        Some(BindingId::Parameter(ParameterId::new(callable, index))),
+        format!("parameter{index}"),
+        match parameter.mode {
+            MirParameterMode::Value => MirStorageKind::Parameter,
+            MirParameterMode::ReadOnlyAlias => {
+                MirStorageKind::AliasParameter(MirAliasAccess::ReadOnly)
+            }
+            MirParameterMode::MutableAlias => {
+                MirStorageKind::AliasParameter(MirAliasAccess::Mutable)
+            }
+        },
+        parameter.ty,
         span,
     )
 }

@@ -89,7 +89,7 @@ fn recursively_non_trivial_source_cleanup_reaches_the_backend() {
 }
 
 #[test]
-fn member_call_without_a_definition_is_a_structured_backend_error() {
+fn initializer_without_a_definition_is_rejected_at_the_backend_boundary() {
     let (mut mir, ids) = projected_object_program();
     let initializer = InitializerId::new(ids.container, 0);
     mir.classes.entries_mut_for_test()[ids.container.index()]
@@ -119,12 +119,11 @@ fn member_call_without_a_definition_is_a_structured_backend_error() {
             span: mir.span,
         }));
 
-    assert!(verify_mir(&mir).is_ok());
+    let errors = verify_mir(&mir).unwrap_err().to_string();
+    assert!(errors.contains("initializer c1:init0 has no member definition"));
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
-    assert!(error
-        .message()
-        .contains("member call target c1:init0 has no MIR definition"));
+    assert!(error.message().contains("input MIR failed verification"));
 }
 
 #[test]

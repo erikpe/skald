@@ -7,6 +7,68 @@ fn verifies_class_metadata_nested_places_initialization_and_receiver_calls() {
 }
 
 #[test]
+fn lowers_complete_source_ordered_initializer_vectors_from_hir() {
+    let checked = type_check_source(concat!(
+        "class Empty { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let mut hir = checked.hir.unwrap();
+    let class = ClassId::new(0);
+    let second = InitializerId::new(class, 1);
+
+    let declaration = &mut hir.classes.entries_mut_for_test()[0];
+    let mut second_declaration = declaration.initializers[0].clone();
+    second_declaration.id = second;
+    declaration.initializers.push(second_declaration);
+
+    let definition = &mut hir.class_definitions.entries_mut_for_test()[0];
+    let mut second_definition = definition.initializers[0].clone();
+    second_definition.callable = second.into();
+    definition.initializers.push(second_definition);
+
+    let mir = lower_hir(&hir).unwrap();
+    assert_eq!(
+        mir.class(class)
+            .unwrap()
+            .initializers
+            .iter()
+            .map(|initializer| initializer.id)
+            .collect::<Vec<_>>(),
+        [InitializerId::new(class, 0), InitializerId::new(class, 1)]
+    );
+    assert!(mir.member_definition(second.into()).is_some());
+    assert!(verify_mir(&mir).is_ok());
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("Initializer c0:init0()"));
+    assert!(dump.contains("Initializer c0:init1()"));
+    assert!(dump.contains("MemberDefinition c0:init1"));
+}
+
+#[test]
+fn verifier_rejects_initializer_density_and_missing_bodies() {
+    let mut wrong_density = lower_text(concat!(
+        "class Empty { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    wrong_density.classes.entries_mut_for_test()[0].initializers[0].id =
+        InitializerId::new(ClassId::new(0), 1);
+    let errors = verify_mir(&wrong_density).unwrap_err().to_string();
+    assert!(errors.contains("initializer table index 0 contains c0:init1"));
+
+    let mut missing_body = lower_text(concat!(
+        "class Empty { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let initializer = InitializerId::new(ClassId::new(0), 0);
+    missing_body
+        .member_definitions
+        .remove_for_test(initializer.into());
+    let errors = verify_mir(&missing_body).unwrap_err().to_string();
+    assert!(errors.contains("initializer c0:init0 has no member definition"));
+}
+
+#[test]
 fn dumps_object_metadata_and_projected_places_deterministically() {
     let (program, _) = object_mir();
     let dump = dump_mir(&program);
@@ -54,6 +116,18 @@ fn dumps_object_metadata_and_projected_places_deterministically() {
             "          f0:v2 = call direct c1:method0 on f0:s0 origin exact(f0:s0 : c1)() @0..30\n",
             "          cleanup f0:s0 as c1 @0..30\n",
             "          return f0:v0 @19..28\n",
+            "  MemberDefinitions\n",
+            "    MemberDefinition c1:init0 @0..30\n",
+            "      Receiver c1:init0:s0\n",
+            "      Parameters c1:init0:s1\n",
+            "      Storage\n",
+            "        c1:init0:s0 receiver c1:init0:self \"self\" : class c1 @0..30\n",
+            "        c1:init0:s1 parameter c1:init0:p0 \"parameter0\" : i64 @0..30\n",
+            "      Values\n",
+            "      EntryBlock c1:init0:b0\n",
+            "      Blocks\n",
+            "        c1:init0:b0 @0..30\n",
+            "          return @0..30\n",
         )
     );
     assert_eq!(dump, dump_mir(&program));

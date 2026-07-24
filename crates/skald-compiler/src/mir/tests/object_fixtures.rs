@@ -73,6 +73,13 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             span,
         },
     ]);
+    program.member_definitions =
+        MirMemberDefinitionTable::new(vec![fixture_empty_member_definition(
+            outer_initializer.into(),
+            outer,
+            &[MirParameter::value(MirType::I64)],
+            span,
+        )]);
 
     let object_storage = StorageId::new(function_id, 0);
     function.storage.push(MirStorage {

@@ -25,7 +25,7 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
     assert_eq!(counter.id, ClassId::new(0));
     assert_eq!(counter.fields[0].id, FieldId::new(counter.id, 0));
     assert_eq!(
-        counter.initializer.as_ref().unwrap().id,
+        counter.initializers[0].id,
         InitializerId::new(counter.id, 0)
     );
     assert_eq!(counter.methods[0].id, MethodId::new(counter.id, 0));
@@ -41,11 +41,8 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
     );
 
     let class_definition = output.program.class_definitions.get(counter.id).unwrap();
-    let initializer = class_definition.initializer.as_ref().unwrap();
-    assert_eq!(
-        initializer.callable,
-        counter.initializer.as_ref().unwrap().id.into()
-    );
+    let initializer = &class_definition.initializers[0];
+    assert_eq!(initializer.callable, counter.initializers[0].id.into());
     let ResolvedStatement::FieldAssignment(initial_assignment) = &initializer.body.statements[0]
     else {
         panic!("expected initializer field assignment");
@@ -84,10 +81,7 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
         panic!("expected construction");
     };
     assert_eq!(construct.class, counter.id);
-    assert_eq!(
-        construct.initializer,
-        counter.initializer.as_ref().unwrap().id
-    );
+    assert_eq!(construct.initializer, counter.initializers[0].id);
 }
 
 #[test]
@@ -105,7 +99,7 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
 
     let value = class(&output, 0);
-    let ordinary = value.initializer.as_ref().unwrap();
+    let ordinary = &value.initializers[0];
     let copy_constructor = value.copy_constructor_declaration.as_ref().unwrap();
     let copy_assignment = value.copy_assignment_declaration.as_ref().unwrap();
     assert_eq!(copy_constructor.id, CopyConstructorId::new(value.id, 0));

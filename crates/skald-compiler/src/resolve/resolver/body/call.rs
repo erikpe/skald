@@ -130,7 +130,7 @@ impl CallableResolver<'_, '_> {
                         ..
                     }) => {
                         let initializer = self.environment.class_symbols[class.index()]
-                            .initializer
+                            .preselected_initializer()
                             .or_else(|| {
                                 self.diagnostics.push(
                                     Diagnostic::error(

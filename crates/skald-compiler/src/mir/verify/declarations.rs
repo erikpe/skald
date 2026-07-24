@@ -265,6 +265,16 @@ impl<'mir> Verifier<'mir> {
                     &format!("initializer {}", initializer.id),
                     &initializer.parameters,
                 );
+                if self
+                    .program
+                    .member_definition(initializer.id.into())
+                    .is_none()
+                {
+                    self.program_error(format!(
+                        "initializer {} has no member definition",
+                        initializer.id
+                    ));
+                }
             }
             self.verify_copy_constructor_metadata(class);
             self.verify_copy_assignment_metadata(class);

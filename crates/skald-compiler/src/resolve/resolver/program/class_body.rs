@@ -42,34 +42,38 @@ impl ClassBodyResolver<'_> {
             unreachable!("class work item must reference a class")
         };
 
-        let initializer = item.initializer_member.map(|member_index| {
-            let syntax::ClassMember::Initializer(source) = &class.members[member_index] else {
-                unreachable!("initializer work must reference an initializer")
-            };
-            let metadata = declaration
-                .initializer
-                .as_ref()
-                .expect("accepted initializer must have declaration metadata");
-            self.resolve_member(
-                metadata.id.into(),
-                &metadata.parameters,
-                &source.body,
-                source.span,
-                declaration
-                    .direct_base
-                    .map_or(BaseInitializationPolicy::Forbidden, |base| {
-                        BaseInitializationPolicy::Required {
-                            base: base.class,
-                            initializer: self
-                                .classes
-                                .get(base.class)
-                                .and_then(|base| base.initializer.as_ref())
-                                .map(|initializer| initializer.id),
-                        }
-                    }),
-                diagnostics,
-            )
-        });
+        let initializers = item
+            .initializer_members
+            .iter()
+            .map(|work| {
+                let syntax::ClassMember::Initializer(source) = &class.members[work.member_index]
+                else {
+                    unreachable!("initializer work must reference an initializer")
+                };
+                let metadata = declaration
+                    .initializer(work.id)
+                    .expect("accepted initializer work must retain its declaration identity");
+                self.resolve_member(
+                    metadata.id.into(),
+                    &metadata.parameters,
+                    &source.body,
+                    source.span,
+                    declaration
+                        .direct_base
+                        .map_or(BaseInitializationPolicy::Forbidden, |base| {
+                            BaseInitializationPolicy::Required {
+                                base: base.class,
+                                initializer: self
+                                    .classes
+                                    .get(base.class)
+                                    .and_then(ResolvedClassDeclaration::preselected_initializer)
+                                    .map(|initializer| initializer.id),
+                            }
+                        }),
+                    diagnostics,
+                )
+            })
+            .collect();
         let copy_constructor = item.copy_constructor_member.map(|member_index| {
             let syntax::ClassMember::Initializer(source) = &class.members[member_index] else {
                 unreachable!("copy-constructor work must reference an initializer")
@@ -143,7 +147,7 @@ impl ClassBodyResolver<'_> {
 
         ResolvedClassDefinition {
             class: item.id,
-            initializer,
+            initializers,
             copy_constructor,
             copy_assignment,
             destructor,

@@ -1,7 +1,7 @@
 use crate::{
     identity::{
         ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, InitializerId,
-        MethodId,
+        MethodId, ParameterId,
     },
     resolve::{
         ResolvedCopyOperation, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
@@ -164,9 +164,10 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
         class.copy_constructor,
         ResolvedCopyOperation::User(CopyConstructorId::new(class.id, 0))
     );
+    assert_eq!(class.initializers[0].id, InitializerId::new(class.id, 0));
     assert_eq!(
-        class.initializer.as_ref().unwrap().id,
-        InitializerId::new(class.id, 0)
+        class.initializers[0].parameters[0].id,
+        ParameterId::new(InitializerId::new(class.id, 0), 0)
     );
     assert_eq!(
         class.copy_assignment,
@@ -178,7 +179,7 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
     );
 
     let definitions = output.program.class_definitions.get(class.id).unwrap();
-    assert!(definitions.initializer.is_some());
+    assert_eq!(definitions.initializers.len(), 1);
     assert!(definitions.copy_constructor.is_some());
     assert!(definitions.copy_assignment.is_some());
     assert!(definitions.destructor.is_some());
@@ -254,8 +255,8 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
     let definitions = output.program.class_definitions.get(duplicate.id).unwrap();
     assert_eq!(
         definitions
-            .initializer
-            .as_ref()
+            .initializers
+            .first()
             .unwrap()
             .body
             .statements

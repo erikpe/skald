@@ -3,7 +3,7 @@
 use super::*;
 
 struct LifecycleDeclarations {
-    initializer: Option<ResolvedInitializerDeclaration>,
+    initializers: Vec<ResolvedInitializerDeclaration>,
     copy_constructor: Option<ResolvedCopyConstructorDeclaration>,
     copy_assignment: Option<ResolvedCopyAssignmentDeclaration>,
     destructor: Option<ResolvedDestructorDeclaration>,
@@ -13,7 +13,7 @@ struct LifecycleDeclarations {
 impl LifecycleDeclarations {
     fn new() -> Self {
         Self {
-            initializer: None,
+            initializers: Vec::new(),
             copy_constructor: None,
             copy_assignment: None,
             destructor: None,
@@ -44,7 +44,7 @@ impl ClassCollectionState {
             work: ClassWorkItem {
                 id,
                 ast_index,
-                initializer_member: None,
+                initializer_members: Vec::new(),
                 copy_constructor_member: None,
                 copy_assignment_member: None,
                 destructor_member: None,
@@ -124,16 +124,18 @@ impl ClassCollectionState {
         ) {
             return;
         }
-        let id = InitializerId::new(self.id, 0);
+        let id = InitializerId::new(self.id, self.lifecycle.initializers.len());
         let declaration = ResolvedInitializerDeclaration {
             id,
             parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
             span: source.span,
         };
-        self.symbols.initializer = Some(declaration.id);
+        self.symbols.initializers.push(declaration.id);
         self.symbols.initializer_span = Some(source.introducer_span);
-        self.lifecycle.initializer = Some(declaration);
-        self.work.initializer_member = Some(member_index);
+        self.lifecycle.initializers.push(declaration);
+        self.work
+            .initializer_members
+            .push(InitializerWorkItem { id, member_index });
     }
 
     fn collect_copy_constructor(
@@ -293,7 +295,7 @@ impl ClassCollectionState {
                 direct_base: self.direct_base,
                 implemented_interfaces: Vec::new(),
                 fields: self.fields,
-                initializer: self.lifecycle.initializer,
+                initializers: self.lifecycle.initializers,
                 copy_constructor,
                 copy_constructor_declaration: self.lifecycle.copy_constructor,
                 copy_assignment,
@@ -404,11 +406,17 @@ fn resolve_direct_base(
 pub(super) struct ClassWorkItem {
     pub(super) id: ClassId,
     pub(super) ast_index: usize,
-    pub(super) initializer_member: Option<usize>,
+    pub(super) initializer_members: Vec<InitializerWorkItem>,
     pub(super) copy_constructor_member: Option<usize>,
     pub(super) copy_assignment_member: Option<usize>,
     pub(super) destructor_member: Option<usize>,
     pub(super) method_members: Vec<usize>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct InitializerWorkItem {
+    pub(super) id: InitializerId,
+    pub(super) member_index: usize,
 }
 
 fn is_copy_constructor(

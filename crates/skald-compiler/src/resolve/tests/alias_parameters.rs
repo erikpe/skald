@@ -45,7 +45,7 @@ fn resolves_alias_modes_nominal_types_and_parameter_ids_for_every_internal_owner
         inspect.parameters[0].type_syntax.kind,
         ResolvedTypeKind::Class(dog.id)
     );
-    let initializer = dog.initializer.as_ref().unwrap();
+    let initializer = &dog.initializers[0];
     assert!(matches!(
         initializer.parameters[0].binding_mode,
         ResolvedParameterBindingMode::ReadOnlyAlias { .. }
@@ -189,7 +189,7 @@ fn resolved_alias_dump_is_exact_and_identity_based() {
             "      Fields\n",
             "        Field c0:field0 \"age\" @92..101\n",
             "          Type I64 @97..100\n",
-            "      OrdinaryInitializer\n",
+            "      OrdinaryInitializers\n",
             "        Initializer c0:init0 @102..126\n",
             "          Parameters\n",
             "      CopyConstructor\n",

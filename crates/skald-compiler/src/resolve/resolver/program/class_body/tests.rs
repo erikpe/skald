@@ -1,6 +1,7 @@
 use crate::{
     identity::{
-        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, InitializerId, MethodId,
+        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, InitializerId, LocalId,
+        MethodId,
     },
     test_support::resolve_source,
 };
@@ -10,7 +11,7 @@ fn resolves_every_accepted_class_body_through_ordered_definition_slots() {
     let output = resolve_source(concat!(
         "class Complete {\n",
         "    value: i64;\n",
-        "    init(value: i64) { self.value = value; }\n",
+        "    init(value: i64) { var saved: i64 = value; self.value = saved; }\n",
         "    init(ref source: Complete) { self.value = source.value; }\n",
         "    assign(ref source: Complete) { self.value = source.value; }\n",
         "    destroy { var old: i64 = self.value; }\n",
@@ -27,7 +28,7 @@ fn resolves_every_accepted_class_body_through_ordered_definition_slots() {
         .get(ClassId::new(0))
         .unwrap();
     assert_eq!(
-        definition.initializer.as_ref().unwrap().callable,
+        definition.initializers[0].callable,
         InitializerId::new(ClassId::new(0), 0).into()
     );
     assert_eq!(
@@ -53,12 +54,16 @@ fn resolves_every_accepted_class_body_through_ordered_definition_slots() {
     assert_eq!(definition.methods.len(), 2);
     assert_eq!(
         definition
-            .initializer
-            .as_ref()
+            .initializers
+            .first()
             .unwrap()
             .body
             .statements
             .len(),
-        1
+        2
+    );
+    assert_eq!(
+        definition.initializers[0].locals[0].id,
+        LocalId::new(InitializerId::new(ClassId::new(0), 0), 0)
     );
 }

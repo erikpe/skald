@@ -120,8 +120,11 @@ Type checking will determine applicability from the existing argument-binding
 relation, reject mode-only overload pairs, select the unique most-specific
 static parameter-type sequence, and record exactly one `InitializerId`.
 `super(arguments)` follows the same boundary for the direct base. The current
-resolver instead selects its class's one ordinary initializer before checking
-arguments; that singular path is transitional.
+resolved IR and HIR already store dense, source-ordered initializer declaration
+and definition vectors, and MIR lowers, verifies, dumps, and emits every entry.
+Source collection still accepts only one ordinary initializer, and the current
+resolver preselects that entry before checking arguments; this narrow selection
+path is transitional.
 
 The distinct `copy(ref source: T)` declaration is a separate lifecycle
 capability rather than an initializer candidate. `T(copy source)` selects that

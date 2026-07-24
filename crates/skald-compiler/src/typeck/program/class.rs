@@ -78,7 +78,7 @@ fn lower_class_declaration(
             }
         })
         .collect();
-    let Some(initializer) = &class.initializer else {
+    if class.initializers.is_empty() {
         diagnostics.push(
             Diagnostic::error(
                 INVALID_OBJECT_DECLARATION,
@@ -90,13 +90,19 @@ fn lower_class_declaration(
             ),
         );
         return None;
-    };
-    valid &= validate_parameters(&initializer.parameters, diagnostics, "initializer");
-    let initializer = HirInitializerDeclaration {
-        id: initializer.id,
-        parameters: initializer.parameters.iter().map(lower_parameter).collect(),
-        span: initializer.span,
-    };
+    }
+    let initializers = class
+        .initializers
+        .iter()
+        .map(|initializer| {
+            valid &= validate_parameters(&initializer.parameters, diagnostics, "initializer");
+            HirInitializerDeclaration {
+                id: initializer.id,
+                parameters: initializer.parameters.iter().map(lower_parameter).collect(),
+                span: initializer.span,
+            }
+        })
+        .collect();
     let copy_constructor_declaration =
         class
             .copy_constructor_declaration
@@ -190,7 +196,7 @@ fn lower_class_declaration(
         direct_base,
         conformances,
         fields,
-        initializer,
+        initializers,
         copy_constructor_declaration,
         copy_constructor: copy_capabilities.constructor(class.id).clone(),
         copy_assignment_declaration,
@@ -234,17 +240,29 @@ struct ClassDefinitionChecker<'program, 'diagnostics> {
 
 impl ClassDefinitionChecker<'_, '_> {
     fn check(&mut self) -> Option<HirClassDefinition> {
-        let initializer = self.class.initializer.as_ref()?;
-        let initializer_definition = self.definition.initializer.as_ref()?;
-        let initializer_body = self.check_member(ClassMemberContext {
-            callable: initializer.id.into(),
-            parameters: &initializer.parameters,
-            definition: initializer_definition,
-            return_type: Type::Unit,
-            access: HirAccess::Mutable,
-            body_kind: MemberBodyKind::OrdinaryInitializer,
-            callable_name: format!("initializer for class `{}`", self.class.name),
-        });
+        if self.class.initializers.is_empty() {
+            return None;
+        }
+        let initializers = self
+            .class
+            .initializers
+            .iter()
+            .map(|initializer| {
+                let definition = self
+                    .definition
+                    .member(initializer.id.into())
+                    .expect("resolved initializer declaration must have a matching body");
+                self.check_member(ClassMemberContext {
+                    callable: initializer.id.into(),
+                    parameters: &initializer.parameters,
+                    definition,
+                    return_type: Type::Unit,
+                    access: HirAccess::Mutable,
+                    body_kind: MemberBodyKind::OrdinaryInitializer,
+                    callable_name: format!("initializer for class `{}`", self.class.name),
+                })
+            })
+            .collect();
         let copy_constructor = self
             .class
             .copy_constructor_declaration
@@ -313,7 +331,7 @@ impl ClassDefinitionChecker<'_, '_> {
             .collect();
         Some(HirClassDefinition {
             class: self.class.id,
-            initializer: initializer_body,
+            initializers,
             copy_constructor,
             copy_assignment,
             destructor,

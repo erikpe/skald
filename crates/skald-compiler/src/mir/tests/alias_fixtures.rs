@@ -181,8 +181,15 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
         span,
     });
     let initializer_parameters = class_declaration.initializers[1].parameters.clone();
+    let ordinary_initializer = class_declaration.initializers[0].clone();
     let method_parameters = class_declaration.methods[1].parameters.clone();
     program.member_definitions = MirMemberDefinitionTable::new(vec![
+        fixture_empty_member_definition(
+            ordinary_initializer.id.into(),
+            class,
+            &ordinary_initializer.parameters,
+            span,
+        ),
         empty_member_definition(initializer.into(), class, &initializer_parameters, span),
         empty_member_definition(method.into(), class, &method_parameters, span),
     ]);

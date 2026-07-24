@@ -43,12 +43,17 @@ impl HirClassDefinitionTable {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [HirClassDefinition] {
+        self.entries.entries_mut_for_test()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirClassDefinition {
     pub class: ClassId,
-    pub initializer: HirMemberDefinition,
+    pub initializers: Vec<HirMemberDefinition>,
     pub copy_constructor: Option<HirMemberDefinition>,
     pub copy_assignment: Option<HirMemberDefinition>,
     pub destructor: Option<HirMemberDefinition>,
@@ -60,9 +65,10 @@ impl HirClassDefinition {
     pub fn member(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
         match callable {
             CallableId::Function(_) => None,
-            CallableId::Initializer(id) if id.class() == self.class => {
-                (self.initializer.callable == callable).then_some(&self.initializer)
-            }
+            CallableId::Initializer(id) if id.class() == self.class => self
+                .initializers
+                .get(id.index())
+                .filter(|definition| definition.callable == callable),
             CallableId::CopyConstructor(id) if id.class() == self.class => self
                 .copy_constructor
                 .as_ref()

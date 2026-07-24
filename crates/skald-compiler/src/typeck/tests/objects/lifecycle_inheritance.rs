@@ -63,7 +63,7 @@ fn hir_retains_ordered_complete_object_lifecycle_operations() {
 
     let definition = hir.class_definitions.get(derived.id).unwrap();
     let HirStatement::BaseInitialization(initialization) =
-        &definition.initializer.body.statements[0]
+        &definition.initializers[0].body.statements[0]
     else {
         panic!("derived initializer should begin with explicit base initialization");
     };
@@ -268,7 +268,7 @@ fn object_argument_temporaries_remain_explicit_in_base_initialization_hir() {
     let hir = output.hir.unwrap();
     let definition = hir.class_definitions.get(ClassId::new(2)).unwrap();
     let HirStatement::BaseInitialization(initialization) =
-        &definition.initializer.body.statements[0]
+        &definition.initializers[0].body.statements[0]
     else {
         panic!("expected base initialization");
     };

@@ -42,7 +42,7 @@ impl ResolvedClassDefinitionTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedClassDefinition {
     pub class: ClassId,
-    pub initializer: Option<ResolvedMemberDefinition>,
+    pub initializers: Vec<ResolvedMemberDefinition>,
     pub copy_constructor: Option<ResolvedMemberDefinition>,
     pub copy_assignment: Option<ResolvedMemberDefinition>,
     pub destructor: Option<ResolvedMemberDefinition>,
@@ -55,8 +55,8 @@ impl ResolvedClassDefinition {
         match callable {
             CallableId::Function(_) => None,
             CallableId::Initializer(initializer) if initializer.class() == self.class => self
-                .initializer
-                .as_ref()
+                .initializers
+                .get(initializer.index())
                 .filter(|definition| definition.callable == callable),
             CallableId::CopyConstructor(copy) if copy.class() == self.class => self
                 .copy_constructor

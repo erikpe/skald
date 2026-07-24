@@ -1,6 +1,7 @@
 use super::build::{MirBodyBuilder, MirBuildError};
 use super::test_fixtures::{
-    assign as fixture_assign, block as fixture_block, value as fixture_value,
+    assign as fixture_assign, block as fixture_block,
+    empty_member_definition as fixture_empty_member_definition, value as fixture_value,
 };
 use super::*;
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
         BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
         MethodId,
     },
-    test_support::lower_source_to_mir,
+    test_support::{lower_source_to_mir, type_check_source},
 };
 
 mod alias_fixtures;

@@ -23,7 +23,9 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .class_definitions
         .iter()
         .flat_map(|class| {
-            std::iter::once(&class.initializer)
+            class
+                .initializers
+                .iter()
                 .chain(class.copy_constructor.iter())
                 .chain(class.copy_assignment.iter())
                 .chain(class.destructor.iter())
@@ -140,16 +142,15 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             })
             .collect(),
         fields,
-        initializers: vec![MirInitializerDeclaration {
-            id: class.initializer.id,
-            parameters: class
-                .initializer
-                .parameters
-                .iter()
-                .map(lower_parameter)
-                .collect(),
-            span: class.initializer.span,
-        }],
+        initializers: class
+            .initializers
+            .iter()
+            .map(|initializer| MirInitializerDeclaration {
+                id: initializer.id,
+                parameters: initializer.parameters.iter().map(lower_parameter).collect(),
+                span: initializer.span,
+            })
+            .collect(),
         copy_constructor_declaration: class.copy_constructor_declaration.as_ref().map(|copy| {
             MirCopyConstructorDeclaration {
                 id: copy.id,

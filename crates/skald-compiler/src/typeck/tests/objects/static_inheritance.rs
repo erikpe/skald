@@ -200,7 +200,8 @@ fn slicing_is_explicit_across_owning_destinations_and_never_elided() {
     let root_assignment = root.copy_assignment.selected().unwrap();
 
     let holder = hir.class_definitions.get(ClassId::new(3)).unwrap();
-    let HirStatement::FieldCopyConstruction(field) = &holder.initializer.body.statements[0] else {
+    let HirStatement::FieldCopyConstruction(field) = &holder.initializers[0].body.statements[0]
+    else {
         panic!("derived field source must slice through copy construction");
     };
     assert_eq!(field.operation, root_copy);

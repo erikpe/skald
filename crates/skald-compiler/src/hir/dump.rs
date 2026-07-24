@@ -144,13 +144,15 @@ impl HirDumper {
                     dumper.output.push('\n');
                 }
             });
-            dumper.line(
-                &format!("Initializer {}", class.initializer.id),
-                class.initializer.span,
-            );
+            dumper.heading("Initializers");
             dumper.indented(|dumper| {
-                for parameter in &class.initializer.parameters {
-                    dumper.parameter(parameter);
+                for initializer in &class.initializers {
+                    dumper.line(&format!("Initializer {}", initializer.id), initializer.span);
+                    dumper.indented(|dumper| {
+                        for parameter in &initializer.parameters {
+                            dumper.parameter(parameter);
+                        }
+                    });
                 }
             });
             dumper.heading("CopyConstructor");
@@ -241,7 +243,9 @@ impl HirDumper {
     fn class_definition(&mut self, class: &HirClassDefinition) {
         self.line(&format!("ClassDefinition {}", class.class), class.span);
         self.indented(|dumper| {
-            dumper.member_definition(&class.initializer);
+            for initializer in &class.initializers {
+                dumper.member_definition(initializer);
+            }
             if let Some(copy_constructor) = &class.copy_constructor {
                 dumper.member_definition(copy_constructor);
             }

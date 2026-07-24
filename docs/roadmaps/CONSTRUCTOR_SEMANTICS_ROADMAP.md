@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM0 complete, CM1 is next.
+Status: in progress; CM1 complete, CM2 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -21,8 +21,10 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - The parser retains every `init(...)` member, but resolution classifies
   `init(ref source: T)` by signature as the copy constructor and rejects a
   second ordinary initializer.
-- Resolved and HIR class declarations and definitions store one ordinary
-  initializer. Calls select that initializer during name resolution, before
+- Resolved and HIR class declarations and definitions store dense,
+  source-ordered ordinary-initializer vectors, and MIR lowers every entry.
+  Source collection still rejects a second ordinary initializer. Calls
+  preselect the sole accepted initializer during name resolution, before
   argument compatibility is known.
 - `InitializerId` contains a class-local ordinal, backend symbols include it,
   and MIR stores ordinary initializer declarations in a vector. Copy
@@ -86,7 +88,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 ## Progress
 
 - [x] CM0 — Give copy construction a distinct identity
-- [ ] CM1 — Generalize ordinary initializer storage
+- [x] CM1 — Generalize ordinary initializer storage
 - [ ] CM2 — Adopt the distinct copy-constructor declaration
 - [ ] CM3 — Select ordinary initializer overloads
 - [ ] CM4 — Select overloaded direct-base initialization
@@ -130,22 +132,22 @@ their behavior.
 **Purpose:** Remove singular declaration and body storage before enabling an
 overload set or changing source copy classification.
 
-- [ ] Store ordinary initializer declarations and executable bodies as dense
+- [x] Store ordinary initializer declarations and executable bodies as dense
       source-ordered vectors in resolved IR and HIR; lower the complete vectors
       into the existing MIR collection.
-- [ ] Give class-body work items explicit initializer member/identity pairs so
+- [x] Give class-body work items explicit initializer member/identity pairs so
       declaration recovery cannot desynchronize syntax, metadata, and bodies.
-- [ ] Generalize class/program lookup, parameter/local ownership, definition
+- [x] Generalize class/program lookup, parameter/local ownership, definition
       iteration, capability consumers, dumps, and test fixtures without yet
       accepting a second ordinary initializer.
-- [ ] Verify declaration/definition density, class ownership, parameter
+- [x] Verify declaration/definition density, class ownership, parameter
       ownership, and body existence for every stored ordinary initializer.
-- [ ] Preserve the current preselected single-initializer call path behind a
+- [x] Preserve the current preselected single-initializer call path behind a
       narrow helper so the later overload task can replace it without touching
       storage consumers again.
-- [ ] Keep backend code generation ordinal-driven and prove distinct
+- [x] Keep backend code generation ordinal-driven and prove distinct
       initializer labels and frames through multi-entry HIR/MIR fixtures.
-- [ ] Update phase documentation for the generalized representation without
+- [x] Update phase documentation for the generalized representation without
       claiming source-level overloading.
 
 **Tests:** Focused resolved/HIR/MIR table, class-body, identity/density

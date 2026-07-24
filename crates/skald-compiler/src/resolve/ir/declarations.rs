@@ -169,7 +169,7 @@ pub struct ResolvedClassDeclaration {
     pub direct_base: Option<ResolvedDirectBase>,
     pub implemented_interfaces: Vec<ResolvedInterfaceClaim>,
     pub fields: Vec<ResolvedFieldDeclaration>,
-    pub initializer: Option<ResolvedInitializerDeclaration>,
+    pub initializers: Vec<ResolvedInitializerDeclaration>,
     pub copy_constructor_declaration: Option<ResolvedCopyConstructorDeclaration>,
     pub copy_constructor: ResolvedCopyOperation<CopyConstructorId>,
     pub copy_assignment_declaration: Option<ResolvedCopyAssignmentDeclaration>,
@@ -199,12 +199,14 @@ impl ResolvedClassDeclaration {
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
-        if id.class() != self.id {
-            return None;
-        }
-        self.initializer
-            .as_ref()
+        (id.class() == self.id)
+            .then(|| self.initializers.get(id.index()))
+            .flatten()
             .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn preselected_initializer(&self) -> Option<&ResolvedInitializerDeclaration> {
+        self.initializers.first()
     }
 
     pub fn copy_constructor_declaration(

@@ -144,15 +144,13 @@ impl ResolvedDumper {
                     dumper.indented(|dumper| dumper.type_syntax(&field.type_syntax));
                 }
             });
-            dumper.heading("OrdinaryInitializer");
-            if let Some(initializer) = &class.initializer {
-                dumper.indented(|dumper| {
+            dumper.heading("OrdinaryInitializers");
+            dumper.indented(|dumper| {
+                for initializer in &class.initializers {
                     dumper.line(&format!("Initializer {}", initializer.id), initializer.span);
                     dumper.indented(|dumper| dumper.parameters(&initializer.parameters));
-                });
-            } else {
-                dumper.indented(|dumper| dumper.raw_line("<none>"));
-            }
+                }
+            });
             dumper.heading("CopyConstructor");
             dumper.indented(|dumper| match class.copy_constructor {
                 ResolvedCopyOperation::User(id) => {
@@ -240,7 +238,7 @@ impl ResolvedDumper {
     fn class_definition(&mut self, class: &ResolvedClassDefinition) {
         self.line(&format!("ClassDefinition {}", class.class), class.span);
         self.indented(|dumper| {
-            if let Some(initializer) = &class.initializer {
+            for initializer in &class.initializers {
                 dumper.member_definition(initializer);
             }
             if let Some(copy_constructor) = &class.copy_constructor {

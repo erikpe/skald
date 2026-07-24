@@ -81,7 +81,7 @@ fn lowers_alias_signatures_for_every_internal_owner() {
     );
     let class = hir.class(ClassId::new(0)).unwrap();
     assert_eq!(
-        class.initializer.parameters[0].mode,
+        class.initializers[0].parameters[0].mode,
         crate::hir::HirParameterMode::ReadOnlyAlias
     );
     assert_eq!(

@@ -16,12 +16,14 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     let hir = output.hir.unwrap();
     let class = hir.class(ClassId::new(0)).unwrap();
     assert_eq!(class.fields[0].id, FieldId::new(class.id, 0));
-    assert_eq!(class.initializer.id, InitializerId::new(class.id, 0));
+    assert_eq!(class.initializers[0].id, InitializerId::new(class.id, 0));
     assert_eq!(class.methods[0].id, MethodId::new(class.id, 0));
     assert_eq!(class.methods[0].receiver_access, HirAccess::Mutable);
     assert_eq!(class.methods[1].receiver_access, HirAccess::ReadOnly);
 
-    let initializer = hir.member_definition(class.initializer.id.into()).unwrap();
+    let initializer = hir
+        .member_definition(class.initializers[0].id.into())
+        .unwrap();
     let HirStatement::FieldAssignment(assignment) = &initializer.body.statements[0] else {
         panic!("expected typed field initialization");
     };
@@ -43,7 +45,7 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
         panic!("expected constructor producer");
     };
     assert_eq!(construction.class, class.id);
-    assert_eq!(construction.initializer, class.initializer.id);
+    assert_eq!(construction.initializer, class.initializers[0].id);
 }
 
 #[test]
@@ -166,7 +168,9 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let hir = output.hir.unwrap();
     let parent = hir.class(ClassId::new(2)).unwrap();
-    let initializer = hir.member_definition(parent.initializer.id.into()).unwrap();
+    let initializer = hir
+        .member_definition(parent.initializers[0].id.into())
+        .unwrap();
     assert!(matches!(
         initializer.body.statements.as_slice(),
         [
@@ -205,7 +209,9 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
 
     let mir = lower_hir(&hir).unwrap();
     assert!(verify_mir(&mir).is_ok());
-    let parent_initializer = mir.member_definition(parent.initializer.id.into()).unwrap();
+    let parent_initializer = mir
+        .member_definition(parent.initializers[0].id.into())
+        .unwrap();
     let construction = parent_initializer.body.blocks[0]
         .instructions
         .iter()

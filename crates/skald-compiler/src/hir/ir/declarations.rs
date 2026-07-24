@@ -212,6 +212,11 @@ impl HirClassDeclarationTable {
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+
+    #[cfg(test)]
+    pub(crate) fn entries_mut_for_test(&mut self) -> &mut [HirClassDeclaration] {
+        self.entries.entries_mut_for_test()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -222,7 +227,7 @@ pub struct HirClassDeclaration {
     pub direct_base: Option<HirDirectBase>,
     pub conformances: Vec<HirInterfaceConformance>,
     pub fields: Vec<HirFieldDeclaration>,
-    pub initializer: HirInitializerDeclaration,
+    pub initializers: Vec<HirInitializerDeclaration>,
     pub copy_constructor_declaration: Option<HirCopyConstructorDeclaration>,
     pub copy_constructor: HirCopyCapability<CopyConstructorId>,
     pub copy_assignment_declaration: Option<HirCopyAssignmentDeclaration>,
@@ -288,10 +293,10 @@ impl HirClassDeclaration {
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&HirInitializerDeclaration> {
-        if id.class() != self.id {
-            return None;
-        }
-        (self.initializer.id == id).then_some(&self.initializer)
+        (id.class() == self.id)
+            .then(|| self.initializers.get(id.index()))
+            .flatten()
+            .filter(|initializer| initializer.id == id)
     }
 
     pub fn copy_constructor_declaration(

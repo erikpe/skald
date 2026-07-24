@@ -178,7 +178,7 @@ fn resolves_only_first_statement_super_for_derived_ordinary_initializers() {
         .get(ClassId::new(1))
         .unwrap();
     let ResolvedStatement::BaseInitialization(base) =
-        &definition.initializer.as_ref().unwrap().body.statements[0]
+        &definition.initializers[0].body.statements[0]
     else {
         panic!("expected resolved base initialization");
     };
