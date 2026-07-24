@@ -424,6 +424,7 @@ impl HirDumper {
                         });
                     }
                     HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
+                    HirLocalInitializer::Shared(value) => dumper.shared_transfer(value),
                 });
             }
             HirStatement::Return(statement) => {
@@ -463,6 +464,7 @@ impl HirDumper {
                                 }
                             });
                         }
+                        HirReturnValue::Shared(value) => dumper.shared_transfer(value),
                     });
                 }
             }
@@ -508,6 +510,19 @@ impl HirDumper {
                     dumper.object_place(&statement.destination);
                     dumper.object_source(&statement.source);
                     dumper.selected_copy_operation(statement.operation);
+                });
+            }
+            HirStatement::SharedFieldWrite(statement) => {
+                self.line(
+                    match statement.kind {
+                        HirSharedFieldWriteKind::Initialize => "SharedFieldInitialization",
+                        HirSharedFieldWriteKind::Assign => "SharedFieldAssignment",
+                    },
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.shared_transfer(&statement.value);
                 });
             }
         }
@@ -756,7 +771,68 @@ impl HirDumper {
                     dumper.selected_copy_operation(copy.operation);
                 });
             }
+            HirCallArgument::Shared(value) => {
+                self.line("SharedArgument", value.span);
+                self.indented(|dumper| dumper.shared_transfer(value));
+            }
         }
+    }
+
+    fn shared_transfer(&mut self, value: &HirSharedTransfer) {
+        let operation = match value.operation {
+            HirOwnerTransfer::Copy => "Copy",
+            HirOwnerTransfer::Adopt => "Adopt",
+        };
+        self.line(
+            &format!(
+                "SharedTransfer {operation} -> {}",
+                shared_target_name(value.target)
+            ),
+            value.span,
+        );
+        self.indented(|dumper| match &value.source {
+            HirSharedSource::Place(HirSharedPlace::Binding {
+                binding,
+                target,
+                span,
+            }) => dumper.line(
+                &format!("SharedBinding {binding} : {}", shared_target_name(*target)),
+                *span,
+            ),
+            HirSharedSource::Place(HirSharedPlace::Field {
+                place,
+                target,
+                span,
+            }) => {
+                dumper.line(
+                    &format!(
+                        "SharedField {} : {}",
+                        place.field,
+                        shared_target_name(*target)
+                    ),
+                    *span,
+                );
+                dumper.indented(|dumper| dumper.object_place(&place.receiver));
+            }
+            HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+                dumper.line(
+                    &format!(
+                        "SharedAllocation {} via {}",
+                        allocation.class, allocation.initializer
+                    ),
+                    allocation.span,
+                );
+                dumper.indented(|dumper| {
+                    for argument in &allocation.arguments {
+                        dumper.call_argument(argument);
+                    }
+                });
+            }
+            HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+                dumper.line("SharedCallResult", call.span);
+                dumper.indented(|dumper| dumper.expression(call));
+            }
+        });
     }
 
     fn object_view(&mut self, label: &str, view: &HirObjectView) {
@@ -953,6 +1029,14 @@ fn view_target_name(target: HirViewTarget) -> String {
         HirViewTarget::Class(class) => format!("class {class}"),
         HirViewTarget::Interface(interface) => format!("interface {interface}"),
         HirViewTarget::Obj => "Obj".to_owned(),
+    }
+}
+
+fn shared_target_name(target: HirSharedTarget) -> String {
+    match target {
+        HirSharedTarget::Class(class) => format!("shared class {class}"),
+        HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
+        HirSharedTarget::Obj => "shared Obj".to_owned(),
     }
 }
 

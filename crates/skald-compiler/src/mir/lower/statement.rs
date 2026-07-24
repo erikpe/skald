@@ -41,6 +41,9 @@ impl BodyLowerer<'_> {
                 self.lower_field_copy_assignment(statement)
             }
             HirStatement::CopyAssignment(statement) => self.lower_copy_assignment(statement),
+            HirStatement::SharedFieldWrite(_) => {
+                unreachable!("shared HIR is rejected before MIR lowering")
+            }
         }
     }
 
@@ -92,6 +95,9 @@ impl BodyLowerer<'_> {
                     .register_owned(storage, copy.destination.class());
                 self.finish_full_expression(local.span);
             }
+            crate::hir::HirLocalInitializer::Shared(_) => {
+                unreachable!("shared HIR is rejected before MIR lowering")
+            }
         }
     }
 
@@ -131,6 +137,9 @@ impl BodyLowerer<'_> {
                 );
                 self.lower_construction(construction, destination);
                 None
+            }
+            Some(crate::hir::HirReturnValue::Shared(_)) => {
+                unreachable!("shared HIR is rejected before MIR lowering")
             }
             None => None,
         };

@@ -60,6 +60,8 @@ pub const INVALID_OBJECT_CAST: &str = "TYP029";
 pub const NO_MATCHING_INITIALIZER: &str = "TYP030";
 pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
 pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
+pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
+pub const UNSUPPORTED_SHARED_OPERATION: &str = "TYP034";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -377,10 +379,8 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
-        // Resolution deliberately gates shared programs during the frontend-
-        // only implementation slice. This placeholder keeps the public
-        // type-check entry point total for manually supplied resolved IR;
-        // canonical shared HIR types replace it in the next ownership task.
-        ResolvedTypeKind::Shared(_) => Type::Unit,
+        ResolvedTypeKind::Shared(target) => {
+            Type::Shared(crate::typeck::shared::lower_shared_target(target))
+        }
     }
 }

@@ -91,6 +91,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
             ));
         }
         crate::hir::HirCallArgument::Copy(_) => {}
+        crate::hir::HirCallArgument::Shared(_) => {}
     }
 }
 
@@ -126,5 +127,6 @@ mod interfaces;
 mod literals;
 mod object_results;
 mod objects;
+mod shared_ownership;
 mod type_operations;
 mod value_parameters;

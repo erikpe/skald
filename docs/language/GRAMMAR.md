@@ -391,14 +391,15 @@ member rules, containment, receivers, initialization, and object places.
 access, forwarding, overlap, and lifetime.
 [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines
 `shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
-`new T(copy source)` semantics. The parser accepts these forms and resolution
-retains their object identities and construction modes, then issues a focused
-frontend-only diagnostic until typed ownership support is implemented. The
-copy marker is not an ordinary initializer argument.
+`new T(copy source)` semantics. The parser and resolver accept these forms and
+retain their object identities and construction modes. Typed HIR supports
+shared storage, owner provenance, and ordinary allocation; explicit copy
+allocation remains a focused typed exclusion. The copy marker is not an
+ordinary initializer argument.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus
 owning inline copy construction, assignment, value arguments, results, and
-slicing. `shared T` is parsed for a focused unsupported-feature diagnostic.
+slicing. Shared-owner casts remain a focused typed exclusion.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-cast semantics.

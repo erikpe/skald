@@ -1,5 +1,5 @@
 use super::*;
-use crate::resolve::{ResolvedSharedTarget, UNSUPPORTED_SHARED_OWNERSHIP};
+use crate::resolve::ResolvedSharedTarget;
 
 #[test]
 fn resolves_shared_targets_and_allocation_modes_to_stable_identities() {
@@ -18,11 +18,10 @@ fn resolves_shared_targets_and_allocation_modes_to_stable_identities() {
         "fn main() -> i64 { return 0; }\n",
     ));
 
-    assert!(output.has_errors(), "shared execution must remain gated");
-    assert!(output
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == UNSUPPORTED_SHARED_OWNERSHIP));
+    assert!(
+        !output.has_errors(),
+        "resolved shared identities must cross into type checking"
+    );
 
     let produce = output.program.declarations.get(FunctionId::new(0)).unwrap();
     assert_eq!(

@@ -1,6 +1,7 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; not implemented**. This document is
+Status: **frozen implementation design; typed HIR vocabulary implemented**.
+This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
 finalization, hidden anchors, and the minimal C allocation boundary. The
@@ -8,11 +9,15 @@ source-visible contract is [Shared Ownership and Heap Allocation](../language/SH
 Object cast legality and consuming contexts are owned by
 [Object Casts](../language/OBJECT_CASTS.md).
 
-Source AST and resolved IR now retain shared targets, exact allocation class
-identities, and ordinary-versus-copy allocation modes behind a frontend-only
-diagnostic. Typed HIR, MIR, and the backend still have no shared types or
-operations, and the current [runtime ABI](RUNTIME_ABI.md) remains version 4
-with no allocation functions.
+Source AST and resolved IR retain shared targets, exact allocation class
+identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
+class/interface/`Obj` shared targets, named-place and produced-owner sources,
+explicit copy/adopt transfers, and ordinary allocation with one selected
+initializer. MIR lowering rejects this vocabulary with a structured error;
+MIR and the backend still have no shared representation or operations, and the
+current [runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation
+functions. Explicit copy allocation and shared-owner casts remain typed
+exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy

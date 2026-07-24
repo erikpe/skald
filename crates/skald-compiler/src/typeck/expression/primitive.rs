@@ -220,6 +220,14 @@ fn select_binary_operation(
         (ResolvedBinaryOperator::Add, Type::F64) => Some(HirBinaryOperation::AddF64),
         (ResolvedBinaryOperator::Subtract, Type::F64) => Some(HirBinaryOperation::SubtractF64),
         (ResolvedBinaryOperator::Multiply, Type::F64) => Some(HirBinaryOperation::MultiplyF64),
-        (_, Type::Bool | Type::Unit | Type::Obj | Type::Class(_) | Type::Interface(_)) => None,
+        (
+            _,
+            Type::Bool
+            | Type::Unit
+            | Type::Obj
+            | Type::Class(_)
+            | Type::Interface(_)
+            | Type::Shared(_),
+        ) => None,
     }
 }

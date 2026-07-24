@@ -13,7 +13,7 @@ use super::{
         HirCheckedObjectView, HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource,
         HirObjectView, HirSelectedCopyOperation, HirViewTarget,
     },
-    Type,
+    HirSharedTransfer, Type,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -114,6 +114,7 @@ pub enum HirCallArgument {
     View(HirObjectView),
     CheckedView(Box<HirCheckedObjectView>),
     Copy(HirCopyArgument),
+    Shared(HirSharedTransfer),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -131,6 +132,7 @@ impl HirCallArgument {
             Self::View(view) => view.span,
             Self::CheckedView(view) => view.span,
             Self::Copy(copy) => copy.span,
+            Self::Shared(value) => value.span,
         }
     }
 }

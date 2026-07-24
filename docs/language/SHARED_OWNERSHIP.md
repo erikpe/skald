@@ -1,12 +1,14 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; frontend syntax and resolution implemented**. This
+Status: **frozen design; typed ownership vocabulary implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
 [status matrix](STATUS.md) remains authoritative for current compiler support.
-The [implemented grammar](GRAMMAR.md) accepts these forms, and resolution
-retains stable targets and allocation modes, but typed ownership and execution
+The [implemented grammar](GRAMMAR.md) accepts these forms. Resolution retains
+stable targets and allocation modes, and typed HIR records shared targets,
+ordinary allocation, and copy-versus-adopt owner provenance. MIR, native
+execution, explicit copy allocation, shared-owner casts, and lifetime effects
 remain unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
@@ -67,6 +69,9 @@ selects `T`'s copy-constructor capability exactly once in the new allocation.
 The marker takes exactly one source and does not form an ordinary initializer
 argument. Conversely, `new T(source)` participates only in ordinary
 initializer overload resolution and never falls back to copy construction.
+Ordinary allocation and initializer selection currently cross typed HIR.
+Explicit copy allocation remains a typed diagnostic until its checked source,
+anchor, and copy-constructor operation can be represented together.
 
 The copy-allocation target must be concrete and copy-constructible. The source
 may be an existing or produced inline object, a `ref` or `mut ref` alias, or an

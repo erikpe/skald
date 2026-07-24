@@ -35,7 +35,6 @@ pub const INHERITED_MEMBER_COLLISION: &str = "RES015";
 pub const INVALID_BASE_INITIALIZATION: &str = "RES016";
 pub const INVALID_OVERRIDE: &str = "RES017";
 pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
-pub const UNSUPPORTED_SHARED_OWNERSHIP: &str = "RES019";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -71,7 +70,7 @@ fn resolve_type(
         syntax::TypeKind::Bool => ResolvedTypeKind::Bool,
         syntax::TypeKind::Unit => ResolvedTypeKind::Unit,
         syntax::TypeKind::Shared {
-            shared_span,
+            shared_span: _,
             target,
         } => {
             let target_kind = if target.text == "Obj" {
@@ -115,16 +114,6 @@ fn resolve_type(
                     }
                 }
             };
-            diagnostics.push(
-                Diagnostic::error(
-                    UNSUPPORTED_SHARED_OWNERSHIP,
-                    "shared ownership is not implemented below name resolution",
-                )
-                .with_primary_label(*shared_span, "shared type resolved here")
-                .with_note(
-                    "the frontend retains this target for the shared-ownership implementation",
-                ),
-            );
             ResolvedTypeKind::Shared(target_kind)
         }
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,

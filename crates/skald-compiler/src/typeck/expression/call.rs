@@ -276,7 +276,13 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirCallArgument> {
         match parameter.binding_mode() {
             ResolvedParameterBindingMode::Value => {
-                if let Type::Class(class) = lower_type(parameter.type_syntax()) {
+                let parameter_type = lower_type(parameter.type_syntax());
+                if let Type::Shared(target) = parameter_type {
+                    return self
+                        .check_shared_transfer(source, target, "shared value argument")
+                        .map(HirCallArgument::Shared);
+                }
+                if let Type::Class(class) = parameter_type {
                     let source =
                         self.check_object_source(source, class, "object value argument")?;
                     let Some(operation) = self.copy_capabilities.constructor(class).selected()
@@ -293,7 +299,7 @@ impl CallableChecker<'_, '_> {
                 let argument = self.check_expression(source)?;
                 require_type(
                     argument.ty,
-                    lower_type(parameter.type_syntax()),
+                    parameter_type,
                     argument.span,
                     "call argument",
                     self.diagnostics,

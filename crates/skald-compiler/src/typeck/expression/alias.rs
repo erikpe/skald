@@ -622,6 +622,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (_, Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit) => None,
+            (_, Type::Shared(_)) => None,
             (CheckedObjectViewSource::Produced { .. }, _) => {
                 unreachable!("produced views enter alias arguments only through explicit casts")
             }

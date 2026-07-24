@@ -1,5 +1,6 @@
 //! Deterministic lowering from typed HIR to MIR.
 
+use super::{build::MirBodyBuilder, model::*};
 use crate::{
     hir::{
         HirBlock, HirExpression, HirLocal, HirParameter, HirParameterMode, HirProgram,
@@ -7,9 +8,6 @@ use crate::{
     },
     identity::{BindingId, CallableId, ClassId},
 };
-use std::convert::Infallible;
-
-use super::{build::MirBodyBuilder, model::*};
 
 mod call;
 mod cleanup;
@@ -19,16 +17,35 @@ mod expression;
 mod object_values;
 mod places;
 mod program;
+mod shared_gate;
 mod statement;
 mod type_operations;
 
 use cleanup::CleanupPlanner;
 
-pub type HirLoweringError = Infallible;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirLoweringError {
+    UnsupportedSharedOwnership { span: crate::source::Span },
+}
+
+impl std::fmt::Display for HirLoweringError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnsupportedSharedOwnership { .. } => {
+                formatter.write_str("shared ownership is not representable in MIR yet")
+            }
+        }
+    }
+}
+
+impl std::error::Error for HirLoweringError {}
 
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
+    if let Some(span) = shared_gate::first_shared_type_span(hir) {
+        return Err(HirLoweringError::UnsupportedSharedOwnership { span });
+    }
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -231,7 +248,7 @@ impl<'hir> BodyLowerer<'hir> {
     }
 }
 
-const fn lower_type(ty: Type) -> MirType {
+fn lower_type(ty: Type) -> MirType {
     match ty {
         Type::I64 => MirType::I64,
         Type::U64 => MirType::U64,
@@ -242,5 +259,6 @@ const fn lower_type(ty: Type) -> MirType {
         Type::Obj => MirType::Obj,
         Type::Class(class) => MirType::Class(class),
         Type::Interface(interface) => MirType::Interface(interface),
+        Type::Shared(_) => unreachable!("shared HIR is rejected before MIR lowering"),
     }
 }

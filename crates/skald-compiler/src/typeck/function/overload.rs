@@ -38,6 +38,7 @@ enum ObjectArgumentSource {
 enum InitializerCallSite {
     DirectConstruction,
     BaseInitialization,
+    Allocation,
 }
 
 impl ObjectArgumentSource {
@@ -72,6 +73,22 @@ impl CallableChecker<'_, '_> {
             &initialization.arguments,
             initialization.super_span,
             InitializerCallSite::BaseInitialization,
+        )
+    }
+
+    pub(in crate::typeck) fn select_allocation_initializer(
+        &mut self,
+        allocation: &crate::resolve::ResolvedAllocationExpr,
+    ) -> Option<crate::identity::InitializerId> {
+        let crate::resolve::ResolvedConstructionMode::Initialize { arguments } = &allocation.mode
+        else {
+            unreachable!("copy allocation does not select an ordinary initializer");
+        };
+        self.select_initializer(
+            allocation.class,
+            arguments,
+            allocation.target_span,
+            InitializerCallSite::Allocation,
         )
     }
 
@@ -181,7 +198,9 @@ impl CallableChecker<'_, '_> {
                 .and_then(|interface| interface.requirements.get(call.requirement.index()))
                 .map(|requirement| lower_type(&requirement.return_type))
                 .expect("resolved interface call must reference a requirement"),
-            ResolvedExpression::Allocation(_) => Type::Unit,
+            ResolvedExpression::Allocation(allocation) => {
+                Type::Shared(crate::hir::HirSharedTarget::Class(allocation.class))
+            }
             ResolvedExpression::Construct(construction) => Type::Class(construction.class),
         }
     }
@@ -284,6 +303,12 @@ impl CallableChecker<'_, '_> {
                             .is_some()
                 }
                 Type::Obj | Type::Interface(_) | Type::Unit => false,
+                Type::Shared(expected) => {
+                    let Type::Shared(actual) = argument.ty else {
+                        return false;
+                    };
+                    crate::typeck::shared::target_accepts(self.program, expected, actual)
+                }
                 primitive => argument.ty == primitive,
             },
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
@@ -319,6 +344,9 @@ impl CallableChecker<'_, '_> {
                 crate::hir::HirViewTarget::Interface(expected),
             ),
             (Type::Class(_), Type::Obj) | (Type::Interface(_), Type::Obj) => true,
+            (Type::Shared(actual), Type::Shared(expected)) => {
+                crate::typeck::shared::target_accepts(self.program, expected, actual)
+            }
             _ => false,
         }
     }
@@ -358,6 +386,7 @@ impl CallableChecker<'_, '_> {
         let owner = match call_site {
             InitializerCallSite::DirectConstruction => "class",
             InitializerCallSite::BaseInitialization => "base class",
+            InitializerCallSite::Allocation => "allocation class",
         };
         let mut diagnostic = Diagnostic::error(
             NO_MATCHING_INITIALIZER,
@@ -394,6 +423,7 @@ impl CallableChecker<'_, '_> {
         let call = match call_site {
             InitializerCallSite::DirectConstruction => "initializer call",
             InitializerCallSite::BaseInitialization => "base initializer call",
+            InitializerCallSite::Allocation => "allocation initializer call",
         };
         let mut diagnostic = Diagnostic::error(
             AMBIGUOUS_INITIALIZER,

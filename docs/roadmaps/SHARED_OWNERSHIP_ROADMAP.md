@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO0 complete, SO1 is next.
+Status: in progress; SO1 complete, SO2 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -26,11 +26,14 @@ and the complete cast direction matrix is
 - Class/interface/`Obj` views, virtual and interface dispatch, type tests, and
   plain checked-place casts preserve complete-object and metadata provenance.
 - The parser and resolver retain `(shared T) source`, stored/result `shared T`
-  targets, and both `new T(...)` allocation modes behind a focused
-  frontend-only diagnostic.
-- Typed HIR and lower phase products do not yet represent shared owners,
-  allocation, anchors, or release. The x86-64 backend has no shared handle or
-  allocation path.
+  targets, and both `new T(...)` allocation modes.
+- Typed HIR represents canonical shared targets, named and produced owner
+  provenance, explicit copy/adopt transfers, and ordinary allocation with one
+  selected initializer. Explicit copy allocation and shared-owner casts remain
+  typed exclusions.
+- MIR and lower phase products do not yet represent shared owners, allocation,
+  anchors, or release. MIR lowering rejects shared HIR structurally, and the
+  x86-64 backend has no shared handle or allocation path.
 - Runtime ABI version 4 exposes scalar output only; it has no allocation or
   deallocation entry points.
 
@@ -75,7 +78,7 @@ and the complete cast direction matrix is
 ## Progress
 
 - [x] SO0 — Parse and resolve shared types and allocation forms
-- [ ] SO1 — Establish typed shared-owner vocabulary
+- [x] SO1 — Establish typed shared-owner vocabulary
 - [ ] SO2 — Represent and verify the first owner lifetime in MIR
 - [ ] SO3 — Upgrade the runtime to the minimal allocation ABI
 - [ ] SO4 — Execute exact-class allocation and last-owner destruction
@@ -131,29 +134,29 @@ need to recover either fact from names or argument shape.
 shared types, owner sources, and allocation before executable lifetime state
 is added to MIR.
 
-- [ ] Add canonical HIR shared targets covering classes, interfaces, and
+- [x] Add canonical HIR shared targets covering classes, interfaces, and
       `Obj`, clearly separated from inline exact-class values and non-owning
       views.
-- [ ] Type-check shared locals, value parameters, results, and fields while
+- [x] Type-check shared locals, value parameters, results, and fields while
       rejecting aliases-to-shared targets, external shared signatures, static
       storage, invalid interface storage assumptions, and all implicit
       inline/alias-to-shared conversions.
-- [ ] Represent ordinary `new C(arguments)` as exact-class allocation plus the
+- [x] Represent ordinary `new C(arguments)` as exact-class allocation plus the
       already overload-selected ordinary initializer and a produced owner; do
       not encode byte size, header offsets, runtime symbols, or count
       operations.
-- [ ] Distinguish named shared places from produced owners and record
+- [x] Distinguish named shared places from produced owners and record
       copy-versus-adopt intent at each enabled consuming boundary.
-- [ ] Centralize shared compatibility and implicit up-view checks so locals,
+- [x] Centralize shared compatibility and implicit up-view checks so locals,
       arguments, results, fields, casts, and later anchors do not grow
       independent conversion rules.
-- [ ] Keep source execution explicitly gated where MIR support is not yet
+- [x] Keep source execution explicitly gated where MIR support is not yet
       present, using structured diagnostics or lowering errors rather than
       panics.
-- [ ] Give shared semantic models cohesive private modules behind the existing
+- [x] Give shared semantic models cohesive private modules behind the existing
       HIR/type-check facades; split broad expression or statement owners only
       where the new responsibility demonstrates the need.
-- [ ] Add type-check diagnostics, HIR construction/provenance tests, and
+- [x] Add type-check diagnostics, HIR construction/provenance tests, and
       deterministic HIR dumps; update phase documentation for the new typed
       boundary.
 

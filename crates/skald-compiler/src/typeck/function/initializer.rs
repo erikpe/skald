@@ -41,6 +41,28 @@ impl CallableChecker<'_, '_> {
             (Type::Class(class), MemberBodyKind::CopyAssignment) => {
                 self.check_field_copy_assignment(target.place.clone(), class, assignment)
             }
+            (Type::Shared(shared_target), body_kind) => self
+                .check_shared_transfer(
+                    &assignment.value,
+                    shared_target,
+                    if body_kind.initializes_receiver() {
+                        "shared field initializer"
+                    } else {
+                        "shared field assignment"
+                    },
+                )
+                .map(|value| {
+                    HirStatement::SharedFieldWrite(crate::hir::HirSharedFieldWrite {
+                        place: target.place.clone(),
+                        value,
+                        kind: if body_kind.initializes_receiver() {
+                            crate::hir::HirSharedFieldWriteKind::Initialize
+                        } else {
+                            crate::hir::HirSharedFieldWriteKind::Assign
+                        },
+                        span: assignment.span,
+                    })
+                }),
             (
                 Type::Bool
                 | Type::I64

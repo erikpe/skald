@@ -146,6 +146,9 @@ impl BodyLowerer<'_> {
                     }));
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(destination)))
                 }
+                HirCallArgument::Shared(_) => {
+                    unreachable!("shared HIR is rejected before MIR lowering")
+                }
             };
             lowered.push(argument);
         }

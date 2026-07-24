@@ -45,10 +45,10 @@ the token after the closing parenthesis is a binary operator, not an adjacent
 cast operand.
 
 The [implemented grammar](GRAMMAR.md) is authoritative for current acceptance.
-`(shared T) source` is retained syntactically but currently produces a focused
-unsupported-feature diagnostic before shared semantic types reach typed HIR.
-Stored `shared T` types and both `new T(...)` allocation modes likewise cross
-syntax and name resolution before the frontend-only ownership gate.
+`(shared T) source` crosses syntax and resolution but currently produces a
+focused typed-HIR exclusion. Stored `shared T` types and ordinary
+`new T(arguments)` cross typed HIR; explicit copy allocation remains excluded
+until its checked source and anchor are implemented together.
 
 ## Two cast results
 
@@ -359,5 +359,6 @@ one.
 
 Local aliases remain a separate future design. The cast profile does not
 implicitly introduce `ref` locals, reference values, alias assignment, or
-escaping borrows. The compiler diagnoses `shared T` as unsupported until
-shared ownership is implemented.
+escaping borrows. Shared storage and ordinary allocation are typed separately;
+shared-owner casts remain unavailable until owner-preserving cast execution is
+implemented.

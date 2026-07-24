@@ -138,6 +138,9 @@ impl CallableChecker<'_, '_> {
             Type::Class(class) => {
                 self.check_object_local_initializer(local.local, class, &local.initializer)
             }
+            Type::Shared(target) => self
+                .check_shared_transfer(&local.initializer, target, "shared local initializer")
+                .map(HirLocalInitializer::Shared),
             _ => self
                 .check_expression(&local.initializer)
                 .and_then(|initializer| {
@@ -285,6 +288,28 @@ impl CallableChecker<'_, '_> {
                     value: Some(HirReturnValue::Object(object_return)),
                     span: statement.span,
                 }))
+            }
+            (Type::Shared(target), Some(value)) => self
+                .check_shared_transfer(value, target, "shared return")
+                .map(|value| {
+                    HirStatement::Return(HirReturn {
+                        value: Some(HirReturnValue::Shared(value)),
+                        span: statement.span,
+                    })
+                }),
+            (Type::Shared(target), None) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RETURN,
+                        format!(
+                            "{} must return a `{}` owner",
+                            self.callable_name,
+                            Type::Shared(target).name()
+                        ),
+                    )
+                    .with_primary_label(statement.span, "expected `return shared_expression;`"),
+                );
+                None
             }
         };
         CheckedStatement::terminates(hir)

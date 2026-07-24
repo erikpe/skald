@@ -11,7 +11,7 @@ error[TYP029]: shared-owner casts are not implemented
  --> tests/golden/compile_fail/object_casts.ska:13:7
     |
 13 |     ((shared Root) root).touch();
-    |       ^^^^^^ `shared T` is reserved for a future ownership slice
+    |       ^^^^^^ owner-preserving shared casts are not available in typed HIR yet
   = note: plain `(T) source` casts produce only a bounded borrowed place
 
 error[TYP014]: owning copy source requires a class cast

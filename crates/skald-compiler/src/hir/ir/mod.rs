@@ -9,6 +9,7 @@ mod body;
 mod declarations;
 mod expression;
 mod object;
+mod shared;
 
 pub use body::{
     BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
@@ -40,6 +41,10 @@ pub use object::{
     HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
     HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
+pub use shared::{
+    HirOwnerTransfer, HirSharedAllocation, HirSharedFieldWrite, HirSharedFieldWriteKind,
+    HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
@@ -52,6 +57,7 @@ pub enum Type {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Shared(HirSharedTarget),
 }
 
 impl Type {
@@ -66,6 +72,11 @@ impl Type {
             Self::Obj => Cow::Borrowed("Obj"),
             Self::Class(class) => Cow::Owned(format!("class {class}")),
             Self::Interface(interface) => Cow::Owned(format!("interface {interface}")),
+            Self::Shared(target) => Cow::Owned(match target {
+                HirSharedTarget::Obj => "shared Obj".to_owned(),
+                HirSharedTarget::Class(class) => format!("shared class {class}"),
+                HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
+            }),
         }
     }
 
@@ -80,7 +91,8 @@ impl Type {
             | Self::Bool
             | Self::Unit
             | Self::Class(_)
-            | Self::Interface(_) => "a",
+            | Self::Interface(_)
+            | Self::Shared(_) => "a",
         }
     }
 }

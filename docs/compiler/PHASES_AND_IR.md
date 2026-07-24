@@ -5,8 +5,9 @@ verification boundaries, deterministic dumps, and phase-facing public paths.
 Source-visible meaning remains owned by the
 [language documentation](../language/README.md). The frozen additions required
 for shared ownership are specified separately in the
-[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md); they are
-not descriptions of current phase products.
+[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). That
+contract distinguishes the implemented typed-HIR vocabulary from the
+remaining MIR, backend, and runtime work.
 
 ## Pipeline contract
 
@@ -108,9 +109,8 @@ copy capability, storage, evaluation lowering, or ABI placement.
 Shared type syntax resolves to an explicit class, interface, or `Obj` target.
 Allocation syntax resolves to an exact concrete `ClassId` and retains ordinary
 arguments or the explicit copy source as the existing distinct construction
-modes. Resolution currently emits a frontend-only diagnostic after preserving
-these facts, so shared syntax cannot cross into HIR until typed owner support
-lands.
+modes. These facts cross resolution without a feature gate. Type checking owns
+their semantic compatibility and the current lower-phase gate.
 
 Ordinary construction and copy construction have type-distinct identities
 through every semantic phase. `InitializerId` names only an ordinary `init`
@@ -198,6 +198,21 @@ HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
 convention locations, or target symbols. Lower phases therefore consume
 already checked semantic choices without reimplementing language policy.
+
+Shared types cross this boundary as canonical class, interface, or `Obj`
+targets, distinct from inline class values and non-owning views. Shared value
+consumers retain a named owner place or produced owner and explicitly select
+copy or adopt. Ordinary `new C(arguments)` retains exact `C`, its selected
+`InitializerId`, and typed source-ordered arguments. Shared locals, value
+parameters, results, and fields use this vocabulary, including compatible
+implicit up-views. Inline values and aliases do not implicitly manufacture an
+owner, external shared signatures remain invalid, and explicit copy allocation
+and shared-owner casts remain structured typed exclusions.
+
+MIR lowering currently returns `HirLoweringError::UnsupportedSharedOwnership`
+before consuming any HIR program containing a shared type. This is the
+deliberate execution gate until MIR gains explicit owner storage and lifetime
+operations.
 
 ## MIR
 

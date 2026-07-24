@@ -57,6 +57,9 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
         HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
         HirCallArgument::Place(_) => false,
+        HirCallArgument::Shared(_) => {
+            unreachable!("shared HIR is rejected before MIR lowering")
+        }
     }
 }
 

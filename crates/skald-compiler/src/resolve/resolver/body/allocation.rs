@@ -24,14 +24,6 @@ impl CallableResolver<'_, '_> {
         let (Some(class), Some(mode)) = (class, mode) else {
             return None;
         };
-        self.diagnostics.push(
-            Diagnostic::error(
-                UNSUPPORTED_SHARED_OWNERSHIP,
-                "heap allocation is not implemented below name resolution",
-            )
-            .with_primary_label(allocation.new_span, "allocation resolved here")
-            .with_note("the frontend retains the exact class and construction mode"),
-        );
         Some(ResolvedExpression::Allocation(ResolvedAllocationExpr {
             class,
             new_span: allocation.new_span,

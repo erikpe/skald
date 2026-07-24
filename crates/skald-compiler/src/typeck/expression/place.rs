@@ -33,7 +33,7 @@ pub(in crate::typeck) enum ObjectPlaceUse {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(super) fn check_field_read(
+    pub(in crate::typeck) fn check_field_read(
         &mut self,
         access: &crate::resolve::ResolvedFieldAccessExpr,
     ) -> Option<HirExpression> {

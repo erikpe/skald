@@ -93,7 +93,7 @@ impl CallableChecker<'_, '_> {
                 )
                 .with_primary_label(
                     shared_span,
-                    "`shared T` is reserved for a future ownership slice",
+                    "owner-preserving shared casts are not available in typed HIR yet",
                 )
                 .with_note("plain `(T) source` casts produce only a bounded borrowed place"),
             );
