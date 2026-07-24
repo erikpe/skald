@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM5 complete, CM6 is next.
+Status: complete; archived after CM6.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -35,8 +35,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
   implemented. The migration changes declaration and explicit-selection
   syntax, not their established lifetime guarantees.
 - `new` and shared storage are not implemented. The planned shared roadmap
-  currently depends on this roadmap for ordinary overload and explicit-copy
-  selection.
+  now builds on this completed constructor model.
 
 ## Scope and invariants
 
@@ -92,7 +91,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - [x] CM3 — Select ordinary initializer overloads
 - [x] CM4 — Select overloaded direct-base initialization
 - [x] CM5 — Execute explicit target-directed copy construction
-- [ ] CM6 — Harden and publish the constructor model
+- [x] CM6 — Harden and publish the constructor model
 
 ## PR-sized implementation sequence
 
@@ -319,30 +318,30 @@ copy implicitly, and the reusable construction mode is ready for `new`.
 **Purpose:** Audit the complete constructor matrix, remove migration
 scaffolding, and leave a maintainable prerequisite for shared ownership.
 
-- [ ] Exercise every ordinary parameter binding mode and type relation across
+- [x] Exercise every ordinary parameter binding mode and type relation across
       locals, fields, value arguments, results, temporaries, elision,
       inheritance, and direct-base construction.
-- [ ] Exercise implicit and explicit copy construction across existing places,
+- [x] Exercise implicit and explicit copy construction across existing places,
       produced objects, aliases, checked casts, slicing, inheritance, user and
       synthesized capabilities, and normal cleanup.
-- [ ] Add malformed public-MIR and backend legality coverage for initializer
+- [x] Add malformed public-MIR and backend legality coverage for initializer
       density, declaration/definition mismatch, selected target/signature,
       copy identity, checked source lifetime, and call target existence.
-- [ ] Audit constructor, call-argument, class-definition, copy, dump, verifier,
+- [x] Audit constructor, call-argument, class-definition, copy, dump, verifier,
       and backend-symbol modules by responsibility. Resolve high-priority
       cohesion problems; record larger lower-priority findings in an indexed
       constructor discoveries document rather than expanding this task.
-- [ ] Remove legacy signature classification, singular initializer fields,
+- [x] Remove legacy signature classification, singular initializer fields,
       temporary semantic gates, stale source spellings, and roadmap codes from
       living code, tests, diagnostics, and general documentation.
-- [ ] Make implemented grammar, status, language overview, lifecycle, aliases,
+- [x] Make implemented grammar, status, language overview, lifecycle, aliases,
       casts, polymorphism, phases, backend, debugging, and testing documents
       concise and current, with one authority for each rule.
-- [ ] Confirm exclusions remain rejected: mode-only overloads, zero ordinary
+- [x] Confirm exclusions remain rejected: mode-only overloads, zero ordinary
       initializers, initializer delegation, method/function overloading,
       default/variadic arguments, implicit downcasts, runtime overload
       dispatch, shared/new execution, and dynamic cloning.
-- [ ] Run the complete repository, supported-toolchain, long robustness,
+- [x] Run the complete repository, supported-toolchain, long robustness,
       documentation, deterministic-process, assembler, native, and diff-
       hygiene gates; then archive this roadmap and unblock shared ownership.
 
@@ -370,8 +369,8 @@ CM6 broadens coverage and removes transition scaffolding after every semantic
 operation is executable.
 
 The implemented class lifecycle, polymorphism, object-place cast, and
-cast-relative receiver work are prerequisites and are complete. This roadmap
-is itself a blocking prerequisite for
-[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md); that
-roadmap must not begin until CM6 is complete. Shared storage, `new`, owner
-lifetimes, and hidden anchors remain in the dependent roadmap.
+cast-relative receiver work were prerequisites and are complete. This roadmap
+is the completed prerequisite for
+[Shared Ownership and Heap Allocation](../roadmaps/SHARED_OWNERSHIP_ROADMAP.md).
+Shared storage, `new`, owner lifetimes, and hidden anchors remain in that
+dependent roadmap.

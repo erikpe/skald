@@ -300,7 +300,7 @@ direct fields. The base is part of the same complete-object lifetime and never
 has an independent lexical cleanup registration.
 
 An ordinary derived initializer must place exactly one `super(arguments);` as
-its first statement. Root initializers cannot contain `super`. The frozen
+its first statement. Root initializers cannot contain `super`. The implemented
 constructor contract selects the unique applicable, most-specific ordinary
 initializer from the direct base's overload set using static argument types.
 The same type-checking engine selects direct and base initializers. Arguments

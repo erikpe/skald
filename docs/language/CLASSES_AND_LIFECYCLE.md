@@ -1,10 +1,8 @@
 # Skald Classes and Lifecycle
 
-Status: authoritative for implemented inline class behavior and ordinary
-initializer overloads, plus the frozen explicit-copy source model. Executable
-base-subobject lifecycle composition is implemented. The
-[status matrix](STATUS.md) distinguishes the current compiler boundary from
-the remaining constructor extension.
+Status: authoritative for the implemented inline class, ordinary-initializer
+overload, explicit-copy, and base-subobject lifecycle model. The
+[status matrix](STATUS.md) records the current compiler boundary.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -32,8 +30,7 @@ may name a class declared later in the same source file.
 
 ## Members and namespaces
 
-The implemented class model and frozen constructor extension use these member
-categories:
+The implemented class model uses these member categories:
 
 | Category | Contract |
 |---|---|

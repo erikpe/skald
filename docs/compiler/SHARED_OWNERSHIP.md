@@ -11,9 +11,9 @@ Object cast legality and consuming contexts are owned by
 The current compiler IR has no shared types or operations, and the current
 [runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation functions.
 Those facts change only during a separately approved implementation roadmap.
-The planned shared work is blocked on the
-[constructor-semantics roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md),
-which supplies overload-selected ordinary initialization, the distinct copy
+The completed
+[constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
+supplied overload-selected ordinary initialization, the distinct copy
 constructor identity, and reusable ordinary-versus-copy construction modes.
 
 ## Responsibility split

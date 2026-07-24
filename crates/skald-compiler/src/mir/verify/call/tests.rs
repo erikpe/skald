@@ -1,5 +1,5 @@
 use crate::{
-    identity::{ClassId, FieldId, FunctionId},
+    identity::{ClassId, FieldId, FunctionId, InitializerId},
     mir::{
         verify_mir, MirCall, MirCallTarget, MirInstruction, MirMethodReceiver, MirPlace, MirType,
         MirValue, ValueId,
@@ -155,4 +155,51 @@ fn initializer_and_method_receiver_contracts_retain_exact_diagnostics() {
     assert!(messages(&wrong_receiver)
         .iter()
         .any(|message| message == "method receiver has the wrong class type"));
+}
+
+#[test]
+fn initializer_target_identity_and_selected_signature_are_verified() {
+    let source = concat!(
+        "class Box {\n",
+        "  init(value: i64) {}\n",
+        "  init(value: bool) {}\n",
+        "}\n",
+        "fn main() -> i64 { var value: Box = Box(1); return 0; }\n",
+    );
+
+    let mut wrong_selection = lower_source_to_mir(source);
+    let function = wrong_selection
+        .definitions
+        .get_mut_for_test(wrong_selection.entry_function)
+        .unwrap();
+    let initialize = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .unwrap();
+    initialize.target = InitializerId::new(ClassId::new(0), 1);
+    assert!(messages(&wrong_selection)
+        .iter()
+        .any(|message| message == "initializer argument 0 type mismatch"));
+
+    let mut unknown_target = lower_source_to_mir(source);
+    let function = unknown_target
+        .definitions
+        .get_mut_for_test(unknown_target.entry_function)
+        .unwrap();
+    let initialize = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .unwrap();
+    initialize.target = InitializerId::new(ClassId::new(0), 99);
+    assert!(messages(&unknown_target)
+        .iter()
+        .any(|message| message == "initializer target c0:init99 is not declared"));
 }

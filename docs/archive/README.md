@@ -36,6 +36,7 @@ Archived plans:
 - [Documentation overhaul](DOCUMENTATION_OVERHAUL_ROADMAP.md)
 - [Restricted polymorphism](POLYMORPHISM_ROADMAP.md)
 - [Object casts](OBJECT_CASTS_ROADMAP.md)
+- [Constructor overloads and explicit copy construction](CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
 
 Supporting records for the documentation overhaul:

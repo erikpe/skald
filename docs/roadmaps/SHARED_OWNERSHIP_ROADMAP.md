@@ -1,7 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: planned; blocked on the constructor-semantics roadmap, then SO0 is
-next.
+Status: planned; prerequisites complete, SO0 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -21,9 +20,9 @@ and the complete cast direction matrix is
 - Inline exact-class values, selected copy operations, deterministic normal
   cleanup, value parameters/results, and full-expression temporaries execute
   through explicit HIR and verified MIR.
-- The prerequisite constructor-semantics roadmap will provide ordinary
-  initializer overload selection, the distinct `copy` lifecycle declaration,
-  and target-directed `T(copy source)` before this roadmap begins.
+- The completed constructor-semantics roadmap provides ordinary initializer
+  overload selection, the distinct `copy` lifecycle declaration, and
+  target-directed `T(copy source)`.
 - Class/interface/`Obj` views, virtual and interface dispatch, type tests, and
   plain checked-place casts preserve complete-object and metadata provenance.
 - `(shared T) source` is parsed only far enough to issue an unsupported-feature
@@ -650,12 +649,11 @@ slices because copy allocation depends on checked places, copy capabilities,
 allocation, owner publication, and anchors. SO14 broadens coverage and
 documentation only after every operation exists.
 
-The constructor-semantics roadmap is a blocking prerequisite and must be
-complete before SO0 begins. It supplies overload-aware ordinary construction,
-the separate copy-constructor identity and declaration, and the shared
-`T(copy source)` construction-mode representation. The archived object-cast
-roadmap and resolved cast-relative receiver follow-up are also prerequisites
-and are complete. Runtime ABI version 5 must land before the backend emits
-allocation calls. Dynamic cloning, weak ownership, optionals, and checked
-exceptions remain independent future designs and must not be pulled into this
-sequence.
+The archived constructor-semantics roadmap supplies overload-aware ordinary
+construction, the separate copy-constructor identity and declaration, and the
+shared `T(copy source)` construction-mode representation. The archived
+object-cast roadmap and resolved cast-relative receiver follow-up are also
+complete prerequisites. Runtime ABI version 5 must land before the backend
+emits allocation calls. Dynamic cloning, weak ownership, optionals, and
+checked exceptions remain independent future designs and must not be pulled
+into this sequence.

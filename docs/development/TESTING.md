@@ -91,6 +91,13 @@ copy is not recorded as constructor elision. Corrupt the lowered copy target
 or operation in a verifier test rather than relying only on successful native
 execution.
 
+Ordinary-constructor coverage should compose value, `ref`, and `mut ref`
+binding with exact, ancestor, interface, and `Obj` relations. Exercise selected
+initializer identities in local, field, argument, result, temporary, and
+direct-base contexts. Verifier mutations should independently cover table
+density, declaration/definition agreement, selected target and signature,
+source lifetime, and undeclared call targets.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

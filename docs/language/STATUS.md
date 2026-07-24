@@ -81,7 +81,7 @@ guarantees.
 | [Loops and iteration](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability) | **Open question** | `while`, `for`, `break`, `continue`, iterator protocols, and their cleanup boundaries are unspecified. |
 | [Remaining primitive operations](TYPES_AND_VALUES.md#operators) | **Open question** | Comparisons, division, remainder, bitwise operations, shifts, explicit primitive casts, signed-overflow behavior, and broader floating operations are not implemented as a settled group. |
 | [Function values](FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability), closures, and generics | **Open question** | Direct named calls are implemented; callable values, capture, generic declarations, inference, and specialization are not specified for Skald. |
-| Static state and broader class features | **Open question** | Static members, access control, abstract/final forms, method/function overloads, reflection, and user-defined conversions are not current language contracts. Ordinary initializer overloading is frozen separately above. |
+| Static state and broader class features | **Open question** | Static members, access control, abstract/final forms, method/function overloads, reflection, and user-defined conversions are not current language contracts. Ordinary initializer overloading is implemented separately above. |
 | Standard library | **Open question** | No Skald-written standard library is implemented; current scalar output is bootstrap runtime interoperation. |
 
 These rows are deliberately brief. Future behavior becomes normative only in a

@@ -57,9 +57,9 @@ the exact declared type; alias arguments must designate a compatible place and
 provide the required access. The complete argument list is checked even when
 one argument is invalid, so independent source errors can be reported.
 
-Functions and methods are not overloaded. The frozen ordinary-initializer
-overload set reuses these argument-binding rules, then applies its separate
-compile-time applicability and specificity rules from
+Functions and methods are not overloaded. The ordinary-initializer overload
+set reuses these argument-binding rules, then applies its separate compile-time
+applicability and specificity rules from
 [classes and lifecycle](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-overloads).
 
 A primitive-returning call is an expression of its declared type. A

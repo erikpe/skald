@@ -127,6 +127,34 @@ fn initializer_without_a_definition_is_rejected_at_the_backend_boundary() {
 }
 
 #[test]
+fn undeclared_initializer_target_is_rejected_at_the_backend_boundary() {
+    let mut mir = lower_source_to_mir(concat!(
+        "class Box { init(value: i64) {} }\n",
+        "fn main() -> i64 { var value: Box = Box(1); return 0; }\n",
+    ));
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let initialize = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Initialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .unwrap();
+    initialize.target = InitializerId::new(ClassId::new(0), 99);
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("initializer target c0:init99 is not declared"));
+}
+
+#[test]
 fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
     let mut mir = counter_member_program();
     let declaration = &mut mir.declarations.entries_mut_for_test()[0];

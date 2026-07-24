@@ -4,26 +4,17 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-- [Constructor Overloads and Explicit Copy Construction](CONSTRUCTOR_SEMANTICS_ROADMAP.md) —
-  **in progress**; establishes the distinct `copy` lifecycle operation, adds target-directed
-  `T(copy source)`, and enables compile-time most-specific ordinary `init`
-  overloads including `super(...)`. The declaration and internal identity are
-  distinct; direct and base overload selection and explicit target-directed
-  copy construction are implemented, with the final hardening audit next. It
-  depends on the completed lifecycle, polymorphism, and object-cast profiles.
 - [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md) —
-  **planned, blocked**; implements non-null strong owners, explicit ordinary
+  **planned, SO0 next**; implements non-null strong owners, explicit ordinary
   and copy allocation, deterministic last-owner destruction, shared
-  polymorphism, and hidden borrow anchors. Next after its prerequisite: parse
-  and resolve shared types and allocation forms. It depends on completion of
-  the constructor-semantics roadmap as well as the completed object-cast
-  profile and frozen language/compiler contracts.
+  polymorphism, and hidden borrow anchors. Its constructor-semantics and
+  object-cast prerequisites are complete; the first task parses and resolves
+  shared types and allocation forms.
 
-The completed polymorphism and object-cast profiles remain the implementation
-baseline. Constructor overload and explicit-copy semantics are implemented as
-specified in [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md);
-their final hardening task precedes shared work. Shared-ownership language and
-implementation contracts are frozen in
+The completed polymorphism, object-cast, and constructor profiles remain the
+implementation baseline. Constructor overload and explicit-copy semantics are
+specified in [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).
+Shared-ownership language and implementation contracts are frozen in
 [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md) and
 the
 [Shared-Ownership Compiler and Runtime Contract](../compiler/SHARED_OWNERSHIP.md),

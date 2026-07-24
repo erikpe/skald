@@ -53,21 +53,20 @@ true false
 if elif else
 ```
 
-`init`, `assign`, and `destroy` are ordinary identifiers except in their direct
-class-member forms:
+`init`, `copy`, `assign`, and `destroy` are ordinary identifiers except in
+their constructor or direct class-member forms:
 
 - `init` followed by a parameter list begins an initializer;
+- `copy` followed by a parameter list begins a copy constructor;
+- `copy` immediately after the opening parenthesis of a class construction
+  selects explicit copy construction;
 - `assign` followed by a parameter list begins copy assignment;
 - `destroy` followed directly by a block begins destruction.
 
 They remain available as field names, method names, parameter names, local
-names, and top-level function names. For example, `destroy: i64;` is a field
-and `fn destroy() -> unit {}` is a method.
-
-The frozen constructor extension additionally makes `copy` contextual in a
-direct class-member declaration and immediately after the opening parenthesis
-of a class construction. The current parser does not yet accept either shape;
-`copy` remains an ordinary identifier everywhere in the implemented grammar.
+names, and top-level function names. For example, `copy: i64;` is a field,
+`fn copy() -> unit {}` is a method, and `T(copy)` passes a binding named
+`copy` to an ordinary initializer.
 
 `extends` is contextually recognized only after a class name. `super` followed
 by a call argument list is contextually recognized as a dedicated statement;
