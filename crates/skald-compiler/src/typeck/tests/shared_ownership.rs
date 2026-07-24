@@ -6,7 +6,7 @@ use crate::{
         Type,
     },
     identity::{ClassId, FunctionId, InitializerId, InterfaceId},
-    mir::{lower_hir, HirLoweringError},
+    mir::{lower_hir, verify_mir},
     typeck::{INVALID_SHARED_CONVERSION, UNSUPPORTED_SHARED_OPERATION},
 };
 
@@ -117,10 +117,39 @@ fn lowers_shared_targets_allocations_and_owner_provenance_into_hir() {
     assert!(dump.contains("SharedField c2:field1"));
     assert!(dump.contains("SharedField c2:field0"));
 
-    assert!(matches!(
-        lower_hir(&hir),
-        Err(HirLoweringError::UnsupportedSharedOwnership { .. })
+    let mir = lower_hir(&hir).expect("shared up-views must lower after SO9");
+    verify_mir(&mir).expect("shared up-view MIR must verify");
+}
+
+#[test]
+fn shared_polymorphic_consumers_keep_static_targets_and_header_origins() {
+    let output = type_check_source(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Root implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Leaf extends Root {\n",
+        "  init(value: i64) { super(value); }\n",
+        "  override fn read() -> i64 { return self.value + 1; }\n",
+        "  fn leaf_only() -> i64 { return 9; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var leaf: shared Leaf = new Leaf(4);\n",
+        "  var root: shared Root = leaf;\n",
+        "  var readable: shared Readable = leaf;\n",
+        "  var matches: bool = root is Leaf;\n",
+        "  return root.read() + readable.read();\n",
+        "}\n",
     ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Origin Shared"));
+    assert!(dump.contains("SharedPointee"));
+    let mir = lower_hir(&hir).expect("stable shared views must lower");
+    verify_mir(&mir).expect("stable shared views must verify");
 }
 
 #[test]

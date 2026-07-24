@@ -185,6 +185,16 @@ dynamic metadata. Metadata identities, ancestry, virtual families, interface
 conformance maps, and requirement selections are target-independent. Table
 layout, slots, symbols, and address adjustment are not language rules.
 
+A stable `shared T` local or value parameter supplies the same semantic view
+from its allocation header. The handle identifies the canonical allocation;
+the header supplies the complete payload address and dynamic-class metadata;
+and the declared `T` supplies the static target. Compatible shared owner
+up-views change only that static target. Member access, virtual/interface
+dispatch, and `is` therefore preserve one allocation and do not copy, slice,
+retain, release, or allocate. Shared-backed aliases whose lifetime can outlast
+one stable expression require hidden anchors and remain a later ownership
+slice.
+
 ## Non-owning conversions and access
 
 Alias parameters extend to class, interface, and `Obj` targets. They remain

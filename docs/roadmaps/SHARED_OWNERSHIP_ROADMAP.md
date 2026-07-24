@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO8 complete, SO9 is next.
+Status: in progress; SO9 complete, SO10 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -100,7 +100,7 @@ and the complete cast direction matrix is
 - [x] SO6 — Carry shared owners across calls and results
 - [x] SO7 — Integrate shared fields with class lifecycle
 - [x] SO8 — Execute shared-field layout and lifecycle
-- [ ] SO9 — Add polymorphic shared views and dispatch
+- [x] SO9 — Add polymorphic shared views and dispatch
 - [ ] SO10 — Execute shared-owner casts
 - [ ] SO11 — Anchor shared-backed calls
 - [ ] SO12 — Anchor shared-backed checked places
@@ -424,28 +424,28 @@ and mixed object graphs finalize in language order.
 **Purpose:** Preserve allocation identity and dynamic metadata while shared
 owners are viewed as ancestors, interfaces, or `Obj`.
 
-- [ ] Enable implicit same-class, ancestor, guaranteed-interface, and `Obj`
+- [x] Enable implicit same-class, ancestor, guaranteed-interface, and `Obj`
       shared up-views without allocation, payload copying, slicing, or metadata
       replacement.
-- [ ] Represent a shared pointee place with static target, access, canonical
+- [x] Represent a shared pointee place with static target, access, canonical
       header identity, complete payload address, and dynamic metadata
       provenance in HIR and MIR.
-- [ ] Support direct, virtual, and interface calls plus inherited field/base
+- [x] Support direct, virtual, and interface calls plus inherited field/base
       projections through stable existing shared locals and value parameters.
-- [ ] Extend `is` to shared class/interface/`Obj` sources without changing
+- [x] Extend `is` to shared class/interface/`Obj` sources without changing
       ownership and reuse the canonical closed-world relation classifier.
-- [ ] Preserve ordinary mutable pointee access and non-exclusive aliasing while
+- [x] Preserve ordinary mutable pointee access and non-exclusive aliasing while
       retaining static target restrictions.
-- [ ] Verify shared view targets, projections, origins, metadata compatibility,
+- [x] Verify shared view targets, projections, origins, metadata compatibility,
       owner liveness, and dispatch selection before backend lowering.
-- [ ] Derive payload and metadata from the header and reuse existing checked
+- [x] Derive payload and metadata from the header and reuse existing checked
       layout and dispatch tables; do not add runtime view or type-test helpers.
-- [ ] Add same/up/interface/`Obj` view, deep virtual/interface dispatch,
+- [x] Add same/up/interface/`Obj` view, deep virtual/interface dispatch,
       type-test, access, malformed-MIR, assembly, and native tests.
-- [ ] Add a source-level strong cycle using a temporary acyclic seed and a
+- [x] Add a source-level strong cycle using a temporary acyclic seed and a
       later shared-`Obj` field replacement; prove its destructors do not run
       after external owners end while non-cyclic controls finalize normally.
-- [ ] Update polymorphism and phase documentation for shared sources.
+- [x] Update polymorphism and phase documentation for shared sources.
 
 **Tests:** Focused view-relation, receiver, interface, type-operation, MIR
 verification, backend dispatch, native polymorphism/cycle, and golden suites,

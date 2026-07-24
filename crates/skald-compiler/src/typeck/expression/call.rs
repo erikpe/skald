@@ -64,21 +64,41 @@ impl CallableChecker<'_, '_> {
         let (access, receiver) = match &call.receiver {
             crate::resolve::ResolvedInterfaceReceiver::Binding { binding, span } => {
                 let access = self.binding_access(*binding, false, *span)?;
+                let shared = matches!(self.binding_type(*binding), Type::Shared(_));
+                let target = HirViewTarget::Interface(call.interface);
                 let view = HirObjectView {
-                    source: HirViewSource::Forwarded {
-                        binding: *binding,
-                        target: HirViewTarget::Interface(call.interface),
-                        access,
-                        span: *span,
+                    source: if shared {
+                        HirViewSource::Shared {
+                            binding: *binding,
+                            target,
+                            access,
+                            span: *span,
+                        }
+                    } else {
+                        HirViewSource::Forwarded {
+                            binding: *binding,
+                            target,
+                            access,
+                            span: *span,
+                        }
                     },
-                    origin: Box::new(HirObjectOrigin::Forwarded {
-                        binding: *binding,
-                        static_target: HirViewTarget::Interface(call.interface),
-                        access,
-                        dispatch_limit: None,
-                        span: *span,
+                    origin: Box::new(if shared {
+                        HirObjectOrigin::Shared {
+                            binding: *binding,
+                            static_target: target,
+                            access,
+                            span: *span,
+                        }
+                    } else {
+                        HirObjectOrigin::Forwarded {
+                            binding: *binding,
+                            static_target: target,
+                            access,
+                            dispatch_limit: None,
+                            span: *span,
+                        }
                     }),
-                    target: HirViewTarget::Interface(call.interface),
+                    target,
                     access,
                     span: *span,
                 };

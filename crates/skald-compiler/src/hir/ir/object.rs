@@ -334,6 +334,14 @@ pub enum HirObjectOrigin {
         dispatch_limit: Option<ClassId>,
         span: Span,
     },
+    /// A stable shared owner whose allocation header supplies the complete
+    /// payload address and dynamic metadata for a borrowed pointee view.
+    Shared {
+        binding: BindingId,
+        static_target: HirViewTarget,
+        access: HirAccess,
+        span: Span,
+    },
     /// An exact object produced into a compiler-owned full-expression
     /// temporary. MIR lowering replaces this marker with the temporary place.
     Produced { dynamic_class: ClassId, span: Span },
@@ -357,7 +365,8 @@ pub enum HirViewTarget {
     Obj,
 }
 
-/// A non-owning, access-preserving conversion used only at an alias boundary.
+/// A non-owning, access-preserving object view used by calls, casts, and type
+/// operations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirObjectView {
     pub source: HirViewSource,
@@ -393,6 +402,13 @@ pub enum HirViewSource {
     Place(HirObjectPlace),
     Produced(Box<HirObjectProducer>),
     Forwarded {
+        binding: BindingId,
+        target: HirViewTarget,
+        access: HirAccess,
+        span: Span,
+    },
+    /// The complete payload addressed through a stable shared owner.
+    Shared {
         binding: BindingId,
         target: HirViewTarget,
         access: HirAccess,

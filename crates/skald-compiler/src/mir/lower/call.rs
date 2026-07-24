@@ -246,6 +246,9 @@ impl BodyLowerer<'_> {
                     _ => unreachable!("forwarded HIR views require indirect storage"),
                 }
             }
+            HirViewSource::Shared { binding, .. } => {
+                MirPlace::shared_pointee(self.storage_for_binding(*binding))
+            }
         };
         let origin = produced_class.map_or_else(
             || self.lower_object_origin(&view.origin),
@@ -390,6 +393,17 @@ impl BodyLowerer<'_> {
                 static_target: lower_view_target(*static_target),
                 access: lower_access(*access),
                 dispatch_limit: *dispatch_limit,
+                span: *span,
+            },
+            HirObjectOrigin::Shared {
+                binding,
+                static_target,
+                access,
+                span,
+            } => MirObjectOrigin::Shared {
+                owner: self.storage_for_binding(*binding),
+                static_target: lower_view_target(*static_target),
+                access: lower_access(*access),
                 span: *span,
             },
             HirObjectOrigin::Produced { .. } => {

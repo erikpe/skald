@@ -15,6 +15,7 @@ use super::abi;
 const MAX_ADDRESSABLE_SIZE: usize = i32::MAX as usize;
 pub(super) const SHARED_HANDLE_SIZE: usize = 8;
 pub(super) const SHARED_HANDLE_ALIGNMENT: usize = 8;
+pub(super) const SHARED_DYNAMIC_METADATA_OFFSET: i32 = 8;
 pub(super) const SHARED_HEADER_SIZE: usize = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

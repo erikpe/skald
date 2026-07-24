@@ -300,8 +300,12 @@ impl CallableResolver<'_, '_> {
         match expression {
             syntax::Expression::Identifier(identifier) => {
                 let binding = self.lookup_binding(&identifier.name.text)?;
-                let ResolvedTypeKind::Interface(interface) = binding.ty else {
-                    return None;
+                let interface = match binding.ty {
+                    ResolvedTypeKind::Interface(interface)
+                    | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Interface(
+                        interface,
+                    )) => interface,
+                    _ => return None,
                 };
                 Some((
                     ResolvedInterfaceReceiver::Binding {

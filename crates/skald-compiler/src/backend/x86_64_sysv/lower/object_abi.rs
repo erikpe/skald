@@ -10,6 +10,7 @@ use super::{
     super::{
         abi::{ArgumentLocation, ObjectOriginLocations, ParameterLocations},
         dispatch::DispatchMetadata,
+        layout::SHARED_DYNAMIC_METADATA_OFFSET,
         machine::{Instruction, Operand, Register},
     },
     value, InstructionSelector,
@@ -136,6 +137,10 @@ impl InstructionSelector<'_, '_> {
             ObjectOriginOperand::Mir(MirObjectOrigin::Forwarded { carrier, .. }) => {
                 self.select_forwarded_origin(*carrier, locations);
             }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
+                self.select_place_address(&MirPlace::shared_pointee(*owner), locations.complete())?;
+                self.select_shared_metadata(*owner, locations.metadata());
+            }
         }
         Ok(())
     }
@@ -159,6 +164,9 @@ impl InstructionSelector<'_, '_> {
                     .expect("verified forwarded carrier has object-origin homes");
                 self.select_frame_word(homes.complete(), location);
                 Ok(())
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
+                self.select_place_address(&MirPlace::shared_pointee(*owner), location)
             }
         }
     }
@@ -185,6 +193,9 @@ impl InstructionSelector<'_, '_> {
             }
             ObjectOriginOperand::Exact { dynamic_class, .. } => {
                 self.load_table_address(dynamic_class, destination);
+            }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
+                self.load_shared_metadata(*owner, destination);
             }
         }
     }
@@ -244,6 +255,9 @@ impl InstructionSelector<'_, '_> {
             ObjectOriginOperand::Exact { dynamic_class, .. } => {
                 self.load_table_address(dynamic_class, Register::R11);
             }
+            ObjectOriginOperand::Mir(MirObjectOrigin::Shared { owner, .. }) => {
+                self.load_shared_metadata(*owner, Register::R11);
+            }
         }
         self.output.push(Instruction::Move {
             source: Operand::Memory {
@@ -261,6 +275,37 @@ impl InstructionSelector<'_, '_> {
             .expect("verified forwarded carrier has object-origin homes");
         self.select_frame_word(homes.complete(), locations.complete());
         self.select_frame_word(homes.metadata(), locations.metadata());
+    }
+
+    fn load_shared_metadata(&mut self, owner: StorageId, destination: Register) {
+        self.output.push(Instruction::Move {
+            source: value::frame_storage(self.frame, owner),
+            destination: destination.into(),
+        });
+        self.output.push(Instruction::Move {
+            source: value::memory(destination, SHARED_DYNAMIC_METADATA_OFFSET),
+            destination: destination.into(),
+        });
+    }
+
+    fn select_shared_metadata(&mut self, owner: StorageId, location: ArgumentLocation) {
+        self.load_shared_metadata(owner, Register::Rax);
+        match location {
+            ArgumentLocation::IntegerRegister(register) => {
+                if register != Register::Rax {
+                    self.output.push(Instruction::Move {
+                        source: Register::Rax.into(),
+                        destination: register.into(),
+                    });
+                }
+            }
+            ArgumentLocation::Stack(displacement) => {
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("object metadata is always integer-class")
+            }
+        }
     }
 
     fn select_frame_word(&mut self, home: i32, location: ArgumentLocation) {

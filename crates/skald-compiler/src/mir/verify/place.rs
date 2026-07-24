@@ -72,9 +72,28 @@ impl Verifier<'_> {
                 );
                 return None;
             }
+            (MirPlaceBase::SharedPointee(_), kind)
+                if matches!(kind, MirStorageKind::Local | MirStorageKind::Parameter)
+                    && matches!(storage.ty, MirType::Shared(_)) =>
+            {
+                MirAliasAccess::Mutable
+            }
+            (MirPlaceBase::SharedPointee(_), _) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!(
+                        "shared-pointee base {storage_id} requires a stable local or parameter owner"
+                    ),
+                );
+                return None;
+            }
             (MirPlaceBase::Storage(_), _) => self.storage_access(function, storage),
         };
-        let mut ty = storage.ty;
+        let mut ty = match (place.base, storage.ty) {
+            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
+            _ => storage.ty,
+        };
         for projection in &place.projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {

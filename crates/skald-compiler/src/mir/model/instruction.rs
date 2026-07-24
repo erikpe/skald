@@ -225,7 +225,7 @@ impl MirViewTarget {
     }
 }
 
-/// One non-owning static conversion at an alias call boundary.
+/// One non-owning static object view with explicit complete-object origin.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirObjectView {
     pub source: MirPlace,
@@ -318,6 +318,14 @@ pub enum MirObjectOrigin {
         static_target: MirViewTarget,
         access: MirAliasAccess,
         dispatch_limit: Option<ClassId>,
+        span: Span,
+    },
+    /// Complete-object identity and metadata derived from the allocation
+    /// header retained by a stable shared owner.
+    Shared {
+        owner: StorageId,
+        static_target: MirViewTarget,
+        access: MirAliasAccess,
         span: Span,
     },
 }

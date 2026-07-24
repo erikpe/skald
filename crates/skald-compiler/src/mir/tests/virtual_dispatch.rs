@@ -328,6 +328,7 @@ impl ReceiverOriginCarrier for MirMethodReceiver {
         match self.origin.as_ref() {
             MirObjectOrigin::Forwarded { carrier, .. } => *carrier,
             MirObjectOrigin::Exact { complete, .. } => complete.base.storage(),
+            MirObjectOrigin::Shared { owner, .. } => *owner,
         }
     }
 }

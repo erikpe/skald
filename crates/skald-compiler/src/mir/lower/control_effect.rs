@@ -87,7 +87,9 @@ fn checked_view_contains_runtime_cast(view: &HirCheckedObjectView) -> bool {
 fn view_source_contains_runtime_cast(source: &HirViewSource) -> bool {
     match source {
         HirViewSource::Produced(producer) => producer_contains_runtime_cast(producer),
-        HirViewSource::Place(_) | HirViewSource::Forwarded { .. } => false,
+        HirViewSource::Place(_)
+        | HirViewSource::Forwarded { .. }
+        | HirViewSource::Shared { .. } => false,
     }
 }
 

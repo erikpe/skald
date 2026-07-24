@@ -524,6 +524,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
         state: &mut ObjectState,
         destination: &MirPlace,
     ) {
+        if matches!(destination.base, MirPlaceBase::SharedPointee(_)) {
+            return;
+        }
         if self.place_is_live(state, destination) {
             self.block_error(block.id, "initialization destination is already live");
             return;
@@ -603,6 +606,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     _ => return,
                 }
             }
+            MirObjectOrigin::Shared { .. } => return,
         };
         self.require_live_place(block, state, &place, kind);
     }
@@ -614,6 +618,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
         place: &MirPlace,
         kind: &str,
     ) {
+        if matches!(place.base, MirPlaceBase::SharedPointee(_)) {
+            // Shared-owner liveness is path-sensitive in the ownership
+            // verifier; inline-object cleanup state deliberately does not
+            // duplicate it.
+            return;
+        }
         if !self.place_is_live(state, place) {
             self.block_error(block.id, format!("{kind} is not live"));
         }

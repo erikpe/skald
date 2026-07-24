@@ -1,4 +1,4 @@
-//! Exact-class local and full-expression shared-owner lowering.
+//! Shared-owner transfer, allocation, field, and full-expression lowering.
 
 use super::*;
 use crate::hir::{

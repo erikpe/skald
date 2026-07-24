@@ -15,18 +15,22 @@ impl BodyLowerer<'_> {
 
     pub(super) fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
         let storage = self.storage_for_binding(place.root());
-        let root = match self.storage[storage.index()].kind {
-            MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
-            MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
-            MirStorageKind::Return
-            | MirStorageKind::Receiver
-            | MirStorageKind::Parameter
-            | MirStorageKind::Local => MirPlace::base(storage),
-            MirStorageKind::Argument
-            | MirStorageKind::Temporary
-            | MirStorageKind::ScalarSpill
-            | MirStorageKind::SharedAllocation => {
-                unreachable!("HIR object paths cannot use compiler-owned storage")
+        let root = if matches!(self.storage[storage.index()].ty, MirType::Shared(_)) {
+            MirPlace::shared_pointee(storage)
+        } else {
+            match self.storage[storage.index()].kind {
+                MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
+                MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
+                MirStorageKind::Return
+                | MirStorageKind::Receiver
+                | MirStorageKind::Parameter
+                | MirStorageKind::Local => MirPlace::base(storage),
+                MirStorageKind::Argument
+                | MirStorageKind::Temporary
+                | MirStorageKind::ScalarSpill
+                | MirStorageKind::SharedAllocation => {
+                    unreachable!("HIR object paths cannot use compiler-owned storage")
+                }
             }
         };
         place

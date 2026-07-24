@@ -138,16 +138,20 @@ impl CallableResolver<'_, '_> {
             self.report_unknown(&identifier.name.text, identifier.span, "unknown object");
             return None;
         };
-        let ResolvedTypeKind::Class(class) = binding.ty else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_MEMBER_SELECTION,
-                    format!("binding `{}` is not an object", identifier.name.text),
-                )
-                .with_primary_label(identifier.span, "member access requires an object")
-                .with_secondary_label(binding.name_span, "binding declared here"),
-            );
-            return None;
+        let class = match binding.ty {
+            ResolvedTypeKind::Class(class)
+            | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) => class,
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_MEMBER_SELECTION,
+                        format!("binding `{}` is not an object", identifier.name.text),
+                    )
+                    .with_primary_label(identifier.span, "member access requires an object")
+                    .with_secondary_label(binding.name_span, "binding declared here"),
+                );
+                return None;
+            }
         };
         Some(ResolvedObjectPlace::root(
             binding.id,

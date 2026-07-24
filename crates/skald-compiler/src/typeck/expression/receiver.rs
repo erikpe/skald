@@ -43,9 +43,19 @@ impl CallableChecker<'_, '_> {
             };
         }
 
-        let Type::Class(static_class) = self.binding_type(place.root()) else {
-            unreachable!("a class object place must have a class-typed root")
+        let root_type = self.binding_type(place.root());
+        let static_class = match root_type {
+            Type::Class(class) | Type::Shared(crate::hir::HirSharedTarget::Class(class)) => class,
+            _ => unreachable!("a class object place must have a class-capable root"),
         };
+        if matches!(root_type, Type::Shared(_)) {
+            return HirObjectOrigin::Shared {
+                binding: place.root(),
+                static_target: HirViewTarget::Class(static_class),
+                access: place.access,
+                span: place.span(),
+            };
+        }
         if self.binding_carries_dynamic_origin(place.root()) {
             return HirObjectOrigin::Forwarded {
                 binding: place.root(),

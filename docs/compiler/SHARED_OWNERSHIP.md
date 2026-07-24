@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; shared fields execute on x86-64**.
+Status: **frozen implementation design; polymorphic shared views execute on x86-64**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -13,15 +13,19 @@ Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
 class/interface/`Obj` shared targets, named-place and produced-owner sources,
 explicit copy/adopt transfers, and ordinary allocation with one selected
-initializer. MIR implements exact-class local owner semantics: allocation,
+initializer. MIR implements compatible shared-owner semantics: allocation,
 publication, adoption, named-owner copying, secure-before-release assignment,
 full-expression temporary cleanup, and normal local release are distinct
 verified operations. Shared call arguments, parameters, return owners, and
 caller results use explicit ownership handoffs across every internal callable
 kind. Shared fields use projected copy, initialization, secure replacement,
 synthesized copy/assignment, and destruction-plan release operations in
-verified MIR and execute as owning graph edges on x86-64. Other broader shared
-uses remain behind a structured lowering gate. The x86-64 backend executes the
+verified MIR and execute as owning graph edges on x86-64. Compatible owner
+up-views and stable local/parameter pointee places retain canonical header,
+complete-payload, static-target, access, and metadata provenance through HIR
+and MIR. Direct, virtual, and interface calls, inherited projections, mutable
+pointee access, and `is` use those places on x86-64. Other broader shared uses
+remain behind a structured lowering gate. The x86-64 backend executes the
 frozen handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
 deallocation. [Runtime ABI version
@@ -131,6 +135,15 @@ CFG joins require identical shared allocation and owner states. These
 operations are target-independent and carry no handle size, header offset, or
 runtime symbol.
 
+`MirPlaceBase::SharedPointee(owner)` is the target-independent root for a
+borrowed payload place. Its owner must be a live stable local or value
+parameter with a compatible shared target. Base and field identities remain
+semantic projections. `MirObjectOrigin::Shared` separately retains the
+canonical owner, source static target, and access; its complete address and
+metadata are deliberately derived only at the backend boundary. Verification
+checks the target and projection relation, mutable access, origin agreement,
+owner liveness at every use, and direct-versus-dynamic dispatch selection.
+
 At a call boundary, caller-owned argument storage is initialized by copying a
 named owner or adopting a produced owner and is then consumed exactly once by
 the call. The corresponding callee value parameter begins live, may be
@@ -228,6 +241,12 @@ The header pointer is the canonical owned identity. The backend derives the
 complete payload address by adding 16 and derives dynamic identity and dispatch
 from the metadata field. Base and field projections are then applied to the
 payload using existing checked target layout.
+
+The current backend performs that derivation directly: a shared-pointee place
+starts at header offset 16, while shared object origins load metadata at offset
+8. Existing class layouts, dispatch descriptors, virtual slots, interface
+witness entries, and metadata-membership tests are reused. No view, dispatch,
+or type-test helper is added to the C runtime.
 
 A shared field is one eight-byte, eight-aligned canonical header handle. It
 follows the ordinary base-prefix and field-padding rules and therefore does not

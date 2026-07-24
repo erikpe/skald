@@ -1,14 +1,11 @@
 //! Checked strong-count transitions for a handle already loaded in `rax`.
 
 use crate::backend::x86_64_sysv::{
-    layout::SHARED_HEADER_SIZE,
+    layout::{SHARED_DYNAMIC_METADATA_OFFSET, SHARED_HEADER_SIZE},
     machine::{Instruction, Label, Operand, Register},
 };
 
-use super::{
-    super::value, DYNAMIC_METADATA_OFFSET, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE,
-    STRONG_COUNT_OFFSET,
-};
+use super::{super::value, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET};
 
 pub(super) fn emit_retain_loaded_handle(failure: Label, output: &mut Vec<Instruction>) {
     output.push(Instruction::Test(Register::Rax));
@@ -86,7 +83,7 @@ pub(in super::super) fn emit_release_loaded_handle(
         destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
     });
     output.push(Instruction::Move {
-        source: value::memory(Register::Rax, DYNAMIC_METADATA_OFFSET),
+        source: value::memory(Register::Rax, SHARED_DYNAMIC_METADATA_OFFSET),
         destination: Register::R11.into(),
     });
     output.push(Instruction::Test(Register::R11));

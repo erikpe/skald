@@ -16,6 +16,28 @@ use super::{
 };
 
 impl<'mir> Verifier<'mir> {
+    pub(super) fn shared_target_accepts(
+        &self,
+        expected: MirSharedTarget,
+        actual: MirSharedTarget,
+    ) -> bool {
+        match expected {
+            MirSharedTarget::Obj => true,
+            MirSharedTarget::Class(expected) => matches!(
+                actual,
+                MirSharedTarget::Class(actual)
+                    if actual == expected || self.program.is_ancestor(expected, actual)
+            ),
+            MirSharedTarget::Interface(expected) => match actual {
+                MirSharedTarget::Class(actual) => {
+                    self.program.conformance(actual, expected).is_some()
+                }
+                MirSharedTarget::Interface(actual) => actual == expected,
+                MirSharedTarget::Obj => false,
+            },
+        }
+    }
+
     pub(super) fn verify_shared_target_declared(
         &mut self,
         callable: CallableId,
@@ -133,13 +155,18 @@ impl<'mir> Verifier<'mir> {
                     | MirStorageKind::Temporary
                     | MirStorageKind::Argument
                     | MirStorageKind::Return
-            ) && allocation_class
-                .is_some_and(|class| storage.ty == MirType::Shared(MirSharedTarget::Class(class)))
+            ) && allocation_class.is_some_and(|class| {
+                matches!(
+                    storage.ty,
+                    MirType::Shared(target)
+                        if self.shared_target_accepts(target, MirSharedTarget::Class(class))
+                )
+            })
         }) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared adoption requires compatible exact-class destination owner storage",
+                "shared adoption requires a compatible destination owner target",
             );
         }
     }
@@ -178,13 +205,16 @@ impl<'mir> Verifier<'mir> {
                             | MirStorageKind::Argument
                             | MirStorageKind::Return
                     )
-                    && matches!(destination.ty, MirType::Shared(_))
-                    && destination.ty == source.ty
+                    && matches!(
+                        (destination.ty, source.ty),
+                        (MirType::Shared(expected), MirType::Shared(actual))
+                            if self.shared_target_accepts(expected, actual)
+                    )
         ) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared copy requires matching source and destination owner storage",
+                "shared copy requires compatible source and destination owner storage",
             );
         }
     }
@@ -205,8 +235,11 @@ impl<'mir> Verifier<'mir> {
                     MirStorageKind::Local | MirStorageKind::Parameter
                 )
                     && source.kind == MirStorageKind::Temporary
-                    && matches!(destination.ty, MirType::Shared(_))
-                    && destination.ty == source.ty
+                    && matches!(
+                        (destination.ty, source.ty),
+                        (MirType::Shared(expected), MirType::Shared(actual))
+                            if self.shared_target_accepts(expected, actual)
+                    )
         ) {
             self.block_error(
                 function.callable(),
@@ -234,8 +267,11 @@ impl<'mir> Verifier<'mir> {
                         | MirStorageKind::Argument
                         | MirStorageKind::Return
                 )
-                    && matches!(destination.ty, MirType::Shared(_))
-                    && destination.ty == source.ty
+                    && matches!(
+                        (destination.ty, source.ty),
+                        (MirType::Shared(expected), MirType::Shared(actual))
+                            if self.shared_target_accepts(expected, actual)
+                    )
                     && matches!(
                         copy.source.projections.last(),
                         Some(super::super::model::MirPlaceProjection::Field(_))
@@ -244,7 +280,7 @@ impl<'mir> Verifier<'mir> {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared field copy requires a matching shared field and fresh owner storage",
+                "shared field copy requires a compatible shared field and fresh owner storage",
             );
         }
     }
@@ -475,6 +511,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
 
     fn apply_block(&mut self, block: &MirBasicBlock, state: &mut SharedState) {
         for instruction in &block.instructions {
+            self.check_pointee_uses(block.id, state, instruction);
             match instruction {
                 MirInstruction::SharedAllocate(allocation) => {
                     if state
@@ -650,6 +687,89 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     state.pending_full_expression_boundary |= transferred;
                 }
             }
+        }
+    }
+
+    fn check_pointee_uses(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        instruction: &MirInstruction,
+    ) {
+        match instruction {
+            MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
+                super::super::model::MirRvalueKind::Load(place) => {
+                    self.require_live_pointee(block, state, place)
+                }
+                super::super::model::MirRvalueKind::TypeTest { source, .. } => {
+                    self.require_live_pointee(block, state, &source.source);
+                    self.require_live_shared_origin(block, state, &source.origin);
+                }
+                _ => {}
+            },
+            MirInstruction::Store(store) => {
+                self.require_live_pointee(block, state, &store.destination)
+            }
+            MirInstruction::Call(call) => {
+                if let Some(receiver) = &call.receiver {
+                    match receiver {
+                        super::super::model::MirCallReceiver::Method(receiver) => {
+                            self.require_live_pointee(block, state, &receiver.place);
+                            self.require_live_shared_origin(block, state, &receiver.origin);
+                        }
+                        super::super::model::MirCallReceiver::Interface(view) => {
+                            self.require_live_pointee(block, state, &view.source);
+                            self.require_live_shared_origin(block, state, &view.origin);
+                        }
+                    }
+                }
+                for argument in &call.arguments {
+                    if let MirArgument::Place(place) = argument {
+                        self.require_live_pointee(block, state, place);
+                    } else if let MirArgument::View(view) = argument {
+                        self.require_live_pointee(block, state, &view.source);
+                        self.require_live_shared_origin(block, state, &view.origin);
+                    }
+                }
+            }
+            MirInstruction::SharedFieldCopy(copy) => {
+                self.require_live_pointee(block, state, &copy.source)
+            }
+            MirInstruction::SharedFieldInitialize(initialize) => {
+                self.require_live_pointee(block, state, &initialize.destination)
+            }
+            MirInstruction::SharedFieldReplace(replace) => {
+                self.require_live_pointee(block, state, &replace.destination)
+            }
+            _ => {}
+        }
+    }
+
+    fn require_live_pointee(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        place: &super::super::model::MirPlace,
+    ) {
+        let super::super::model::MirPlaceBase::SharedPointee(owner) = place.base else {
+            return;
+        };
+        if !state.live_owners.contains(&owner) {
+            self.error(block, "shared pointee is used without a live owner");
+        }
+    }
+
+    fn require_live_shared_origin(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        origin: &super::super::model::MirObjectOrigin,
+    ) {
+        let super::super::model::MirObjectOrigin::Shared { owner, .. } = origin else {
+            return;
+        };
+        if !state.live_owners.contains(owner) {
+            self.error(block, "shared object origin is used without a live owner");
         }
     }
 

@@ -589,6 +589,16 @@ fn dump_object_origin(output: &mut String, origin: &MirObjectOrigin) {
             }
             output.push(')');
         }
+        MirObjectOrigin::Shared {
+            owner,
+            static_target,
+            access,
+            ..
+        } => {
+            let _ = write!(output, "shared({owner} : ");
+            dump_view_target(output, *static_target);
+            let _ = write!(output, " {access})");
+        }
     }
 }
 
@@ -673,6 +683,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
         }
         MirPlaceBase::CheckedView(storage) => {
             let _ = write!(output, "checked({storage})");
+        }
+        MirPlaceBase::SharedPointee(storage) => {
+            let _ = write!(output, "shared-pointee({storage})");
         }
     }
     for projection in &place.projections {

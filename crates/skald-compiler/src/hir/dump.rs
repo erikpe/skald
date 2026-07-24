@@ -877,6 +877,19 @@ impl HirDumper {
                     ),
                     *span,
                 ),
+                HirViewSource::Shared {
+                    binding,
+                    target,
+                    access,
+                    span,
+                } => dumper.line(
+                    &format!(
+                        "SharedPointee {binding} : {} {}",
+                        view_target_name(*target),
+                        access_name(*access)
+                    ),
+                    *span,
+                ),
             }
             dumper.object_origin(&view.origin);
         });
@@ -989,6 +1002,19 @@ impl HirDumper {
                 dynamic_class,
                 span,
             } => self.line(&format!("Origin Produced dynamic {dynamic_class}"), *span),
+            HirObjectOrigin::Shared {
+                binding,
+                static_target,
+                access,
+                span,
+            } => self.line(
+                &format!(
+                    "Origin Shared {binding} : {} {}",
+                    view_target_name(*static_target),
+                    access_name(*access)
+                ),
+                *span,
+            ),
         }
     }
 

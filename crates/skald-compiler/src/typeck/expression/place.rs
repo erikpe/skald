@@ -269,15 +269,18 @@ impl CallableChecker<'_, '_> {
         span: Span,
         allow_initializing_self: bool,
     ) -> Option<HirObjectPlace> {
-        let Type::Class(class) = self.binding_type(binding) else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INVALID_ALIAS_ARGUMENT,
-                    "alias argument must designate an object",
-                )
-                .with_primary_label(span, "this binding has a primitive type"),
-            );
-            return None;
+        let class = match self.binding_type(binding) {
+            Type::Class(class) | Type::Shared(crate::hir::HirSharedTarget::Class(class)) => class,
+            _ => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_ALIAS_ARGUMENT,
+                        "alias argument must designate an object",
+                    )
+                    .with_primary_label(span, "this binding has a primitive type"),
+                );
+                return None;
+            }
         };
         let access = self.binding_access(binding, allow_initializing_self, span)?;
         Some(HirObjectPlace {

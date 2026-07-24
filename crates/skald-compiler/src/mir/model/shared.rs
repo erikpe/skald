@@ -17,6 +17,16 @@ pub enum MirSharedTarget {
     Interface(InterfaceId),
 }
 
+impl MirSharedTarget {
+    pub const fn ty(self) -> super::value::MirType {
+        match self {
+            Self::Obj => super::value::MirType::Obj,
+            Self::Class(class) => super::value::MirType::Class(class),
+            Self::Interface(interface) => super::value::MirType::Interface(interface),
+        }
+    }
+}
+
 impl fmt::Display for MirSharedTarget {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

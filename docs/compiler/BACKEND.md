@@ -279,20 +279,23 @@ verified plan through derived bodies, recursively projected fields, and the
 base chain. No path performs implicit allocation, deallocation, or aggregate
 runtime copy.
 
-The shared-ownership extension provides explicit verified exact-class ordinary
+The shared-ownership extension provides explicit verified ordinary
 allocation, publication, adoption, named-owner copy, ownership move, and
 release operations. Its one-word
 handle, allocation header, dynamic finalizer, and internal ABI rules are fixed
 in [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-representation).
-The current backend executes exact-class shared local initialization and
+The current backend executes compatible shared local initialization and
 assignment from named owners and ordinary allocations, including checked
 retain, secure-before-release replacement, dynamic complete destruction, and
 exact-base deallocation. Internal shared parameters use one integer-class word
 in the existing register/stack classifier, and shared results use `rax`
 without the hidden destination reserved for inline class results. Functions,
 initializers, methods, interface calls, recursion, and mixed argument pressure
-all use this same call facade. Field, polymorphic-view, cast, and anchor
-contexts remain gated by their owning frontend or MIR phases.
+all use this same call facade. Stable shared local/parameter pointee places
+derive their complete payload at header offset 16 and dynamic metadata at
+offset 8, then reuse ordinary field layout, virtual/interface dispatch, and
+type-test machinery. Shared-backed alias, cast, and anchor contexts remain
+gated by their owning frontend or MIR phases.
 
 ## Symbols and process entry
 

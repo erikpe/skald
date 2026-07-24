@@ -460,7 +460,11 @@ impl<'mir> Verifier<'mir> {
                             | MirStorageKind::Temporary
                             | MirStorageKind::Argument
                             | MirStorageKind::Return
-                    ) && storage.ty == MirType::Shared(target)
+                    ) && matches!(
+                        storage.ty,
+                        MirType::Shared(destination)
+                            if self.shared_target_accepts(destination, target)
+                    )
                 })
             });
             if !valid {

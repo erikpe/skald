@@ -167,6 +167,118 @@ fn carries_named_and_produced_owners_through_parameters_and_results() {
 }
 
 #[test]
+fn shared_upviews_retain_header_provenance_for_members_dispatch_and_type_tests() {
+    let program = lower_text(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Root implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Middle extends Root { init(value: i64) { super(value); } }\n",
+        "class Leaf extends Middle {\n",
+        "  extra: i64;\n",
+        "  init(value: i64, extra: i64) { super(value); self.extra = extra; }\n",
+        "  override fn read() -> i64 { return self.value + self.extra; }\n",
+        "  mut fn bump() -> i64 { self.value = self.value + 1; return self.value; }\n",
+        "}\n",
+        "fn classify(value: shared Obj) -> i64 {\n",
+        "  if (value is Leaf) { return 1; } else { return 0; }\n",
+        "}\n",
+        "fn relay(value: shared Root) -> i64 { return value.read(); }\n",
+        "fn bump(value: shared Leaf) -> i64 { return value.bump(); }\n",
+        "fn main() -> i64 {\n",
+        "  var leaf: shared Leaf = new Leaf(10, 5);\n",
+        "  var root: shared Root = leaf;\n",
+        "  var readable: shared Readable = leaf;\n",
+        "  var erased: shared Obj = leaf;\n",
+        "  var bumped: i64 = bump(leaf);\n",
+        "  return bumped + root.read() + readable.read() + relay(leaf) + classify(erased);\n",
+        "}\n",
+    ));
+    verify_mir(&program).expect("shared polymorphic views must verify");
+    let dump = dump_mir(&program);
+    assert!(dump.contains("shared-pointee("));
+    assert!(dump.contains("origin shared("));
+    assert!(dump.contains("virtual "));
+    assert!(dump.contains("interface "));
+    assert!(dump.contains("type-test view(shared-pointee("));
+
+    let assembly = emit_assembly(Target::X86_64SysV, &program)
+        .expect("shared polymorphic views must reach the backend");
+    assert!(assembly.contains(" + 16]"));
+    assert!(assembly.contains(" + 8]"));
+}
+
+#[test]
+fn rejects_corrupt_shared_pointee_origin_and_dead_owner_use() {
+    let program = lower_text(concat!(
+        "class Root {\n",
+        "  init() {}\n",
+        "  virtual fn read() -> i64 { return 1; }\n",
+        "}\n",
+        "class Leaf extends Root {\n",
+        "  init() { super(); }\n",
+        "  override fn read() -> i64 { return 2; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var value: shared Root = new Leaf();\n",
+        "  return value.read();\n",
+        "}\n",
+    ));
+
+    let mut wrong_origin = program.clone();
+    let call = main_instructions_mut(&mut wrong_origin)
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Call(call) if call.receiver.is_some() => Some(call),
+            _ => None,
+        })
+        .unwrap();
+    let receiver = call.receiver.as_mut().unwrap().as_method_mut().unwrap();
+    let MirObjectOrigin::Shared { static_target, .. } = receiver.origin.as_mut() else {
+        panic!("shared receiver must retain a shared origin");
+    };
+    *static_target = MirViewTarget::Obj;
+    assert!(has_error(
+        &wrong_origin,
+        "shared origin requires a stable owner with the declared static target"
+    ));
+
+    let mut dead_owner = program;
+    let instructions = main_instructions_mut(&mut dead_owner);
+    let call_index = instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::Call(call) if call.receiver.is_some()))
+        .unwrap();
+    let owner = match &instructions[call_index] {
+        MirInstruction::Call(call) => {
+            let receiver = call.receiver.as_ref().unwrap().as_method().unwrap();
+            let MirObjectOrigin::Shared { owner, .. } = receiver.origin.as_ref() else {
+                panic!("shared receiver must retain a shared owner");
+            };
+            *owner
+        }
+        _ => unreachable!(),
+    };
+    instructions.insert(
+        call_index,
+        MirInstruction::SharedRelease(MirSharedRelease {
+            owner,
+            span: instructions[call_index].span(),
+        }),
+    );
+    assert!(has_error(
+        &dead_owner,
+        "shared pointee is used without a live owner"
+    ));
+    assert!(has_error(
+        &dead_owner,
+        "shared object origin is used without a live owner"
+    ));
+}
+
+#[test]
 fn lowers_shared_fields_as_owner_edges_in_lifecycle_order() {
     let program = lower_text(concat!(
         "class Item { init() {} }\n",
@@ -536,7 +648,7 @@ fn rejects_wrong_target_and_non_new_allocation() {
     owner.ty = MirType::Shared(MirSharedTarget::Class(ClassId::new(99)));
     assert!(has_error(
         &wrong_target,
-        "requires compatible exact-class destination owner storage"
+        "requires a compatible destination owner target"
     ));
 
     let mut non_new = exact_owner_program();

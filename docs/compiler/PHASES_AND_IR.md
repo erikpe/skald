@@ -209,8 +209,8 @@ implicit up-views. Inline values and aliases do not implicitly manufacture an
 owner, external shared signatures remain invalid, and explicit copy allocation
 and shared-owner casts remain structured typed exclusions.
 
-MIR lowering accepts exact-class shared local initialization and assignment
-from named owners and ordinary allocations. It also carries same-target shared
+MIR lowering accepts compatible shared local initialization and assignment
+from named owners and ordinary allocations. It also carries compatible shared
 owners through internal function, initializer, method, and interface
 parameters and results. Named sources copy, produced sources adopt, calls
 consume caller argument owners, callees normally release parameter owners, and
@@ -222,9 +222,13 @@ distinguishes field-owner copying, initialization, replacement, synthesized
 shared-field copy steps, and reverse-order shared-field destruction from
 inline containment. The verifier checks field type, access, transfer
 ownership, exact initialization on normal initializer returns, lifecycle
-metadata, and control-flow agreement. A structured
-`HirLoweringError::UnsupportedSharedOwnership` gate remains for polymorphic
-transfers and views, casts, and anchors.
+metadata, and control-flow agreement. Stable shared locals and value
+parameters lower to explicit shared-pointee places and shared object origins
+for inherited projection, mutable member access, virtual/interface dispatch,
+and `is`. The verifier ties every such place to a live owner and compatible
+header metadata. A structured `HirLoweringError::UnsupportedSharedOwnership`
+gate remains for shared-owner casts, shared-backed alias borrowing, anchors,
+and explicit copy allocation.
 
 ## MIR
 

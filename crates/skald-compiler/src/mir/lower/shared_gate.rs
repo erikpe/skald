@@ -1,12 +1,12 @@
-//! Deliberate gate around the executable exact-target shared-owner subset.
+//! Deliberate gate around executable shared-owner operations not yet lowered.
 
 use std::collections::HashSet;
 
 use crate::{
     hir::{
         HirBlock, HirCallArgument, HirLocal, HirLocalInitializer, HirOwnerTransfer, HirProgram,
-        HirReturnValue, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTarget,
-        HirSharedTransfer, HirStatement, Type,
+        HirReturnValue, HirSharedPlace, HirSharedProducer, HirSharedSource, HirSharedTransfer,
+        HirStatement, Type,
     },
     identity::LocalId,
     source::Span,
@@ -60,7 +60,7 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
             HirStatement::Local(local) => match &local.initializer {
                 HirLocalInitializer::Shared(transfer) => {
                     pending.remove(&local.local);
-                    if !supports_exact_local_transfer(transfer) {
+                    if !supports_transfer(transfer) {
                         return Some(transfer.span);
                     }
                 }
@@ -81,7 +81,7 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
                 }
             },
             HirStatement::Return(result) => match &result.value {
-                Some(HirReturnValue::Shared(transfer)) if !supports_exact_transfer(transfer) => {
+                Some(HirReturnValue::Shared(transfer)) if !supports_transfer(transfer) => {
                     return Some(transfer.span);
                 }
                 Some(HirReturnValue::Scalar(expression))
@@ -116,14 +116,14 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
             HirStatement::CopyAssignment(copy) if !source_supports_shared(&copy.source) => {
                 return Some(copy.span);
             }
-            HirStatement::SharedFieldWrite(write) if !supports_exact_transfer(&write.value) => {
+            HirStatement::SharedFieldWrite(write) if !supports_transfer(&write.value) => {
                 return Some(write.span);
             }
             HirStatement::SharedAssignment(assignment) => {
                 if !matches!(
                     assignment.destination,
                     crate::identity::BindingId::Local(_) | crate::identity::BindingId::Parameter(_)
-                ) || !supports_exact_transfer(&assignment.value)
+                ) || !supports_transfer(&assignment.value)
                 {
                     return Some(assignment.span);
                 }
@@ -158,27 +158,20 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
     None
 }
 
-fn supports_exact_local_transfer(transfer: &HirSharedTransfer) -> bool {
-    supports_exact_transfer(transfer)
-}
-
-fn supports_exact_transfer(transfer: &HirSharedTransfer) -> bool {
+fn supports_transfer(transfer: &HirSharedTransfer) -> bool {
     match &transfer.source {
-        HirSharedSource::Place(HirSharedPlace::Binding { target, .. }) => {
-            transfer.operation == HirOwnerTransfer::Copy && transfer.target == *target
+        HirSharedSource::Place(HirSharedPlace::Binding { .. }) => {
+            transfer.operation == HirOwnerTransfer::Copy
         }
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
             transfer.operation == HirOwnerTransfer::Adopt
-                && transfer.target == HirSharedTarget::Class(allocation.class)
                 && arguments_support_shared(&allocation.arguments)
         }
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
-            transfer.operation == HirOwnerTransfer::Adopt
-                && transfer.target == transfer.source.target()
-                && expression_supports_shared(call)
+            transfer.operation == HirOwnerTransfer::Adopt && expression_supports_shared(call)
         }
-        HirSharedSource::Place(HirSharedPlace::Field { target, .. }) => {
-            transfer.operation == HirOwnerTransfer::Copy && transfer.target == *target
+        HirSharedSource::Place(HirSharedPlace::Field { .. }) => {
+            transfer.operation == HirOwnerTransfer::Copy
         }
     }
 }
@@ -187,7 +180,7 @@ fn arguments_support_shared(arguments: &[HirCallArgument]) -> bool {
     arguments.iter().all(|argument| match argument {
         HirCallArgument::Value(expression) => expression_supports_shared(expression),
         HirCallArgument::Copy(copy) => source_supports_shared(&copy.source),
-        HirCallArgument::Shared(transfer) => supports_exact_transfer(transfer),
+        HirCallArgument::Shared(transfer) => supports_transfer(transfer),
         HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::CheckedView(_) => {
             true
         }

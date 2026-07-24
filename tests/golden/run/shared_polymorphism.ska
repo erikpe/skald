@@ -1,0 +1,55 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Root implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Middle extends Root {
+    init(value: i64) {
+        super(value);
+    }
+}
+
+class Leaf extends Middle {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = extra;
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+}
+
+fn classify(value: shared Obj) -> i64 {
+    if (value is Leaf) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+fn main() -> i64 {
+    var leaf: shared Leaf = new Leaf(10, 5);
+    var root: shared Root = leaf;
+    var readable: shared Readable = leaf;
+    var erased: shared Obj = leaf;
+    ska_rt_println_i64(root.read());
+    ska_rt_println_i64(readable.read());
+    ska_rt_println_i64(classify(erased));
+    return 0;
+}

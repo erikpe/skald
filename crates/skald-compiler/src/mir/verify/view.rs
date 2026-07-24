@@ -161,7 +161,87 @@ impl Verifier<'_> {
                 *access,
                 *dispatch_limit,
             ),
+            MirObjectOrigin::Shared {
+                owner,
+                static_target,
+                access,
+                ..
+            } => self.verify_shared_origin(site, *owner, *static_target, *access),
         }
+    }
+
+    fn verify_shared_origin(
+        &mut self,
+        site: OriginSite<'_>,
+        owner: super::super::model::StorageId,
+        static_target: MirViewTarget,
+        access: MirAliasAccess,
+    ) -> Option<VerifiedOrigin> {
+        let Some(storage) = site.function.storage(owner) else {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!("{} shared origin owner {owner} is not declared", site.kind),
+            );
+            return None;
+        };
+        let valid_owner = matches!(
+            storage.kind,
+            MirStorageKind::Local | MirStorageKind::Parameter
+        ) && storage.ty
+            == MirType::Shared(match static_target {
+                MirViewTarget::Class(class) => super::super::model::MirSharedTarget::Class(class),
+                MirViewTarget::Interface(interface) => {
+                    super::super::model::MirSharedTarget::Interface(interface)
+                }
+                MirViewTarget::Obj => super::super::model::MirSharedTarget::Obj,
+            });
+        if !valid_owner {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} shared origin requires a stable owner with the declared static target",
+                    site.kind
+                ),
+            );
+        }
+        if site.subject.base != MirPlaceBase::SharedPointee(owner)
+            || site
+                .subject
+                .projections
+                .iter()
+                .any(|projection| matches!(projection, MirPlaceProjection::Field(_)))
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} static place does not come from its shared owner payload",
+                    site.kind
+                ),
+            );
+        }
+        if access != MirAliasAccess::Mutable
+            || site
+                .subject_metadata
+                .is_some_and(|place| place.access != access)
+        {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!("{} shared origin access is inconsistent", site.kind),
+            );
+        }
+        let static_class = match static_target {
+            MirViewTarget::Class(class) => Some(class),
+            MirViewTarget::Interface(_) | MirViewTarget::Obj => None,
+        };
+        Some(VerifiedOrigin {
+            static_class,
+            forwarded: true,
+            dispatch_limited: false,
+        })
     }
 
     fn verify_exact_origin(

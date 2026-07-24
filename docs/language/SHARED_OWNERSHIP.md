@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; exact-target owners and executable shared fields implemented**. This
+Status: **frozen design; polymorphic owners and shared fields implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -16,8 +16,12 @@ initializers, methods, and interface requirements, including produced
 arguments and results. Shared fields participate in initialization, field
 replacement, copying, assignment, and destruction in typed HIR and verified
 MIR, and execute as one-word owning edges on x86-64.
-Polymorphic views, explicit copy allocation, shared-owner casts, and anchors
-remain unavailable.
+Compatible shared up-views, stable shared-local and value-parameter member
+access, virtual/interface dispatch, and `is` type tests now execute without
+changing allocation identity or dynamic metadata. Shared-backed alias
+arguments and checked place casts still require the later hidden-anchor
+slices. Explicit copy allocation, shared-owner casts, and anchors remain
+unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
@@ -77,12 +81,11 @@ selects `T`'s copy-constructor capability exactly once in the new allocation.
 The marker takes exactly one source and does not form an ordinary initializer
 argument. Conversely, `new T(source)` participates only in ordinary
 initializer overload resolution and never falls back to copy construction.
-Ordinary allocation and initializer selection cross typed HIR. Exact-class
-local initialization and assignment from both named and newly allocated
-owners, plus same-target internal callable parameters and results, also cross
+Ordinary allocation and initializer selection cross typed HIR. Compatible
+same/ancestor/interface/`Obj` owner transfers, local initialization and
+assignment, internal callable parameters and results, shared fields, and
+polymorphic use through stable shared locals and value parameters cross
 verified target-independent MIR and execute on the current x86-64 backend.
-Polymorphic owner conversions and field-owning contexts remain staged
-implementation work.
 Explicit copy allocation remains a typed diagnostic until its checked source,
 anchor, and copy-constructor operation can be represented together.
 
@@ -206,6 +209,20 @@ Non-owning aliases remain deliberately non-exclusive. Multiple overlapping
 alias arguments are legal for inline objects. Effects follow source evaluation
 order; Skald does not promise data-race safety or thread-safe sharing in this
 initial profile.
+
+Stable shared locals and value parameters may be used directly as class method
+receivers and as the roots of inherited base and field projections. A
+`shared Interface` may call that interface's requirements. These operations
+borrow the existing payload for the duration of the expression; they do not
+create an owner, allocate, copy, slice, or replace the handle's static target.
+The shared owner itself remains live for the complete operation. Borrowing
+from a replaceable shared field or passing a shared-backed alias beyond this
+stable expression boundary is reserved for the hidden-anchor implementation.
+
+The expression `owner is T` is available for shared class, interface, and
+`Obj` owners. It reads the allocation header's dynamic metadata and neither
+retains nor releases the owner. Statically guaranteed and impossible outcomes
+use the same closed-world classifier as inline and alias sources.
 
 ## Shared fields and lifecycle
 

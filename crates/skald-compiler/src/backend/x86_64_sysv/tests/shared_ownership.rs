@@ -251,6 +251,133 @@ fn shared_parameters_and_results_use_integer_arguments_and_rax_without_hidden_de
     assert_system_assembler_accepts(&output);
 }
 
+#[test]
+fn shared_views_execute_deep_virtual_interface_and_mutable_member_access() {
+    let mut output = assembly(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Root implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Middle extends Root { init(value: i64) { super(value); } }\n",
+        "class Leaf extends Middle {\n",
+        "  extra: i64;\n",
+        "  init(value: i64, extra: i64) { super(value); self.extra = extra; }\n",
+        "  override fn read() -> i64 { return self.value + self.extra; }\n",
+        "  mut fn bump() -> i64 { self.value = self.value + 1; return self.value; }\n",
+        "}\n",
+        "fn bump(value: shared Leaf) -> i64 { return value.bump(); }\n",
+        "fn main() -> i64 {\n",
+        "  var leaf: shared Leaf = new Leaf(10, 5);\n",
+        "  var root: shared Root = leaf;\n",
+        "  var readable: shared Readable = leaf;\n",
+        "  var erased: shared Obj = leaf;\n",
+        "  var bumped: i64 = bump(leaf);\n",
+        "  if (root is Leaf) {\n",
+        "    if (readable is Leaf) {\n",
+        "      if (erased is Leaf) { return bumped + root.read() + readable.read(); }\n",
+        "    }\n",
+        "  }\n",
+        "  return 1;\n",
+        "}\n",
+    ));
+    output.push_str(simple_ownership_stubs());
+
+    let status = run_native_assembly(&output);
+    assert_eq!(status.code(), Some(43));
+}
+
+#[test]
+fn intentional_strong_cycle_leaks_while_acyclic_controls_finalize() {
+    let mut output = assembly(concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn report() -> i64;\n",
+        "class Seed {\n",
+        "  init() {}\n",
+        "  destroy { observe(10); }\n",
+        "}\n",
+        "class Node {\n",
+        "  edge: shared Obj;\n",
+        "  init(edge: shared Obj) { self.edge = edge; }\n",
+        "  destroy { observe(1); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  {\n",
+        "    var seed: shared Obj = new Seed();\n",
+        "    var left: shared Node = new Node(seed);\n",
+        "    var right: shared Node = new Node(left);\n",
+        "    left.edge = right;\n",
+        "    var control: shared Seed = new Seed();\n",
+        "  }\n",
+        "  return report();\n",
+        "}\n",
+    ));
+    output.push_str(cycle_observer_stubs());
+
+    let status = run_native_assembly(&output);
+    assert_eq!(status.code(), Some(0));
+}
+
+fn simple_ownership_stubs() -> &'static str {
+    concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
+fn cycle_observer_stubs() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".align 8\n",
+        ".Lcycle_observe_count: .zero 8\n",
+        ".Lcycle_observe_sum: .zero 8\n",
+        ".Lcycle_free_count: .zero 8\n",
+        "\n.text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    inc qword ptr [rip + .Lcycle_observe_count]\n",
+        "    add qword ptr [rip + .Lcycle_observe_sum], rdi\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl report\n",
+        ".type report, @function\n",
+        "report:\n",
+        "    mov rax, 1\n",
+        "    cmp qword ptr [rip + .Lcycle_observe_count], 2\n",
+        "    jne .Lcycle_report_done\n",
+        "    cmp qword ptr [rip + .Lcycle_observe_sum], 20\n",
+        "    jne .Lcycle_report_done\n",
+        "    cmp qword ptr [rip + .Lcycle_free_count], 2\n",
+        "    jne .Lcycle_report_done\n",
+        "    xor rax, rax\n",
+        ".Lcycle_report_done:\n",
+        "    ret\n",
+        ".size report, .-report\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    inc qword ptr [rip + .Lcycle_free_count]\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
 fn native_ownership_stubs() -> &'static str {
     concat!(
         "\n.text\n",

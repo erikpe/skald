@@ -14,6 +14,7 @@ use crate::{
 
 use super::{
     super::{
+        layout::SHARED_DYNAMIC_METADATA_OFFSET,
         machine::{Instruction, Label, Register},
         symbol,
     },
@@ -26,7 +27,6 @@ pub(super) use count::emit_release_loaded_handle;
 use count::emit_retain_loaded_handle;
 
 const STRONG_COUNT_OFFSET: i32 = 0;
-const DYNAMIC_METADATA_OFFSET: i32 = 8;
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
 const RUNTIME_FREE: &str = "ska_rt_free";
 const PRESERVED_HANDLE_STACK_SIZE: u32 = 16;
@@ -73,7 +73,7 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         value::store_rax(
-            value::memory(Register::R11, DYNAMIC_METADATA_OFFSET),
+            value::memory(Register::R11, SHARED_DYNAMIC_METADATA_OFFSET),
             self.output,
         );
         self.output.push(Instruction::MoveImmediate64 {

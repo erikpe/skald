@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     abi,
-    layout::{DataLayout, SHARED_HANDLE_ALIGNMENT, SHARED_HANDLE_SIZE},
+    layout::{DataLayout, SHARED_HANDLE_ALIGNMENT, SHARED_HANDLE_SIZE, SHARED_HEADER_SIZE},
 };
 
 const SCALAR_HOME_SIZE: usize = 8;
@@ -31,6 +31,7 @@ pub(super) enum FramePlaceBase {
     Receiver { home: i32 },
     OwnedParameter { home: i32 },
     Alias { home: i32 },
+    SharedPointee { home: i32 },
 }
 
 impl FramePlaceBase {
@@ -40,7 +41,8 @@ impl FramePlaceBase {
             Self::Return { home }
             | Self::Receiver { home }
             | Self::OwnedParameter { home }
-            | Self::Alias { home } => Some(home),
+            | Self::Alias { home }
+            | Self::SharedPointee { home } => Some(home),
         }
     }
 }
@@ -211,9 +213,19 @@ impl FrameLayout {
                 },
                 0,
             ),
+            MirPlaceBase::SharedPointee(_) => (
+                FramePlaceBase::SharedPointee {
+                    home: self.storage(storage_id),
+                },
+                i32::try_from(SHARED_HEADER_SIZE)
+                    .map_err(|_| place_address_error(function.callable()))?,
+            ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
         };
-        let mut ty = storage.ty;
+        let mut ty = match (place.base, storage.ty) {
+            (MirPlaceBase::SharedPointee(_), MirType::Shared(target)) => target.ty(),
+            _ => storage.ty,
+        };
         for projection in &place.projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {
