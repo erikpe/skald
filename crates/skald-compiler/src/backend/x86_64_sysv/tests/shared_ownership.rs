@@ -108,6 +108,29 @@ fn verified_copy_fixture_contains_checked_count_overflow_termination() {
     assert_system_assembler_accepts(&output);
 }
 
+#[test]
+fn shared_parameters_and_results_use_integer_arguments_and_rax_without_hidden_destination() {
+    let output = assembly(concat!(
+        "class Widget { init() {} }\n",
+        "fn forward(value: shared Widget) -> shared Widget { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var source: shared Widget = new Widget();\n",
+        "  var result: shared Widget = forward(source);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    let forward = output
+        .split(".Lska_fn_0:")
+        .nth(1)
+        .and_then(|tail| tail.split(".size .Lska_fn_0").next())
+        .expect("forward function assembly");
+    assert!(forward.contains("mov qword ptr [rbp - 16], rdi"));
+    assert!(forward.contains("mov rax, qword ptr [rbp - 8]"));
+    assert!(!forward.contains("mov qword ptr [rbp - 8], rdi"));
+    assert_system_assembler_accepts(&output);
+}
+
 fn native_ownership_stubs() -> &'static str {
     concat!(
         "\n.text\n",

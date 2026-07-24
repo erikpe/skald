@@ -210,12 +210,15 @@ owner, external shared signatures remain invalid, and explicit copy allocation
 and shared-owner casts remain structured typed exclusions.
 
 MIR lowering accepts exact-class shared local initialization and assignment
-from named owners and ordinary allocations. Named sources copy, produced
-sources adopt, assignment secures an owning temporary before releasing its
-destination and moves that temporary into the destination, and
-full-expression cleanup releases any remaining owning temporaries in reverse
-order. A structured `HirLoweringError::UnsupportedSharedOwnership` gate remains
-for shared signatures, fields, polymorphic transfers and views, and results.
+from named owners and ordinary allocations. It also carries same-target shared
+owners through internal function, initializer, method, and interface
+parameters and results. Named sources copy, produced sources adopt, calls
+consume caller argument owners, callees normally release parameter owners, and
+shared returns escape through one dedicated result owner after cleanup.
+Assignment secures an owning temporary before releasing its destination and
+moves that temporary into the destination. A structured
+`HirLoweringError::UnsupportedSharedOwnership` gate remains for shared fields,
+polymorphic transfers and views, casts, and anchors.
 
 ## MIR
 

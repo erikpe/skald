@@ -97,6 +97,7 @@ impl BodyLowerer<'_> {
             receiver,
             arguments,
             result: None,
+            shared_result: None,
             destination: Some(destination),
             span: call.span,
         }));

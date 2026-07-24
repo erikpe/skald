@@ -3,7 +3,7 @@
 use crate::hir::{
     HirCallArgument, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpression,
     HirExpressionKind, HirInterfaceReceiver, HirObjectCallTarget, HirObjectProducer,
-    HirObjectSource, HirViewSource,
+    HirObjectSource, HirSharedProducer, HirSharedSource, HirViewSource,
 };
 
 pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bool {
@@ -57,9 +57,16 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
         HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
         HirCallArgument::Place(_) => false,
-        HirCallArgument::Shared(_) => {
-            unreachable!("shared HIR is rejected before MIR lowering")
-        }
+        HirCallArgument::Shared(transfer) => match &transfer.source {
+            HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => allocation
+                .arguments
+                .iter()
+                .any(call_argument_contains_runtime_cast),
+            HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+                expression_contains_runtime_cast(call)
+            }
+            HirSharedSource::Place(_) => false,
+        },
     }
 }
 

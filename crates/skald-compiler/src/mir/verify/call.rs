@@ -444,6 +444,41 @@ impl<'mir> Verifier<'mir> {
         return_type: MirType,
         result_ty: Option<MirType>,
     ) {
+        if let MirType::Shared(target) = return_type {
+            if call.result.is_some() || call.destination.is_some() {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "shared-returning call must not have a scalar or object result",
+                );
+            }
+            let valid = call.shared_result.is_some_and(|result| {
+                function.storage(result).is_some_and(|storage| {
+                    matches!(
+                        storage.kind,
+                        MirStorageKind::Local
+                            | MirStorageKind::Temporary
+                            | MirStorageKind::Argument
+                            | MirStorageKind::Return
+                    ) && storage.ty == MirType::Shared(target)
+                })
+            });
+            if !valid {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "shared-returning call requires matching caller-owned result storage",
+                );
+            }
+            return;
+        }
+        if call.shared_result.is_some() {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "non-shared call must not declare a shared result",
+            );
+        }
         let destination = call
             .destination
             .as_ref()

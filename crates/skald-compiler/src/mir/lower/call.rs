@@ -79,10 +79,65 @@ impl BodyLowerer<'_> {
             receiver,
             arguments,
             result,
+            shared_result: None,
             destination: None,
             span: expression.span,
         }));
         result
+    }
+
+    pub(super) fn lower_shared_call(&mut self, expression: &HirExpression, destination: StorageId) {
+        let (target, receiver, arguments) = match &expression.kind {
+            crate::hir::HirExpressionKind::DirectCall {
+                function,
+                arguments,
+            } => (
+                MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::MethodCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                let receiver = self.lower_method_receiver(receiver);
+                (
+                    MirCallTarget::Method(lower_method_target(*target)),
+                    Some(receiver.into()),
+                    self.lower_call_arguments(arguments),
+                )
+            }
+            crate::hir::HirExpressionKind::InterfaceCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                let receiver = match receiver {
+                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
+                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
+                };
+                (
+                    MirCallTarget::Interface(MirInterfaceCallTarget {
+                        interface: target.interface,
+                        requirement: target.requirement,
+                    }),
+                    Some(receiver.into()),
+                    self.lower_call_arguments(arguments),
+                )
+            }
+            _ => unreachable!("shared call producer must contain a call expression"),
+        };
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            shared_result: Some(destination),
+            destination: None,
+            span: expression.span,
+        }));
+        self.full_expression_has_shared_effect = true;
     }
 
     pub(super) fn lower_call_arguments(
@@ -146,8 +201,18 @@ impl BodyLowerer<'_> {
                     }));
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(destination)))
                 }
-                HirCallArgument::Shared(_) => {
-                    unreachable!("shared HIR is rejected before MIR lowering")
+                HirCallArgument::Shared(transfer) => {
+                    let storage = StorageId::new(self.input.callable, self.storage.len());
+                    self.storage.push(MirStorage {
+                        id: storage,
+                        source: None,
+                        name: format!("shared-argument-{}", storage.index()),
+                        kind: MirStorageKind::Argument,
+                        ty: lower_type(Type::Shared(transfer.target)),
+                        span: transfer.span,
+                    });
+                    self.lower_shared_transfer(storage, transfer);
+                    LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
             };
             lowered.push(argument);

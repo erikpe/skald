@@ -132,6 +132,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         receiver: Some(MirMethodReceiver::exact(object_storage.into(), outer).into()),
         arguments: vec![],
         result: Some(method_result),
+        shared_result: None,
         destination: None,
         span,
     }));

@@ -278,8 +278,12 @@ in [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#x86-64-r
 The current backend executes exact-class shared local initialization and
 assignment from named owners and ordinary allocations, including checked
 retain, secure-before-release replacement, dynamic complete destruction, and
-exact-base deallocation. Call, result, field, polymorphic-view, cast, and
-anchor contexts remain gated by their owning frontend or MIR phases.
+exact-base deallocation. Internal shared parameters use one integer-class word
+in the existing register/stack classifier, and shared results use `rax`
+without the hidden destination reserved for inline class results. Functions,
+initializers, methods, interface calls, recursion, and mixed argument pressure
+all use this same call facade. Field, polymorphic-view, cast, and anchor
+contexts remain gated by their owning frontend or MIR phases.
 
 ## Symbols and process entry
 

@@ -204,7 +204,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
-                Some(MirTerminator::Return { .. }) => self.check_normal_return(block, &state),
+                Some(MirTerminator::Return { .. }) | Some(MirTerminator::ReturnShared { .. }) => {
+                    self.check_normal_return(block, &state)
+                }
                 Some(MirTerminator::Terminate { .. }) => {}
                 None => {}
             }
@@ -219,7 +221,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
             {
                 let mut state = ObjectState::default();
                 self.apply_block(block, &mut state);
-                if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
+                if matches!(
+                    block.terminator,
+                    Some(MirTerminator::Return { .. } | MirTerminator::ReturnShared { .. })
+                ) {
                     self.check_normal_return(block, &state);
                 }
             }
@@ -228,7 +233,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
 
     fn check_normal_return(&mut self, block: &MirBasicBlock, state: &ObjectState) {
         if let Some(return_storage) = self.function.return_storage() {
-            if !self.place_is_live(state, &MirPlace::base(return_storage)) {
+            if self
+                .function
+                .storage(return_storage)
+                .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
+                && !self.place_is_live(state, &MirPlace::base(return_storage))
+            {
                 self.block_error(
                     block.id,
                     "object return storage is not initialized on normal return",
@@ -549,9 +559,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
         for argument in arguments {
             let view = match argument {
                 MirArgument::View(view) => view,
-                MirArgument::Value(_) | MirArgument::Place(_) | MirArgument::OwnedPlace(_) => {
-                    continue
-                }
+                MirArgument::Value(_)
+                | MirArgument::Place(_)
+                | MirArgument::OwnedPlace(_)
+                | MirArgument::SharedOwner(_) => continue,
             };
             self.require_live_place(block, state, &view.source, "object view source");
             self.require_live_origin(block, state, &view.origin, "object view origin");

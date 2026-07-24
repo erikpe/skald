@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; exact-class local owner semantics implemented**. This
+Status: **frozen design; exact-target local and callable owners implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -10,8 +10,10 @@ stable targets and allocation modes, and typed HIR records shared targets,
 ordinary allocation, and copy-versus-adopt owner provenance. Exact-class
 shared locals now support ordinary allocation, named-owner copying,
 secure-before-release assignment, full-expression ownership boundaries, and
-normal cleanup through verified MIR and native execution. Owners crossing
-calls or results, shared fields and polymorphic views, explicit copy
+normal cleanup through verified MIR and native execution. Same-target shared
+parameters and results now transfer owners through internal functions,
+initializers, methods, and interface requirements, including produced
+arguments and results. Shared fields and polymorphic views, explicit copy
 allocation, shared-owner casts, and anchors remain unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
@@ -74,8 +76,9 @@ argument. Conversely, `new T(source)` participates only in ordinary
 initializer overload resolution and never falls back to copy construction.
 Ordinary allocation and initializer selection cross typed HIR. Exact-class
 local initialization and assignment from both named and newly allocated
-owners also cross verified target-independent MIR and execute on the current
-x86-64 backend. Broader owner-producing and consuming contexts remain staged
+owners, plus same-target internal callable parameters and results, also cross
+verified target-independent MIR and execute on the current x86-64 backend.
+Polymorphic owner conversions and field-owning contexts remain staged
 implementation work.
 Explicit copy allocation remains a typed diagnostic until its checked source,
 anchor, and copy-constructor operation can be represented together.

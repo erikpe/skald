@@ -1,0 +1,87 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Relay {
+    fn pass(value: shared Trace) -> shared Trace;
+}
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Forwarder implements Relay {
+    init(value: shared Trace) {}
+
+    fn pass(value: shared Trace) -> shared Trace {
+        return value;
+    }
+}
+
+fn make(marker: i64) -> shared Trace {
+    return new Trace(marker);
+}
+
+fn forward(value: shared Trace) -> shared Trace {
+    return value;
+}
+
+fn replace(
+    value: shared Trace,
+    replacement: shared Trace
+) -> shared Trace {
+    value = replacement;
+    return value;
+}
+
+fn recurse(value: shared Trace, again: bool) -> shared Trace {
+    if (again) {
+        return recurse(value, false);
+    }
+    return value;
+}
+
+fn through_interface(
+    ref relay: Relay,
+    value: shared Trace
+) -> shared Trace {
+    return relay.pass(value);
+}
+
+fn consume_pair(
+    first: shared Trace,
+    second: shared Trace
+) -> unit {}
+
+fn crowded(
+    first: i64,
+    second: i64,
+    third: i64,
+    fourth: i64,
+    fifth: i64,
+    sixth: i64,
+    value: shared Trace,
+    tail: i64
+) -> i64 {
+    return first + second + third + fourth + fifth + sixth + tail;
+}
+
+fn main() -> i64 {
+    var first: shared Trace = make(1);
+    var copied: shared Trace = forward(first);
+    var produced: shared Trace = forward(make(2));
+    var relay: Forwarder = Forwarder(first);
+    var method: shared Trace = relay.pass(first);
+    var via_interface: shared Trace = through_interface(relay, first);
+    var recursive: shared Trace = recurse(make(3), true);
+    consume_pair(new Trace(4), new Trace(5));
+    ska_rt_println_i64(crowded(1, 2, 3, 4, 5, 6, first, 7));
+    var replacement: shared Trace = replace(copied, produced);
+    return 0;
+}

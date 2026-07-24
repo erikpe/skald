@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; exact-class local owners implemented**.
+Status: **frozen implementation design; local and internal callable owners implemented**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -16,11 +16,14 @@ explicit copy/adopt transfers, and ordinary allocation with one selected
 initializer. MIR implements exact-class local owner semantics: allocation,
 publication, adoption, named-owner copying, secure-before-release assignment,
 full-expression temporary cleanup, and normal local release are distinct
-verified operations. Broader shared uses remain behind a structured lowering
-gate, and the x86-64 backend executes this profile with the frozen handle,
-header, checked retain, count-one publication, dynamic complete finalization,
-and last-owner deallocation. [Runtime ABI version 5](RUNTIME_ABI.md) provides
-only checked byte allocation and exact-base deallocation.
+verified operations. Shared call arguments, parameters, return owners, and
+caller results use explicit ownership handoffs across every internal callable
+kind. Broader shared uses remain behind a structured lowering gate, and the
+x86-64 backend executes this profile with the frozen handle, header, checked
+retain, one-word internal ABI, count-one publication, dynamic complete
+finalization, and last-owner deallocation. [Runtime ABI version
+5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
+deallocation.
 Explicit copy allocation and shared-owner casts remain typed exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
@@ -125,6 +128,18 @@ CFG joins require identical shared allocation and owner states. These
 operations are target-independent and carry no handle size, header offset, or
 runtime symbol.
 
+At a call boundary, caller-owned argument storage is initialized by copying a
+named owner or adopting a produced owner and is then consumed exactly once by
+the call. The corresponding callee value parameter begins live, may be
+replaced with the ordinary secure-before-release assignment sequence, and is
+released by normal parameter cleanup. A named return is copied and a produced
+return is adopted into the callee's dedicated return-owner storage before
+local and parameter cleanup. `ReturnShared` then transfers that sole remaining
+owner to caller-selected result storage. Verification rejects duplicate
+argument transfer, an uncleaned parameter, an initialized result destination,
+or a normal shared return with any owner other than its declared result still
+live.
+
 On x86-64, allocation storage and shared-owner storage each receive one
 eight-byte stack home. `SharedAllocate` checks the exact class payload plus
 the 16-byte header before calling `ska_rt_alloc`; initialization receives the
@@ -137,6 +152,14 @@ transition, and calls `ska_rt_free` only after finalization returns. The
 verified copy operation uses the same checked retain lowering in source
 programs. Assignment mechanically follows the verified copy-or-adopt, release,
 move order.
+
+An internal shared parameter is one integer-class word and follows the
+existing source-ordered register/stack classifier alongside scalar and object
+arguments. A shared result is returned directly in `rax`; unlike an inline
+class result, it does not consume a hidden return-destination argument.
+Incoming parameter spilling and outgoing result securing preserve that
+distinction under receiver arguments, register exhaustion, recursion, and
+indirect interface dispatch.
 
 ## MIR verification
 

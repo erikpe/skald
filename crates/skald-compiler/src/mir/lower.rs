@@ -130,8 +130,12 @@ impl<'hir> BodyLowerer<'hir> {
             .iter()
             .zip(&lowerer.parameter_storage)
         {
-            if let (HirParameterMode::Value, Type::Class(class)) = (parameter.mode, parameter.ty) {
-                lowerer.cleanup.register_owned(*storage, class);
+            if parameter.mode == HirParameterMode::Value {
+                match parameter.ty {
+                    Type::Class(class) => lowerer.cleanup.register_owned(*storage, class),
+                    Type::Shared(_) => lowerer.cleanup.register_shared(*storage),
+                    _ => {}
+                }
             }
         }
         lowerer.lower_block(lowerer.input.source_body);
@@ -171,6 +175,17 @@ impl<'hir> BodyLowerer<'hir> {
                 name: "return".to_owned(),
                 kind: MirStorageKind::Return,
                 ty: MirType::Class(class),
+                span: self.input.source_body.span,
+            });
+        } else if let Type::Shared(target) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "shared-return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: lower_type(Type::Shared(target)),
                 span: self.input.source_body.span,
             });
         }

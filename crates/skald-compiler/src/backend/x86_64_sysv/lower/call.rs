@@ -38,6 +38,7 @@ impl InstructionSelector<'_, '_> {
             receiver,
             &call.arguments,
             call.result,
+            call.shared_result,
         )
     }
 
@@ -56,6 +57,7 @@ impl InstructionSelector<'_, '_> {
                 },
             }),
             &initialize.arguments,
+            None,
             None,
         )
     }
@@ -78,6 +80,7 @@ impl InstructionSelector<'_, '_> {
             target.direct_callable(),
             signature.return_type,
             None,
+            None,
         );
         Ok(())
     }
@@ -99,6 +102,7 @@ impl InstructionSelector<'_, '_> {
             }),
             &[],
             None,
+            None,
         )
     }
 
@@ -116,6 +120,7 @@ impl InstructionSelector<'_, '_> {
             receiver,
             arguments,
             result,
+            None,
         )
     }
 
@@ -126,6 +131,7 @@ impl InstructionSelector<'_, '_> {
         receiver: Option<ReceiverOperand<'_>>,
         arguments: &[MirArgument],
         result: Option<ValueId>,
+        shared_result: Option<crate::mir::StorageId>,
     ) -> Result<(), BackendError> {
         let signature = target.signature(self.program);
         let layout = self.marshal_call_inputs(
@@ -141,6 +147,7 @@ impl InstructionSelector<'_, '_> {
             target.direct_callable(),
             signature.return_type,
             result,
+            shared_result,
         );
         Ok(())
     }

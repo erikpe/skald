@@ -226,6 +226,7 @@ fn rejects_dead_exact_virtual_receiver_origins() {
                 }),
             ],
             result: Some(result),
+            shared_result: None,
             destination: None,
             span: function.span,
         }));

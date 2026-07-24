@@ -50,7 +50,10 @@ fn lowers_deep_source_places_without_class_values_and_preserves_them_through_pas
         .filter_map(|instruction| match instruction {
             MirInstruction::Call(call) => match &call.arguments[0] {
                 MirArgument::View(view) => Some(&view.source),
-                MirArgument::Value(_) | MirArgument::Place(_) | MirArgument::OwnedPlace(_) => None,
+                MirArgument::Value(_)
+                | MirArgument::Place(_)
+                | MirArgument::OwnedPlace(_)
+                | MirArgument::SharedOwner(_) => None,
             },
             _ => None,
         })

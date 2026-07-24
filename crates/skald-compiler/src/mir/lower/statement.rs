@@ -46,7 +46,7 @@ impl BodyLowerer<'_> {
                 self.finish_full_expression(assignment.span);
             }
             HirStatement::SharedFieldWrite(_) => {
-                unreachable!("shared HIR is rejected before MIR lowering")
+                unreachable!("shared fields are rejected before MIR lowering")
             }
         }
     }
@@ -144,8 +144,18 @@ impl BodyLowerer<'_> {
                 self.lower_construction(construction, destination);
                 None
             }
-            Some(crate::hir::HirReturnValue::Shared(_)) => {
-                unreachable!("shared HIR is rejected before MIR lowering")
+            Some(crate::hir::HirReturnValue::Shared(transfer)) => {
+                let destination = self
+                    .return_storage
+                    .expect("shared-returning body must have return storage");
+                self.lower_shared_transfer(destination, transfer);
+                self.finish_full_expression(statement.span);
+                self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
+                self.terminate(MirTerminator::ReturnShared {
+                    owner: destination,
+                    span: statement.span,
+                });
+                return;
             }
             None => None,
         };

@@ -44,6 +44,7 @@ impl Verifier<'_> {
             );
         }
         let mut owned_arguments = HashSet::new();
+        let mut shared_arguments = HashSet::new();
         for (index, argument) in arguments.iter().enumerate() {
             let Some(parameter) = parameters.get(index) else {
                 self.verify_extra_argument(site, argument, defined);
@@ -62,6 +63,17 @@ impl Verifier<'_> {
                         place,
                         parameter.ty,
                         &mut owned_arguments,
+                    );
+                }
+                (MirArgument::SharedOwner(owner), MirParameterMode::Value)
+                    if matches!(parameter.ty, MirType::Shared(_)) =>
+                {
+                    self.verify_shared_owner_argument(
+                        site,
+                        index,
+                        *owner,
+                        parameter.ty,
+                        &mut shared_arguments,
                     );
                 }
                 (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
@@ -104,6 +116,20 @@ impl Verifier<'_> {
                         format!("{kind} argument {index} cannot transfer ownership"),
                     );
                 }
+                (MirArgument::SharedOwner(owner), _) => {
+                    if function.storage(*owner).is_none() {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("{kind} shared argument storage {owner} is not declared"),
+                        );
+                    }
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("{kind} argument {index} cannot transfer a shared owner"),
+                    );
+                }
             }
         }
     }
@@ -124,6 +150,48 @@ impl Verifier<'_> {
             MirArgument::View(view) => {
                 self.verify_object_view(site.function, site.block, view, "extra object view");
             }
+            MirArgument::SharedOwner(owner) => {
+                if site.function.storage(*owner).is_none() {
+                    self.block_error(
+                        site.function.callable(),
+                        site.block.id,
+                        format!("extra shared argument storage {owner} is not declared"),
+                    );
+                }
+            }
+        }
+    }
+
+    fn verify_shared_owner_argument(
+        &mut self,
+        site: ArgumentSite<'_>,
+        index: usize,
+        owner: super::super::model::StorageId,
+        parameter_ty: MirType,
+        shared_arguments: &mut HashSet<super::super::model::StorageId>,
+    ) {
+        let valid = site.function.storage(owner).is_some_and(|storage| {
+            storage.kind == MirStorageKind::Argument && storage.ty == parameter_ty
+        });
+        if !valid {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} must transfer matching shared caller argument storage",
+                    site.kind
+                ),
+            );
+        }
+        if !shared_arguments.insert(owner) {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} argument {index} transfers shared storage more than once",
+                    site.kind
+                ),
+            );
         }
     }
 

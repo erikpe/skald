@@ -6,7 +6,7 @@ use crate::identity::CallableId;
 
 use super::{
     super::model::{
-        BlockId, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
+        BlockId, MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
         MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy, MirSharedInitialize,
         MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
         MirTerminator, MirType, StorageId, ValueId,
@@ -128,14 +128,17 @@ impl<'mir> Verifier<'mir> {
         if !destination.is_some_and(|storage| {
             matches!(
                 storage.kind,
-                MirStorageKind::Local | MirStorageKind::Temporary
+                MirStorageKind::Local
+                    | MirStorageKind::Temporary
+                    | MirStorageKind::Argument
+                    | MirStorageKind::Return
             ) && allocation_class
                 .is_some_and(|class| storage.ty == MirType::Shared(MirSharedTarget::Class(class)))
         }) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared adoption requires compatible exact-class local or temporary owner storage",
+                "shared adoption requires compatible exact-class destination owner storage",
             );
         }
     }
@@ -159,15 +162,28 @@ impl<'mir> Verifier<'mir> {
         if !matches!(
             (destination, source),
             (Some(destination), Some(source))
-                if matches!(destination.kind, MirStorageKind::Local | MirStorageKind::Temporary)
-                    && matches!(source.kind, MirStorageKind::Local | MirStorageKind::Temporary)
-                    && matches!(destination.ty, MirType::Shared(MirSharedTarget::Class(_)))
+                if matches!(
+                    destination.kind,
+                    MirStorageKind::Local
+                        | MirStorageKind::Temporary
+                        | MirStorageKind::Argument
+                        | MirStorageKind::Return
+                )
+                    && matches!(
+                        source.kind,
+                        MirStorageKind::Local
+                            | MirStorageKind::Parameter
+                            | MirStorageKind::Temporary
+                            | MirStorageKind::Argument
+                            | MirStorageKind::Return
+                    )
+                    && matches!(destination.ty, MirType::Shared(_))
                     && destination.ty == source.ty
         ) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared copy requires matching exact-class local or temporary owner storage",
+                "shared copy requires matching source and destination owner storage",
             );
         }
     }
@@ -183,15 +199,18 @@ impl<'mir> Verifier<'mir> {
         if !matches!(
             (destination, source),
             (Some(destination), Some(source))
-                if destination.kind == MirStorageKind::Local
+                if matches!(
+                    destination.kind,
+                    MirStorageKind::Local | MirStorageKind::Parameter
+                )
                     && source.kind == MirStorageKind::Temporary
-                    && matches!(destination.ty, MirType::Shared(MirSharedTarget::Class(_)))
+                    && matches!(destination.ty, MirType::Shared(_))
                     && destination.ty == source.ty
         ) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared move requires a matching exact-class temporary and local destination",
+                "shared move requires a matching temporary and replaceable owner destination",
             );
         }
     }
@@ -205,13 +224,13 @@ impl<'mir> Verifier<'mir> {
         if !function.storage(release.owner).is_some_and(|storage| {
             matches!(
                 storage.kind,
-                MirStorageKind::Local | MirStorageKind::Temporary
+                MirStorageKind::Local | MirStorageKind::Parameter | MirStorageKind::Temporary
             ) && matches!(storage.ty, MirType::Shared(_))
         }) {
             self.block_error(
                 function.callable(),
                 block.id,
-                "shared release requires local or temporary owner storage",
+                "shared release requires local, parameter, or temporary owner storage",
             );
         }
     }
@@ -297,7 +316,18 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         if self.function.body().entry.index() >= incoming.len() {
             return;
         }
-        incoming[self.function.body().entry.index()] = Some(SharedState::default());
+        let mut initial = SharedState::default();
+        for parameter in self.function.parameters() {
+            if self
+                .function
+                .storage(*parameter)
+                .is_some_and(|storage| matches!(storage.ty, MirType::Shared(_)))
+            {
+                initial.live_owners.insert(*parameter);
+                initial.owner_origins.insert(*parameter, *parameter);
+            }
+        }
+        incoming[self.function.body().entry.index()] = Some(initial);
         let mut pending = VecDeque::from([self.function.body().entry]);
 
         while let Some(block_id) = pending.pop_front() {
@@ -325,7 +355,10 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     self.merge(*true_target, &state, &mut incoming, &mut pending);
                     self.merge(*false_target, &state, &mut incoming, &mut pending);
                 }
-                Some(MirTerminator::Return { .. }) => self.check_return(block, &state),
+                Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
+                Some(MirTerminator::ReturnShared { owner, .. }) => {
+                    self.check_return(block, &state, Some(*owner))
+                }
                 Some(MirTerminator::Terminate { .. }) | None => {}
             }
         }
@@ -333,25 +366,6 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
 
     fn apply_block(&mut self, block: &MirBasicBlock, state: &mut SharedState) {
         for instruction in &block.instructions {
-            if state.pending_full_expression_boundary
-                && !matches!(
-                    instruction,
-                    MirInstruction::EndFullExpression(_)
-                        | MirInstruction::SharedAllocate(_)
-                        | MirInstruction::SharedInitialize(_)
-                        | MirInstruction::SharedPublish(_)
-                        | MirInstruction::SharedAdopt(_)
-                        | MirInstruction::SharedCopy(_)
-                        | MirInstruction::SharedMove(_)
-                        | MirInstruction::SharedRelease(_)
-                )
-            {
-                self.error(
-                    block.id,
-                    "shared owner adoption must end at a full-expression boundary",
-                );
-                state.pending_full_expression_boundary = false;
-            }
             match instruction {
                 MirInstruction::SharedAllocate(allocation) => {
                     if state
@@ -366,6 +380,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                 }
                 MirInstruction::SharedInitialize(initialize) => {
+                    self.transfer_call_arguments(block.id, state, &initialize.arguments);
                     self.transition(
                         block.id,
                         state,
@@ -469,17 +484,61 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                     state.pending_full_expression_boundary = false;
                 }
+                MirInstruction::Call(call) => {
+                    let transferred =
+                        self.transfer_call_arguments(block.id, state, &call.arguments);
+                    if let Some(result) = call.shared_result {
+                        if state.live_owners.contains(&result)
+                            || state.released_owners.contains(&result)
+                        {
+                            self.error(
+                                block.id,
+                                "shared call result storage is already initialized",
+                            );
+                        } else {
+                            state.live_owners.insert(result);
+                            state.owner_origins.insert(result, result);
+                        }
+                    }
+                    state.pending_full_expression_boundary |=
+                        transferred || call.shared_result.is_some();
+                }
                 MirInstruction::Assign(_)
-                | MirInstruction::Call(_)
                 | MirInstruction::Cleanup(_)
-                | MirInstruction::Initialize(_)
                 | MirInstruction::Store(_)
                 | MirInstruction::CopyConstruct(_)
                 | MirInstruction::CopyAssign(_)
                 | MirInstruction::BindCheckedView(_)
                 | MirInstruction::EndCheckedView(_) => {}
+                MirInstruction::Initialize(initialize) => {
+                    let transferred =
+                        self.transfer_call_arguments(block.id, state, &initialize.arguments);
+                    state.pending_full_expression_boundary |= transferred;
+                }
             }
         }
+    }
+
+    fn transfer_call_arguments(
+        &mut self,
+        block: BlockId,
+        state: &mut SharedState,
+        arguments: &[MirArgument],
+    ) -> bool {
+        let mut transferred = false;
+        for argument in arguments {
+            let MirArgument::SharedOwner(owner) = argument else {
+                continue;
+            };
+            transferred = true;
+            if !state.live_owners.remove(owner) {
+                self.error(block, "shared call argument is not a live owner");
+            } else {
+                state.owner_origins.remove(owner);
+                state.released_owners.insert(*owner);
+            }
+        }
+        transferred
     }
 
     fn transition(
@@ -498,14 +557,24 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         }
     }
 
-    fn check_return(&mut self, block: &MirBasicBlock, state: &SharedState) {
+    fn check_return(
+        &mut self,
+        block: &MirBasicBlock,
+        state: &SharedState,
+        returned_owner: Option<StorageId>,
+    ) {
         if state.pending_full_expression_boundary {
             self.error(
                 block.id,
                 "shared owner adoption has no full-expression boundary",
             );
         }
-        if !state.live_owners.is_empty() {
+        let live_is_exact_result = returned_owner.is_some_and(|owner| {
+            state.live_owners.len() == 1 && state.live_owners.contains(&owner)
+        });
+        if (!state.live_owners.is_empty() && !live_is_exact_result)
+            || (returned_owner.is_some() && !live_is_exact_result)
+        {
             self.error(block.id, "shared owner remains live on normal return");
         }
         if !state.allocations.is_empty() {

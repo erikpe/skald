@@ -33,7 +33,11 @@ impl BodyLowerer<'_> {
         self.full_expression_has_shared_effect = true;
     }
 
-    fn lower_shared_transfer(&mut self, destination: StorageId, transfer: &HirSharedTransfer) {
+    pub(super) fn lower_shared_transfer(
+        &mut self,
+        destination: StorageId,
+        transfer: &HirSharedTransfer,
+    ) {
         match &transfer.source {
             HirSharedSource::Place(HirSharedPlace::Binding { binding, .. }) => {
                 debug_assert_eq!(transfer.operation, HirOwnerTransfer::Copy);
@@ -47,11 +51,15 @@ impl BodyLowerer<'_> {
                 debug_assert_eq!(transfer.operation, HirOwnerTransfer::Adopt);
                 self.lower_shared_allocation(destination, allocation);
             }
-            HirSharedSource::Place(HirSharedPlace::Field { .. })
-            | HirSharedSource::Produced(HirSharedProducer::Call(_)) => {
+            HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+                debug_assert_eq!(transfer.operation, HirOwnerTransfer::Adopt);
+                self.lower_shared_call(call, destination);
+            }
+            HirSharedSource::Place(HirSharedPlace::Field { .. }) => {
                 unreachable!("broader shared sources are rejected before MIR lowering")
             }
         }
+        self.full_expression_has_shared_effect = true;
     }
 
     fn lower_shared_allocation(

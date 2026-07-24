@@ -29,6 +29,11 @@ pub enum MirTerminator {
         value: Option<ValueId>,
         span: Span,
     },
+    /// Returns one live shared owner and transfers it to the caller.
+    ReturnShared {
+        owner: super::ids::StorageId,
+        span: Span,
+    },
     Goto {
         target: BlockId,
         span: Span,
@@ -63,6 +68,7 @@ impl MirTerminator {
     pub const fn span(&self) -> Span {
         match self {
             Self::Return { span, .. }
+            | Self::ReturnShared { span, .. }
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
             | Self::CheckedCast { span, .. }
@@ -74,7 +80,7 @@ impl MirTerminator {
     /// the true edge always precedes the false edge.
     pub fn successors(&self) -> impl Iterator<Item = BlockId> {
         let targets = match self {
-            Self::Return { .. } => [None, None],
+            Self::Return { .. } | Self::ReturnShared { .. } => [None, None],
             Self::Goto { target, .. } => [Some(*target), None],
             Self::Branch {
                 true_target,

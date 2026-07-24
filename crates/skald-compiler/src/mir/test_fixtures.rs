@@ -153,6 +153,7 @@ pub(crate) fn call(
         receiver: receiver.map(Into::into),
         arguments,
         result,
+        shared_result: None,
         destination,
         span,
     })

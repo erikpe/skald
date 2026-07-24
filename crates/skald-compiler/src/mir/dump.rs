@@ -310,6 +310,8 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 if let Some(destination) = &call.destination {
                     dump_place(output, destination);
                     output.push_str(" <- ");
+                } else if let Some(result) = call.shared_result {
+                    let _ = write!(output, "{result} = shared-result ");
                 } else if let Some(result) = call.result {
                     let _ = write!(output, "{result} = ");
                 }
@@ -491,6 +493,10 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             if let Some(value) = value {
                 let _ = write!(output, " {value}");
             }
+            write_span(output, *span);
+        }
+        Some(MirTerminator::ReturnShared { owner, span }) => {
+            let _ = write!(output, "return-shared {owner}");
             write_span(output, *span);
         }
         Some(MirTerminator::Goto { target, span }) => {
@@ -675,6 +681,9 @@ fn dump_argument(output: &mut String, argument: &MirArgument) {
             output.push_str("owned(");
             dump_place(output, place);
             output.push(')');
+        }
+        MirArgument::SharedOwner(owner) => {
+            let _ = write!(output, "shared-owner({owner})");
         }
     }
 }

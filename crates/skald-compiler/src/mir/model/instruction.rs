@@ -134,6 +134,9 @@ pub struct MirCall {
     pub receiver: Option<MirCallReceiver>,
     pub arguments: Vec<MirArgument>,
     pub result: Option<ValueId>,
+    /// Caller-owned storage that receives one shared owner returned in the
+    /// target ABI's shared-result register.
+    pub shared_result: Option<StorageId>,
     /// Caller-owned uninitialized storage for a class result.
     pub destination: Option<MirPlace>,
     pub span: Span,
@@ -195,6 +198,8 @@ pub enum MirArgument {
     /// A complete live caller destination transferred to the corresponding
     /// class value parameter for the duration of the call.
     OwnedPlace(MirPlace),
+    /// One live caller-owned shared argument transferred to the callee.
+    SharedOwner(StorageId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

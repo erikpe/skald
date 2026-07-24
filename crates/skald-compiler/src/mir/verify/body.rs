@@ -184,13 +184,17 @@ impl<'mir> Verifier<'mir> {
             if matches!(storage.ty, MirType::Shared(_))
                 && !matches!(
                     storage.kind,
-                    MirStorageKind::Local | MirStorageKind::Temporary
+                    MirStorageKind::Local
+                        | MirStorageKind::Parameter
+                        | MirStorageKind::Temporary
+                        | MirStorageKind::Argument
+                        | MirStorageKind::Return
                 )
             {
                 self.function_error(
                     function.callable(),
                     format!(
-                        "shared owner storage {} must be a local or temporary",
+                        "shared owner storage {} has an unsupported ownership role",
                         storage.id
                     ),
                 );
@@ -242,6 +246,24 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(
                         function.callable(),
                         "object-returning definition must identify exactly one matching return storage slot",
+                    );
+                }
+            }
+            MirType::Shared(target) => {
+                let Some(return_storage) = function.return_storage() else {
+                    self.function_error(
+                        function.callable(),
+                        "shared-returning definition has no return storage",
+                    );
+                    return;
+                };
+                let valid = slots.len() == 1
+                    && slots[0].id == return_storage
+                    && slots[0].ty == MirType::Shared(target);
+                if !valid {
+                    self.function_error(
+                        function.callable(),
+                        "shared-returning definition must identify exactly one matching return owner slot",
                     );
                 }
             }
@@ -420,6 +442,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Class(_)
                                 | MirType::Interface(_)
                                 | MirType::Obj
+                                | MirType::Shared(_)
                         ) {
                             self.block_error(
                                 function.callable(),
@@ -437,13 +460,30 @@ impl<'mir> Verifier<'mir> {
                 } else if return_type != MirType::Unit
                     && !matches!(
                         return_type,
-                        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                        MirType::Class(_)
+                            | MirType::Interface(_)
+                            | MirType::Obj
+                            | MirType::Shared(_)
                     )
                 {
                     self.block_error(
                         function.callable(),
                         block.id,
                         "value-returning function return has no operand",
+                    );
+                }
+            }
+            Some(MirTerminator::ReturnShared { owner, .. }) => {
+                let valid = matches!(return_type, MirType::Shared(_))
+                    && function.return_storage() == Some(*owner)
+                    && function.storage(*owner).is_some_and(|storage| {
+                        storage.kind == MirStorageKind::Return && storage.ty == return_type
+                    });
+                if !valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "shared return must transfer the definition's matching return owner",
                     );
                 }
             }

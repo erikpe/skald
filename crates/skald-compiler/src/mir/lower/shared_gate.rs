@@ -1,4 +1,4 @@
-//! Deliberate gate around the first executable shared-owner subset.
+//! Deliberate gate around the executable exact-target shared-owner subset.
 
 use std::collections::HashSet;
 
@@ -13,18 +13,6 @@ use crate::{
 };
 
 pub(super) fn first_unsupported_shared_span(hir: &HirProgram) -> Option<Span> {
-    for declaration in hir.declarations.iter() {
-        if matches!(declaration.return_type, Type::Shared(_)) {
-            return Some(declaration.span);
-        }
-        if let Some(parameter) = declaration
-            .parameters
-            .iter()
-            .find(|parameter| matches!(parameter.ty, Type::Shared(_)))
-        {
-            return Some(parameter.span);
-        }
-    }
     for class in hir.classes.iter() {
         if let Some(field) = class
             .fields
@@ -32,41 +20,6 @@ pub(super) fn first_unsupported_shared_span(hir: &HirProgram) -> Option<Span> {
             .find(|field| matches!(field.ty, Type::Shared(_)))
         {
             return Some(field.span);
-        }
-        for initializer in &class.initializers {
-            if let Some(parameter) = initializer
-                .parameters
-                .iter()
-                .find(|parameter| matches!(parameter.ty, Type::Shared(_)))
-            {
-                return Some(parameter.span);
-            }
-        }
-        for method in &class.methods {
-            if matches!(method.return_type, Type::Shared(_)) {
-                return Some(method.span);
-            }
-            if let Some(parameter) = method
-                .parameters
-                .iter()
-                .find(|parameter| matches!(parameter.ty, Type::Shared(_)))
-            {
-                return Some(parameter.span);
-            }
-        }
-    }
-    for interface in hir.interfaces.iter() {
-        for requirement in &interface.requirements {
-            if matches!(requirement.return_type, Type::Shared(_)) {
-                return Some(requirement.span);
-            }
-            if let Some(parameter) = requirement
-                .parameters
-                .iter()
-                .find(|parameter| matches!(parameter.ty, Type::Shared(_)))
-            {
-                return Some(parameter.span);
-            }
         }
     }
     for definition in hir.definitions.iter() {
@@ -108,6 +61,11 @@ fn validate_definition(locals: &[HirLocal], body: &HirBlock) -> Option<Span> {
 fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Span> {
     for statement in &block.statements {
         match statement {
+            HirStatement::BaseInitialization(initialization)
+                if !arguments_support_shared(&initialization.arguments) =>
+            {
+                return Some(initialization.span);
+            }
             HirStatement::Local(local) => match &local.initializer {
                 HirLocalInitializer::Shared(transfer) => {
                     pending.remove(&local.local);
@@ -115,19 +73,64 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
                         return Some(transfer.span);
                     }
                 }
-                HirLocalInitializer::Value(_)
-                | HirLocalInitializer::Object(_)
-                | HirLocalInitializer::Copy(_) => {}
+                HirLocalInitializer::Value(expression) => {
+                    if !expression_supports_shared(expression) {
+                        return Some(expression.span);
+                    }
+                }
+                HirLocalInitializer::Object(initialization) => {
+                    if !producer_supports_shared(&initialization.producer) {
+                        return Some(initialization.span);
+                    }
+                }
+                HirLocalInitializer::Copy(copy) => {
+                    if !source_supports_shared(&copy.source) {
+                        return Some(copy.span);
+                    }
+                }
             },
-            HirStatement::Return(result)
-                if matches!(result.value, Some(HirReturnValue::Shared(_))) =>
+            HirStatement::Return(result) => match &result.value {
+                Some(HirReturnValue::Shared(transfer)) if !supports_exact_transfer(transfer) => {
+                    return Some(transfer.span);
+                }
+                Some(HirReturnValue::Scalar(expression))
+                    if !expression_supports_shared(expression) =>
+                {
+                    return Some(expression.span);
+                }
+                Some(HirReturnValue::Object(result)) if !object_return_supports_shared(result) => {
+                    return Some(result_span(result));
+                }
+                _ => {}
+            },
+            HirStatement::Call(call) if !expression_supports_shared(&call.call) => {
+                return Some(call.span);
+            }
+            HirStatement::FieldAssignment(assignment)
+                if !expression_supports_shared(&assignment.value) =>
             {
-                return Some(result.span);
+                return Some(assignment.span);
+            }
+            HirStatement::FieldConstruction(construction)
+                if !construction_supports_shared(&construction.construction) =>
+            {
+                return Some(construction.span);
+            }
+            HirStatement::FieldCopyConstruction(copy) if !source_supports_shared(&copy.source) => {
+                return Some(copy.span);
+            }
+            HirStatement::FieldCopyAssignment(copy) if !source_supports_shared(&copy.source) => {
+                return Some(copy.span);
+            }
+            HirStatement::CopyAssignment(copy) if !source_supports_shared(&copy.source) => {
+                return Some(copy.span);
             }
             HirStatement::SharedFieldWrite(write) => return Some(write.span),
             HirStatement::SharedAssignment(assignment) => {
-                if !matches!(assignment.destination, crate::identity::BindingId::Local(_))
-                    || !supports_exact_local_transfer(&assignment.value)
+                if !matches!(
+                    assignment.destination,
+                    crate::identity::BindingId::Local(_) | crate::identity::BindingId::Parameter(_)
+                ) || !supports_exact_transfer(&assignment.value)
                 {
                     return Some(assignment.span);
                 }
@@ -150,7 +153,6 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
                 }
             }
             HirStatement::BaseInitialization(_)
-            | HirStatement::Return(_)
             | HirStatement::Call(_)
             | HirStatement::FieldAssignment(_)
             | HirStatement::FieldConstruction(_)
@@ -163,6 +165,10 @@ fn validate_block(block: &HirBlock, pending: &mut HashSet<LocalId>) -> Option<Sp
 }
 
 fn supports_exact_local_transfer(transfer: &HirSharedTransfer) -> bool {
+    supports_exact_transfer(transfer)
+}
+
+fn supports_exact_transfer(transfer: &HirSharedTransfer) -> bool {
     match &transfer.source {
         HirSharedSource::Place(HirSharedPlace::Binding { target, .. }) => {
             transfer.operation == HirOwnerTransfer::Copy && transfer.target == *target
@@ -170,12 +176,82 @@ fn supports_exact_local_transfer(transfer: &HirSharedTransfer) -> bool {
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
             transfer.operation == HirOwnerTransfer::Adopt
                 && transfer.target == HirSharedTarget::Class(allocation.class)
-                && allocation
-                    .arguments
-                    .iter()
-                    .all(|argument| !matches!(argument, HirCallArgument::Shared(_)))
+                && arguments_support_shared(&allocation.arguments)
         }
-        HirSharedSource::Place(HirSharedPlace::Field { .. })
-        | HirSharedSource::Produced(HirSharedProducer::Call(_)) => false,
+        HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
+            transfer.operation == HirOwnerTransfer::Adopt
+                && transfer.target == transfer.source.target()
+                && expression_supports_shared(call)
+        }
+        HirSharedSource::Place(HirSharedPlace::Field { .. }) => false,
+    }
+}
+
+fn arguments_support_shared(arguments: &[HirCallArgument]) -> bool {
+    arguments.iter().all(|argument| match argument {
+        HirCallArgument::Value(expression) => expression_supports_shared(expression),
+        HirCallArgument::Copy(copy) => source_supports_shared(&copy.source),
+        HirCallArgument::Shared(transfer) => supports_exact_transfer(transfer),
+        HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::CheckedView(_) => {
+            true
+        }
+    })
+}
+
+fn expression_supports_shared(expression: &crate::hir::HirExpression) -> bool {
+    match &expression.kind {
+        crate::hir::HirExpressionKind::Unary { operand, .. }
+        | crate::hir::HirExpressionKind::Grouped(operand) => expression_supports_shared(operand),
+        crate::hir::HirExpressionKind::Binary { left, right, .. } => {
+            expression_supports_shared(left) && expression_supports_shared(right)
+        }
+        crate::hir::HirExpressionKind::DirectCall { arguments, .. }
+        | crate::hir::HirExpressionKind::MethodCall { arguments, .. }
+        | crate::hir::HirExpressionKind::InterfaceCall { arguments, .. } => {
+            arguments_support_shared(arguments)
+        }
+        _ => true,
+    }
+}
+
+fn producer_supports_shared(producer: &crate::hir::HirObjectProducer) -> bool {
+    match producer {
+        crate::hir::HirObjectProducer::Construct(construction) => {
+            construction_supports_shared(construction)
+        }
+        crate::hir::HirObjectProducer::Call(call) => arguments_support_shared(&call.arguments),
+    }
+}
+
+fn construction_supports_shared(construction: &crate::hir::HirConstruction) -> bool {
+    match &construction.mode {
+        crate::hir::HirConstructionMode::Initialize { arguments, .. } => {
+            arguments_support_shared(arguments)
+        }
+        crate::hir::HirConstructionMode::Copy { source, .. } => source_supports_shared(source),
+    }
+}
+
+fn source_supports_shared(source: &crate::hir::HirObjectSource) -> bool {
+    match source {
+        crate::hir::HirObjectSource::Produced(producer) => producer_supports_shared(producer),
+        crate::hir::HirObjectSource::Slice(slice) => source_supports_shared(&slice.source),
+        crate::hir::HirObjectSource::Place(_) | crate::hir::HirObjectSource::Checked(_) => true,
+    }
+}
+
+fn object_return_supports_shared(result: &crate::hir::HirObjectReturn) -> bool {
+    match result {
+        crate::hir::HirObjectReturn::Copy { source, .. } => source_supports_shared(source),
+        crate::hir::HirObjectReturn::Construct { construction, .. } => {
+            construction_supports_shared(construction)
+        }
+    }
+}
+
+fn result_span(result: &crate::hir::HirObjectReturn) -> Span {
+    match result {
+        crate::hir::HirObjectReturn::Copy { span, .. } => *span,
+        crate::hir::HirObjectReturn::Construct { construction, .. } => construction.span,
     }
 }

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO5 complete, SO6 is next.
+Status: in progress; SO6 complete, SO7 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -38,6 +38,11 @@ and the complete cast direction matrix is
   structurally gated. The x86-64 backend executes that profile with one-word
   handles, checked allocation and retain, secure-before-release assignment,
   dynamic complete finalization, and last-owner deallocation.
+- Internal functions, initializers, methods, and interface requirements carry
+  same-target shared owners through explicit caller argument consumption,
+  callee parameter cleanup, and shared return handoff. The x86-64 ABI uses one
+  integer-class word for arguments and `rax` for results without an inline
+  object's hidden return destination.
 - Runtime ABI version 5 retains scalar output and exposes only checked
   nonzero byte allocation and exact-base deallocation. Reference counts,
   object headers, metadata, and finalization remain compiler-owned.
@@ -88,7 +93,7 @@ and the complete cast direction matrix is
 - [x] SO3 — Upgrade the runtime to the minimal allocation ABI
 - [x] SO4 — Execute exact-class allocation and last-owner destruction
 - [x] SO5 — Complete local, assignment, and temporary owner semantics
-- [ ] SO6 — Carry shared owners across calls and results
+- [x] SO6 — Carry shared owners across calls and results
 - [ ] SO7 — Integrate shared fields with class lifecycle
 - [ ] SO8 — Execute shared-field layout and lifecycle
 - [ ] SO9 — Add polymorphic shared views and dispatch
@@ -315,29 +320,29 @@ dangling destination.
 **Purpose:** Extend the established owner state machine across internal
 callable boundaries without creating a second call or result pipeline.
 
-- [ ] Enable shared value parameters and results for internal functions,
+- [x] Enable shared value parameters and results for internal functions,
       initializers, methods, and interface requirements while preserving the
       external-signature exclusion.
-- [ ] Copy named arguments at their source position, transfer produced
+- [x] Copy named arguments at their source position, transfer produced
       arguments, and make the callee adopt and normally release each incoming
       parameter owner.
-- [ ] Copy named returns, transfer produced returns, and secure the caller's
+- [x] Copy named returns, transfer produced returns, and secure the caller's
       result before callee or caller-side temporary cleanup.
-- [ ] Permit assignment to a live shared value parameter using the same
+- [x] Permit assignment to a live shared value parameter using the same
       secure-incoming, release-old, store-incoming operation as a local.
-- [ ] Integrate shared arguments with existing receiver-first and
+- [x] Integrate shared arguments with existing receiver-first and
       left-to-right mixed scalar, inline-copy, view, and shared evaluation.
-- [ ] Extend MIR call arguments/results and verification with explicit owner
+- [x] Extend MIR call arguments/results and verification with explicit owner
       handoff, callee parameter cleanup, result path agreement, and no
       double-release on normal return.
-- [ ] Realize the one-word integer-class internal ABI, including register
+- [x] Realize the one-word integer-class internal ABI, including register
       exhaustion, stack arguments, `rax` results, recursion, and call pressure.
-- [ ] Keep shared call logic behind existing call facades and factor common
+- [x] Keep shared call logic behind existing call facades and factor common
       copy/adopt handling rather than branching independently in every
       callable kind.
-- [ ] Add mixed-ABI, named/produced argument, forwarding, recursion, result,
+- [x] Add mixed-ABI, named/produced argument, forwarding, recursion, result,
       cleanup-order, verifier-corruption, assembly, and native tests.
-- [ ] Update callable, phase, and backend documentation for the implemented
+- [x] Update callable, phase, and backend documentation for the implemented
       internal shared ABI.
 
 **Tests:** Focused call/type-check/MIR/verifier/ABI suites, assembler

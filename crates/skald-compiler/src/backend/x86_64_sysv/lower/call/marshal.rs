@@ -24,10 +24,15 @@ pub(super) fn spill_parameters(
     frame: &FrameLayout,
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
+    let has_return_destination = function.return_storage().is_some_and(|storage| {
+        function
+            .storage(storage)
+            .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
+    });
     let layout = classify_call(
         signature.parameters,
         function.receiver().is_some(),
-        function.return_storage().is_some(),
+        has_return_destination,
     )
     .ok_or_else(|| {
         argument_area_error(
@@ -36,7 +41,7 @@ pub(super) fn spill_parameters(
         )
     })?;
 
-    if let Some(return_storage) = function.return_storage() {
+    if let Some(return_storage) = function.return_storage().filter(|_| has_return_destination) {
         let incoming = layout
             .return_destination()
             .expect("object-returning layout has a return destination")
@@ -280,6 +285,7 @@ impl InstructionSelector<'_, '_> {
         direct_target: Option<CallableId>,
         return_type: MirType,
         result: Option<ValueId>,
+        shared_result: Option<StorageId>,
     ) {
         if layout.stack_size() != 0 {
             self.output
@@ -288,6 +294,9 @@ impl InstructionSelector<'_, '_> {
         self.normalize_external_bool_result(direct_target, return_type);
         if let Some(result) = result {
             self.store_call_result(return_type, result);
+        }
+        if let Some(result) = shared_result {
+            value::store_rax(value::frame_storage(self.frame, result), self.output);
         }
     }
 
@@ -322,9 +331,33 @@ impl InstructionSelector<'_, '_> {
             {
                 self.select_place_address(place, locations.value())?;
             }
+            (MirArgument::SharedOwner(owner), MirParameterMode::Value)
+                if matches!(parameter.ty, MirType::Shared(_)) =>
+            {
+                self.marshal_shared_owner(*owner, locations.value());
+            }
             _ => unreachable!("verified argument kind must match its parameter mode"),
         }
         Ok(())
+    }
+
+    fn marshal_shared_owner(&mut self, owner: StorageId, location: ArgumentLocation) {
+        let source = value::frame_storage(self.frame, owner);
+        match location {
+            ArgumentLocation::IntegerRegister(register) => {
+                self.output.push(Instruction::Move {
+                    source,
+                    destination: register.into(),
+                });
+            }
+            ArgumentLocation::Stack(displacement) => {
+                value::load_rax(source, self.output);
+                value::store_rax(value::memory(Register::Rsp, displacement), self.output);
+            }
+            ArgumentLocation::SseRegister(_) => {
+                unreachable!("shared owners are integer-class")
+            }
+        }
     }
 
     fn marshal_value_argument(

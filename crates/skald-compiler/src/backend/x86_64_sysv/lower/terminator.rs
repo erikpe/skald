@@ -27,6 +27,10 @@ pub(super) fn select(
             }
             output.push(Instruction::Jump(epilogue.clone()));
         }
+        MirTerminator::ReturnShared { owner, .. } => {
+            value::load_rax(value::frame_storage(frame, *owner), output);
+            output.push(Instruction::Jump(epilogue.clone()));
+        }
         MirTerminator::Goto { target, .. } => {
             output.push(Instruction::Jump(block_label(*target)));
         }
