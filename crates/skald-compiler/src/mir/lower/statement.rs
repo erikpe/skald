@@ -165,13 +165,7 @@ impl BodyLowerer<'_> {
 
     fn lower_field_construction(&mut self, statement: &crate::hir::HirFieldConstruction) {
         let destination = self.lower_field_place(&statement.place);
-        let arguments = self.lower_call_arguments(&statement.construction.arguments);
-        self.emit(MirInstruction::Initialize(MirInitialize {
-            destination,
-            target: statement.construction.initializer,
-            arguments,
-            span: statement.span,
-        }));
+        self.lower_construction_at(&statement.construction, destination, statement.span);
         self.finish_full_expression(statement.span);
     }
 

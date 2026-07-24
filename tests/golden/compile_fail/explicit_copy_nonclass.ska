@@ -1,0 +1,12 @@
+class Value {
+    init() {}
+}
+
+fn consume(ref value: Value) -> i64 {
+    return 0;
+}
+
+fn main() -> i64 {
+    var value: Value = Value();
+    return consume(copy value);
+}

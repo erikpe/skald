@@ -27,7 +27,10 @@ fn parses_a_representative_program() {
     let Expression::Call(call) = &local.initializer else {
         panic!("expected call initializer");
     };
-    assert_eq!(call.arguments.len(), 1);
+    let CallArguments::Ordinary(arguments) = &call.arguments else {
+        panic!("expected ordinary call arguments");
+    };
+    assert_eq!(arguments.len(), 1);
 }
 
 #[test]

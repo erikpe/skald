@@ -108,8 +108,19 @@ pub struct ResolvedMethodCallExpr {
 pub struct ResolvedConstructExpr {
     pub class: ClassId,
     pub callee_span: Span,
-    pub arguments: Vec<ResolvedExpression>,
+    pub mode: ResolvedConstructionMode,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedConstructionMode {
+    Initialize {
+        arguments: Vec<ResolvedExpression>,
+    },
+    Copy {
+        copy_span: Span,
+        source: Box<ResolvedExpression>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

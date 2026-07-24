@@ -223,10 +223,6 @@ impl CallableChecker<'_, '_> {
                     );
                     return CheckedStatement::terminates(None);
                 };
-                let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
-                    self.report_unavailable_copy_operation(class, true, value.span());
-                    return CheckedStatement::terminates(None);
-                };
                 let object_return = if matches!(
                     value,
                     crate::resolve::ResolvedExpression::Construct(construction)
@@ -240,9 +236,21 @@ impl CallableChecker<'_, '_> {
                     else {
                         return CheckedStatement::terminates(None);
                     };
+                    let omitted_copy = match &construction.mode {
+                        crate::hir::HirConstructionMode::Initialize { .. } => {
+                            let Some(operation) =
+                                self.copy_capabilities.constructor(class).selected()
+                            else {
+                                self.report_unavailable_copy_operation(class, true, value.span());
+                                return CheckedStatement::terminates(None);
+                            };
+                            Some(operation)
+                        }
+                        crate::hir::HirConstructionMode::Copy { .. } => None,
+                    };
                     HirObjectReturn::Construct {
                         construction,
-                        omitted_copy: operation,
+                        omitted_copy,
                     }
                 } else {
                     if let crate::resolve::ResolvedExpression::Construct(construction) = value {
@@ -259,6 +267,11 @@ impl CallableChecker<'_, '_> {
                     }
                     let Some(source) = self.check_object_source(value, class, "object return")
                     else {
+                        return CheckedStatement::terminates(None);
+                    };
+                    let Some(operation) = self.copy_capabilities.constructor(class).selected()
+                    else {
+                        self.report_unavailable_copy_operation(class, true, value.span());
                         return CheckedStatement::terminates(None);
                     };
                     HirObjectReturn::Copy {

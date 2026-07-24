@@ -1,0 +1,8 @@
+error[RES011]: `copy` construction requires a concrete class
+ --> tests/golden/compile_fail/explicit_copy_nonclass.ska:11:20
+    |
+11 |     return consume(copy value);
+    |                    ^^^^ copy-construction marker used here
+    |
+11 |     return consume(copy value);
+    |            ------- this callee does not name a class

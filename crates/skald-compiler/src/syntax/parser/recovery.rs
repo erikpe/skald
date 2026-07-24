@@ -106,18 +106,27 @@ impl Parser<'_> {
     }
 
     pub(super) fn starts_expression(&self) -> bool {
-        self.at_any(&[
-            TokenKind::Identifier,
-            TokenKind::SelfValue,
-            TokenKind::NumericLiteral(NumericLiteralKind::I64),
-            TokenKind::NumericLiteral(NumericLiteralKind::U64),
-            TokenKind::NumericLiteral(NumericLiteralKind::U8),
-            TokenKind::NumericLiteral(NumericLiteralKind::F64),
-            TokenKind::True,
-            TokenKind::False,
-            TokenKind::Minus,
-            TokenKind::LeftParen,
-        ])
+        Self::token_starts_expression(self.peek().kind)
+    }
+
+    pub(super) fn starts_expression_ahead(&self, distance: usize) -> bool {
+        Self::token_starts_expression(self.peek_ahead(distance).kind)
+    }
+
+    const fn token_starts_expression(kind: TokenKind) -> bool {
+        matches!(
+            kind,
+            TokenKind::Identifier
+                | TokenKind::SelfValue
+                | TokenKind::NumericLiteral(NumericLiteralKind::I64)
+                | TokenKind::NumericLiteral(NumericLiteralKind::U64)
+                | TokenKind::NumericLiteral(NumericLiteralKind::U8)
+                | TokenKind::NumericLiteral(NumericLiteralKind::F64)
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::Minus
+                | TokenKind::LeftParen
+        )
     }
 
     pub(super) fn synchronize_class_member(&mut self) {

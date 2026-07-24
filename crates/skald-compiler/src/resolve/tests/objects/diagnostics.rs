@@ -204,3 +204,23 @@ fn diagnoses_super_when_the_direct_base_has_no_initializer() {
         .expect("missing base initializer must be diagnosed");
     assert!(diagnostic.message.contains("has no ordinary initializer"));
 }
+
+#[test]
+fn rejects_the_copy_marker_for_non_class_calls() {
+    let output = resolve_text(concat!(
+        "class Value { init() {} }\n",
+        "fn consume(ref value: Value) -> i64 { return 0; }\n",
+        "fn main() -> i64 {\n",
+        "  var value: Value = Value();\n",
+        "  return consume(copy value);\n",
+        "}\n",
+    ));
+
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == INVALID_CONSTRUCTION_TARGET)
+        .expect("copy marker on a function call must be rejected");
+    assert!(diagnostic.message.contains("concrete class"));
+    assert!(diagnostic.labels[0].message.contains("marker"));
+}

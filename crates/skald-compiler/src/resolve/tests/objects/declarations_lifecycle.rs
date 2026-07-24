@@ -81,7 +81,10 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
         panic!("expected construction");
     };
     assert_eq!(construct.class, counter.id);
-    assert_eq!(construct.arguments.len(), 1);
+    let ResolvedConstructionMode::Initialize { arguments } = &construct.mode else {
+        panic!("expected ordinary construction");
+    };
+    assert_eq!(arguments.len(), 1);
 }
 
 #[test]
@@ -173,6 +176,40 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
             "MemberDefinition c0:assign0",
         ]
     );
+}
+
+#[test]
+fn resolves_explicit_copy_construction_as_a_distinct_mode() {
+    let output = resolve_text(concat!(
+        "class Value {\n",
+        "  copy(ref source: Value) {}\n",
+        "  init() {}\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var source: Value = Value();\n",
+        "  var result: Value = Value(copy source);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedExpression::Construct(construction) = local_initializer(&main.body.statements[1])
+    else {
+        panic!("expected resolved construction");
+    };
+    let ResolvedConstructionMode::Copy { copy_span, source } = &construction.mode else {
+        panic!("expected explicit copy mode");
+    };
+    assert!(matches!(**source, ResolvedExpression::Binding(_)));
+    assert!(copy_span.range().start() < source.span().range().start());
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("CopyConstruct c0"));
+    assert!(dump.contains("Copy @"));
 }
 
 #[test]

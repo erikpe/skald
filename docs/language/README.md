@@ -49,7 +49,7 @@ receiver is evaluated before its explicit arguments.
 `var` declarations create owning local storage. Primitive values are copied as
 primitive payloads. Class initialization, copy construction, assignment, and
 destruction use the selected lifecycle operation for the exact class.
-The frozen constructor model gives ordinary `init` declarations a
+The implemented constructor model gives ordinary `init` declarations a
 constructor-only overload set and gives copy construction the distinct
 `copy(ref source: T)` declaration and `T(copy source)` selection form.
 

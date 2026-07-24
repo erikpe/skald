@@ -83,10 +83,14 @@ fn view_source_contains_runtime_cast(source: &HirViewSource) -> bool {
 
 fn producer_contains_runtime_cast(producer: &HirObjectProducer) -> bool {
     match producer {
-        HirObjectProducer::Construct(construction) => construction
-            .arguments
-            .iter()
-            .any(call_argument_contains_runtime_cast),
+        HirObjectProducer::Construct(construction) => match &construction.mode {
+            crate::hir::HirConstructionMode::Initialize { arguments, .. } => {
+                arguments.iter().any(call_argument_contains_runtime_cast)
+            }
+            crate::hir::HirConstructionMode::Copy { source, .. } => {
+                object_source_contains_runtime_cast(source)
+            }
+        },
         HirObjectProducer::Call(call) => {
             let receiver_has_cast = match &call.target {
                 HirObjectCallTarget::Direct(_) => false,

@@ -11,7 +11,7 @@ use crate::{
     source::Span,
     typeck::program::{
         lower_parameter_mode, lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_ALIAS_ARGUMENT,
-        INVALID_TYPE_TEST,
+        INVALID_COPY_CONSTRUCTION, INVALID_TYPE_TEST,
     },
 };
 
@@ -20,6 +20,7 @@ pub(super) enum ViewSourceUse {
     AliasArgument,
     TypeTest,
     Cast,
+    CopyConstruction,
 }
 
 impl ViewSourceUse {
@@ -28,6 +29,7 @@ impl ViewSourceUse {
             Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
             Self::TypeTest => INVALID_TYPE_TEST,
             Self::Cast => crate::typeck::program::INVALID_OBJECT_CAST,
+            Self::CopyConstruction => INVALID_COPY_CONSTRUCTION,
         }
     }
 
@@ -36,6 +38,7 @@ impl ViewSourceUse {
             Self::AliasArgument => "alias argument must designate an object",
             Self::TypeTest => "type-test source must designate an object",
             Self::Cast => "object-cast source must designate an object",
+            Self::CopyConstruction => "copy-construction source must designate an object",
         }
     }
 
@@ -44,6 +47,9 @@ impl ViewSourceUse {
             Self::AliasArgument => "alias argument must be an existing object place",
             Self::TypeTest => "type-test source must be an existing object place",
             Self::Cast => "object-cast source must be an existing object place",
+            Self::CopyConstruction => {
+                "copy-construction source must be an object place or produced object"
+            }
         }
     }
 }
@@ -386,8 +392,10 @@ impl CallableChecker<'_, '_> {
                 Some(CheckedObjectViewSource::Class { place, origin })
             }
             expression
-                if matches!(source_use, ViewSourceUse::Cast)
-                    && !is_object_cast_expression(expression)
+                if matches!(
+                    source_use,
+                    ViewSourceUse::Cast | ViewSourceUse::CopyConstruction
+                ) && !is_object_cast_expression(expression)
                     && self.resolved_object_class(expression).is_some() =>
             {
                 let class = self

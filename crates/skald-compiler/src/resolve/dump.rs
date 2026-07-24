@@ -566,14 +566,27 @@ impl ResolvedDumper {
                     }
                 });
             }
-            ResolvedExpression::Construct(construct) => {
-                self.line(&format!("Construct {}", construct.class), construct.span);
-                self.indented(|dumper| {
-                    for argument in &construct.arguments {
-                        dumper.expression(argument);
-                    }
-                });
-            }
+            ResolvedExpression::Construct(construct) => match &construct.mode {
+                ResolvedConstructionMode::Initialize { arguments } => {
+                    self.line(&format!("Construct {}", construct.class), construct.span);
+                    self.indented(|dumper| {
+                        for argument in arguments {
+                            dumper.expression(argument);
+                        }
+                    });
+                }
+                ResolvedConstructionMode::Copy { copy_span, source } => {
+                    self.line(
+                        &format!("CopyConstruct {}", construct.class),
+                        construct.span,
+                    );
+                    self.indented(|dumper| {
+                        dumper.line("Copy", *copy_span);
+                        dumper.heading("Source");
+                        dumper.indented(|dumper| dumper.expression(source));
+                    });
+                }
+            },
         }
     }
 

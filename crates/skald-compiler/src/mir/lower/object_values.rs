@@ -2,7 +2,8 @@
 
 use crate::{
     hir::{
-        HirConstruction, HirObjectCall, HirObjectCallTarget, HirObjectProducer, HirObjectSource,
+        HirConstruction, HirConstructionMode, HirObjectCall, HirObjectCallTarget,
+        HirObjectProducer, HirObjectSource,
     },
     identity::ClassId,
     source::Span,
@@ -30,13 +31,39 @@ impl BodyLowerer<'_> {
         construction: &HirConstruction,
         destination: MirPlace,
     ) {
-        let arguments = self.lower_call_arguments(&construction.arguments);
-        self.emit(MirInstruction::Initialize(MirInitialize {
-            destination,
-            target: construction.initializer,
-            arguments,
-            span: construction.span,
-        }));
+        self.lower_construction_at(construction, destination, construction.span);
+    }
+
+    pub(super) fn lower_construction_at(
+        &mut self,
+        construction: &HirConstruction,
+        destination: MirPlace,
+        span: Span,
+    ) {
+        match &construction.mode {
+            HirConstructionMode::Initialize {
+                initializer,
+                arguments,
+            } => {
+                let arguments = self.lower_call_arguments(arguments);
+                self.emit(MirInstruction::Initialize(MirInitialize {
+                    destination,
+                    target: *initializer,
+                    arguments,
+                    span,
+                }));
+            }
+            HirConstructionMode::Copy { source, operation } => {
+                let source = self.lower_object_source(source);
+                self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                    destination,
+                    source,
+                    class: construction.class,
+                    operation: lower_selected_copy_operation(*operation),
+                    span,
+                }));
+            }
+        }
     }
 
     fn lower_object_call(&mut self, call: &HirObjectCall, destination: MirPlace) {

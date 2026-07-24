@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM4 complete, CM5 is next.
+Status: in progress; CM5 complete, CM6 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -91,7 +91,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - [x] CM2 — Adopt the distinct copy-constructor declaration
 - [x] CM3 — Select ordinary initializer overloads
 - [x] CM4 — Select overloaded direct-base initialization
-- [ ] CM5 — Execute explicit target-directed copy construction
+- [x] CM5 — Execute explicit target-directed copy construction
 - [ ] CM6 — Harden and publish the constructor model
 
 ## PR-sized implementation sequence
@@ -272,37 +272,37 @@ construction order.
 **Purpose:** Give copy construction one unambiguous expression form that shared
 allocation can later compose without overloading ordinary initialization.
 
-- [ ] Parse contextual `copy` immediately after a construction argument list's
+- [x] Parse contextual `copy` immediately after a construction argument list's
       opening parenthesis as a one-source construction mode, preserving exact
       spans, precedence, nesting, and recovery. `T(copy)` and
       `T(copy, other)` remain ordinary arguments that happen to name a binding.
-- [ ] Resolve `T(copy source)` only when `T` names a concrete class and retain
+- [x] Resolve `T(copy source)` only when `T` names a concrete class and retain
       explicit copy mode rather than fabricating an ordinary argument.
       Functions, methods, interfaces, and `Obj` cannot consume the marker.
-- [ ] Type-check the source once through the canonical object-view relation:
+- [x] Type-check the source once through the canonical object-view relation:
       statically select guaranteed exact/ancestor targets, emit a runtime check
       for dynamically possible forwarded sources, and reject statically
       impossible sources.
-- [ ] Reuse checked-place access, provenance, slicing, produced-temporary, and
+- [x] Reuse checked-place access, provenance, slicing, produced-temporary, and
       copy-capability machinery. Keep an explicit inner cast as an optional
       additional refinement rather than requiring a matching cast.
-- [ ] Record one selected copy constructor and checked source in HIR; lower
+- [x] Record one selected copy constructor and checked source in HIR; lower
       its success/failure edges, source lifetime, destination construction,
       and cleanup through existing verified MIR operations.
-- [ ] Keep implicit owning-copy contexts unchanged. Make `T(arguments)`
+- [x] Keep implicit owning-copy contexts unchanged. Make `T(arguments)`
       ordinary-only, make `T(copy source)` copy-only, and reject fallback in
       either direction.
-- [ ] Evaluate the source exactly once, keep it live until the exact `T`
+- [x] Evaluate the source exactly once, keep it live until the exact `T`
       destination is complete, preserve deliberate slicing, and prohibit
       copy elision and dynamic-type-preserving cloning.
-- [ ] Expose one construction-mode representation that the shared roadmap can
+- [x] Expose one construction-mode representation that the shared roadmap can
       reuse for `new T(arguments)` and `new T(copy source)` without source-
       shape inspection.
-- [ ] Add same/up/down/cross, inline/produced/alias, read-only/mutable,
+- [x] Add same/up/down/cross, inline/produced/alias, read-only/mutable,
       inner-cast refinement, slicing, unavailable-copy, static-impossibility,
       runtime-failure, source-once, cleanup-order, parser-ambiguity, dump,
       verifier, assembly, and native tests.
-- [ ] Update implemented grammar, lifecycle, casts, phases, status, debugging,
+- [x] Update implemented grammar, lifecycle, casts, phases, status, debugging,
       and testing documentation for the executable explicit-copy form.
 
 **Tests:** Focused syntax through backend tests, parser robustness,

@@ -201,9 +201,36 @@ pub struct HirObjectSlice {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirConstruction {
     pub class: ClassId,
-    pub initializer: InitializerId,
-    pub arguments: Vec<HirCallArgument>,
+    pub mode: HirConstructionMode,
     pub span: Span,
+}
+
+impl HirConstruction {
+    pub fn initializer(&self) -> Option<InitializerId> {
+        match self.mode {
+            HirConstructionMode::Initialize { initializer, .. } => Some(initializer),
+            HirConstructionMode::Copy { .. } => None,
+        }
+    }
+
+    pub fn arguments(&self) -> Option<&[HirCallArgument]> {
+        match &self.mode {
+            HirConstructionMode::Initialize { arguments, .. } => Some(arguments),
+            HirConstructionMode::Copy { .. } => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirConstructionMode {
+    Initialize {
+        initializer: InitializerId,
+        arguments: Vec<HirCallArgument>,
+    },
+    Copy {
+        source: Box<HirObjectSource>,
+        operation: HirSelectedCopyOperation<CopyConstructorId>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -217,7 +244,7 @@ pub enum HirObjectReturn {
     /// The supported return-elision case: construct directly in return storage.
     Construct {
         construction: HirConstruction,
-        omitted_copy: HirSelectedCopyOperation<CopyConstructorId>,
+        omitted_copy: Option<HirSelectedCopyOperation<CopyConstructorId>>,
     },
 }
 

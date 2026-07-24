@@ -424,8 +424,17 @@ pub struct BinaryExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CallExpr {
     pub callee: Box<Expression>,
-    pub arguments: Vec<Expression>,
+    pub arguments: CallArguments,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CallArguments {
+    Ordinary(Vec<Expression>),
+    Copy {
+        copy_span: Span,
+        source: Box<Expression>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

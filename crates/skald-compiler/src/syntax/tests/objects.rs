@@ -775,3 +775,74 @@ fn object_ast_dump_is_exact_and_source_shaped() {
         )
     );
 }
+
+#[test]
+fn parses_contextual_copy_construction_without_stealing_copy_arguments() {
+    let (sources, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var first: Thing = Thing(copy source.field);\n",
+        "  var second: Thing = Thing(copy);\n",
+        "  var third: Thing = Thing(copy, other);\n",
+        "  var nested: Thing = Thing(copy Thing(copy source));\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let main = function(&output.ast, 0);
+    let expected = [true, false, false, true];
+    for (statement, is_copy) in main.body.statements[..4].iter().zip(expected) {
+        let Statement::Local(local) = statement else {
+            panic!("expected local declaration");
+        };
+        let Expression::Call(call) = &local.initializer else {
+            panic!("expected construction-shaped call");
+        };
+        assert_eq!(
+            matches!(call.arguments, CallArguments::Copy { .. }),
+            is_copy
+        );
+    }
+    let Statement::Local(first) = &main.body.statements[0] else {
+        unreachable!()
+    };
+    let Expression::Call(first) = &first.initializer else {
+        unreachable!()
+    };
+    let CallArguments::Copy { copy_span, source } = &first.arguments else {
+        unreachable!()
+    };
+    assert_eq!(source_text(&sources, *copy_span), "copy");
+    assert_eq!(source_text(&sources, source.span()), "source.field");
+
+    let Statement::Local(nested) = &main.body.statements[3] else {
+        unreachable!()
+    };
+    let Expression::Call(nested) = &nested.initializer else {
+        unreachable!()
+    };
+    let CallArguments::Copy { source, .. } = &nested.arguments else {
+        unreachable!()
+    };
+    assert_eq!(source_text(&sources, source.span()), "Thing(copy source)");
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Copy @"));
+    assert!(dump.contains("Source\n"));
+}
+
+#[test]
+fn malformed_copy_construction_recovers_to_the_following_statement() {
+    let (_, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var value: Thing = Thing(copy source, other);\n",
+        "  return 7;\n",
+        "}\n",
+    ));
+
+    assert!(output.has_errors());
+    let main = function(&output.ast, 0);
+    assert!(matches!(
+        main.body.statements.last(),
+        Some(Statement::Return(_))
+    ));
+}

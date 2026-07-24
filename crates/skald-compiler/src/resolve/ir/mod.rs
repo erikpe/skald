@@ -26,10 +26,11 @@ pub use declarations::{
 };
 pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
-    ResolvedConstructExpr, ResolvedDirectCallExpr, ResolvedExpression, ResolvedFieldAccessExpr,
-    ResolvedGroupedExpr, ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver,
-    ResolvedMethodCallExpr, ResolvedNumericLiteralExpr, ResolvedObjectCastExpr,
-    ResolvedObjectCastTargetMode, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDirectCallExpr, ResolvedExpression,
+    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
+    ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
+    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr, ResolvedUnaryExpr,
+    ResolvedUnaryOperator,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};

@@ -45,7 +45,10 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
         panic!("expected constructor producer");
     };
     assert_eq!(construction.class, class.id);
-    assert_eq!(construction.initializer, class.initializers[0].id);
+    assert_eq!(
+        construction.initializer().unwrap(),
+        class.initializers[0].id
+    );
 }
 
 #[test]
@@ -185,10 +188,10 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
     assert_eq!(statement.place.field, FieldId::new(parent.id, 0));
     assert_eq!(statement.construction.class, ClassId::new(1));
     assert_eq!(
-        statement.construction.initializer,
+        statement.construction.initializer().unwrap(),
         InitializerId::new(ClassId::new(1), 0)
     );
-    let (_, seed) = class_alias_view(&statement.construction.arguments[0]);
+    let (_, seed) = class_alias_view(&statement.construction.arguments().unwrap()[0]);
     assert_eq!(seed.access, HirAccess::ReadOnly);
 
     let dump = dump_hir(&hir);
@@ -416,7 +419,7 @@ fn selects_exact_primitive_initializer_overloads_into_hir() {
             else {
                 panic!("expected constructor producer");
             };
-            Some(construction.initializer)
+            Some(construction.initializer().unwrap())
         })
         .collect();
     assert_eq!(
@@ -488,7 +491,7 @@ fn selects_the_unique_most_specific_object_parameter_types() {
             else {
                 return None;
             };
-            (construction.class == ClassId::new(2)).then_some(construction.initializer)
+            (construction.class == ClassId::new(2)).then_some(construction.initializer().unwrap())
         })
         .collect();
     assert_eq!(
@@ -584,7 +587,7 @@ fn alias_access_filters_candidates_before_type_specificity() {
         panic!("expected returned construction");
     };
     assert_eq!(
-        construction.initializer,
+        construction.initializer().unwrap(),
         InitializerId::new(ClassId::new(2), 0)
     );
 
@@ -599,7 +602,7 @@ fn alias_access_filters_candidates_before_type_specificity() {
         panic!("expected constructor producer");
     };
     assert_eq!(
-        construction.initializer,
+        construction.initializer().unwrap(),
         InitializerId::new(ClassId::new(2), 1)
     );
 }
@@ -646,15 +649,16 @@ fn value_copy_applicability_competes_with_alias_views_for_existing_and_produced_
     assert_eq!(constructions.len(), 2);
     for construction in &constructions {
         assert_eq!(
-            construction.initializer,
+            construction.initializer().unwrap(),
             InitializerId::new(ClassId::new(2), 1)
         );
         assert!(matches!(
-            construction.arguments.as_slice(),
+            construction.arguments().unwrap(),
             [crate::hir::HirCallArgument::Copy(_)]
         ));
     }
-    let crate::hir::HirCallArgument::Copy(produced) = &constructions[1].arguments[0] else {
+    let crate::hir::HirCallArgument::Copy(produced) = &constructions[1].arguments().unwrap()[0]
+    else {
         unreachable!();
     };
     let crate::hir::HirObjectSource::Slice(slice) = &produced.source else {

@@ -156,10 +156,10 @@ authority rather than infer ownership from cast syntax.
 
 Ordinary direct and base-initializer overload selection belongs to type
 checking, and copy construction has a distinct lifecycle identity. The
-remaining constructor extension adds the explicit copy-construction source
-mode. Its phase boundary is defined in
-[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md), and its
-implementation roadmap blocks shared ownership.
+explicit copy-construction source mode is carried separately from ordinary
+arguments through syntax, resolution, HIR, and MIR. Its phase boundary is
+defined in
+[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md).
 
 Feature maturity and implementation order belong in the
 [language status matrix](../language/STATUS.md) and

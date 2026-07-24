@@ -11,7 +11,9 @@ use crate::{
         HirObjectView, HirTypeTest, HirTypeTestKind, HirViewTarget,
     },
     resolve::{ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr},
-    typeck::program::{lower_type, INVALID_OBJECT_CAST, INVALID_TYPE_TEST},
+    typeck::program::{
+        lower_type, INVALID_COPY_CONSTRUCTION, INVALID_OBJECT_CAST, INVALID_TYPE_TEST,
+    },
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -33,6 +35,52 @@ enum CheckedViewRejection {
 }
 
 impl CallableChecker<'_, '_> {
+    pub(in crate::typeck) fn check_copy_construction_view(
+        &mut self,
+        expression: &crate::resolve::ResolvedExpression,
+        target: crate::identity::ClassId,
+        target_span: Span,
+        span: Span,
+    ) -> Option<HirCheckedObjectView> {
+        let source = self.check_object_view_source(expression, ViewSourceUse::CopyConstruction)?;
+        let source_span = source.span();
+        let target_class = target;
+        let target = HirViewTarget::Class(target_class);
+        let operation = match self.select_checked_view(source, target, HirAccess::ReadOnly) {
+            Ok(operation) => operation,
+            Err(CheckedViewRejection::StaticFailure) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_COPY_CONSTRUCTION,
+                        "copy-construction source can never provide the target class",
+                    )
+                    .with_primary_label(
+                        target_span,
+                        "no possible dynamic class provides this object",
+                    )
+                    .with_secondary_label(source_span, "source view"),
+                );
+                return None;
+            }
+            Err(CheckedViewRejection::InsufficientAccess) => {
+                unreachable!("every object source permits read-only copy access")
+            }
+        };
+        let projections = self.checked_view_projections(&operation.view, target);
+        Some(HirCheckedObjectView {
+            class: Some(target_class),
+            view: operation.view,
+            consumer_target: target,
+            consumer_access: HirAccess::ReadOnly,
+            kind: match operation.kind {
+                CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
+                CheckedViewKind::Runtime => HirCheckedObjectViewKind::RuntimeTerminate,
+            },
+            projections,
+            span,
+        })
+    }
+
     pub(in crate::typeck) fn check_object_cast(
         &mut self,
         cast: &ResolvedObjectCastExpr,
@@ -72,21 +120,7 @@ impl CallableChecker<'_, '_> {
                 unreachable!("a plain object cast preserves the source access")
             }
         };
-        let projections = match (&operation.view.source, target) {
-            (crate::hir::HirViewSource::Produced(producer), HirViewTarget::Class(target))
-                if producer.class() != target =>
-            {
-                self.program
-                    .hierarchy
-                    .base_chain(producer.class())
-                    .expect("statically successful produced cast must have valid ancestry")
-                    .take_while(|base| *base != target)
-                    .chain(std::iter::once(target))
-                    .map(crate::object_path::ObjectProjection::Base)
-                    .collect()
-            }
-            _ => Vec::new(),
-        };
+        let projections = self.checked_view_projections(&operation.view, target);
         Some(HirCheckedObjectView {
             class: match target {
                 HirViewTarget::Class(class) => Some(class),
@@ -102,6 +136,28 @@ impl CallableChecker<'_, '_> {
             projections,
             span: cast.span,
         })
+    }
+
+    fn checked_view_projections(
+        &self,
+        view: &HirObjectView,
+        target: HirViewTarget,
+    ) -> Vec<crate::object_path::ObjectProjection> {
+        match (&view.source, target) {
+            (crate::hir::HirViewSource::Produced(producer), HirViewTarget::Class(target))
+                if producer.class() != target =>
+            {
+                self.program
+                    .hierarchy
+                    .base_chain(producer.class())
+                    .expect("statically successful produced cast must have valid ancestry")
+                    .take_while(|base| *base != target)
+                    .chain(std::iter::once(target))
+                    .map(crate::object_path::ObjectProjection::Base)
+                    .collect()
+            }
+            _ => Vec::new(),
+        }
     }
 
     pub(super) fn check_type_test(&mut self, test: &ResolvedTypeTestExpr) -> Option<HirExpression> {

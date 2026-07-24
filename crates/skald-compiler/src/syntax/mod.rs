@@ -11,8 +11,8 @@ mod dump;
 mod parser;
 
 pub use ast::{
-    BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, CallExpr,
-    ClassDecl, ClassMember, CompilationUnit, ConditionalArm, ConditionalStatement,
+    BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, CallArguments,
+    CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm, ConditionalStatement,
     CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement,
     ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
     IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl, MethodModifier, Name,

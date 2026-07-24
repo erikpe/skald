@@ -378,12 +378,21 @@ impl AstDumper {
                 self.indented(|dumper| {
                     dumper.heading("Callee");
                     dumper.indented(|dumper| dumper.expression(&call.callee));
-                    dumper.heading("Arguments");
-                    dumper.indented(|dumper| {
-                        for argument in &call.arguments {
-                            dumper.expression(argument);
+                    match &call.arguments {
+                        CallArguments::Ordinary(arguments) => {
+                            dumper.heading("Arguments");
+                            dumper.indented(|dumper| {
+                                for argument in arguments {
+                                    dumper.expression(argument);
+                                }
+                            });
                         }
-                    });
+                        CallArguments::Copy { copy_span, source } => {
+                            dumper.line("Copy", *copy_span);
+                            dumper.heading("Source");
+                            dumper.indented(|dumper| dumper.expression(source));
+                        }
+                    }
                 });
             }
             Expression::Grouped(grouped) => {

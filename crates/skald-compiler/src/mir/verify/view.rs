@@ -96,7 +96,12 @@ impl Verifier<'_> {
             match view.target {
                 MirViewTarget::Class(target)
                     if origin.static_class.is_some_and(|static_class| {
-                        target != static_class && !self.program.is_ancestor(target, static_class)
+                        let static_conversion = target == static_class
+                            || self.program.is_ancestor(target, static_class);
+                        let checked_downcast = allow_dynamic_conversion
+                            && origin.forwarded
+                            && self.program.is_ancestor(static_class, target);
+                        !static_conversion && !checked_downcast
                     }) =>
                 {
                     self.block_error(

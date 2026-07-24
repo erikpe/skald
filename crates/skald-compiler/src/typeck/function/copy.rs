@@ -82,17 +82,24 @@ impl CallableChecker<'_, '_> {
                 if construction.class == class
         ) {
             let construction = self.check_construction_initializer(class, initializer)?;
-            // Elision does not change validity: the corresponding non-elided
-            // execution must still have a selected copy constructor.
-            let Some(elided_copy) = self.copy_capabilities.constructor(class).selected() else {
-                self.report_unavailable_copy_operation(class, true, initializer.span());
-                return None;
+            let elided_copy = match &construction.mode {
+                crate::hir::HirConstructionMode::Initialize { .. } => {
+                    // Elision does not change validity: the corresponding
+                    // non-elided execution must still have a copy constructor.
+                    let Some(operation) = self.copy_capabilities.constructor(class).selected()
+                    else {
+                        self.report_unavailable_copy_operation(class, true, initializer.span());
+                        return None;
+                    };
+                    Some(operation)
+                }
+                crate::hir::HirConstructionMode::Copy { .. } => None,
             };
             return Some(HirLocalInitializer::Object(HirObjectInitialization {
                 destination,
                 span: construction.span,
                 producer: HirObjectProducer::Construct(construction),
-                elided_copy: Some(elided_copy),
+                elided_copy,
             }));
         }
         if matches!(

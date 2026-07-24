@@ -60,9 +60,8 @@ an empty class. Those declarations form one class-owned overload set. Copy
 construction instead occupies the separate `copy` lifecycle slot; an
 `init(ref source: T)` declaration is an ordinary initializer. Direct
 construction and direct-base `super(arguments)` use the same overload
-selection engine. The
-[constructor roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md) tracks
-explicit copy-construction expressions.
+selection engine. `T(copy source)` selects the separate copy-construction slot
+and never participates in ordinary initializer overload resolution.
 
 All executable exact-class fields and methods are accessible wherever the
 receiver is available. Static members and access modifiers are not
@@ -590,9 +589,10 @@ deallocation or any particular storage operation.
 
 The implemented executable class model does not yet include shared or
 heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, explicit `T(copy source)` construction,
-method overloads, reflection, or user-defined conversions. Ordinary direct and
-base-initializer overloads and the distinct `copy` declaration execute.
+modifiers, `final`, abstract members, method overloads, reflection, or
+user-defined conversions. Ordinary direct and base-initializer overloads,
+the distinct `copy` declaration, and target-directed `T(copy source)`
+construction execute.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
 class/interface/`Obj` alias views, slicing, virtual dispatch, interface
 dispatch, type tests, and checked object casts execute on x86-64. Their

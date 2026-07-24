@@ -8,9 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
   **in progress**; establishes the distinct `copy` lifecycle operation, adds target-directed
   `T(copy source)`, and enables compile-time most-specific ordinary `init`
   overloads including `super(...)`. The declaration and internal identity are
-  distinct; direct and base overload selection are implemented, and explicit
-  target-directed copy construction is next. It depends on the completed
-  lifecycle, polymorphism, and object-cast profiles.
+  distinct; direct and base overload selection and explicit target-directed
+  copy construction are implemented, with the final hardening audit next. It
+  depends on the completed lifecycle, polymorphism, and object-cast profiles.
 - [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md) —
   **planned, blocked**; implements non-null strong owners, explicit ordinary
   and copy allocation, deterministic last-owner destruction, shared
@@ -20,10 +20,10 @@ progress. Completed roadmaps and resolved discovery records move to
   profile and frozen language/compiler contracts.
 
 The completed polymorphism and object-cast profiles remain the implementation
-baseline. Constructor overload and explicit-copy semantics are frozen in
-[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md) and are the next
-implementation work. Shared-ownership language and implementation contracts
-are frozen in
+baseline. Constructor overload and explicit-copy semantics are implemented as
+specified in [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md);
+their final hardening task precedes shared work. Shared-ownership language and
+implementation contracts are frozen in
 [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md) and
 the
 [Shared-Ownership Compiler and Runtime Contract](../compiler/SHARED_OWNERSHIP.md),

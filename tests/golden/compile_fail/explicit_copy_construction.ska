@@ -1,0 +1,16 @@
+class Animal {
+    init() {}
+}
+
+class Dog extends Animal {
+    init() {
+        super();
+    }
+}
+
+fn main() -> i64 {
+    var animal: Animal = Animal();
+    var impossible: Dog = Dog(copy animal);
+    var ordinary_only: Animal = Animal(animal);
+    return 0;
+}

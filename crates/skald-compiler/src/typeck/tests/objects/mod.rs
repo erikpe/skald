@@ -17,6 +17,7 @@ use crate::{
 
 mod construction;
 mod dumps;
+mod explicit_copy;
 mod lifecycle_copy;
 mod lifecycle_inheritance;
 mod object_places;

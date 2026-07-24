@@ -169,7 +169,10 @@ fn grouped_call_arguments_remain_source_shaped_beside_alias_signatures() {
     let Expression::Call(call) = &statement.expression else {
         panic!("expected call expression");
     };
-    assert!(matches!(call.arguments[0], Expression::Grouped(_)));
+    let CallArguments::Ordinary(arguments) = &call.arguments else {
+        panic!("expected ordinary call arguments");
+    };
+    assert!(matches!(arguments[0], Expression::Grouped(_)));
 }
 
 #[test]

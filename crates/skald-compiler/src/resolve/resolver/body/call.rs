@@ -41,16 +41,50 @@ impl CallableResolver<'_, '_> {
     }
 
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
-        let target = self.resolve_call_target(&call.callee);
-        let mut arguments = Vec::with_capacity(call.arguments.len());
+        let copy_mode = matches!(call.arguments, syntax::CallArguments::Copy { .. });
+        let target = self.resolve_call_target(&call.callee, copy_mode)?;
+        if let syntax::CallArguments::Copy { copy_span, source } = &call.arguments {
+            let source = self.resolve_expression(source)?;
+            return match target {
+                CallTarget::Constructor { class } => {
+                    Some(ResolvedExpression::Construct(ResolvedConstructExpr {
+                        class,
+                        callee_span: call.callee.span(),
+                        mode: ResolvedConstructionMode::Copy {
+                            copy_span: *copy_span,
+                            source: Box::new(source),
+                        },
+                        span: call.span,
+                    }))
+                }
+                _ => {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_CONSTRUCTION_TARGET,
+                            "`copy` construction requires a concrete class",
+                        )
+                        .with_primary_label(*copy_span, "copy-construction marker used here")
+                        .with_secondary_label(
+                            call.callee.span(),
+                            "this callee does not name a class",
+                        ),
+                    );
+                    None
+                }
+            };
+        }
+
+        let syntax::CallArguments::Ordinary(syntax_arguments) = &call.arguments else {
+            unreachable!("copy construction returned above");
+        };
+        let mut arguments = Vec::with_capacity(syntax_arguments.len());
         let mut valid = true;
-        for argument in &call.arguments {
+        for argument in syntax_arguments {
             match self.resolve_expression(argument) {
                 Some(argument) => arguments.push(argument),
                 None => valid = false,
             }
         }
-        let target = target?;
         if !valid {
             return None;
         }
@@ -67,7 +101,7 @@ impl CallableResolver<'_, '_> {
                 ResolvedExpression::Construct(ResolvedConstructExpr {
                     class,
                     callee_span: call.callee.span(),
-                    arguments,
+                    mode: ResolvedConstructionMode::Initialize { arguments },
                     span: call.span,
                 })
             }
@@ -100,7 +134,11 @@ impl CallableResolver<'_, '_> {
         })
     }
 
-    fn resolve_call_target(&mut self, callee: &syntax::Expression) -> Option<CallTarget> {
+    fn resolve_call_target(
+        &mut self,
+        callee: &syntax::Expression,
+        copy_mode: bool,
+    ) -> Option<CallTarget> {
         match callee {
             syntax::Expression::Identifier(identifier) => {
                 if let Some(binding) = self.lookup_binding(&identifier.name.text) {
@@ -128,11 +166,12 @@ impl CallableResolver<'_, '_> {
                         kind: TopLevelSymbolKind::Class(class),
                         ..
                     }) => {
-                        if self
-                            .environment
-                            .classes
-                            .get(class)
-                            .is_none_or(|class| class.initializers.is_empty())
+                        if !copy_mode
+                            && self
+                                .environment
+                                .classes
+                                .get(class)
+                                .is_none_or(|class| class.initializers.is_empty())
                         {
                             self.diagnostics.push(
                                 Diagnostic::error(

@@ -186,12 +186,43 @@ impl Parser<'_> {
     }
 
     fn finish_call(&mut self, callee: Expression) -> Option<Expression> {
-        let (arguments, end_span) = self.parse_call_arguments()?;
+        let (arguments, end_span) = if self.at_contextual_copy_arguments() {
+            self.parse_copy_call_arguments()?
+        } else {
+            let (arguments, end_span) = self.parse_call_arguments()?;
+            (CallArguments::Ordinary(arguments), end_span)
+        };
         Some(Expression::Call(CallExpr {
             span: self.cover(callee.span(), end_span),
             callee: Box::new(callee),
             arguments,
         }))
+    }
+
+    fn at_contextual_copy_arguments(&self) -> bool {
+        self.peek().kind == TokenKind::LeftParen
+            && self.peek_ahead(1).kind == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(1)) == "copy"
+            && self.starts_expression_ahead(2)
+    }
+
+    fn parse_copy_call_arguments(&mut self) -> Option<(CallArguments, Span)> {
+        let left_paren = self.advance();
+        debug_assert_eq!(left_paren.kind, TokenKind::LeftParen);
+        let copy_token = self.advance();
+        debug_assert_eq!(self.lexeme(copy_token), "copy");
+        let source = self.parse_expression()?;
+        let right_paren = self.expect(
+            TokenKind::RightParen,
+            "`)` after the explicit copy-construction source",
+        )?;
+        Some((
+            CallArguments::Copy {
+                copy_span: copy_token.span,
+                source: Box::new(source),
+            },
+            right_paren.span,
+        ))
     }
 
     pub(super) fn parse_call_arguments(&mut self) -> Option<(Vec<Expression>, Span)> {

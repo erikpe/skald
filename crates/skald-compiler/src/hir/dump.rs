@@ -447,13 +447,20 @@ impl HirDumper {
                             construction,
                             omitted_copy,
                         }) => {
-                            dumper.line("ElidedObjectResult", construction.span);
+                            let heading = if omitted_copy.is_some() {
+                                "ElidedObjectResult"
+                            } else {
+                                "ObjectResult"
+                            };
+                            dumper.line(heading, construction.span);
                             dumper.indented(|dumper| {
                                 dumper.construction(construction);
-                                dumper.raw_line("ElidedCopy");
-                                dumper.indented(|dumper| {
-                                    dumper.selected_copy_operation(*omitted_copy)
-                                });
+                                if let Some(operation) = omitted_copy {
+                                    dumper.raw_line("ElidedCopy");
+                                    dumper.indented(|dumper| {
+                                        dumper.selected_copy_operation(*operation)
+                                    });
+                                }
                             });
                         }
                     });
@@ -659,18 +666,32 @@ impl HirDumper {
     }
 
     fn construction(&mut self, construction: &HirConstruction) {
-        self.line(
-            &format!(
-                "Construct {} via {}",
-                construction.class, construction.initializer
-            ),
-            construction.span,
-        );
-        self.indented(|dumper| {
-            for argument in &construction.arguments {
-                dumper.call_argument(argument);
+        match &construction.mode {
+            HirConstructionMode::Initialize {
+                initializer,
+                arguments,
+            } => {
+                self.line(
+                    &format!("Construct {} via {initializer}", construction.class),
+                    construction.span,
+                );
+                self.indented(|dumper| {
+                    for argument in arguments {
+                        dumper.call_argument(argument);
+                    }
+                });
             }
-        });
+            HirConstructionMode::Copy { source, operation } => {
+                self.line(
+                    &format!("ExplicitCopyConstruct {}", construction.class),
+                    construction.span,
+                );
+                self.indented(|dumper| {
+                    dumper.object_source(source);
+                    dumper.selected_copy_operation(*operation);
+                });
+            }
+        }
     }
 
     fn object_call(&mut self, call: &HirObjectCall) {

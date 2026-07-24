@@ -179,8 +179,15 @@ impl CallableChecker<'_, '_> {
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<HirExpression> {
-        for argument in &construction.arguments {
-            let _ = self.check_expression(argument);
+        match &construction.mode {
+            crate::resolve::ResolvedConstructionMode::Initialize { arguments } => {
+                for argument in arguments {
+                    let _ = self.check_expression(argument);
+                }
+            }
+            crate::resolve::ResolvedConstructionMode::Copy { source, .. } => {
+                let _ = self.check_expression(source);
+            }
         }
         self.diagnostics.push(
             Diagnostic::error(

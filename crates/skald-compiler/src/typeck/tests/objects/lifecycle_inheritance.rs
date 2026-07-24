@@ -516,7 +516,10 @@ fn derived_return_elision_keeps_the_composed_copy_selection() {
     else {
         panic!("expected elided derived object result");
     };
-    assert_eq!(*omitted_copy, derived.copy_constructor.selected().unwrap());
+    assert_eq!(
+        *omitted_copy,
+        Some(derived.copy_constructor.selected().unwrap())
+    );
 }
 
 #[test]

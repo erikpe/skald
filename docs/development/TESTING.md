@@ -84,6 +84,13 @@ Exact dump and diagnostic expectations should remain readable and intentional.
 When an expectation changes, inspect the semantic difference before updating
 it. Do not introduce a second renderer solely to make a test convenient.
 
+Explicit-copy tests should distinguish `T(copy source)` from ordinary
+`T(copy)` and `T(copy, other)`, cover static and runtime target selection,
+assert one source evaluation and one selected copy, and verify that explicit
+copy is not recorded as constructor elision. Corrupt the lowered copy target
+or operation in a verifier test rather than relying only on successful native
+execution.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

@@ -46,6 +46,12 @@ later products are not created after diagnostics from an earlier source phase.
 For successful typed HIR, inspect MIR before assembly so semantic lowering and
 target realization remain distinguishable.
 
+For `T(copy source)`, the AST and resolved dumps must retain a distinct copy
+mode rather than an ordinary argument. HIR must show one selected copy
+operation and checked exact-`T` source. MIR then shows any `checked_cast`
+success/failure edge before one `copy_construct`, followed by the checked-view
+and produced-temporary full-expression cleanup.
+
 MIR verification runs at three boundaries:
 
 1. immediately after HIR lowering in debug builds;

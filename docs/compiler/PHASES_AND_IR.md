@@ -129,6 +129,13 @@ capability rather than an initializer candidate. `T(copy source)` selects that
 capability explicitly and records a target-directed checked exact-`T` source.
 Ordinary `T(arguments)` never falls back to copy construction.
 
+Syntax and resolved IR retain ordinary arguments and explicit-copy source as
+different construction modes. HIR replaces the former with one selected
+`InitializerId` and typed arguments, or the latter with one selected
+copy-constructor operation and checked object source. This
+destination-oriented representation can be reused by future `new T(...)`
+lowering without inspecting source expression shape.
+
 ## Typed HIR
 
 Type checking validates the whole resolved program and constructs HIR only
@@ -203,6 +210,8 @@ explicit:
 - initialization, copying, assignment, and cleanup operations;
 - checked-view sources for owning copy operations, with explicit bounded
   carrier lifetime across any runtime selection;
+- destination-oriented ordinary and explicit-copy construction, with runtime
+  failure before copy and one exact-class copy instruction on success;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
 - basic blocks with explicit return, jump, boolean-branch, checked-cast, and

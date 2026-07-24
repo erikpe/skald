@@ -112,23 +112,56 @@ impl CallableChecker<'_, '_> {
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<HirConstruction> {
-        let initializer_id = self.select_construction_initializer(construction)?;
-        let initializer = self
-            .program
-            .initializer(initializer_id)
-            .expect("selected construction must reference an initializer");
-        let arguments = self.check_arguments(
-            &construction.arguments,
-            &initializer.parameters,
-            construction.callee_span,
-            "initializer",
-            None,
-            None,
-        )?;
+        let mode = match &construction.mode {
+            crate::resolve::ResolvedConstructionMode::Initialize { arguments } => {
+                let initializer_id = self.select_construction_initializer(construction)?;
+                let initializer = self
+                    .program
+                    .initializer(initializer_id)
+                    .expect("selected construction must reference an initializer");
+                let arguments = self.check_arguments(
+                    arguments,
+                    &initializer.parameters,
+                    construction.callee_span,
+                    "initializer",
+                    None,
+                    None,
+                )?;
+                crate::hir::HirConstructionMode::Initialize {
+                    initializer: initializer_id,
+                    arguments,
+                }
+            }
+            crate::resolve::ResolvedConstructionMode::Copy { copy_span, source } => {
+                let source =
+                    if crate::typeck::function::copy::is_checked_object_source_expression(source) {
+                        self.check_object_source(source, construction.class, "copy construction")?
+                    } else {
+                        let checked = self.check_copy_construction_view(
+                            source,
+                            construction.class,
+                            construction.callee_span,
+                            construction.span,
+                        )?;
+                        crate::hir::HirObjectSource::Checked(Box::new(checked))
+                    };
+                let Some(operation) = self
+                    .copy_capabilities
+                    .constructor(construction.class)
+                    .selected()
+                else {
+                    self.report_unavailable_copy_operation(construction.class, true, *copy_span);
+                    return None;
+                };
+                crate::hir::HirConstructionMode::Copy {
+                    source: Box::new(source),
+                    operation,
+                }
+            }
+        };
         Some(HirConstruction {
             class: construction.class,
-            initializer: initializer_id,
-            arguments,
+            mode,
             span: construction.span,
         })
     }

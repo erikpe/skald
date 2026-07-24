@@ -205,20 +205,22 @@ types. A derived initializer's leading `super(arguments)` applies the same
 selection to the direct base's overload set. The copy constructor remains a
 separate lifecycle slot and is never an ordinary initializer candidate.
 
-The remaining constructor roadmap extends construction arguments with:
+Construction has two syntactically distinct argument modes:
 
 ```text
 copy-construction-arguments  = "(" "copy" expression ")"
 ```
 
-`Class(copy source)` will use `copy-construction-arguments`;
+`Class(copy source)` uses `copy-construction-arguments`;
 `Class(arguments)` never falls back to copy construction. The same distinction
-will apply to future `new Class(copy source)` and
+applies to the future `new Class(copy source)` and
 `new Class(arguments)`.
 
-`copy-construction-arguments` is a frozen future source contract, not syntax
-accepted by the current compiler. Explicit `Class(copy source)` selection
-remains later constructor-roadmap work.
+The marker is contextual only immediately after the opening `(` and only when
+followed by an expression. Consequently `Class(copy)` and
+`Class(copy, other)` remain ordinary argument lists in which `copy` names a
+binding. The explicit mode accepts exactly one source; a comma after that
+source is an error.
 
 `interface` and `implements` are contextual words. Interface bodies contain
 signatures only: fields, lifecycle declarations, method bodies, inheritance,
@@ -297,6 +299,7 @@ postfix-expression
                  = primary-expression {member-suffix | call-suffix}
 member-suffix    = "." identifier
 call-suffix      = "(" [argument-list] ")"
+                 | copy-construction-arguments
 argument-list    = expression {"," expression}
 
 primary-expression

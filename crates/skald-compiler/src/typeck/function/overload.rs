@@ -51,9 +51,13 @@ impl CallableChecker<'_, '_> {
         &mut self,
         construction: &crate::resolve::ResolvedConstructExpr,
     ) -> Option<crate::identity::InitializerId> {
+        let crate::resolve::ResolvedConstructionMode::Initialize { arguments } = &construction.mode
+        else {
+            unreachable!("copy construction does not select an ordinary initializer");
+        };
         self.select_initializer(
             construction.class,
-            &construction.arguments,
+            arguments,
             construction.callee_span,
             InitializerCallSite::DirectConstruction,
         )

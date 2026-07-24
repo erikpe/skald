@@ -301,7 +301,7 @@ first-class:
 | Exact-class local or field initialization | Copy-construct exact class `T` |
 | Exact-class value argument or result | Copy into the parameter or result destination |
 | Whole-object assignment to an owning exact `T` destination | Run exact `T` copy assignment |
-| `T(copy source)` | In the frozen constructor profile, copy-construct exact inline `T` from a target-directed checked place |
+| `T(copy source)` | Copy-construct exact inline `T` from a target-directed checked place |
 | `new T(copy source)` | In the future shared profile, allocate exact `T` and copy-construct it from a target-directed checked place |
 
 An interface or `Obj` place cast is valid only in view-consuming contexts
