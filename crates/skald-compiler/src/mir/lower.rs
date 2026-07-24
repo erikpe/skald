@@ -17,6 +17,7 @@ mod expression;
 mod object_values;
 mod places;
 mod program;
+mod shared;
 mod shared_gate;
 mod statement;
 mod type_operations;
@@ -32,7 +33,7 @@ impl std::fmt::Display for HirLoweringError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnsupportedSharedOwnership { .. } => {
-                formatter.write_str("shared ownership is not representable in MIR yet")
+                formatter.write_str("shared ownership operation is outside the current MIR profile")
             }
         }
     }
@@ -43,7 +44,7 @@ impl std::error::Error for HirLoweringError {}
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    if let Some(span) = shared_gate::first_shared_type_span(hir) {
+    if let Some(span) = shared_gate::first_unsupported_shared_span(hir) {
         return Err(HirLoweringError::UnsupportedSharedOwnership { span });
     }
     let mir = program::lower_program(hir);
@@ -96,6 +97,7 @@ struct BodyLowerer<'hir> {
     cleanup: CleanupPlanner,
     full_expression_temporaries: Vec<MirCleanup>,
     full_expression_checked_views: Vec<StorageId>,
+    full_expression_has_shared_effect: bool,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -113,6 +115,7 @@ impl<'hir> BodyLowerer<'hir> {
             cleanup: CleanupPlanner::new(),
             full_expression_temporaries: Vec::new(),
             full_expression_checked_views: Vec::new(),
+            full_expression_has_shared_effect: false,
             return_storage: None,
             receiver_storage: None,
             input,
@@ -221,9 +224,9 @@ impl<'hir> BodyLowerer<'hir> {
             .expect("HIR lowering must not emit after a terminator");
     }
 
-    fn emit_cleanups(&mut self, cleanups: Vec<MirCleanup>) {
+    fn emit_cleanups(&mut self, cleanups: Vec<cleanup::PlannedCleanup>) {
         for cleanup in cleanups {
-            self.emit(MirInstruction::Cleanup(cleanup));
+            self.emit(cleanup.into_instruction());
         }
     }
 
@@ -259,6 +262,12 @@ fn lower_type(ty: Type) -> MirType {
         Type::Obj => MirType::Obj,
         Type::Class(class) => MirType::Class(class),
         Type::Interface(interface) => MirType::Interface(interface),
-        Type::Shared(_) => unreachable!("shared HIR is rejected before MIR lowering"),
+        Type::Shared(target) => MirType::Shared(match target {
+            crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
+            crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
+            crate::hir::HirSharedTarget::Interface(interface) => {
+                MirSharedTarget::Interface(interface)
+            }
+        }),
     }
 }

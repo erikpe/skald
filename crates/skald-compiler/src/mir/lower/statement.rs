@@ -95,8 +95,10 @@ impl BodyLowerer<'_> {
                     .register_owned(storage, copy.destination.class());
                 self.finish_full_expression(local.span);
             }
-            crate::hir::HirLocalInitializer::Shared(_) => {
-                unreachable!("shared HIR is rejected before MIR lowering")
+            crate::hir::HirLocalInitializer::Shared(transfer) => {
+                self.lower_exact_shared_allocation_local(storage, transfer);
+                self.cleanup.register_shared(storage);
+                self.finish_full_expression(local.span);
             }
         }
     }

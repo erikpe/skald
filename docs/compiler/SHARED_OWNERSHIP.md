@@ -1,6 +1,6 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; typed HIR vocabulary implemented**.
+Status: **frozen implementation design; first verified MIR lifetime implemented**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -13,11 +13,14 @@ Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
 class/interface/`Obj` shared targets, named-place and produced-owner sources,
 explicit copy/adopt transfers, and ordinary allocation with one selected
-initializer. MIR lowering rejects this vocabulary with a structured error;
-MIR and the backend still have no shared representation or operations, and the
-current [runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation
-functions. Explicit copy allocation and shared-owner casts remain typed
-exclusions.
+initializer. MIR implements the first exact-class local profile:
+`shared C = new C(arguments)` has distinct unpublished allocation storage,
+initialization, publication, adoption, a full-expression boundary, and normal
+release. Broader shared uses remain behind a structured lowering gate, and
+the backend deliberately rejects otherwise valid shared MIR until target
+support lands. The current [runtime ABI](RUNTIME_ABI.md) remains version 4
+with no allocation functions. Explicit copy allocation and shared-owner casts
+remain typed exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy
@@ -91,6 +94,24 @@ No backend may infer ownership operations from uses or insert an unverified
 retain/release policy. Optimization may remove an operation only after MIR
 represents it and only when ownership, destruction timing, and failure behavior
 remain unchanged.
+
+The implemented SO2 state machine separates an allocation storage slot from
+owner storage:
+
+```text
+new -> allocated -> initialized -> published -> adopted owner
+                                                   |
+                                                   v
+                                                released
+```
+
+Only the publication transition creates count-one ownership. The allocation
+slot remains compiler-owned construction provenance and cannot be used as a
+place, view, receiver, or call argument. Adoption must be followed by its
+explicit full-expression boundary; normal return requires every local owner
+to have been released. CFG joins require identical shared allocation and owner
+states. These operations are target-independent and carry no handle size,
+header offset, or runtime symbol.
 
 ## MIR verification
 

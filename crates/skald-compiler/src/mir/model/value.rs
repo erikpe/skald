@@ -23,6 +23,8 @@ pub enum MirType {
     /// The universal non-owning object-view target. It has no owning storage
     /// or target layout of its own.
     Obj,
+    /// A non-null strong owner carrying one object view of a live allocation.
+    Shared(super::shared::MirSharedTarget),
     Unit,
 }
 
@@ -30,7 +32,7 @@ impl MirType {
     pub const fn is_scalar_value(self) -> bool {
         !matches!(
             self,
-            Self::Class(_) | Self::Interface(_) | Self::Obj | Self::Unit
+            Self::Class(_) | Self::Interface(_) | Self::Obj | Self::Shared(_) | Self::Unit
         )
     }
 }
@@ -46,6 +48,7 @@ impl fmt::Display for MirType {
             Self::Class(class) => write!(formatter, "class {class}"),
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
+            Self::Shared(target) => write!(formatter, "shared {target}"),
             Self::Unit => formatter.write_str("unit"),
         }
     }

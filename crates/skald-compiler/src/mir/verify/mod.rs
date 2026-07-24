@@ -21,6 +21,7 @@ mod inheritance;
 mod instructions;
 mod interfaces;
 mod place;
+mod shared;
 mod sink;
 mod type_operations;
 mod view;

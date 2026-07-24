@@ -199,7 +199,11 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
     match ty {
         MirType::I64 | MirType::U64 | MirType::F64 => Some(TypeLayout::new(8, 8)),
         MirType::U8 | MirType::Bool => Some(TypeLayout::new(1, 1)),
-        MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
+        MirType::Class(_)
+        | MirType::Interface(_)
+        | MirType::Obj
+        | MirType::Shared(_)
+        | MirType::Unit => None,
     }
 }
 

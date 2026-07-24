@@ -304,6 +304,9 @@ pub enum MirStorageKind {
     /// Compiler-owned scalar home used to preserve block-local MIR values
     /// across checked-cast control-flow edges.
     ScalarSpill,
+    /// Compiler-owned unpublished storage for one heap allocation under
+    /// construction. This is not a strong owner and cannot be source-named.
+    SharedAllocation,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

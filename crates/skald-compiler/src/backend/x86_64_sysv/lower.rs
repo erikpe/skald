@@ -175,6 +175,18 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_checked_view_binding(binding)?
             }
             MirInstruction::EndCheckedView(_) => {}
+            MirInstruction::SharedAllocate(_)
+            | MirInstruction::SharedInitialize(_)
+            | MirInstruction::SharedPublish(_)
+            | MirInstruction::SharedAdopt(_)
+            | MirInstruction::SharedCopy(_)
+            | MirInstruction::SharedRelease(_) => {
+                return Err(BackendError::new(
+                    crate::backend::Target::X86_64SysV,
+                    Some(self.function.callable()),
+                    "shared ownership is not supported by the x86-64 backend yet",
+                ));
+            }
         }
         Ok(())
     }

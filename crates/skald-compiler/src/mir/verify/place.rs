@@ -32,6 +32,16 @@ impl Verifier<'_> {
             );
             return None;
         };
+        if storage.kind == MirStorageKind::SharedAllocation {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!(
+                    "unpublished shared allocation storage {storage_id} cannot be used as a place"
+                ),
+            );
+            return None;
+        }
         let access = match (place.base, storage.kind) {
             (
                 MirPlaceBase::Storage(_),

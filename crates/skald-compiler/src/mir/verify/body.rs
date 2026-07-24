@@ -64,6 +64,7 @@ impl<'mir> Verifier<'mir> {
             self.verify_block(return_type, function, block, &mut defined_values);
         }
         self.verify_cleanup_liveness(function);
+        self.verify_shared_ownership(function);
 
         for value in function.values() {
             if !defined_values.contains(&value.id) {
@@ -125,6 +126,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::Temporary, None)
                     | (MirStorageKind::CheckedView(_), None)
                     | (MirStorageKind::ScalarSpill, None)
+                    | (MirStorageKind::SharedAllocation, None)
             );
             if !source_matches_kind {
                 self.function_error(
@@ -168,6 +170,23 @@ impl<'mir> Verifier<'mir> {
                     format!("compiler-owned storage {} must have class type", storage.id),
                 );
             }
+            if storage.kind == MirStorageKind::SharedAllocation
+                && !matches!(storage.ty, MirType::Class(_))
+            {
+                self.function_error(
+                    function.callable(),
+                    format!(
+                        "shared allocation storage {} must have exact class type",
+                        storage.id
+                    ),
+                );
+            }
+            if matches!(storage.ty, MirType::Shared(_)) && storage.kind != MirStorageKind::Local {
+                self.function_error(
+                    function.callable(),
+                    format!("SO2 shared owner storage {} must be a local", storage.id),
+                );
+            }
             if let MirType::Class(class) = storage.ty {
                 if self.program.class(class).is_none() {
                     self.function_error(
@@ -186,6 +205,9 @@ impl<'mir> Verifier<'mir> {
                         ),
                     );
                 }
+            }
+            if let MirType::Shared(target) = storage.ty {
+                self.verify_shared_target_declared(function.callable(), target);
             }
         }
     }

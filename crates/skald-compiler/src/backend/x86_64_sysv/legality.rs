@@ -18,6 +18,18 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    if let Some(function) = program.executable_definitions().find(|function| {
+        function.storage_entries().iter().any(|storage| {
+            matches!(storage.ty, crate::mir::MirType::Shared(_))
+                || storage.kind == crate::mir::MirStorageKind::SharedAllocation
+        })
+    }) {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            Some(function.callable()),
+            "shared ownership is not supported by the x86-64 backend yet",
+        ));
+    }
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
@@ -89,6 +101,14 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::EndCheckedView(_)
                     | MirInstruction::Store(_)
                     | MirInstruction::EndFullExpression(_) => {}
+                    MirInstruction::SharedAllocate(_)
+                    | MirInstruction::SharedInitialize(_)
+                    | MirInstruction::SharedPublish(_)
+                    | MirInstruction::SharedAdopt(_)
+                    | MirInstruction::SharedCopy(_)
+                    | MirInstruction::SharedRelease(_) => {
+                        unreachable!("shared MIR is rejected before target legality checks")
+                    }
                 }
             }
         }

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO1 complete, SO2 is next.
+Status: in progress; SO2 complete, SO3 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -31,9 +31,11 @@ and the complete cast direction matrix is
   provenance, explicit copy/adopt transfers, and ordinary allocation with one
   selected initializer. Explicit copy allocation and shared-owner casts remain
   typed exclusions.
-- MIR and lower phase products do not yet represent shared owners, allocation,
-  anchors, or release. MIR lowering rejects shared HIR structurally, and the
-  x86-64 backend has no shared handle or allocation path.
+- MIR represents and verifies the first exact allocated local lifetime with
+  distinct unpublished allocation storage, initialization, publication,
+  adoption, full-expression boundary, and normal release. Broader shared HIR
+  remains structurally gated, and the x86-64 backend deliberately rejects
+  valid shared MIR until it gains a handle and allocation path.
 - Runtime ABI version 4 exposes scalar output only; it has no allocation or
   deallocation entry points.
 
@@ -79,7 +81,7 @@ and the complete cast direction matrix is
 
 - [x] SO0 — Parse and resolve shared types and allocation forms
 - [x] SO1 — Establish typed shared-owner vocabulary
-- [ ] SO2 — Represent and verify the first owner lifetime in MIR
+- [x] SO2 — Represent and verify the first owner lifetime in MIR
 - [ ] SO3 — Upgrade the runtime to the minimal allocation ABI
 - [ ] SO4 — Execute exact-class allocation and last-owner destruction
 - [ ] SO5 — Complete local, assignment, and temporary owner semantics
@@ -173,29 +175,29 @@ duplicated compatibility policy.
 exact-class allocated local before any backend or broader value context relies
 on it.
 
-- [ ] Add target-independent shared storage and semantic operations for exact
+- [x] Add target-independent shared storage and semantic operations for exact
       allocation, produced-owner adoption, named-owner copy, release, and
       full-expression ownership boundaries.
-- [ ] Lower `var value: shared C = new C(arguments);` in source evaluation
+- [x] Lower `var value: shared C = new C(arguments);` in source evaluation
       order: evaluate arguments, allocate unpublished exact storage, run the
       selected initializer, publish count-one ownership, adopt into the local,
       and release it at normal scope exit.
-- [ ] Model an allocation under construction separately from a live published
+- [x] Model an allocation under construction separately from a live published
       owner so no release, view, or call can observe a partially initialized
       allocation.
-- [ ] Extend initialized-storage and cleanup planning for shared owners without
+- [x] Extend initialized-storage and cleanup planning for shared owners without
       treating a handle as an inline class place or an ordinary unowned scalar.
-- [ ] Add responsibility-specific MIR verification for compatible owner
+- [x] Add responsibility-specific MIR verification for compatible owner
       storage, publication, single adopt/release paths, normal-exit cleanup,
       non-null provenance, exact allocation class, and the rule that allocation
       originates only from `new`.
-- [ ] Make backend rejection of otherwise valid shared MIR structured until
+- [x] Make backend rejection of otherwise valid shared MIR structured until
       target support lands.
-- [ ] Add malformed-MIR fixtures and mutations for duplicate adoption,
+- [x] Add malformed-MIR fixtures and mutations for duplicate adoption,
       release-before-publication, missing release, use-after-release,
       wrong-target storage, non-`new` allocation, and invalid control-flow
       joins.
-- [ ] Add deterministic MIR dumps and update phase documentation with the
+- [x] Add deterministic MIR dumps and update phase documentation with the
       explicit ownership state machine.
 
 **Tests:** Focused HIR-to-MIR lowering, ownership-verifier mutation, cleanup,

@@ -4,7 +4,7 @@ use crate::{identity::ClassId, source::Span};
 
 use super::{
     BodyLowerer, MirCheckedViewEnd, MirCleanup, MirEndFullExpression, MirInstruction, MirPlace,
-    StorageId,
+    MirSharedRelease, StorageId,
 };
 
 impl BodyLowerer<'_> {
@@ -16,7 +16,7 @@ impl BodyLowerer<'_> {
                 span,
             }));
         }
-        if self.full_expression_temporaries.is_empty() {
+        if self.full_expression_temporaries.is_empty() && !self.full_expression_has_shared_effect {
             return;
         }
         let temporaries = self
@@ -32,6 +32,7 @@ impl BodyLowerer<'_> {
             temporaries,
             span,
         }));
+        self.full_expression_has_shared_effect = false;
     }
 }
 
@@ -39,7 +40,27 @@ impl BodyLowerer<'_> {
 #[derive(Clone, Copy)]
 struct InitializedStorage {
     storage: StorageId,
-    class: ClassId,
+    kind: OwnedStorageKind,
+}
+
+#[derive(Clone, Copy)]
+enum OwnedStorageKind {
+    Inline(ClassId),
+    Shared,
+}
+
+pub(super) enum PlannedCleanup {
+    Inline(MirCleanup),
+    Shared(MirSharedRelease),
+}
+
+impl PlannedCleanup {
+    pub(super) fn into_instruction(self) -> MirInstruction {
+        match self {
+            Self::Inline(cleanup) => MirInstruction::Cleanup(cleanup),
+            Self::Shared(release) => MirInstruction::SharedRelease(release),
+        }
+    }
 }
 
 /// Tracks lexical ownership independently from expression lowering.
@@ -64,10 +85,23 @@ impl CleanupPlanner {
         self.scopes
             .last_mut()
             .expect("an initialized local must belong to an active lexical scope")
-            .push(InitializedStorage { storage, class });
+            .push(InitializedStorage {
+                storage,
+                kind: OwnedStorageKind::Inline(class),
+            });
     }
 
-    pub(super) fn for_current_scope(&self, span: Span) -> Vec<MirCleanup> {
+    pub(super) fn register_shared(&mut self, storage: StorageId) {
+        self.scopes
+            .last_mut()
+            .expect("an initialized local must belong to an active lexical scope")
+            .push(InitializedStorage {
+                storage,
+                kind: OwnedStorageKind::Shared,
+            });
+    }
+
+    pub(super) fn for_current_scope(&self, span: Span) -> Vec<PlannedCleanup> {
         self.scopes
             .last()
             .expect("a scope exit requires an active lexical scope")
@@ -77,7 +111,7 @@ impl CleanupPlanner {
             .collect()
     }
 
-    pub(super) fn for_all_scopes(&self, span: Span) -> Vec<MirCleanup> {
+    pub(super) fn for_all_scopes(&self, span: Span) -> Vec<PlannedCleanup> {
         self.scopes
             .iter()
             .rev()
@@ -94,11 +128,17 @@ impl CleanupPlanner {
 }
 
 impl InitializedStorage {
-    fn cleanup(self, span: Span) -> MirCleanup {
-        MirCleanup {
-            destination: MirPlace::base(self.storage),
-            target: self.class,
-            span,
+    fn cleanup(self, span: Span) -> PlannedCleanup {
+        match self.kind {
+            OwnedStorageKind::Inline(class) => PlannedCleanup::Inline(MirCleanup {
+                destination: MirPlace::base(self.storage),
+                target: class,
+                span,
+            }),
+            OwnedStorageKind::Shared => PlannedCleanup::Shared(MirSharedRelease {
+                owner: self.storage,
+                span,
+            }),
         }
     }
 }
@@ -131,7 +171,10 @@ mod tests {
         let all = planner.for_all_scopes(span);
         assert_eq!(
             all.iter()
-                .map(|cleanup| cleanup.destination.base.storage())
+                .map(|cleanup| match cleanup {
+                    PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
+                    PlannedCleanup::Shared(release) => release.owner,
+                })
                 .collect::<Vec<_>>(),
             [second_inner, first_inner, outer]
         );
@@ -139,10 +182,10 @@ mod tests {
         assert_eq!(planner.for_current_scope(span).len(), 2);
         planner.leave_scope();
         assert_eq!(
-            planner.for_current_scope(span)[0]
-                .destination
-                .base
-                .storage(),
+            match &planner.for_current_scope(span)[0] {
+                PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
+                PlannedCleanup::Shared(release) => release.owner,
+            },
             outer
         );
     }

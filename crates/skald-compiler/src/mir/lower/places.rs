@@ -22,7 +22,10 @@ impl BodyLowerer<'_> {
             | MirStorageKind::Receiver
             | MirStorageKind::Parameter
             | MirStorageKind::Local => MirPlace::base(storage),
-            MirStorageKind::Argument | MirStorageKind::Temporary | MirStorageKind::ScalarSpill => {
+            MirStorageKind::Argument
+            | MirStorageKind::Temporary
+            | MirStorageKind::ScalarSpill
+            | MirStorageKind::SharedAllocation => {
                 unreachable!("HIR object paths cannot use compiler-owned storage")
             }
         };

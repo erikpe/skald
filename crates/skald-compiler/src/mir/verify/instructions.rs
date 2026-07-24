@@ -83,6 +83,20 @@ impl Verifier<'_> {
             MirInstruction::EndCheckedView(end) => {
                 self.verify_checked_view_end(function, block, end)
             }
+            MirInstruction::SharedAllocate(allocation) => {
+                self.verify_shared_allocate(function, block, allocation)
+            }
+            MirInstruction::SharedInitialize(initialize) => {
+                self.verify_shared_initialize(function, block, initialize, defined_in_block)
+            }
+            MirInstruction::SharedPublish(publish) => {
+                self.verify_shared_publish(function, block, publish)
+            }
+            MirInstruction::SharedAdopt(adopt) => self.verify_shared_adopt(function, block, adopt),
+            MirInstruction::SharedCopy(copy) => self.verify_shared_copy(function, block, copy),
+            MirInstruction::SharedRelease(release) => {
+                self.verify_shared_release(function, block, release)
+            }
         }
     }
 

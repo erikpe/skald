@@ -259,6 +259,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::Argument => "argument",
             MirStorageKind::Temporary => "temporary",
             MirStorageKind::ScalarSpill => "scalar-spill",
+            MirStorageKind::SharedAllocation => "shared-allocation",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
         match storage.source {
@@ -271,6 +272,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::Temporary => output.push_str("<temporary> "),
                 MirStorageKind::CheckedView(_) => output.push_str("<checked-view> "),
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
+                MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),
                 _ => unreachable!("verified language storage has a source binding"),
             },
         }
@@ -419,6 +421,57 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             MirInstruction::EndCheckedView(end) => {
                 let _ = write!(output, "end-checked-view {}", end.carrier);
                 write_span(output, end.span);
+            }
+            MirInstruction::SharedAllocate(allocation) => {
+                let origin = match allocation.origin {
+                    MirSharedAllocationOrigin::New => "new",
+                    MirSharedAllocationOrigin::Unspecified => "unspecified",
+                };
+                let _ = write!(
+                    output,
+                    "shared-allocate {} exact {} from {origin}",
+                    allocation.allocation, allocation.class,
+                );
+                write_span(output, allocation.span);
+            }
+            MirInstruction::SharedInitialize(initialize) => {
+                let _ = write!(
+                    output,
+                    "shared-initialize {} with {}(",
+                    initialize.allocation, initialize.target
+                );
+                for (index, argument) in initialize.arguments.iter().enumerate() {
+                    if index != 0 {
+                        output.push_str(", ");
+                    }
+                    dump_argument(output, argument);
+                }
+                output.push(')');
+                write_span(output, initialize.span);
+            }
+            MirInstruction::SharedPublish(publish) => {
+                let _ = write!(output, "shared-publish {}", publish.allocation);
+                write_span(output, publish.span);
+            }
+            MirInstruction::SharedAdopt(adopt) => {
+                let _ = write!(
+                    output,
+                    "shared-adopt {} from {}",
+                    adopt.destination, adopt.allocation
+                );
+                write_span(output, adopt.span);
+            }
+            MirInstruction::SharedCopy(copy) => {
+                let _ = write!(
+                    output,
+                    "shared-copy {} from {}",
+                    copy.destination, copy.source
+                );
+                write_span(output, copy.span);
+            }
+            MirInstruction::SharedRelease(release) => {
+                let _ = write!(output, "shared-release {}", release.owner);
+                write_span(output, release.span);
             }
         }
         output.push('\n');

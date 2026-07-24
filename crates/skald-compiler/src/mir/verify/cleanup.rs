@@ -144,7 +144,8 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::Local
                 | MirStorageKind::Argument
                 | MirStorageKind::Temporary
-                | MirStorageKind::ScalarSpill => continue,
+                | MirStorageKind::ScalarSpill
+                | MirStorageKind::SharedAllocation => continue,
             };
             initial.live.insert(place);
         }
@@ -321,6 +322,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.check_borrowed_arguments(block, state, &initialize.arguments);
                     self.consume_owned_arguments(block, state, &initialize.arguments);
                     self.initialize_place(block, state, &initialize.destination);
+                }
+                MirInstruction::SharedInitialize(initialize) => {
+                    self.check_borrowed_arguments(block, state, &initialize.arguments);
+                    self.consume_owned_arguments(block, state, &initialize.arguments);
                 }
                 MirInstruction::CopyConstruct(copy)
                     if self.is_owning_class_place(&copy.destination, copy.class) =>

@@ -23,6 +23,7 @@ mod object_results;
 mod object_temporaries;
 mod objects;
 mod robustness;
+mod shared;
 mod static_inheritance;
 mod type_operation_fixtures;
 mod type_operations;

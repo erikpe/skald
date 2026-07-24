@@ -27,6 +27,12 @@ pub enum MirInstruction {
     EndFullExpression(MirEndFullExpression),
     BindCheckedView(MirCheckedViewBinding),
     EndCheckedView(MirCheckedViewEnd),
+    SharedAllocate(super::shared::MirSharedAllocate),
+    SharedInitialize(super::shared::MirSharedInitialize),
+    SharedPublish(super::shared::MirSharedPublish),
+    SharedAdopt(super::shared::MirSharedAdopt),
+    SharedCopy(super::shared::MirSharedCopy),
+    SharedRelease(super::shared::MirSharedRelease),
 }
 
 impl MirInstruction {
@@ -42,6 +48,12 @@ impl MirInstruction {
             Self::EndFullExpression(instruction) => instruction.span,
             Self::BindCheckedView(instruction) => instruction.span,
             Self::EndCheckedView(instruction) => instruction.span,
+            Self::SharedAllocate(instruction) => instruction.span,
+            Self::SharedInitialize(instruction) => instruction.span,
+            Self::SharedPublish(instruction) => instruction.span,
+            Self::SharedAdopt(instruction) => instruction.span,
+            Self::SharedCopy(instruction) => instruction.span,
+            Self::SharedRelease(instruction) => instruction.span,
         }
     }
 }

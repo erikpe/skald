@@ -6,6 +6,7 @@ mod definition;
 mod ids;
 mod instruction;
 mod interface;
+mod shared;
 mod value;
 
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminationReason, MirTerminator};
@@ -32,6 +33,10 @@ pub use instruction::{
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,
     MirInterfaceRequirement, MirRequirementImplementation,
+};
+pub use shared::{
+    MirSharedAdopt, MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCopy,
+    MirSharedInitialize, MirSharedPublish, MirSharedRelease, MirSharedTarget,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,
