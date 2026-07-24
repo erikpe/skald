@@ -791,6 +791,21 @@ impl HirDumper {
                 self.line("MaterializedSource", producer.span());
                 self.indented(|dumper| dumper.object_producer(producer));
             }
+            crate::hir::HirObjectSource::Checked(view) => {
+                let kind = match view.kind {
+                    HirCheckedObjectViewKind::Static => "static",
+                    HirCheckedObjectViewKind::RuntimeTerminate => "runtime-terminate",
+                };
+                self.line(
+                    &format!(
+                        "CheckedSource {kind} -> {} {}",
+                        view_target_name(view.consumer_target),
+                        access_name(view.consumer_access)
+                    ),
+                    view.span,
+                );
+                self.indented(|dumper| dumper.object_view("SelectedView", &view.view));
+            }
             crate::hir::HirObjectSource::Slice(slice) => {
                 let path = slice
                     .bases

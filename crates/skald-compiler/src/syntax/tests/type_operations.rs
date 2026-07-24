@@ -128,3 +128,21 @@ fn malformed_type_operations_report_focused_errors_and_recover() {
     assert!(codes.contains(&INVALID_NARROWING));
     assert_eq!(function(&output.ast, 1).name.text, "main");
 }
+
+#[test]
+fn cast_rooted_whole_object_assignment_reaches_semantic_rejection() {
+    let (_, output) = parse_text(
+        "fn invalid(mut ref value: Obj, ref leaf: Leaf) -> unit {\n\
+           ((Leaf) value) = leaf;\n\
+           return;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let function = function(&output.ast, 0);
+    assert!(matches!(
+        function.body.statements[0],
+        Statement::ObjectAssignment(_)
+    ));
+    assert!(matches!(function.body.statements[1], Statement::Return(_)));
+}

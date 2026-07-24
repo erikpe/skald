@@ -157,6 +157,9 @@ pub struct HirCopyConstruction {
 pub enum HirObjectSource {
     Place(HirObjectPlace),
     Produced(HirObjectProducer),
+    /// A checked, full-expression-bounded class place consumed by an owning
+    /// copy operation after its static or runtime selection succeeds.
+    Checked(Box<HirCheckedObjectView>),
     Slice(HirObjectSlice),
 }
 
@@ -165,6 +168,10 @@ impl HirObjectSource {
         match self {
             Self::Place(place) => place.class(),
             Self::Produced(producer) => producer.class(),
+            Self::Checked(view) => match view.class {
+                Some(class) => class,
+                None => panic!("owning checked sources must select a class"),
+            },
             Self::Slice(slice) => slice.target,
         }
     }
@@ -173,6 +180,7 @@ impl HirObjectSource {
         match self {
             Self::Place(place) => place.span(),
             Self::Produced(producer) => producer.span(),
+            Self::Checked(view) => view.span,
             Self::Slice(slice) => slice.span,
         }
     }

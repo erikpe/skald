@@ -102,7 +102,7 @@ impl BodyLowerer<'_> {
         for (index, argument) in arguments.iter().enumerate() {
             let later_branch = arguments[index + 1..]
                 .iter()
-                .any(call_argument_contains_runtime_cast);
+                .any(super::control_effect::call_argument_contains_runtime_cast);
             let argument = match argument {
                 HirCallArgument::Value(expression) => {
                     let value = self
@@ -329,18 +329,6 @@ impl BodyLowerer<'_> {
                 unreachable!("produced origins are replaced while lowering their source")
             }
         }
-    }
-}
-
-fn call_argument_contains_runtime_cast(argument: &HirCallArgument) -> bool {
-    match argument {
-        HirCallArgument::Value(expression) => {
-            super::expression::expression_contains_runtime_cast(expression)
-        }
-        HirCallArgument::CheckedView(view) => {
-            view.kind == crate::hir::HirCheckedObjectViewKind::RuntimeTerminate
-        }
-        HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::Copy(_) => false,
     }
 }
 

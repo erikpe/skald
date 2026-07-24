@@ -97,3 +97,19 @@ fn narrowed_alias_does_not_escape_its_trailing_block() {
         .iter()
         .any(|diagnostic| diagnostic.code == UNKNOWN_NAME));
 }
+
+#[test]
+fn cast_places_cannot_replace_whole_objects() {
+    let output = resolve_text(
+        "class Leaf { init() {} }\n\
+         fn invalid(mut ref value: Obj, ref leaf: Leaf) -> unit {\n\
+           ((Leaf) value) = leaf;\n\
+         }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.has_errors());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_MEMBER_SELECTION && diagnostic.message.contains("object place")
+    }));
+}

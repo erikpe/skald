@@ -1,6 +1,6 @@
 # Object Casts and Narrow Removal Roadmap
 
-Status: in progress; **OC2** is next.
+Status: in progress; **OC3** is next.
 
 This roadmap replaces the implemented scoped `narrow` statement with
 expression-level C-style object casts. It establishes the checked-place
@@ -55,7 +55,7 @@ runtime cast service.
 
 - [x] OC0 — Extract reusable object-view relation and failure semantics
 - [x] OC1 — Add checked-place cast syntax and direct view consumers
-- [ ] OC2 — Integrate casts with owning inline operations
+- [x] OC2 — Integrate casts with owning inline operations
 - [ ] OC3 — Remove `narrow` and publish the cast profile
 
 ## PR-sized implementation sequence
@@ -135,27 +135,27 @@ and failure behavior, while existing `narrow` programs remain unchanged.
 **Purpose:** Complete the plain cast matrix by feeding checked class places
 through the established exact-class lifecycle pipeline.
 
-- [ ] Permit a checked class place as the source for local and field
+- [x] Permit a checked class place as the source for local and field
       initialization, exact-class value parameters, exact-class results, and
       whole-object assignment to a mutable owning destination.
-- [ ] Select the target class's existing copy constructor or copy-assignment
+- [x] Select the target class's existing copy constructor or copy-assignment
       operation after the cast succeeds; reject missing capabilities through
       the ordinary diagnostics.
-- [ ] Preserve exact target identity and slicing when the complete dynamic
+- [x] Preserve exact target identity and slicing when the complete dynamic
       object is more derived than the cast class.
-- [ ] Preserve destination-before-source assignment order, source-once
+- [x] Preserve destination-before-source assignment order, source-once
       evaluation, result-before-cleanup ordering, temporary registration, and
       exactly-once destruction.
-- [ ] Reject interface and `Obj` cast places in standalone inline destinations.
-- [ ] Reject cast places as whole-object replacement destinations and continue
+- [x] Reject interface and `Obj` cast places in standalone inline destinations.
+- [x] Reject cast places as whole-object replacement destinations and continue
       to allow only supported field mutation or method calls through mutable
       views.
-- [ ] Prove produced inline sources remain live through the check and copy
+- [x] Prove produced inline sources remain live through the check and copy
       without introducing local aliases or path-dependent ownership at joins.
-- [ ] Keep the checked-place copy boundary reusable by the later
+- [x] Keep the checked-place copy boundary reusable by the later
       `new T((T) source)` shared copy-allocation consumer without adding
       allocation or shared-owner operations in this task.
-- [ ] Add focused user/synthesized-copy, self-assignment, slicing, result,
+- [x] Add focused user/synthesized-copy, self-assignment, slicing, result,
       parameter, temporary, cleanup-order, diagnostic, dump, and native tests.
 
 **Tests:** Focused lifecycle, copy, type-operation, MIR verification, backend,

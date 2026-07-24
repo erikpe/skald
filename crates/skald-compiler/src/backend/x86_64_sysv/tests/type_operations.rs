@@ -177,6 +177,79 @@ fn checked_cast_places_execute_as_receivers_fields_and_alias_arguments() {
 }
 
 #[test]
+fn checked_cast_places_execute_through_owning_copy_operations() {
+    let source = "\
+         class Root {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           init(ref other: Root) { self.value = other.value + 10; }\n\
+           assign(ref other: Root) { self.value = other.value + 20; }\n\
+         }\n\
+         class Leaf extends Root {\n\
+           extra: i64;\n\
+           init(value: i64, extra: i64) { super(value); self.extra = extra; }\n\
+         }\n\
+         class Holder {\n\
+           item: Leaf;\n\
+           init(ref source: Obj) { self.item = (Leaf) source; }\n\
+           mut fn replace(ref source: Obj) -> unit { self.item = (Leaf) source; }\n\
+           fn total() -> i64 { return self.item.value + self.item.extra; }\n\
+         }\n\
+         fn consume(value: Leaf) -> i64 { return value.value + value.extra; }\n\
+         fn ordered(marker: i64, value: Leaf) -> i64 {\n\
+           return marker + value.value + value.extra;\n\
+         }\n\
+         fn copied(ref source: Obj) -> Leaf { return (Leaf) source; }\n\
+         fn exercise(destination: Leaf, ref source: Obj) -> i64 {\n\
+           var local: Leaf = (Leaf) source;\n\
+           var sliced: Root = (Root) source;\n\
+           var produced: Root = (Root) Leaf(3, 4);\n\
+           var returned: Leaf = copied(source);\n\
+           var holder: Holder = Holder(source);\n\
+           holder.replace(source);\n\
+           destination = (Leaf) destination;\n\
+           destination = (Leaf) source;\n\
+           return local.value + local.extra + sliced.value + produced.value\n\
+               + returned.value + returned.extra + holder.total()\n\
+               + destination.value + destination.extra + consume((Leaf) source)\n\
+               + ordered(5, (Leaf) source);\n\
+         }\n\
+         fn main() -> i64 {\n\
+           var leaf: Leaf = Leaf(1, 2);\n\
+           var destination: Leaf = Leaf(0, 0);\n\
+           return exercise(destination, leaf);\n\
+         }\n";
+
+    let result = run_native_assembly_output(&assembly(source));
+    assert_eq!(result.status.code(), Some(127));
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn produced_cast_copy_sources_are_destroyed_exactly_once_after_copying() {
+    let source = "\
+         extern fn ska_rt_println_i64(value: i64) -> unit;\n\
+         class Token {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           init(ref other: Token) { self.value = other.value; }\n\
+           destroy { ska_rt_println_i64(self.value); }\n\
+         }\n\
+         fn main() -> i64 {\n\
+           var copied: Token = (Token) Token(42);\n\
+           return 0;\n\
+         }\n";
+    let mut output = assembly(source);
+    output.push_str(println_i64_stub());
+
+    let result = run_native_assembly_output(&output);
+    assert_eq!(result.stdout, b"42\n42\n");
+    assert_eq!(result.status.code(), Some(0));
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
 fn failed_checked_cast_terminates_at_its_consumer() {
     let source = "\
          class Leaf { init() {} fn code() -> i64 { return 7; } }\n\

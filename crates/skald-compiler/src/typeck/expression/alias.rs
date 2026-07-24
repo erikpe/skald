@@ -378,6 +378,7 @@ impl CallableChecker<'_, '_> {
             }
             expression
                 if matches!(source_use, ViewSourceUse::Cast)
+                    && !is_object_cast_expression(expression)
                     && self.resolved_object_class(expression).is_some() =>
             {
                 let class = self
@@ -626,6 +627,14 @@ impl CallableChecker<'_, '_> {
             }
         }
         None
+    }
+}
+
+fn is_object_cast_expression(expression: &ResolvedExpression) -> bool {
+    match expression {
+        ResolvedExpression::ObjectCast(_) => true,
+        ResolvedExpression::Grouped(grouped) => is_object_cast_expression(&grouped.expression),
+        _ => false,
     }
 }
 

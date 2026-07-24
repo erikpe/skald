@@ -146,6 +146,51 @@ impl CallableChecker<'_, '_> {
         class: ClassId,
         context: &'static str,
     ) -> Option<HirObjectSource> {
+        match expression {
+            crate::resolve::ResolvedExpression::ObjectCast(cast) => {
+                let checked = self.check_object_cast(cast)?;
+                return self.finish_checked_object_source(checked, class, context);
+            }
+            crate::resolve::ResolvedExpression::Grouped(grouped)
+                if is_checked_object_source_expression(&grouped.expression) =>
+            {
+                return self.check_object_source(&grouped.expression, class, context);
+            }
+            crate::resolve::ResolvedExpression::FieldAccess(access)
+                if access.receiver.cast.is_some() =>
+            {
+                let field = self
+                    .program
+                    .field(access.field)
+                    .expect("resolved checked-source field must exist");
+                let crate::resolve::ResolvedTypeKind::Class(field_class) = field.type_syntax.kind
+                else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "owning copy source must designate a class object",
+                        )
+                        .with_primary_label(
+                            access.member_span,
+                            "this cast-selected field has a primitive type",
+                        ),
+                    );
+                    return None;
+                };
+                let (_, _, checked) =
+                    self.check_object_receiver(&access.receiver, ObjectPlaceUse::CopySource)?;
+                let mut checked =
+                    checked.expect("cast-rooted field source must retain its checked view");
+                checked
+                    .projections
+                    .push(crate::object_path::ObjectProjection::Field(access.field));
+                checked.class = Some(field_class);
+                checked.consumer_target = crate::hir::HirViewTarget::Class(field_class);
+                checked.span = access.span;
+                return self.finish_checked_object_source(*checked, class, context);
+            }
+            _ => {}
+        }
         if let Some(construction) = construction_through_groups(expression) {
             let mut construction =
                 self.check_object_construction(construction.class, construction, "object source")?;
@@ -174,6 +219,28 @@ impl CallableChecker<'_, '_> {
             .check_object_source_place(expression)
             .map(HirObjectSource::Place)?;
         self.convert_object_source(source, class, context)
+    }
+
+    fn finish_checked_object_source(
+        &mut self,
+        checked: crate::hir::HirCheckedObjectView,
+        target: ClassId,
+        context: &'static str,
+    ) -> Option<HirObjectSource> {
+        if checked.class.is_none() {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_OBJECT_CONTEXT,
+                    "owning copy source requires a class cast",
+                )
+                .with_primary_label(
+                    checked.span,
+                    "interface and `Obj` views have no standalone inline storage",
+                ),
+            );
+            return None;
+        }
+        self.convert_object_source(HirObjectSource::Checked(Box::new(checked)), target, context)
     }
 
     fn convert_object_source(
@@ -286,6 +353,10 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
                     _ => None,
                 }),
+            crate::resolve::ResolvedExpression::ObjectCast(cast) => match cast.target.kind {
+                crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                _ => None,
+            },
             crate::resolve::ResolvedExpression::Grouped(grouped) => {
                 self.resolved_object_class(&grouped.expression)
             }
@@ -416,6 +487,19 @@ impl CallableChecker<'_, '_> {
                 span,
             }),
         ))
+    }
+}
+
+pub(in crate::typeck) fn is_checked_object_source_expression(
+    expression: &crate::resolve::ResolvedExpression,
+) -> bool {
+    match expression {
+        crate::resolve::ResolvedExpression::ObjectCast(_) => true,
+        crate::resolve::ResolvedExpression::Grouped(grouped) => {
+            is_checked_object_source_expression(&grouped.expression)
+        }
+        crate::resolve::ResolvedExpression::FieldAccess(access) => access.receiver.cast.is_some(),
+        _ => false,
     }
 }
 

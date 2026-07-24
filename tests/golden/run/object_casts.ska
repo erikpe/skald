@@ -34,8 +34,27 @@ fn through_cast(ref value: Obj) -> i64 {
         + read_leaf((Leaf) value);
 }
 
+fn read_owned(value: Leaf) -> i64 {
+    return value.read();
+}
+
+fn copied(ref value: Obj) -> Leaf {
+    return (Leaf) value;
+}
+
+fn owning_casts(ref value: Obj) -> i64 {
+    var leaf: Leaf = (Leaf) value;
+    var root: Root = (Root) value;
+    var destination: Leaf = Leaf(0, 0);
+    var returned: Leaf = copied(value);
+    destination = (Leaf) value;
+    return leaf.read() + root.read() + destination.read()
+        + returned.read() + read_owned((Leaf) value);
+}
+
 fn main() -> i64 {
     var leaf: Leaf = Leaf(10, 5);
     ska_rt_println_i64(through_cast(leaf));
+    ska_rt_println_i64(owning_casts(leaf));
     return 0;
 }

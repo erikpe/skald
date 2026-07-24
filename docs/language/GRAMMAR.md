@@ -351,9 +351,9 @@ These forms remain outside this implemented grammar until compiler support is
 added.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
-implemented for immediate non-owning receiver, alias-argument, field-read, and
-supported field-mutation consumers. `shared T` is parsed for a focused
-unsupported-feature diagnostic. Scoped `narrow` remains accepted during the
-staged replacement.
+implemented for non-owning receiver, alias-argument, and field consumers plus
+owning inline copy construction, assignment, value arguments, results, and
+slicing. `shared T` is parsed for a focused unsupported-feature diagnostic.
+Scoped `narrow` remains accepted during the staged replacement.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-narrowing semantics.

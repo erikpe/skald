@@ -196,6 +196,9 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_direct_field_construction(place, class, field_name, assignment);
         }
+        if super::copy::is_checked_object_source_expression(&assignment.value) {
+            return self.check_field_copy_construction(place, class, assignment);
+        }
         let Some(actual) = self.resolved_object_class(&assignment.value) else {
             let _ = self.check_field_construction(class, field_name, &assignment.value);
             return None;

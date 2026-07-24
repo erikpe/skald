@@ -13,6 +13,7 @@ use super::{build::MirBodyBuilder, model::*};
 
 mod call;
 mod cleanup;
+mod control_effect;
 mod control_flow;
 mod expression;
 mod object_values;

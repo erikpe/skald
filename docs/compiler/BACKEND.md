@@ -246,6 +246,13 @@ same non-returning `ud2` boundary. The backend does not call a runtime cast
 helper, reconstruct metadata, allocate for a cast, retain for a plain place
 cast, or permit a failure edge to continue.
 
+Owning inline consumers lower the successful checked address through the
+ordinary verified copy-construction or copy-assignment instruction. Any
+selected ancestor path is already an explicit MIR base projection. Checked
+view homes end only after the copy completes, and produced source temporaries
+then follow the ordinary reverse full-expression cleanup plan. No additional
+backend copy path or runtime service exists for cast sources.
+
 The later `new T((T) source)` copy-allocation path is a consumer of that
 verified checked place, not a cast-side allocation. It must take its failure
 edge before calling the allocator for its destination, keep the source anchor

@@ -1,14 +1,14 @@
 # Object Casts
 
-Status: **implemented direct-consumer slice; broader integration planned**.
+Status: **plain checked-place casts implemented; shared-owner casts planned**.
 This document is authoritative for C-style cast syntax and the complete
 conversion matrix between inline class places, non-owning aliases, and shared
-owners. The current compiler implements plain checked-place casts for immediate
-method receivers, alias arguments, primitive field reads, and supported field
-mutation. Produced inline sources use owning full-expression temporaries.
-Owning inline consumers and shared-owner casts remain planned. Scoped `narrow`
-also remains implemented during the staged migration owned by the
-[object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md).
+owners. The current compiler implements plain checked-place casts for method
+receivers, alias arguments, field access, exact-class copy construction and
+assignment, value parameters, results, and owning slicing. Produced inline
+sources use owning full-expression temporaries. Shared-owner casts remain
+planned. Scoped `narrow` also remains implemented during the staged migration
+owned by the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md).
 
 Primitive conversions, optional casts, unsafe reinterpretation, user-defined
 conversions, and external object ABI are outside this profile.
@@ -354,8 +354,7 @@ implicitly introduce `ref` locals, reference values, alias assignment, or
 escaping borrows.
 
 During the cast-roadmap transition, the compiler accepts both scoped `narrow`
-and the implemented plain-cast direct-consumer subset. It rejects owning uses
-of a cast place until inline copy/slicing integration lands, and diagnoses
-`shared T` as unsupported. The support matrix above remains the final semantic
-target rather than a claim that every destination category is already
-implemented.
+and the implemented plain checked-place profile. It diagnoses `shared T` as
+unsupported until shared ownership is implemented. The remaining cast-roadmap
+work removes `narrow` and its statement-specific compiler representation; it
+does not broaden the plain cast matrix.

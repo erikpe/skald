@@ -149,12 +149,12 @@ even primitive equality is currently unavailable in source.
 
 ## Conversions and future value families
 
-The implemented grammar has no cast syntax, and the language performs no
-primitive casts or user-defined conversions. Numeric conversion behavior,
-including integer width changes and numeric/boolean conversion, is not frozen.
-Object conversion is frozen separately in
-[Object Casts](OBJECT_CASTS.md): those future forms select checked object
-places or preserve existing shared allocations and never reinterpret bytes.
+The language performs no primitive casts or user-defined conversions. Numeric
+conversion behavior, including integer width changes and numeric/boolean
+conversion, is not frozen. Object casts are defined separately in
+[Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
+places, while future shared casts preserve existing allocations. Neither form
+reinterprets bytes.
 
 Optional values are an exploratory direction for representing absence without
 making every value nullable. Their type syntax, empty value, presence checks,

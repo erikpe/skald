@@ -256,4 +256,45 @@ fn rejects_corrupt_checked_cast_carriers_and_failure_edges() {
     assert!(errors
         .iter()
         .any(|error| error.message.contains("checked-view binding destination")));
+
+    let mut ended_before_copy = lower_text(
+        "class Leaf { init() {} }\n\
+         class Other { init() {} }\n\
+         fn copied(ref value: Obj) -> Leaf { return (Leaf) value; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    let copied = ended_before_copy
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let success = copied
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::CopyConstruct(_)))
+        })
+        .expect("cast-copy success block");
+    let copy = success
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::CopyConstruct(_)))
+        .unwrap();
+    let end = success
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::EndCheckedView(_)))
+        .unwrap();
+    success.instructions.swap(copy, end);
+    let errors =
+        verify_mir(&ended_before_copy).expect_err("ended checked source must fail verification");
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.message.contains("not live")),
+        "{errors}"
+    );
 }

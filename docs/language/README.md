@@ -117,8 +117,8 @@ makes a result source-observable.
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,
   and checked narrowing.
 - [Object casts](OBJECT_CASTS.md) defines the implemented C-style plain
-  checked-place direct-consumer slice and freezes the remaining shared-owner
-  syntax, complete ownership-direction matrix, owning inline integration, and
+  checked-place profile, including owning inline copy consumers, and freezes
+  the remaining shared-owner syntax, complete ownership-direction matrix, and
   final replacement for implemented `narrow`.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive

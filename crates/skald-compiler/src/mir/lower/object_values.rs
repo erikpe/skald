@@ -94,6 +94,7 @@ impl BodyLowerer<'_> {
                 });
                 destination
             }
+            HirObjectSource::Checked(view) => self.lower_checked_object_view(view).source,
             HirObjectSource::Slice(slice) => slice.bases.iter().copied().fold(
                 self.lower_object_source(&slice.source),
                 MirPlace::project_base,

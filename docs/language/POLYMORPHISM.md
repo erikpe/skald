@@ -7,10 +7,9 @@ checked narrowing execute through verified MIR on the x86-64 backend. The
 [status matrix](STATUS.md) owns the compiler-support boundary.
 
 The frozen [object-cast design](OBJECT_CASTS.md) is being implemented in
-stages. Plain checked-place casts now support immediate receiver,
-alias-argument, and field consumers. This document remains authoritative for
-the still-supported scoped `narrow` form until the remaining cast integration
-and removal stages complete.
+stages. Plain checked-place casts now support non-owning consumers and owning
+inline copy operations. This document remains authoritative for the
+still-supported scoped `narrow` form until its removal stage completes.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:

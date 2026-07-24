@@ -107,7 +107,7 @@ impl BodyLowerer<'_> {
         let left = self
             .lower_expression(left)
             .expect("typed binary operand must produce a value");
-        let spilled_left = expression_contains_runtime_cast(right)
+        let spilled_left = super::control_effect::expression_contains_runtime_cast(right)
             .then(|| self.spill_scalar(left, lower_type(left_ty(operation)), expression.span));
         let right = self
             .lower_expression(right)
@@ -195,59 +195,5 @@ fn left_ty(operation: HirBinaryOperation) -> Type {
         HirBinaryOperation::AddF64
         | HirBinaryOperation::SubtractF64
         | HirBinaryOperation::MultiplyF64 => Type::F64,
-    }
-}
-
-pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bool {
-    use crate::hir::{HirCallArgument, HirCheckedObjectViewKind, HirInterfaceReceiver};
-
-    let argument_has_cast = |argument: &HirCallArgument| match argument {
-        HirCallArgument::Value(value) => expression_contains_runtime_cast(value),
-        HirCallArgument::CheckedView(view) => {
-            view.kind == HirCheckedObjectViewKind::RuntimeTerminate
-        }
-        HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::Copy(_) => false,
-    };
-    match &expression.kind {
-        HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
-            expression_contains_runtime_cast(operand)
-        }
-        HirExpressionKind::Binary { left, right, .. } => {
-            expression_contains_runtime_cast(left) || expression_contains_runtime_cast(right)
-        }
-        HirExpressionKind::DirectCall { arguments, .. } => arguments.iter().any(argument_has_cast),
-        HirExpressionKind::MethodCall {
-            receiver,
-            arguments,
-            ..
-        } => {
-            receiver
-                .checked_cast
-                .as_ref()
-                .is_some_and(|view| view.kind == HirCheckedObjectViewKind::RuntimeTerminate)
-                || arguments.iter().any(argument_has_cast)
-        }
-        HirExpressionKind::InterfaceCall {
-            receiver,
-            arguments,
-            ..
-        } => {
-            matches!(
-                receiver,
-                HirInterfaceReceiver::Checked(view)
-                    if view.kind == HirCheckedObjectViewKind::RuntimeTerminate
-            ) || arguments.iter().any(argument_has_cast)
-        }
-        HirExpressionKind::FieldRead(place) => place
-            .checked_cast
-            .as_ref()
-            .is_some_and(|view| view.kind == HirCheckedObjectViewKind::RuntimeTerminate),
-        HirExpressionKind::Binding(_)
-        | HirExpressionKind::I64(_)
-        | HirExpressionKind::U64(_)
-        | HirExpressionKind::U8(_)
-        | HirExpressionKind::F64Bits(_)
-        | HirExpressionKind::Boolean(_)
-        | HirExpressionKind::TypeTest(_) => false,
     }
 }

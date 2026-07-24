@@ -13,3 +13,9 @@ error[TYP029]: shared-owner casts are not implemented
 13 |     ((shared Root) root).touch();
     |       ^^^^^^ `shared T` is reserved for a future ownership slice
   = note: plain `(T) source` casts produce only a bounded borrowed place
+
+error[TYP014]: owning copy source requires a class cast
+ --> tests/golden/compile_fail/object_casts.ska:14:29
+    |
+14 |     var erased_copy: Root = (Obj) root;
+    |                             ^^^^^^^^^^ interface and `Obj` views have no standalone inline storage

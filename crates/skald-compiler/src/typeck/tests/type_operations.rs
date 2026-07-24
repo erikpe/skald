@@ -2,7 +2,8 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirExpressionKind, HirLocalInitializer, HirNarrowingFailure, HirNarrowingKind,
-        HirTypeTestKind, HirViewSource, HirViewTarget,
+        HirObjectReturn, HirObjectSource, HirReturnValue, HirTypeTestKind, HirViewSource,
+        HirViewTarget,
     },
     identity::{ClassId, FunctionId, InterfaceId},
     mir::{dump_mir, lower_hir, verify_mir},
@@ -84,6 +85,115 @@ fn checked_interface_casts_support_requirement_receivers() {
     ));
     let mir = lower_hir(&hir).expect("interface cast must lower");
     verify_mir(&mir).expect("interface cast MIR must verify");
+}
+
+#[test]
+fn checked_class_casts_feed_every_owning_copy_context() {
+    let output = check_text(
+        "class Base {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+         }\n\
+         class Leaf extends Base {\n\
+           extra: i64;\n\
+           init(value: i64, extra: i64) { super(value); self.extra = extra; }\n\
+         }\n\
+         class Holder {\n\
+           item: Leaf;\n\
+           init(ref source: Obj) { self.item = (Leaf) source; }\n\
+           mut fn replace(ref source: Obj) -> unit { self.item = (Leaf) source; }\n\
+         }\n\
+         fn consume(value: Leaf) -> i64 { return value.value + value.extra; }\n\
+         fn copied(ref source: Obj) -> Leaf { return (Leaf) source; }\n\
+         fn exercise(destination: Leaf, ref source: Obj) -> i64 {\n\
+           var local: Leaf = (Leaf) source;\n\
+           var sliced: Base = (Leaf) source;\n\
+           var produced: Base = (Base) Leaf(3, 4);\n\
+           destination = (Leaf) source;\n\
+           return consume((Leaf) source) + local.value + sliced.value + produced.value;\n\
+         }\n\
+         fn field_copied(ref source: Obj) -> Leaf { return ((Holder) source).item; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let exercise = hir.definitions.get(FunctionId::new(2)).unwrap();
+    let HirStatement::Local(local) = &exercise.body.statements[0] else {
+        panic!("expected copied local");
+    };
+    let HirLocalInitializer::Copy(local) = &local.initializer else {
+        panic!("cast local must use copy construction");
+    };
+    assert!(matches!(local.source, HirObjectSource::Checked(_)));
+
+    let HirStatement::Local(sliced) = &exercise.body.statements[1] else {
+        panic!("expected sliced local");
+    };
+    let HirLocalInitializer::Copy(sliced) = &sliced.initializer else {
+        panic!("cast slice must use copy construction");
+    };
+    assert!(matches!(sliced.source, HirObjectSource::Slice(_)));
+
+    let copied = hir.definitions.get(FunctionId::new(1)).unwrap();
+    let HirStatement::Return(returned) = &copied.body.statements[0] else {
+        panic!("expected object return");
+    };
+    let Some(HirReturnValue::Object(HirObjectReturn::Copy { source, .. })) = &returned.value else {
+        panic!("cast return must use copy construction");
+    };
+    assert!(matches!(source, HirObjectSource::Checked(_)));
+
+    let mir = lower_hir(&hir).expect("owning cast sources must lower");
+    let dump = dump_mir(&mir);
+    if let Err(errors) = verify_mir(&mir) {
+        panic!("owning cast-source MIR must verify: {errors}\n{dump}");
+    }
+    assert!(dump.contains("checked-cast"));
+    assert!(dump.contains("copy-construct"));
+    assert!(dump.contains("copy-assign"));
+    assert!(dump_hir(&hir).contains("CheckedSource runtime-terminate"));
+}
+
+#[test]
+fn interface_and_obj_casts_cannot_supply_inline_storage() {
+    let output = check_text(&format!(
+        "{TYPES}\
+         fn invalid(ref erased: Obj) -> unit {{\n\
+           var from_interface: Base = (Tag) erased;\n\
+           var from_obj: Base = (Obj) erased;\n\
+         }}\n\
+         fn main() -> i64 {{ return 0; }}\n"
+    ));
+
+    assert!(output.has_errors());
+    let errors: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == INVALID_OBJECT_CONTEXT)
+        .collect();
+    assert_eq!(errors.len(), 2, "{:?}", output.diagnostics);
+    assert!(errors
+        .iter()
+        .all(|diagnostic| diagnostic.message.contains("class cast")));
+}
+
+#[test]
+fn checked_cast_copy_sources_use_ordinary_capability_diagnostics() {
+    let mut resolved = resolve_text(
+        "class Leaf { init() {} }\n\
+         fn copied(ref source: Obj) -> Leaf { return (Leaf) source; }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        crate::resolve::ResolvedCopyOperation::Unavailable;
+
+    let output = type_check(&resolved);
+    assert!(output.hir.is_none());
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == COPY_OPERATION_UNAVAILABLE
+            && diagnostic.message.contains("copy construction")
+    }));
 }
 
 #[test]

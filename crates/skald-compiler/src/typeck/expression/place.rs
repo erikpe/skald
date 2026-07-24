@@ -109,7 +109,7 @@ impl CallableChecker<'_, '_> {
             .class
             .expect("class member receivers require a class cast target");
         let suffix = &receiver.path.projections;
-        checked.projections = suffix.clone();
+        checked.projections.extend_from_slice(suffix);
         checked.class = Some(receiver.path.class);
         let place = HirObjectPlace {
             path: crate::object_path::ObjectPath {

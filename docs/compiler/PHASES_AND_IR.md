@@ -150,9 +150,11 @@ uses an expression-level checked-place operation. HIR retains the source view,
 target identity, preserved access/origin, static or runtime classification,
 post-cast projections, and immediate consumer target/access. Plain cast views
 are bounded by their consuming full expression rather than a narrowed-alias
-identity or lexical body. The current direct consumers are receivers, alias
-arguments, primitive field reads, and supported field mutation; owning inline
-uses remain planned. The later shared extension will consume an
+identity or lexical body. Consumers include receivers, alias arguments, field
+access and mutation, and exact-class owning copy construction, assignment,
+value arguments, and results. An owning HIR source wraps the checked view and
+may add the ordinary exact-ancestor slice path; it does not introduce another
+copy operation. The later shared extension will consume an
 exact-class checked place in `new T((T) source)` while separately recording
 allocation and selected copy construction; allocation is not an effect of the
 cast node.
@@ -178,6 +180,8 @@ explicit:
 - interface declarations, effective class conformance maps, and explicit
   interface call targets;
 - initialization, copying, assignment, and cleanup operations;
+- checked-view sources for owning copy operations, with explicit bounded
+  carrier lifetime across any runtime selection;
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
 - basic blocks with explicit return, jump, boolean-branch, checked-narrowing,
@@ -217,17 +221,16 @@ edge and ended explicitly on lexical fallthrough. The verifier checks legal
 static/runtime relations, declared targets, view access and provenance,
 single definition, scoped liveness, and the terminating failure edge.
 
-Plain casts currently feed ordinary receiver, alias-argument, field-read, and
-field-mutation operations. Runtime casts use explicit success and unrecoverable
-failure edges plus a checked-view carrier ended at the consuming
-full-expression boundary. Static casts from concrete places become verified
-view projections; forwarded static sources use the same bounded carrier when a
-typed indirect home is required. Scalar values that must survive a cast edge
-are explicitly spilled so MIR's transient values remain block-local. The
-verifier checks target relation, access, provenance, single definition,
-carrier liveness, failure termination, and consumer compatibility. Future
-owning consumers extend this checked-place evaluation to copy, assignment, and
-result operations. Future shared-owner casts add explicit copy/adopt
+Plain casts feed ordinary receiver, alias-argument, field access and mutation,
+copy construction, copy assignment, value-argument, and result operations.
+Runtime casts use explicit success and unrecoverable failure edges plus a
+checked-view carrier ended at the consuming full-expression boundary. Static
+casts from concrete places become verified view projections; forwarded static
+sources use the same bounded carrier when a typed indirect home is required.
+Scalar values that must survive a cast edge are explicitly spilled so MIR's
+transient values remain block-local. The verifier checks target relation,
+access, provenance, single definition, carrier liveness, failure termination,
+and consumer compatibility. Shared-owner casts will add explicit copy/adopt
 ownership operations but no allocation operation. Future copy allocation
 instead composes that checked-place result with an explicit source `new`,
 exact-class allocation, and selected copy-constructor operation after the

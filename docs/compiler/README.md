@@ -151,8 +151,9 @@ open language and build contracts in
 
 The staged replacement of scoped `narrow` with C-style object casts is indexed
 in the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md). Plain
-direct-consumer casts are implemented; owning integration and narrow removal
-remain. The complete source-visible matrix is defined in
+checked-place casts and their owning inline copy consumers are implemented;
+statement-specific `narrow` removal remains. The complete source-visible matrix
+is defined in
 [Object Casts](../language/OBJECT_CASTS.md); compiler phases must consume that
 authority rather than infer ownership from cast syntax.
 

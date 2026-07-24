@@ -45,7 +45,7 @@ enum CheckedViewRejection {
 }
 
 impl CallableChecker<'_, '_> {
-    pub(super) fn check_object_cast(
+    pub(in crate::typeck) fn check_object_cast(
         &mut self,
         cast: &ResolvedObjectCastExpr,
     ) -> Option<HirCheckedObjectView> {
@@ -84,6 +84,21 @@ impl CallableChecker<'_, '_> {
                 unreachable!("a plain object cast preserves the source access")
             }
         };
+        let projections = match (&operation.view.source, target) {
+            (crate::hir::HirViewSource::Produced(producer), HirViewTarget::Class(target))
+                if producer.class() != target =>
+            {
+                self.program
+                    .hierarchy
+                    .base_chain(producer.class())
+                    .expect("statically successful produced cast must have valid ancestry")
+                    .take_while(|base| *base != target)
+                    .chain(std::iter::once(target))
+                    .map(crate::object_path::ObjectProjection::Base)
+                    .collect()
+            }
+            _ => Vec::new(),
+        };
         Some(HirCheckedObjectView {
             class: match target {
                 HirViewTarget::Class(class) => Some(class),
@@ -96,7 +111,7 @@ impl CallableChecker<'_, '_> {
                 CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
                 CheckedViewKind::Runtime { .. } => HirCheckedObjectViewKind::RuntimeTerminate,
             },
-            projections: Vec::new(),
+            projections,
             span: cast.span,
         })
     }
