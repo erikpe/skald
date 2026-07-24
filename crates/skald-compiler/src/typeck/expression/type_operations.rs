@@ -1,12 +1,15 @@
-//! Type-test classification and checked non-owning narrowing.
+//! Type-test checking and checked non-owning view selection.
 
-use super::{alias::ViewSourceUse, *};
+use super::{
+    alias::ViewSourceUse,
+    object_view_relation::{classify_object_view_relation, ObjectViewRelation},
+    *,
+};
 use crate::{
     hir::{
         HirAccess, HirExpressionKind, HirNarrowingFailure, HirNarrowingKind, HirObjectView,
         HirTypeTest, HirTypeTestKind, HirViewTarget,
     },
-    identity::ClassId,
     resolve::{ResolvedNarrowing, ResolvedTypeTestExpr},
     typeck::program::{
         lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_NARROWING, INVALID_TYPE_TEST,
@@ -14,21 +17,38 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TypeRelation {
-    StaticSuccess,
+enum CheckedViewFailure {
+    Terminate,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CheckedViewKind {
+    Static,
+    Runtime { failure: CheckedViewFailure },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CheckedViewOperation {
+    view: HirObjectView,
+    kind: CheckedViewKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CheckedViewRejection {
     StaticFailure,
-    Runtime,
+    InsufficientAccess,
 }
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_type_test(&mut self, test: &ResolvedTypeTestExpr) -> Option<HirExpression> {
         let source = self.check_object_view_source(&test.source, ViewSourceUse::TypeTest)?;
         let target = self.check_view_target(&test.target, test.target_span, INVALID_TYPE_TEST)?;
-        let relation = self.classify_type_relation(&source, target);
+        let relation =
+            classify_object_view_relation(self.program, source.relation_source(), target);
         let kind = match relation {
-            TypeRelation::StaticSuccess => HirTypeTestKind::StaticSuccess,
-            TypeRelation::StaticFailure => HirTypeTestKind::StaticFailure,
-            TypeRelation::Runtime => HirTypeTestKind::Runtime,
+            ObjectViewRelation::StaticSuccess => HirTypeTestKind::StaticSuccess,
+            ObjectViewRelation::StaticFailure => HirTypeTestKind::StaticFailure,
+            ObjectViewRelation::Runtime => HirTypeTestKind::Runtime,
         };
         let access = source.access();
         let source_target = source.static_target();
@@ -65,60 +85,46 @@ impl CallableChecker<'_, '_> {
             return None;
         }
 
-        let relation = self.classify_type_relation(&source, target);
-        if relation == TypeRelation::StaticFailure {
-            self.diagnostics.push(
-                Diagnostic::error(INVALID_NARROWING, "checked narrowing can never succeed")
-                    .with_primary_label(target_span, "no possible dynamic class provides this view")
-                    .with_secondary_label(source.span(), "source view"),
-            );
-            return None;
-        }
-
         let access = if mutable {
             HirAccess::Mutable
         } else {
             HirAccess::ReadOnly
         };
-        if !source.access().permits(access) {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    INSUFFICIENT_ALIAS_ACCESS,
-                    "checked narrowing cannot increase alias access",
-                )
-                .with_primary_label(source.span(), "this source provides read-only access")
-                .with_secondary_label(name_span, "mutable narrowed alias requested here"),
-            );
-            return None;
-        }
-
-        let kind = match relation {
-            TypeRelation::StaticSuccess => HirNarrowingKind::Static,
-            TypeRelation::Runtime => HirNarrowingKind::Runtime {
+        let source_span = source.span();
+        let operation = match self.select_checked_view(source, target, access) {
+            Ok(operation) => operation,
+            Err(CheckedViewRejection::StaticFailure) => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_NARROWING, "checked narrowing can never succeed")
+                        .with_primary_label(
+                            target_span,
+                            "no possible dynamic class provides this view",
+                        )
+                        .with_secondary_label(source_span, "source view"),
+                );
+                return None;
+            }
+            Err(CheckedViewRejection::InsufficientAccess) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INSUFFICIENT_ALIAS_ACCESS,
+                        "checked narrowing cannot increase alias access",
+                    )
+                    .with_primary_label(source_span, "this source provides read-only access")
+                    .with_secondary_label(name_span, "mutable narrowed alias requested here"),
+                );
+                return None;
+            }
+        };
+        let kind = match operation.kind {
+            CheckedViewKind::Static => HirNarrowingKind::Static,
+            CheckedViewKind::Runtime {
+                failure: CheckedViewFailure::Terminate,
+            } => HirNarrowingKind::Runtime {
                 failure: HirNarrowingFailure::Terminate,
             },
-            TypeRelation::StaticFailure => unreachable!("static failure returned above"),
         };
-        let view = match (relation, source, target) {
-            (
-                TypeRelation::StaticSuccess,
-                alias::CheckedObjectViewSource::Class { place, origin },
-                HirViewTarget::Class(target),
-            ) => {
-                let place = self
-                    .project_place_to_ancestor(place, target)
-                    .expect("statically successful class narrowing must select an ancestor");
-                HirObjectView {
-                    span: place.span(),
-                    source: crate::hir::HirViewSource::Place(place),
-                    origin: Box::new(origin),
-                    target: HirViewTarget::Class(target),
-                    access,
-                }
-            }
-            (_, source, target) => source.into_view(target, access),
-        };
-        Some((view, kind))
+        Some((operation.view, kind))
     }
 
     fn check_view_target(
@@ -144,72 +150,49 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn classify_type_relation(
+    fn select_checked_view(
         &self,
-        source: &alias::CheckedObjectViewSource,
+        source: alias::CheckedObjectViewSource,
         target: HirViewTarget,
-    ) -> TypeRelation {
-        if target == HirViewTarget::Obj {
-            return TypeRelation::StaticSuccess;
+        access: HirAccess,
+    ) -> Result<CheckedViewOperation, CheckedViewRejection> {
+        let relation =
+            classify_object_view_relation(self.program, source.relation_source(), target);
+        if relation == ObjectViewRelation::StaticFailure {
+            return Err(CheckedViewRejection::StaticFailure);
         }
-        if let Some(class) = source.exact_dynamic_class() {
-            return if self.class_provides_view(class, target) {
-                TypeRelation::StaticSuccess
-            } else {
-                TypeRelation::StaticFailure
-            };
-        }
-        if self.view_guarantees_target(source.static_target(), target) {
-            return TypeRelation::StaticSuccess;
+        if !source.access().permits(access) {
+            return Err(CheckedViewRejection::InsufficientAccess);
         }
 
-        let mut any_source = false;
-        let mut any_success = false;
-        let mut any_failure = false;
-        for class in self.program.classes.iter().map(|class| class.id) {
-            if !self.class_can_inhabit_view(class, source.static_target()) {
-                continue;
+        let view = match (relation, source, target) {
+            (
+                ObjectViewRelation::StaticSuccess,
+                alias::CheckedObjectViewSource::Class { place, origin },
+                HirViewTarget::Class(target),
+            ) => {
+                let place = self
+                    .project_place_to_ancestor(place, target)
+                    .expect("statically successful class view must select an ancestor");
+                HirObjectView {
+                    span: place.span(),
+                    source: crate::hir::HirViewSource::Place(place),
+                    origin: Box::new(origin),
+                    target: HirViewTarget::Class(target),
+                    access,
+                }
             }
-            any_source = true;
-            if self.class_provides_view(class, target) {
-                any_success = true;
-            } else {
-                any_failure = true;
+            (_, source, target) => source.into_view(target, access),
+        };
+        let kind = match relation {
+            ObjectViewRelation::StaticSuccess => CheckedViewKind::Static,
+            ObjectViewRelation::Runtime => CheckedViewKind::Runtime {
+                failure: CheckedViewFailure::Terminate,
+            },
+            ObjectViewRelation::StaticFailure => {
+                unreachable!("statically impossible views returned above")
             }
-        }
-        match (any_source, any_success, any_failure) {
-            (_, true, true) => TypeRelation::Runtime,
-            (_, true, false) => TypeRelation::StaticSuccess,
-            _ => TypeRelation::StaticFailure,
-        }
-    }
-
-    fn view_guarantees_target(&self, source: HirViewTarget, target: HirViewTarget) -> bool {
-        match (source, target) {
-            (_, HirViewTarget::Obj) => true,
-            (HirViewTarget::Class(class), target) => self.class_provides_view(class, target),
-            (HirViewTarget::Interface(source), HirViewTarget::Interface(target)) => {
-                source == target
-            }
-            (HirViewTarget::Interface(_), HirViewTarget::Class(_))
-            | (HirViewTarget::Obj, HirViewTarget::Class(_))
-            | (HirViewTarget::Obj, HirViewTarget::Interface(_)) => false,
-        }
-    }
-
-    fn class_can_inhabit_view(&self, class: ClassId, view: HirViewTarget) -> bool {
-        match view {
-            HirViewTarget::Class(target) => self
-                .program
-                .hierarchy
-                .is_subtype(class, target)
-                .unwrap_or(false),
-            HirViewTarget::Interface(interface) => self.class_conforms_to(class, interface),
-            HirViewTarget::Obj => true,
-        }
-    }
-
-    fn class_provides_view(&self, class: ClassId, target: HirViewTarget) -> bool {
-        self.class_can_inhabit_view(class, target)
+        };
+        Ok(CheckedViewOperation { view, kind })
     }
 }

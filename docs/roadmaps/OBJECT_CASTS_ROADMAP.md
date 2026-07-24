@@ -1,6 +1,6 @@
 # Object Casts and Narrow Removal Roadmap
 
-Status: planned; **OC0** is next.
+Status: in progress; **OC1** is next.
 
 This roadmap replaces the implemented scoped `narrow` statement with
 expression-level C-style object casts. It establishes the checked-place
@@ -53,7 +53,7 @@ runtime cast service.
 
 ## Progress
 
-- [ ] OC0 — Extract reusable object-view relation and failure semantics
+- [x] OC0 — Extract reusable object-view relation and failure semantics
 - [ ] OC1 — Add checked-place cast syntax and direct view consumers
 - [ ] OC2 — Integrate casts with owning inline operations
 - [ ] OC3 — Remove `narrow` and publish the cast profile
@@ -65,19 +65,19 @@ runtime cast service.
 **Purpose:** Turn the current `is`/`narrow` policy into one reusable semantic
 owner before a second source form depends on it.
 
-- [ ] Extract the static-success, static-failure, and runtime classification
+- [x] Extract the static-success, static-failure, and runtime classification
       over exact class, class, interface, and `Obj` sources without changing
       current behavior.
-- [ ] Keep target selection identity-based and preserve the closed declared
+- [x] Keep target selection identity-based and preserve the closed declared
       class-set test for possible cross-casts.
-- [ ] Centralize checked-operation access preservation, target-place
+- [x] Centralize checked-operation access preservation, target-place
       projection, and unrecoverable failure selection behind the type-checker
       expression facade.
-- [ ] Separate reusable checked-view facts from narrowed-alias binding and
+- [x] Separate reusable checked-view facts from narrowed-alias binding and
       lexical-body construction.
-- [ ] Keep current HIR/MIR dumps, diagnostics, `is`, `narrow`, native output,
+- [x] Keep current HIR/MIR dumps, diagnostics, `is`, `narrow`, native output,
       and failure behavior byte-for-byte stable where they are asserted.
-- [ ] Add focused classifier tests covering exact inline sources, class views,
+- [x] Add focused classifier tests covering exact inline sources, class views,
       interface views, `Obj`, same-type casts, upcasts, possible downcasts,
       cross-casts, and impossible relations.
 

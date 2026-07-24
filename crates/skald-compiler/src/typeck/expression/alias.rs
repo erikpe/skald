@@ -104,6 +104,13 @@ impl CheckedObjectViewSource {
         }
     }
 
+    pub(super) fn relation_source(&self) -> super::object_view_relation::ObjectViewSource {
+        self.exact_dynamic_class().map_or_else(
+            || super::object_view_relation::ObjectViewSource::Dynamic(self.static_target()),
+            super::object_view_relation::ObjectViewSource::ExactClass,
+        )
+    }
+
     pub(super) fn into_view(self, target: HirViewTarget, access: HirAccess) -> HirObjectView {
         match self {
             Self::Class { place, origin } => HirObjectView {
@@ -322,7 +329,11 @@ impl CallableChecker<'_, '_> {
             }
             (CheckedObjectViewSource::Class { place, origin }, Type::Interface(interface)) => {
                 let actual = place.class();
-                if !self.class_conforms_to(actual, interface) {
+                if !super::object_view_relation::class_provides_view(
+                    self.program,
+                    actual,
+                    HirViewTarget::Interface(interface),
+                ) {
                     let interface_name = &self
                         .program
                         .interface(interface)
@@ -452,29 +463,6 @@ impl CallableChecker<'_, '_> {
             }
             (_, Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit) => None,
         }
-    }
-
-    pub(super) fn class_conforms_to(
-        &self,
-        class: crate::identity::ClassId,
-        interface: crate::identity::InterfaceId,
-    ) -> bool {
-        std::iter::once(class)
-            .chain(
-                self.program
-                    .hierarchy
-                    .base_chain(class)
-                    .into_iter()
-                    .flatten(),
-            )
-            .any(|candidate| {
-                self.program.class(candidate).is_some_and(|declaration| {
-                    declaration
-                        .implemented_interfaces
-                        .iter()
-                        .any(|claim| claim.interface == interface)
-                })
-            })
     }
 
     pub(super) fn project_place_to_ancestor(

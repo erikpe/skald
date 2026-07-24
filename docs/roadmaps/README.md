@@ -4,9 +4,9 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-- [Object Casts and Narrow Removal](OBJECT_CASTS_ROADMAP.md) — **planned**;
+- [Object Casts and Narrow Removal](OBJECT_CASTS_ROADMAP.md) — **in progress**;
   replace scoped `narrow` with C-style checked-place casts over the existing
-  polymorphic view pipeline. **OC0** is next. This roadmap must complete before
+  polymorphic view pipeline. **OC1** is next. This roadmap must complete before
   shared-ownership implementation planning.
 
 The completed polymorphism profile remains the implementation baseline.

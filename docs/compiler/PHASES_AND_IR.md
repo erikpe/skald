@@ -137,6 +137,14 @@ result view, lexical body, and either a static conversion or runtime check with
 explicit terminating failure. Narrowed aliases are views, not locals or owning
 storage.
 
+Type checking derives both operations from one identity-based, closed-world
+object-view relation. Exact inline objects resolve against their known dynamic
+class; forwarded class, interface, and `Obj` views resolve against the declared
+classes that can inhabit the source view. Checked-view selection then preserves
+access, projects statically selected class targets, and records terminating
+runtime failure before the narrowing-specific layer adds its alias identity
+and lexical body.
+
 The frozen [object-cast replacement](../language/OBJECT_CASTS.md) will move
 that dynamic check into an expression-level checked-place operation. HIR will
 retain the source view, target identity, preserved access/origin, static or

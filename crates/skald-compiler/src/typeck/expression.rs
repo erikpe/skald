@@ -14,6 +14,7 @@ use super::{function::CallableChecker, program::TYPE_MISMATCH};
 
 mod alias;
 mod call;
+mod object_view_relation;
 mod place;
 mod primitive;
 mod receiver;
