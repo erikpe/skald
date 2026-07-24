@@ -7,7 +7,7 @@ class Value {
         self.field = field;
     }
 
-    init(ref other: Value) {
+    copy(ref other: Value) {
         self.field = other.field + 100;
     }
 

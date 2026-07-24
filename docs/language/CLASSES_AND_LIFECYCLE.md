@@ -58,16 +58,11 @@ elsewhere.
 Every class has one or more explicit ordinary `init` declarations, including
 an empty class. Those declarations form one class-owned overload set. Copy
 construction instead occupies the separate `copy` lifecycle slot; an
-`init(ref source: T)` declaration is an ordinary initializer rather than a
-copy constructor in the frozen model.
-
-The current compiler is transitional: it accepts exactly one ordinary
-initializer and classifies `init(ref source: T)` as the copy-constructor slot.
-The
+`init(ref source: T)` declaration is an ordinary initializer. The current
+compiler accepts the distinct `copy` declaration but still restricts each
+class to one ordinary initializer; the
 [constructor-overload and explicit-copy roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
-will replace that legacy classification before shared ownership is
-implemented. The legacy spelling is current compiler behavior, not part of
-the frozen source contract.
+tracks overload selection and explicit copy-construction expressions.
 
 All executable exact-class fields and methods are accessible wherever the
 receiver is available. Static members and access modifiers are not

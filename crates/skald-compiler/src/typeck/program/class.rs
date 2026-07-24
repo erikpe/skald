@@ -393,7 +393,7 @@ mod tests {
             "class Complete {\n",
             "    value: i64;\n",
             "    init(value: i64) { self.value = value; }\n",
-            "    init(ref source: Complete) { self.value = source.value; }\n",
+            "    copy(ref source: Complete) { self.value = source.value; }\n",
             "    assign(ref source: Complete) { self.value = source.value; }\n",
             "    destroy {}\n",
             "    fn read() -> i64 { return self.value; }\n",

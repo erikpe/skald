@@ -82,7 +82,7 @@ fn run_helper_process(output: &Path, helper_output: &str, test_name: &str) {
 fn object_phase_dump() -> String {
     let text = concat!(
         "class Box { value: i64; init(value: i64) { self.value = value; } ",
-        "init(ref other: Box) { self.value = other.value; } ",
+        "copy(ref other: Box) { self.value = other.value; } ",
         "assign(ref other: Box) { self.value = other.value; } ",
         "mut fn set(value: i64) -> unit { self.value = value; } ",
         "fn get() -> i64 { return self.value; } destroy {} }\n",

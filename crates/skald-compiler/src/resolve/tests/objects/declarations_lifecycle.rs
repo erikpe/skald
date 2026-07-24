@@ -89,7 +89,7 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
     let output = resolve_text(concat!(
         "class Value {\n",
         "    value: i64;\n",
-        "    init(ref other: Value) { self.value = other.value; }\n",
+        "    copy(ref other: Value) { self.value = other.value; }\n",
         "    init(value: i64) { self.value = value; }\n",
         "    assign(ref source: Value) { self.value = source.value; }\n",
         "}\n",
@@ -269,7 +269,7 @@ fn copy_lifecycle_slots_are_not_explicit_method_call_targets() {
     let output = resolve_text(concat!(
         "class Value {\n",
         "  init() {}\n",
-        "  init(ref other: Value) {}\n",
+        "  copy(ref other: Value) {}\n",
         "  assign(ref other: Value) { self.assign(other); }\n",
         "}\n",
         "fn main() -> i64 { return 0; }\n",

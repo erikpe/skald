@@ -12,7 +12,7 @@ fn resolves_every_accepted_class_body_through_ordered_definition_slots() {
         "class Complete {\n",
         "    value: i64;\n",
         "    init(value: i64) { var saved: i64 = value; self.value = saved; }\n",
-        "    init(ref source: Complete) { self.value = source.value; }\n",
+        "    copy(ref source: Complete) { self.value = source.value; }\n",
         "    assign(ref source: Complete) { self.value = source.value; }\n",
         "    destroy { var old: i64 = self.value; }\n",
         "    fn first() -> i64 { return self.value; }\n",

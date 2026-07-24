@@ -65,6 +65,7 @@ pub struct InterfaceRequirementDecl {
 pub enum ClassMember {
     Field(FieldDecl),
     Initializer(InitializerDecl),
+    CopyConstructor(CopyConstructorDecl),
     CopyAssignment(CopyAssignmentDecl),
     Destructor(DestructorDecl),
     Method(MethodDecl),
@@ -75,6 +76,7 @@ impl ClassMember {
         match self {
             Self::Field(field) => field.span,
             Self::Initializer(initializer) => initializer.span,
+            Self::CopyConstructor(constructor) => constructor.span,
             Self::CopyAssignment(assignment) => assignment.span,
             Self::Destructor(destructor) => destructor.span,
             Self::Method(method) => method.span,
@@ -91,6 +93,14 @@ pub struct FieldDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InitializerDecl {
+    pub introducer_span: Span,
+    pub parameters: Vec<Parameter>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CopyConstructorDecl {
     pub introducer_span: Span,
     pub parameters: Vec<Parameter>,
     pub body: Block,

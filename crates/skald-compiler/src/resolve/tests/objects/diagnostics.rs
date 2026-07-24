@@ -151,7 +151,7 @@ fn resolves_only_first_statement_super_for_derived_ordinary_initializers() {
         "class Missing extends Base { value: i64; init() { self.value = 0; } }\n",
         "class Duplicate extends Base { init() { super(0); super(1); } }\n",
         "class Root { init() { super(); } }\n",
-        "class Copy extends Base { init() { super(0); } init(ref source: Copy) { super(0); } }\n",
+        "class Copy extends Base { init() { super(0); } copy(ref source: Copy) { super(0); } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 

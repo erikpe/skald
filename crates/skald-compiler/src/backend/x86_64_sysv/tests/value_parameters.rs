@@ -6,7 +6,7 @@ fn lowers_owned_parameters_for_initializers_methods_and_functions() {
         "class Value {\n",
         "  field: i64;\n",
         "  init(field: i64) { self.field = field; }\n",
-        "  init(ref other: Value) { self.field = other.field + 5; }\n",
+        "  copy(ref other: Value) { self.field = other.field + 5; }\n",
         "}\n",
         "class Holder {\n",
         "  marker: i64;\n",

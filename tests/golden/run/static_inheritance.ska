@@ -9,7 +9,7 @@ class Base {
         self.value = value;
     }
 
-    init(ref other: Base) {
+    copy(ref other: Base) {
         self.tag = other.tag;
         self.value = other.value + 10;
     }

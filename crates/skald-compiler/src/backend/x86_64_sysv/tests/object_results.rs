@@ -7,7 +7,7 @@ fn lowers_function_and_method_object_results_through_hidden_return_storage() {
         "  tag: u8;\n",
         "  field: i64;\n",
         "  init(field: i64, tag: u8) { self.tag = tag; self.field = field; }\n",
-        "  init(ref other: Value) {\n",
+        "  copy(ref other: Value) {\n",
         "    self.tag = other.tag;\n",
         "    self.field = other.field + 100;\n",
         "  }\n",

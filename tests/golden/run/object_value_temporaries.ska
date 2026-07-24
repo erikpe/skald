@@ -7,7 +7,7 @@ class Trace {
         self.value = value;
     }
 
-    init(ref other: Trace) {
+    copy(ref other: Trace) {
         self.value = 100 + other.value;
     }
 

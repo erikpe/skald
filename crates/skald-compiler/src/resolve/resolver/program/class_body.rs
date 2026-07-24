@@ -75,8 +75,8 @@ impl ClassBodyResolver<'_> {
             })
             .collect();
         let copy_constructor = item.copy_constructor_member.map(|member_index| {
-            let syntax::ClassMember::Initializer(source) = &class.members[member_index] else {
-                unreachable!("copy-constructor work must reference an initializer")
+            let syntax::ClassMember::CopyConstructor(source) = &class.members[member_index] else {
+                unreachable!("copy-constructor work must reference a copy constructor")
             };
             let metadata = declaration
                 .copy_constructor_declaration

@@ -5,7 +5,7 @@ const COPY_SOURCE: &str = concat!(
     "class Value {\n",
     "  value: i64;\n",
     "  init(value: i64) { self.value = value; }\n",
-    "  init(ref other: Value) { self.value = other.value; }\n",
+    "  copy(ref other: Value) { self.value = other.value; }\n",
     "  assign(ref other: Value) { self.value = other.value; }\n",
     "  destroy {}\n",
     "}\n",

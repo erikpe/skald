@@ -155,7 +155,7 @@ fn checked_cast_places_execute_through_owning_copy_operations() {
          class Root {\n\
            value: i64;\n\
            init(value: i64) { self.value = value; }\n\
-           init(ref other: Root) { self.value = other.value + 10; }\n\
+           copy(ref other: Root) { self.value = other.value + 10; }\n\
            assign(ref other: Root) { self.value = other.value + 20; }\n\
          }\n\
          class Leaf extends Root {\n\
@@ -206,7 +206,7 @@ fn produced_cast_copy_sources_are_destroyed_exactly_once_after_copying() {
          class Token {\n\
            value: i64;\n\
            init(value: i64) { self.value = value; }\n\
-           init(ref other: Token) { self.value = other.value; }\n\
+           copy(ref other: Token) { self.value = other.value; }\n\
            destroy { ska_rt_println_i64(self.value); }\n\
          }\n\
          fn main() -> i64 {\n\

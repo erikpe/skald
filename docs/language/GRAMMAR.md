@@ -163,12 +163,14 @@ class-declaration           = "class" identifier ["extends" identifier]
 
 class-member                = field-declaration
                             | initializer-declaration
+                            | copy-constructor-declaration
                             | copy-assignment-declaration
                             | destruction-declaration
                             | method-declaration
 
 field-declaration           = identifier ":" storage-type ";"
 initializer-declaration     = "init" parameter-list block
+copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
 destruction-declaration     = "destroy" block
 method-declaration          = [method-modifier] ["mut"] "fn" identifier parameter-list
@@ -188,13 +190,18 @@ only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
 name.
 
-### Frozen constructor syntax transition
+### Frozen construction-selection syntax
 
-The planned constructor model extends the class grammar with:
+The implemented `copy` declaration occupies a separate lifecycle slot. Its
+required semantic shape is `copy(ref source: EnclosingClass) { ... }`; parsing
+retains the general parameter-list shape so resolution can diagnose wrong
+arity, binding mode, and target type precisely. An `init` declaration is
+always ordinary, including `init(ref source: EnclosingClass)`.
+
+The planned constructor model additionally extends construction arguments
+with:
 
 ```text
-copy-constructor-declaration = "copy" "(" "ref" identifier
-                               ":" named-type ")" block
 copy-construction-arguments  = "(" "copy" expression ")"
 ```
 
@@ -206,10 +213,10 @@ argument grammar and never falls back to copy construction. The same
 distinction will apply to future `new Class(copy source)` and
 `new Class(arguments)`.
 
-These productions are a frozen future source contract, not syntax accepted by
-the current compiler. Until the prerequisite constructor roadmap lands, the
-compiler accepts one ordinary `init` and semantically classifies the
-single-`ref` exact-class `init` shape as its legacy copy constructor.
+`copy-construction-arguments` is a frozen future source contract, not syntax
+accepted by the current compiler. The compiler currently accepts one ordinary
+`init`; initializer overloading and explicit `Class(copy source)` selection
+remain later constructor-roadmap work.
 
 `interface` and `implements` are contextual words. Interface bodies contain
 signatures only: fields, lifecycle declarations, method bodies, inheritance,

@@ -95,6 +95,14 @@ impl AstDumper {
                     dumper.block(&initializer.body);
                 });
             }
+            ClassMember::CopyConstructor(constructor) => {
+                self.line("CopyConstructor", constructor.span);
+                self.indented(|dumper| {
+                    dumper.line("Introducer", constructor.introducer_span);
+                    dumper.parameters(&constructor.parameters);
+                    dumper.block(&constructor.body);
+                });
+            }
             ClassMember::CopyAssignment(assignment) => {
                 self.line("CopyAssignment", assignment.span);
                 self.indented(|dumper| {

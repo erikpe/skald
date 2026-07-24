@@ -28,7 +28,7 @@ class Copy extends Base {
         super(0);
     }
 
-    init(ref source: Copy) {
+    copy(ref source: Copy) {
         super(0);
     }
 }

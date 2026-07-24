@@ -7,6 +7,7 @@ struct LifecycleDeclarations {
     copy_constructor: Option<ResolvedCopyConstructorDeclaration>,
     copy_assignment: Option<ResolvedCopyAssignmentDeclaration>,
     destructor: Option<ResolvedDestructorDeclaration>,
+    copy_constructor_invalid: bool,
     copy_assignment_invalid: bool,
 }
 
@@ -17,6 +18,7 @@ impl LifecycleDeclarations {
             copy_constructor: None,
             copy_assignment: None,
             destructor: None,
+            copy_constructor_invalid: false,
             copy_assignment_invalid: false,
         }
     }
@@ -88,33 +90,6 @@ impl ClassCollectionState {
         top_levels: &HashMap<String, TopLevelSymbol>,
         diagnostics: &mut Diagnostics,
     ) {
-        if is_copy_constructor(source, self.id, top_levels) {
-            self.collect_copy_constructor(
-                member_index,
-                source,
-                class_name,
-                top_levels,
-                diagnostics,
-            );
-        } else {
-            self.collect_ordinary_initializer(
-                member_index,
-                source,
-                class_name,
-                top_levels,
-                diagnostics,
-            );
-        }
-    }
-
-    fn collect_ordinary_initializer(
-        &mut self,
-        member_index: usize,
-        source: &syntax::InitializerDecl,
-        class_name: &str,
-        top_levels: &HashMap<String, TopLevelSymbol>,
-        diagnostics: &mut Diagnostics,
-    ) {
         if report_duplicate_lifecycle(
             self.symbols.initializer_span,
             source.introducer_span,
@@ -141,7 +116,7 @@ impl ClassCollectionState {
     fn collect_copy_constructor(
         &mut self,
         member_index: usize,
-        source: &syntax::InitializerDecl,
+        source: &syntax::CopyConstructorDecl,
         class_name: &str,
         top_levels: &HashMap<String, TopLevelSymbol>,
         diagnostics: &mut Diagnostics,
@@ -155,13 +130,25 @@ impl ClassCollectionState {
         ) {
             return;
         }
+        self.symbols.copy_constructor_span = Some(source.introducer_span);
         let id = CopyConstructorId::new(self.id, 0);
+        let Some(parameter) = resolve_copy_source_parameter(
+            id.into(),
+            self.id,
+            &source.parameters,
+            source.span,
+            CopyLifecycleKind::Constructor,
+            top_levels,
+            diagnostics,
+        ) else {
+            self.lifecycle.copy_constructor_invalid = true;
+            return;
+        };
         let declaration = ResolvedCopyConstructorDeclaration {
             id,
-            parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
+            parameters: vec![parameter],
             span: source.span,
         };
-        self.symbols.copy_constructor_span = Some(source.introducer_span);
         self.lifecycle.copy_constructor = Some(declaration);
         self.work.copy_constructor_member = Some(member_index);
     }
@@ -185,9 +172,15 @@ impl ClassCollectionState {
         }
         self.symbols.copy_assignment_span = Some(source.introducer_span);
         let id = CopyAssignmentId::new(self.id, 0);
-        let Some(parameter) =
-            resolve_copy_assignment_parameter(id, self.id, source, top_levels, diagnostics)
-        else {
+        let Some(parameter) = resolve_copy_source_parameter(
+            id.into(),
+            self.id,
+            &source.parameters,
+            source.span,
+            CopyLifecycleKind::Assignment,
+            top_levels,
+            diagnostics,
+        ) else {
             self.lifecycle.copy_assignment_invalid = true;
             return;
         };
@@ -270,13 +263,16 @@ impl ClassCollectionState {
         self,
         class: &syntax::ClassDecl,
     ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
-        let copy_constructor = self
-            .lifecycle
-            .copy_constructor
-            .as_ref()
-            .map_or(ResolvedCopyOperation::Synthesized(self.id), |declaration| {
-                ResolvedCopyOperation::User(declaration.id)
-            });
+        let copy_constructor = if self.lifecycle.copy_constructor_invalid {
+            ResolvedCopyOperation::Unavailable
+        } else {
+            self.lifecycle
+                .copy_constructor
+                .as_ref()
+                .map_or(ResolvedCopyOperation::Synthesized(self.id), |declaration| {
+                    ResolvedCopyOperation::User(declaration.id)
+                })
+        };
         let copy_assignment = if self.lifecycle.copy_assignment_invalid {
             ResolvedCopyOperation::Unavailable
         } else {
@@ -327,6 +323,13 @@ pub(super) fn collect_class(
             syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
                 member_index,
                 initializer,
+                &class.name.text,
+                top_levels,
+                diagnostics,
+            ),
+            syntax::ClassMember::CopyConstructor(constructor) => state.collect_copy_constructor(
+                member_index,
+                constructor,
                 &class.name.text,
                 top_levels,
                 diagnostics,
@@ -419,48 +422,50 @@ pub(super) struct InitializerWorkItem {
     pub(super) member_index: usize,
 }
 
-fn is_copy_constructor(
-    initializer: &syntax::InitializerDecl,
-    owner: ClassId,
-    top_levels: &HashMap<String, TopLevelSymbol>,
-) -> bool {
-    let [parameter] = initializer.parameters.as_slice() else {
-        return false;
-    };
-    if !matches!(
-        parameter.binding_mode,
-        syntax::ParameterBindingMode::ReadOnlyAlias { .. }
-    ) {
-        return false;
-    }
-    let syntax::TypeKind::Named(name) = &parameter.type_syntax.kind else {
-        return false;
-    };
-    matches!(
-        top_levels.get(&name.text),
-        Some(TopLevelSymbol {
-            kind: TopLevelSymbolKind::Class(class),
-            ..
-        }) if *class == owner
-    )
+#[derive(Clone, Copy)]
+enum CopyLifecycleKind {
+    Constructor,
+    Assignment,
 }
 
-fn resolve_copy_assignment_parameter(
-    callable: CopyAssignmentId,
+impl CopyLifecycleKind {
+    const fn description(self) -> &'static str {
+        match self {
+            Self::Constructor => "copy constructor",
+            Self::Assignment => "copy assignment",
+        }
+    }
+
+    const fn introducer(self) -> &'static str {
+        match self {
+            Self::Constructor => "copy",
+            Self::Assignment => "assign",
+        }
+    }
+}
+
+fn resolve_copy_source_parameter(
+    callable: CallableId,
     owner: ClassId,
-    assignment: &syntax::CopyAssignmentDecl,
+    parameters: &[syntax::Parameter],
+    declaration_span: Span,
+    operation: CopyLifecycleKind,
     top_levels: &HashMap<String, TopLevelSymbol>,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedParameter> {
-    let [parameter] = assignment.parameters.as_slice() else {
+    let description = operation.description();
+    let [parameter] = parameters else {
         diagnostics.push(
             Diagnostic::error(
                 INVALID_LIFECYCLE_SIGNATURE,
-                "copy assignment requires exactly one source parameter",
+                format!("{description} requires exactly one source parameter"),
             )
             .with_primary_label(
-                assignment.span,
-                "use `assign(ref name: EnclosingClass) { ... }`",
+                declaration_span,
+                format!(
+                    "use `{}(ref name: EnclosingClass) {{ ... }}`",
+                    operation.introducer()
+                ),
             ),
         );
         return None;
@@ -473,7 +478,7 @@ fn resolve_copy_assignment_parameter(
         diagnostics.push(
             Diagnostic::error(
                 INVALID_LIFECYCLE_SIGNATURE,
-                "copy-assignment source must be a read-only alias",
+                format!("{description} source must be a read-only alias"),
             )
             .with_primary_label(parameter.span, "use `ref name: EnclosingClass`"),
         );
@@ -485,7 +490,7 @@ fn resolve_copy_assignment_parameter(
         diagnostics.push(
             Diagnostic::error(
                 INVALID_LIFECYCLE_SIGNATURE,
-                "copy-assignment source must have the exact enclosing class type",
+                format!("{description} source must have the exact enclosing class type"),
             )
             .with_primary_label(parameter.type_syntax.span, "expected the enclosing class"),
         );

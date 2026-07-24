@@ -420,6 +420,36 @@ fn parses_copy_assignment_as_a_dedicated_contextual_member() {
 }
 
 #[test]
+fn parses_copy_constructor_as_a_dedicated_contextual_member() {
+    let (sources, output) = parse_text(concat!(
+        "class Value { ",
+        "init() {} ",
+        "copy(ref other: Value) { return; } ",
+        "copy: i64; ",
+        "fn copy() -> unit {} ",
+        "}",
+    ));
+    assert!(output.diagnostics.is_empty());
+
+    let value = class(&output.ast, 0);
+    let ClassMember::CopyConstructor(constructor) = &value.members[1] else {
+        panic!("expected a copy-constructor declaration");
+    };
+    assert_eq!(source_text(&sources, constructor.introducer_span), "copy");
+    assert_eq!(
+        source_text(&sources, constructor.span),
+        "copy(ref other: Value) { return; }"
+    );
+    assert_eq!(constructor.parameters.len(), 1);
+    assert_eq!(constructor.parameters[0].name.text, "other");
+    assert_eq!(constructor.body.statements.len(), 1);
+    assert!(matches!(value.members[2], ClassMember::Field(_)));
+    assert!(matches!(value.members[3], ClassMember::Method(_)));
+
+    assert!(dump_ast(&output.ast).contains("CopyConstructor"));
+}
+
+#[test]
 fn malformed_destructors_recover_to_later_class_members() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",
@@ -490,6 +520,43 @@ fn malformed_copy_assignments_recover_to_later_class_members() {
     }
     assert!(broken.members.iter().any(
         |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
+    ));
+}
+
+#[test]
+fn malformed_copy_constructors_recover_to_later_class_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "    init() {}\n",
+        "    copy(ref other: Broken) -> unit {}\n",
+        "    after_result: i64;\n",
+        "    mut copy(ref other: Broken) {}\n",
+        "    after_modifier: i64;\n",
+        "    copy(ref other: Broken);\n",
+        "    after_semicolon: i64;\n",
+        "    copy\n",
+        "    fn recovered() -> unit {}\n",
+        "}\n",
+    ));
+
+    assert!(output.has_errors());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_CLASS_MEMBER
+            || diagnostic.code == EXPECTED_TOKEN));
+    let broken = class(&output.ast, 0);
+    for expected in ["after_result", "after_modifier", "after_semicolon"] {
+        assert!(broken.members.iter().any(
+            |member| matches!(member, ClassMember::Field(field) if field.name.text == expected)
+        ));
+    }
+    assert!(broken.members.iter().any(
+        |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
+    ));
+    assert!(!broken.members.iter().any(
+        |member| matches!(member, ClassMember::Initializer(initializer)
+            if initializer.parameters.len() == 1)
     ));
 }
 

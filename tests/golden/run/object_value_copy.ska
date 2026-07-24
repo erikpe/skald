@@ -11,7 +11,7 @@ class Leaf {
         self.suffix = true;
     }
 
-    init(ref other: Leaf) {
+    copy(ref other: Leaf) {
         self.prefix = other.prefix;
         self.value = 100 + other.value;
         self.suffix = other.suffix;

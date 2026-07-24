@@ -109,7 +109,7 @@ impl Parser<'_> {
                 && (self.starts_method_modifier()
                     || self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
-                    || (self.lexeme(self.peek()) == "assign"
+                    || (matches!(self.lexeme(self.peek()), "copy" | "assign")
                         && self.peek_ahead(1).kind == TokenKind::LeftParen)
                     || (self.lexeme(self.peek()) == "init"
                         && self.peek_ahead(1).kind == TokenKind::LeftParen)))
@@ -130,7 +130,10 @@ impl Parser<'_> {
 
         if self.at(TokenKind::Mut)
             && self.peek_ahead(1).kind == TokenKind::Identifier
-            && matches!(self.lexeme(self.peek_ahead(1)), "assign" | "destroy")
+            && matches!(
+                self.lexeme(self.peek_ahead(1)),
+                "copy" | "assign" | "destroy"
+            )
         {
             let modifier = self.advance();
             let lifecycle = self.lexeme(self.peek()).to_owned();
@@ -140,10 +143,17 @@ impl Parser<'_> {
                 modifier.span,
                 format!("`{lifecycle}` already has an implicit mutable receiver"),
             );
-            if lifecycle == "assign" {
-                self.parse_copy_assignment();
-            } else {
-                self.parse_destructor();
+            match lifecycle.as_str() {
+                "copy" => {
+                    self.parse_copy_constructor();
+                }
+                "assign" => {
+                    self.parse_copy_assignment();
+                }
+                "destroy" => {
+                    self.parse_destructor();
+                }
+                _ => unreachable!("guarded lifecycle spelling"),
             }
             return None;
         }
@@ -156,6 +166,11 @@ impl Parser<'_> {
             let text = self.lexeme(self.peek());
             if text == "init" && self.peek_ahead(1).kind == TokenKind::LeftParen {
                 return self.parse_initializer().map(ClassMember::Initializer);
+            }
+            if text == "copy" && self.peek_ahead(1).kind == TokenKind::LeftParen {
+                return self
+                    .parse_copy_constructor()
+                    .map(ClassMember::CopyConstructor);
             }
             if self.peek_ahead(1).kind == TokenKind::Colon {
                 return self.parse_field().map(ClassMember::Field);
@@ -172,14 +187,18 @@ impl Parser<'_> {
             let span = self.peek().span;
             let message = match text {
                 "assign" => "malformed copy-assignment declaration",
+                "copy" => "malformed copy-constructor declaration",
                 "init" => "malformed initializer declaration",
                 _ => "expected a field, initializer, destructor, or method declaration",
             };
+            if matches!(text, "assign" | "copy" | "init") {
+                self.advance();
+            }
             self.report(
                 INVALID_CLASS_MEMBER,
                 message,
                 span,
-                "class members use `name: type;`, `init(...) { ... }`, `assign(ref name: Class) { ... }`, `destroy { ... }`, or `[virtual|override] [mut] fn name(...) -> type { ... }`",
+                "class members use `name: type;`, `init(...) { ... }`, `copy(ref name: Class) { ... }`, `assign(ref name: Class) { ... }`, `destroy { ... }`, or `[virtual|override] [mut] fn name(...) -> type { ... }`",
             );
             return None;
         }
@@ -226,21 +245,47 @@ impl Parser<'_> {
     }
 
     fn parse_copy_assignment(&mut self) -> Option<CopyAssignmentDecl> {
+        let (introducer, parameters, body) =
+            self.parse_parameterized_lifecycle_member("assign", "copy-assignment")?;
+        Some(CopyAssignmentDecl {
+            introducer_span: introducer.span,
+            parameters,
+            span: self.cover(introducer.span, body.span),
+            body,
+        })
+    }
+
+    fn parse_copy_constructor(&mut self) -> Option<CopyConstructorDecl> {
+        let (introducer, parameters, body) =
+            self.parse_parameterized_lifecycle_member("copy", "copy-constructor")?;
+        Some(CopyConstructorDecl {
+            introducer_span: introducer.span,
+            parameters,
+            span: self.cover(introducer.span, body.span),
+            body,
+        })
+    }
+
+    fn parse_parameterized_lifecycle_member(
+        &mut self,
+        introducer_name: &str,
+        description: &str,
+    ) -> Option<(Token, Vec<Parameter>, Block)> {
         let introducer = self.advance();
-        debug_assert_eq!(self.lexeme(introducer), "assign");
+        debug_assert_eq!(self.lexeme(introducer), introducer_name);
         let parameters = self.parse_parameter_list()?;
         let mut valid = true;
 
         if let Some(arrow) = self.consume(TokenKind::Arrow) {
             self.report(
                 INVALID_CLASS_MEMBER,
-                "copy-assignment members do not declare a result type",
+                format!("{description} members do not declare a result type"),
                 arrow.span,
-                "`assign` returns `unit` implicitly",
+                format!("`{introducer_name}` returns `unit` implicitly"),
             );
             self.parse_type(
                 TypeContext::Result,
-                "expected a type after the invalid copy-assignment result arrow",
+                format!("expected a type after the invalid {description} result arrow"),
             );
             valid = false;
         }
@@ -248,7 +293,7 @@ impl Parser<'_> {
         if let Some(semicolon) = self.consume(TokenKind::Semicolon) {
             self.report(
                 INVALID_CLASS_MEMBER,
-                "copy-assignment members require a body",
+                format!("{description} members require a body"),
                 semicolon.span,
                 "replace `;` with `{ ... }`",
             );
@@ -256,12 +301,7 @@ impl Parser<'_> {
         }
 
         let body = self.parse_block()?;
-        valid.then_some(CopyAssignmentDecl {
-            introducer_span: introducer.span,
-            parameters,
-            span: self.cover(introducer.span, body.span),
-            body,
-        })
+        valid.then_some((introducer, parameters, body))
     }
 
     fn parse_destructor(&mut self) -> Option<DestructorDecl> {

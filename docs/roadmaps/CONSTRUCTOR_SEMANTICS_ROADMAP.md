@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: in progress; CM1 complete, CM2 is next.
+Status: in progress; CM2 complete, CM3 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -18,9 +18,9 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 
 ## Current baseline
 
-- The parser retains every `init(...)` member, but resolution classifies
-  `init(ref source: T)` by signature as the copy constructor and rejects a
-  second ordinary initializer.
+- The parser and resolver represent `copy(ref source: T)` as the distinct copy
+  lifecycle slot. Every `init(...)` is ordinary, and source collection still
+  rejects a second ordinary initializer.
 - Resolved and HIR class declarations and definitions store dense,
   source-ordered ordinary-initializer vectors, and MIR lowers every entry.
   Source collection still rejects a second ordinary initializer. Calls
@@ -89,7 +89,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 
 - [x] CM0 — Give copy construction a distinct identity
 - [x] CM1 — Generalize ordinary initializer storage
-- [ ] CM2 — Adopt the distinct copy-constructor declaration
+- [x] CM2 — Adopt the distinct copy-constructor declaration
 - [ ] CM3 — Select ordinary initializer overloads
 - [ ] CM4 — Select overloaded direct-base initialization
 - [ ] CM5 — Execute explicit target-directed copy construction
@@ -163,23 +163,23 @@ still exposes one.
 **Purpose:** Make lifecycle intent source-explicit and remove signature-based
 classification before `init` becomes an overload set.
 
-- [ ] Add a source-shaped `copy` class-member declaration with exact introducer,
+- [x] Add a source-shaped `copy` class-member declaration with exact introducer,
       parameter, body, and recovery spans; keep `copy` contextual rather than
       reserving it lexically.
-- [ ] Resolve `copy(ref source: T)` directly into the dedicated copy slot and
+- [x] Resolve `copy(ref source: T)` directly into the dedicated copy slot and
       require exactly one read-only alias parameter designating the enclosing
       exact class.
-- [ ] Reject duplicate, malformed, modified, result-bearing, additional-
+- [x] Reject duplicate, malformed, modified, result-bearing, additional-
       parameter, wrong-mode, and wrong-target copy declarations without
       reclassifying them as ordinary initializers or methods.
-- [ ] Stop classifying any `init` signature as copy construction.
+- [x] Stop classifying any `init` signature as copy construction.
       `init(ref source: T)` becomes an ordinary initializer under the same
       rules as every other `init`.
-- [ ] Migrate all repository source, focused fixtures, goldens, dumps, and
+- [x] Migrate all repository source, focused fixtures, goldens, dumps, and
       diagnostics from the legacy copy declaration to `copy`.
-- [ ] Preserve user and synthesized copy capability, base composition,
+- [x] Preserve user and synthesized copy capability, base composition,
       definite-field initialization, cleanup, and native effects unchanged.
-- [ ] Update the implemented grammar and status boundary when the new
+- [x] Update the implemented grammar and status boundary when the new
       declaration becomes accepted; remove the legacy source spelling from
       living behavior documentation.
 

@@ -24,7 +24,7 @@ fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
             "class Value {\n",
             "  value: i64;\n",
             "  init(value: i64) { self.value = value; }\n",
-            "  init(ref other: Value) { self.value = other.value; }\n",
+            "  copy(ref other: Value) { self.value = other.value; }\n",
             "  assign(ref other: Value) { self.value = other.value; }\n",
             "}\n",
             "fn main() -> i64 { return 0; }\n",

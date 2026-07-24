@@ -221,6 +221,7 @@ fn ordinary_member_name(member: &syntax::ClassMember) -> Option<(&syntax::Name, 
         syntax::ClassMember::Field(field) => Some((&field.name, field.name.span)),
         syntax::ClassMember::Method(method) => Some((&method.name, method.name.span)),
         syntax::ClassMember::Initializer(_)
+        | syntax::ClassMember::CopyConstructor(_)
         | syntax::ClassMember::CopyAssignment(_)
         | syntax::ClassMember::Destructor(_) => None,
     }

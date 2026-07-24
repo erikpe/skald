@@ -5,11 +5,11 @@ progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
 - [Constructor Overloads and Explicit Copy Construction](CONSTRUCTOR_SEMANTICS_ROADMAP.md) —
-  **planned**; replaces signature-classified copy construction with the
-  distinct `copy` lifecycle operation, adds target-directed
+  **in progress**; establishes the distinct `copy` lifecycle operation, adds target-directed
   `T(copy source)`, and enables compile-time most-specific ordinary `init`
-  overloads including `super(...)`. Next: give copy construction a distinct
-  identity. It depends on the completed lifecycle, polymorphism, and
+  overloads including `super(...)`. The declaration and internal identity are
+  distinct; next is ordinary initializer overload selection. It depends on
+  the completed lifecycle, polymorphism, and
   object-cast profiles.
 - [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md) —
   **planned, blocked**; implements non-null strong owners, explicit ordinary

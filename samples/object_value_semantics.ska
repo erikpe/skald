@@ -7,7 +7,7 @@ class Value {
         self.number = number;
     }
 
-    init(ref other: Value) {
+    copy(ref other: Value) {
         self.number = 100 + other.number;
     }
 

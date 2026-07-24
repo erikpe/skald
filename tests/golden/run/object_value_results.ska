@@ -9,7 +9,7 @@ class Value {
         self.field = field;
     }
 
-    init(ref other: Value) {
+    copy(ref other: Value) {
         self.tag = other.tag;
         self.field = other.field + 100;
     }
@@ -26,7 +26,7 @@ class Value {
 class Empty {
     init() {}
 
-    init(ref other: Empty) {}
+    copy(ref other: Empty) {}
 
     destroy {
         ska_rt_println_i64(2);

@@ -142,7 +142,7 @@ fn inherited_body_uses_select_the_declaring_base_projection() {
 fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
     let output = resolve_source(concat!(
         "class Sample {\n",
-        "    init(ref source: Sample) {}\n",
+        "    copy(ref source: Sample) {}\n",
         "    first: i64;\n",
         "    fn read() -> i64 { return 0; }\n",
         "    init(value: i64) {}\n",
@@ -193,8 +193,8 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
         "class Duplicate {\n",
         "    init() {}\n",
         "    init(value: i64) {}\n",
-        "    init(ref first: Duplicate) {}\n",
-        "    init(ref second: Duplicate) {}\n",
+        "    copy(ref first: Duplicate) {}\n",
+        "    copy(ref second: Duplicate) {}\n",
         "    assign(ref first: Duplicate) {}\n",
         "    assign(ref second: Duplicate) {}\n",
         "    destroy {}\n",
@@ -283,6 +283,55 @@ fn lifecycle_duplicates_and_invalid_signatures_recover_in_source_order() {
             .len(),
         0
     );
+}
+
+#[test]
+fn copy_declarations_have_exact_signatures_and_init_never_infers_copy_intent() {
+    let output = resolve_source(concat!(
+        "class Other { init() {} }\n",
+        "class Ordinary { init(ref source: Ordinary) {} }\n",
+        "class Missing { init() {} copy() {} }\n",
+        "class Extra { init() {} copy(ref first: Extra, ref second: Extra) {} }\n",
+        "class ValueMode { init() {} copy(source: ValueMode) {} }\n",
+        "class MutableMode { init() {} copy(mut ref source: MutableMode) {} }\n",
+        "class WrongTarget { init() {} copy(ref source: Other) {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    let ordinary = output.program.classes.get(ClassId::new(1)).unwrap();
+    assert_eq!(ordinary.initializers.len(), 1);
+    assert_eq!(
+        ordinary.copy_constructor,
+        ResolvedCopyOperation::Synthesized(ordinary.id)
+    );
+
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 5);
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_LIFECYCLE_SIGNATURE));
+    assert!(diagnostics[0]
+        .message
+        .contains("requires exactly one source parameter"));
+    assert!(diagnostics[1]
+        .message
+        .contains("requires exactly one source parameter"));
+    assert!(diagnostics[2].message.contains("must be a read-only alias"));
+    assert!(diagnostics[3].message.contains("must be a read-only alias"));
+    assert!(diagnostics[4]
+        .message
+        .contains("must have the exact enclosing class type"));
+    for class_index in 2..=6 {
+        assert_eq!(
+            output
+                .program
+                .classes
+                .get(ClassId::new(class_index))
+                .unwrap()
+                .copy_constructor,
+            ResolvedCopyOperation::Unavailable
+        );
+    }
 }
 
 #[test]

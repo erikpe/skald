@@ -15,7 +15,7 @@ class Root implements Adjustable, Readable {
         self.value = value;
     }
 
-    init(ref other: Root) {
+    copy(ref other: Root) {
         self.value = other.value + 100;
     }
 
