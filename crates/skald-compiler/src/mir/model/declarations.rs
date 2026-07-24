@@ -5,8 +5,9 @@ use std::fmt;
 use crate::{
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        InterfaceId, InterfaceRequirementId, MethodId, VirtualFamilyId, VirtualSlotId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
+        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId, VirtualFamilyId,
+        VirtualSlotId,
     },
     source::Span,
 };
@@ -59,6 +60,13 @@ impl MirProgram {
 
     pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
         self.class(id.class())?.initializer(id)
+    }
+
+    pub fn copy_constructor(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&MirCopyConstructorDeclaration> {
+        self.class(id.class())?.copy_constructor_declaration(id)
     }
 
     pub fn copy_assignment(&self, id: CopyAssignmentId) -> Option<&MirCopyAssignmentDeclaration> {
@@ -122,6 +130,13 @@ impl MirProgram {
             }
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
+                    .map(|declaration| MirCallableSignature {
+                        parameters: &declaration.parameters,
+                        return_type: MirType::Unit,
+                    })
+            }
+            CallableId::CopyConstructor(copy) => {
+                self.copy_constructor(copy)
                     .map(|declaration| MirCallableSignature {
                         parameters: &declaration.parameters,
                         return_type: MirType::Unit,
@@ -281,8 +296,8 @@ pub struct MirClassDeclaration {
     pub conformances: Vec<MirInterfaceConformance>,
     pub fields: Vec<MirFieldDeclaration>,
     pub initializers: Vec<MirInitializerDeclaration>,
-    pub copy_constructor_declaration: Option<MirInitializerDeclaration>,
-    pub copy_constructor: MirCopyCapability<InitializerId>,
+    pub copy_constructor_declaration: Option<MirCopyConstructorDeclaration>,
+    pub copy_constructor: MirCopyCapability<CopyConstructorId>,
     pub copy_assignment_declaration: Option<MirCopyAssignmentDeclaration>,
     pub copy_assignment: MirCopyCapability<CopyAssignmentId>,
     pub destruction: MirDestructionPlan,
@@ -305,15 +320,19 @@ impl MirClassDeclaration {
     }
 
     pub fn initializer(&self, id: InitializerId) -> Option<&MirInitializerDeclaration> {
-        let ordinary = (id.class() == self.id)
+        (id.class() == self.id)
             .then(|| self.initializers.get(id.index()))
             .flatten()
-            .filter(|initializer| initializer.id == id);
-        ordinary.or_else(|| {
-            self.copy_constructor_declaration
-                .as_ref()
-                .filter(|declaration| declaration.id == id && id.class() == self.id)
-        })
+            .filter(|initializer| initializer.id == id)
+    }
+
+    pub fn copy_constructor_declaration(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&MirCopyConstructorDeclaration> {
+        self.copy_constructor_declaration
+            .as_ref()
+            .filter(|declaration| declaration.id == id && id.class() == self.id)
     }
 
     pub fn copy_assignment_declaration(
@@ -351,6 +370,13 @@ pub struct MirFieldDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirInitializerDeclaration {
     pub id: InitializerId,
+    pub parameters: Vec<MirParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCopyConstructorDeclaration {
+    pub id: CopyConstructorId,
     pub parameters: Vec<MirParameter>,
     pub span: Span,
 }

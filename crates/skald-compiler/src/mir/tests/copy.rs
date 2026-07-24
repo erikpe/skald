@@ -32,7 +32,7 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
     assert_eq!(
         value.copy_constructor,
         MirCopyCapability::User(MirUserCopy {
-            operation: InitializerId::new(value.id, 1),
+            operation: CopyConstructorId::new(value.id, 0),
             base: None,
         })
     );
@@ -44,7 +44,7 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
         })
     );
     assert!(mir
-        .member_definition(InitializerId::new(value.id, 1).into())
+        .member_definition(CopyConstructorId::new(value.id, 0).into())
         .is_some());
     assert!(mir
         .member_definition(CopyAssignmentId::new(value.id, 0).into())
@@ -83,7 +83,7 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
     assert_eq!(construction.class, value.id);
     assert_eq!(
         construction.operation,
-        MirSelectedCopyOperation::User(InitializerId::new(value.id, 1))
+        MirSelectedCopyOperation::User(CopyConstructorId::new(value.id, 0))
     );
     let MirInstruction::CopyAssign(self_assignment) = copies[1] else {
         panic!("expected self-assignment second");
@@ -92,9 +92,30 @@ fn lowers_selected_copy_operations_and_lifecycle_definitions_structurally() {
     assert!(main.values.iter().all(|value| value.ty.is_scalar_value()));
 
     let dump = dump_mir(&mir);
-    assert!(dump.contains("CopyConstructor\n        User c0:init1"));
-    assert!(dump.contains("copy-construct f0:s1 from f0:s0 as c0 via user c0:init1"));
+    assert!(dump.contains("CopyConstructor\n        User c0:copy0"));
+    assert!(dump.contains("copy-construct f0:s1 from f0:s0 as c0 via user c0:copy0"));
     assert!(dump.contains("copy-assign f0:s1 from f0:s1 as c0 via user c0:assign0"));
+}
+
+#[test]
+fn verifier_checks_copy_constructor_identity_and_definition_independently() {
+    let mut wrong_identity = lower_text(COPY_SOURCE);
+    let class = ClassId::new(0);
+    wrong_identity.classes.entries_mut_for_test()[0]
+        .copy_constructor_declaration
+        .as_mut()
+        .unwrap()
+        .id = CopyConstructorId::new(class, 1);
+    let errors = verify_mir(&wrong_identity).unwrap_err().to_string();
+    assert!(errors.contains("copy-constructor declaration contains c0:copy1"));
+
+    let mut missing_definition = lower_text(COPY_SOURCE);
+    let copy = CopyConstructorId::new(class, 0);
+    missing_definition
+        .member_definitions
+        .remove_for_test(copy.into());
+    let errors = verify_mir(&missing_definition).unwrap_err().to_string();
+    assert!(errors.contains("copy constructor c0:copy0 has no member definition"));
 }
 
 #[test]

@@ -2,7 +2,7 @@
 
 use crate::{
     identity::{
-        BindingId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
+        BindingId, CopyConstructorId, FunctionId, InterfaceId, InterfaceRequirementId, MethodId,
         VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
@@ -119,7 +119,7 @@ pub enum HirCallArgument {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCopyArgument {
     pub source: HirObjectSource,
-    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub operation: HirSelectedCopyOperation<CopyConstructorId>,
     pub span: Span,
 }
 

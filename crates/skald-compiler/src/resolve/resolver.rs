@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     identity::{
-        ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId, InterfaceId,
-        MethodId,
+        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, FunctionId,
+        InitializerId, InterfaceId, MethodId,
     },
     source::Span,
     syntax,

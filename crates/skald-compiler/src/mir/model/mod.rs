@@ -11,12 +11,12 @@ mod value;
 pub use control_flow::{MirBasicBlock, MirBody, MirTerminationReason, MirTerminator};
 pub use declarations::{
     MirBaseCopy, MirCallableSignature, MirClassDeclaration, MirClassDeclarationTable,
-    MirCopyAssignmentDeclaration, MirCopyCapability, MirDestructionPlan, MirDestructionStep,
-    MirDestructorDeclaration, MirDirectBase, MirFieldDeclaration, MirFunctionDeclaration,
-    MirFunctionDeclarationTable, MirFunctionLinkage, MirInitializerDeclaration,
-    MirMethodDeclaration, MirParameter, MirParameterMode, MirProgram, MirReceiverAccess,
-    MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy, MirUserCopy,
-    MirVirtualFamily, MirVirtualFamilyTable,
+    MirCopyAssignmentDeclaration, MirCopyCapability, MirCopyConstructorDeclaration,
+    MirDestructionPlan, MirDestructionStep, MirDestructorDeclaration, MirDirectBase,
+    MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionLinkage,
+    MirInitializerDeclaration, MirMethodDeclaration, MirParameter, MirParameterMode, MirProgram,
+    MirReceiverAccess, MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy,
+    MirUserCopy, MirVirtualFamily, MirVirtualFamilyTable,
 };
 pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,

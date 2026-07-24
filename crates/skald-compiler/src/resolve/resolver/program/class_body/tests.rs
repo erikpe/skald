@@ -1,5 +1,7 @@
 use crate::{
-    identity::{ClassId, CopyAssignmentId, DestructorId, InitializerId, MethodId},
+    identity::{
+        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, InitializerId, MethodId,
+    },
     test_support::resolve_source,
 };
 
@@ -30,7 +32,7 @@ fn resolves_every_accepted_class_body_through_ordered_definition_slots() {
     );
     assert_eq!(
         definition.copy_constructor.as_ref().unwrap().callable,
-        InitializerId::new(ClassId::new(0), 1).into()
+        CopyConstructorId::new(ClassId::new(0), 0).into()
     );
     assert_eq!(
         definition.copy_assignment.as_ref().unwrap().callable,

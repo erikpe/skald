@@ -7,7 +7,8 @@ use crate::{
         HirSelectedCopyOperation, HirSynthesizedFieldCopy,
     },
     identity::{
-        BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, MethodId,
+        BindingId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId, FunctionId,
+        InitializerId, MethodId,
     },
     mir::{lower_hir, verify_mir, MirInstruction, MirPlaceProjection},
     object_path::ObjectProjection,

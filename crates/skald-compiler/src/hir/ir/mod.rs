@@ -18,13 +18,13 @@ pub use body::{
 };
 pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,
-    HirCopyAssignmentDeclaration, HirDestructionPlan, HirDestructionStep, HirDestructorDeclaration,
-    HirDirectBase, HirFieldDeclaration, HirFunctionDeclaration, HirFunctionDeclarationTable,
-    HirFunctionLinkage, HirInitializerDeclaration, HirInterfaceConformance,
-    HirInterfaceDeclaration, HirInterfaceDeclarationTable, HirInterfaceParameter,
-    HirInterfaceRequirement, HirLocal, HirMethodDeclaration, HirMethodDispatch, HirParameter,
-    HirParameterMode, HirProgram, HirRequirementImplementation, HirVirtualFamily,
-    HirVirtualFamilyTable,
+    HirCopyAssignmentDeclaration, HirCopyConstructorDeclaration, HirDestructionPlan,
+    HirDestructionStep, HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration,
+    HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionLinkage,
+    HirInitializerDeclaration, HirInterfaceConformance, HirInterfaceDeclaration,
+    HirInterfaceDeclarationTable, HirInterfaceParameter, HirInterfaceRequirement, HirLocal,
+    HirMethodDeclaration, HirMethodDispatch, HirParameter, HirParameterMode, HirProgram,
+    HirRequirementImplementation, HirVirtualFamily, HirVirtualFamilyTable,
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,

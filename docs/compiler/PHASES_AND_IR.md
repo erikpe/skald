@@ -105,6 +105,14 @@ Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
 
+Ordinary construction and copy construction have type-distinct identities
+through every semantic phase. `InitializerId` names only an ordinary `init`
+candidate; `CopyConstructorId` names the separate copy lifecycle slot, and
+both have corresponding `CallableId` variants for parameters, locals, bodies,
+verification, and backend symbols. The current parser and resolver still
+classify the legacy `init(ref source: T)` signature as that copy slot until the
+dedicated source declaration is implemented.
+
 The frozen constructor extension deliberately moves ordinary initializer
 selection below name resolution. Resolution will retain the construction class
 identity, source-ordered arguments, and candidate initializer identities.

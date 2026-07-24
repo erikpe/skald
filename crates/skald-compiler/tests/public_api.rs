@@ -61,7 +61,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _interface_call: Option<HirInterfaceCallTarget> = None;
     let mir: MirProgram = lower_hir(hir).unwrap();
     let _mir_base: Option<MirDirectBase> = None;
-    let _mir_base_copy: Option<MirBaseCopy<skald_compiler::identity::InitializerId>> = None;
+    let _mir_base_copy: Option<MirBaseCopy<skald_compiler::identity::CopyConstructorId>> = None;
     let _mir_projection: Option<MirPlaceProjection> = None;
     let _mir_view: Option<MirObjectView> = None;
     let _mir_view_target: Option<MirViewTarget> = None;

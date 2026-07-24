@@ -4,7 +4,10 @@ use super::test_fixtures::{
 };
 use super::*;
 use crate::{
-    identity::{BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId},
+    identity::{
+        BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
+        MethodId,
+    },
     test_support::lower_source_to_mir,
 };
 

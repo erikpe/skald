@@ -151,7 +151,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             span: class.initializer.span,
         }],
         copy_constructor_declaration: class.copy_constructor_declaration.as_ref().map(|copy| {
-            MirInitializerDeclaration {
+            MirCopyConstructorDeclaration {
                 id: copy.id,
                 parameters: copy.parameters.iter().map(lower_parameter).collect(),
                 span: copy.span,

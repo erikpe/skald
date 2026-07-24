@@ -14,7 +14,8 @@ use crate::mir::test_fixtures::{
 use crate::{
     backend::{emit_assembly, Target, RUNTIME_ABI_MARKER_SYMBOL},
     identity::{
-        BindingId, ClassId, FieldId, FunctionId, InitializerId, LocalId, MethodId, ParameterId,
+        BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
+        MethodId, ParameterId,
     },
     mir::{
         verify_mir, BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBasicBlock,

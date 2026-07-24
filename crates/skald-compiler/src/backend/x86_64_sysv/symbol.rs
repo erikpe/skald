@@ -22,6 +22,9 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
             initializer.class().index(),
             initializer.index()
         ),
+        CallableId::CopyConstructor(copy) => {
+            format!(".Lska_class_{}_copy_{}", copy.class().index(), copy.index())
+        }
         CallableId::CopyAssignment(assignment) => format!(
             ".Lska_class_{}_assign_{}",
             assignment.class().index(),
@@ -52,6 +55,9 @@ pub(super) fn local_label_stem(callable: CallableId) -> String {
             initializer.class().index(),
             initializer.index()
         ),
+        CallableId::CopyConstructor(copy) => {
+            format!("class_{}_copy_{}", copy.class().index(), copy.index())
+        }
         CallableId::CopyAssignment(assignment) => format!(
             "class_{}_assign_{}",
             assignment.class().index(),

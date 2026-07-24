@@ -193,6 +193,10 @@ impl<'mir> Verifier<'mir> {
                     .program
                     .initializer(initializer)
                     .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
+                CallableId::CopyConstructor(copy) => self
+                    .program
+                    .copy_constructor(copy)
+                    .map(|declaration| (&declaration.parameters[..], MirType::Unit)),
                 CallableId::CopyAssignment(assignment) => {
                     self.program.copy_assignment(assignment).map(|declaration| {
                         (std::slice::from_ref(&declaration.parameter), MirType::Unit)
@@ -340,7 +344,7 @@ impl<'mir> Verifier<'mir> {
 
     fn verify_copy_constructor_metadata(&mut self, class: &MirClassDeclaration) {
         if let Some(declaration) = &class.copy_constructor_declaration {
-            if declaration.id.class() != class.id || declaration.id.index() != 1 {
+            if declaration.id.class() != class.id || declaration.id.index() != 0 {
                 self.program_error(format!(
                     "class {} copy-constructor declaration contains {}",
                     class.id, declaration.id
@@ -461,7 +465,7 @@ impl<'mir> Verifier<'mir> {
     fn verify_synthesized_constructor(
         &mut self,
         class: &MirClassDeclaration,
-        copy: &MirSynthesizedCopy<crate::identity::InitializerId>,
+        copy: &MirSynthesizedCopy<crate::identity::CopyConstructorId>,
     ) {
         self.verify_constructor_base(class, copy.base);
         if copy.class != class.id || copy.fields.len() != class.fields.len() {

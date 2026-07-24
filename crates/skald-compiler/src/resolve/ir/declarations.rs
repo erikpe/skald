@@ -3,9 +3,9 @@
 use crate::{
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        InterfaceId, InterfaceRequirementId, LocalId, MethodId, ParameterId, VirtualFamilyId,
-        VirtualSlotId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
+        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
+        ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -44,6 +44,13 @@ impl ResolvedProgram {
 
     pub fn initializer(&self, id: InitializerId) -> Option<&ResolvedInitializerDeclaration> {
         self.class(id.class())?.initializer(id)
+    }
+
+    pub fn copy_constructor(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&ResolvedCopyConstructorDeclaration> {
+        self.class(id.class())?.copy_constructor_declaration(id)
     }
 
     pub fn destructor(&self, id: DestructorId) -> Option<&ResolvedDestructorDeclaration> {
@@ -163,8 +170,8 @@ pub struct ResolvedClassDeclaration {
     pub implemented_interfaces: Vec<ResolvedInterfaceClaim>,
     pub fields: Vec<ResolvedFieldDeclaration>,
     pub initializer: Option<ResolvedInitializerDeclaration>,
-    pub copy_constructor_declaration: Option<ResolvedInitializerDeclaration>,
-    pub copy_constructor: ResolvedCopyOperation<InitializerId>,
+    pub copy_constructor_declaration: Option<ResolvedCopyConstructorDeclaration>,
+    pub copy_constructor: ResolvedCopyOperation<CopyConstructorId>,
     pub copy_assignment_declaration: Option<ResolvedCopyAssignmentDeclaration>,
     pub copy_assignment: ResolvedCopyOperation<CopyAssignmentId>,
     pub destructor: Option<ResolvedDestructorDeclaration>,
@@ -198,11 +205,18 @@ impl ResolvedClassDeclaration {
         self.initializer
             .as_ref()
             .filter(|initializer| initializer.id == id)
-            .or_else(|| {
-                self.copy_constructor_declaration
-                    .as_ref()
-                    .filter(|initializer| initializer.id == id)
-            })
+    }
+
+    pub fn copy_constructor_declaration(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&ResolvedCopyConstructorDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.copy_constructor_declaration
+            .as_ref()
+            .filter(|constructor| constructor.id == id)
     }
 
     pub fn copy_assignment_declaration(
@@ -248,6 +262,13 @@ pub struct ResolvedFieldDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInitializerDeclaration {
     pub id: InitializerId,
+    pub parameters: Vec<ResolvedParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedCopyConstructorDeclaration {
+    pub id: CopyConstructorId,
     pub parameters: Vec<ResolvedParameter>,
     pub span: Span,
 }

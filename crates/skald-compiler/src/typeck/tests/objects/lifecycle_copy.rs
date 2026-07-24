@@ -15,7 +15,7 @@ fn lowers_valid_copy_lifecycle_declarations_and_bodies_into_hir() {
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let hir = output.hir.unwrap();
     let class = hir.class(ClassId::new(0)).unwrap();
-    let copy_constructor = InitializerId::new(class.id, 1);
+    let copy_constructor = CopyConstructorId::new(class.id, 0);
     let copy_assignment = CopyAssignmentId::new(class.id, 0);
     assert!(matches!(
         &class.copy_constructor,
@@ -174,7 +174,7 @@ fn type_checks_class_field_copy_operations_only_inside_copy_bodies() {
         .map(str::trim)
         .filter(|line| {
             line.starts_with("User c1:")
-                || line.starts_with("MemberDefinition c1:init1")
+                || line.starts_with("MemberDefinition c1:copy0")
                 || line.starts_with("MemberDefinition c1:assign0")
                 || line.starts_with("FieldCopy")
         })
@@ -183,9 +183,9 @@ fn type_checks_class_field_copy_operations_only_inside_copy_bodies() {
     assert_eq!(
         copy_lines,
         [
-            "User c1:init1",
+            "User c1:copy0",
             "User c1:assign0",
-            "MemberDefinition c1:init1",
+            "MemberDefinition c1:copy0",
             "FieldCopyConstruction",
             "MemberDefinition c1:assign0",
             "FieldCopyAssignment",
@@ -243,7 +243,7 @@ fn selects_place_to_place_copy_construction_and_assignment_in_hir() {
     );
     assert_eq!(
         copy.operation,
-        HirSelectedCopyOperation::User(InitializerId::new(value.id, 1))
+        HirSelectedCopyOperation::User(CopyConstructorId::new(value.id, 0))
     );
 
     let HirStatement::CopyAssignment(assignment) = &main.body.statements[2] else {

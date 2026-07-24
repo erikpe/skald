@@ -3,9 +3,9 @@
 use crate::{
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, DestructorId, FieldId, FunctionId, InitializerId,
-        InterfaceId, InterfaceRequirementId, LocalId, MethodId, ParameterId, VirtualFamilyId,
-        VirtualSlotId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
+        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
+        ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -44,6 +44,13 @@ impl HirProgram {
         self.class(id.class())?.initializer(id)
     }
 
+    pub fn copy_constructor(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&HirCopyConstructorDeclaration> {
+        self.class(id.class())?.copy_constructor_declaration(id)
+    }
+
     pub fn copy_assignment(&self, id: CopyAssignmentId) -> Option<&HirCopyAssignmentDeclaration> {
         self.class(id.class())?.copy_assignment_declaration(id)
     }
@@ -74,6 +81,13 @@ impl HirProgram {
             }
             CallableId::Initializer(initializer) => {
                 self.initializer(initializer)
+                    .map(|declaration| HirCallableSignature {
+                        parameters: &declaration.parameters,
+                        return_type: Type::Unit,
+                    })
+            }
+            CallableId::CopyConstructor(copy) => {
+                self.copy_constructor(copy)
                     .map(|declaration| HirCallableSignature {
                         parameters: &declaration.parameters,
                         return_type: Type::Unit,
@@ -209,8 +223,8 @@ pub struct HirClassDeclaration {
     pub conformances: Vec<HirInterfaceConformance>,
     pub fields: Vec<HirFieldDeclaration>,
     pub initializer: HirInitializerDeclaration,
-    pub copy_constructor_declaration: Option<HirInitializerDeclaration>,
-    pub copy_constructor: HirCopyCapability<InitializerId>,
+    pub copy_constructor_declaration: Option<HirCopyConstructorDeclaration>,
+    pub copy_constructor: HirCopyCapability<CopyConstructorId>,
     pub copy_assignment_declaration: Option<HirCopyAssignmentDeclaration>,
     pub copy_assignment: HirCopyCapability<CopyAssignmentId>,
     pub destructor: Option<HirDestructorDeclaration>,
@@ -277,13 +291,19 @@ impl HirClassDeclaration {
         if id.class() != self.id {
             return None;
         }
-        (self.initializer.id == id)
-            .then_some(&self.initializer)
-            .or_else(|| {
-                self.copy_constructor_declaration
-                    .as_ref()
-                    .filter(|declaration| declaration.id == id)
-            })
+        (self.initializer.id == id).then_some(&self.initializer)
+    }
+
+    pub fn copy_constructor_declaration(
+        &self,
+        id: CopyConstructorId,
+    ) -> Option<&HirCopyConstructorDeclaration> {
+        if id.class() != self.id {
+            return None;
+        }
+        self.copy_constructor_declaration
+            .as_ref()
+            .filter(|declaration| declaration.id == id)
     }
 
     pub fn copy_assignment_declaration(
@@ -326,6 +346,13 @@ pub struct HirFieldDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirInitializerDeclaration {
     pub id: InitializerId,
+    pub parameters: Vec<HirParameter>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCopyConstructorDeclaration {
+    pub id: CopyConstructorId,
     pub parameters: Vec<HirParameter>,
     pub span: Span,
 }

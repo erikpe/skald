@@ -2,8 +2,8 @@
 
 use crate::{
     identity::{
-        ClassId, CopyAssignmentId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId,
-        MethodId, VirtualFamilyId, VirtualSlotId,
+        ClassId, CopyAssignmentId, CopyConstructorId, FunctionId, InitializerId, InterfaceId,
+        InterfaceRequirementId, MethodId, VirtualFamilyId, VirtualSlotId,
     },
     source::Span,
 };
@@ -93,7 +93,7 @@ pub struct MirCopyConstruction {
     pub destination: MirPlace,
     pub source: MirPlace,
     pub class: ClassId,
-    pub operation: MirSelectedCopyOperation<InitializerId>,
+    pub operation: MirSelectedCopyOperation<CopyConstructorId>,
     pub span: Span,
 }
 

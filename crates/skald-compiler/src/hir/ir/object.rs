@@ -2,7 +2,8 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, CopyAssignmentId, FieldId, FunctionId, InitializerId, InterfaceId,
+        BindingId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId, FunctionId,
+        InitializerId, InterfaceId,
     },
     object_path::ObjectPath,
     source::Span,
@@ -98,7 +99,7 @@ pub struct HirObjectInitialization {
     pub producer: HirObjectProducer,
     /// The validated copy operation omitted by permitted constructor elision.
     /// Calls initialize their result destination directly and leave this empty.
-    pub elided_copy: Option<HirSelectedCopyOperation<InitializerId>>,
+    pub elided_copy: Option<HirSelectedCopyOperation<CopyConstructorId>>,
     pub span: Span,
 }
 
@@ -149,7 +150,7 @@ pub enum HirObjectCallTarget {
 pub struct HirCopyConstruction {
     pub destination: HirObjectPlace,
     pub source: HirObjectSource,
-    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub operation: HirSelectedCopyOperation<CopyConstructorId>,
     pub span: Span,
 }
 
@@ -209,14 +210,14 @@ pub struct HirConstruction {
 pub enum HirObjectReturn {
     Copy {
         source: HirObjectSource,
-        operation: HirSelectedCopyOperation<InitializerId>,
+        operation: HirSelectedCopyOperation<CopyConstructorId>,
         class: ClassId,
         span: Span,
     },
     /// The supported return-elision case: construct directly in return storage.
     Construct {
         construction: HirConstruction,
-        omitted_copy: HirSelectedCopyOperation<InitializerId>,
+        omitted_copy: HirSelectedCopyOperation<CopyConstructorId>,
     },
 }
 
@@ -238,7 +239,7 @@ pub struct HirFieldConstruction {
 pub struct HirFieldCopyConstruction {
     pub place: HirFieldPlace,
     pub source: HirObjectSource,
-    pub operation: HirSelectedCopyOperation<InitializerId>,
+    pub operation: HirSelectedCopyOperation<CopyConstructorId>,
     pub span: Span,
 }
 

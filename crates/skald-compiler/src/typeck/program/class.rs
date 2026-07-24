@@ -4,9 +4,9 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     hir::{
         HirAccess, HirClassDeclaration, HirClassDefinition, HirCopyAssignmentDeclaration,
-        HirDestructionPlan, HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration,
-        HirInitializerDeclaration, HirInterfaceConformance, HirMemberDefinition,
-        HirMethodDeclaration, HirMethodDispatch, Type,
+        HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructorDeclaration, HirDirectBase,
+        HirFieldDeclaration, HirInitializerDeclaration, HirInterfaceConformance,
+        HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch, Type,
     },
     identity::CallableId,
     resolve::{
@@ -101,7 +101,7 @@ fn lower_class_declaration(
         class
             .copy_constructor_declaration
             .as_ref()
-            .map(|copy| HirInitializerDeclaration {
+            .map(|copy| HirCopyConstructorDeclaration {
                 id: copy.id,
                 parameters: copy.parameters.iter().map(lower_parameter).collect(),
                 span: copy.span,

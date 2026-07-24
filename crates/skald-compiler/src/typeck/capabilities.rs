@@ -4,13 +4,13 @@ use crate::{
     hir::{
         HirBaseCopy, HirCopyCapability, HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy,
     },
-    identity::{ClassId, CopyAssignmentId, FieldId, InitializerId},
+    identity::{ClassId, CopyAssignmentId, CopyConstructorId, FieldId},
     resolve::{ResolvedClassDeclaration, ResolvedCopyOperation, ResolvedProgram, ResolvedTypeKind},
 };
 
 #[derive(Clone, Debug)]
 pub(super) struct CopyCapabilities {
-    constructors: CapabilitySet<InitializerId>,
+    constructors: CapabilitySet<CopyConstructorId>,
     assignments: CapabilitySet<CopyAssignmentId>,
 }
 
@@ -22,7 +22,7 @@ impl CopyCapabilities {
         }
     }
 
-    pub(super) fn constructor(&self, class: ClassId) -> &HirCopyCapability<InitializerId> {
+    pub(super) fn constructor(&self, class: ClassId) -> &HirCopyCapability<CopyConstructorId> {
         self.constructors.capability(class)
     }
 

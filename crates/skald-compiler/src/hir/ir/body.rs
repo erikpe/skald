@@ -60,14 +60,13 @@ impl HirClassDefinition {
     pub fn member(&self, callable: CallableId) -> Option<&HirMemberDefinition> {
         match callable {
             CallableId::Function(_) => None,
-            CallableId::Initializer(id) if id.class() == self.class => (self.initializer.callable
-                == callable)
-                .then_some(&self.initializer)
-                .or_else(|| {
-                    self.copy_constructor
-                        .as_ref()
-                        .filter(|definition| definition.callable == callable)
-                }),
+            CallableId::Initializer(id) if id.class() == self.class => {
+                (self.initializer.callable == callable).then_some(&self.initializer)
+            }
+            CallableId::CopyConstructor(id) if id.class() == self.class => self
+                .copy_constructor
+                .as_ref()
+                .filter(|definition| definition.callable == callable),
             CallableId::CopyAssignment(id) if id.class() == self.class => self
                 .copy_assignment
                 .as_ref()
@@ -81,6 +80,7 @@ impl HirClassDefinition {
                 .as_ref()
                 .filter(|definition| definition.callable == callable),
             CallableId::Initializer(_)
+            | CallableId::CopyConstructor(_)
             | CallableId::CopyAssignment(_)
             | CallableId::Destructor(_)
             | CallableId::Method(_) => None,

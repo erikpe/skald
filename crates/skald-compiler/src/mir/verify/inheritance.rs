@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::identity::{CopyAssignmentId, InitializerId};
+use crate::identity::{CopyAssignmentId, CopyConstructorId};
 
 use super::{
     super::model::{MirBaseCopy, MirClassDeclaration},
@@ -48,7 +48,7 @@ impl Verifier<'_> {
     pub(super) fn verify_constructor_base(
         &mut self,
         class: &MirClassDeclaration,
-        actual: Option<MirBaseCopy<InitializerId>>,
+        actual: Option<MirBaseCopy<CopyConstructorId>>,
     ) {
         let expected = class.direct_base.and_then(|direct| {
             self.program

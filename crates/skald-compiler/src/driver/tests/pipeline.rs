@@ -35,7 +35,7 @@ fn unused_copy_lifecycle_bodies_lower_to_mir_member_definitions() {
 
     assert!(artifact.report.diagnostics.is_empty());
     assert!(artifact.assembly.contains(".Lska_class_0_init_0"));
-    assert!(artifact.assembly.contains(".Lska_class_0_init_1"));
+    assert!(artifact.assembly.contains(".Lska_class_0_copy_0"));
     assert!(artifact.assembly.contains(".Lska_class_0_assign_0"));
 }
 

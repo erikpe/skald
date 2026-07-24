@@ -108,8 +108,8 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
     let ordinary = value.initializer.as_ref().unwrap();
     let copy_constructor = value.copy_constructor_declaration.as_ref().unwrap();
     let copy_assignment = value.copy_assignment_declaration.as_ref().unwrap();
-    assert_eq!(copy_constructor.id, InitializerId::new(value.id, 0));
-    assert_eq!(ordinary.id, InitializerId::new(value.id, 1));
+    assert_eq!(copy_constructor.id, CopyConstructorId::new(value.id, 0));
+    assert_eq!(ordinary.id, InitializerId::new(value.id, 0));
     assert_eq!(copy_assignment.id, CopyAssignmentId::new(value.id, 0));
     assert_eq!(
         value.copy_constructor,
@@ -172,10 +172,10 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
     assert_eq!(
         identity_lines,
         [
-            "User c0:init0",
+            "User c0:copy0",
             "User c0:assign0",
-            "MemberDefinition c0:init1",
             "MemberDefinition c0:init0",
+            "MemberDefinition c0:copy0",
             "MemberDefinition c0:assign0",
         ]
     );

@@ -57,7 +57,10 @@ impl ResolvedClassDefinition {
             CallableId::Initializer(initializer) if initializer.class() == self.class => self
                 .initializer
                 .as_ref()
-                .or(self.copy_constructor.as_ref())
+                .filter(|definition| definition.callable == callable),
+            CallableId::CopyConstructor(copy) if copy.class() == self.class => self
+                .copy_constructor
+                .as_ref()
                 .filter(|definition| definition.callable == callable),
             CallableId::CopyAssignment(assignment) if assignment.class() == self.class => self
                 .copy_assignment
@@ -72,6 +75,7 @@ impl ResolvedClassDefinition {
                 .get(method.index())
                 .filter(|definition| definition.callable == callable),
             CallableId::Initializer(_)
+            | CallableId::CopyConstructor(_)
             | CallableId::CopyAssignment(_)
             | CallableId::Destructor(_)
             | CallableId::Method(_) => None,

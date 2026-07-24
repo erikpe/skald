@@ -58,7 +58,7 @@ docs-check:
 	cargo run --quiet --locked -p skald-docs-check -- .
 
 # Ordinary behavioral suites included in test.
-test: compiler-test cli-test golden-test runtime-test docs-test
+test: cli-test golden-test runtime-test docs-test compiler-test
 
 compiler-test:
 	cargo test --locked -p skald-compiler

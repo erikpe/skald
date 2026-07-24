@@ -1,6 +1,6 @@
 # Constructor Overloads and Explicit Copy Construction Roadmap
 
-Status: planned; CM0 is next.
+Status: in progress; CM0 complete, CM1 is next.
 
 This roadmap replaces the transitional single-initializer and signature-
 classified copy-constructor model with the frozen constructor contract:
@@ -24,10 +24,11 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 - Resolved and HIR class declarations and definitions store one ordinary
   initializer. Calls select that initializer during name resolution, before
   argument compatibility is known.
-- `InitializerId` already contains a class-local ordinal, backend symbols
-  include it, and MIR already stores ordinary initializer declarations in a
-  vector. The singular assumptions above MIR prevent that latent
-  representation from being used source-side.
+- `InitializerId` contains a class-local ordinal, backend symbols include it,
+  and MIR stores ordinary initializer declarations in a vector. Copy
+  construction now uses the distinct `CopyConstructorId` and callable-symbol
+  namespace introduced by CM0. The singular assumptions above MIR still
+  prevent ordinary initializer ordinals from being used source-side.
 - Copy construction, checked object places, slicing, exact-class copy
   capability selection, deterministic cleanup, and verified MIR execution are
   implemented. The migration changes declaration and explicit-selection
@@ -84,7 +85,7 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 
 ## Progress
 
-- [ ] CM0 — Give copy construction a distinct identity
+- [x] CM0 — Give copy construction a distinct identity
 - [ ] CM1 — Generalize ordinary initializer storage
 - [ ] CM2 — Adopt the distinct copy-constructor declaration
 - [ ] CM3 — Select ordinary initializer overloads
@@ -99,20 +100,20 @@ recorded in [Compiler Phases and Intermediate Representations](../compiler/PHASE
 **Purpose:** Remove the identity collision between ordinary and copy
 construction before either declaration family expands.
 
-- [ ] Introduce a dedicated `CopyConstructorId` and `CallableId` variant,
+- [x] Introduce a dedicated `CopyConstructorId` and `CallableId` variant,
       parallel to copy assignment and destruction, so a copy lifecycle
       operation cannot enter an ordinary initializer candidate set.
-- [ ] Migrate resolved, HIR, MIR, capability, verifier, backend, symbol, dump,
+- [x] Migrate resolved, HIR, MIR, capability, verifier, backend, symbol, dump,
       local-owner, parameter, and test-fixture paths from copy-as-
       `InitializerId` to the dedicated identity.
-- [ ] Keep the current source behavior temporarily: one accepted ordinary
+- [x] Keep the current source behavior temporarily: one accepted ordinary
       initializer and the legacy signature-classified copy declaration still
       compile while copy construction receives an honest internal identity.
-- [ ] Verify declaration/definition ownership for the copy slot independently
+- [x] Verify declaration/definition ownership for the copy slot independently
       of ordinary initializer density before backend lowering.
-- [ ] Update phase dumps and internal documentation for the separated identity
+- [x] Update phase dumps and internal documentation for the separated identity
       without claiming a source-level syntax change.
-- [ ] Add identity/verifier mutations, callable-symbol collision tests, and
+- [x] Add identity/verifier mutations, callable-symbol collision tests, and
       regressions for all existing copy capability and native lifecycle
       behavior.
 

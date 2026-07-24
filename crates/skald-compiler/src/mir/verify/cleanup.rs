@@ -110,7 +110,10 @@ struct CleanupLivenessAnalysis<'mir, 'errors> {
 impl CleanupLivenessAnalysis<'_, '_> {
     fn analyze(&mut self) {
         let mut initial = ObjectState::default();
-        if !matches!(self.function.callable(), CallableId::Initializer(_)) {
+        if !matches!(
+            self.function.callable(),
+            CallableId::Initializer(_) | CallableId::CopyConstructor(_)
+        ) {
             if let Some(receiver) = self.function.receiver() {
                 if self
                     .function

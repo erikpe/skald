@@ -4,10 +4,9 @@ use super::*;
 
 struct LifecycleDeclarations {
     initializer: Option<ResolvedInitializerDeclaration>,
-    copy_constructor: Option<ResolvedInitializerDeclaration>,
+    copy_constructor: Option<ResolvedCopyConstructorDeclaration>,
     copy_assignment: Option<ResolvedCopyAssignmentDeclaration>,
     destructor: Option<ResolvedDestructorDeclaration>,
-    next_initializer_index: usize,
     copy_assignment_invalid: bool,
 }
 
@@ -18,7 +17,6 @@ impl LifecycleDeclarations {
             copy_constructor: None,
             copy_assignment: None,
             destructor: None,
-            next_initializer_index: 0,
             copy_assignment_invalid: false,
         }
     }
@@ -126,7 +124,12 @@ impl ClassCollectionState {
         ) {
             return;
         }
-        let declaration = self.resolve_initializer(source, top_levels, diagnostics);
+        let id = InitializerId::new(self.id, 0);
+        let declaration = ResolvedInitializerDeclaration {
+            id,
+            parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
+            span: source.span,
+        };
         self.symbols.initializer = Some(declaration.id);
         self.symbols.initializer_span = Some(source.introducer_span);
         self.lifecycle.initializer = Some(declaration);
@@ -150,25 +153,15 @@ impl ClassCollectionState {
         ) {
             return;
         }
-        let declaration = self.resolve_initializer(source, top_levels, diagnostics);
-        self.symbols.copy_constructor_span = Some(source.introducer_span);
-        self.lifecycle.copy_constructor = Some(declaration);
-        self.work.copy_constructor_member = Some(member_index);
-    }
-
-    fn resolve_initializer(
-        &mut self,
-        source: &syntax::InitializerDecl,
-        top_levels: &HashMap<String, TopLevelSymbol>,
-        diagnostics: &mut Diagnostics,
-    ) -> ResolvedInitializerDeclaration {
-        let id = InitializerId::new(self.id, self.lifecycle.next_initializer_index);
-        self.lifecycle.next_initializer_index += 1;
-        ResolvedInitializerDeclaration {
+        let id = CopyConstructorId::new(self.id, 0);
+        let declaration = ResolvedCopyConstructorDeclaration {
             id,
             parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
             span: source.span,
-        }
+        };
+        self.symbols.copy_constructor_span = Some(source.introducer_span);
+        self.lifecycle.copy_constructor = Some(declaration);
+        self.work.copy_constructor_member = Some(member_index);
     }
 
     fn collect_copy_assignment(

@@ -139,6 +139,7 @@ impl Verifier<'_> {
                 None => MirAliasAccess::ReadOnly,
             },
             CallableId::Initializer(_)
+            | CallableId::CopyConstructor(_)
             | CallableId::CopyAssignment(_)
             | CallableId::Destructor(_) => MirAliasAccess::Mutable,
             CallableId::Function(_) => MirAliasAccess::ReadOnly,

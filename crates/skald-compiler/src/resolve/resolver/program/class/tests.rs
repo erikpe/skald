@@ -1,5 +1,8 @@
 use crate::{
-    identity::{ClassId, CopyAssignmentId, DestructorId, FieldId, InitializerId, MethodId},
+    identity::{
+        ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, InitializerId,
+        MethodId,
+    },
     resolve::{
         ResolvedCopyOperation, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
         INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
@@ -159,11 +162,11 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
     assert_eq!(class.methods[1].id, MethodId::new(class.id, 1));
     assert_eq!(
         class.copy_constructor,
-        ResolvedCopyOperation::User(InitializerId::new(class.id, 0))
+        ResolvedCopyOperation::User(CopyConstructorId::new(class.id, 0))
     );
     assert_eq!(
         class.initializer.as_ref().unwrap().id,
-        InitializerId::new(class.id, 1)
+        InitializerId::new(class.id, 0)
     );
     assert_eq!(
         class.copy_assignment,

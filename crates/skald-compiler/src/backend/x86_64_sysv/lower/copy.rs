@@ -49,7 +49,7 @@ impl InstructionSelector<'_, '_> {
 
     fn select_construction_operation(
         &mut self,
-        operation: MirSelectedCopyOperation<crate::identity::InitializerId>,
+        operation: MirSelectedCopyOperation<crate::identity::CopyConstructorId>,
         destination: MirPlace,
         source: MirPlace,
     ) -> Result<(), BackendError> {
@@ -72,7 +72,11 @@ impl InstructionSelector<'_, '_> {
                         source.clone().project_base(base.base),
                     )?;
                 }
-                self.select_copy_call(CallableId::Initializer(initializer), &destination, &source)
+                self.select_copy_call(
+                    CallableId::CopyConstructor(initializer),
+                    &destination,
+                    &source,
+                )
             }
             MirSelectedCopyOperation::Synthesized(class) => {
                 let (base, fields) = match &self

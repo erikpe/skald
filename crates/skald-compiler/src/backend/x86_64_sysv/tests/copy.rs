@@ -21,7 +21,10 @@ const COPY_SOURCE: &str = concat!(
 fn lowers_user_and_synthesized_copy_in_mir_defined_field_order() {
     let output = assembly(COPY_SOURCE);
 
-    assert_eq!(output.matches("call .Lska_class_0_init_1").count(), 2);
+    assert!(output.contains(".Lska_class_0_init_0:"));
+    assert!(output.contains(".Lska_class_0_copy_0:"));
+    assert!(!output.contains(".Lska_class_0_init_1"));
+    assert_eq!(output.matches("call .Lska_class_0_copy_0").count(), 2);
     assert_eq!(output.matches("call .Lska_class_0_assign_0").count(), 2);
     assert!(output.contains("movzx"));
     assert!(output.contains("movsd"));
@@ -62,7 +65,7 @@ fn malformed_copy_mir_is_rejected_before_instruction_selection() {
             _ => None,
         })
         .unwrap();
-    copy.operation = MirSelectedCopyOperation::User(InitializerId::new(copy.class, 0));
+    copy.operation = MirSelectedCopyOperation::User(CopyConstructorId::new(copy.class, 1));
 
     let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
     assert!(error.message().contains("input MIR failed verification"));
