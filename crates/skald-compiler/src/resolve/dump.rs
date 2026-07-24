@@ -423,7 +423,7 @@ impl ResolvedDumper {
                     assignment.span,
                 );
                 self.indented(|dumper| {
-                    dumper.object_place(&assignment.receiver);
+                    dumper.object_receiver(&assignment.receiver);
                     dumper.line("Equal", assignment.equal_span);
                     dumper.heading("Value");
                     dumper.indented(|dumper| dumper.expression(&assignment.value));
@@ -537,12 +537,12 @@ impl ResolvedDumper {
             }
             ResolvedExpression::FieldAccess(access) => {
                 self.line(&format!("FieldAccess {}", access.field), access.span);
-                self.indented(|dumper| dumper.object_place(&access.receiver));
+                self.indented(|dumper| dumper.object_receiver(&access.receiver));
             }
             ResolvedExpression::MethodCall(call) => {
                 self.line(&format!("MethodCall {}", call.method), call.span);
                 self.indented(|dumper| {
-                    dumper.object_place(&call.receiver);
+                    dumper.object_receiver(&call.receiver);
                     dumper.heading("Arguments");
                     dumper.indented(|dumper| {
                         for argument in &call.arguments {
@@ -593,6 +593,38 @@ impl ResolvedDumper {
             &format!("Receiver {} class {}", place.render_identity(), place.class),
             place.span,
         );
+    }
+
+    fn object_receiver(&mut self, receiver: &ResolvedObjectReceiver) {
+        match receiver {
+            ResolvedObjectReceiver::BindingPath(path) => self.object_place(path),
+            ResolvedObjectReceiver::CastRelative {
+                cast,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(&format!("CastRelativeReceiver class {class}"), *span);
+                self.indented(|dumper| {
+                    dumper.line(
+                        &format!("CastTarget {}", render_type_kind(cast.target.kind)),
+                        cast.target_span,
+                    );
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&cast.source));
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
+        }
     }
 
     fn heading(&mut self, name: &str) {

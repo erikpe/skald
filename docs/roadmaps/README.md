@@ -2,11 +2,8 @@
 
 This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
-[`../archive/`](../archive/README.md).
-
-- [Object Casts Discoveries](OBJECT_CASTS_DISCOVERIES.md) — pending
-  resolved-receiver representation follow-up found while implementing checked
-  cast places; it is bounded to later cast/compiler work.
+[`../archive/`](../archive/README.md). There are currently no active
+implementation roadmaps or discovery records.
 
 The completed polymorphism profile remains the implementation baseline.
 Shared-ownership language and implementation contracts are frozen in

@@ -52,7 +52,7 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
     };
     assert_eq!(initial_assignment.field, counter.fields[0].id);
     assert_eq!(
-        initial_assignment.receiver.root,
+        initial_assignment.receiver.root().unwrap(),
         BindingId::Receiver(initializer.callable)
     );
 
@@ -66,7 +66,7 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
     };
     assert_eq!(forwarded_call.method, counter.methods[1].id);
     assert_eq!(
-        forwarded_call.receiver.root,
+        forwarded_call.receiver.root().unwrap(),
         BindingId::Receiver(forwarded.callable)
     );
 
@@ -130,14 +130,14 @@ fn resolves_copy_lifecycle_slots_to_stable_owner_qualified_identities() {
         panic!("expected the copy-assignment body to resolve");
     };
     assert_eq!(
-        assignment.receiver.root,
+        assignment.receiver.root().unwrap(),
         BindingId::Receiver(copy_assignment.id.into())
     );
     let ResolvedExpression::FieldAccess(source) = &assignment.value else {
         panic!("expected source field access");
     };
     assert_eq!(
-        source.receiver.root,
+        source.receiver.root().unwrap(),
         BindingId::Parameter(copy_assignment.parameter.id)
     );
 
@@ -239,7 +239,7 @@ fn resolves_destructor_identity_receiver_body_and_forward_references() {
         panic!("expected a field read through destructor `self`");
     };
     assert_eq!(
-        value.receiver.root,
+        value.receiver.root().unwrap(),
         BindingId::Receiver(CallableId::Destructor(destructor.id))
     );
 
@@ -251,7 +251,7 @@ fn resolves_destructor_identity_receiver_body_and_forward_references() {
     };
     assert_eq!(reset.method, resource.methods[0].id);
     assert_eq!(
-        reset.receiver.root,
+        reset.receiver.root().unwrap(),
         BindingId::Receiver(CallableId::Destructor(destructor.id))
     );
     assert_eq!(resource.methods[1].name, "destroy");

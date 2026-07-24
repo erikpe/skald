@@ -368,7 +368,20 @@ impl CallableChecker<'_, '_> {
                     .receiver
                     .clone()
                     .project_field(access.field, class, access.span);
-                let place = self.check_object_place(&place, ObjectPlaceUse::Alias)?;
+                let Some(path) = place.binding_path() else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            source_use.diagnostic_code(),
+                            "a cast-relative field cannot be the source of another type operation",
+                        )
+                        .with_primary_label(
+                            access.span,
+                            "consume this checked field directly or copy it into inline storage",
+                        ),
+                    );
+                    return None;
+                };
+                let place = self.check_object_place(path, ObjectPlaceUse::Alias)?;
                 let origin = self.object_origin(&place);
                 Some(CheckedObjectViewSource::Class { place, origin })
             }

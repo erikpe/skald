@@ -47,3 +47,7 @@ Resolved compiler-maintainability follow-ups:
 
 - [maintainability discoveries](MAINTAINABILITY_DISCOVERIES.md)
 - [polymorphism maintainability discoveries](POLYMORPHISM_DISCOVERIES.md)
+
+Resolved object-cast follow-ups:
+
+- [object-cast discoveries](OBJECT_CASTS_DISCOVERIES.md)

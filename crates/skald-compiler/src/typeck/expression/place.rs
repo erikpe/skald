@@ -99,8 +99,17 @@ impl CallableChecker<'_, '_> {
         HirObjectOrigin,
         Option<Box<HirCheckedObjectView>>,
     )> {
-        let Some(cast) = &receiver.cast else {
-            let place = self.check_object_place(&receiver.path, place_use)?;
+        let ResolvedObjectReceiver::CastRelative {
+            cast,
+            projections,
+            class,
+            span,
+        } = receiver
+        else {
+            let path = receiver
+                .binding_path()
+                .expect("ordinary receiver must retain its binding path");
+            let place = self.check_object_place(path, place_use)?;
             let origin = self.object_origin(&place);
             return Some((place, origin, None));
         };
@@ -108,20 +117,22 @@ impl CallableChecker<'_, '_> {
         let target_class = checked
             .class
             .expect("class member receivers require a class cast target");
-        let suffix = &receiver.path.projections;
-        checked.projections.extend_from_slice(suffix);
-        checked.class = Some(receiver.path.class);
+        checked.projections.extend_from_slice(projections);
+        checked.class = Some(*class);
+        // HIR member carriers still require an ordinary place alongside an
+        // optional checked cast. Lowering selects the checked cast and never
+        // observes this root; the resolved receiver itself has no fake binding.
         let place = HirObjectPlace {
             path: crate::object_path::ObjectPath {
-                root: receiver.path.root,
-                projections: suffix.clone(),
-                class: receiver.path.class,
-                span: receiver.path.span,
+                root: BindingId::Receiver(self.callable),
+                projections: projections.clone(),
+                class: *class,
+                span: *span,
             },
             access: checked.view.access,
         };
         debug_assert!(
-            target_class == receiver.path.class || !suffix.is_empty(),
+            target_class == *class || !projections.is_empty(),
             "unprojected cast receiver must retain its target class"
         );
         let origin = (*checked.view.origin).clone();
@@ -214,7 +225,7 @@ impl CallableChecker<'_, '_> {
                     );
                     return None;
                 };
-                if access.receiver.cast.is_some() {
+                if access.receiver.cast().is_some() {
                     self.diagnostics.push(
                         Diagnostic::error(
                             INVALID_OBJECT_CONTEXT,
@@ -227,12 +238,12 @@ impl CallableChecker<'_, '_> {
                     );
                     return None;
                 }
-                let place =
-                    access
-                        .receiver
-                        .path
-                        .clone()
-                        .project_field(access.field, class, access.span);
+                let place = access
+                    .receiver
+                    .binding_path()
+                    .expect("cast receiver was rejected above")
+                    .clone()
+                    .project_field(access.field, class, access.span);
                 self.check_object_place(&place, ObjectPlaceUse::CopySource)
             }
             _ => {

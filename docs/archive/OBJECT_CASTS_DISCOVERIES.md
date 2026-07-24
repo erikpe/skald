@@ -1,7 +1,6 @@
 # Object Casts Discoveries
 
-Status: one pending representation follow-up discovered during checked-place
-implementation.
+Status: resolved.
 
 ## Cast-relative receiver paths
 
@@ -26,3 +25,10 @@ binding identity for produced storage.
 
 **Likely owner:** `resolve/ir/object_place.rs` and
 `resolve/resolver/body/place.rs`.
+
+**Resolution:** `ResolvedObjectReceiver` now distinguishes a stable
+`BindingPath` from a `CastRelative` receiver containing the checked cast and
+only the projections applied after it. Name resolution no longer manufactures
+a binding root for casts over produced storage. Resolver dumps and regression
+tests expose the distinction while shared accessors preserve ordinary-place
+test ergonomics.

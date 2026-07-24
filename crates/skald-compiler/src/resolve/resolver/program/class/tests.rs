@@ -130,7 +130,7 @@ fn inherited_body_uses_select_the_declaring_base_projection() {
     };
     assert_eq!(access.field, FieldId::new(ClassId::new(0), 0));
     assert_eq!(
-        access.receiver.projections,
+        access.receiver.projections(),
         [crate::object_path::ObjectProjection::Base(ClassId::new(0))]
     );
 }

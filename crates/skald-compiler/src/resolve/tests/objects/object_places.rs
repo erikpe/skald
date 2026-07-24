@@ -30,18 +30,18 @@ fn resolves_nested_object_places_from_locals_self_and_alias_roots() {
         panic!("expected nested self field access");
     };
     assert_eq!(
-        self_access.receiver.root,
+        self_access.receiver.root().unwrap(),
         BindingId::Receiver(root_definition.callable)
     );
-    assert_eq!(self_access.receiver.projections, expected);
-    assert_eq!(self_access.receiver.class, ClassId::new(0));
+    assert_eq!(self_access.receiver.projections(), expected);
+    assert_eq!(self_access.receiver.class(), ClassId::new(0));
 
     let inspect = output.program.definitions.get(FunctionId::new(1)).unwrap();
     let ResolvedExpression::MethodCall(call) = return_value(&inspect.body.statements[0]) else {
         panic!("expected nested method call");
     };
     assert_eq!(
-        call.receiver.root,
+        call.receiver.root().unwrap(),
         BindingId::Parameter(
             output
                 .program
@@ -52,7 +52,7 @@ fn resolves_nested_object_places_from_locals_self_and_alias_roots() {
                 .id,
         )
     );
-    assert_eq!(call.receiver.projections, expected);
+    assert_eq!(call.receiver.projections(), expected);
 
     let forward = output.program.definitions.get(FunctionId::new(2)).unwrap();
     let ResolvedExpression::DirectCall(call) = return_value(&forward.body.statements[0]) else {
@@ -64,7 +64,7 @@ fn resolves_nested_object_places_from_locals_self_and_alias_roots() {
     let ResolvedExpression::FieldAccess(argument) = &*grouped.expression else {
         panic!("expected class-field endpoint");
     };
-    assert_eq!(argument.receiver.projections, expected[..1]);
+    assert_eq!(argument.receiver.projections(), &expected[..1]);
     assert_eq!(grouped.span, call.arguments[0].span());
 
     let main = output
@@ -77,10 +77,10 @@ fn resolves_nested_object_places_from_locals_self_and_alias_roots() {
         panic!("expected nested local field access");
     };
     assert_eq!(
-        local_access.receiver.root,
+        local_access.receiver.root().unwrap(),
         BindingId::Local(main.locals[0].id)
     );
-    assert_eq!(local_access.receiver.projections, expected);
+    assert_eq!(local_access.receiver.projections(), expected);
 
     let dump = dump_resolved(&output.program);
     let nested_receivers: Vec<_> = dump

@@ -157,7 +157,7 @@ impl CallableChecker<'_, '_> {
                 return self.check_object_source(&grouped.expression, class, context);
             }
             crate::resolve::ResolvedExpression::FieldAccess(access)
-                if access.receiver.cast.is_some() =>
+                if access.receiver.cast().is_some() =>
             {
                 let field = self
                     .program
@@ -485,7 +485,7 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
         crate::resolve::ResolvedExpression::Grouped(grouped) => {
             is_checked_object_source_expression(&grouped.expression)
         }
-        crate::resolve::ResolvedExpression::FieldAccess(access) => access.receiver.cast.is_some(),
+        crate::resolve::ResolvedExpression::FieldAccess(access) => access.receiver.cast().is_some(),
         _ => false,
     }
 }

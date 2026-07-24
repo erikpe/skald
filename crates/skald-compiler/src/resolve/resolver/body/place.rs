@@ -26,12 +26,7 @@ impl CallableResolver<'_, '_> {
                     );
                     return None;
                 };
-                // Cast receivers carry their semantic source separately. The
-                // path root is only a source-shaped carrier for projections;
-                // produced sources therefore use a never-lowered sentinel.
-                let root = object_view_root_binding(&cast.source)
-                    .unwrap_or(BindingId::Receiver(self.callable));
-                Some(ResolvedObjectReceiver::from_cast(cast, root, class))
+                Some(ResolvedObjectReceiver::from_cast(cast, class))
             }
             syntax::Expression::Grouped(grouped) => Some(
                 self.resolve_object_receiver(&grouped.expression)?
@@ -280,14 +275,5 @@ impl CallableResolver<'_, '_> {
             }
         }
         unreachable!("selected inherited member owner must be in the receiver base chain")
-    }
-}
-
-fn object_view_root_binding(expression: &ResolvedExpression) -> Option<BindingId> {
-    match expression {
-        ResolvedExpression::Binding(binding) => Some(binding.binding),
-        ResolvedExpression::Grouped(grouped) => object_view_root_binding(&grouped.expression),
-        ResolvedExpression::FieldAccess(access) => Some(access.receiver.root),
-        _ => None,
     }
 }

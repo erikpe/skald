@@ -98,10 +98,10 @@ fn alias_parameters_are_object_place_bases_and_grouping_preserves_argument_shape
         panic!("expected grouped method receiver");
     };
     assert_eq!(
-        call.receiver.root,
+        call.receiver.root().unwrap(),
         BindingId::Parameter(relay.parameters[0].id)
     );
-    assert_eq!(call.receiver.class, ClassId::new(0));
+    assert_eq!(call.receiver.class(), ClassId::new(0));
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn alias_places_keep_lexical_shadowing_and_class_member_namespaces_independent()
         panic!("expected inner field access");
     };
     assert_eq!(
-        inner.receiver.root,
+        inner.receiver.root().unwrap(),
         BindingId::Local(definition.locals[0].id)
     );
     assert_eq!(inner.field, FieldId::new(ClassId::new(1), 0));
@@ -140,7 +140,7 @@ fn alias_places_keep_lexical_shadowing_and_class_member_namespaces_independent()
         panic!("expected outer field access");
     };
     assert_eq!(
-        outer.receiver.root,
+        outer.receiver.root().unwrap(),
         BindingId::Parameter(choose.parameters[0].id)
     );
     assert_eq!(outer.field, FieldId::new(ClassId::new(0), 0));
