@@ -18,9 +18,9 @@ initializer. MIR implements the first exact-class local profile:
 initialization, publication, adoption, a full-expression boundary, and normal
 release. Broader shared uses remain behind a structured lowering gate, and
 the backend deliberately rejects otherwise valid shared MIR until target
-support lands. The current [runtime ABI](RUNTIME_ABI.md) remains version 4
-with no allocation functions. Explicit copy allocation and shared-owner casts
-remain typed exclusions.
+support lands. [Runtime ABI version 5](RUNTIME_ABI.md) provides only checked
+byte allocation and exact-base deallocation; no backend path calls it yet.
+Explicit copy allocation and shared-owner casts remain typed exclusions.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy
@@ -285,9 +285,8 @@ object-graph search or a general exclusivity borrow analysis.
 
 ## Minimal C runtime ABI
 
-The first shared-ownership implementation requires an incompatible runtime ABI
-revision from version 4 to version 5. In addition to carrying the renamed
-version-5 marker and existing output functions, the public C header will add:
+Runtime ABI version 5 carries its version-specific marker, retains the existing
+output functions, and provides:
 
 ```c
 void *ska_rt_alloc(uint64_t byte_count);
@@ -311,11 +310,10 @@ inspect metadata, invoke finalizers, or implement retain and release. Exact C
 termination machinery remains private; the stable behavior is unsuccessful
 non-returning failure.
 
-ABI version 5 and these symbols are frozen for the shared-ownership
-implementation, but are not claims about the currently shipped version-4
-archive. The header, runtime implementation, every generated process-entry
-marker, direct C harnesses, mismatch tests, and documentation must transition
-together.
+ABI version 5 and these symbols are the current shared-ownership runtime
+boundary. The header, runtime implementation, every generated process-entry
+marker, direct C harnesses, mismatch tests, and documentation carry the same
+version.
 
 The runtime owns neither initializer nor copy-constructor selection nor
 partially constructed object state. For copy allocation, the compiler

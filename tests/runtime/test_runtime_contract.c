@@ -10,8 +10,8 @@
 #endif
 
 _Static_assert(CHAR_BIT == 8, "runtime test requires eight-bit bytes");
-_Static_assert(SKALD_RUNTIME_ABI_VERSION == UINT64_C(4),
-               "runtime contract requires ABI version 4");
+_Static_assert(SKALD_RUNTIME_ABI_VERSION == UINT64_C(5),
+               "runtime contract requires ABI version 5");
 _Static_assert(sizeof(double) == sizeof(uint64_t), "runtime test requires a 64-bit double");
 _Static_assert(FLT_RADIX == 2, "runtime test requires a binary double");
 _Static_assert(DBL_MANT_DIG == 53, "runtime test requires an IEEE-754 binary64 significand");

@@ -20,11 +20,14 @@ The current public surface is:
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(4)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v4
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5
 
 void SKALD_RUNTIME_ABI_MARKER(void);
 uint64_t ska_rt_abi_version(void);
+
+void *ska_rt_alloc(uint64_t byte_count);
+void ska_rt_free(void *allocation);
 
 void ska_rt_println_i64(int64_t value);
 void ska_rt_println_u64(uint64_t value);
@@ -40,7 +43,7 @@ and call them through the ordinary restricted external-function mechanism.
 
 ## Version and link compatibility
 
-ABI version 4 uses the exported no-op marker `ska_rt_abi_v4`. Every generated
+ABI version 5 uses the exported no-op marker `ska_rt_abi_v5`. Every generated
 process entry wrapper calls that exact symbol before entering Skald code. A
 runtime archive with an older or otherwise incompatible marker therefore fails
 normal linking with an undefined-symbol error rather than producing an
@@ -76,6 +79,25 @@ The direct contract harness repeats them independently so a platform mismatch
 fails while building the runtime suite. The current compiler target maps Skald
 primitive values to these C types as described in the
 [external C ABI](BACKEND.md#external-c-abi).
+
+## Allocation and deallocation
+
+`ska_rt_alloc(byte_count)` requires a nonzero byte count representable by C
+`size_t`. It converts the count exactly, calls `malloc`, and returns suitably
+aligned non-null storage of at least the requested size. A zero count, a count
+that cannot be represented by `size_t`, or allocation failure terminates the
+process unsuccessfully without returning. The ABI promises neither diagnostic
+text nor an exact exit status.
+
+`ska_rt_free(allocation)` requires the exact non-null base pointer returned by
+one successful `ska_rt_alloc` call that has not already been freed. It passes
+that pointer to `free` exactly once. Violating this precondition is a
+compiler/runtime defect.
+
+These functions know only byte counts and allocation base pointers. They do
+not know object layout, initialize reference counts, inspect metadata, invoke
+finalizers, retain owners, or release owners. `malloc`, `free`, and the common
+unrecoverable termination helper remain implementation details.
 
 ## Output records
 
@@ -116,10 +138,10 @@ stable contract is unsuccessful termination without a normal return.
 
 ## Responsibility boundary
 
-The runtime currently owns only its version/link guard and the five output
-operations above. It has no public ABI for:
+The runtime currently owns only its version/link guard, checked byte
+allocation/deallocation, and the five output operations above. It has no
+public ABI for:
 
-- allocation or deallocation;
 - shared ownership or reference counting;
 - object, class, interface, or dynamic-type metadata;
 - garbage collection, roots, tracing, safepoints, or write barriers;
@@ -130,13 +152,10 @@ operations above. It has no public ABI for:
 Future language designs may require some of these responsibilities, but they
 do not exist merely because a runtime library is present.
 
-Shared ownership now has a frozen, unimplemented boundary in the
+Shared ownership uses this minimal boundary as frozen in the
 [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#minimal-c-runtime-abi).
-Its implementation will make an incompatible transition to ABI version 5 and
-add only checked `ska_rt_alloc(uint64_t)` and `ska_rt_free(void *)` wrappers.
 Reference counting, metadata, anchors, and finalizer selection remain
-compiler-owned. This planned transition does not add those symbols to the
-currently shipped version-4 header or archive.
+compiler-owned.
 
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
@@ -145,10 +164,15 @@ transition, and focused tests.
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds
-three directly linked C harnesses:
+five directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;
+- the successful-allocation harness checks non-null suitably aligned writable
+  storage across representative sizes and exact-base deallocation;
+- the allocation-failure harness uses child processes to require unsuccessful
+  termination for zero, host-unrepresentable sizes when applicable, and
+  allocator failure;
 - the output harness compares successful records byte for byte, including
   range boundaries and exact binary64 patterns; and
 - the failure harness closes child-process stdout and requires every output

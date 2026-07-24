@@ -71,7 +71,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) | **First verified MIR lifetime** | Shared locals, value parameters, results, and fields have typed HIR vocabulary. The exact `shared C = new C(arguments)` local profile lowers to explicit unpublished allocation, initialization, publication, adoption, full-expression boundary, and normal release in verified MIR. Broader shared contexts remain gated and the backend deliberately rejects shared MIR; native allocation, count operations, dynamic destruction, anchors, explicit copy allocation, shared-owner casts, and the minimal allocation ABI remain unimplemented. Dynamic-type-preserving cloning is deferred. |
+| [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) | **Verified MIR lifetime and runtime allocation boundary** | Shared locals, value parameters, results, and fields have typed HIR vocabulary. The exact `shared C = new C(arguments)` local profile lowers to explicit unpublished allocation, initialization, publication, adoption, full-expression boundary, and normal release in verified MIR. Runtime ABI version 5 provides checked byte allocation and exact-base deallocation without ownership policy. Broader shared contexts remain gated and the backend deliberately rejects shared MIR; native object allocation, count operations, dynamic destruction, anchors, explicit copy allocation, and shared-owner casts remain unimplemented. Dynamic-type-preserving cloning is deferred. |
 | [Shared object-cast extension](OBJECT_CASTS.md) | **Frozen design** | `(shared T) source` and future copy allocation through `new T(copy source)` remain planned. Plain casts and their implemented owning consumers never allocate. |
 | Optional values | **Exploratory direction** | Absence should remain explicit rather than making every value nullable; syntax, presence handling, conversions, payload lifetime, and lifecycle behavior are open. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |
@@ -106,8 +106,8 @@ than copied from legacy prose:
 - the golden runner recursively discovers `tests/golden/run/**/*.ska` and
   `tests/golden/compile_fail/**/*.ska`, checks deterministic assembly or
   diagnostics, and compares repeated native status and output;
-- the runtime Makefile builds the contract, successful-output, and
-  output-failure C harnesses documented in the
+- the runtime Makefile builds the contract, successful/failing allocation,
+  and successful/failing output C harnesses documented in the
   [runtime test guide](../../tests/runtime/README.md);
 - the backend registry and its focused test expose only `x86_64-sysv`.
 

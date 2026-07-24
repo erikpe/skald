@@ -159,7 +159,7 @@ fn emits_a_c_compatible_entry_boundary() {
         "main:\n",
         "    push rbp\n",
         "    mov rbp, rsp\n",
-        "    call ska_rt_abi_v4\n",
+        "    call ska_rt_abi_v5\n",
         "    call .Lska_fn_1",
     )));
     assert!(!output.contains(".globl .Lska_fn_"));

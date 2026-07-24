@@ -5,13 +5,13 @@ progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
 - [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md) —
-  **in progress, SO3 next**; implements non-null strong owners,
+  **in progress, SO4 next**; implements non-null strong owners,
   explicit ordinary and copy allocation, deterministic last-owner destruction,
   shared polymorphism, and hidden borrow anchors. Its constructor-semantics and
-  object-cast prerequisites are complete; source syntax and resolved identities
-  typed owner vocabulary, and the first exact allocated local lifetime in
-  verified MIR are implemented. The next task upgrades the deliberately
-  minimal allocation runtime ABI.
+  object-cast prerequisites are complete; source syntax, resolved identities,
+  typed owner vocabulary, the first exact allocated local lifetime in verified
+  MIR, and the minimal allocation runtime ABI are implemented. The next task
+  executes exact-class allocation and last-owner destruction.
 
 The completed polymorphism, object-cast, and constructor profiles remain the
 implementation baseline. Constructor overload and explicit-copy semantics are

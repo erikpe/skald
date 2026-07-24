@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO2 complete, SO3 is next.
+Status: in progress; SO3 complete, SO4 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -36,8 +36,9 @@ and the complete cast direction matrix is
   adoption, full-expression boundary, and normal release. Broader shared HIR
   remains structurally gated, and the x86-64 backend deliberately rejects
   valid shared MIR until it gains a handle and allocation path.
-- Runtime ABI version 4 exposes scalar output only; it has no allocation or
-  deallocation entry points.
+- Runtime ABI version 5 retains scalar output and exposes only checked
+  nonzero byte allocation and exact-base deallocation. Reference counts,
+  object headers, metadata, and finalization remain compiler-owned.
 
 ## Scope and invariants
 
@@ -82,7 +83,7 @@ and the complete cast direction matrix is
 - [x] SO0 — Parse and resolve shared types and allocation forms
 - [x] SO1 — Establish typed shared-owner vocabulary
 - [x] SO2 — Represent and verify the first owner lifetime in MIR
-- [ ] SO3 — Upgrade the runtime to the minimal allocation ABI
+- [x] SO3 — Upgrade the runtime to the minimal allocation ABI
 - [ ] SO4 — Execute exact-class allocation and last-owner destruction
 - [ ] SO5 — Complete local, assignment, and temporary owner semantics
 - [ ] SO6 — Carry shared owners across calls and results
@@ -213,20 +214,20 @@ storage uses.
 **Purpose:** Publish and test the deliberately small version-5 C boundary
 before generated code depends on it.
 
-- [ ] Change the runtime ABI version and link marker from version 4 to version
+- [x] Change the runtime ABI version and link marker from version 4 to version
       5 across the public header, C implementation, generated process entry,
       direct harnesses, mismatch tests, and documentation.
-- [ ] Add `ska_rt_alloc(uint64_t)` as a checked nonzero allocation wrapper that
+- [x] Add `ska_rt_alloc(uint64_t)` as a checked nonzero allocation wrapper that
       rejects unrepresentable `size_t`, terminates unsuccessfully on failure,
       and returns suitably aligned non-null storage.
-- [ ] Add `ska_rt_free(void *)` as the exact-base deallocation wrapper with no
+- [x] Add `ska_rt_free(void *)` as the exact-base deallocation wrapper with no
       knowledge of counts, headers, metadata, payloads, or finalizers.
-- [ ] Keep failure machinery implementation-private and retain the existing
+- [x] Keep failure machinery implementation-private and retain the existing
       scalar output behavior unchanged.
-- [ ] Extend direct C harnesses for version compatibility, successful
+- [x] Extend direct C harnesses for version compatibility, successful
       allocation/write/free, nonzero and representability preconditions,
       allocation failure, and link-marker mismatch.
-- [ ] Update the runtime ABI authority and runtime test guide in the same
+- [x] Update the runtime ABI authority and runtime test guide in the same
       change.
 
 **Tests:** `make runtime-test`, focused driver link-mismatch tests,

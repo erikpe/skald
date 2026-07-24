@@ -6,14 +6,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(4)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v4
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5
 
 /* Version-specific link guard required by compiler-generated executables. */
 void SKALD_RUNTIME_ABI_MARKER(void);
 
 /* Runtime inspection hook; link compatibility uses SKALD_RUNTIME_ABI_MARKER. */
 uint64_t ska_rt_abi_version(void);
+
+/* Allocates byte_count suitably aligned bytes. A zero or unrepresentable
+   count, or allocation failure, terminates the process unsuccessfully. */
+void* ska_rt_alloc(uint64_t byte_count);
+
+/* Releases the exact base pointer returned by one successful ska_rt_alloc. */
+void ska_rt_free(void* allocation);
 
 /* Writes the shortest ASCII decimal representation and one LF to stdout.
    A detected write or flush failure terminates the process unsuccessfully. */

@@ -80,15 +80,15 @@ static void ska_rt_format_f64_bits_line(char output[SKA_RT_F64_BITS_LINE_CAPACIT
     output[2 + SKA_RT_F64_HEX_DIGITS] = '\n';
 }
 
-static void ska_rt_output_failure(void) {
-    /* Output failure is unrecoverable at the bootstrap ABI. _Exit avoids a
-       second implicit attempt to flush the already-failed stdout stream. */
+static _Noreturn void ska_rt_terminate_unsuccessfully(void) {
+    /* Runtime boundary failures are unrecoverable. _Exit also avoids an
+       implicit attempt to flush stdout after an output failure. */
     _Exit(EXIT_FAILURE);
 }
 
 static void ska_rt_write_stdout_record(const char* record, size_t length) {
     if (fwrite(record, sizeof(record[0]), length, stdout) != length || fflush(stdout) == EOF) {
-        ska_rt_output_failure();
+        ska_rt_terminate_unsuccessfully();
     }
 }
 
@@ -104,6 +104,24 @@ void SKALD_RUNTIME_ABI_MARKER(void) {
 
 uint64_t ska_rt_abi_version(void) {
     return SKALD_RUNTIME_ABI_VERSION;
+}
+
+void* ska_rt_alloc(uint64_t byte_count) {
+    const size_t allocation_size = (size_t)byte_count;
+    void* allocation;
+
+    if (byte_count == UINT64_C(0) || (uint64_t)allocation_size != byte_count) {
+        ska_rt_terminate_unsuccessfully();
+    }
+    allocation = malloc(allocation_size);
+    if (allocation == NULL) {
+        ska_rt_terminate_unsuccessfully();
+    }
+    return allocation;
+}
+
+void ska_rt_free(void* allocation) {
+    free(allocation);
 }
 
 void ska_rt_println_i64(int64_t value) {

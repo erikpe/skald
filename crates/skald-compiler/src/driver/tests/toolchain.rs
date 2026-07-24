@@ -105,7 +105,7 @@ fn runtime_archive_without_current_abi_marker_is_a_toolchain_failure() {
     assert_eq!(tool, OsString::from("cc"));
     assert!(exit_code.is_some());
     assert!(
-        details.contains("ska_rt_abi_v4"),
+        details.contains("ska_rt_abi_v5"),
         "linker did not identify the missing ABI marker: {details}"
     );
     assert_eq!(fs::read_to_string(output).unwrap(), "previous executable");
