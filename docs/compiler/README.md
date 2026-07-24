@@ -149,9 +149,10 @@ target-independent phases. Multiple-file compilation must first settle the
 open language and build contracts in
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md).
 
-The planned replacement of scoped `narrow` with C-style object casts is indexed
-in the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md). Its
-source-visible matrix is frozen in
+The staged replacement of scoped `narrow` with C-style object casts is indexed
+in the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md). Plain
+direct-consumer casts are implemented; owning integration and narrow removal
+remain. The complete source-visible matrix is defined in
 [Object Casts](../language/OBJECT_CASTS.md); compiler phases must consume that
 authority rather than infer ownership from cast syntax.
 

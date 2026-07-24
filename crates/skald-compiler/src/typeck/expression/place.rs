@@ -2,10 +2,16 @@
 
 use crate::{
     diagnostics::Diagnostic,
-    hir::{HirAccess, HirExpression, HirExpressionKind, HirFieldPlace, HirObjectPlace, Type},
+    hir::{
+        HirAccess, HirCheckedObjectView, HirExpression, HirExpressionKind, HirFieldPlace,
+        HirObjectOrigin, HirObjectPlace, Type,
+    },
     identity::{BindingId, FieldId, ParameterId},
     object_path::{ObjectPath, ObjectProjection},
-    resolve::{ResolvedExpression, ResolvedObjectPlace, ResolvedParameter, ResolvedTypeKind},
+    resolve::{
+        ResolvedExpression, ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedParameter,
+        ResolvedTypeKind,
+    },
     source::Span,
 };
 
@@ -37,7 +43,8 @@ impl CallableChecker<'_, '_> {
             access.span,
             ObjectPlaceUse::Member,
         )?;
-        if place.receiver.root() == BindingId::Receiver(self.callable)
+        if place.checked_cast.is_none()
+            && place.receiver.root() == BindingId::Receiver(self.callable)
             && place.receiver.path.is_root()
             && !self.check_initializer_field_liveness(place.field, access.member_span)
         {
@@ -69,16 +76,56 @@ impl CallableChecker<'_, '_> {
 
     pub(in crate::typeck) fn check_field_place(
         &mut self,
-        place: &ResolvedObjectPlace,
+        receiver: &ResolvedObjectReceiver,
         field: FieldId,
         span: Span,
         place_use: ObjectPlaceUse,
     ) -> Option<HirFieldPlace> {
+        let (receiver, _, checked_cast) = self.check_object_receiver(receiver, place_use)?;
         Some(HirFieldPlace {
-            receiver: self.check_object_place(place, place_use)?,
+            receiver,
+            checked_cast,
             field,
             span,
         })
+    }
+
+    pub(in crate::typeck) fn check_object_receiver(
+        &mut self,
+        receiver: &ResolvedObjectReceiver,
+        place_use: ObjectPlaceUse,
+    ) -> Option<(
+        HirObjectPlace,
+        HirObjectOrigin,
+        Option<Box<HirCheckedObjectView>>,
+    )> {
+        let Some(cast) = &receiver.cast else {
+            let place = self.check_object_place(&receiver.path, place_use)?;
+            let origin = self.object_origin(&place);
+            return Some((place, origin, None));
+        };
+        let mut checked = self.check_object_cast(cast)?;
+        let target_class = checked
+            .class
+            .expect("class member receivers require a class cast target");
+        let suffix = &receiver.path.projections;
+        checked.projections = suffix.clone();
+        checked.class = Some(receiver.path.class);
+        let place = HirObjectPlace {
+            path: crate::object_path::ObjectPath {
+                root: receiver.path.root,
+                projections: suffix.clone(),
+                class: receiver.path.class,
+                span: receiver.path.span,
+            },
+            access: checked.view.access,
+        };
+        debug_assert!(
+            target_class == receiver.path.class || !suffix.is_empty(),
+            "unprojected cast receiver must retain its target class"
+        );
+        let origin = (*checked.view.origin).clone();
+        Some((place, origin, Some(Box::new(checked))))
     }
 
     pub(in crate::typeck) fn check_object_place(
@@ -167,10 +214,25 @@ impl CallableChecker<'_, '_> {
                     );
                     return None;
                 };
-                let place = access
-                    .receiver
-                    .clone()
-                    .project_field(access.field, class, access.span);
+                if access.receiver.cast.is_some() {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "owning use of a cast field is not implemented",
+                        )
+                        .with_primary_label(
+                            access.span,
+                            "cast places are limited to direct non-owning consumers",
+                        ),
+                    );
+                    return None;
+                }
+                let place =
+                    access
+                        .receiver
+                        .path
+                        .clone()
+                        .project_field(access.field, class, access.span);
                 self.check_object_place(&place, ObjectPlaceUse::CopySource)
             }
             _ => {

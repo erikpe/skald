@@ -255,7 +255,14 @@ additive-expression
 multiplicative-expression
                  = unary-expression {"*" unary-expression}
 
-unary-expression = "-" unary-expression | postfix-expression
+unary-expression = "-" unary-expression
+                 | object-cast-expression
+                 | postfix-expression
+
+object-cast-expression
+                 = "(" object-cast-target ")" unary-expression
+object-cast-target
+                 = view-target | "shared" view-target
 
 postfix-expression
                  = primary-expression {member-suffix | call-suffix}
@@ -273,7 +280,7 @@ primary-expression
 From tightest to loosest binding, precedence is:
 
 1. postfix member access and calls;
-2. unary `-`;
+2. unary `-` and object casts;
 3. binary `*`;
 4. binary `+` and `-`;
 5. contextual `is`.
@@ -283,6 +290,14 @@ right to left. `is` is non-associative, so chained tests are syntax errors.
 Grouping overrides precedence and remains represented in the source-shaped
 syntax tree. Calls and member access may be interleaved in one postfix chain;
 declaration selection and call legality are semantic concerns.
+
+A parenthesized identifier followed by an adjacent expression is an object-cast
+candidate. Cast syntax deliberately wins over grouped callable spelling:
+`(f)(argument)` is resolved as a cast candidate, while direct calls use
+`f(argument)`. Empty `()` is not an expression operand, and `(value) - other`
+remains grouped subtraction. Postfix use of a cast requires grouping, as in
+`((Leaf) value).read()`. `shared` is contextual only in the cast-target
+position.
 
 ## Syntax errors and nesting
 
@@ -334,9 +349,11 @@ initializer expression is an explicit checked place cast to the same concrete
 class named by `new`; grouping around that cast does not change the form.
 These forms remain outside this implemented grammar until compiler support is
 added.
-[Object casts](OBJECT_CASTS.md) freezes future `(T) source` and
-`(shared T) source` forms, precedence, and type-name disambiguation. The
-current grammar continues to accept scoped `narrow` instead until the indexed
-cast roadmap is implemented.
+[Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
+forms, precedence, and type-name disambiguation. Plain casts are currently
+implemented for immediate non-owning receiver, alias-argument, field-read, and
+supported field-mutation consumers. `shared T` is parsed for a focused
+unsupported-feature diagnostic. Scoped `narrow` remains accepted during the
+staged replacement.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-narrowing semantics.

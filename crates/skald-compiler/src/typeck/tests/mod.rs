@@ -84,6 +84,12 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
                 crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
             ));
         }
+        crate::hir::HirCallArgument::CheckedView(view) => {
+            assert!(matches!(
+                view.consumer_access,
+                crate::hir::HirAccess::ReadOnly | crate::hir::HirAccess::Mutable
+            ));
+        }
         crate::hir::HirCallArgument::Copy(_) => {}
     }
 }

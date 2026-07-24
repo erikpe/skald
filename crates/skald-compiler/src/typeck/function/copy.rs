@@ -239,7 +239,7 @@ impl CallableChecker<'_, '_> {
         }))
     }
 
-    pub(super) fn resolved_object_class(
+    pub(in crate::typeck) fn resolved_object_class(
         &self,
         expression: &crate::resolve::ResolvedExpression,
     ) -> Option<ClassId> {

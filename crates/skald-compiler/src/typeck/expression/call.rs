@@ -4,8 +4,8 @@ use super::*;
 use crate::{
     hir::{
         HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirInterfaceCallTarget,
-        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource,
-        HirViewTarget,
+        HirInterfaceReceiver, HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin,
+        HirObjectView, HirViewSource, HirViewTarget,
     },
     identity::BindingId,
     resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
@@ -56,11 +56,44 @@ impl CallableChecker<'_, '_> {
             .get(call.requirement.index())
             .filter(|requirement| requirement.id == call.requirement)
             .expect("resolved interface call must reference a requirement");
-        let access = self.binding_access(call.receiver, false, call.receiver_span)?;
         let required_access = if requirement.mutable {
             HirAccess::Mutable
         } else {
             HirAccess::ReadOnly
+        };
+        let (access, receiver) = match &call.receiver {
+            crate::resolve::ResolvedInterfaceReceiver::Binding { binding, span } => {
+                let access = self.binding_access(*binding, false, *span)?;
+                let view = HirObjectView {
+                    source: HirViewSource::Forwarded {
+                        binding: *binding,
+                        target: HirViewTarget::Interface(call.interface),
+                        access,
+                        span: *span,
+                    },
+                    origin: Box::new(HirObjectOrigin::Forwarded {
+                        binding: *binding,
+                        static_target: HirViewTarget::Interface(call.interface),
+                        access,
+                        dispatch_limit: None,
+                        span: *span,
+                    }),
+                    target: HirViewTarget::Interface(call.interface),
+                    access,
+                    span: *span,
+                };
+                (access, HirInterfaceReceiver::View(view))
+            }
+            crate::resolve::ResolvedInterfaceReceiver::Cast(cast) => {
+                let mut checked = self.check_object_cast(cast)?;
+                debug_assert_eq!(
+                    checked.view.target,
+                    HirViewTarget::Interface(call.interface)
+                );
+                let access = checked.view.access;
+                checked.consumer_access = required_access;
+                (access, HirInterfaceReceiver::Checked(Box::new(checked)))
+            }
         };
         if !access.permits(required_access) {
             self.diagnostics.push(
@@ -87,24 +120,6 @@ impl CallableChecker<'_, '_> {
             Some(&requirement.name),
             Some(requirement.name_span),
         )?;
-        let receiver = HirObjectView {
-            source: HirViewSource::Forwarded {
-                binding: call.receiver,
-                target: HirViewTarget::Interface(call.interface),
-                access,
-                span: call.receiver_span,
-            },
-            origin: Box::new(HirObjectOrigin::Forwarded {
-                binding: call.receiver,
-                static_target: HirViewTarget::Interface(call.interface),
-                access,
-                dispatch_limit: None,
-                span: call.receiver_span,
-            }),
-            target: HirViewTarget::Interface(call.interface),
-            access,
-            span: call.receiver_span,
-        };
         Some(HirExpression {
             kind: HirExpressionKind::InterfaceCall {
                 receiver,
@@ -123,7 +138,8 @@ impl CallableChecker<'_, '_> {
         &mut self,
         call: &crate::resolve::ResolvedMethodCallExpr,
     ) -> Option<HirExpression> {
-        let receiver = self.check_object_place(&call.receiver, ObjectPlaceUse::Member)?;
+        let (receiver, origin, checked_cast) =
+            self.check_object_receiver(&call.receiver, ObjectPlaceUse::Member)?;
         let method = self
             .program
             .method(call.method)
@@ -168,7 +184,6 @@ impl CallableChecker<'_, '_> {
             Some(&method.name),
             Some(method.name_span),
         )?;
-        let origin = self.object_origin(&receiver);
         let target = match method.dispatch {
             ResolvedMethodDispatch::Direct => HirMethodCallTarget::Direct(call.method),
             ResolvedMethodDispatch::VirtualRoot { family, slot }
@@ -176,6 +191,7 @@ impl CallableChecker<'_, '_> {
                 if matches!(
                     origin,
                     HirObjectOrigin::Exact { .. }
+                        | HirObjectOrigin::Produced { .. }
                         | HirObjectOrigin::Forwarded {
                             dispatch_limit: Some(_),
                             ..
@@ -196,6 +212,7 @@ impl CallableChecker<'_, '_> {
                 receiver: HirMethodReceiver {
                     place: receiver,
                     origin: Box::new(origin),
+                    checked_cast,
                 },
                 target,
                 arguments,

@@ -20,6 +20,7 @@ pub(super) enum ViewSourceUse {
     AliasArgument,
     TypeTest,
     Narrowing,
+    Cast,
 }
 
 impl ViewSourceUse {
@@ -28,6 +29,7 @@ impl ViewSourceUse {
             Self::AliasArgument => INVALID_ALIAS_ARGUMENT,
             Self::TypeTest => INVALID_TYPE_TEST,
             Self::Narrowing => INVALID_NARROWING,
+            Self::Cast => crate::typeck::program::INVALID_OBJECT_CAST,
         }
     }
 
@@ -36,6 +38,7 @@ impl ViewSourceUse {
             Self::AliasArgument => "alias argument must designate an object",
             Self::TypeTest => "type-test source must designate an object",
             Self::Narrowing => "checked-narrowing source must designate an object",
+            Self::Cast => "object-cast source must designate an object",
         }
     }
 
@@ -44,6 +47,7 @@ impl ViewSourceUse {
             Self::AliasArgument => "alias argument must be an existing object place",
             Self::TypeTest => "type-test source must be an existing object place",
             Self::Narrowing => "checked-narrowing source must be an existing object place",
+            Self::Cast => "object-cast source must be an existing object place",
         }
     }
 }
@@ -64,6 +68,11 @@ pub(super) enum CheckedObjectViewSource {
         access: HirAccess,
         span: Span,
     },
+    Produced {
+        source: crate::hir::HirObjectProducer,
+        class: crate::identity::ClassId,
+        span: Span,
+    },
 }
 
 impl CheckedObjectViewSource {
@@ -71,6 +80,7 @@ impl CheckedObjectViewSource {
         match self {
             Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
+            Self::Produced { .. } => HirAccess::Mutable,
         }
     }
 
@@ -78,6 +88,7 @@ impl CheckedObjectViewSource {
         match self {
             Self::Class { place, .. } => place.span(),
             Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
+            Self::Produced { span, .. } => *span,
         }
     }
 
@@ -86,6 +97,7 @@ impl CheckedObjectViewSource {
             Self::Class { place, .. } => HirViewTarget::Class(place.class()),
             Self::Obj { .. } => HirViewTarget::Obj,
             Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
+            Self::Produced { class, .. } => HirViewTarget::Class(*class),
         }
     }
 
@@ -96,11 +108,12 @@ impl CheckedObjectViewSource {
                 ..
             } => Some(*dynamic_class),
             Self::Class {
-                origin: HirObjectOrigin::Forwarded { .. },
+                origin: HirObjectOrigin::Forwarded { .. } | HirObjectOrigin::Produced { .. },
                 ..
             }
             | Self::Obj { .. }
             | Self::Interface { .. } => None,
+            Self::Produced { class, .. } => Some(*class),
         }
     }
 
@@ -145,6 +158,20 @@ impl CheckedObjectViewSource {
                 access,
                 span,
             ),
+            Self::Produced {
+                source,
+                class,
+                span,
+            } => HirObjectView {
+                source: HirViewSource::Produced(Box::new(source)),
+                origin: Box::new(HirObjectOrigin::Produced {
+                    dynamic_class: class,
+                    span,
+                }),
+                target,
+                access,
+                span,
+            },
         }
     }
 }
@@ -155,6 +182,14 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
+        if let ResolvedExpression::ObjectCast(cast) = expression {
+            return self.check_cast_alias_argument(cast, parameter);
+        }
+        if let ResolvedExpression::Grouped(grouped) = expression {
+            if matches!(*grouped.expression, ResolvedExpression::ObjectCast(_)) {
+                return self.check_alias_argument(&grouped.expression, parameter);
+            }
+        }
         let source = self.check_object_view_source(expression, ViewSourceUse::AliasArgument)?;
         let required = lower_parameter_mode(parameter.binding_mode())
             .required_access()
@@ -176,6 +211,95 @@ impl CallableChecker<'_, '_> {
             required,
             parameter,
         )
+    }
+
+    fn check_cast_alias_argument(
+        &mut self,
+        cast: &crate::resolve::ResolvedObjectCastExpr,
+        parameter: &impl CallParameter,
+    ) -> Option<HirCallArgument> {
+        let mut checked = self.check_object_cast(cast)?;
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        if !checked.view.access.permits(required) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INSUFFICIENT_ALIAS_ACCESS,
+                    "read-only cast place cannot satisfy a mutable alias parameter",
+                )
+                .with_primary_label(cast.span, "this cast preserves read-only source access")
+                .with_secondary_label(parameter.span(), "mutable alias declared here"),
+            );
+            return None;
+        }
+        let expected = lower_type(parameter.type_syntax());
+        let expected_target = match expected {
+            Type::Class(class) => HirViewTarget::Class(class),
+            Type::Interface(interface) => HirViewTarget::Interface(interface),
+            Type::Obj => HirViewTarget::Obj,
+            primitive => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        format!(
+                            "cast place cannot satisfy value parameter type `{}`",
+                            primitive.name()
+                        ),
+                    )
+                    .with_primary_label(cast.span, "this is a non-owning object place"),
+                );
+                return None;
+            }
+        };
+        let cast_target = checked.view.target;
+        let compatible = match (cast_target, expected_target) {
+            (actual, expected) if actual == expected => true,
+            (HirViewTarget::Class(actual), HirViewTarget::Class(expected)) => {
+                let mut current = actual;
+                while current != expected {
+                    let Some(base) = self.program.hierarchy.direct_base(current) else {
+                        break;
+                    };
+                    checked
+                        .projections
+                        .push(crate::object_path::ObjectProjection::Base(base));
+                    current = base;
+                }
+                if current == expected {
+                    checked.class = Some(expected);
+                    true
+                } else {
+                    false
+                }
+            }
+            (HirViewTarget::Class(_), HirViewTarget::Obj) => true,
+            (HirViewTarget::Class(actual), HirViewTarget::Interface(interface)) => {
+                super::object_view_relation::class_provides_view(
+                    self.program,
+                    actual,
+                    HirViewTarget::Interface(interface),
+                )
+            }
+            _ => false,
+        };
+        if !compatible {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!("cast place is incompatible with `{}`", expected.name()),
+                )
+                .with_primary_label(cast.span, "this cast cannot be implicitly converted")
+                .with_secondary_label(
+                    parameter.type_syntax().span,
+                    "alias parameter type declared here",
+                ),
+            );
+            return None;
+        }
+        checked.consumer_target = expected_target;
+        checked.consumer_access = required;
+        Some(HirCallArgument::CheckedView(Box::new(checked)))
     }
 
     pub(super) fn check_object_view_source(
@@ -224,7 +348,8 @@ impl CallableChecker<'_, '_> {
                         set_origin_span(origin, grouped.span);
                     }
                     CheckedObjectViewSource::Obj { span, .. }
-                    | CheckedObjectViewSource::Interface { span, .. } => *span = grouped.span,
+                    | CheckedObjectViewSource::Interface { span, .. }
+                    | CheckedObjectViewSource::Produced { span, .. } => *span = grouped.span,
                 }
                 Some(source)
             }
@@ -250,6 +375,23 @@ impl CallableChecker<'_, '_> {
                 let place = self.check_object_place(&place, ObjectPlaceUse::Alias)?;
                 let origin = self.object_origin(&place);
                 Some(CheckedObjectViewSource::Class { place, origin })
+            }
+            expression
+                if matches!(source_use, ViewSourceUse::Cast)
+                    && self.resolved_object_class(expression).is_some() =>
+            {
+                let class = self
+                    .resolved_object_class(expression)
+                    .expect("guarded produced object class");
+                let source = self.check_object_source(expression, class, "object-cast source")?;
+                let crate::hir::HirObjectSource::Produced(source) = source else {
+                    unreachable!("non-place object cast source must produce an object")
+                };
+                Some(CheckedObjectViewSource::Produced {
+                    span: expression.span(),
+                    source,
+                    class,
+                })
             }
             _ => {
                 self.diagnostics.push(
@@ -462,6 +604,9 @@ impl CallableChecker<'_, '_> {
                 None
             }
             (_, Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit) => None,
+            (CheckedObjectViewSource::Produced { .. }, _) => {
+                unreachable!("produced views enter alias arguments only through explicit casts")
+            }
         }
     }
 
@@ -534,6 +679,9 @@ fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
     match origin {
         HirObjectOrigin::Exact { complete, .. } => complete.path.span = span,
         HirObjectOrigin::Forwarded {
+            span: origin_span, ..
+        } => *origin_span = span,
+        HirObjectOrigin::Produced {
             span: origin_span, ..
         } => *origin_span = span,
     }

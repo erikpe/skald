@@ -7,9 +7,10 @@ impl CallableResolver<'_, '_> {
         &mut self,
         member: &syntax::MemberAccessExpr,
     ) -> Option<ResolvedExpression> {
-        let receiver = self.resolve_object_place(&member.receiver)?;
-        let selected = self.select_member(receiver.class, &member.member)?;
-        let receiver = self.project_to_declaring_class(receiver, selected.declaring_class());
+        let receiver = self.resolve_object_receiver(&member.receiver)?;
+        let selected = self.select_member(receiver.class(), &member.member)?;
+        let receiver =
+            self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
         match selected {
             OrdinaryMemberSymbolKind::Field(field) => {
                 Some(ResolvedExpression::FieldAccess(ResolvedFieldAccessExpr {
@@ -208,10 +209,10 @@ impl CallableResolver<'_, '_> {
                         member_span: member.member.span,
                     });
                 }
-                let receiver = self.resolve_object_place(&member.receiver)?;
-                let selected = self.select_member(receiver.class, &member.member)?;
+                let receiver = self.resolve_object_receiver(&member.receiver)?;
+                let selected = self.select_member(receiver.class(), &member.member)?;
                 let receiver =
-                    self.project_to_declaring_class(receiver, selected.declaring_class());
+                    self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
                 match selected {
                     OrdinaryMemberSymbolKind::Method(method) => Some(CallTarget::Method {
                         receiver,
@@ -251,20 +252,46 @@ impl CallableResolver<'_, '_> {
     }
 
     fn interface_receiver(
-        &self,
+        &mut self,
         expression: &syntax::Expression,
-    ) -> Option<(BindingId, crate::identity::InterfaceId, Span)> {
+    ) -> Option<(
+        ResolvedInterfaceReceiver,
+        crate::identity::InterfaceId,
+        Span,
+    )> {
         match expression {
             syntax::Expression::Identifier(identifier) => {
                 let binding = self.lookup_binding(&identifier.name.text)?;
                 let ResolvedTypeKind::Interface(interface) = binding.ty else {
                     return None;
                 };
-                Some((binding.id, interface, identifier.span))
+                Some((
+                    ResolvedInterfaceReceiver::Binding {
+                        binding: binding.id,
+                        span: identifier.span,
+                    },
+                    interface,
+                    identifier.span,
+                ))
             }
             syntax::Expression::Grouped(grouped) => self
                 .interface_receiver(&grouped.expression)
-                .map(|(binding, interface, _)| (binding, interface, grouped.span)),
+                .map(|(receiver, interface, _)| (receiver, interface, grouped.span)),
+            syntax::Expression::ObjectCast(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::ObjectCast(cast) = resolved else {
+                    unreachable!("object cast syntax must resolve as an object cast")
+                };
+                let ResolvedTypeKind::Interface(interface) = cast.target.kind else {
+                    return None;
+                };
+                let span = cast.span;
+                Some((
+                    ResolvedInterfaceReceiver::Cast(Box::new(cast)),
+                    interface,
+                    span,
+                ))
+            }
             _ => None,
         }
     }
@@ -307,12 +334,12 @@ enum CallTarget {
         initializer: InitializerId,
     },
     Method {
-        receiver: ResolvedObjectPlace,
+        receiver: ResolvedObjectReceiver,
         method: MethodId,
         member_span: Span,
     },
     Interface {
-        receiver: BindingId,
+        receiver: ResolvedInterfaceReceiver,
         interface: crate::identity::InterfaceId,
         requirement: crate::identity::InterfaceRequirementId,
         receiver_span: Span,

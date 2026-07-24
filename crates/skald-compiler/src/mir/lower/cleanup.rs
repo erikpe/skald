@@ -2,10 +2,20 @@
 
 use crate::{identity::ClassId, source::Span};
 
-use super::{BodyLowerer, MirCleanup, MirEndFullExpression, MirInstruction, MirPlace, StorageId};
+use super::{
+    BodyLowerer, MirCheckedViewEnd, MirCleanup, MirEndFullExpression, MirInstruction, MirPlace,
+    StorageId,
+};
 
 impl BodyLowerer<'_> {
     pub(super) fn finish_full_expression(&mut self, span: Span) {
+        let checked_views: Vec<_> = self.full_expression_checked_views.drain(..).rev().collect();
+        for carrier in checked_views {
+            self.emit(MirInstruction::EndCheckedView(MirCheckedViewEnd {
+                carrier,
+                span,
+            }));
+        }
         if self.full_expression_temporaries.is_empty() {
             return;
         }

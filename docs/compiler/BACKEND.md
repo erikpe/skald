@@ -238,11 +238,13 @@ runtime. A successful narrowing stores the selected address, complete-object
 address, and unchanged metadata address in scoped alias frame homes. Failure
 executes `ud2`; it does not return or run remaining source cleanup.
 
-Expression-level object casts are frozen to use the same comparisons and
-selected-address derivation. The eventual backend may keep a bounded temporary
-view home or forward the checked operands directly, but it must not reconstruct
-metadata, allocate for a cast, retain for a plain place cast, or permit a
-failure edge to continue.
+Expression-level object casts use the same comparisons and selected-address
+derivation. Runtime casts and forwarded static views use bounded temporary view
+homes containing the selected address, complete-object address, and unchanged
+metadata; concrete static sources project directly. Cast failure executes the
+same non-returning `ud2` boundary. The backend does not call a runtime cast
+helper, reconstruct metadata, allocate for a cast, retain for a plain place
+cast, or permit a failure edge to continue.
 
 The later `new T((T) source)` copy-allocation path is a consumer of that
 verified checked place, not a cast-side allocation. It must take its failure

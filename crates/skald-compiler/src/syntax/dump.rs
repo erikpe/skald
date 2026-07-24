@@ -381,6 +381,18 @@ impl AstDumper {
                     dumper.named("Target", &test.target.text, test.target.span);
                 });
             }
+            Expression::ObjectCast(cast) => {
+                let mode = match cast.target_mode {
+                    ObjectCastTargetMode::Plain => "ObjectCast",
+                    ObjectCastTargetMode::Shared { .. } => "SharedObjectCast",
+                };
+                self.line(mode, cast.span);
+                self.indented(|dumper| {
+                    dumper.named("Target", &cast.target.text, cast.target.span);
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&cast.source));
+                });
+            }
             Expression::Call(call) => {
                 self.line("Call", call.span);
                 self.indented(|dumper| {

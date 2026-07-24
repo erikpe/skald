@@ -1,6 +1,6 @@
 # Object Casts and Narrow Removal Roadmap
 
-Status: in progress; **OC1** is next.
+Status: in progress; **OC2** is next.
 
 This roadmap replaces the implemented scoped `narrow` statement with
 expression-level C-style object casts. It establishes the checked-place
@@ -54,7 +54,7 @@ runtime cast service.
 ## Progress
 
 - [x] OC0 — Extract reusable object-view relation and failure semantics
-- [ ] OC1 — Add checked-place cast syntax and direct view consumers
+- [x] OC1 — Add checked-place cast syntax and direct view consumers
 - [ ] OC2 — Integrate casts with owning inline operations
 - [ ] OC3 — Remove `narrow` and publish the cast profile
 
@@ -93,34 +93,34 @@ and future checked-place casts without knowing about a scoped alias body.
 **Purpose:** Introduce the new expression as a complete vertical slice for
 non-owning uses before removing the old statement form.
 
-- [ ] Extend the parser with unary-precedence `(T) source` cast candidates,
+- [x] Extend the parser with unary-precedence `(T) source` cast candidates,
       including exact spans, nesting-budget use, deterministic recovery, and
       the frozen precedence over grouped callable spelling.
-- [ ] Represent `T` by resolved class/interface/`Obj` identity; retain the
+- [x] Represent `T` by resolved class/interface/`Obj` identity; retain the
       `shared T` target mode syntactically for a focused unsupported-feature
       diagnostic without introducing shared semantic types.
-- [ ] Add source-shaped AST/resolved nodes and a typed HIR checked-place
+- [x] Add source-shaped AST/resolved nodes and a typed HIR checked-place
       expression carrying source view, target, access, complete-object origin,
       and static/runtime classification.
-- [ ] Accept existing inline places and aliases as sources. Materialize
+- [x] Accept existing inline places and aliases as sources. Materialize
       supported produced inline objects through the existing full-expression
       temporary model rather than borrowing dead storage.
-- [ ] Support cast places as direct and virtual/interface method receivers,
+- [x] Support cast places as direct and virtual/interface method receivers,
       `ref`/`mut ref` arguments, field reads, and supported field mutation while
       preserving access and non-exclusivity.
-- [ ] Lower static casts as verified view projections and runtime casts through
+- [x] Lower static casts as verified view projections and runtime casts through
       explicit success/failure control flow with a bounded temporary view
       carrier.
-- [ ] Extend MIR verification before backend consumption: target relation,
+- [x] Extend MIR verification before backend consumption: target relation,
       access, provenance, single definition, full-expression liveness,
       termination, and consumer compatibility must all be checked.
-- [ ] Reuse backend metadata membership checks and target-address derivation;
+- [x] Reuse backend metadata membership checks and target-address derivation;
       emit the existing unrecoverable trap on failure without adding a runtime
       cast helper.
-- [ ] Add syntax, resolution, HIR, MIR, verifier-corruption, backend,
+- [x] Add syntax, resolution, HIR, MIR, verifier-corruption, backend,
       deterministic-dump, assembly-acceptance, native-success, and
       native-failure coverage.
-- [ ] Keep `narrow` executable during this task and update living support prose
+- [x] Keep `narrow` executable during this task and update living support prose
       only for the newly implemented direct-consumer boundary.
 
 **Tests:** Focused syntax through backend type-operation suites, new native and

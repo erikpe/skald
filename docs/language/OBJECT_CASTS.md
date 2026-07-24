@@ -1,18 +1,21 @@
 # Object Casts
 
-Status: **frozen design; not implemented**. This document is authoritative for
-the future C-style cast syntax and the complete conversion matrix between
-inline class places, non-owning aliases, and shared owners. The current compiler
-instead implements the scoped `narrow` statement described in
-[polymorphism](POLYMORPHISM.md#checked-narrowing). The planned migration is
-owned by the [object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md).
+Status: **implemented direct-consumer slice; broader integration planned**.
+This document is authoritative for C-style cast syntax and the complete
+conversion matrix between inline class places, non-owning aliases, and shared
+owners. The current compiler implements plain checked-place casts for immediate
+method receivers, alias arguments, primitive field reads, and supported field
+mutation. Produced inline sources use owning full-expression temporaries.
+Owning inline consumers and shared-owner casts remain planned. Scoped `narrow`
+also remains implemented during the staged migration owned by the
+[object-casts roadmap](../roadmaps/OBJECT_CASTS_ROADMAP.md).
 
 Primitive conversions, optional casts, unsafe reinterpretation, user-defined
 conversions, and external object ABI are outside this profile.
 
 ## Source forms and precedence
 
-The frozen forms are:
+The source forms are:
 
 ```text
 object-cast-expression = "(" object-cast-target ")" unary-expression
@@ -42,8 +45,9 @@ over a grouped callable spelling such as `(f)(argument)`; direct calls remain
 the token after the closing parenthesis is a binary operator, not an adjacent
 cast operand.
 
-The [implemented grammar](GRAMMAR.md) remains authoritative for current
-acceptance and does not yet contain this production.
+The [implemented grammar](GRAMMAR.md) is authoritative for current acceptance.
+`(shared T) source` is retained syntactically but currently produces a focused
+unsupported-feature diagnostic before shared semantic types are introduced.
 
 ## Two cast results
 
@@ -349,6 +353,9 @@ Local aliases remain a separate future design. Removing `narrow` does not
 implicitly introduce `ref` locals, reference values, alias assignment, or
 escaping borrows.
 
-Until the cast roadmap completes, the current compiler continues to accept
-`narrow` and reject these cast forms. The implemented syntax and support matrix
-remain authoritative for that transitional fact.
+During the cast-roadmap transition, the compiler accepts both scoped `narrow`
+and the implemented plain-cast direct-consumer subset. It rejects owning uses
+of a cast place until inline copy/slicing integration lands, and diagnoses
+`shared T` as unsupported. The support matrix above remains the final semantic
+target rather than a claim that every destination category is already
+implemented.

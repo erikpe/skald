@@ -544,6 +544,17 @@ impl ResolvedDumper {
                 );
                 self.indented(|dumper| dumper.expression(&test.source));
             }
+            ResolvedExpression::ObjectCast(cast) => {
+                let mode = match cast.target_mode {
+                    ResolvedObjectCastTargetMode::Plain => "ObjectCast",
+                    ResolvedObjectCastTargetMode::Shared { .. } => "SharedObjectCast",
+                };
+                self.line(
+                    &format!("{mode} target {}", render_type_kind(cast.target.kind)),
+                    cast.span,
+                );
+                self.indented(|dumper| dumper.expression(&cast.source));
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.line(&format!("DirectCall {}", call.function), call.span);
                 self.indented(|dumper| {
@@ -573,10 +584,16 @@ impl ResolvedDumper {
                 });
             }
             ResolvedExpression::InterfaceCall(call) => {
+                let receiver = match &call.receiver {
+                    ResolvedInterfaceReceiver::Binding { binding, .. } => {
+                        format!("{binding}")
+                    }
+                    ResolvedInterfaceReceiver::Cast(_) => "checked-cast".to_owned(),
+                };
                 self.line(
                     &format!(
                         "InterfaceCall {} {} receiver {}",
-                        call.interface, call.requirement, call.receiver
+                        call.interface, call.requirement, receiver
                     ),
                     call.span,
                 );

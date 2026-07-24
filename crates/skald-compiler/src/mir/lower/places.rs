@@ -5,9 +5,12 @@ use crate::identity::BindingId;
 use crate::object_path::ObjectProjection;
 
 impl BodyLowerer<'_> {
-    pub(super) fn lower_field_place(&self, place: &crate::hir::HirFieldPlace) -> MirPlace {
-        self.lower_object_place(&place.receiver)
-            .project_field(place.field)
+    pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
+        let receiver = match &place.checked_cast {
+            Some(cast) => self.lower_checked_object_view(cast).source,
+            None => self.lower_object_place(&place.receiver),
+        };
+        receiver.project_field(place.field)
     }
 
     pub(super) fn lower_object_place(&self, place: &crate::hir::HirObjectPlace) -> MirPlace {
@@ -15,11 +18,12 @@ impl BodyLowerer<'_> {
         let root = match self.storage[storage.index()].kind {
             MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
             MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(storage),
+            MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
             MirStorageKind::Return
             | MirStorageKind::Receiver
             | MirStorageKind::Parameter
             | MirStorageKind::Local => MirPlace::base(storage),
-            MirStorageKind::Argument | MirStorageKind::Temporary => {
+            MirStorageKind::Argument | MirStorageKind::Temporary | MirStorageKind::ScalarSpill => {
                 unreachable!("HIR object paths cannot use compiler-owned storage")
             }
         };

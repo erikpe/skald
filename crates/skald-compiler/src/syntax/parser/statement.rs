@@ -430,5 +430,6 @@ fn is_receiver_place(expression: &Expression) -> bool {
         | Expression::Binary(_)
         | Expression::TypeTest(_)
         | Expression::Call(_) => false,
+        Expression::ObjectCast(_) => true,
     }
 }

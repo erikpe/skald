@@ -156,6 +156,42 @@ fn failed_checked_narrowing_terminates_without_returning_or_cleanup() {
 }
 
 #[test]
+fn checked_cast_places_execute_as_receivers_fields_and_alias_arguments() {
+    let source = "\
+         class Root { init() {} virtual fn code() -> i64 { return 1; } }\n\
+         class Leaf extends Root {\n\
+           value: i64;\n\
+           init(value: i64) { super(); self.value = value; }\n\
+           override fn code() -> i64 { return self.value; }\n\
+         }\n\
+         fn take(ref leaf: Leaf) -> i64 { return leaf.value; }\n\
+         fn inspect(ref any: Obj) -> i64 {\n\
+           return ((Leaf) any).code() + ((Leaf) any).value + take((Leaf) any);\n\
+         }\n\
+         fn main() -> i64 { var leaf: Leaf = Leaf(7); return inspect(leaf); }\n";
+
+    let result = run_native_assembly_output(&assembly(source));
+    assert_eq!(result.status.code(), Some(21));
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn failed_checked_cast_terminates_at_its_consumer() {
+    let source = "\
+         class Leaf { init() {} fn code() -> i64 { return 7; } }\n\
+         class Other { init() {} }\n\
+         fn inspect(ref any: Obj) -> i64 { return ((Leaf) any).code(); }\n\
+         fn main() -> i64 { var other: Other = Other(); return inspect(other); }\n";
+
+    let result = run_native_assembly_output(&assembly(source));
+    assert!(!result.status.success());
+    assert_eq!(result.status.signal(), Some(4));
+    assert!(result.stdout.is_empty());
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
 fn corrupt_type_operation_metadata_is_rejected_before_instruction_selection() {
     let mut program = lower_text(&format!(
         "{TYPE_OPERATION_TYPES}\

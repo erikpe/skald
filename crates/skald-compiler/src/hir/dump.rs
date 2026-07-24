@@ -649,7 +649,7 @@ impl HirDumper {
                     expression,
                 );
                 self.indented(|dumper| {
-                    dumper.call_argument(&HirCallArgument::View(receiver.clone()));
+                    dumper.interface_receiver(receiver);
                     for argument in arguments {
                         dumper.call_argument(argument);
                     }
@@ -701,12 +701,23 @@ impl HirDumper {
                 dumper.method_receiver(receiver);
             }
             if let HirObjectCallTarget::Interface { receiver, .. } = &call.target {
-                dumper.call_argument(&HirCallArgument::View(receiver.clone()));
+                dumper.interface_receiver(receiver);
             }
             for argument in &call.arguments {
                 dumper.call_argument(argument);
             }
         });
+    }
+
+    fn interface_receiver(&mut self, receiver: &HirInterfaceReceiver) {
+        match receiver {
+            HirInterfaceReceiver::View(view) => {
+                self.call_argument(&HirCallArgument::View(view.clone()))
+            }
+            HirInterfaceReceiver::Checked(view) => {
+                self.call_argument(&HirCallArgument::CheckedView(view.clone()))
+            }
+        }
     }
 
     fn call_argument(&mut self, argument: &HirCallArgument) {
@@ -721,6 +732,13 @@ impl HirDumper {
             }
             HirCallArgument::View(view) => {
                 self.object_view("ViewArgument", view);
+            }
+            HirCallArgument::CheckedView(view) => {
+                let kind = match view.kind {
+                    HirCheckedObjectViewKind::Static => "static",
+                    HirCheckedObjectViewKind::RuntimeTerminate => "runtime-terminate",
+                };
+                self.object_view(&format!("CheckedViewArgument {kind}"), &view.view);
             }
             HirCallArgument::Copy(copy) => {
                 self.line("CopyArgument", copy.span);
@@ -744,6 +762,10 @@ impl HirDumper {
         self.indented(|dumper| {
             match &view.source {
                 HirViewSource::Place(place) => dumper.object_place(place),
+                HirViewSource::Produced(producer) => {
+                    dumper.line("ProducedView", producer.span());
+                    dumper.indented(|dumper| dumper.object_producer(producer));
+                }
                 HirViewSource::Forwarded {
                     binding,
                     target,
@@ -850,6 +872,10 @@ impl HirDumper {
                     *span,
                 );
             }
+            HirObjectOrigin::Produced {
+                dynamic_class,
+                span,
+            } => self.line(&format!("Origin Produced dynamic {dynamic_class}"), *span),
         }
     }
 

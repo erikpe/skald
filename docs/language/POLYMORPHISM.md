@@ -6,9 +6,11 @@ inline slicing, opt-in virtual dispatch, interface dispatch, type tests, and
 checked narrowing execute through verified MIR on the x86-64 backend. The
 [status matrix](STATUS.md) owns the compiler-support boundary.
 
-The frozen [object-cast design](OBJECT_CASTS.md) replaces checked narrowing
-with expression-level C-style casts after its implementation roadmap completes.
-Until then, this document remains authoritative for current `narrow` behavior.
+The frozen [object-cast design](OBJECT_CASTS.md) is being implemented in
+stages. Plain checked-place casts now support immediate receiver,
+alias-argument, and field consumers. This document remains authoritative for
+the still-supported scoped `narrow` form until the remaining cast integration
+and removal stages complete.
 
 This document is the language authority for the restricted polymorphism
 profile. It extends, rather than replaces:

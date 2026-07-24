@@ -51,7 +51,17 @@ impl BodyLowerer<'_> {
                     interface: target.interface,
                     requirement: target.requirement,
                 }),
-                Some(self.lower_object_view(receiver).into()),
+                Some(
+                    match receiver {
+                        crate::hir::HirInterfaceReceiver::View(view) => {
+                            self.lower_object_view(view)
+                        }
+                        crate::hir::HirInterfaceReceiver::Checked(view) => {
+                            self.lower_checked_object_view(view)
+                        }
+                    }
+                    .into(),
+                ),
             ),
         };
         let arguments = self.lower_call_arguments(&call.arguments);

@@ -19,6 +19,101 @@ class Derived extends Base { init() { super(); } }\n\
 class Other { init() {} }\n";
 
 #[test]
+fn checked_object_casts_support_direct_receivers_alias_arguments_and_fields() {
+    let output = check_text(
+        "class Base { init() {} virtual fn read() -> i64 { return 1; } }\n\
+         class Leaf extends Base {\n\
+           value: i64;\n\
+           init(value: i64) { super(); self.value = value; }\n\
+           override fn read() -> i64 { return self.value; }\n\
+         }\n\
+         fn take(ref leaf: Leaf) -> i64 { return leaf.value; }\n\
+         fn inspect(ref value: Obj) -> i64 {\n\
+           var from_method: i64 = ((Leaf) value).read();\n\
+           var from_field: i64 = ((Leaf) value).value;\n\
+           return take((Leaf) value) + from_method + from_field;\n\
+         }\n\
+         fn replace(mut ref value: Obj) -> unit {\n\
+           ((Leaf) value).value = 9;\n\
+         }\n\
+         fn produced() -> i64 { return ((Leaf) Leaf(4)).read(); }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let definition = hir.definitions.get(FunctionId::new(1)).unwrap();
+    let HirStatement::Local(method) = &definition.body.statements[0] else {
+        panic!("expected method-result local");
+    };
+    let HirLocalInitializer::Value(method) = &method.initializer else {
+        panic!("expected scalar initializer");
+    };
+    let HirExpressionKind::MethodCall { receiver, .. } = &method.kind else {
+        panic!("expected method call");
+    };
+    assert!(receiver.checked_cast.is_some());
+
+    let mir = lower_hir(&hir).expect("checked casts must lower");
+    verify_mir(&mir).expect("lowered checked casts must verify");
+    let dump = dump_mir(&mir);
+    assert!(dump.contains("checked-cast"));
+    assert!(dump.contains("end-checked-view"));
+}
+
+#[test]
+fn checked_interface_casts_support_requirement_receivers() {
+    let output = check_text(&format!(
+        "{TYPES}\
+         fn inspect(ref value: Obj) -> unit {{ ((Tag) value).mark(); }}\n\
+         fn main() -> i64 {{ return 0; }}\n"
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let definition = hir.definitions.get(FunctionId::new(0)).unwrap();
+    let HirStatement::Call(call) = &definition.body.statements[0] else {
+        panic!("expected interface call statement");
+    };
+    let HirExpressionKind::InterfaceCall { receiver, .. } = &call.call.kind else {
+        panic!("expected interface call");
+    };
+    assert!(matches!(
+        receiver,
+        crate::hir::HirInterfaceReceiver::Checked(_)
+    ));
+    let mir = lower_hir(&hir).expect("interface cast must lower");
+    verify_mir(&mir).expect("interface cast MIR must verify");
+}
+
+#[test]
+fn rejects_shared_impossible_value_target_and_unconsumed_casts() {
+    let output = check_text(&format!(
+        "{TYPES}\
+         fn invalid(ref erased: Obj, ref other: Other) -> unit {{\n\
+           (shared Derived) erased;\n\
+           ((Base) other).mark();\n\
+           (Derived) erased;\n\
+         }}\n\
+         fn main() -> i64 {{ return 0; }}\n"
+    ));
+
+    assert!(output.has_errors());
+    let cast_errors: Vec<_> = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::typeck::program::INVALID_OBJECT_CAST)
+        .collect();
+    assert_eq!(cast_errors.len(), 3, "{:?}", output.diagnostics);
+    assert!(cast_errors
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("shared-owner")));
+    assert!(cast_errors
+        .iter()
+        .any(|diagnostic| diagnostic.message.contains("never succeed")));
+}
+
+#[test]
 fn classifies_type_tests_from_exact_and_forwarded_class_obj_and_interface_views() {
     let output = check_text(&format!(
         "{TYPES}\

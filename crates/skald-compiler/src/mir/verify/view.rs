@@ -197,6 +197,7 @@ impl Verifier<'_> {
                 MirStorageKind::Receiver
                     | MirStorageKind::AliasParameter(_)
                     | MirStorageKind::NarrowedAlias(_)
+                    | MirStorageKind::CheckedView(_)
             )
         });
         let ends_at_field = matches!(
@@ -252,9 +253,9 @@ impl Verifier<'_> {
         };
         let carrier_access = match storage.kind {
             MirStorageKind::Receiver => self.storage_access(site.function, storage),
-            MirStorageKind::AliasParameter(access) | MirStorageKind::NarrowedAlias(access) => {
-                access
-            }
+            MirStorageKind::AliasParameter(access)
+            | MirStorageKind::NarrowedAlias(access)
+            | MirStorageKind::CheckedView(access) => access,
             _ => {
                 self.block_error(
                     site.function.callable(),
@@ -268,6 +269,7 @@ impl Verifier<'_> {
             MirStorageKind::Receiver => MirPlaceBase::Storage(carrier),
             MirStorageKind::AliasParameter(_) => MirPlaceBase::AliasParameter(carrier),
             MirStorageKind::NarrowedAlias(_) => MirPlaceBase::NarrowedAlias(carrier),
+            MirStorageKind::CheckedView(_) => MirPlaceBase::CheckedView(carrier),
             _ => unreachable!("origin carrier kind checked above"),
         };
         if site.subject.base != expected_base

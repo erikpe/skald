@@ -3,6 +3,80 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn resolve_object_receiver(
+        &mut self,
+        expression: &syntax::Expression,
+    ) -> Option<ResolvedObjectReceiver> {
+        match expression {
+            syntax::Expression::ObjectCast(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::ObjectCast(cast) = resolved else {
+                    unreachable!("object-cast syntax must resolve to an object-cast expression")
+                };
+                let ResolvedTypeKind::Class(class) = cast.target.kind else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            "ordinary member selection requires a class cast target",
+                        )
+                        .with_primary_label(
+                            cast.target_span,
+                            "this target does not declare class fields or methods",
+                        ),
+                    );
+                    return None;
+                };
+                // Cast receivers carry their semantic source separately. The
+                // path root is only a source-shaped carrier for projections;
+                // produced sources therefore use a never-lowered sentinel.
+                let root = object_view_root_binding(&cast.source)
+                    .unwrap_or(BindingId::Receiver(self.callable));
+                Some(ResolvedObjectReceiver::from_cast(cast, root, class))
+            }
+            syntax::Expression::Grouped(grouped) => Some(
+                self.resolve_object_receiver(&grouped.expression)?
+                    .with_span(grouped.span),
+            ),
+            syntax::Expression::MemberAccess(member) => {
+                let receiver = self.resolve_object_receiver(&member.receiver)?;
+                let selected = self.select_member(receiver.class(), &member.member)?;
+                let receiver =
+                    self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
+                match selected {
+                    OrdinaryMemberSymbolKind::Field(field) => self.project_receiver_field(
+                        receiver,
+                        field,
+                        member.span,
+                        member.member.span,
+                    ),
+                    OrdinaryMemberSymbolKind::Method(method) => {
+                        let declaration = self
+                            .environment
+                            .classes
+                            .get(method.class())
+                            .and_then(|class| class.method(method))
+                            .expect("member symbols must reference declaration metadata");
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_MEMBER_SELECTION,
+                                format!(
+                                    "method `{}` cannot be used as an object place",
+                                    declaration.name
+                                ),
+                            )
+                            .with_primary_label(member.member.span, "expected a class field here")
+                            .with_secondary_label(declaration.name_span, "method declared here"),
+                        );
+                        None
+                    }
+                }
+            }
+            _ => self
+                .resolve_object_place(expression)
+                .map(ResolvedObjectReceiver::from_place),
+        }
+    }
+
     pub(super) fn resolve_object_place(
         &mut self,
         expression: &syntax::Expression,
@@ -132,6 +206,59 @@ impl CallableResolver<'_, '_> {
         Some(receiver.project_field(field, class, span))
     }
 
+    fn project_receiver_field(
+        &mut self,
+        receiver: ResolvedObjectReceiver,
+        field: FieldId,
+        span: Span,
+        member_span: Span,
+    ) -> Option<ResolvedObjectReceiver> {
+        let declaration = self
+            .environment
+            .classes
+            .get(field.class())
+            .and_then(|class| class.field(field))
+            .expect("member symbols must reference declaration metadata");
+        let ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_MEMBER_SELECTION,
+                    format!("field `{}` does not contain an object", declaration.name),
+                )
+                .with_primary_label(
+                    member_span,
+                    "member access cannot continue through this field",
+                )
+                .with_secondary_label(declaration.type_syntax.span, "field has a primitive type"),
+            );
+            return None;
+        };
+        Some(receiver.project_field(field, class, span))
+    }
+
+    pub(super) fn project_receiver_to_declaring_class(
+        &self,
+        mut receiver: ResolvedObjectReceiver,
+        declaring_class: ClassId,
+    ) -> ResolvedObjectReceiver {
+        if receiver.class() == declaring_class {
+            return receiver;
+        }
+        let span = receiver.span();
+        for base in self
+            .environment
+            .hierarchy
+            .base_chain(receiver.class())
+            .expect("resolved member receiver must have valid ancestry")
+        {
+            receiver = receiver.project_base(base, span);
+            if base == declaring_class {
+                return receiver;
+            }
+        }
+        unreachable!("selected inherited member owner must be in the receiver base chain")
+    }
+
     pub(super) fn project_to_declaring_class(
         &self,
         mut receiver: ResolvedObjectPlace,
@@ -153,5 +280,14 @@ impl CallableResolver<'_, '_> {
             }
         }
         unreachable!("selected inherited member owner must be in the receiver base chain")
+    }
+}
+
+fn object_view_root_binding(expression: &ResolvedExpression) -> Option<BindingId> {
+    match expression {
+        ResolvedExpression::Binding(binding) => Some(binding.binding),
+        ResolvedExpression::Grouped(grouped) => object_view_root_binding(&grouped.expression),
+        ResolvedExpression::FieldAccess(access) => Some(access.receiver.root),
+        _ => None,
     }
 }

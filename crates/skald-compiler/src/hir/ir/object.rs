@@ -9,7 +9,10 @@ use crate::{
 };
 
 use super::{
-    expression::{HirCallArgument, HirExpression, HirInterfaceCallTarget, HirMethodCallTarget},
+    expression::{
+        HirCallArgument, HirExpression, HirInterfaceCallTarget, HirInterfaceReceiver,
+        HirMethodCallTarget,
+    },
     HirAccess,
 };
 
@@ -137,7 +140,7 @@ pub enum HirObjectCallTarget {
         target: HirMethodCallTarget,
     },
     Interface {
-        receiver: HirObjectView,
+        receiver: HirInterfaceReceiver,
         target: HirInterfaceCallTarget,
     },
 }
@@ -290,6 +293,9 @@ pub enum HirObjectOrigin {
         dispatch_limit: Option<ClassId>,
         span: Span,
     },
+    /// An exact object produced into a compiler-owned full-expression
+    /// temporary. MIR lowering replaces this marker with the temporary place.
+    Produced { dynamic_class: ClassId, span: Span },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -298,6 +304,9 @@ pub struct HirMethodReceiver {
     pub place: HirObjectPlace,
     /// The complete object used by virtual selection and nested forwarding.
     pub origin: Box<HirObjectOrigin>,
+    /// Present when the receiver place is defined by a full-expression checked
+    /// cast rather than by an ordinary stable binding path.
+    pub checked_cast: Option<Box<HirCheckedObjectView>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -318,8 +327,30 @@ pub struct HirObjectView {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCheckedObjectView {
+    pub view: HirObjectView,
+    /// The view passed to the direct consumer after the cast succeeds. This
+    /// may be an implicit up-view of the checked target.
+    pub consumer_target: HirViewTarget,
+    pub consumer_access: HirAccess,
+    pub kind: HirCheckedObjectViewKind,
+    /// Projections selected after the cast target (for inherited members and
+    /// fields reached through the cast place).
+    pub projections: Vec<crate::object_path::ObjectProjection>,
+    pub class: Option<ClassId>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirCheckedObjectViewKind {
+    Static,
+    RuntimeTerminate,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirViewSource {
     Place(HirObjectPlace),
+    Produced(Box<HirObjectProducer>),
     Forwarded {
         binding: BindingId,
         target: HirViewTarget,
@@ -331,6 +362,7 @@ pub enum HirViewSource {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFieldPlace {
     pub receiver: HirObjectPlace,
+    pub checked_cast: Option<Box<HirCheckedObjectView>>,
     pub field: FieldId,
     pub span: Span,
 }

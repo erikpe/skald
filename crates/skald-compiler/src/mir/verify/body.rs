@@ -127,6 +127,8 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::Return, None)
                     | (MirStorageKind::Argument, None)
                     | (MirStorageKind::Temporary, None)
+                    | (MirStorageKind::CheckedView(_), None)
+                    | (MirStorageKind::ScalarSpill, None)
             );
             if !source_matches_kind {
                 self.function_error(
@@ -149,7 +151,9 @@ impl<'mir> Verifier<'mir> {
             if matches!(storage.ty, MirType::Interface(_) | MirType::Obj)
                 && !matches!(
                     storage.kind,
-                    MirStorageKind::AliasParameter(_) | MirStorageKind::NarrowedAlias(_)
+                    MirStorageKind::AliasParameter(_)
+                        | MirStorageKind::NarrowedAlias(_)
+                        | MirStorageKind::CheckedView(_)
                 )
             {
                 self.function_error(
@@ -448,6 +452,18 @@ impl<'mir> Verifier<'mir> {
                 failure_target,
                 ..
             }) => self.verify_checked_narrow_terminator(
+                function,
+                block,
+                binding,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::CheckedCast {
+                binding,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_checked_cast_terminator(
                 function,
                 block,
                 binding,

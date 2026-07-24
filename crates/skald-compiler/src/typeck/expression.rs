@@ -10,7 +10,10 @@ use crate::{
     source::Span,
 };
 
-use super::{function::CallableChecker, program::TYPE_MISMATCH};
+use super::{
+    function::CallableChecker,
+    program::{INVALID_OBJECT_CAST, TYPE_MISMATCH},
+};
 
 mod alias;
 mod call;
@@ -64,6 +67,21 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Unary(unary) => self.check_unary_expression(unary),
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
             ResolvedExpression::TypeTest(test) => self.check_type_test(test),
+            ResolvedExpression::ObjectCast(cast) => {
+                if self.check_object_cast(cast).is_some() {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CAST,
+                            "an object cast must be consumed as a non-owning place",
+                        )
+                        .with_primary_label(
+                            cast.span,
+                            "use this cast as a receiver, field place, or alias argument",
+                        ),
+                    );
+                }
+                None
+            }
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),

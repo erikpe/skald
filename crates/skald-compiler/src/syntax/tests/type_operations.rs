@@ -1,6 +1,60 @@
 use super::*;
 
 #[test]
+fn object_casts_parse_at_unary_precedence_with_frozen_ambiguity_rules() {
+    let (_, output) = parse_text(
+        "fn inspect(ref value: Obj, other: i64) -> i64 {\n\
+           ((Leaf) value).read();\n\
+           (shared Leaf) value;\n\
+           (f)(value);\n\
+           return (other) - 1;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let statements = &function(&output.ast, 0).body.statements;
+    let Statement::Expression(method) = &statements[0] else {
+        panic!("expected method expression");
+    };
+    let Expression::Call(call) = &method.expression else {
+        panic!("expected call");
+    };
+    let Expression::MemberAccess(member) = call.callee.as_ref() else {
+        panic!("expected member selection");
+    };
+    let Expression::Grouped(grouped) = member.receiver.as_ref() else {
+        panic!("expected grouped cast receiver");
+    };
+    assert!(matches!(
+        grouped.expression.as_ref(),
+        Expression::ObjectCast(ObjectCastExpr {
+            target_mode: ObjectCastTargetMode::Plain,
+            ..
+        })
+    ));
+
+    let Statement::Expression(shared) = &statements[1] else {
+        panic!("expected shared cast expression");
+    };
+    assert!(matches!(
+        shared.expression,
+        Expression::ObjectCast(ObjectCastExpr {
+            target_mode: ObjectCastTargetMode::Shared { .. },
+            ..
+        })
+    ));
+
+    let Statement::Expression(ambiguous) = &statements[2] else {
+        panic!("expected ambiguous cast expression");
+    };
+    assert!(matches!(ambiguous.expression, Expression::ObjectCast(_)));
+    assert!(matches!(
+        return_value(function(&output.ast, 0)),
+        Expression::Binary(_)
+    ));
+}
+
+#[test]
 fn type_tests_have_lower_precedence_than_arithmetic_and_group_explicitly() {
     let (_, output) = parse_text(
         "fn inspect(ref value: Sample) -> bool { return value.age + 1 is Sample; }\n\

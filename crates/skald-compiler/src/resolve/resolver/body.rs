@@ -234,6 +234,29 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                     _ => None,
                 }
             }
+            syntax::Expression::ObjectCast(cast) => {
+                let source = self.resolve_expression(&cast.source);
+                let target = self.resolve_view_target(&cast.target);
+                match (source, target) {
+                    (Some(source), Some(target)) => {
+                        Some(ResolvedExpression::ObjectCast(ResolvedObjectCastExpr {
+                            source: Box::new(source),
+                            target,
+                            target_mode: match cast.target_mode {
+                                syntax::ObjectCastTargetMode::Plain => {
+                                    ResolvedObjectCastTargetMode::Plain
+                                }
+                                syntax::ObjectCastTargetMode::Shared { shared_span } => {
+                                    ResolvedObjectCastTargetMode::Shared { shared_span }
+                                }
+                            },
+                            target_span: cast.target.span,
+                            span: cast.span,
+                        }))
+                    }
+                    _ => None,
+                }
+            }
             syntax::Expression::Call(call) => self.resolve_call(call),
             syntax::Expression::Grouped(grouped) => {
                 let expression = self.resolve_expression(&grouped.expression)?;

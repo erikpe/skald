@@ -17,8 +17,9 @@ pub use ast::{
     FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr, IdentifierExpr,
     InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl, MethodModifier, Name,
     NarrowedAliasBinding, NarrowingStatement, NumericLiteralExpr, ObjectAssignmentStatement,
-    Parameter, ParameterBindingMode, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration,
-    TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
+    ObjectCastExpr, ObjectCastTargetMode, Parameter, ParameterBindingMode, ReturnStatement,
+    SelfExpr, Statement, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr,
+    UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

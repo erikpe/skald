@@ -7,12 +7,17 @@ use super::{
 };
 use crate::{
     hir::{
-        HirAccess, HirExpressionKind, HirNarrowingFailure, HirNarrowingKind, HirObjectView,
-        HirTypeTest, HirTypeTestKind, HirViewTarget,
+        HirAccess, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpressionKind,
+        HirNarrowingFailure, HirNarrowingKind, HirObjectView, HirTypeTest, HirTypeTestKind,
+        HirViewTarget,
     },
-    resolve::{ResolvedNarrowing, ResolvedTypeTestExpr},
+    resolve::{
+        ResolvedNarrowing, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
+        ResolvedTypeTestExpr,
+    },
     typeck::program::{
-        lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_NARROWING, INVALID_TYPE_TEST,
+        lower_type, INSUFFICIENT_ALIAS_ACCESS, INVALID_NARROWING, INVALID_OBJECT_CAST,
+        INVALID_TYPE_TEST,
     },
 };
 
@@ -40,6 +45,62 @@ enum CheckedViewRejection {
 }
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_object_cast(
+        &mut self,
+        cast: &ResolvedObjectCastExpr,
+    ) -> Option<HirCheckedObjectView> {
+        if let ResolvedObjectCastTargetMode::Shared { shared_span } = cast.target_mode {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_OBJECT_CAST,
+                    "shared-owner casts are not implemented",
+                )
+                .with_primary_label(
+                    shared_span,
+                    "`shared T` is reserved for a future ownership slice",
+                )
+                .with_note("plain `(T) source` casts produce only a bounded borrowed place"),
+            );
+            return None;
+        }
+        let source = self.check_object_view_source(&cast.source, ViewSourceUse::Cast)?;
+        let target = self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
+        let source_span = source.span();
+        let access = source.access();
+        let operation = match self.select_checked_view(source, target, access) {
+            Ok(operation) => operation,
+            Err(CheckedViewRejection::StaticFailure) => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_OBJECT_CAST, "object cast can never succeed")
+                        .with_primary_label(
+                            cast.target_span,
+                            "no possible dynamic class provides this view",
+                        )
+                        .with_secondary_label(source_span, "source view"),
+                );
+                return None;
+            }
+            Err(CheckedViewRejection::InsufficientAccess) => {
+                unreachable!("a plain object cast preserves the source access")
+            }
+        };
+        Some(HirCheckedObjectView {
+            class: match target {
+                HirViewTarget::Class(class) => Some(class),
+                HirViewTarget::Interface(_) | HirViewTarget::Obj => None,
+            },
+            view: operation.view,
+            consumer_target: target,
+            consumer_access: access,
+            kind: match operation.kind {
+                CheckedViewKind::Static => HirCheckedObjectViewKind::Static,
+                CheckedViewKind::Runtime { .. } => HirCheckedObjectViewKind::RuntimeTerminate,
+            },
+            projections: Vec::new(),
+            span: cast.span,
+        })
+    }
+
     pub(super) fn check_type_test(&mut self, test: &ResolvedTypeTestExpr) -> Option<HirExpression> {
         let source = self.check_object_view_source(&test.source, ViewSourceUse::TypeTest)?;
         let target = self.check_view_target(&test.target, test.target_span, INVALID_TYPE_TEST)?;

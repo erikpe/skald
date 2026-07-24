@@ -98,7 +98,8 @@ impl FrameLayout {
                     MirStorageKind::Return
                     | MirStorageKind::Receiver
                     | MirStorageKind::AliasParameter(_)
-                    | MirStorageKind::NarrowedAlias(_),
+                    | MirStorageKind::NarrowedAlias(_)
+                    | MirStorageKind::CheckedView(_),
                     _,
                 )
                 | (MirStorageKind::Parameter, MirType::Class(_)) => {
@@ -116,6 +117,7 @@ impl FrameLayout {
                 MirStorageKind::Receiver
                     | MirStorageKind::AliasParameter(_)
                     | MirStorageKind::NarrowedAlias(_)
+                    | MirStorageKind::CheckedView(_)
             );
             object_origins.push(if carries_origin {
                 Some(ObjectOriginHomes {
@@ -200,6 +202,12 @@ impl FrameLayout {
                 0,
             ),
             MirPlaceBase::NarrowedAlias(_) => (
+                FramePlaceBase::Alias {
+                    home: self.storage(storage_id),
+                },
+                0,
+            ),
+            MirPlaceBase::CheckedView(_) => (
                 FramePlaceBase::Alias {
                     home: self.storage(storage_id),
                 },

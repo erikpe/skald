@@ -86,6 +86,13 @@ impl MirPlace {
         }
     }
 
+    pub fn checked_view(base: StorageId) -> Self {
+        Self {
+            base: MirPlaceBase::CheckedView(base),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
@@ -102,6 +109,7 @@ pub enum MirPlaceBase {
     Storage(StorageId),
     AliasParameter(StorageId),
     NarrowedAlias(StorageId),
+    CheckedView(StorageId),
 }
 
 impl MirPlaceBase {
@@ -109,7 +117,8 @@ impl MirPlaceBase {
         match self {
             Self::Storage(storage)
             | Self::AliasParameter(storage)
-            | Self::NarrowedAlias(storage) => storage,
+            | Self::NarrowedAlias(storage)
+            | Self::CheckedView(storage) => storage,
         }
     }
 }

@@ -320,6 +320,7 @@ pub enum Expression {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     TypeTest(TypeTestExpr),
+    ObjectCast(ObjectCastExpr),
     Call(CallExpr),
     Grouped(GroupedExpr),
     SelfValue(SelfExpr),
@@ -335,12 +336,27 @@ impl Expression {
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
+            Self::ObjectCast(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::SelfValue(expression) => expression.span,
             Self::MemberAccess(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ObjectCastExpr {
+    pub target: Name,
+    pub target_mode: ObjectCastTargetMode,
+    pub source: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ObjectCastTargetMode {
+    Plain,
+    Shared { shared_span: Span },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

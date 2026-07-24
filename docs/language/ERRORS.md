@@ -62,11 +62,13 @@ release are compiler/runtime defects rather than source-level failures. These
 rules do not change current compiler support or establish a general panic
 facility.
 
-The frozen [object-cast design](OBJECT_CASTS.md#failure) carries the current
+The implemented [object-cast design](OBJECT_CASTS.md#failure) carries the
 checked-narrowing failure boundary forward: a dynamically unsuccessful cast
 terminates without producing a null or invalid view and without guaranteeing
 remaining cleanup. A statically impossible cast is rejected at compile time.
-These cast forms are not yet accepted by the compiler.
+This currently applies to plain casts consumed directly as receivers, alias
+arguments, field reads, or supported field mutation; shared-owner and owning
+inline cast consumers remain unimplemented.
 
 ## Cleanup and abrupt termination
 

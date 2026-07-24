@@ -145,15 +145,17 @@ access, projects statically selected class targets, and records terminating
 runtime failure before the narrowing-specific layer adds its alias identity
 and lexical body.
 
-The frozen [object-cast replacement](../language/OBJECT_CASTS.md) will move
-that dynamic check into an expression-level checked-place operation. HIR will
-retain the source view, target identity, preserved access/origin, static or
-runtime classification, and place-versus-shared-owner result. Plain cast views
-will be bounded by their consuming full expression rather than a narrowed
-alias identity or lexical body. The later shared extension will consume an
+The implemented [object-cast replacement](../language/OBJECT_CASTS.md) also
+uses an expression-level checked-place operation. HIR retains the source view,
+target identity, preserved access/origin, static or runtime classification,
+post-cast projections, and immediate consumer target/access. Plain cast views
+are bounded by their consuming full expression rather than a narrowed-alias
+identity or lexical body. The current direct consumers are receivers, alias
+arguments, primitive field reads, and supported field mutation; owning inline
+uses remain planned. The later shared extension will consume an
 exact-class checked place in `new T((T) source)` while separately recording
 allocation and selected copy construction; allocation is not an effect of the
-cast node. These are planned phase changes, not current HIR fields.
+cast node.
 
 HIR preserves structured source control flow and source spans useful for
 diagnostics. It does not contain byte offsets, registers, stack slots, calling
@@ -179,7 +181,7 @@ explicit:
 - selected base copy steps, owning slices, and complete destruction plans;
 - object-result destinations and full-expression temporary boundaries; and
 - basic blocks with explicit return, jump, boolean-branch, checked-narrowing,
-  and unrecoverable-failure terminators.
+  checked-cast, and unrecoverable-failure terminators.
 
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values. Field
@@ -215,11 +217,17 @@ edge and ended explicitly on lexical fallthrough. The verifier checks legal
 static/runtime relations, declared targets, view access and provenance,
 single definition, scoped liveness, and the terminating failure edge.
 
-The cast roadmap will replace that dedicated scoped storage with explicit
-checked-place evaluation feeding ordinary receiver, alias-argument, copy,
-assignment, and result operations. Runtime casts still require explicit
-success and unrecoverable failure control-flow edges; static casts become
-verified view projections. Future shared-owner casts add explicit copy/adopt
+Plain casts currently feed ordinary receiver, alias-argument, field-read, and
+field-mutation operations. Runtime casts use explicit success and unrecoverable
+failure edges plus a checked-view carrier ended at the consuming
+full-expression boundary. Static casts from concrete places become verified
+view projections; forwarded static sources use the same bounded carrier when a
+typed indirect home is required. Scalar values that must survive a cast edge
+are explicitly spilled so MIR's transient values remain block-local. The
+verifier checks target relation, access, provenance, single definition,
+carrier liveness, failure termination, and consumer compatibility. Future
+owning consumers extend this checked-place evaluation to copy, assignment, and
+result operations. Future shared-owner casts add explicit copy/adopt
 ownership operations but no allocation operation. Future copy allocation
 instead composes that checked-place result with an explicit source `new`,
 exact-class allocation, and selected copy-constructor operation after the

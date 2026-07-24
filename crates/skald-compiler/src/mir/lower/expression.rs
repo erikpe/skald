@@ -52,11 +52,14 @@ impl BodyLowerer<'_> {
                 arguments,
             } => self.lower_direct_call(expression, *function, arguments),
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
-            HirExpressionKind::FieldRead(place) => Some(self.assign(
-                MirRvalueKind::Load(self.lower_field_place(place)),
-                lower_type(expression.ty),
-                expression.span,
-            )),
+            HirExpressionKind::FieldRead(place) => {
+                let place = self.lower_field_place(place);
+                Some(self.assign(
+                    MirRvalueKind::Load(place),
+                    lower_type(expression.ty),
+                    expression.span,
+                ))
+            }
             HirExpressionKind::MethodCall {
                 receiver,
                 target,
@@ -104,9 +107,16 @@ impl BodyLowerer<'_> {
         let left = self
             .lower_expression(left)
             .expect("typed binary operand must produce a value");
+        let spilled_left = expression_contains_runtime_cast(right)
+            .then(|| self.spill_scalar(left, lower_type(left_ty(operation)), expression.span));
         let right = self
             .lower_expression(right)
             .expect("typed binary operand must produce a value");
+        let left = spilled_left
+            .map(|(storage, ty)| {
+                self.assign(MirRvalueKind::Load(storage.into()), ty, expression.span)
+            })
+            .unwrap_or(left);
         Some(self.assign(
             MirRvalueKind::Binary {
                 operation: match operation {
@@ -131,6 +141,30 @@ impl BodyLowerer<'_> {
         ))
     }
 
+    pub(super) fn spill_scalar(
+        &mut self,
+        value: ValueId,
+        ty: MirType,
+        span: crate::source::Span,
+    ) -> (StorageId, MirType) {
+        debug_assert!(ty.is_scalar_value());
+        let storage = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: storage,
+            source: None,
+            name: format!("spill{}", storage.index()),
+            kind: MirStorageKind::ScalarSpill,
+            ty,
+            span,
+        });
+        self.emit(MirInstruction::Store(MirStore {
+            destination: storage.into(),
+            value,
+            span,
+        }));
+        (storage, ty)
+    }
+
     pub(super) fn assign(
         &mut self,
         kind: MirRvalueKind,
@@ -144,5 +178,76 @@ impl BodyLowerer<'_> {
             span,
         }));
         result
+    }
+}
+
+fn left_ty(operation: HirBinaryOperation) -> Type {
+    match operation {
+        HirBinaryOperation::AddI64
+        | HirBinaryOperation::SubtractI64
+        | HirBinaryOperation::MultiplyI64 => Type::I64,
+        HirBinaryOperation::AddU64
+        | HirBinaryOperation::SubtractU64
+        | HirBinaryOperation::MultiplyU64 => Type::U64,
+        HirBinaryOperation::AddU8
+        | HirBinaryOperation::SubtractU8
+        | HirBinaryOperation::MultiplyU8 => Type::U8,
+        HirBinaryOperation::AddF64
+        | HirBinaryOperation::SubtractF64
+        | HirBinaryOperation::MultiplyF64 => Type::F64,
+    }
+}
+
+pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bool {
+    use crate::hir::{HirCallArgument, HirCheckedObjectViewKind, HirInterfaceReceiver};
+
+    let argument_has_cast = |argument: &HirCallArgument| match argument {
+        HirCallArgument::Value(value) => expression_contains_runtime_cast(value),
+        HirCallArgument::CheckedView(view) => {
+            view.kind == HirCheckedObjectViewKind::RuntimeTerminate
+        }
+        HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::Copy(_) => false,
+    };
+    match &expression.kind {
+        HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
+            expression_contains_runtime_cast(operand)
+        }
+        HirExpressionKind::Binary { left, right, .. } => {
+            expression_contains_runtime_cast(left) || expression_contains_runtime_cast(right)
+        }
+        HirExpressionKind::DirectCall { arguments, .. } => arguments.iter().any(argument_has_cast),
+        HirExpressionKind::MethodCall {
+            receiver,
+            arguments,
+            ..
+        } => {
+            receiver
+                .checked_cast
+                .as_ref()
+                .is_some_and(|view| view.kind == HirCheckedObjectViewKind::RuntimeTerminate)
+                || arguments.iter().any(argument_has_cast)
+        }
+        HirExpressionKind::InterfaceCall {
+            receiver,
+            arguments,
+            ..
+        } => {
+            matches!(
+                receiver,
+                HirInterfaceReceiver::Checked(view)
+                    if view.kind == HirCheckedObjectViewKind::RuntimeTerminate
+            ) || arguments.iter().any(argument_has_cast)
+        }
+        HirExpressionKind::FieldRead(place) => place
+            .checked_cast
+            .as_ref()
+            .is_some_and(|view| view.kind == HirCheckedObjectViewKind::RuntimeTerminate),
+        HirExpressionKind::Binding(_)
+        | HirExpressionKind::I64(_)
+        | HirExpressionKind::U64(_)
+        | HirExpressionKind::U8(_)
+        | HirExpressionKind::F64Bits(_)
+        | HirExpressionKind::Boolean(_)
+        | HirExpressionKind::TypeTest(_) => false,
     }
 }

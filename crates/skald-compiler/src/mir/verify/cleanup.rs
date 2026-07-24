@@ -35,7 +35,9 @@ impl<'mir> Verifier<'mir> {
         let destination = self.verify_place(function, block, &cleanup.destination);
         if matches!(
             cleanup.destination.base,
-            MirPlaceBase::AliasParameter(_) | MirPlaceBase::NarrowedAlias(_)
+            MirPlaceBase::AliasParameter(_)
+                | MirPlaceBase::NarrowedAlias(_)
+                | MirPlaceBase::CheckedView(_)
         ) {
             self.block_error(
                 function.callable(),
@@ -136,11 +138,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 }
                 MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage.id),
                 MirStorageKind::NarrowedAlias(_) => continue,
+                MirStorageKind::CheckedView(_) => continue,
                 MirStorageKind::Receiver
                 | MirStorageKind::Return
                 | MirStorageKind::Local
                 | MirStorageKind::Argument
-                | MirStorageKind::Temporary => continue,
+                | MirStorageKind::Temporary
+                | MirStorageKind::ScalarSpill => continue,
             };
             initial.live.insert(place);
         }
@@ -196,6 +200,31 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     success_state
                         .live
                         .insert(MirPlace::narrowed_alias(binding.destination));
+                    self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::CheckedCast {
+                    binding,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.require_live_place(
+                        block,
+                        &state,
+                        &binding.view.source,
+                        "checked-cast source",
+                    );
+                    self.require_live_origin(
+                        block,
+                        &state,
+                        &binding.view.origin,
+                        "checked-cast origin",
+                    );
+                    let mut success_state = state.clone();
+                    success_state
+                        .live
+                        .insert(MirPlace::checked_view(binding.destination));
                     self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
@@ -477,6 +506,36 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     }
                     state.live.remove(&alias);
                 }
+                MirInstruction::BindCheckedView(binding) => {
+                    self.require_live_place(
+                        block,
+                        state,
+                        &binding.view.source,
+                        "checked-cast source",
+                    );
+                    self.require_live_origin(
+                        block,
+                        state,
+                        &binding.view.origin,
+                        "checked-cast origin",
+                    );
+                    let carrier = MirPlace::checked_view(binding.destination);
+                    if self.place_is_live(state, &carrier) {
+                        self.block_error(block.id, "checked-view carrier is already live");
+                    } else {
+                        state.live.insert(carrier);
+                    }
+                }
+                MirInstruction::EndCheckedView(end) => {
+                    let carrier = MirPlace::checked_view(end.carrier);
+                    if !self.place_is_live(state, &carrier) {
+                        self.block_error(
+                            block.id,
+                            "checked-view carrier is not live at full-expression end",
+                        );
+                    }
+                    state.live.remove(&carrier);
+                }
                 _ => {}
             }
         }
@@ -563,6 +622,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     MirStorageKind::Receiver => MirPlace::base(*carrier),
                     MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(*carrier),
                     MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(*carrier),
+                    MirStorageKind::CheckedView(_) => MirPlace::checked_view(*carrier),
                     _ => return,
                 }
             }
@@ -589,7 +649,10 @@ impl CleanupLivenessAnalysis<'_, '_> {
         place: &MirPlace,
         kind: &str,
     ) {
-        if matches!(place.base, MirPlaceBase::NarrowedAlias(_)) {
+        if matches!(
+            place.base,
+            MirPlaceBase::NarrowedAlias(_) | MirPlaceBase::CheckedView(_)
+        ) {
             self.require_live_place(block, state, place, kind);
         }
     }

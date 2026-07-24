@@ -30,7 +30,7 @@ Use the authority closest to the behavior:
 - implemented inheritance, polymorphic views, virtual/interface dispatch,
   type tests, and checked narrowing belong in
   [polymorphism](language/POLYMORPHISM.md);
-- frozen C-style object casts, the complete inline/alias/shared conversion
+- staged C-style object casts, the complete inline/alias/shared conversion
   matrix, cast failure, the checked-place copy-allocation source, and the
   planned `narrow` replacement belong in
   [object casts](language/OBJECT_CASTS.md);

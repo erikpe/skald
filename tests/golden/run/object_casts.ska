@@ -1,0 +1,41 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Root {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Leaf extends Root {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = extra;
+    }
+
+    override fn read() -> i64 {
+        return self.value + self.extra;
+    }
+}
+
+fn read_leaf(ref value: Leaf) -> i64 {
+    return value.read();
+}
+
+fn through_cast(ref value: Obj) -> i64 {
+    return ((Leaf) value).read() + ((Leaf) value).extra
+        + read_leaf((Leaf) value);
+}
+
+fn main() -> i64 {
+    var leaf: Leaf = Leaf(10, 5);
+    ska_rt_println_i64(through_cast(leaf));
+    return 0;
+}

@@ -196,3 +196,64 @@ fn rejects_invalid_type_targets_results_and_narrowed_views() {
     *carrier = StorageId::new(FunctionId::new(1), 99);
     assert_error(&provenance, "origin carrier");
 }
+
+#[test]
+fn rejects_corrupt_checked_cast_carriers_and_failure_edges() {
+    fn cast_program() -> MirProgram {
+        lower_text(
+            "class Leaf { init() {} fn read() -> i64 { return 7; } }\n\
+             class Other { init() {} }\n\
+             fn inspect(ref value: Obj) -> i64 { return ((Leaf) value).read(); }\n\
+             fn main() -> i64 { return 0; }\n",
+        )
+    }
+
+    let mut malformed_edge = cast_program();
+    let inspect = malformed_edge
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let (failure, success) = inspect
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::CheckedCast {
+                failure_target,
+                success_target,
+                ..
+            }) => Some((failure_target, success_target)),
+            _ => None,
+        })
+        .unwrap();
+    inspect.body.blocks[failure.index()].terminator = Some(MirTerminator::Goto {
+        target: success,
+        span: inspect.span,
+    });
+    let errors =
+        verify_mir(&malformed_edge).expect_err("cast failure edge mutation must be rejected");
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("object-cast failure")));
+
+    let mut wrong_storage = cast_program();
+    let inspect = wrong_storage
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let carrier = inspect
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match &block.terminator {
+            Some(MirTerminator::CheckedCast { binding, .. }) => Some(binding.destination),
+            _ => None,
+        })
+        .unwrap();
+    inspect.storage[carrier.index()].kind = MirStorageKind::Temporary;
+    let errors =
+        verify_mir(&wrong_storage).expect_err("cast carrier kind mutation must be rejected");
+    assert!(errors
+        .iter()
+        .any(|error| error.message.contains("checked-view binding destination")));
+}

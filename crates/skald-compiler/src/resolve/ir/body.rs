@@ -224,7 +224,7 @@ pub struct ResolvedObjectAssignment {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedFieldAssignment {
-    pub receiver: ResolvedObjectPlace,
+    pub receiver: super::ResolvedObjectReceiver,
     pub field: FieldId,
     pub member_span: Span,
     pub equal_span: Span,

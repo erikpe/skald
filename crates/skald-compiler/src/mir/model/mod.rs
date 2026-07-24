@@ -24,10 +24,11 @@ pub use definition::{
 };
 pub use ids::{BlockId, StorageId, ValueId};
 pub use instruction::{
-    MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCleanup,
-    MirCopyAssignment, MirCopyConstruction, MirEndFullExpression, MirInitialize, MirInstruction,
-    MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver, MirNarrowedAliasBinding,
-    MirNarrowedAliasEnd, MirObjectOrigin, MirObjectView, MirStore, MirViewTarget,
+    MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCheckedViewBinding,
+    MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
+    MirInitialize, MirInstruction, MirInterfaceCallTarget, MirMethodCallTarget, MirMethodReceiver,
+    MirNarrowedAliasBinding, MirNarrowedAliasEnd, MirObjectOrigin, MirObjectView, MirStore,
+    MirViewTarget,
 };
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,

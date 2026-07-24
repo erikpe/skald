@@ -78,6 +78,7 @@ struct BodyLowerer<'hir> {
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
     full_expression_temporaries: Vec<MirCleanup>,
+    full_expression_checked_views: Vec<StorageId>,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -95,6 +96,7 @@ impl<'hir> BodyLowerer<'hir> {
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
             full_expression_temporaries: Vec::new(),
+            full_expression_checked_views: Vec::new(),
             return_storage: None,
             receiver_storage: None,
             input,

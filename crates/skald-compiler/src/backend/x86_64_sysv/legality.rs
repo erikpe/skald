@@ -87,6 +87,8 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     MirInstruction::Assign(_)
                     | MirInstruction::BindNarrowedAlias(_)
                     | MirInstruction::EndNarrowedAlias(_)
+                    | MirInstruction::BindCheckedView(_)
+                    | MirInstruction::EndCheckedView(_)
                     | MirInstruction::Store(_)
                     | MirInstruction::EndFullExpression(_) => {}
                 }

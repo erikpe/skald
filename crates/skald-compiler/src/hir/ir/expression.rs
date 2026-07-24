@@ -10,8 +10,8 @@ use crate::{
 
 use super::{
     object::{
-        HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource, HirObjectView,
-        HirSelectedCopyOperation, HirViewTarget,
+        HirCheckedObjectView, HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource,
+        HirObjectView, HirSelectedCopyOperation, HirViewTarget,
     },
     Type,
 };
@@ -52,12 +52,18 @@ pub enum HirExpressionKind {
         arguments: Vec<HirCallArgument>,
     },
     InterfaceCall {
-        receiver: HirObjectView,
+        receiver: HirInterfaceReceiver,
         target: HirInterfaceCallTarget,
         arguments: Vec<HirCallArgument>,
     },
     TypeTest(HirTypeTest),
     Grouped(Box<HirExpression>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirInterfaceReceiver {
+    View(HirObjectView),
+    Checked(Box<HirCheckedObjectView>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -106,6 +112,7 @@ pub enum HirCallArgument {
     Value(HirExpression),
     Place(HirObjectPlace),
     View(HirObjectView),
+    CheckedView(Box<HirCheckedObjectView>),
     Copy(HirCopyArgument),
 }
 
@@ -122,6 +129,7 @@ impl HirCallArgument {
             Self::Value(expression) => expression.span,
             Self::Place(place) => place.span(),
             Self::View(view) => view.span,
+            Self::CheckedView(view) => view.span,
             Self::Copy(copy) => copy.span,
         }
     }

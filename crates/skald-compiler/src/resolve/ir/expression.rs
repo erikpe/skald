@@ -9,7 +9,7 @@ use crate::{
     source::Span,
 };
 
-use super::object_place::ResolvedObjectPlace;
+use super::object_place::ResolvedObjectReceiver;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedExpression {
@@ -19,6 +19,7 @@ pub enum ResolvedExpression {
     Unary(ResolvedUnaryExpr),
     Binary(ResolvedBinaryExpr),
     TypeTest(ResolvedTypeTestExpr),
+    ObjectCast(ResolvedObjectCastExpr),
     DirectCall(ResolvedDirectCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
@@ -36,6 +37,7 @@ impl ResolvedExpression {
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
+            Self::ObjectCast(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
@@ -44,6 +46,21 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedObjectCastExpr {
+    pub source: Box<ResolvedExpression>,
+    pub target: super::ResolvedType,
+    pub target_mode: ResolvedObjectCastTargetMode,
+    pub target_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedObjectCastTargetMode {
+    Plain,
+    Shared { shared_span: Span },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -56,7 +73,7 @@ pub struct ResolvedTypeTestExpr {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceCallExpr {
-    pub receiver: BindingId,
+    pub receiver: ResolvedInterfaceReceiver,
     pub interface: InterfaceId,
     pub requirement: InterfaceRequirementId,
     pub receiver_span: Span,
@@ -66,8 +83,14 @@ pub struct ResolvedInterfaceCallExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedInterfaceReceiver {
+    Binding { binding: BindingId, span: Span },
+    Cast(Box<ResolvedObjectCastExpr>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedFieldAccessExpr {
-    pub receiver: ResolvedObjectPlace,
+    pub receiver: ResolvedObjectReceiver,
     pub field: FieldId,
     pub member_span: Span,
     pub span: Span,
@@ -75,7 +98,7 @@ pub struct ResolvedFieldAccessExpr {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedMethodCallExpr {
-    pub receiver: ResolvedObjectPlace,
+    pub receiver: ResolvedObjectReceiver,
     pub method: MethodId,
     pub member_span: Span,
     pub arguments: Vec<ResolvedExpression>,

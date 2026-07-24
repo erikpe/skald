@@ -3,8 +3,8 @@
 use crate::{
     backend::BackendError,
     mir::{
-        BlockId, MirNarrowedAliasBinding, MirObjectOrigin, MirObjectView, MirTerminationReason,
-        MirTerminator, MirType, MirViewTarget, ValueId,
+        BlockId, MirCheckedViewBinding, MirNarrowedAliasBinding, MirObjectOrigin, MirObjectView,
+        MirTerminationReason, MirTerminator, MirType, MirViewTarget, ValueId,
     },
 };
 
@@ -64,6 +64,24 @@ impl InstructionSelector<'_, '_> {
         )
     }
 
+    pub(super) fn select_checked_view_binding(
+        &mut self,
+        binding: &MirCheckedViewBinding,
+    ) -> Result<(), BackendError> {
+        self.select_place_address(
+            &binding.view.source,
+            ArgumentLocation::IntegerRegister(Register::Rax),
+        )?;
+        value::store_rax(
+            value::memory(Register::Rbp, self.frame.storage(binding.destination)),
+            self.output,
+        );
+        self.store_object_origin(
+            ObjectOriginOperand::Mir(&binding.view.origin),
+            binding.destination,
+        )
+    }
+
     pub(super) fn select_type_operation_terminator(
         &mut self,
         terminator: &MirTerminator,
@@ -86,8 +104,25 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::Jump(block_label(*success_target)));
                 Ok(true)
             }
+            MirTerminator::CheckedCast {
+                binding,
+                success_target,
+                failure_target,
+                ..
+            } => {
+                let matched = cast_match_label(self.function.callable(), block);
+                self.emit_membership_branches(&binding.view.origin, binding.view.target, &matched);
+                self.output
+                    .push(Instruction::Jump(block_label(*failure_target)));
+                self.output.push(Instruction::Label(matched));
+                self.select_checked_view_binding(binding)?;
+                self.output
+                    .push(Instruction::Jump(block_label(*success_target)));
+                Ok(true)
+            }
             MirTerminator::Terminate {
-                reason: MirTerminationReason::NarrowingFailure,
+                reason:
+                    MirTerminationReason::NarrowingFailure | MirTerminationReason::ObjectCastFailure,
                 ..
             } => {
                 self.output.push(Instruction::Trap);
@@ -118,6 +153,14 @@ impl InstructionSelector<'_, '_> {
             self.output.push(Instruction::JumpIfEqual(matched.clone()));
         }
     }
+}
+
+fn cast_match_label(callable: crate::identity::CallableId, block: BlockId) -> Label {
+    Label::new(format!(
+        ".Lska_{}_cast_{}_matched",
+        symbol::local_label_stem(callable),
+        block.index()
+    ))
 }
 
 fn type_test_label(result: ValueId, suffix: &str) -> Label {

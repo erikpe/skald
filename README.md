@@ -14,6 +14,8 @@ primitive values, functions, lexical control flow, exact nominal inline
 classes, deterministic copying and destruction, owning class parameters and
 results, call-scoped object views, single inheritance, virtual/interface
 dispatch, type tests, and checked narrowing. The
+compiler also supports plain checked object casts in immediate receiver,
+alias-argument, and field-consuming expressions. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.

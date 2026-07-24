@@ -249,12 +249,12 @@ impl CallableResolver<'_, '_> {
         &mut self,
         assignment: &syntax::FieldAssignmentStatement,
     ) -> Option<ResolvedFieldAssignment> {
-        let receiver = self.resolve_object_place(&assignment.place.receiver);
+        let receiver = self.resolve_object_receiver(&assignment.place.receiver);
         let selected = receiver.and_then(|receiver| {
-            self.select_member(receiver.class, &assignment.place.member)
+            self.select_member(receiver.class(), &assignment.place.member)
                 .map(|member| {
-                    let receiver =
-                        self.project_to_declaring_class(receiver, member.declaring_class());
+                    let receiver = self
+                        .project_receiver_to_declaring_class(receiver, member.declaring_class());
                     (receiver, member)
                 })
         });

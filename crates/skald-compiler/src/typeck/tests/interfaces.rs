@@ -58,6 +58,9 @@ fn selects_inherited_conformance_and_interface_calls_by_identity() {
         panic!("expected interface call");
     };
     assert_eq!(target.interface, InterfaceId::new(0));
+    let crate::hir::HirInterfaceReceiver::View(receiver) = receiver else {
+        panic!("ordinary interface parameter must remain an unchecked view");
+    };
     assert_eq!(
         receiver.target,
         HirViewTarget::Interface(InterfaceId::new(0))

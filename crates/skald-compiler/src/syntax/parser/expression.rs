@@ -88,7 +88,72 @@ impl Parser<'_> {
             }));
         }
 
+        if self.starts_object_cast() {
+            return self.parse_object_cast();
+        }
+
         self.parse_postfix()
+    }
+
+    fn starts_object_cast(&self) -> bool {
+        if !self.at(TokenKind::LeftParen) {
+            return false;
+        }
+        let (right_paren_distance, valid_target) = if self.peek_ahead(1).kind
+            == TokenKind::Identifier
+            && self.lexeme(self.peek_ahead(1)) == "shared"
+        {
+            (
+                3,
+                self.peek_ahead(2).kind == TokenKind::Identifier
+                    && self.peek_ahead(3).kind == TokenKind::RightParen,
+            )
+        } else {
+            (
+                2,
+                self.peek_ahead(1).kind == TokenKind::Identifier
+                    && self.peek_ahead(2).kind == TokenKind::RightParen,
+            )
+        };
+        valid_target && self.starts_cast_operand(right_paren_distance + 1)
+    }
+
+    fn starts_cast_operand(&self, distance: usize) -> bool {
+        if self.peek_ahead(distance).kind == TokenKind::LeftParen
+            && self.peek_ahead(distance + 1).kind == TokenKind::RightParen
+        {
+            return false;
+        }
+        matches!(
+            self.peek_ahead(distance).kind,
+            TokenKind::Identifier
+                | TokenKind::SelfValue
+                | TokenKind::NumericLiteral(_)
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::LeftParen
+        )
+    }
+
+    fn parse_object_cast(&mut self) -> Option<Expression> {
+        let left_paren = self.advance();
+        let target_mode = if self.at_contextual("shared") {
+            ObjectCastTargetMode::Shared {
+                shared_span: self.advance().span,
+            }
+        } else {
+            ObjectCastTargetMode::Plain
+        };
+        let target = self.parse_name("expected a cast target")?;
+        let _right_paren = self.expect(TokenKind::RightParen, "`)` after the cast target")?;
+        let source = self.with_syntax_nesting(left_paren.span, |parser| parser.parse_unary())?;
+        let span = self.cover(left_paren.span, source.span());
+        Some(Expression::ObjectCast(ObjectCastExpr {
+            target,
+            target_mode,
+            source: Box::new(source),
+            span,
+        }))
     }
 
     fn parse_postfix(&mut self) -> Option<Expression> {

@@ -61,7 +61,9 @@ impl<'mir> Verifier<'mir> {
         let destination = self.verify_place(function, block, &initialize.destination);
         if matches!(
             initialize.destination.base,
-            MirPlaceBase::AliasParameter(_) | MirPlaceBase::NarrowedAlias(_)
+            MirPlaceBase::AliasParameter(_)
+                | MirPlaceBase::NarrowedAlias(_)
+                | MirPlaceBase::CheckedView(_)
         ) {
             self.block_error(
                 function.callable(),

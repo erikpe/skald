@@ -1,0 +1,15 @@
+error[TYP029]: object cast can never succeed
+ --> tests/golden/compile_fail/object_casts.ska:12:7
+    |
+12 |     ((Unrelated) root).touch();
+    |       ^^^^^^^^^ no possible dynamic class provides this view
+    |
+12 |     ((Unrelated) root).touch();
+    |                  ---- source view
+
+error[TYP029]: shared-owner casts are not implemented
+ --> tests/golden/compile_fail/object_casts.ska:13:7
+    |
+13 |     ((shared Root) root).touch();
+    |       ^^^^^^ `shared T` is reserved for a future ownership slice
+  = note: plain `(T) source` casts produce only a bounded borrowed place

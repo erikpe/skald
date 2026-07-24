@@ -297,10 +297,15 @@ pub enum MirStorageKind {
     AliasParameter(MirAliasAccess),
     /// Scoped indirect storage established by a checked narrowing operation.
     NarrowedAlias(MirAliasAccess),
+    /// Full-expression indirect storage established by a checked object cast.
+    CheckedView(MirAliasAccess),
     Local,
     /// Caller-owned storage transferred to one callee value parameter.
     Argument,
     Temporary,
+    /// Compiler-owned scalar home used to preserve block-local MIR values
+    /// across checked-cast control-flow edges.
+    ScalarSpill,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

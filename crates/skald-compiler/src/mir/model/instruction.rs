@@ -27,6 +27,8 @@ pub enum MirInstruction {
     EndFullExpression(MirEndFullExpression),
     BindNarrowedAlias(MirNarrowedAliasBinding),
     EndNarrowedAlias(MirNarrowedAliasEnd),
+    BindCheckedView(MirCheckedViewBinding),
+    EndCheckedView(MirCheckedViewEnd),
 }
 
 impl MirInstruction {
@@ -42,8 +44,23 @@ impl MirInstruction {
             Self::EndFullExpression(instruction) => instruction.span,
             Self::BindNarrowedAlias(instruction) => instruction.span,
             Self::EndNarrowedAlias(instruction) => instruction.span,
+            Self::BindCheckedView(instruction) => instruction.span,
+            Self::EndCheckedView(instruction) => instruction.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCheckedViewBinding {
+    pub destination: StorageId,
+    pub view: MirObjectView,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirCheckedViewEnd {
+    pub carrier: StorageId,
+    pub span: Span,
 }
 
 /// Establishes one scoped alias after a statically successful narrowing.

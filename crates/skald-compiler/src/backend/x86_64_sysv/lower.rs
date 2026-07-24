@@ -175,6 +175,10 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_narrowed_alias_binding(binding)?
             }
             MirInstruction::EndNarrowedAlias(_) => {}
+            MirInstruction::BindCheckedView(binding) => {
+                self.select_checked_view_binding(binding)?
+            }
+            MirInstruction::EndCheckedView(_) => {}
         }
         Ok(())
     }

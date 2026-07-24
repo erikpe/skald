@@ -255,9 +255,12 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::AliasParameter(MirAliasAccess::Mutable) => "mut-ref-parameter",
             MirStorageKind::NarrowedAlias(MirAliasAccess::ReadOnly) => "narrowed-ref",
             MirStorageKind::NarrowedAlias(MirAliasAccess::Mutable) => "narrowed-mut-ref",
+            MirStorageKind::CheckedView(MirAliasAccess::ReadOnly) => "checked-view",
+            MirStorageKind::CheckedView(MirAliasAccess::Mutable) => "checked-mut-view",
             MirStorageKind::Local => "local",
             MirStorageKind::Argument => "argument",
             MirStorageKind::Temporary => "temporary",
+            MirStorageKind::ScalarSpill => "scalar-spill",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
         match storage.source {
@@ -268,6 +271,8 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::Return => output.push_str("<return> "),
                 MirStorageKind::Argument => output.push_str("<argument> "),
                 MirStorageKind::Temporary => output.push_str("<temporary> "),
+                MirStorageKind::CheckedView(_) => output.push_str("<checked-view> "),
+                MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
                 _ => unreachable!("verified language storage has a source binding"),
             },
         }
@@ -417,6 +422,15 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, "end-narrowed {}", end.alias);
                 write_span(output, end.span);
             }
+            MirInstruction::BindCheckedView(binding) => {
+                let _ = write!(output, "bind-checked-view {} = ", binding.destination);
+                dump_object_view(output, &binding.view);
+                write_span(output, binding.span);
+            }
+            MirInstruction::EndCheckedView(end) => {
+                let _ = write!(output, "end-checked-view {}", end.carrier);
+                write_span(output, end.span);
+            }
         }
         output.push('\n');
     }
@@ -459,9 +473,24 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::CheckedCast {
+            binding,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(output, "checked-cast {} = ", binding.destination);
+            dump_object_view(output, &binding.view);
+            let _ = write!(
+                output,
+                ", success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::Terminate { reason, span }) => {
             let reason = match reason {
                 MirTerminationReason::NarrowingFailure => "narrowing-failure",
+                MirTerminationReason::ObjectCastFailure => "object-cast-failure",
             };
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
@@ -580,6 +609,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
         }
         MirPlaceBase::NarrowedAlias(storage) => {
             let _ = write!(output, "narrowed({storage})");
+        }
+        MirPlaceBase::CheckedView(storage) => {
+            let _ = write!(output, "checked({storage})");
         }
     }
     for projection in &place.projections {

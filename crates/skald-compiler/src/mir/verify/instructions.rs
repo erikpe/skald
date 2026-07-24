@@ -83,6 +83,12 @@ impl Verifier<'_> {
             MirInstruction::EndNarrowedAlias(end) => {
                 self.verify_narrowed_alias_end(function, block, end)
             }
+            MirInstruction::BindCheckedView(binding) => {
+                self.verify_checked_view_binding(function, block, binding, false)
+            }
+            MirInstruction::EndCheckedView(end) => {
+                self.verify_checked_view_end(function, block, end)
+            }
         }
     }
 

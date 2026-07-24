@@ -2,8 +2,9 @@
 
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirMethodCallTarget,
-        HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource, HirViewTarget,
+        HirAccess, HirCallArgument, HirExpression, HirInterfaceCallTarget, HirInterfaceReceiver,
+        HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource,
+        HirViewTarget,
     },
     identity::FunctionId,
 };
@@ -43,12 +44,15 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_interface_call(
         &mut self,
         expression: &HirExpression,
-        receiver: &HirObjectView,
+        receiver: &HirInterfaceReceiver,
         target: HirInterfaceCallTarget,
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
         // Receiver selection precedes all explicit argument effects.
-        let receiver = self.lower_object_view(receiver);
+        let receiver = match receiver {
+            HirInterfaceReceiver::View(view) => self.lower_object_view(view),
+            HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
+        };
         let arguments = self.lower_call_arguments(arguments);
         self.emit_scalar_call(
             MirCallTarget::Interface(MirInterfaceCallTarget {
@@ -85,15 +89,46 @@ impl BodyLowerer<'_> {
         &mut self,
         arguments: &[HirCallArgument],
     ) -> Vec<MirArgument> {
-        arguments
-            .iter()
-            .map(|argument| match argument {
-                HirCallArgument::Value(expression) => MirArgument::Value(
-                    self.lower_expression(expression)
-                        .expect("typed value argument must produce a scalar value"),
-                ),
-                HirCallArgument::Place(place) => MirArgument::Place(self.lower_object_place(place)),
-                HirCallArgument::View(view) => MirArgument::View(self.lower_object_view(view)),
+        enum LoweredArgument {
+            Ready(MirArgument),
+            Spilled {
+                storage: StorageId,
+                ty: MirType,
+                span: crate::source::Span,
+            },
+        }
+
+        let mut lowered = Vec::with_capacity(arguments.len());
+        for (index, argument) in arguments.iter().enumerate() {
+            let later_branch = arguments[index + 1..]
+                .iter()
+                .any(call_argument_contains_runtime_cast);
+            let argument = match argument {
+                HirCallArgument::Value(expression) => {
+                    let value = self
+                        .lower_expression(expression)
+                        .expect("typed value argument must produce a scalar value");
+                    if later_branch {
+                        let (storage, ty) =
+                            self.spill_scalar(value, lower_type(expression.ty), expression.span);
+                        LoweredArgument::Spilled {
+                            storage,
+                            ty,
+                            span: expression.span,
+                        }
+                    } else {
+                        LoweredArgument::Ready(MirArgument::Value(value))
+                    }
+                }
+                HirCallArgument::Place(place) => {
+                    LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))
+                }
+                HirCallArgument::View(view) => {
+                    LoweredArgument::Ready(MirArgument::View(self.lower_object_view(view)))
+                }
+                HirCallArgument::CheckedView(view) => {
+                    LoweredArgument::Ready(MirArgument::View(self.lower_checked_object_view(view)))
+                }
                 HirCallArgument::Copy(copy) => {
                     let source = self.lower_object_source(&copy.source);
                     let destination = self.new_object_storage(
@@ -109,37 +144,162 @@ impl BodyLowerer<'_> {
                         operation: lower_selected_copy_operation(copy.operation),
                         span: copy.span,
                     }));
-                    MirArgument::OwnedPlace(MirPlace::base(destination))
+                    LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(destination)))
+                }
+            };
+            lowered.push(argument);
+        }
+        lowered
+            .into_iter()
+            .map(|argument| match argument {
+                LoweredArgument::Ready(argument) => argument,
+                LoweredArgument::Spilled { storage, ty, span } => {
+                    MirArgument::Value(self.assign(MirRvalueKind::Load(storage.into()), ty, span))
                 }
             })
             .collect()
     }
 
-    pub(super) fn lower_object_view(&self, view: &HirObjectView) -> MirObjectView {
+    pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
+        let produced_class = match &view.source {
+            HirViewSource::Produced(producer) => Some(producer.class()),
+            _ => None,
+        };
         let source = match &view.source {
             HirViewSource::Place(place) => self.lower_object_place(place),
+            HirViewSource::Produced(producer) => self.lower_object_source(
+                &crate::hir::HirObjectSource::Produced(producer.as_ref().clone()),
+            ),
             HirViewSource::Forwarded { binding, .. } => {
                 let storage = self.storage_for_binding(*binding);
                 match self.storage[storage.index()].kind {
                     MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
                     MirStorageKind::NarrowedAlias(_) => MirPlace::narrowed_alias(storage),
+                    MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
                     _ => unreachable!("forwarded HIR views require indirect storage"),
                 }
             }
         };
+        let origin = produced_class.map_or_else(
+            || self.lower_object_origin(&view.origin),
+            |dynamic_class| MirObjectOrigin::Exact {
+                complete: source.clone(),
+                dynamic_class,
+            },
+        );
         MirObjectView {
             source,
-            origin: Box::new(self.lower_object_origin(&view.origin)),
+            origin: Box::new(origin),
             target: type_operations::lower_view_target(view.target),
             access: type_operations::lower_access(view.access),
             span: view.span,
         }
     }
 
-    pub(super) fn lower_method_receiver(&self, receiver: &HirMethodReceiver) -> MirMethodReceiver {
+    pub(super) fn lower_method_receiver(
+        &mut self,
+        receiver: &HirMethodReceiver,
+    ) -> MirMethodReceiver {
+        if let Some(cast) = &receiver.checked_cast {
+            let view = self.lower_checked_object_view(cast);
+            return MirMethodReceiver {
+                place: view.source,
+                origin: view.origin,
+            };
+        }
         MirMethodReceiver {
             place: self.lower_object_place(&receiver.place),
             origin: Box::new(self.lower_object_origin(&receiver.origin)),
+        }
+    }
+
+    pub(super) fn lower_checked_object_view(
+        &mut self,
+        checked: &crate::hir::HirCheckedObjectView,
+    ) -> MirObjectView {
+        let source = self.lower_object_view(&checked.view);
+        let direct_static_source = matches!(
+            checked.view.source,
+            HirViewSource::Place(_) | HirViewSource::Produced(_)
+        );
+        if checked.kind == crate::hir::HirCheckedObjectViewKind::Static && direct_static_source {
+            let projected = checked
+                .projections
+                .iter()
+                .fold(source.source, |place, projection| match projection {
+                    crate::object_path::ObjectProjection::Base(base) => place.project_base(*base),
+                    crate::object_path::ObjectProjection::Field(field) => {
+                        place.project_field(*field)
+                    }
+                });
+            return MirObjectView {
+                source: projected,
+                origin: source.origin,
+                target: type_operations::lower_view_target(checked.consumer_target),
+                access: type_operations::lower_access(checked.consumer_access),
+                span: checked.span,
+            };
+        }
+        let destination = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: destination,
+            source: None,
+            name: format!("cast#{}", destination.index()),
+            kind: MirStorageKind::CheckedView(type_operations::lower_access(checked.view.access)),
+            ty: type_operations::lower_view_target(checked.view.target).ty(),
+            span: checked.span,
+        });
+        let binding = MirCheckedViewBinding {
+            destination,
+            view: source.clone(),
+            span: checked.span,
+        };
+        match checked.kind {
+            crate::hir::HirCheckedObjectViewKind::Static => {
+                self.emit(MirInstruction::BindCheckedView(binding));
+            }
+            crate::hir::HirCheckedObjectViewKind::RuntimeTerminate => {
+                let success = self.body.allocate_block(checked.span);
+                let failure = self.body.allocate_block(checked.span);
+                self.terminate(MirTerminator::CheckedCast {
+                    binding,
+                    success_target: success,
+                    failure_target: failure,
+                    span: checked.span,
+                });
+                self.body
+                    .select_block(failure)
+                    .expect("allocated cast failure block must be selectable");
+                self.terminate(MirTerminator::Terminate {
+                    reason: MirTerminationReason::ObjectCastFailure,
+                    span: checked.span,
+                });
+                self.body
+                    .select_block(success)
+                    .expect("allocated cast success block must be selectable");
+            }
+        }
+        self.full_expression_checked_views.push(destination);
+        let source = checked.projections.iter().fold(
+            MirPlace::checked_view(destination),
+            |place, projection| match projection {
+                crate::object_path::ObjectProjection::Base(base) => place.project_base(*base),
+                crate::object_path::ObjectProjection::Field(field) => place.project_field(*field),
+            },
+        );
+        let origin = Box::new(MirObjectOrigin::Forwarded {
+            carrier: destination,
+            static_target: type_operations::lower_view_target(checked.view.target),
+            access: type_operations::lower_access(checked.view.access),
+            dispatch_limit: None,
+            span: checked.span,
+        });
+        MirObjectView {
+            source,
+            origin,
+            target: type_operations::lower_view_target(checked.consumer_target),
+            access: type_operations::lower_access(checked.consumer_access),
+            span: checked.span,
         }
     }
 
@@ -165,7 +325,22 @@ impl BodyLowerer<'_> {
                 dispatch_limit: *dispatch_limit,
                 span: *span,
             },
+            HirObjectOrigin::Produced { .. } => {
+                unreachable!("produced origins are replaced while lowering their source")
+            }
         }
+    }
+}
+
+fn call_argument_contains_runtime_cast(argument: &HirCallArgument) -> bool {
+    match argument {
+        HirCallArgument::Value(expression) => {
+            super::expression::expression_contains_runtime_cast(expression)
+        }
+        HirCallArgument::CheckedView(view) => {
+            view.kind == crate::hir::HirCheckedObjectViewKind::RuntimeTerminate
+        }
+        HirCallArgument::Place(_) | HirCallArgument::View(_) | HirCallArgument::Copy(_) => false,
     }
 }
 

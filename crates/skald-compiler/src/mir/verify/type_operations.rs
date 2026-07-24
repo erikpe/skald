@@ -4,8 +4,9 @@ use std::collections::HashSet;
 
 use super::{
     super::model::{
-        MirBasicBlock, MirDefinitionRef, MirInstruction, MirNarrowedAliasBinding,
-        MirNarrowedAliasEnd, MirRvalue, MirStorageKind, MirTerminator, MirType, MirViewTarget,
+        MirBasicBlock, MirCheckedViewBinding, MirCheckedViewEnd, MirDefinitionRef, MirInstruction,
+        MirNarrowedAliasBinding, MirNarrowedAliasEnd, MirRvalue, MirStorageKind, MirTerminator,
+        MirType, MirViewTarget,
     },
     context::Verifier,
 };
@@ -130,6 +131,83 @@ impl Verifier<'_> {
         }
     }
 
+    pub(super) fn verify_checked_view_binding(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        binding: &MirCheckedViewBinding,
+        runtime: bool,
+    ) {
+        let Some(storage) = function.storage(binding.destination) else {
+            self.block_error(
+                function.callable(),
+                block.id,
+                format!(
+                    "checked-view destination {} is not declared",
+                    binding.destination
+                ),
+            );
+            return;
+        };
+        let access = match storage.kind {
+            MirStorageKind::CheckedView(access) => access,
+            _ => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "checked-view binding destination has the wrong storage kind",
+                );
+                return;
+            }
+        };
+        let source =
+            self.verify_narrowing_view(function, block, &binding.view, "checked-cast view");
+        self.verify_view_target_declared(function, block, binding.view.target, "checked cast");
+        if storage.ty != binding.view.target.ty() || access != binding.view.access {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "checked-view storage does not match its selected view",
+            );
+        }
+        if let Some(source) = source {
+            let expected = if runtime {
+                TypeRelation::Runtime
+            } else {
+                TypeRelation::StaticSuccess
+            };
+            if self.classify_type_relation(source.ty, binding.view.target) != expected {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    if runtime {
+                        "checked cast does not require a runtime check"
+                    } else {
+                        "static checked cast is not guaranteed to succeed"
+                    },
+                );
+            }
+        }
+    }
+
+    pub(super) fn verify_checked_view_end(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        end: &MirCheckedViewEnd,
+    ) {
+        if !function
+            .storage(end.carrier)
+            .is_some_and(|storage| matches!(storage.kind, MirStorageKind::CheckedView(_)))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "checked-view end does not name checked-view storage",
+            );
+        }
+    }
+
     pub(super) fn verify_narrowed_alias_definitions(&mut self, function: MirDefinitionRef<'_>) {
         let mut definitions = HashSet::new();
         for block in &function.body().blocks {
@@ -152,6 +230,36 @@ impl Verifier<'_> {
                         "narrowed alias is defined more than once",
                     );
                 }
+            }
+            if let Some(MirTerminator::CheckedCast { binding, .. }) = &block.terminator {
+                if !definitions.insert(binding.destination) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "checked-view carrier is defined more than once",
+                    );
+                }
+            }
+            for instruction in &block.instructions {
+                if let MirInstruction::BindCheckedView(binding) = instruction {
+                    if !definitions.insert(binding.destination) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "checked-view carrier is defined more than once",
+                        );
+                    }
+                }
+            }
+        }
+        for storage in function.storage_entries() {
+            if matches!(storage.kind, MirStorageKind::CheckedView(_))
+                && !definitions.contains(&storage.id)
+            {
+                self.function_error(
+                    function.callable(),
+                    format!("checked-view storage {} has no definition", storage.id),
+                );
             }
         }
         for storage in function.storage_entries() {
@@ -197,6 +305,41 @@ impl Verifier<'_> {
                 function.callable(),
                 block.id,
                 "checked narrowing failure edge must terminate with narrowing failure",
+            );
+        }
+    }
+
+    pub(super) fn verify_checked_cast_terminator(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        binding: &MirCheckedViewBinding,
+        success_target: super::super::model::BlockId,
+        failure_target: super::super::model::BlockId,
+    ) {
+        self.verify_checked_view_binding(function, block, binding, true);
+        self.verify_block_target(function, block, success_target);
+        self.verify_block_target(function, block, failure_target);
+        if success_target == failure_target {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "checked cast success and failure edges must differ",
+            );
+        }
+        if !function.block(failure_target).is_some_and(|failure| {
+            matches!(
+                failure.terminator,
+                Some(MirTerminator::Terminate {
+                    reason: super::super::model::MirTerminationReason::ObjectCastFailure,
+                    ..
+                })
+            )
+        }) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "checked cast failure edge must terminate with object-cast failure",
             );
         }
     }

@@ -6,8 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Object Casts and Narrow Removal](OBJECT_CASTS_ROADMAP.md) — **in progress**;
   replace scoped `narrow` with C-style checked-place casts over the existing
-  polymorphic view pipeline. **OC1** is next. This roadmap must complete before
+  polymorphic view pipeline. **OC2** is next. This roadmap must complete before
   shared-ownership implementation planning.
+- [Object Casts Discoveries](OBJECT_CASTS_DISCOVERIES.md) — pending
+  representation and control-effect follow-ups found while implementing the
+  direct checked-place slice; both are bounded to later cast/compiler work.
 
 The completed polymorphism profile remains the implementation baseline.
 Shared-ownership language and implementation contracts are frozen in

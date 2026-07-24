@@ -28,15 +28,17 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,
-    HirInterfaceCallTarget, HirMethodCallTarget, HirTypeTest, HirTypeTestKind, HirUnaryOperation,
+    HirInterfaceCallTarget, HirInterfaceReceiver, HirMethodCallTarget, HirTypeTest,
+    HirTypeTestKind, HirUnaryOperation,
 };
 pub use object::{
-    HirBaseCopy, HirBaseInitialization, HirConstruction, HirCopyAssignment, HirCopyCapability,
-    HirCopyConstruction, HirFieldAssignment, HirFieldConstruction, HirFieldCopyAssignment,
-    HirFieldCopyConstruction, HirFieldPlace, HirMethodReceiver, HirObjectCall, HirObjectCallTarget,
-    HirObjectInitialization, HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer,
-    HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
-    HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
+    HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,
+    HirConstruction, HirCopyAssignment, HirCopyCapability, HirCopyConstruction, HirFieldAssignment,
+    HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldPlace,
+    HirMethodReceiver, HirObjectCall, HirObjectCallTarget, HirObjectInitialization,
+    HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer, HirObjectReturn,
+    HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation, HirSynthesizedCopy,
+    HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
