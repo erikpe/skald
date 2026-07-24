@@ -10,6 +10,9 @@ Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
 are owned by [Object Casts](OBJECT_CASTS.md).
+Ordinary overload and explicit-copy semantics are owned by
+[Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
+prerequisite rather than redefined by shared allocation.
 
 ## Safety contract
 
@@ -42,7 +45,7 @@ shared Drawable
 shared Obj
 
 new Widget(arguments)
-new Widget((Widget) source)
+new Widget(copy source)
 ```
 
 `shared` and `new` are contextual words in these exact positions. A shared
@@ -54,25 +57,24 @@ one produced strong owner. The expected type may immediately view that owner
 as the same class, an ancestor, a conformed interface, or `Obj`; this preserves
 the allocation and its complete dynamic class rather than slicing it.
 
-There are two allocation forms. `new ConcreteClass(arguments)` invokes the
-named class's ordinary initializer. `new T((T) source)` is explicit copy
-allocation: its sole initializer expression is a matching explicit place cast,
-and it invokes `T`'s selected copy constructor exactly once in the new
-allocation. The matching cast is required even when `source` already has exact
-class `T`; grouping around the cast does not change the copy-allocation form.
-Every other `new T(arguments)` shape remains ordinary initialization rather
-than participating in lifecycle overload resolution. The matching-cast shape
-is reserved for copy allocation even if `T`'s ordinary initializer could
-otherwise accept an exact-`T` value argument.
+There are two allocation modes. `new ConcreteClass(arguments)` selects one
+ordinary initializer overload under the
+[class construction rules](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-overloads).
+`new T(copy source)` is explicit copy allocation: the contextual `copy` marker
+selects `T`'s copy-constructor capability exactly once in the new allocation.
+The marker takes exactly one source and does not form an ordinary initializer
+argument. Conversely, `new T(source)` participates only in ordinary
+initializer overload resolution and never falls back to copy construction.
 
 The copy-allocation target must be concrete and copy-constructible. The source
 may be an existing or produced inline object, a `ref` or `mut ref` alias, or an
 object reached through shared ownership, subject to the checked-place rules in
 [Object Casts](OBJECT_CASTS.md). It executes in this order:
 
-1. evaluate the cast source exactly once and establish any required temporary
+1. evaluate the copy source exactly once and establish any required temporary
    or hidden owning anchor;
-2. select the exact `T` place, terminating on a required failed dynamic check;
+2. select the exact `T` place through the target-directed checked-copy
+   relation, terminating on a required failed dynamic check;
 3. allocate storage for one exact `T`;
 4. copy-construct the payload from that checked place; and
 5. publish the completed allocation as one produced `shared T` owner.
@@ -83,10 +85,15 @@ anchor remain live through the copy and until its result owner is secured. The
 explicit copy-constructor operation is not eligible for copy elision.
 
 The named allocation class determines the complete dynamic class. For example,
-`new Animal((Animal) dog)` deliberately copies and slices to an exact
-`Animal`; `new Dog((Dog) animal)` first checks the view and then creates an
-exact `Dog`. To retain a statically known `Dog` while satisfying
-`shared Animal`, use `new Dog((Dog) dog)` and the ordinary shared upcast.
+`new Animal(copy dog)` deliberately copies and slices to an exact `Animal`;
+`new Dog(copy animal)` first checks the view and then creates an exact `Dog`.
+To retain a statically known `Dog` while satisfying `shared Animal`, use
+`new Dog(copy dog)` and the ordinary shared upcast.
+
+The compiler supplies the target-directed static selection or dynamic check
+when required. An explicit inner cast is optional and expresses an additional
+refinement, as in `new Animal(copy (Dog) source)`. It does not change the fact
+that the allocation has exact dynamic class `Animal`.
 
 Only source forms headed by `new` create a shared allocation. Reads,
 assignments, calls, results, casts, upcasts, and hidden anchors may create,

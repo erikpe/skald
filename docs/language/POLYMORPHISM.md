@@ -203,8 +203,10 @@ The source complete object and dynamic class are preserved. Read-only access
 cannot become mutable. Without interface inheritance, there is no implicit
 interface-to-interface conversion. There is no implicit downcast, cross-cast,
 `Obj`-to-class/interface conversion, or conversion from an unrelated class.
-Because Skald has no overload sets, conversion ranking is unnecessary: the
-declared parameter target determines the one required conversion.
+Functions, methods, and interface requirements have no overload sets, so their
+declared parameter target determines the one required conversion. The frozen
+ordinary-initializer overload set instead uses the compile-time specificity
+rules in [classes and lifecycle](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-overloads).
 
 Different views may overlap or designate the same complete object. Existing
 non-exclusivity remains: no identity or overlap check is inserted, and effects
@@ -298,13 +300,16 @@ direct fields. The base is part of the same complete-object lifetime and never
 has an independent lexical cleanup registration.
 
 An ordinary derived initializer must place exactly one `super(arguments);` as
-its first statement. Root initializers cannot contain `super`. The call selects
-the direct base's sole ordinary initializer, evaluates arguments left to right,
-and initializes the base before any derived-field initialization. After normal
-completion, inherited members operate on the live base while the enclosing
-derived `self` remains incomplete until all direct fields are initialized.
-Missing, duplicate, or later `super` calls are invalid. There is no implicit
-zero-argument base call.
+its first statement. Root initializers cannot contain `super`. Under the
+frozen constructor-overload extension, the call selects the unique applicable,
+most-specific ordinary initializer from the direct base's overload set using
+static argument types. The current compiler has only one candidate. In either
+case, arguments evaluate left to right and the base is initialized before any
+derived-field initialization. After normal completion, inherited members
+operate on the live base while the enclosing derived `self` remains incomplete
+until all direct fields are initialized. Missing, duplicate, later, unmatched,
+or ambiguous `super` calls are invalid. There is no implicit zero-argument base
+call.
 
 Because `super(...)` is first, its arguments may use initializer parameters and
 other ordinary expressions but cannot read or alias any part of incomplete

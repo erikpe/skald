@@ -242,11 +242,12 @@ view homes end only after the copy completes, and produced source temporaries
 then follow the ordinary reverse full-expression cleanup plan. No additional
 backend copy path or runtime service exists for cast sources.
 
-The later `new T((T) source)` copy-allocation path is a consumer of that
-verified checked place, not a cast-side allocation. It must take its failure
-edge before calling the allocator for its destination, keep the source anchor
-live through selected exact-`T` copy construction, and write metadata for `T`
-rather than copying the source's dynamic-class metadata.
+The later `new T(copy source)` copy-allocation path uses the same verified
+checked-place relation through a target-directed copy context, not a cast-side
+allocation. It must take its failure edge before calling the allocator for its
+destination, keep the source anchor live through selected exact-`T` copy
+construction, and write metadata for `T` rather than copying the source's
+dynamic-class metadata.
 
 ## Instruction selection and cleanup realization
 

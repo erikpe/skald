@@ -1,7 +1,10 @@
 # Skald Classes and Lifecycle
 
-Status: authoritative for implemented inline class behavior, including
-executable base-subobject lifecycle composition.
+Status: authoritative for implemented inline class behavior and the frozen,
+not-yet-implemented constructor-overload and explicit-copy source model.
+Executable base-subobject lifecycle composition is implemented. The
+[status matrix](STATUS.md) distinguishes the current compiler boundary from
+the frozen constructor extension.
 
 The [status matrix](STATUS.md) defines feature maturity, the
 [grammar](GRAMMAR.md#class-declarations) defines accepted source shape,
@@ -29,12 +32,13 @@ may name a class declared later in the same source file.
 
 ## Members and namespaces
 
-The implemented class member categories are:
+The implemented class model and frozen constructor extension use these member
+categories:
 
 | Category | Contract |
 |---|---|
 | Field | Named inline storage with a primitive or exact-class type. |
-| Ordinary initializer | The one required operation that establishes a new complete object. |
+| Ordinary initializer | One member of the required overload set that establishes a new complete object. |
 | Method | An instance operation with a read-only or mutable receiver; polymorphism defines direct and virtual selection. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
@@ -46,16 +50,24 @@ have the same name, and methods cannot be overloaded. The same member name may
 be declared independently by unrelated classes.
 
 Lifecycle declarations occupy dedicated class-owned slots rather than the
-ordinary member namespace. `init`, `assign`, and `destroy` are contextual in
-those declaration shapes and remain valid ordinary field, method, parameter,
-local, and top-level function names elsewhere.
+ordinary member namespace. `init`, `copy`, `assign`, and `destroy` are
+contextual in their declaration or construction-marker shapes and remain
+valid ordinary field, method, parameter, local, and top-level function names
+elsewhere.
 
-Every class has exactly one explicit ordinary initializer, including an empty
-class. An initializer with exactly one read-only alias parameter of the
-enclosing class is classified as the separate copy-constructor slot; it does
-not satisfy the ordinary-initializer requirement. Any other valid `init`
-signature is ordinary, and a second ordinary initializer is rejected rather
-than forming an overload set.
+Every class has one or more explicit ordinary `init` declarations, including
+an empty class. Those declarations form one class-owned overload set. Copy
+construction instead occupies the separate `copy` lifecycle slot; an
+`init(ref source: T)` declaration is an ordinary initializer rather than a
+copy constructor in the frozen model.
+
+The current compiler is transitional: it accepts exactly one ordinary
+initializer and classifies `init(ref source: T)` as the copy-constructor slot.
+The
+[constructor-overload and explicit-copy roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
+will replace that legacy classification before shared ownership is
+implemented. The legacy spelling is current compiler behavior, not part of
+the frozen source contract.
 
 All executable exact-class fields and methods are accessible wherever the
 receiver is available. Static members and access modifiers are not
@@ -159,12 +171,13 @@ conditionals, call statements, explicit returns, or assignment through
 another root or a deeper destination. Grouping around `self` does not change
 the direct destination.
 
-The base call selects the direct base's ordinary initializer by stable
-identity. Arguments evaluate left to right and may use initializer parameters
-and ordinary expressions, but cannot read or alias incomplete `self`. The base
-becomes live only after a valid call; direct derived fields cannot be
-initialized first. Argument temporaries remain explicit call arguments and
-end at the `super(...)` statement boundary.
+The base call selects one applicable ordinary initializer from the direct
+base's overload set and records its stable identity. Arguments evaluate left
+to right and may use initializer parameters and ordinary expressions, but
+cannot read or alias incomplete `self`. The base becomes live only after a
+valid call; direct derived fields cannot be initialized first. Argument
+temporaries remain explicit call arguments and end at the `super(...)`
+statement boundary.
 
 Every direct field must be initialized exactly once. Fields may be initialized
 in any source order. A field becomes initialized only after its complete,
@@ -219,12 +232,64 @@ used as a complete method receiver, alias source, copy source, or ordinary
 value. The complete object becomes live only after every direct field has been
 initialized and the ordinary initializer returns normally.
 
+## Ordinary initializer overloads
+
+`Class(arguments)` selects one ordinary initializer from the named class.
+`new Class(arguments)` uses the same overload selection when shared allocation
+is implemented; `new` changes destination storage and ownership, not which
+ordinary initializer is applicable.
+
+An ordinary initializer signature is its ordered parameter types and binding
+modes. Parameter names do not participate. Two declarations with the same
+arity and ordered parameter types are invalid when their signatures are
+identical or differ only by binding mode. In particular, a class cannot use
+`init(value: Dog)` and `init(ref value: Dog)` as separate overloads. This
+prevents overload selection from silently choosing between copying and
+borrowing the same declared type.
+
+A candidate is applicable when its arity matches and every argument can bind
+to the corresponding parameter under the ordinary call rules. Constructor
+overloading introduces no additional numeric conversion, object conversion,
+runtime downcast, or ownership conversion. Among applicable candidates, the
+compiler selects the unique most-specific ordered parameter-type sequence:
+one candidate is more specific than another when every parameter type is the
+same as or a subtype of the corresponding type and at least one is a strict
+subtype. Primitive types are comparable only when exact. Binding mode is never
+a specificity tiebreaker.
+
+No applicable candidate is a compile-time error. More than one applicable
+candidate without a unique most-specific candidate is ambiguous and is also a
+compile-time error. Diagnostics identify the supplied static argument types
+and competing declared signatures. Selection depends only on static source
+types and access; a source's runtime dynamic class never selects an overload.
+An explicit checked cast may refine a source before ordinary overload
+selection.
+
+For example:
+
+```ska
+class Kennel {
+    init(ref animal: Animal) {}
+    init(ref dog: Dog) {}
+}
+```
+
+An exact `Dog` place selects the `Dog` overload. A forwarded `ref Animal`
+selects the `Animal` overload even when its complete runtime object is a
+`Dog`; `Kennel((Dog) animal)` performs the explicit checked cast before
+selecting the `Dog` overload.
+
+Constructor delegation between ordinary initializers is not part of this
+profile. Every derived ordinary initializer still begins with exactly one
+`super(arguments);`, and that call independently selects one overload from
+the direct base.
+
 ## Fresh construction
 
-`Class(arguments)` selects that class's ordinary initializer. The arguments
-must match its ordered parameters exactly. Destination storage is selected
-before argument evaluation, arguments are evaluated from left to right, and
-the initializer begins only after every argument is ready. The destination
+After overload selection, the arguments must satisfy the selected
+initializer's ordered parameters. Destination storage is selected before
+argument evaluation, arguments are evaluated from left to right, and the
+initializer begins only after every argument is ready. The destination
 becomes live only on normal initializer completion.
 
 A fresh object may directly initialize an exact-class local or a direct class
@@ -245,14 +310,17 @@ members have an implicit `unit` result and are not ordinary callable methods.
 
 | Operation | Declaration | Receiver state | Body contract |
 |---|---|---|---|
-| Copy construction | `init(ref source: T) { ... }` inside `T` | Mutable, incomplete `self` | Straight-line initialization of every direct field exactly once. |
+| Copy construction | `copy(ref source: T) { ... }` inside `T` | Mutable, incomplete `self` | Straight-line initialization of every direct field exactly once. |
 | Copy assignment | `assign(ref source: T) { ... }` inside `T` | Mutable, live `self` | General mutable `unit`-method statements; may update any supported subset of fields. |
 | Destruction | `destroy { ... }` | Mutable, live `self` | General mutable `unit`-method statements; `return;` and fallthrough complete the body. |
 
 The source parameter name is arbitrary, but its read-only binding mode and
-exact enclosing class are required. These declarations take no modifiers,
-explicit result, semicolon, or additional parameters. A malformed declaration
-does not become an overload or a different lifecycle operation.
+exact enclosing class are required for both `copy` and `assign`. Those
+declarations take no modifiers, explicit result, semicolon, or additional
+parameters. A malformed declaration does not become an overload or a
+different lifecycle operation. In particular, malformed `copy` never falls
+back to an ordinary initializer, while `init(ref source: T)` remains an
+ordinary initializer.
 
 A copy-constructor body follows the ordinary initializer's definite-field
 rules. A primitive field is initialized from an exact primitive expression. A
@@ -332,6 +400,41 @@ cleanup.
 Fresh and returned sources may instead require the temporary or direct-result
 rules below. Skald has no moves: producing one object does not implicitly end
 another object's lifetime or transfer its cleanup registration.
+
+Implicit owning contexts continue to select copy construction where this
+document already requires it:
+
+```ska
+var copy: T = source;
+```
+
+The explicit construction form is:
+
+```ska
+var copy: T = T(copy source);
+```
+
+`copy` in this position selects the copy-constructor capability directly. It
+is not an ordinary initializer argument and takes exactly one source
+expression. Conversely, `T(source)` participates only in ordinary initializer
+overload resolution and never falls back to copy construction when no
+ordinary initializer matches.
+
+The target `T` makes `T(copy source)` a target-directed checked-copy context.
+The compiler statically selects an exact or ancestor `T` place when guaranteed,
+performs the existing object-view runtime check when a forwarded
+class/interface/`Obj` source can dynamically supply `T`, and rejects a
+statically impossible source. An exact inline base value cannot dynamically
+recover a derived object that slicing already discarded. A successful
+ancestor selection may deliberately slice into the exact `T` destination.
+The source is evaluated once, remains live through the selected copy
+constructor, and is released or cleaned only after the destination is live.
+
+An explicit place cast inside the copy source remains meaningful as an
+additional refinement, for example `Animal(copy (Dog) source)`. The inner cast
+selects and checks the `Dog` view; the outer construction still copies an exact
+`Animal`. Explicit copy construction is not eligible for copy elision and
+does not preserve an arbitrary runtime dynamic class.
 
 ## Assignment to a live object
 
@@ -491,23 +594,25 @@ deallocation or any particular storage operation.
 
 The implemented executable class model does not yet include shared or
 heap-backed objects, `new`, nullable object references, static members, access
-modifiers, `final`, abstract members, overloads, reflection, or user-defined
-conversions. Direct-base syntax, hierarchy validation, inherited selection and
-lifecycle, class/interface/`Obj` alias views, slicing, virtual dispatch, and
-interface dispatch, type tests, and checked object casts execute on x86-64.
-Their maturity is recorded in the [status matrix](STATUS.md), and the
+modifiers, `final`, abstract members, ordinary initializer overloads, the
+distinct `copy` declaration/construction marker, method overloads, reflection,
+or user-defined conversions. Direct-base syntax, hierarchy validation,
+inherited selection and lifecycle, class/interface/`Obj` alias views, slicing,
+virtual dispatch, interface dispatch, type tests, and checked object casts
+execute on x86-64. Their maturity is recorded in the
+[status matrix](STATUS.md), and the
 [polymorphism profile](POLYMORPHISM.md) owns their language contract.
 
 Shared fields, heap construction, shared copying and assignment, and dynamic
 last-owner destruction now have a frozen but unimplemented extension in
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). That extension
 preserves the lifecycle order above. Its explicit
-`new T((T) source)` copy-allocation form invokes this document's selected
-exact-`T` copy constructor once from a checked `T` place and is not eligible
-for copy elision. Shared fields copy in declaration order, secure incoming
-owners before releasing old owners during assignment, and release in reverse
-declaration order during complete-object destruction. Preserving an arbitrary
-source dynamic class through cloning remains deferred.
+`new T(copy source)` copy-allocation form invokes this document's selected
+exact-`T` copy constructor once from a target-directed checked `T` place and
+is not eligible for copy elision. Shared fields copy in declaration order,
+secure incoming owners before releasing old owners during assignment, and
+release in reverse declaration order during complete-object destruction.
+Preserving an arbitrary source dynamic class through cloning remains deferred.
 
 This document specifies source-visible class and initialization behavior. It
 does not prescribe compiler identities, phase data structures, containment

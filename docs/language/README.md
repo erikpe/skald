@@ -42,13 +42,16 @@ receiver is evaluated before its explicit arguments.
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
-| **lifecycle member** | A contextual `init`, `assign`, or `destroy` class member occupying a dedicated semantic slot rather than the ordinary method namespace. |
+| **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. The current compiler has not yet migrated to the frozen `copy` spelling or overloaded `init`. |
 
 ## Values, places, and mutation
 
 `var` declarations create owning local storage. Primitive values are copied as
 primitive payloads. Class initialization, copy construction, assignment, and
 destruction use the selected lifecycle operation for the exact class.
+The frozen constructor model gives ordinary `init` declarations a
+constructor-only overload set and gives copy construction the distinct
+`copy(ref source: T)` declaration and `T(copy source)` selection form.
 
 Value parameters own their incoming value. Current class value parameters are
 copy-constructed by the caller and cleaned by the callee. `ref` and `mut ref`
@@ -104,8 +107,9 @@ makes a result source-observable.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, and evaluation order.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
-  classes, inline containment, receivers, ordinary initialization, and object
-  places, plus copying, assignment, temporaries, and deterministic lifetime.
+  classes, inline containment, receivers, ordinary initializer overloads,
+  explicit copy construction, and object places, plus assignment, temporaries,
+  and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes the

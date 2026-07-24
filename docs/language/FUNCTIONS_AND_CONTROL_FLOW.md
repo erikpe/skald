@@ -17,7 +17,8 @@ first-class values.
 
 The callable rules in this document also apply to instance methods where their
 class-owned receiver rules permit. Initializers, copy assignment, and
-destructors use more specialized body and result contracts owned by
+copy construction and destructors use more specialized body and result
+contracts owned by
 [class and lifecycle semantics](CLASSES_AND_LIFECYCLE.md).
 
 ## Function declarations
@@ -55,6 +56,11 @@ A call supplies exactly one argument per parameter. Value arguments must have
 the exact declared type; alias arguments must designate a compatible place and
 provide the required access. The complete argument list is checked even when
 one argument is invalid, so independent source errors can be reported.
+
+Functions and methods are not overloaded. The frozen ordinary-initializer
+overload set reuses these argument-binding rules, then applies its separate
+compile-time applicability and specificity rules from
+[classes and lifecycle](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-overloads).
 
 A primitive-returning call is an expression of its declared type. A
 `unit`-returning call has no result payload. An exact-class-returning internal
@@ -184,11 +190,11 @@ Postfix calls on a cast result use explicit grouping, for example
 `((Leaf) value).read()`. Cast execution does not reorder receivers or later
 arguments.
 
-The frozen shared copy-allocation form `new T((T) source)` is one such
-consuming context. It evaluates and checks the cast source before allocating
-the copy destination, keeps the source and any anchor live through exact-`T`
-copy construction, and secures the produced owner before full-expression
-cleanup.
+The frozen shared copy-allocation form `new T(copy source)` is one such
+consuming context. It evaluates and target-checks the copy source before
+allocating the destination, keeps the source and any anchor live through
+exact-`T` copy construction, and secures the produced owner before
+full-expression cleanup.
 
 ## Unsupported control flow and callability
 

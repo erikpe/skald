@@ -54,9 +54,9 @@ The frozen, unimplemented
 [shared-ownership design](SHARED_OWNERSHIP.md#unrecoverable-failures) applies
 the same non-returning boundary to allocation failure and `u64` strong-count
 overflow. Neither failure is catchable or guarantees remaining cleanup.
-Its explicit `new T((T) source)` copy-allocation form completes any required
-dynamic cast check before allocating its destination; cast failure therefore
-cannot leave a copy destination awaiting cleanup.
+Its explicit `new T(copy source)` copy-allocation form completes any required
+target-directed dynamic check before allocating its destination; failure
+therefore cannot leave a copy destination awaiting cleanup.
 Strong-count underflow, invalid handles, double finalization, and use after
 release are compiler/runtime defects rather than source-level failures. These
 rules do not change current compiler support or establish a general panic

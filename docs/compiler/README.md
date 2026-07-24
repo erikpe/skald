@@ -154,6 +154,12 @@ implemented. The complete source-visible matrix is defined in
 [Object Casts](../language/OBJECT_CASTS.md); compiler phases must consume that
 authority rather than infer ownership from cast syntax.
 
+The frozen constructor extension moves ordinary initializer overload
+selection into type checking and gives copy construction a distinct lifecycle
+identity and source mode. Its phase boundary is defined in
+[Compiler Phases and Intermediate Representations](PHASES_AND_IR.md), and its
+implementation roadmap blocks shared ownership.
+
 Feature maturity and implementation order belong in the
 [language status matrix](../language/STATUS.md) and
 [active roadmap index](../roadmaps/README.md), not in compiler architecture.

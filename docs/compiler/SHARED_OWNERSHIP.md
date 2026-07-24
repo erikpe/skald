@@ -11,6 +11,10 @@ Object cast legality and consuming contexts are owned by
 The current compiler IR has no shared types or operations, and the current
 [runtime ABI](RUNTIME_ABI.md) remains version 4 with no allocation functions.
 Those facts change only during a separately approved implementation roadmap.
+The planned shared work is blocked on the
+[constructor-semantics roadmap](../roadmaps/CONSTRUCTOR_SEMANTICS_ROADMAP.md),
+which supplies overload-selected ordinary initialization, the distinct copy
+constructor identity, and reusable ordinary-versus-copy construction modes.
 
 ## Responsibility split
 
@@ -33,16 +37,18 @@ dispatch, roots, tracing, safepoints, cycle detection, or borrow analysis.
 Resolution assigns the existing class, interface, field, callable, and
 polymorphic identities. `shared T` carries a resolved static target, and
 every `new C(...)` carries the exact concrete `ClassId` and either ordinary-
-initializer or explicit copy-allocation mode; lower phases never recover these
-facts from a source name or argument shape.
+initializer-overload or explicit copy-allocation mode; lower phases never
+recover these facts from a source name or argument shape. Type checking
+selects the exact ordinary `InitializerId` using the same overload engine as
+inline `C(arguments)`.
 
 Typed HIR records:
 
 - shared types and compatible class/interface/`Obj` views;
 - the exact class and construction mode selected by every `new`;
-- for `new T((T) source)`, the matching explicit cast, selected exact-class
-  copy constructor, source provenance, and any full-expression anchor
-  requirement;
+- for `new T(copy source)`, the selected exact-class copy constructor,
+  target-directed checked source, source provenance, and any full-expression
+  anchor requirement;
 - whether each owner use copies a named place or adopts a produced owner;
 - shared local, parameter, result, field, and temporary lifetimes;
 - pointee places with their static target, access, complete-object provenance,
@@ -61,9 +67,10 @@ represent, by semantic operation rather than necessarily by these Rust names:
 
 - lower ordinary `new C(arguments)` to allocation storage for exact `C` and
   invocation of its selected ordinary initializer;
-- lower `new T((T) source)` as source evaluation and anchoring, checked-place
-  selection, allocation storage for exact `T`, invocation of its selected copy
-  constructor, and publication of the produced owner, in that order;
+- lower `new T(copy source)` as source evaluation and anchoring,
+  target-directed checked-place selection, allocation storage for exact `T`,
+  invocation of its selected copy constructor, and publication of the
+  produced owner, in that order;
 - create a strong owner by copy, transfer a produced owner by adopt, and end an
   owner by release;
 - perform shared assignment in secure-incoming, release-old, store order;
@@ -103,10 +110,10 @@ The MIR verifier must reject a program unless all of the following hold:
 - each ordinary allocation names a concrete constructible class and its
   selected ordinary initializer;
 - each copy allocation originates from the exact source shape
-  `new T((T) source)`, names concrete copy-constructible `T`, performs any
-  dynamic check before allocating its destination, invokes the selected `T`
-  copy constructor exactly once, and retains its checked source and anchor
-  through completion;
+  `new T(copy source)`, names concrete copy-constructible `T`, performs any
+  target-directed dynamic check before allocating its destination, invokes
+  the selected `T` copy constructor exactly once, and retains its checked
+  source and anchor through completion;
 - every allocation originates from source `new`; no cast, conversion, inline
   copy, owner copy, anchor, call, result, or assignment independently creates
   an allocation operation;
@@ -238,8 +245,8 @@ once and establishes any required owner before the dynamic check. An existing
 local or value parameter already supplies a stable owner; a replaceable place
 is copied; and a produced owner remains adopted by its temporary. The success
 edge supplies a non-owning view to its consuming receiver, alias argument, or
-inline copy. When the consumer is `new T((T) source)`, that same view and owner
-remain live while exact `T` storage is allocated and its selected copy
+inline copy. When the consumer is `new T(copy source)`, that same view and
+owner remain live while exact `T` storage is allocated and its selected copy
 constructor runs; the produced owner is secured before the view and anchor
 end. A cast from an existing alias uses its verified outer lifetime and
 creates no shared owner.
@@ -284,8 +291,8 @@ together.
 
 The runtime owns neither initializer nor copy-constructor selection nor
 partially constructed object state. For copy allocation, the compiler
-completes the source cast before calling `ska_rt_alloc` for the destination,
-then constructs the exact class named by `new`.
+completes target-directed source selection before calling `ska_rt_alloc` for
+the destination, then constructs the exact class named by `new`.
 
 Dynamic cloning is outside this contract. The compiler does not derive a new
 allocation class from source metadata or synthesize a clone path. A future

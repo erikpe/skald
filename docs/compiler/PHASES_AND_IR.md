@@ -105,6 +105,21 @@ Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,
 copy capability, storage, evaluation lowering, or ABI placement.
 
+The frozen constructor extension deliberately moves ordinary initializer
+selection below name resolution. Resolution will retain the construction class
+identity, source-ordered arguments, and candidate initializer identities.
+Type checking will determine applicability from the existing argument-binding
+relation, reject mode-only overload pairs, select the unique most-specific
+static parameter-type sequence, and record exactly one `InitializerId`.
+`super(arguments)` follows the same boundary for the direct base. The current
+resolver instead selects its class's one ordinary initializer before checking
+arguments; that singular path is transitional.
+
+The distinct `copy(ref source: T)` declaration is a separate lifecycle
+capability rather than an initializer candidate. `T(copy source)` selects that
+capability explicitly and records a target-directed checked exact-`T` source.
+Ordinary `T(arguments)` never falls back to copy construction.
+
 ## Typed HIR
 
 Type checking validates the whole resolved program and constructs HIR only
@@ -151,9 +166,9 @@ alias arguments, field
 access and mutation, and exact-class owning copy construction, assignment,
 value arguments, and results. An owning HIR source wraps the checked view and
 may add the ordinary exact-ancestor slice path; it does not introduce another
-copy operation. The later shared extension will consume an
-exact-class checked place in `new T((T) source)` while separately recording
-allocation and selected copy construction; allocation is not an effect of the
+copy operation. The later shared extension will consume a target-directed
+checked exact-class source in `new T(copy source)` while separately recording
+allocation and selected copy construction; allocation is not an effect of a
 cast node.
 
 HIR preserves structured source control flow and source spans useful for
@@ -229,8 +244,8 @@ transient values remain block-local. The verifier checks target relation,
 access, provenance, single definition, carrier liveness, failure termination,
 and consumer compatibility. Shared-owner casts will add explicit copy/adopt
 ownership operations but no allocation operation. Future copy allocation
-instead composes that checked-place result with an explicit source `new`,
-exact-class allocation, and selected copy-constructor operation after the
+instead composes a target-directed checked source with explicit source `new`,
+exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.
 
 ## Verification and passes

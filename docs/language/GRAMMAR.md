@@ -64,6 +64,11 @@ They remain available as field names, method names, parameter names, local
 names, and top-level function names. For example, `destroy: i64;` is a field
 and `fn destroy() -> unit {}` is a method.
 
+The frozen constructor extension additionally makes `copy` contextual in a
+direct class-member declaration and immediately after the opening parenthesis
+of a class construction. The current parser does not yet accept either shape;
+`copy` remains an ordinary identifier everywhere in the implemented grammar.
+
 `extends` is contextually recognized only after a class name. `super` followed
 by a call argument list is contextually recognized as a dedicated statement;
 resolution restricts it to the first statement of a derived ordinary
@@ -182,6 +187,29 @@ initializer-body restrictions, receiver access, or member type legality. It
 only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
 name.
+
+### Frozen constructor syntax transition
+
+The planned constructor model extends the class grammar with:
+
+```text
+copy-constructor-declaration = "copy" "(" "ref" identifier
+                               ":" named-type ")" block
+copy-construction-arguments  = "(" "copy" expression ")"
+```
+
+Each class will require one or more `initializer-declaration` members, which
+form an overload set. A `copy-constructor-declaration` occupies one separate
+lifecycle slot. `Class(copy source)` uses
+`copy-construction-arguments`; `Class(arguments)` retains the ordinary call
+argument grammar and never falls back to copy construction. The same
+distinction will apply to future `new Class(copy source)` and
+`new Class(arguments)`.
+
+These productions are a frozen future source contract, not syntax accepted by
+the current compiler. Until the prerequisite constructor roadmap lands, the
+compiler accepts one ordinary `init` and semantically classifies the
+single-`ref` exact-class `init` shape as its legacy copy constructor.
 
 `interface` and `implements` are contextual words. Interface bodies contain
 signatures only: fields, lifecycle declarations, method bodies, inheritance,
@@ -336,11 +364,10 @@ member rules, containment, receivers, initialization, and object places.
 access, forwarding, overlap, and lifetime.
 [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes future
 `shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
-`new T((T) source)` source forms and semantics. In the copy form, the sole
-initializer expression is an explicit checked place cast to the same concrete
-class named by `new`; grouping around that cast does not change the form.
-These forms remain outside this implemented grammar until compiler support is
-added.
+`new T(copy source)` source forms and semantics. The copy marker selects the
+named class's copy constructor and target-directed checked source; it is not
+an ordinary initializer argument. These forms remain outside this implemented
+grammar until compiler support is added.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus

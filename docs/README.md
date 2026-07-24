@@ -19,8 +19,9 @@ Use the authority closest to the behavior:
   [types and values](language/TYPES_AND_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
-- exact classes, inline containment, receivers, initialization, and object
-  places belong in [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
+- exact classes, inline containment, receivers, ordinary initializer
+  overloading, explicit copy construction, and object places belong in
+  [classes and lifecycle](language/CLASSES_AND_LIFECYCLE.md);
 - implemented call-scoped alias access and lifetime belong in
   [aliases and ownership](language/ALIASES_AND_OWNERSHIP.md);
 - frozen non-null shared values, heap allocation, strong ownership,
@@ -31,7 +32,7 @@ Use the authority closest to the behavior:
   type tests, and checked object casts belong in
   [polymorphism](language/POLYMORPHISM.md);
 - C-style object casts, the complete inline/alias/shared conversion matrix,
-  cast failure, and the checked-place copy-allocation source belong in
+  cast failure, and target-directed checked copy sources belong in
   [object casts](language/OBJECT_CASTS.md);
 - the current compilation unit, top-level namespace, entry point, external
   declarations, and future module boundary belong in
