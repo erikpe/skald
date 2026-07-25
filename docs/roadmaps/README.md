@@ -6,7 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## Planned
 
-No implementation roadmaps are currently active.
+- [Explicit Optional Values](OPTIONAL_VALUES_ROADMAP.md) — **planned**. Adds
+  inline `T?`, optional shared owners spelled `shared? T`, explicit `none`,
+  non-failing presence tests, checked postfix unwrap, conditional lifecycle,
+  and dynamically guarded inline payload views while preserving every
+  non-optional validity guarantee. OP0, freezing the focused language and
+  compiler contracts in living documentation, is next. It depends on the
+  completed inline-object, alias, shared-ownership, polymorphism, object-cast,
+  and constructor profiles.
 
 ## Implementation baseline
 
