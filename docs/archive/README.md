@@ -53,3 +53,7 @@ Resolved compiler-maintainability follow-ups:
 Resolved object-cast follow-ups:
 
 - [object-cast discoveries](OBJECT_CASTS_DISCOVERIES.md)
+
+Resolved shared-ownership follow-ups:
+
+- [shared-ownership maintainability discoveries](SHARED_OWNERSHIP_DISCOVERIES.md)
