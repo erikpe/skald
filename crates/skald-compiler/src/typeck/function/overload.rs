@@ -324,6 +324,11 @@ impl CallableChecker<'_, '_> {
                         || argument.ty == Type::OptionalPrimitive(payload)
                         || argument.ty == payload.payload_type()
                 }
+                Type::OptionalClass(class) => {
+                    argument.absent
+                        || argument.ty == Type::OptionalClass(class)
+                        || argument.ty == Type::Class(class)
+                }
                 Type::Class(target) => {
                     let Type::Class(actual) = argument.ty else {
                         return false;
@@ -405,6 +410,11 @@ impl CallableChecker<'_, '_> {
                         (candidate, other),
                         (candidate, Type::OptionalPrimitive(payload))
                             if candidate == payload.payload_type()
+                    )
+                    || matches!(
+                        (candidate, other),
+                        (Type::Class(candidate), Type::OptionalClass(payload))
+                            if candidate == payload
                     );
                 strict |= compatible && candidate != other;
                 compatible

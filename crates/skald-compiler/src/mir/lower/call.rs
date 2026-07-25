@@ -143,7 +143,7 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_optional_call(
         &mut self,
         expression: &HirExpression,
-        destination: StorageId,
+        destination: MirPlace,
     ) {
         let (target, receiver, arguments) = match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
@@ -193,7 +193,7 @@ impl BodyLowerer<'_> {
             arguments,
             result: None,
             shared_result: None,
-            destination: Some(MirPlace::base(destination)),
+            destination: Some(destination),
             span: expression.span,
         }));
     }
@@ -247,6 +247,16 @@ impl BodyLowerer<'_> {
                         source,
                         span: argument.span(),
                     }));
+                    LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
+                }
+                HirCallArgument::ClassOptional(value) => {
+                    let storage = self.new_optional_storage(
+                        MirStorageKind::Argument,
+                        "class-optional-argument",
+                        Type::OptionalClass(value.class),
+                        value.span,
+                    );
+                    self.lower_class_optional_initialize(storage, value);
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
                 }
                 HirCallArgument::Place(place) => {

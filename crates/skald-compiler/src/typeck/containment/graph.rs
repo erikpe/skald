@@ -57,8 +57,13 @@ impl ContainmentGraph {
                 reverse_edges[target.index()].push(class.id.index());
             }
             for field in &class.fields {
-                let ResolvedTypeKind::Class(target) = field.type_syntax.kind else {
-                    continue;
+                let target = match field.type_syntax.kind {
+                    ResolvedTypeKind::Class(target)
+                    | ResolvedTypeKind::Optional {
+                        payload: crate::resolve::ResolvedOptionalPayload::Class(target),
+                        ..
+                    } => target,
+                    _ => continue,
                 };
                 if target.index() >= class_count {
                     continue;

@@ -47,7 +47,7 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn select_construction_operation(
+    pub(super) fn select_construction_operation(
         &mut self,
         operation: MirSelectedCopyOperation<crate::identity::CopyConstructorId>,
         destination: MirPlace,
@@ -117,6 +117,23 @@ impl InstructionSelector<'_, '_> {
                                 &crate::mir::MirOptionalSource::Copy(source),
                             )?;
                         }
+                        MirSynthesizedFieldCopy::OptionalClass {
+                            field,
+                            class,
+                            operation,
+                        } => {
+                            self.select_class_optional_initialize(
+                                &crate::mir::MirClassOptionalInitialize {
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirClassOptionalSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
+                                    class,
+                                    copy_constructor: Some(operation),
+                                    span: self.function.span(),
+                                },
+                            )?;
+                        }
                         MirSynthesizedFieldCopy::Shared { field } => {
                             self.select_shared_field_construction(
                                 &destination.clone().project_field(field),
@@ -137,7 +154,7 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    fn select_assignment_operation(
+    pub(super) fn select_assignment_operation(
         &mut self,
         operation: MirSelectedCopyOperation<crate::identity::CopyAssignmentId>,
         destination: MirPlace,
@@ -205,6 +222,40 @@ impl InstructionSelector<'_, '_> {
                             self.select_optional_write(
                                 &destination,
                                 &crate::mir::MirOptionalSource::Copy(source),
+                            )?;
+                        }
+                        MirSynthesizedFieldCopy::OptionalClass {
+                            field,
+                            class,
+                            operation,
+                        } => {
+                            let constructor = match &self
+                                .program
+                                .class(class)
+                                .expect("verified optional payload class must exist")
+                                .copy_constructor
+                            {
+                                crate::mir::MirCopyCapability::User(copy) => {
+                                    crate::mir::MirSelectedCopyOperation::User(copy.operation)
+                                }
+                                crate::mir::MirCopyCapability::Synthesized(copy) => {
+                                    crate::mir::MirSelectedCopyOperation::Synthesized(copy.class)
+                                }
+                                crate::mir::MirCopyCapability::Unavailable => unreachable!(
+                                    "optional assignment capability requires payload construction"
+                                ),
+                            };
+                            self.select_class_optional_assign(
+                                &crate::mir::MirClassOptionalAssign {
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirClassOptionalSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
+                                    class,
+                                    copy_constructor: Some(constructor),
+                                    copy_assignment: Some(operation),
+                                    span: self.function.span(),
+                                },
                             )?;
                         }
                         MirSynthesizedFieldCopy::Shared { field } => {
@@ -288,6 +339,7 @@ impl InstructionSelector<'_, '_> {
             | MirType::Obj
             | MirType::Shared(_)
             | MirType::OptionalPrimitive(_)
+            | MirType::OptionalClass(_)
             | MirType::Unit => {
                 unreachable!("verified primitive copy step must have a payload primitive type")
             }

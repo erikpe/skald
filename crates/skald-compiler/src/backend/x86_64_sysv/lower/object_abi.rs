@@ -61,6 +61,7 @@ impl InstructionSelector<'_, '_> {
                     class
                 }
                 crate::mir::MirPlaceProjection::Base(_) => unreachable!(),
+                crate::mir::MirPlaceProjection::OptionalPayload(_) => unreachable!(),
             };
             return self.select_object_origin(
                 ObjectOriginOperand::Exact {

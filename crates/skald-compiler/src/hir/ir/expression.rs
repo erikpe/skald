@@ -119,6 +119,7 @@ pub enum HirCallArgument {
         source: HirOptionalSource,
         payload: super::HirPrimitiveType,
     },
+    ClassOptional(super::HirClassOptionalInitialize),
     Place(HirObjectPlace),
     View(HirObjectView),
     CheckedView(Box<HirCheckedObjectView>),
@@ -138,6 +139,7 @@ impl HirCallArgument {
         match self {
             Self::Value(expression) => expression.span,
             Self::Optional { source, .. } => source.span(),
+            Self::ClassOptional(value) => value.span,
             Self::Place(place) => place.span(),
             Self::View(view) => view.span,
             Self::CheckedView(view) => view.span,

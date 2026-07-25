@@ -49,7 +49,8 @@ fn shared_edges_do_not_require_the_pointee_copy_capability() {
     ));
     resolved.classes.entries_mut_for_test()[0].copy_constructor =
         ResolvedCopyOperation::Unavailable;
-    resolved.classes.entries_mut_for_test()[0].copy_assignment = ResolvedCopyOperation::Unavailable;
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
 
     let capabilities = CopyCapabilities::compute(&resolved);
     assert!(matches!(
@@ -62,6 +63,26 @@ fn shared_edges_do_not_require_the_pointee_copy_capability() {
     ));
     assert_eq!(capabilities.constructor_failure(ClassId::new(1)), None);
     assert_eq!(capabilities.assignment_failure(ClassId::new(1)), None);
+}
+
+#[test]
+fn optional_inline_edges_require_the_payload_copy_capability() {
+    let mut resolved = resolve_text(concat!(
+        "class Child { init() {} }\n",
+        "class Parent { child: Child?; init() { self.child = none; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    resolved.classes.entries_mut_for_test()[0].copy_assignment = ResolvedCopyOperation::Unavailable;
+
+    let capabilities = CopyCapabilities::compute(&resolved);
+    assert_eq!(
+        capabilities.assignment(ClassId::new(1)),
+        &HirCopyCapability::Unavailable
+    );
+    assert_eq!(
+        capabilities.assignment_failure(ClassId::new(1)),
+        Some([CopyPathElement::Field(FieldId::new(ClassId::new(1), 0))].as_slice())
+    );
 }
 
 #[test]

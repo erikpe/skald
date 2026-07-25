@@ -52,6 +52,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 | HirStatement::SharedFieldWrite(_)
                 | HirStatement::SharedAssignment(_)
                 | HirStatement::OptionalAssignment(_) => {}
+                HirStatement::ClassOptionalAssignment(_) => {}
             }
         }
     }

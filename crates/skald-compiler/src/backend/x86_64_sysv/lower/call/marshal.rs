@@ -28,7 +28,7 @@ pub(super) fn spill_parameters(
         function.storage(storage).is_some_and(|storage| {
             matches!(
                 storage.ty,
-                MirType::Class(_) | MirType::OptionalPrimitive(_)
+                MirType::Class(_) | MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
             )
         })
     });
@@ -332,7 +332,7 @@ impl InstructionSelector<'_, '_> {
             (MirArgument::OwnedPlace(place), MirParameterMode::Value)
                 if matches!(
                     parameter.ty,
-                    MirType::Class(_) | MirType::OptionalPrimitive(_)
+                    MirType::Class(_) | MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
                 ) =>
             {
                 self.select_place_address(place, locations.value())?;

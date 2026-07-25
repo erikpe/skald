@@ -9,9 +9,10 @@ reference-counting realization, and executable shared-field layout are owned by 
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
 the current target profile below.
 The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
-optional layout, ABI, guard, and trap realization. Verified primitive optional
-local, field, parameter, result, and temporary MIR is legal backend input;
-class payloads, checked views, and optional shared owners remain planned.
+optional layout, ABI, guard, and trap realization. Verified primitive and
+exact-class optional local, field, parameter, result, and temporary MIR is
+legal backend input; checked class payload views and optional shared owners
+remain planned.
 
 ## Backend interface and target registry
 
@@ -71,15 +72,16 @@ inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
 input.
 
-Primitive optional owning values follow the frozen layout in
+Inline optional owning values follow the frozen layout in
 [Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): an
 eight-byte state word precedes the payload at its required alignment. The
 backend writes a present payload before publishing state, branches before
 reading a copied or unwrapped payload, and lowers verified absent-access
-failure to `ud2`. Fields use that layout recursively. Internal primitive
-optional parameters/results use the documented pointer aggregate convention;
-`shared? T`, class payloads, and guarded views retain their planned target
-rules.
+failure to `ud2`. Exact-class payloads use the same state prefix with aligned
+reserved class bytes and conditional lifecycle calls. Fields use that layout
+recursively. Internal inline optional parameters/results use the documented
+pointer aggregate convention; `shared? T` and guarded views retain their
+planned target rules.
 
 ## Data layout
 

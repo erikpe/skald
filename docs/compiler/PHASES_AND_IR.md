@@ -9,9 +9,9 @@ cross-phase invariants are specified separately in the
 The optional-value phase and IR additions are specified in the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Optional tokens,
 source-shaped AST nodes, and flat resolved identities are implemented;
-primitive optional owning locals, fields, internal parameters/results, and
-temporaries additionally have typed HIR, verified MIR, and executable backend
-lowering.
+primitive and exact-class optional owning locals, fields, internal
+parameters/results, and temporaries additionally have typed HIR, verified MIR,
+conditional lifecycle operations, and executable backend lowering.
 
 ## Pipeline contract
 

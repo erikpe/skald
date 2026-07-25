@@ -1,8 +1,11 @@
 //! Primitive optional storage operations.
 
-use crate::source::Span;
+use crate::{
+    identity::{ClassId, CopyAssignmentId, CopyConstructorId},
+    source::Span,
+};
 
-use super::{MirPlace, ValueId};
+use super::{MirPlace, MirSelectedCopyOperation, ValueId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPrimitiveType {
@@ -56,4 +59,44 @@ pub struct MirOptionalAssign {
 pub enum MirPresenceTestKind {
     Some,
     None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirClassOptionalSource {
+    Absent,
+    Present(MirPlace),
+    Copy(MirPlace),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirClassOptionalInitialize {
+    pub destination: MirPlace,
+    pub source: MirClassOptionalSource,
+    pub class: ClassId,
+    pub copy_constructor: Option<MirSelectedCopyOperation<CopyConstructorId>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirClassOptionalAssign {
+    pub destination: MirPlace,
+    pub source: MirClassOptionalSource,
+    pub class: ClassId,
+    pub copy_constructor: Option<MirSelectedCopyOperation<CopyConstructorId>>,
+    pub copy_assignment: Option<MirSelectedCopyOperation<CopyAssignmentId>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirClassOptionalPublish {
+    pub destination: MirPlace,
+    pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirClassOptionalCleanup {
+    pub destination: MirPlace,
+    pub class: ClassId,
+    pub span: Span,
 }

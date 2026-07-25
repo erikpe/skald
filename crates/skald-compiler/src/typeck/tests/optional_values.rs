@@ -159,16 +159,66 @@ fn optional_signature_matching_is_exact_for_overrides_and_interfaces() {
 
 #[test]
 fn unsupported_optional_positions_still_stop_before_hir() {
-    for source in [
-        "class Item { init() {} } fn main() -> i64 { var item: Item? = none; return 0; }",
+    let output = check_text(
         "class Item { init() {} } fn main() -> i64 { var item: shared? Item = none; return 0; }",
-    ] {
-        let output = check_text(source);
-        assert!(output.hir.is_none());
-        assert_eq!(output.diagnostics.len(), 1, "{:?}", output.diagnostics);
-        assert_eq!(
-            output.diagnostics.iter().next().unwrap().code,
-            OPTIONAL_VALUES_NOT_IMPLEMENTED
-        );
-    }
+    );
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        OPTIONAL_VALUES_NOT_IMPLEMENTED
+    );
+}
+
+#[test]
+fn class_optionals_type_across_owning_positions_without_payload_access() {
+    let output = check_text(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+         class Holder {\n\
+           item: Item?;\n\
+           init(item: Item?) { self.item = item; }\n\
+           mut fn replace(item: Item?) -> Item? { self.item = item; return self.item; }\n\
+         }\n\
+         fn forward(item: Item?) -> Item? { return item; }\n\
+         fn main() -> i64 {\n\
+           var item: Item? = Item(7);\n\
+           var holder: Holder = Holder(item);\n\
+           item = none;\n\
+           item = holder.replace(forward(Item(8)));\n\
+           if (item is some) { return 42; }\n\
+           return 0;\n\
+         }\n",
+    );
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("class optionals must produce HIR"));
+    assert!(dump.contains("ClassOptionalInitialization"));
+    assert!(dump.contains("ClassOptionalAssignment"));
+    assert!(dump.contains("OptionalClass"));
+}
+
+#[test]
+fn class_optional_unwrap_remains_reserved_for_checked_views() {
+    let output = check_text(
+        "class Item { init() {} }\n\
+         fn main() -> i64 { var item: Item? = Item(); item!; return 0; }\n",
+    );
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == OPTIONAL_VALUES_NOT_IMPLEMENTED));
+}
+
+#[test]
+fn class_optional_payloads_participate_in_recursive_containment() {
+    let output = check_text(
+        "class Node { next: Node?; init() { self.next = none; } }\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+    assert!(output.hir.is_none());
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == RECURSIVE_INLINE_CONTAINMENT));
 }

@@ -126,6 +126,126 @@ impl Verifier<'_> {
                 &assignment.source,
                 defined_in_block,
             ),
+            MirInstruction::ClassOptionalInitialize(initialize) => {
+                self.verify_class_optional_places(
+                    function,
+                    block,
+                    &initialize.destination,
+                    &initialize.source,
+                    initialize.class,
+                );
+                let expected = self
+                    .program
+                    .class(initialize.class)
+                    .and_then(|class| class.copy_constructor.selected());
+                let valid = match initialize.source {
+                    crate::mir::MirClassOptionalSource::Absent => {
+                        initialize.copy_constructor.is_none()
+                    }
+                    _ => initialize.copy_constructor == expected && expected.is_some(),
+                };
+                if !valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class optional initialization has an invalid copy operation",
+                    );
+                }
+            }
+            MirInstruction::ClassOptionalAssign(assignment) => {
+                self.verify_class_optional_places(
+                    function,
+                    block,
+                    &assignment.destination,
+                    &assignment.source,
+                    assignment.class,
+                );
+                let declaration = self.program.class(assignment.class);
+                let expected_constructor =
+                    declaration.and_then(|class| class.copy_constructor.selected());
+                let expected_assignment =
+                    declaration.and_then(|class| class.copy_assignment.selected());
+                let valid = match assignment.source {
+                    crate::mir::MirClassOptionalSource::Absent => {
+                        assignment.copy_constructor.is_none()
+                            && assignment.copy_assignment.is_none()
+                    }
+                    _ => {
+                        assignment.copy_constructor == expected_constructor
+                            && assignment.copy_assignment == expected_assignment
+                            && expected_constructor.is_some()
+                            && expected_assignment.is_some()
+                    }
+                };
+                if !valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class optional assignment has invalid payload copy operations",
+                    );
+                }
+            }
+            MirInstruction::ClassOptionalPublish(publish) => {
+                if self
+                    .verify_place(function, block, &publish.destination)
+                    .map(|p| p.ty)
+                    != Some(MirType::OptionalClass(publish.class))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class optional publish destination has the wrong type",
+                    );
+                }
+            }
+            MirInstruction::ClassOptionalCleanup(cleanup) => {
+                if self
+                    .verify_place(function, block, &cleanup.destination)
+                    .map(|p| p.ty)
+                    != Some(MirType::OptionalClass(cleanup.class))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class optional cleanup destination has the wrong type",
+                    );
+                }
+            }
+        }
+    }
+
+    fn verify_class_optional_places(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        destination: &MirPlace,
+        source: &crate::mir::MirClassOptionalSource,
+        class: crate::identity::ClassId,
+    ) {
+        if self
+            .verify_place(function, block, destination)
+            .map(|p| p.ty)
+            != Some(MirType::OptionalClass(class))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "class optional destination has the wrong type",
+            );
+        }
+        let (source, expected) = match source {
+            crate::mir::MirClassOptionalSource::Absent => return,
+            crate::mir::MirClassOptionalSource::Present(place) => (place, MirType::Class(class)),
+            crate::mir::MirClassOptionalSource::Copy(place) => {
+                (place, MirType::OptionalClass(class))
+            }
+        };
+        if self.verify_place(function, block, source).map(|p| p.ty) != Some(expected) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "class optional source has the wrong type",
+            );
         }
     }
 

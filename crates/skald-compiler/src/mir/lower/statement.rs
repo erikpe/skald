@@ -53,6 +53,10 @@ impl BodyLowerer<'_> {
                 self.lower_optional_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
+            HirStatement::ClassOptionalAssignment(assignment) => {
+                self.lower_class_optional_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
         }
     }
 
@@ -113,6 +117,11 @@ impl BodyLowerer<'_> {
                 self.lower_optional_initialize(storage, source, local.span);
                 self.finish_full_expression(local.span);
             }
+            crate::hir::HirLocalInitializer::ClassOptional(value) => {
+                self.lower_class_optional_initialize(storage, value);
+                self.cleanup.register_class_optional(storage, value.class);
+                self.finish_full_expression(local.span);
+            }
         }
     }
 
@@ -132,6 +141,13 @@ impl BodyLowerer<'_> {
                     source,
                     span: statement.span,
                 }));
+                None
+            }
+            Some(crate::hir::HirReturnValue::ClassOptional(value)) => {
+                let destination = self
+                    .return_storage
+                    .expect("class-optional-returning body must have return storage");
+                self.lower_class_optional_initialize(destination, value);
                 None
             }
             Some(crate::hir::HirReturnValue::Object(crate::hir::HirObjectReturn::Copy {

@@ -43,8 +43,10 @@ pub use object::{
     HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 pub use optional::{
-    HirOptionalAssignment, HirOptionalOperand, HirOptionalPlace, HirOptionalSource,
-    HirOptionalStorage, HirOptionalWriteKind, HirPresenceTestKind, HirPrimitiveType,
+    HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
+    HirClassOptionalSource, HirOptionalAssignment, HirOptionalOperand, HirOptionalPlace,
+    HirOptionalSource, HirOptionalStorage, HirOptionalWriteKind, HirPresenceTestKind,
+    HirPrimitiveType,
 };
 pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
@@ -65,6 +67,7 @@ pub enum Type {
     Interface(InterfaceId),
     Shared(HirSharedTarget),
     OptionalPrimitive(HirPrimitiveType),
+    OptionalClass(ClassId),
 }
 
 impl Type {
@@ -85,6 +88,7 @@ impl Type {
                 HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
             }),
             Self::OptionalPrimitive(payload) => Cow::Owned(format!("{}?", payload.name())),
+            Self::OptionalClass(class) => Cow::Owned(format!("class {class}?")),
         }
     }
 
@@ -101,7 +105,8 @@ impl Type {
             | Self::Class(_)
             | Self::Interface(_)
             | Self::Shared(_)
-            | Self::OptionalPrimitive(_) => "a",
+            | Self::OptionalPrimitive(_)
+            | Self::OptionalClass(_) => "a",
         }
     }
 }

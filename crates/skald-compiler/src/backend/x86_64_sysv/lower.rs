@@ -212,6 +212,18 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::OptionalAssign(assignment) => {
                 self.select_optional_assign(assignment)?
             }
+            MirInstruction::ClassOptionalInitialize(initialize) => {
+                self.select_class_optional_initialize(initialize)?
+            }
+            MirInstruction::ClassOptionalAssign(assignment) => {
+                self.select_class_optional_assign(assignment)?
+            }
+            MirInstruction::ClassOptionalPublish(publish) => {
+                self.select_class_optional_publish(publish)?
+            }
+            MirInstruction::ClassOptionalCleanup(cleanup) => {
+                self.select_class_optional_cleanup(cleanup)?
+            }
         }
         Ok(())
     }

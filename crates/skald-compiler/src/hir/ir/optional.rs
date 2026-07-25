@@ -1,8 +1,11 @@
 //! Typed primitive-optional storage operations.
 
-use crate::{identity::BindingId, source::Span};
+use crate::{
+    identity::{BindingId, ClassId, CopyAssignmentId, CopyConstructorId},
+    source::Span,
+};
 
-use super::{HirExpression, HirFieldPlace};
+use super::{HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirPrimitiveType {
@@ -49,6 +52,57 @@ pub enum HirOptionalStorage {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirClassOptionalPlace {
+    pub storage: HirOptionalStorage,
+    pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirClassOptionalSource {
+    Absent {
+        span: Span,
+    },
+    /// An ordinary exact-class source. Produced objects remain explicit so MIR
+    /// can construct directly in a new optional's reserved payload.
+    Present(HirObjectSource),
+    Copy(HirClassOptionalPlace),
+    Produced(Box<HirExpression>),
+}
+
+impl HirClassOptionalSource {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Absent { span } => *span,
+            Self::Present(source) => source.span(),
+            Self::Copy(place) => place.span,
+            Self::Produced(expression) => expression.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirClassOptionalInitialize {
+    pub class: ClassId,
+    pub source: HirClassOptionalSource,
+    /// Required only when a present source must be copied.
+    pub copy_constructor: Option<HirSelectedCopyOperation<CopyConstructorId>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirClassOptionalAssignment {
+    pub destination: HirClassOptionalPlace,
+    pub source: HirClassOptionalSource,
+    /// Present-to-absent transition.
+    pub copy_constructor: Option<HirSelectedCopyOperation<CopyConstructorId>>,
+    /// Present-to-present transition.
+    pub copy_assignment: Option<HirSelectedCopyOperation<CopyAssignmentId>>,
+    pub kind: HirOptionalWriteKind,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirOptionalSource {
     Absent { span: Span },
     Present(HirExpression),
@@ -60,6 +114,8 @@ pub enum HirOptionalSource {
 pub enum HirOptionalOperand {
     Place(HirOptionalPlace),
     Produced(Box<HirExpression>),
+    ClassPlace(HirClassOptionalPlace),
+    ClassProduced(Box<HirExpression>),
 }
 
 impl HirOptionalOperand {
@@ -70,6 +126,9 @@ impl HirOptionalOperand {
                 super::Type::OptionalPrimitive(payload) => payload,
                 _ => panic!("produced optional operand must have optional type"),
             },
+            Self::ClassPlace(_) | Self::ClassProduced(_) => {
+                panic!("class optional payload access is implemented by checked views")
+            }
         }
     }
 }

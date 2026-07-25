@@ -9,6 +9,12 @@ the contracts mean.
 
 Choose the narrowest layer that observes the behavior at its owning boundary.
 
+Optional-value coverage spans type/capability/containment tests, HIR and MIR
+shape and verifier tests, target layout tests, and native lifecycle tests.
+Exact-class optional native tests use side-effect-visible destructors to catch
+extra temporaries, missed conditional cleanup, and incorrect argument/result
+ownership.
+
 | Layer | Location | Use it for |
 |---|---|---|
 | Compiler unit tests | `crates/skald-compiler/src/` beside the owner | Private algorithms, diagnostics, exact phase dumps, MIR verification, target legality, and lowering |

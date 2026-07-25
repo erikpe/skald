@@ -26,6 +26,7 @@ pub enum MirType {
     /// A non-null strong owner carrying one object view of a live allocation.
     Shared(super::shared::MirSharedTarget),
     OptionalPrimitive(super::optional::MirPrimitiveType),
+    OptionalClass(ClassId),
     Unit,
 }
 
@@ -39,6 +40,7 @@ impl MirType {
                 | Self::Shared(_)
                 | Self::Unit
                 | Self::OptionalPrimitive(_)
+                | Self::OptionalClass(_)
         )
     }
 }
@@ -56,6 +58,7 @@ impl fmt::Display for MirType {
             Self::Obj => formatter.write_str("Obj"),
             Self::Shared(target) => write!(formatter, "shared {target}"),
             Self::OptionalPrimitive(payload) => write!(formatter, "{payload}?"),
+            Self::OptionalClass(class) => write!(formatter, "class {class}?"),
             Self::Unit => formatter.write_str("unit"),
         }
     }
@@ -119,6 +122,12 @@ impl MirPlace {
         self.projections.push(MirPlaceProjection::Base(base));
         self
     }
+
+    pub fn project_optional_payload(mut self, class: ClassId) -> Self {
+        self.projections
+            .push(MirPlaceProjection::OptionalPayload(class));
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -155,6 +164,8 @@ pub enum MirPlaceProjection {
     /// Selects the declared direct base of the current class-typed place.
     Base(ClassId),
     Field(FieldId),
+    /// Selects the reserved payload bytes of an inline-class optional.
+    OptionalPayload(ClassId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

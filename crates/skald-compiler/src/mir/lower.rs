@@ -69,6 +69,7 @@ struct LoweredBody {
 enum FullExpressionTemporary {
     Inline(MirCleanup),
     Shared(StorageId),
+    ClassOptional(crate::mir::MirClassOptionalCleanup),
 }
 
 struct BodyLowerer<'hir> {
@@ -118,6 +119,9 @@ impl<'hir> BodyLowerer<'hir> {
                 match parameter.ty {
                     Type::Class(class) => lowerer.cleanup.register_owned(*storage, class),
                     Type::Shared(_) => lowerer.cleanup.register_shared(*storage),
+                    Type::OptionalClass(class) => {
+                        lowerer.cleanup.register_class_optional(*storage, class)
+                    }
                     _ => {}
                 }
             }
@@ -181,6 +185,17 @@ impl<'hir> BodyLowerer<'hir> {
                 name: "optional-return".to_owned(),
                 kind: MirStorageKind::Return,
                 ty: MirType::OptionalPrimitive(optional::lower_primitive_type(payload)),
+                span: self.input.source_body.span,
+            });
+        } else if let Type::OptionalClass(class) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "class-optional-return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: MirType::OptionalClass(class),
                 span: self.input.source_body.span,
             });
         }
@@ -284,5 +299,6 @@ fn lower_type(ty: Type) -> MirType {
         Type::OptionalPrimitive(payload) => {
             MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
         }
+        Type::OptionalClass(class) => MirType::OptionalClass(class),
     }
 }

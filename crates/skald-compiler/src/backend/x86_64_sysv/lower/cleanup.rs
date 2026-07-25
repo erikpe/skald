@@ -13,7 +13,7 @@ impl InstructionSelector<'_, '_> {
         self.select_destruction_plan(cleanup.target, cleanup.destination.clone())
     }
 
-    fn select_destruction_plan(
+    pub(super) fn select_destruction_plan(
         &mut self,
         class: ClassId,
         destination: MirPlace,
@@ -64,6 +64,30 @@ impl InstructionSelector<'_, '_> {
                         &destination.clone().project_field(field),
                         "cleanup_shared_field",
                     )?;
+                }
+                MirDestructionStep::OptionalClassField(field) => {
+                    let field_class = match self
+                        .program
+                        .field(field)
+                        .ok_or_else(|| {
+                            self.cleanup_error(format!(
+                                "destruction plan for {class} names unknown field {field}"
+                            ))
+                        })?
+                        .ty
+                    {
+                        MirType::OptionalClass(field_class) => field_class,
+                        _ => {
+                            return Err(self.cleanup_error(format!(
+                                "destruction plan for {class} contains non-optional-class field {field}"
+                            )))
+                        }
+                    };
+                    self.select_class_optional_cleanup(&crate::mir::MirClassOptionalCleanup {
+                        destination: destination.clone().project_field(field),
+                        class: field_class,
+                        span: self.function.span(),
+                    })?;
                 }
             }
         }

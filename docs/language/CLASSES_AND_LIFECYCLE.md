@@ -590,11 +590,12 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model includes primitive optional fields in
-ordinary initialization and synthesized copy construction/assignment. They
-must be initialized exactly once, may hold `none`, and require no destruction
-step. It does not yet include optional class payloads or optional shared
-owners, static members, access modifiers, `final`, abstract members,
+The implemented executable class model includes primitive and exact-class
+optional fields in ordinary initialization and synthesized copy
+construction/assignment. They must be initialized exactly once and may hold
+`none`; a present exact-class payload is destroyed conditionally in reverse
+field order. It does not yet include checked optional-class payload access or
+optional shared owners, static members, access modifiers, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base
@@ -604,7 +605,8 @@ construction execute.
 The frozen [optional-values contract](OPTIONAL_VALUES.md) uses explicit `T?`
 rather than nullable plain class values. Primitive optional fields use inline
 state plus payload storage and participate in the class lifecycle described
-above. Exact-class `T?` still reserves inline payload storage, so it does not
+above. Exact-class `T?` reserves inline payload storage and applies the existing
+payload copy/assignment/destruction operations conditionally, so it does not
 make recursive inline containment finite; `shared? T` remains the planned
 finite optional-owner form.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,

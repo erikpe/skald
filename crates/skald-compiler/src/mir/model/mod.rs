@@ -36,8 +36,9 @@ pub use interface::{
     MirInterfaceRequirement, MirRequirementImplementation,
 };
 pub use optional::{
-    MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind,
-    MirPrimitiveType,
+    MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
+    MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
+    MirOptionalSource, MirPresenceTestKind, MirPrimitiveType,
 };
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,

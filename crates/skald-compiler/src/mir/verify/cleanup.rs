@@ -747,6 +747,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     let field = self.program.field(field_id)?;
                     ty = field.ty;
                 }
+                MirPlaceProjection::OptionalPayload(class) => {
+                    if ty != MirType::OptionalClass(class) {
+                        return None;
+                    }
+                    ty = MirType::Class(class);
+                }
             }
         }
         Some(ty)

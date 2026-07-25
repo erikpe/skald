@@ -1,4 +1,20 @@
+use super::super::layout;
 use super::*;
+
+#[test]
+fn class_optional_layout_reserves_an_aligned_exact_payload() {
+    let program = lower_text(
+        "class Value { byte: u8; wide: i64; init() { self.byte = 1u8; self.wide = 2; } }\n\
+         fn main() -> i64 { var value: Value? = none; return 0; }\n",
+    );
+    let layouts = layout::DataLayout::compute(&program).unwrap();
+    let payload = layouts.class(ClassId::new(0)).unwrap().ty();
+    let optional = layouts.optional_class(ClassId::new(0)).unwrap();
+
+    assert_eq!(optional.payload_offset() % payload.alignment(), 0);
+    assert!(optional.ty().size() >= optional.payload_offset() + payload.size());
+    assert_eq!(optional.ty().alignment(), payload.alignment().max(8));
+}
 
 #[test]
 fn primitive_optionals_execute_present_payloads_for_every_primitive() {
@@ -110,4 +126,55 @@ fn optional_values_execute_through_virtual_and_interface_calls() {
     }\n";
 
     assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
+#[test]
+fn class_optional_lifecycle_executes_through_calls_fields_and_assignment() {
+    let source = concat!(
+        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "class Value {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  destroy { ska_rt_println_i64(self.marker); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  value: Value?;\n",
+        "  init(value: Value?) { self.value = value; }\n",
+        "}\n",
+        "fn forward(value: Value?) -> Value? { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var first: Value? = Value(42);\n",
+        "  var second: Value? = first;\n",
+        "  first = none;\n",
+        "  first = forward(Value(42));\n",
+        "  var holder: Holder = Holder(first);\n",
+        "  if (holder.value is some) { return 42; }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(println_i64_stub());
+    let result = run_native_assembly_output(&output);
+
+    assert_eq!(result.status.code(), Some(42));
+    assert_eq!(result.stdout, b"42\n42\n42\n42\n42\n42\n42\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn class_optional_parameters_and_results_execute_under_stack_pressure() {
+    let source = "class Value { init() {} }\n\
+        fn choose(a: Value?, b: Value?, c: Value?, d: Value?, e: Value?, f: Value?, g: Value?) -> Value? {\n\
+          if (g is some) { return g; }\n\
+          return a;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var result: Value? = choose(none, none, none, none, none, none, Value());\n\
+          if (result is some) { return 42; }\n\
+          return 0;\n\
+        }\n";
+    let output = assembly(source);
+
+    assert!(output.contains("mov qword ptr [rsp]"));
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
 }

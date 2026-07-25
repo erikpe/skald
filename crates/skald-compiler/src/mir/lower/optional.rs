@@ -2,19 +2,162 @@
 
 use crate::{
     hir::{
-        HirOptionalOperand, HirOptionalPlace, HirOptionalSource, HirOptionalStorage,
-        HirPresenceTestKind, Type,
+        HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
+        HirClassOptionalSource, HirObjectSource, HirOptionalOperand, HirOptionalPlace,
+        HirOptionalSource, HirOptionalStorage, HirPresenceTestKind, Type,
     },
     mir::{
-        MirInstruction, MirOptionalAssign, MirOptionalInitialize, MirOptionalSource,
-        MirPresenceTestKind, MirPrimitiveType, MirRvalueKind, MirStorage, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType, StorageId,
+        MirClassOptionalAssign, MirClassOptionalInitialize, MirClassOptionalPublish,
+        MirClassOptionalSource, MirInstruction, MirOptionalAssign, MirOptionalInitialize,
+        MirOptionalSource, MirPresenceTestKind, MirPrimitiveType, MirRvalueKind, MirStorage,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, StorageId,
     },
 };
 
 use super::BodyLowerer;
 
 impl BodyLowerer<'_> {
+    pub(super) fn lower_class_optional_initialize(
+        &mut self,
+        destination: StorageId,
+        value: &HirClassOptionalInitialize,
+    ) {
+        self.lower_class_optional_initialize_at(crate::mir::MirPlace::base(destination), value);
+    }
+
+    fn lower_class_optional_initialize_at(
+        &mut self,
+        destination: crate::mir::MirPlace,
+        value: &HirClassOptionalInitialize,
+    ) {
+        match &value.source {
+            HirClassOptionalSource::Produced(expression) => {
+                self.lower_optional_call(expression, destination);
+            }
+            HirClassOptionalSource::Present(HirObjectSource::Produced(producer)) => {
+                self.emit(MirInstruction::ClassOptionalInitialize(
+                    MirClassOptionalInitialize {
+                        destination: destination.clone(),
+                        source: MirClassOptionalSource::Absent,
+                        class: value.class,
+                        copy_constructor: None,
+                        span: value.span,
+                    },
+                ));
+                self.lower_object_producer(
+                    producer,
+                    destination.clone().project_optional_payload(value.class),
+                );
+                self.emit(MirInstruction::ClassOptionalPublish(
+                    MirClassOptionalPublish {
+                        destination,
+                        class: value.class,
+                        span: value.span,
+                    },
+                ));
+            }
+            source => {
+                let source = self.lower_class_optional_source(source);
+                self.emit(MirInstruction::ClassOptionalInitialize(
+                    MirClassOptionalInitialize {
+                        destination,
+                        source,
+                        class: value.class,
+                        copy_constructor: value
+                            .copy_constructor
+                            .map(super::lower_selected_copy_operation),
+                        span: value.span,
+                    },
+                ));
+            }
+        }
+    }
+
+    pub(super) fn lower_class_optional_assignment(
+        &mut self,
+        assignment: &HirClassOptionalAssignment,
+    ) {
+        let destination = self.lower_class_optional_place(&assignment.destination);
+        if assignment.kind == crate::hir::HirOptionalWriteKind::Initialize {
+            self.lower_class_optional_initialize_at(
+                destination,
+                &HirClassOptionalInitialize {
+                    class: assignment.destination.class,
+                    source: assignment.source.clone(),
+                    copy_constructor: assignment.copy_constructor,
+                    span: assignment.span,
+                },
+            );
+            return;
+        }
+        let source = match &assignment.source {
+            HirClassOptionalSource::Produced(expression) => {
+                let storage = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "class-optional-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(storage));
+                self.full_expression_temporaries.push(
+                    super::FullExpressionTemporary::ClassOptional(
+                        crate::mir::MirClassOptionalCleanup {
+                            destination: crate::mir::MirPlace::base(storage),
+                            class: assignment.destination.class,
+                            span: expression.span,
+                        },
+                    ),
+                );
+                MirClassOptionalSource::Copy(crate::mir::MirPlace::base(storage))
+            }
+            source => self.lower_class_optional_source(source),
+        };
+        self.emit(MirInstruction::ClassOptionalAssign(
+            MirClassOptionalAssign {
+                destination,
+                source,
+                class: assignment.destination.class,
+                copy_constructor: assignment
+                    .copy_constructor
+                    .map(super::lower_selected_copy_operation),
+                copy_assignment: assignment
+                    .copy_assignment
+                    .map(super::lower_selected_copy_operation),
+                span: assignment.span,
+            },
+        ));
+    }
+
+    fn lower_class_optional_source(
+        &mut self,
+        source: &HirClassOptionalSource,
+    ) -> MirClassOptionalSource {
+        match source {
+            HirClassOptionalSource::Absent { .. } => MirClassOptionalSource::Absent,
+            HirClassOptionalSource::Present(source) => {
+                MirClassOptionalSource::Present(self.lower_object_source(source))
+            }
+            HirClassOptionalSource::Copy(place) => {
+                MirClassOptionalSource::Copy(self.lower_class_optional_place(place))
+            }
+            HirClassOptionalSource::Produced(_) => {
+                unreachable!("produced optional sources are lowered at their consumer")
+            }
+        }
+    }
+
+    fn lower_class_optional_place(
+        &mut self,
+        place: &HirClassOptionalPlace,
+    ) -> crate::mir::MirPlace {
+        match &place.storage {
+            HirOptionalStorage::Binding(binding) => {
+                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
+            }
+            HirOptionalStorage::Field(field) => self.lower_field_place(field),
+        }
+    }
+
     pub(super) fn lower_optional_initialize(
         &mut self,
         destination: StorageId,
@@ -139,7 +282,7 @@ impl BodyLowerer<'_> {
                     expression.ty,
                     expression.span,
                 );
-                self.lower_optional_call(expression, destination);
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
                 MirOptionalSource::Copy(crate::mir::MirPlace::base(destination))
             }
         }
@@ -167,7 +310,30 @@ impl BodyLowerer<'_> {
                     expression.ty,
                     expression.span,
                 );
-                self.lower_optional_call(expression, destination);
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
+                crate::mir::MirPlace::base(destination)
+            }
+            HirOptionalOperand::ClassPlace(place) => self.lower_class_optional_place(place),
+            HirOptionalOperand::ClassProduced(expression) => {
+                let destination = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "class-optional-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_call(expression, crate::mir::MirPlace::base(destination));
+                self.full_expression_temporaries.push(
+                    super::FullExpressionTemporary::ClassOptional(
+                        crate::mir::MirClassOptionalCleanup {
+                            destination: crate::mir::MirPlace::base(destination),
+                            class: match expression.ty {
+                                Type::OptionalClass(class) => class,
+                                _ => unreachable!(),
+                            },
+                            span: expression.span,
+                        },
+                    ),
+                );
                 crate::mir::MirPlace::base(destination)
             }
         }
@@ -180,8 +346,12 @@ impl BodyLowerer<'_> {
         ty: crate::hir::Type,
         span: crate::source::Span,
     ) -> StorageId {
-        let Type::OptionalPrimitive(payload) = ty else {
-            unreachable!("optional storage requires an optional primitive type");
+        let mir_ty = match ty {
+            Type::OptionalPrimitive(payload) => {
+                MirType::OptionalPrimitive(lower_primitive_type(payload))
+            }
+            Type::OptionalClass(class) => MirType::OptionalClass(class),
+            _ => unreachable!("optional storage requires an optional type"),
         };
         let id = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
@@ -189,7 +359,7 @@ impl BodyLowerer<'_> {
             source: None,
             name: format!("{name}-{}", id.index()),
             kind,
-            ty: MirType::OptionalPrimitive(lower_primitive_type(payload)),
+            ty: mir_ty,
             span,
         });
         id

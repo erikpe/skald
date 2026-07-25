@@ -107,6 +107,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Obj
                                 | MirType::Shared(_)
                                 | MirType::OptionalPrimitive(_)
+                                | MirType::OptionalClass(_)
                         )
                 }) {
                     self.function_error(
@@ -121,6 +122,7 @@ impl<'mir> Verifier<'mir> {
                         | MirType::Obj
                         | MirType::Shared(_)
                         | MirType::OptionalPrimitive(_)
+                        | MirType::OptionalClass(_)
                 ) {
                     self.function_error(
                         declaration.id,
@@ -322,6 +324,9 @@ impl<'mir> Verifier<'mir> {
                     .filter_map(|field| match field.ty {
                         MirType::Class(_) => Some(MirDestructionStep::Field(field.id)),
                         MirType::Shared(_) => Some(MirDestructionStep::SharedField(field.id)),
+                        MirType::OptionalClass(_) => {
+                            Some(MirDestructionStep::OptionalClassField(field.id))
+                        }
                         _ => None,
                     }),
             );
@@ -527,6 +532,22 @@ impl<'mir> Verifier<'mir> {
                         payload: step_payload,
                     },
                 ) => *id == field.id && payload == *step_payload,
+                (
+                    MirType::OptionalClass(target),
+                    MirSynthesizedFieldCopy::OptionalClass {
+                        field: id,
+                        class: step_class,
+                        operation,
+                    },
+                ) => {
+                    *id == field.id
+                        && target == *step_class
+                        && self
+                            .program
+                            .class(target)
+                            .and_then(|class| class.copy_constructor.selected())
+                            == Some(*operation)
+                }
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
@@ -580,6 +601,22 @@ impl<'mir> Verifier<'mir> {
                         payload: step_payload,
                     },
                 ) => *id == field.id && payload == *step_payload,
+                (
+                    MirType::OptionalClass(target),
+                    MirSynthesizedFieldCopy::OptionalClass {
+                        field: id,
+                        class: step_class,
+                        operation,
+                    },
+                ) => {
+                    *id == field.id
+                        && target == *step_class
+                        && self
+                            .program
+                            .class(target)
+                            .and_then(|class| class.copy_assignment.selected())
+                            == Some(*operation)
+                }
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }

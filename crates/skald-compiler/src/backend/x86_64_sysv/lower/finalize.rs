@@ -157,6 +157,59 @@ fn select_plan(
                 );
                 output.push(Instruction::Label(labels.complete));
             }
+            MirDestructionStep::OptionalClassField(field) => {
+                let field_declaration = program
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
+                let MirType::OptionalClass(field_class) = field_declaration.ty else {
+                    return Err(finalizer_error(format!(
+                        "finalizer for {class} contains non-optional-class field {field}"
+                    )));
+                };
+                let field_offset = i32::try_from(
+                    data_layout
+                        .field(field)
+                        .ok_or_else(|| {
+                            finalizer_error(format!("field {field} has no target layout"))
+                        })?
+                        .offset,
+                )
+                .ok()
+                .and_then(|offset| complete_offset.checked_add(offset))
+                .ok_or_else(|| {
+                    finalizer_error("finalizer optional-field address exceeds target limits")
+                })?;
+                let finished = Label::new(format!(
+                    "finalize_optional_{}_{}_{}",
+                    complete_class.index(),
+                    field.index(),
+                    output.len()
+                ));
+                load_complete_address(field_offset, Register::R11, output);
+                output.push(Instruction::Move {
+                    source: memory(Register::R11, 0),
+                    destination: Register::Rax.into(),
+                });
+                output.push(Instruction::Test(Register::Rax));
+                output.push(Instruction::JumpIfEqual(finished.clone()));
+                let payload_offset =
+                    i32::try_from(data_layout.optional_class(field_class)?.payload_offset())
+                        .map_err(|_| {
+                            finalizer_error("optional payload offset exceeds target limits")
+                        })?;
+                select_plan(
+                    program,
+                    data_layout,
+                    dispatch,
+                    complete_class,
+                    field_class,
+                    field_offset.checked_add(payload_offset).ok_or_else(|| {
+                        finalizer_error("finalizer optional payload exceeds target limits")
+                    })?,
+                    output,
+                )?;
+                output.push(Instruction::Label(finished));
+            }
             MirDestructionStep::Base(base) => {
                 let base_offset = data_layout
                     .class(class)

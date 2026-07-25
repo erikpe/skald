@@ -109,15 +109,20 @@ impl FrameLayout {
                     | MirStorageKind::CheckedView(_),
                     _,
                 )
-                | (MirStorageKind::Parameter, MirType::Class(_) | MirType::OptionalPrimitive(_)) => {
-                    (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)
-                }
+                | (
+                    MirStorageKind::Parameter,
+                    MirType::Class(_) | MirType::OptionalPrimitive(_) | MirType::OptionalClass(_),
+                ) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
                 (_, MirType::Class(_) | MirType::Unit) => {
                     let ty = data_layout.ty(storage.ty)?;
                     (ty.size(), ty.alignment())
                 }
                 (_, MirType::OptionalPrimitive(payload)) => {
                     let ty = data_layout.optional(payload)?.ty();
+                    (ty.size(), ty.alignment())
+                }
+                (_, MirType::OptionalClass(class)) => {
+                    let ty = data_layout.optional_class(class)?.ty();
                     (ty.size(), ty.alignment())
                 }
                 (_, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
@@ -198,7 +203,9 @@ impl FrameLayout {
                 if storage.kind == MirStorageKind::Parameter
                     && matches!(
                         storage.ty,
-                        MirType::Class(_) | MirType::OptionalPrimitive(_)
+                        MirType::Class(_)
+                            | MirType::OptionalPrimitive(_)
+                            | MirType::OptionalClass(_)
                     ) =>
             {
                 (
@@ -272,6 +279,17 @@ impl FrameLayout {
                         .field(field_id)
                         .expect("verified field must be declared")
                         .ty;
+                }
+                MirPlaceProjection::OptionalPayload(class) => {
+                    if ty != MirType::OptionalClass(class) {
+                        return Err(place_metadata_error(function.callable()));
+                    }
+                    let offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+                        .map_err(|_| place_address_error(function.callable()))?;
+                    displacement = displacement
+                        .checked_add(offset)
+                        .ok_or_else(|| place_address_error(function.callable()))?;
+                    ty = MirType::Class(class);
                 }
             }
         }

@@ -313,6 +313,11 @@ impl CallableChecker<'_, '_> {
                         .check_optional_source(source, payload, "primitive optional argument")
                         .map(|source| HirCallArgument::Optional { source, payload });
                 }
+                if let Type::OptionalClass(class) = parameter_type {
+                    return self
+                        .check_class_optional_initialize(class, source, "class optional argument")
+                        .map(HirCallArgument::ClassOptional);
+                }
                 let argument = self.check_expression(source)?;
                 require_type(
                     argument.ty,

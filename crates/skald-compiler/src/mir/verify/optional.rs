@@ -43,7 +43,17 @@ impl Verifier<'_> {
         source: &MirPlace,
         result_type: MirType,
     ) {
-        self.verify_optional_storage(function, block, source);
+        if !matches!(
+            self.verify_place(function, block, source)
+                .map(|place| place.ty),
+            Some(MirType::OptionalPrimitive(_) | MirType::OptionalClass(_))
+        ) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional presence-test source is not optional storage",
+            );
+        }
         if result_type != MirType::Bool {
             self.block_error(
                 function.callable(),
@@ -182,6 +192,39 @@ impl Verifier<'_> {
                             &state,
                         );
                     }
+                    MirInstruction::ClassOptionalInitialize(initialize) => {
+                        require_initialized_class_source(
+                            self,
+                            function,
+                            block,
+                            &initialize.source,
+                            &state,
+                        );
+                        if !state.insert(initialize.destination.clone()) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "class optional storage is initialized more than once",
+                            );
+                        }
+                    }
+                    MirInstruction::ClassOptionalAssign(assignment) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &assignment.destination,
+                            &state,
+                            "class optional assignment destination",
+                        );
+                        require_initialized_class_source(
+                            self,
+                            function,
+                            block,
+                            &assignment.source,
+                            &state,
+                        );
+                    }
                     MirInstruction::Assign(assignment) => {
                         if let MirRvalueKind::OptionalPresence { source, .. } =
                             &assignment.rvalue.kind
@@ -201,7 +244,10 @@ impl Verifier<'_> {
                             if function
                                 .storage(destination.base.storage())
                                 .is_some_and(|storage| {
-                                    matches!(storage.ty, MirType::OptionalPrimitive(_))
+                                    matches!(
+                                        storage.ty,
+                                        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                                    )
                                 })
                                 && !state.insert(destination.clone())
                             {
@@ -250,10 +296,12 @@ impl Verifier<'_> {
             if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
                 if let Some(return_storage) = function.return_storage() {
                     let place = MirPlace::base(return_storage);
-                    if function
-                        .storage(return_storage)
-                        .is_some_and(|storage| matches!(storage.ty, MirType::OptionalPrimitive(_)))
-                    {
+                    if function.storage(return_storage).is_some_and(|storage| {
+                        matches!(
+                            storage.ty,
+                            MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                        )
+                    }) {
                         require_initialized(
                             self,
                             function,
@@ -325,9 +373,12 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
         .parameters()
         .iter()
         .filter(|storage| {
-            function
-                .storage(**storage)
-                .is_some_and(|storage| matches!(storage.ty, MirType::OptionalPrimitive(_)))
+            function.storage(**storage).is_some_and(|storage| {
+                matches!(
+                    storage.ty,
+                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                )
+            })
         })
         .map(|storage| MirPlace::base(*storage))
         .collect::<HashSet<_>>();
@@ -350,6 +401,20 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
                     MirInstruction::OptionalAssign(assignment) => {
                         seed_projected(&mut state, &assignment.destination);
                         if let MirOptionalSource::Copy(source) = &assignment.source {
+                            seed_projected(&mut state, source);
+                        }
+                    }
+                    MirInstruction::ClassOptionalInitialize(initialize) => {
+                        seed_projected(&mut state, &initialize.destination);
+                        if let crate::mir::MirClassOptionalSource::Copy(source) = &initialize.source
+                        {
+                            seed_projected(&mut state, source);
+                        }
+                    }
+                    MirInstruction::ClassOptionalAssign(assignment) => {
+                        seed_projected(&mut state, &assignment.destination);
+                        if let crate::mir::MirClassOptionalSource::Copy(source) = &assignment.source
+                        {
                             seed_projected(&mut state, source);
                         }
                     }
@@ -388,11 +453,19 @@ fn apply_initializations(
             MirInstruction::OptionalInitialize(initialize) => {
                 state.insert(initialize.destination.clone());
             }
+            MirInstruction::ClassOptionalInitialize(initialize) => {
+                state.insert(initialize.destination.clone());
+            }
             MirInstruction::Call(call) => {
                 if let Some(destination) = &call.destination {
                     if function
                         .storage(destination.base.storage())
-                        .is_some_and(|storage| matches!(storage.ty, MirType::OptionalPrimitive(_)))
+                        .is_some_and(|storage| {
+                            matches!(
+                                storage.ty,
+                                MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                            )
+                        })
                     {
                         state.insert(destination.clone());
                     } else if let Some(class) = complete_class_storage(function, destination) {
@@ -467,6 +540,9 @@ fn initialize_optional_fields_inner(
             MirType::OptionalPrimitive(_) => {
                 state.insert(place);
             }
+            MirType::OptionalClass(_) => {
+                state.insert(place);
+            }
             MirType::Class(nested) => {
                 initialize_optional_fields_inner(program, nested, &place, state, visiting)
             }
@@ -491,6 +567,25 @@ fn require_initialized_source(
             place,
             state,
             "optional copy source",
+        );
+    }
+}
+
+fn require_initialized_class_source(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    source: &crate::mir::MirClassOptionalSource,
+    state: &HashSet<MirPlace>,
+) {
+    if let crate::mir::MirClassOptionalSource::Copy(place) = source {
+        require_initialized(
+            verifier,
+            function,
+            block,
+            place,
+            state,
+            "class optional copy source",
         );
     }
 }

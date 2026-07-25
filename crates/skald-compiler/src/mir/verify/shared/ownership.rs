@@ -353,7 +353,11 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 | MirInstruction::Store(_)
                 | MirInstruction::CopyAssign(_)
                 | MirInstruction::OptionalInitialize(_)
-                | MirInstruction::OptionalAssign(_) => {}
+                | MirInstruction::OptionalAssign(_)
+                | MirInstruction::ClassOptionalInitialize(_)
+                | MirInstruction::ClassOptionalAssign(_)
+                | MirInstruction::ClassOptionalPublish(_)
+                | MirInstruction::ClassOptionalCleanup(_) => {}
                 MirInstruction::BindCheckedView(binding) => {
                     self.require_live_pointee(block.id, state, &binding.view.source);
                     self.require_live_shared_origin(block.id, state, &binding.view.origin);

@@ -559,6 +559,20 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
+            (MirType::OptionalClass(_), Some(_), _) => self.block_error(
+                function.callable(),
+                block.id,
+                "class-optional-returning call must not have a scalar result",
+            ),
+            (MirType::OptionalClass(class), None, destination) => {
+                if destination.map(|place| place.ty) != Some(MirType::OptionalClass(class)) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class-optional-returning call requires matching caller-owned destination storage",
+                    );
+                }
+            }
             (_, Some(_), Some(_)) => self.block_error(
                 function.callable(),
                 block.id,

@@ -1,8 +1,8 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design with primitive optional owning locals, fields,
-and internal callable boundaries implemented through HIR, MIR verification,
-x86-64 lowering, and native execution.
+Status: frozen compiler design with primitive and exact inline-class optional
+owning locals, fields, and internal callable boundaries implemented through
+HIR, MIR verification, x86-64 lowering, and native execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -11,11 +11,12 @@ authoritative for source currently accepted by the compiler.
 This document freezes phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. AST and resolved IR contain all
-supported source-shaped forms and flat identities. Primitive optionals continue
-through explicit typed HIR and MIR places, calls, and lifecycle operations; the
-verifier proves their storage, aggregate-boundary, and failure-edge invariants,
-and the x86-64 backend executes them. Unsupported payload families and aliases
-still stop at `TYP035`.
+supported source-shaped forms and flat identities. Primitive and exact-class
+optionals continue through explicit typed HIR and MIR places, calls, and
+lifecycle operations; the verifier proves their storage, aggregate-boundary,
+conditional ownership, and failure-edge invariants, and the x86-64 backend
+executes them. Checked class payload views, optional shared owners, and
+optional-container aliases still stop at `TYP035`.
 
 ## Phase ownership
 
@@ -99,11 +100,11 @@ Flow-sensitive knowledge may classify a check as statically successful for
 optimization, but HIR source legality never depends on that classification.
 Every unwrap remains a checked semantic operation.
 
-The implemented primitive-value subset uses explicit HIR nodes for absent and
-present initialization, exact optional copy and assignment, field places,
-arguments/results, produced calls, presence tests, and checked unwrap. Class
-payload lifecycle, guarded checked places, and shared owners remain later
-subsets of this same model.
+The implemented inline subset uses explicit HIR nodes for absent and present
+initialization, exact optional copy and assignment, field places,
+arguments/results, produced calls, presence tests, conditional class lifecycle,
+and checked primitive unwrap. Guarded class payload places and shared owners
+remain later subsets of this same model.
 
 ## MIR optional storage model
 
@@ -146,6 +147,12 @@ terminator. Its failure successor is an explicit empty block ending in
 `OptionalAccessFailure`. Definite-initialization verification intersects
 initialized wrapper storage at CFG joins and deliberately does not treat
 dynamic presence as a static fact.
+
+Exact-class optional MIR additionally records conditional initialization,
+publication after destination-directed construction, copy construction,
+assignment, and cleanup. Optional payload projections designate only reserved
+exact-class bytes and are valid construction/lifecycle destinations; ordinary
+source access to those bytes remains unavailable until checked views land.
 
 ## Lifecycle state machine
 

@@ -123,6 +123,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 MirDestructionStep::SharedField(field) => {
                     let _ = writeln!(output, "        SharedField {field}");
                 }
+                MirDestructionStep::OptionalClassField(field) => {
+                    let _ = writeln!(output, "        OptionalClassField {field}");
+                }
                 MirDestructionStep::Base(base) => {
                     let _ = writeln!(output, "        Base {base}");
                 }
@@ -165,6 +168,18 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
                     }
                     MirSynthesizedFieldCopy::Shared { field } => {
                         let _ = writeln!(output, "          Shared {field}");
+                    }
+                    MirSynthesizedFieldCopy::OptionalClass {
+                        field,
+                        class,
+                        operation,
+                    } => {
+                        let _ = write!(
+                            output,
+                            "          OptionalClass {field} : class {class}? via "
+                        );
+                        dump_copy_operation(output, *operation);
+                        output.push('\n');
                     }
                     MirSynthesizedFieldCopy::Class { field, operation } => {
                         let _ = write!(output, "          Class {field} via ");
@@ -540,6 +555,28 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_optional_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
+            MirInstruction::ClassOptionalInitialize(initialize) => {
+                output.push_str("class-optional-initialize ");
+                dump_place(output, &initialize.destination);
+                let _ = write!(output, " : class {}?", initialize.class);
+                write_span(output, initialize.span);
+            }
+            MirInstruction::ClassOptionalAssign(assignment) => {
+                output.push_str("class-optional-assign ");
+                dump_place(output, &assignment.destination);
+                let _ = write!(output, " : class {}?", assignment.class);
+                write_span(output, assignment.span);
+            }
+            MirInstruction::ClassOptionalPublish(publish) => {
+                output.push_str("class-optional-publish ");
+                dump_place(output, &publish.destination);
+                write_span(output, publish.span);
+            }
+            MirInstruction::ClassOptionalCleanup(cleanup) => {
+                output.push_str("class-optional-cleanup ");
+                dump_place(output, &cleanup.destination);
+                write_span(output, cleanup.span);
+            }
         }
         output.push('\n');
     }
@@ -808,6 +845,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
             }
             MirPlaceProjection::Field(field) => {
                 let _ = write!(output, ".field({field})");
+            }
+            MirPlaceProjection::OptionalPayload(class) => {
+                let _ = write!(output, ".optional-payload({class})");
             }
         }
     }

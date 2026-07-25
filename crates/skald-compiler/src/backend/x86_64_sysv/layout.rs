@@ -114,6 +114,13 @@ impl DataLayout {
             )),
             MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
             MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
+            MirType::OptionalClass(class) => {
+                let payload = self
+                    .class(class)
+                    .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
+                    .ty();
+                optional_layout_for(payload).map(OptionalLayout::ty)
+            }
             MirType::Unit => Err(layout_error(
                 "payload-free type `unit` has no storage layout",
             )),
@@ -129,6 +136,14 @@ impl DataLayout {
         payload: crate::mir::MirPrimitiveType,
     ) -> Result<OptionalLayout, BackendError> {
         optional_layout(payload)
+    }
+
+    pub(super) fn optional_class(&self, class: ClassId) -> Result<OptionalLayout, BackendError> {
+        let payload = self
+            .class(class)
+            .ok_or_else(|| layout_error(format!("class {class} has no target layout")))?
+            .ty();
+        optional_layout_for(payload)
     }
 
     pub(super) fn class(&self, class: ClassId) -> Option<&ClassLayout> {
@@ -232,6 +247,9 @@ impl<'mir> LayoutBuilder<'mir> {
         for ty in fields {
             let ty = match ty {
                 MirType::Class(dependency) => self.compute_class(dependency)?,
+                MirType::OptionalClass(dependency) => {
+                    optional_layout_for(self.compute_class(dependency)?)?.ty()
+                }
                 field => self.field(field)?,
             };
             laid_out_fields.push(ty);
@@ -251,6 +269,9 @@ impl<'mir> LayoutBuilder<'mir> {
         match ty {
             MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
             MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
+            MirType::OptionalClass(_) => {
+                unreachable!("optional class dependencies are handled recursively")
+            }
             _ => primitive_layout(ty).ok_or_else(|| match ty {
                 MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
                 MirType::Unit => layout_error("field type `unit` has no target layout"),
@@ -269,6 +290,7 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Obj
         | MirType::Shared(_)
         | MirType::OptionalPrimitive(_)
+        | MirType::OptionalClass(_)
         | MirType::Unit => None,
     }
 }
@@ -276,6 +298,10 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
 fn optional_layout(payload: crate::mir::MirPrimitiveType) -> Result<OptionalLayout, BackendError> {
     let payload = primitive_layout(payload.payload_type())
         .expect("every primitive optional payload has a target layout");
+    optional_layout_for(payload)
+}
+
+fn optional_layout_for(payload: TypeLayout) -> Result<OptionalLayout, BackendError> {
     let alignment = OPTIONAL_STATE_ALIGNMENT.max(payload.alignment());
     let payload_offset = abi::align_up(OPTIONAL_STATE_SIZE, payload.alignment())
         .ok_or_else(|| layout_error("primitive optional payload offset exceeds target limits"))?;

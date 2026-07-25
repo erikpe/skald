@@ -15,7 +15,8 @@ use super::{
         HirObjectInitialization, HirObjectReturn,
     },
     shared::{HirSharedAssignment, HirSharedFieldWrite, HirSharedTransfer},
-    HirOptionalAssignment, HirOptionalSource,
+    HirClassOptionalAssignment, HirClassOptionalInitialize, HirOptionalAssignment,
+    HirOptionalSource,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -202,6 +203,7 @@ pub enum HirStatement {
     SharedFieldWrite(HirSharedFieldWrite),
     SharedAssignment(HirSharedAssignment),
     OptionalAssignment(HirOptionalAssignment),
+    ClassOptionalAssignment(HirClassOptionalAssignment),
 }
 
 impl HirStatement {
@@ -221,6 +223,7 @@ impl HirStatement {
             Self::SharedFieldWrite(statement) => statement.span,
             Self::SharedAssignment(statement) => statement.span,
             Self::OptionalAssignment(statement) => statement.span,
+            Self::ClassOptionalAssignment(statement) => statement.span,
         }
     }
 }
@@ -239,6 +242,7 @@ pub enum HirLocalInitializer {
     Copy(HirCopyConstruction),
     Shared(HirSharedTransfer),
     Optional(HirOptionalSource),
+    ClassOptional(HirClassOptionalInitialize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -251,6 +255,7 @@ pub struct HirReturn {
 pub enum HirReturnValue {
     Scalar(HirExpression),
     Optional(HirOptionalSource),
+    ClassOptional(HirClassOptionalInitialize),
     Object(HirObjectReturn),
     Shared(HirSharedTransfer),
 }

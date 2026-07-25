@@ -191,6 +191,19 @@ impl Verifier<'_> {
                     };
                     ty = field.ty;
                 }
+                MirPlaceProjection::OptionalPayload(class) => {
+                    if ty != MirType::OptionalClass(class) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!(
+                                "optional payload projection {class} has incompatible base type {ty}"
+                            ),
+                        );
+                        return None;
+                    }
+                    ty = MirType::Class(class);
+                }
             }
         }
         Some(VerifiedPlace { ty, access })

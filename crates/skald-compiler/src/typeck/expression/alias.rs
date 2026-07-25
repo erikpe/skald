@@ -738,7 +738,8 @@ impl CallableChecker<'_, '_> {
                 | Type::F64
                 | Type::Bool
                 | Type::Unit
-                | Type::OptionalPrimitive(_),
+                | Type::OptionalPrimitive(_)
+                | Type::OptionalClass(_),
             ) => None,
             (_, Type::Shared(_)) => None,
             (CheckedObjectViewSource::Produced { .. }, _) => {

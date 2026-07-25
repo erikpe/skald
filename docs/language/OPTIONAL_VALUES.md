@@ -1,21 +1,22 @@
 # Optional Values
 
-Status: frozen language design with primitive optionals implemented across
-owning locals, fields, and internal callable boundaries. The
+Status: frozen language design with primitive and exact inline-class optionals
+implemented across owning locals, fields, and internal callable boundaries. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
 
 This document freezes Skald's source-level optional-value contract. Primitive
-`i64?`, `u64?`, `u8?`, `f64?`, and `bool?` values now execute end to end in
+`i64?`, `u64?`, `u8?`, `f64?`, and `bool?` values and exact inline class `T?`
+values now execute end to end in
 owning locals, fields, internal value parameters/results, methods, interfaces,
-virtual overrides, and initializer overloads. Class payloads, optional shared
-owners, and aliases to optional containers remain at the focused `TYP035`
-type-checking boundary until their roadmap stages.
+virtual overrides, and initializer overloads. Inline class payload access
+through postfix `!`, optional shared owners, and aliases to optional containers
+remain at the focused `TYP035` type-checking boundary until their roadmap stages.
 Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 
-## Implemented primitive-value slice
+## Implemented owning-value slice
 
 The current executable profile permits primitive optional owning values
 initialized from `none`, an exact ordinary primitive value, or another exact
@@ -33,6 +34,20 @@ copy = 42;
 payload and terminates unsuccessfully when the optional is absent. The
 optional itself never has truthiness and never implicitly becomes its payload.
 The same rules apply to all five primitive types.
+
+Exact class optionals additionally own the conditional payload lifecycle:
+
+```ska
+var empty_item: Item? = none;
+var item: Item? = Item();
+var copied_item: Item? = item;
+copied_item = none;
+```
+
+They work in locals, fields, internal value parameters/results, produced call
+results, initializer overloads, and synthesized class lifecycle. Presence tests
+are implemented. Checked non-owning class payload access remains OP5, so
+`item!`, `item!.field`, and `item!.run()` are still rejected for now.
 
 ## Core invariant
 
@@ -64,7 +79,7 @@ ownership:
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
 | primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
-| class `T?` | Inline optional containing zero or one exact class `T` | Syntax/resolution implemented; execution planned |
+| class `T?` | Inline optional containing zero or one exact class `T` | Owning lifecycle and internal boundaries execute; checked payload access is planned |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
 | `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |

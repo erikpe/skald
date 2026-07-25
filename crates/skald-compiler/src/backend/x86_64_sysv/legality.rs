@@ -109,7 +109,11 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::SharedFieldInitialize(_)
                     | MirInstruction::OptionalInitialize(_)
                     | MirInstruction::SharedFieldReplace(_)
-                    | MirInstruction::OptionalAssign(_) => {}
+                    | MirInstruction::OptionalAssign(_)
+                    | MirInstruction::ClassOptionalInitialize(_)
+                    | MirInstruction::ClassOptionalAssign(_)
+                    | MirInstruction::ClassOptionalPublish(_)
+                    | MirInstruction::ClassOptionalCleanup(_) => {}
                 }
             }
         }

@@ -250,3 +250,4 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             .collect()
     }
 }
+pub(in crate::typeck) use copy::lower_object_call;

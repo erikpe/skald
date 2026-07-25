@@ -540,7 +540,10 @@ fn construction_through_groups(
     }
 }
 
-fn lower_object_call(expression: HirExpression, class: ClassId) -> HirObjectCall {
+pub(in crate::typeck) fn lower_object_call(
+    expression: HirExpression,
+    class: ClassId,
+) -> HirObjectCall {
     let span = expression.span;
     match expression.kind {
         HirExpressionKind::DirectCall {

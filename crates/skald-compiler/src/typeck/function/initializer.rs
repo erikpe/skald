@@ -109,6 +109,39 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
+            (Type::OptionalClass(class), body_kind) => {
+                let destination = crate::hir::HirClassOptionalPlace {
+                    storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
+                    class,
+                    span: assignment.span,
+                };
+                if body_kind.initializes_receiver() {
+                    self.check_class_optional_initialize(
+                        class,
+                        &assignment.value,
+                        "class optional field initializer",
+                    )
+                    .map(|value| {
+                        HirStatement::ClassOptionalAssignment(
+                            crate::hir::HirClassOptionalAssignment {
+                                destination,
+                                source: value.source,
+                                copy_constructor: value.copy_constructor,
+                                copy_assignment: None,
+                                kind: crate::hir::HirOptionalWriteKind::Initialize,
+                                span: assignment.span,
+                            },
+                        )
+                    })
+                } else {
+                    self.check_class_optional_assignment(
+                        destination,
+                        &assignment.value,
+                        "class optional field assignment",
+                    )
+                    .map(HirStatement::ClassOptionalAssignment)
+                }
+            }
         };
         self.finish_field_assignment(target, body_kind, hir)
     }

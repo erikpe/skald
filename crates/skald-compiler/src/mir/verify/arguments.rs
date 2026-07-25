@@ -57,7 +57,9 @@ impl Verifier<'_> {
                 (MirArgument::OwnedPlace(place), MirParameterMode::Value)
                     if matches!(
                         parameter.ty,
-                        MirType::Class(_) | MirType::OptionalPrimitive(_)
+                        MirType::Class(_)
+                            | MirType::OptionalPrimitive(_)
+                            | MirType::OptionalClass(_)
                     ) =>
                 {
                     self.verify_owned_place_argument(

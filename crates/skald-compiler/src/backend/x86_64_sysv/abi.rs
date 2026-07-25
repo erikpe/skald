@@ -140,7 +140,8 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             | MirType::Bool
             | MirType::Class(_)
             | MirType::Shared(_)
-            | MirType::OptionalPrimitive(_) => Some(ScalarClass::Integer),
+            | MirType::OptionalPrimitive(_)
+            | MirType::OptionalClass(_) => Some(ScalarClass::Integer),
             MirType::F64 => Some(ScalarClass::Sse),
             MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
         },

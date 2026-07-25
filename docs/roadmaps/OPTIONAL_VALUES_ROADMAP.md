@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP4 is next.
+Status: in progress; OP5 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -184,7 +184,7 @@ documents remain historical and are not migration targets.
 - [x] OP1 — Add optional syntax and resolved type identities
 - [x] OP2 — Execute primitive optional locals and checked inspection
 - [x] OP3 — Carry primitive optionals through stored and callable boundaries
-- [ ] OP4 — Implement inline-class optional lifecycle
+- [x] OP4 — Implement inline-class optional lifecycle
 - [ ] OP5 — Enforce checked payload views and dynamic presence guards
 - [ ] OP6 — Implement optional shared owners
 - [ ] OP7 — Complete alias, overload, conversion, and polymorphism integration
@@ -351,31 +351,31 @@ and external optionals remain diagnosed before backend lowering.
 construction, copy, assignment, destruction, destination, and containment
 semantics.
 
-- [ ] Extend type and layout queries with aligned inline-class optional storage
+- [x] Extend type and layout queries with aligned inline-class optional storage
       containing state plus reserved exact payload bytes; retain base-prefix
       and field alignment rules.
-- [ ] Initialize class optionals from `none`, exact live places, produced
+- [x] Initialize class optionals from `none`, exact live places, produced
       objects, calls, and fresh construction. Construct an ungrouped fresh
       exact `T(arguments)` directly in a new optional payload destination.
-- [ ] Implement optional copy construction and destruction by branching on
+- [x] Implement optional copy construction and destruction by branching on
       source presence and conditionally invoking exactly one existing payload
       lifecycle operation.
-- [ ] Implement the complete assignment matrix, securing the source and any
+- [x] Implement the complete assignment matrix, securing the source and any
       checked view before destroying/releasing or assigning the destination.
-- [ ] Carry class optionals through locals, fields, value parameters, results,
+- [x] Carry class optionals through locals, fields, value parameters, results,
       temporaries, initializer overloads, synthesized lifecycle, base/field
       recursion, normal return, and reverse cleanup.
-- [ ] Extend copy/assignment capability analysis through optional class fields
+- [x] Extend copy/assignment capability analysis through optional class fields
       and report the existing failing payload path when a required operation is
       unavailable.
-- [ ] Preserve recursive containment rejection: an optional inline class edge
+- [x] Preserve recursive containment rejection: an optional inline class edge
       contributes the same payload-layout edge as its non-optional class.
-- [ ] Add MIR conditional payload construction/copy/assignment/destruction
+- [x] Add MIR conditional payload construction/copy/assignment/destruction
       operations and verification for reserved storage, published presence,
       cleanup registration, result transfer, temporaries, and CFG joins.
-- [ ] Lower optional class destinations, calls, and cleanup on x86-64 without
+- [x] Lower optional class destinations, calls, and cleanup on x86-64 without
       addressing absent payload bytes or inventing backend lifecycle policy.
-- [ ] Update optional values, classes/lifecycle, types/values, phases/IR,
+- [x] Update optional values, classes/lifecycle, types/values, phases/IR,
       backend, and testing documentation with the implemented object lifecycle
       and direct-payload construction rule.
 

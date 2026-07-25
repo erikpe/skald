@@ -16,9 +16,12 @@ pub(super) struct CopyCapabilities {
 
 impl CopyCapabilities {
     pub(super) fn compute(program: &ResolvedProgram) -> Self {
+        let constructors = CapabilitySet::compute(program, |class| class.copy_constructor, None);
+        let assignments =
+            CapabilitySet::compute(program, |class| class.copy_assignment, Some(&constructors));
         Self {
-            constructors: CapabilitySet::compute(program, |class| class.copy_constructor),
-            assignments: CapabilitySet::compute(program, |class| class.copy_assignment),
+            constructors,
+            assignments,
         }
     }
 
@@ -58,6 +61,7 @@ impl<I: Copy> CapabilitySet<I> {
     fn compute(
         program: &ResolvedProgram,
         resolved_operation: fn(&ResolvedClassDeclaration) -> ResolvedCopyOperation<I>,
+        required_constructors: Option<&CapabilitySet<CopyConstructorId>>,
     ) -> Self {
         let mut capabilities = vec![None; program.classes.len()];
         let mut failure_paths = vec![None; program.classes.len()];
@@ -71,6 +75,7 @@ impl<I: Copy> CapabilitySet<I> {
                 &mut capabilities,
                 &mut failure_paths,
                 &mut states,
+                required_constructors,
             );
         }
 
@@ -106,6 +111,7 @@ fn compute_class<I: Copy>(
     capabilities: &mut [Option<HirCopyCapability<I>>],
     failure_paths: &mut [Option<Vec<CopyPathElement>>],
     states: &mut [VisitState],
+    required_constructors: Option<&CapabilitySet<CopyConstructorId>>,
 ) -> HirCopyCapability<I> {
     match states[class_id.index()] {
         VisitState::Complete => {
@@ -129,6 +135,7 @@ fn compute_class<I: Copy>(
             capabilities,
             failure_paths,
             states,
+            required_constructors,
         );
         nested.selected().map(|operation| HirBaseCopy {
             base: direct_base.class,
@@ -167,6 +174,7 @@ fn compute_class<I: Copy>(
                             capabilities,
                             failure_paths,
                             states,
+                            required_constructors,
                         );
                         let Some(operation) = nested.selected() else {
                             let mut path = vec![CopyPathElement::Field(field.id)];
@@ -201,8 +209,40 @@ fn compute_class<I: Copy>(
                             crate::resolve::ResolvedOptionalPayload::Bool => {
                                 crate::hir::HirPrimitiveType::Bool
                             }
-                            crate::resolve::ResolvedOptionalPayload::Class(_) => {
-                                unreachable!("class optionals are gated before capabilities")
+                            crate::resolve::ResolvedOptionalPayload::Class(target) => {
+                                if let Some(constructors) = required_constructors {
+                                    if constructors.capability(target).selected().is_none() {
+                                        let mut path = vec![CopyPathElement::Field(field.id)];
+                                        if let Some(nested_path) = constructors.failure(target) {
+                                            path.extend(nested_path);
+                                        }
+                                        failure = Some(path);
+                                        break;
+                                    }
+                                }
+                                let nested = compute_class(
+                                    target,
+                                    program,
+                                    resolved_operation,
+                                    capabilities,
+                                    failure_paths,
+                                    states,
+                                    required_constructors,
+                                );
+                                let Some(operation) = nested.selected() else {
+                                    let mut path = vec![CopyPathElement::Field(field.id)];
+                                    if let Some(nested_path) = &failure_paths[target.index()] {
+                                        path.extend(nested_path);
+                                    }
+                                    failure = Some(path);
+                                    break;
+                                };
+                                fields.push(HirSynthesizedFieldCopy::OptionalClass {
+                                    field: field.id,
+                                    class: target,
+                                    operation,
+                                });
+                                continue;
                             }
                         };
                         fields.push(HirSynthesizedFieldCopy::OptionalPrimitive {

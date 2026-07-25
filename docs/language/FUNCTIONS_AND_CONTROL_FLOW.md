@@ -135,9 +135,11 @@ value.
 
 The [optional-values contract](OPTIONAL_VALUES.md#presence-tests) adds
 `value is some` and `value is none` as `bool`-producing tests. They execute for
-primitive optional locals, fields, parameters, and produced call results and
+primitive and exact-class optional locals, fields, parameters, and produced
+call results and
 do not add optional truthiness. A presence test does not narrow the declared
-type; payload use still spells the checked postfix unwrap `value!`.
+type. Primitive payload use spells checked postfix unwrap `value!`; class
+payload unwrap remains reserved until checked payload views are implemented.
 
 Conditions are evaluated in source order. Evaluation stops at the first
 condition producing `true`, and only that arm executes. If no condition is

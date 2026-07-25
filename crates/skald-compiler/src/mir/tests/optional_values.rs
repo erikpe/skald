@@ -114,3 +114,24 @@ fn verifier_rejects_uninitialized_use_and_mismatched_failure_edges() {
         .iter()
         .any(|error| error.message.contains("optional unwrap failure edge")));
 }
+
+#[test]
+fn lowers_class_optional_lifecycle_fields_arguments_results_and_cleanup() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+        class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+        fn forward(item: Item?) -> Item? { return item; }\n\
+        fn main() -> i64 {\n\
+          var item: Item? = Item(7);\n\
+          var holder: Holder = Holder(item);\n\
+          item = forward(none);\n\
+          if (item is none) { return 42; }\n\
+          return 0;\n\
+        }\n";
+    let program = lower_text(source);
+    verify_mir(&program).expect("owning class optionals must verify");
+    let dump = dump_mir(&program);
+    assert!(dump.contains("class-optional-initialize"));
+    assert!(dump.contains("class-optional-assign"));
+    assert!(dump.contains("class-optional-cleanup"));
+    assert!(dump.contains("OptionalClassField"));
+}

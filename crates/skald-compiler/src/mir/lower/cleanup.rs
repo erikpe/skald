@@ -39,6 +39,15 @@ impl BodyLowerer<'_> {
                         span,
                     }));
                 }
+                super::FullExpressionTemporary::ClassOptional(cleanup) => {
+                    if !inline.is_empty() {
+                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                            temporaries: std::mem::take(&mut inline),
+                            span,
+                        }));
+                    }
+                    self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
+                }
             }
         }
         self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
@@ -60,11 +69,13 @@ struct InitializedStorage {
 enum OwnedStorageKind {
     Inline(ClassId),
     Shared,
+    ClassOptional(ClassId),
 }
 
 pub(super) enum PlannedCleanup {
     Inline(MirCleanup),
     Shared(MirSharedRelease),
+    ClassOptional(crate::mir::MirClassOptionalCleanup),
 }
 
 impl PlannedCleanup {
@@ -72,6 +83,7 @@ impl PlannedCleanup {
         match self {
             Self::Inline(cleanup) => MirInstruction::Cleanup(cleanup),
             Self::Shared(release) => MirInstruction::SharedRelease(release),
+            Self::ClassOptional(cleanup) => MirInstruction::ClassOptionalCleanup(cleanup),
         }
     }
 }
@@ -114,6 +126,16 @@ impl CleanupPlanner {
             });
     }
 
+    pub(super) fn register_class_optional(&mut self, storage: StorageId, class: ClassId) {
+        self.scopes
+            .last_mut()
+            .expect("an initialized local must belong to an active lexical scope")
+            .push(InitializedStorage {
+                storage,
+                kind: OwnedStorageKind::ClassOptional(class),
+            });
+    }
+
     pub(super) fn for_current_scope(&self, span: Span) -> Vec<PlannedCleanup> {
         self.scopes
             .last()
@@ -152,6 +174,13 @@ impl InitializedStorage {
                 owner: self.storage,
                 span,
             }),
+            OwnedStorageKind::ClassOptional(class) => {
+                PlannedCleanup::ClassOptional(crate::mir::MirClassOptionalCleanup {
+                    destination: MirPlace::base(self.storage),
+                    class,
+                    span,
+                })
+            }
         }
     }
 }
@@ -187,6 +216,9 @@ mod tests {
                 .map(|cleanup| match cleanup {
                     PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
                     PlannedCleanup::Shared(release) => release.owner,
+                    PlannedCleanup::ClassOptional(cleanup) => {
+                        cleanup.destination.base.storage()
+                    }
                 })
                 .collect::<Vec<_>>(),
             [second_inner, first_inner, outer]
@@ -198,6 +230,7 @@ mod tests {
             match &planner.for_current_scope(span)[0] {
                 PlannedCleanup::Inline(cleanup) => cleanup.destination.base.storage(),
                 PlannedCleanup::Shared(release) => release.owner,
+                PlannedCleanup::ClassOptional(cleanup) => cleanup.destination.base.storage(),
             },
             outer
         );

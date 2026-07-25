@@ -56,6 +56,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
     match argument {
         HirCallArgument::Value(expression) => expression_contains_runtime_cast(expression),
         HirCallArgument::Optional { .. } => true,
+        HirCallArgument::ClassOptional(_) => true,
         HirCallArgument::CheckedView(view) => checked_view_contains_runtime_cast(view),
         HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),

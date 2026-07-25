@@ -40,6 +40,10 @@ pub enum MirInstruction {
     SharedFieldReplace(super::shared::MirSharedFieldReplace),
     OptionalInitialize(super::optional::MirOptionalInitialize),
     OptionalAssign(super::optional::MirOptionalAssign),
+    ClassOptionalInitialize(super::optional::MirClassOptionalInitialize),
+    ClassOptionalAssign(super::optional::MirClassOptionalAssign),
+    ClassOptionalPublish(super::optional::MirClassOptionalPublish),
+    ClassOptionalCleanup(super::optional::MirClassOptionalCleanup),
 }
 
 impl MirInstruction {
@@ -68,6 +72,10 @@ impl MirInstruction {
             Self::SharedFieldReplace(instruction) => instruction.span,
             Self::OptionalInitialize(instruction) => instruction.span,
             Self::OptionalAssign(instruction) => instruction.span,
+            Self::ClassOptionalInitialize(instruction) => instruction.span,
+            Self::ClassOptionalAssign(instruction) => instruction.span,
+            Self::ClassOptionalPublish(instruction) => instruction.span,
+            Self::ClassOptionalCleanup(instruction) => instruction.span,
         }
     }
 }

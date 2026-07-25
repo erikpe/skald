@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    resolve::{ResolvedOptionalPayload, ResolvedProgram, ResolvedType, ResolvedTypeKind},
+    resolve::{ResolvedProgram, ResolvedType, ResolvedTypeKind},
     source::Span,
 };
 
@@ -119,25 +119,13 @@ fn record_unsupported_parameter(
 }
 
 fn record_unsupported_type(first: &mut Option<Span>, ty: &ResolvedType) {
-    if matches!(
-        ty.kind,
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(_),
-            ..
-        } | ResolvedTypeKind::OptionalShared { .. }
-    ) {
+    if matches!(ty.kind, ResolvedTypeKind::OptionalShared { .. }) {
         record_span(first, ty.span);
     }
 }
 
 fn record_unsupported_local_type(first: &mut Option<Span>, ty: &ResolvedType) {
-    if matches!(
-        ty.kind,
-        ResolvedTypeKind::Optional {
-            payload: ResolvedOptionalPayload::Class(_),
-            ..
-        } | ResolvedTypeKind::OptionalShared { .. }
-    ) {
+    if matches!(ty.kind, ResolvedTypeKind::OptionalShared { .. }) {
         record_span(first, ty.span);
     }
 }

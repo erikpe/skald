@@ -390,16 +390,24 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }
-        ResolvedTypeKind::Optional { payload, .. } => Type::OptionalPrimitive(match payload {
-            crate::resolve::ResolvedOptionalPayload::I64 => crate::hir::HirPrimitiveType::I64,
-            crate::resolve::ResolvedOptionalPayload::U64 => crate::hir::HirPrimitiveType::U64,
-            crate::resolve::ResolvedOptionalPayload::U8 => crate::hir::HirPrimitiveType::U8,
-            crate::resolve::ResolvedOptionalPayload::F64 => crate::hir::HirPrimitiveType::F64,
-            crate::resolve::ResolvedOptionalPayload::Bool => crate::hir::HirPrimitiveType::Bool,
-            crate::resolve::ResolvedOptionalPayload::Class(_) => {
-                unreachable!("unsupported class optional is rejected before type lowering")
+        ResolvedTypeKind::Optional { payload, .. } => match payload {
+            crate::resolve::ResolvedOptionalPayload::I64 => {
+                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::I64)
             }
-        }),
+            crate::resolve::ResolvedOptionalPayload::U64 => {
+                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U64)
+            }
+            crate::resolve::ResolvedOptionalPayload::U8 => {
+                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::U8)
+            }
+            crate::resolve::ResolvedOptionalPayload::F64 => {
+                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::F64)
+            }
+            crate::resolve::ResolvedOptionalPayload::Bool => {
+                Type::OptionalPrimitive(crate::hir::HirPrimitiveType::Bool)
+            }
+            crate::resolve::ResolvedOptionalPayload::Class(class) => Type::OptionalClass(class),
+        },
         ResolvedTypeKind::OptionalShared { .. } => {
             unreachable!("unsupported optional shared owner is rejected before type lowering")
         }

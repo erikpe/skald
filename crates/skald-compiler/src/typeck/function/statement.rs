@@ -106,24 +106,42 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedOptionalAssignment,
     ) -> CheckedStatement {
-        let Type::OptionalPrimitive(payload) = self.binding_type(assignment.destination) else {
-            unreachable!("unsupported optional assignments are rejected before body checking");
-        };
-        let source =
-            self.check_optional_source(&assignment.source, payload, "optional local assignment");
-        CheckedStatement::falls_through(source.map(|source| {
-            HirStatement::OptionalAssignment(HirOptionalAssignment {
-                destination: HirOptionalPlace {
-                    storage: HirOptionalStorage::Binding(assignment.destination),
+        match self.binding_type(assignment.destination) {
+            Type::OptionalPrimitive(payload) => {
+                let source = self.check_optional_source(
+                    &assignment.source,
                     payload,
+                    "optional local assignment",
+                );
+                CheckedStatement::falls_through(source.map(|source| {
+                    HirStatement::OptionalAssignment(HirOptionalAssignment {
+                        destination: HirOptionalPlace {
+                            storage: HirOptionalStorage::Binding(assignment.destination),
+                            payload,
+                            span: assignment.span,
+                        },
+                        payload,
+                        source,
+                        kind: HirOptionalWriteKind::Assign,
+                        span: assignment.span,
+                    })
+                }))
+            }
+            Type::OptionalClass(class) => {
+                let destination = crate::hir::HirClassOptionalPlace {
+                    storage: HirOptionalStorage::Binding(assignment.destination),
+                    class,
                     span: assignment.span,
-                },
-                payload,
-                source,
-                kind: HirOptionalWriteKind::Assign,
-                span: assignment.span,
-            })
-        }))
+                };
+                let value = self.check_class_optional_assignment(
+                    destination,
+                    &assignment.source,
+                    "class optional local assignment",
+                );
+                CheckedStatement::falls_through(value.map(HirStatement::ClassOptionalAssignment))
+            }
+            _ => unreachable!("resolved optional assignment must target optional storage"),
+        }
     }
 
     fn check_base_initialization(
@@ -195,6 +213,13 @@ impl CallableChecker<'_, '_> {
                     "primitive optional local initializer",
                 )
                 .map(HirLocalInitializer::Optional),
+            Type::OptionalClass(class) => self
+                .check_class_optional_initialize(
+                    class,
+                    &local.initializer,
+                    "class optional local initializer",
+                )
+                .map(HirLocalInitializer::ClassOptional),
             _ => self
                 .check_expression(&local.initializer)
                 .and_then(|initializer| {
@@ -384,6 +409,28 @@ impl CallableChecker<'_, '_> {
                         ),
                     )
                     .with_primary_label(statement.span, "expected `return optional_expression;`"),
+                );
+                None
+            }
+            (Type::OptionalClass(class), Some(value)) => self
+                .check_class_optional_initialize(class, value, "class optional return")
+                .map(|value| {
+                    HirStatement::Return(HirReturn {
+                        value: Some(HirReturnValue::ClassOptional(value)),
+                        span: statement.span,
+                    })
+                }),
+            (Type::OptionalClass(class), None) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RETURN,
+                        format!(
+                            "{} must return a `{}` value",
+                            self.callable_name,
+                            Type::OptionalClass(class).name()
+                        ),
+                    )
+                    .with_primary_label(statement.span, "expected an optional object value"),
                 );
                 None
             }

@@ -96,6 +96,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::Copy(_) => {}
         crate::hir::HirCallArgument::Shared(_) => {}
         crate::hir::HirCallArgument::Optional { .. } => {}
+        crate::hir::HirCallArgument::ClassOptional(_) => {}
     }
 }
 

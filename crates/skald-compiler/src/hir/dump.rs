@@ -195,6 +195,9 @@ impl HirDumper {
                             HirDestructionStep::SharedField(field) => {
                                 dumper.raw_line(&format!("SharedField {field}"));
                             }
+                            HirDestructionStep::OptionalClassField(field) => {
+                                dumper.raw_line(&format!("OptionalClassField {field}"));
+                            }
                             HirDestructionStep::Base(base) => {
                                 dumper.raw_line(&format!("Base {base}"));
                             }
@@ -307,6 +310,15 @@ impl HirDumper {
                             }
                             HirSynthesizedFieldCopy::Shared { field } => {
                                 dumper.raw_line(&format!("Shared {field}"));
+                            }
+                            HirSynthesizedFieldCopy::OptionalClass {
+                                field,
+                                class,
+                                operation,
+                            } => {
+                                dumper.raw_line(&format!("OptionalClass {field} : class {class}?"));
+                                dumper
+                                    .indented(|dumper| dumper.selected_copy_operation(*operation));
                             }
                             HirSynthesizedFieldCopy::Class { field, operation } => {
                                 let selected = match operation {
@@ -438,6 +450,7 @@ impl HirDumper {
                     HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
                     HirLocalInitializer::Shared(value) => dumper.shared_transfer(value),
                     HirLocalInitializer::Optional(source) => dumper.optional_source(source),
+                    HirLocalInitializer::ClassOptional(value) => dumper.class_optional_value(value),
                 });
             }
             HirStatement::Return(statement) => {
@@ -479,6 +492,7 @@ impl HirDumper {
                         }
                         HirReturnValue::Shared(value) => dumper.shared_transfer(value),
                         HirReturnValue::Optional(source) => dumper.optional_source(source),
+                        HirReturnValue::ClassOptional(value) => dumper.class_optional_value(value),
                     });
                 }
             }
@@ -558,6 +572,18 @@ impl HirDumper {
                 self.indented(|dumper| {
                     dumper.optional_place(&assignment.destination);
                     dumper.optional_source(&assignment.source);
+                });
+            }
+            HirStatement::ClassOptionalAssignment(assignment) => {
+                self.line(
+                    &format!(
+                        "ClassOptionalAssignment class {}?",
+                        assignment.destination.class
+                    ),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.class_optional_source(&assignment.source);
                 });
             }
         }
@@ -745,11 +771,51 @@ impl HirDumper {
         }
     }
 
+    fn class_optional_value(&mut self, value: &crate::hir::HirClassOptionalInitialize) {
+        self.line(
+            &format!("ClassOptionalInitialization class {}?", value.class),
+            value.span,
+        );
+        self.indented(|dumper| dumper.class_optional_source(&value.source));
+    }
+
+    fn class_optional_source(&mut self, source: &crate::hir::HirClassOptionalSource) {
+        match source {
+            crate::hir::HirClassOptionalSource::Absent { span } => {
+                self.line("ClassOptionalAbsent", *span)
+            }
+            crate::hir::HirClassOptionalSource::Present(source) => {
+                self.line("ClassOptionalPresent", source.span());
+                self.indented(|dumper| dumper.object_source(source));
+            }
+            crate::hir::HirClassOptionalSource::Copy(place) => {
+                self.line(
+                    &format!("ClassOptionalCopy class {}?", place.class),
+                    place.span,
+                );
+            }
+            crate::hir::HirClassOptionalSource::Produced(expression) => {
+                self.line("ClassOptionalProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+        }
+    }
+
     fn optional_operand(&mut self, operand: &crate::hir::HirOptionalOperand) {
         match operand {
             crate::hir::HirOptionalOperand::Place(place) => self.optional_place(place),
             crate::hir::HirOptionalOperand::Produced(expression) => {
                 self.line("OptionalProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+            crate::hir::HirOptionalOperand::ClassPlace(place) => {
+                self.line(
+                    &format!("ClassOptionalPlace class {}?", place.class),
+                    place.span,
+                );
+            }
+            crate::hir::HirOptionalOperand::ClassProduced(expression) => {
+                self.line("ClassOptionalProduced", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
             }
         }
@@ -843,6 +909,13 @@ impl HirDumper {
                     source.span(),
                 );
                 self.indented(|dumper| dumper.optional_source(source));
+            }
+            HirCallArgument::ClassOptional(value) => {
+                self.line(
+                    &format!("ClassOptionalArgument class {}?", value.class),
+                    value.span,
+                );
+                self.indented(|dumper| dumper.class_optional_source(&value.source));
             }
             HirCallArgument::Place(place) => {
                 self.line("PlaceArgument", place.span());

@@ -3,8 +3,10 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirExpression, HirExpressionKind, HirOptionalOperand, HirOptionalPlace, HirOptionalSource,
-        HirOptionalStorage, HirPresenceTestKind, HirPrimitiveType, Type,
+        HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
+        HirClassOptionalSource, HirExpression, HirExpressionKind, HirOptionalOperand,
+        HirOptionalPlace, HirOptionalSource, HirOptionalStorage, HirPresenceTestKind,
+        HirPrimitiveType, Type,
     },
     resolve::{
         ResolvedExpression, ResolvedPresenceTestExpr, ResolvedPresenceTestKind, ResolvedUnwrapExpr,
@@ -16,6 +18,174 @@ use super::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_class_optional_initialize(
+        &mut self,
+        class: crate::identity::ClassId,
+        source: &ResolvedExpression,
+        context: &'static str,
+    ) -> Option<HirClassOptionalInitialize> {
+        let checked = self.check_class_optional_source(source, class, context)?;
+        let copy_constructor = if matches!(checked, HirClassOptionalSource::Absent { .. }) {
+            None
+        } else {
+            let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
+                self.report_unavailable_copy_operation(class, true, source.span());
+                return None;
+            };
+            Some(operation)
+        };
+        Some(HirClassOptionalInitialize {
+            class,
+            source: checked,
+            copy_constructor,
+            span: source.span(),
+        })
+    }
+
+    pub(super) fn check_class_optional_assignment(
+        &mut self,
+        destination: HirClassOptionalPlace,
+        source: &ResolvedExpression,
+        context: &'static str,
+    ) -> Option<HirClassOptionalAssignment> {
+        let checked = self.check_class_optional_source(source, destination.class, context)?;
+        let (copy_constructor, copy_assignment) =
+            if matches!(checked, HirClassOptionalSource::Absent { .. }) {
+                (None, None)
+            } else {
+                let Some(construction) = self
+                    .copy_capabilities
+                    .constructor(destination.class)
+                    .selected()
+                else {
+                    self.report_unavailable_copy_operation(destination.class, true, source.span());
+                    return None;
+                };
+                let Some(assignment) = self
+                    .copy_capabilities
+                    .assignment(destination.class)
+                    .selected()
+                else {
+                    self.report_unavailable_copy_operation(destination.class, false, source.span());
+                    return None;
+                };
+                (Some(construction), Some(assignment))
+            };
+        Some(HirClassOptionalAssignment {
+            destination,
+            source: checked,
+            copy_constructor,
+            copy_assignment,
+            kind: crate::hir::HirOptionalWriteKind::Assign,
+            span: source.span(),
+        })
+    }
+
+    fn check_class_optional_source(
+        &mut self,
+        source: &ResolvedExpression,
+        class: crate::identity::ClassId,
+        context: &'static str,
+    ) -> Option<HirClassOptionalSource> {
+        if let ResolvedExpression::Absent(absent) = source {
+            return Some(HirClassOptionalSource::Absent { span: absent.span });
+        }
+        if let Some(place) = self.class_optional_place(source) {
+            if place.class == class {
+                return Some(HirClassOptionalSource::Copy(place));
+            }
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!("{context} requires `class {class}?`"),
+                )
+                .with_primary_label(
+                    place.span,
+                    format!("source has type `class {}?`", place.class),
+                ),
+            );
+            return None;
+        }
+        if is_call_through_groups(source) {
+            let expression = self.check_expression(source)?;
+            if expression.ty == Type::OptionalClass(class) {
+                return Some(HirClassOptionalSource::Produced(Box::new(expression)));
+            }
+            if let Type::OptionalClass(actual) = expression.ty {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        format!("{context} requires `class {class}?`"),
+                    )
+                    .with_primary_label(
+                        expression.span,
+                        format!("source has type `class {actual}?`"),
+                    ),
+                );
+                return None;
+            }
+            if expression.ty == Type::Class(class) {
+                return Some(HirClassOptionalSource::Present(
+                    crate::hir::HirObjectSource::Produced(crate::hir::HirObjectProducer::Call(
+                        super::function::lower_object_call(expression, class),
+                    )),
+                ));
+            }
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!("{context} requires `class {class}` or `class {class}?`"),
+                )
+                .with_primary_label(
+                    expression.span,
+                    format!("source has type `{}`", expression.ty.name()),
+                ),
+            );
+            return None;
+        }
+        self.check_object_source(source, class, context)
+            .map(HirClassOptionalSource::Present)
+    }
+
+    pub(super) fn class_optional_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirClassOptionalPlace> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                let Type::OptionalClass(class) = self.binding_type(binding.binding) else {
+                    return None;
+                };
+                Some(HirClassOptionalPlace {
+                    storage: HirOptionalStorage::Binding(binding.binding),
+                    class,
+                    span: binding.span,
+                })
+            }
+            ResolvedExpression::Grouped(grouped) => self
+                .class_optional_place(&grouped.expression)
+                .map(|place| HirClassOptionalPlace {
+                    span: grouped.span,
+                    ..place
+                }),
+            ResolvedExpression::FieldAccess(access) => {
+                let expression = self.check_field_read(access)?;
+                let Type::OptionalClass(class) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::FieldRead(place) = expression.kind else {
+                    unreachable!("field checking must produce a field-read expression");
+                };
+                Some(HirClassOptionalPlace {
+                    storage: HirOptionalStorage::Field(place),
+                    class,
+                    span: expression.span,
+                })
+            }
+            _ => None,
+        }
+    }
+
     pub(super) fn check_optional_source(
         &mut self,
         source: &ResolvedExpression,
@@ -78,6 +248,19 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirExpression> {
         let source =
             self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+        if matches!(
+            source,
+            HirOptionalOperand::ClassPlace(_) | HirOptionalOperand::ClassProduced(_)
+        ) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::OPTIONAL_VALUES_NOT_IMPLEMENTED,
+                    "checked class-optional payload views are not executable yet",
+                )
+                .with_primary_label(unwrap.span, "class optional unwrap is implemented in OP5"),
+            );
+            return None;
+        }
         let payload = source.payload();
         Some(HirExpression {
             kind: HirExpressionKind::Unwrap(source),
@@ -95,10 +278,22 @@ impl CallableChecker<'_, '_> {
         if let Some(place) = self.optional_place(expression) {
             return Some(HirOptionalOperand::Place(place));
         }
+        if let Some(place) = self.class_optional_place(expression) {
+            return Some(HirOptionalOperand::ClassPlace(place));
+        }
         if is_call_through_groups(expression) {
             if let Some(value) = self.check_expression(expression) {
-                if matches!(value.ty, Type::OptionalPrimitive(_)) {
-                    return Some(HirOptionalOperand::Produced(Box::new(value)));
+                if matches!(
+                    value.ty,
+                    Type::OptionalPrimitive(_) | Type::OptionalClass(_)
+                ) {
+                    return Some(match value.ty {
+                        Type::OptionalPrimitive(_) => HirOptionalOperand::Produced(Box::new(value)),
+                        Type::OptionalClass(_) => {
+                            HirOptionalOperand::ClassProduced(Box::new(value))
+                        }
+                        _ => unreachable!(),
+                    });
                 }
                 self.report_non_optional_operand(value.ty, span, context);
                 return None;
