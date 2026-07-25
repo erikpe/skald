@@ -271,6 +271,7 @@ impl InstructionSelector<'_, '_> {
             | MirType::Interface(_)
             | MirType::Obj
             | MirType::Shared(_)
+            | MirType::OptionalPrimitive(_)
             | MirType::Unit => {
                 unreachable!("verified primitive copy step must have a payload primitive type")
             }

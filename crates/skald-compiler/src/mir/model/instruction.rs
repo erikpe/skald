@@ -38,6 +38,8 @@ pub enum MirInstruction {
     SharedRelease(super::shared::MirSharedRelease),
     SharedFieldInitialize(super::shared::MirSharedFieldInitialize),
     SharedFieldReplace(super::shared::MirSharedFieldReplace),
+    OptionalInitialize(super::optional::MirOptionalInitialize),
+    OptionalAssign(super::optional::MirOptionalAssign),
 }
 
 impl MirInstruction {
@@ -64,6 +66,8 @@ impl MirInstruction {
             Self::SharedRelease(instruction) => instruction.span,
             Self::SharedFieldInitialize(instruction) => instruction.span,
             Self::SharedFieldReplace(instruction) => instruction.span,
+            Self::OptionalInitialize(instruction) => instruction.span,
+            Self::OptionalAssign(instruction) => instruction.span,
         }
     }
 }

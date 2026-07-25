@@ -403,11 +403,12 @@ particular, it does not define:
 - copy, assignment, destruction, temporary, or evaluation semantics;
 - foreign-call legality, target representation, or runtime behavior.
 
-Optional type and expression shapes currently cross lexing, parsing, and name
-resolution with explicit nodes and flat resolved target identities. Type
-checking rejects every such program with `TYP035`; no optional HIR, MIR,
-layout, ABI, or execution behavior is implemented yet. The frozen semantics
-belong to [Optional Values](OPTIONAL_VALUES.md).
+Optional type and expression shapes cross lexing, parsing, and name resolution
+with explicit nodes and flat resolved target identities. Primitive optional
+locals also cross explicit HIR, MIR, verification, x86-64 layout, and
+execution. Other optional positions retain the focused `TYP035` boundary. The
+semantics and exact implemented slice belong to
+[Optional Values](OPTIONAL_VALUES.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

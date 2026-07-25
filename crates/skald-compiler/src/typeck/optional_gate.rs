@@ -1,38 +1,37 @@
-//! Temporary boundary between resolved optional syntax and executable HIR.
+//! Boundary for optional positions whose executable profile has not landed.
 
 use crate::{
     diagnostics::{Diagnostic, Diagnostics},
-    resolve::{
-        ResolvedBlock, ResolvedConstructionMode, ResolvedExpression, ResolvedObjectReceiver,
-        ResolvedProgram, ResolvedStatement, ResolvedType, ResolvedTypeKind,
-    },
+    resolve::{ResolvedOptionalPayload, ResolvedProgram, ResolvedType, ResolvedTypeKind},
     source::Span,
 };
 
 use super::OPTIONAL_VALUES_NOT_IMPLEMENTED;
 
-pub(super) fn reject_unimplemented_optionals(
+pub(super) fn reject_unsupported_optionals(
     program: &ResolvedProgram,
     diagnostics: &mut Diagnostics,
 ) -> bool {
-    let Some(span) = first_optional_span(program) else {
+    let Some(span) = first_unsupported_optional_span(program) else {
         return false;
     };
     diagnostics.push(
         Diagnostic::error(
             OPTIONAL_VALUES_NOT_IMPLEMENTED,
-            "optional values are not executable yet",
+            "this optional-value position is not executable yet",
         )
         .with_primary_label(
             span,
-            "optional syntax is resolved, but HIR and execution support are not implemented",
+            "only primitive optional locals are executable in the current profile",
         )
-        .with_note("the compiler currently accepts optional syntax only through name resolution"),
+        .with_note(
+            "optional fields, parameters, results, class payloads, shared owners, and aliases remain planned",
+        ),
     );
     true
 }
 
-fn first_optional_span(program: &ResolvedProgram) -> Option<Span> {
+fn first_unsupported_optional_span(program: &ResolvedProgram) -> Option<Span> {
     let mut first = None;
 
     for interface in program.interfaces.iter() {
@@ -43,7 +42,6 @@ fn first_optional_span(program: &ResolvedProgram) -> Option<Span> {
             }
         }
     }
-
     for class in program.classes.iter() {
         for field in &class.fields {
             record_type(&mut first, &field.type_syntax);
@@ -62,17 +60,14 @@ fn first_optional_span(program: &ResolvedProgram) -> Option<Span> {
             record_type(&mut first, &method.return_type);
         }
     }
-
     for declaration in program.declarations.iter() {
         record_parameters(&mut first, &declaration.parameters);
         record_type(&mut first, &declaration.return_type);
     }
-
     for definition in program.definitions.iter() {
         for local in &definition.locals {
-            record_type(&mut first, &local.type_syntax);
+            record_unsupported_local_type(&mut first, &local.type_syntax);
         }
-        record_block(&mut first, &definition.body);
     }
     for class in program.class_definitions.iter() {
         for member in class
@@ -84,9 +79,8 @@ fn first_optional_span(program: &ResolvedProgram) -> Option<Span> {
             .chain(class.methods.iter())
         {
             for local in &member.locals {
-                record_type(&mut first, &local.type_syntax);
+                record_unsupported_local_type(&mut first, &local.type_syntax);
             }
-            record_block(&mut first, &member.body);
         }
     }
 
@@ -108,114 +102,20 @@ fn record_type(first: &mut Option<Span>, ty: &ResolvedType) {
     }
 }
 
-fn record_block(first: &mut Option<Span>, block: &ResolvedBlock) {
-    for statement in &block.statements {
-        match statement {
-            ResolvedStatement::BaseInitialization(statement) => {
-                record_expressions(first, &statement.arguments)
-            }
-            ResolvedStatement::Local(statement) => record_expression(first, &statement.initializer),
-            ResolvedStatement::Return(statement) => {
-                if let Some(value) = &statement.value {
-                    record_expression(first, value);
-                }
-            }
-            ResolvedStatement::Expression(statement) => {
-                record_expression(first, &statement.expression)
-            }
-            ResolvedStatement::Conditional(statement) => {
-                for arm in &statement.arms {
-                    record_expression(first, &arm.condition);
-                    record_block(first, &arm.body);
-                }
-                if let Some(else_block) = &statement.else_block {
-                    record_block(first, else_block);
-                }
-            }
-            ResolvedStatement::Block(block) => record_block(first, block),
-            ResolvedStatement::FieldAssignment(statement) => {
-                record_receiver(first, &statement.receiver);
-                record_expression(first, &statement.value);
-            }
-            ResolvedStatement::ObjectAssignment(statement) => {
-                record_expression(first, &statement.source)
-            }
-            ResolvedStatement::SharedAssignment(statement) => {
-                record_expression(first, &statement.source)
-            }
-            ResolvedStatement::OptionalAssignment(statement) => {
-                record_span(first, statement.span);
-                record_expression(first, &statement.source);
-            }
-        }
-    }
-}
-
-fn record_expressions(first: &mut Option<Span>, expressions: &[ResolvedExpression]) {
-    for expression in expressions {
-        record_expression(first, expression);
-    }
-}
-
-fn record_expression(first: &mut Option<Span>, expression: &ResolvedExpression) {
-    match expression {
-        ResolvedExpression::Absent(expression) => record_span(first, expression.span),
-        ResolvedExpression::PresenceTest(expression) => record_span(first, expression.span),
-        ResolvedExpression::Unwrap(expression) => record_span(first, expression.span),
-        ResolvedExpression::Unary(expression) => record_expression(first, &expression.operand),
-        ResolvedExpression::Dereference(expression) => record_expression(first, &expression.source),
-        ResolvedExpression::Binary(expression) => {
-            record_expression(first, &expression.left);
-            record_expression(first, &expression.right);
-        }
-        ResolvedExpression::TypeTest(expression) => record_expression(first, &expression.source),
-        ResolvedExpression::ObjectCast(expression) => record_expression(first, &expression.source),
-        ResolvedExpression::Allocation(expression) => {
-            record_construction_mode(first, &expression.mode)
-        }
-        ResolvedExpression::DirectCall(expression) => {
-            record_expressions(first, &expression.arguments)
-        }
-        ResolvedExpression::Grouped(expression) => record_expression(first, &expression.expression),
-        ResolvedExpression::FieldAccess(expression) => record_receiver(first, &expression.receiver),
-        ResolvedExpression::MethodCall(expression) => {
-            record_receiver(first, &expression.receiver);
-            record_expressions(first, &expression.arguments);
-        }
-        ResolvedExpression::InterfaceCall(expression) => {
-            record_expressions(first, &expression.arguments)
-        }
-        ResolvedExpression::Construct(expression) => {
-            record_construction_mode(first, &expression.mode)
-        }
-        ResolvedExpression::Binding(_)
-        | ResolvedExpression::NumericLiteral(_)
-        | ResolvedExpression::Boolean(_) => {}
-    }
-}
-
-fn record_construction_mode(first: &mut Option<Span>, mode: &ResolvedConstructionMode) {
-    match mode {
-        ResolvedConstructionMode::Initialize { arguments } => record_expressions(first, arguments),
-        ResolvedConstructionMode::Copy { source, .. } => record_expression(first, source),
-    }
-}
-
-fn record_receiver(first: &mut Option<Span>, receiver: &ResolvedObjectReceiver) {
-    match receiver {
-        ResolvedObjectReceiver::BindingPath(_) => {}
-        ResolvedObjectReceiver::CastRelative { cast, .. } => record_expression(first, &cast.source),
-        ResolvedObjectReceiver::Dereference { dereference, .. } => {
-            record_expression(first, &dereference.source)
-        }
+fn record_unsupported_local_type(first: &mut Option<Span>, ty: &ResolvedType) {
+    if matches!(
+        ty.kind,
+        ResolvedTypeKind::Optional {
+            payload: ResolvedOptionalPayload::Class(_),
+            ..
+        } | ResolvedTypeKind::OptionalShared { .. }
+    ) {
+        record_span(first, ty.span);
     }
 }
 
 fn record_span(first: &mut Option<Span>, candidate: Span) {
-    if match first {
-        Some(span) => candidate.range().start() < span.range().start(),
-        None => true,
-    } {
+    if first.is_none_or(|span| candidate.range().start() < span.range().start()) {
         *first = Some(candidate);
     }
 }

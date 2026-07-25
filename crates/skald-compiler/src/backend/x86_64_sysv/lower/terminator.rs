@@ -47,6 +47,7 @@ pub(super) fn select(
         }
         MirTerminator::CheckedCast { .. }
         | MirTerminator::SharedCast { .. }
+        | MirTerminator::OptionalUnwrap { .. }
         | MirTerminator::Terminate { .. } => {
             unreachable!("type-operation terminators use their dedicated selector")
         }

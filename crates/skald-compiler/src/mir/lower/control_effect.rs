@@ -46,7 +46,9 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
         | HirExpressionKind::U64(_)
         | HirExpressionKind::U8(_)
         | HirExpressionKind::F64Bits(_)
-        | HirExpressionKind::Boolean(_) => false,
+        | HirExpressionKind::Boolean(_)
+        | HirExpressionKind::PresenceTest { .. } => false,
+        HirExpressionKind::Unwrap(_) => true,
     }
 }
 

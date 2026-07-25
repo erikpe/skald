@@ -116,6 +116,10 @@ impl FrameLayout {
                     let ty = data_layout.ty(storage.ty)?;
                     (ty.size(), ty.alignment())
                 }
+                (_, MirType::OptionalPrimitive(payload)) => {
+                    let ty = data_layout.optional(payload)?.ty();
+                    (ty.size(), ty.alignment())
+                }
                 (_, _) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
             };
             storage_offsets.push(allocator.allocate(size, alignment)?);

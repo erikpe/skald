@@ -121,6 +121,14 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     self.merge(*success_target, &success, &mut incoming, &mut pending);
                     self.merge(*failure_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::OptionalUnwrap {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.merge(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
                 Some(MirTerminator::ReturnShared { owner, .. }) => {
                     self.check_return(block, &state, Some(*owner))
@@ -343,7 +351,9 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 MirInstruction::Assign(_)
                 | MirInstruction::Cleanup(_)
                 | MirInstruction::Store(_)
-                | MirInstruction::CopyAssign(_) => {}
+                | MirInstruction::CopyAssign(_)
+                | MirInstruction::OptionalInitialize(_)
+                | MirInstruction::OptionalAssign(_) => {}
                 MirInstruction::BindCheckedView(binding) => {
                     self.require_live_pointee(block.id, state, &binding.view.source);
                     self.require_live_shared_origin(block.id, state, &binding.view.origin);

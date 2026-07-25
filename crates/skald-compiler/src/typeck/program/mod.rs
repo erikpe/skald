@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     capabilities::CopyCapabilities, containment::validate_containment, function::CallableChecker,
-    optional_gate::reject_unimplemented_optionals,
+    optional_gate::reject_unsupported_optionals,
 };
 
 mod class;
@@ -80,7 +80,7 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if reject_unimplemented_optionals(program, &mut diagnostics) {
+    if reject_unsupported_optionals(program, &mut diagnostics) {
         return TypeCheckOutput {
             hir: None,
             diagnostics,
@@ -390,8 +390,18 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }
-        ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. } => {
-            unreachable!("the optional-value type-checking gate runs before type lowering")
+        ResolvedTypeKind::Optional { payload, .. } => Type::OptionalPrimitive(match payload {
+            crate::resolve::ResolvedOptionalPayload::I64 => crate::hir::HirPrimitiveType::I64,
+            crate::resolve::ResolvedOptionalPayload::U64 => crate::hir::HirPrimitiveType::U64,
+            crate::resolve::ResolvedOptionalPayload::U8 => crate::hir::HirPrimitiveType::U8,
+            crate::resolve::ResolvedOptionalPayload::F64 => crate::hir::HirPrimitiveType::F64,
+            crate::resolve::ResolvedOptionalPayload::Bool => crate::hir::HirPrimitiveType::Bool,
+            crate::resolve::ResolvedOptionalPayload::Class(_) => {
+                unreachable!("unsupported class optional is rejected before type lowering")
+            }
+        }),
+        ResolvedTypeKind::OptionalShared { .. } => {
+            unreachable!("unsupported optional shared owner is rejected before type lowering")
         }
     }
 }

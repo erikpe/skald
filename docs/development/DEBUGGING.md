@@ -143,13 +143,12 @@ Inspect optional frontend behavior at the narrowest owner defined by the frozen
   `some`, type-marker spans, presence tests, and unwrap nodes;
 - resolved dumps currently expose canonical flat inline-optional and
   optional-shared targets plus absence, presence-test, and unwrap nodes;
-- `TYP035` is the expected current boundary before HIR;
-- future HIR dumps will expose injection, checked access, and selected payload
-  consumers;
-- MIR for initialized optional storage, conditional lifecycle, presence
-  guards, shared anchors, and exact non-returning failure reasons; and
-- assembly for state/payload offsets, the `shared? T` zero niche, internal
-  parameter/result lowering, and trap-only failures.
-
-MIR and assembly items remain planned obligations; the current compiler never
-lowers optional syntax past type checking.
+- primitive-local HIR dumps expose absent/present initialization, copy,
+  assignment, presence tests, and checked value extraction;
+- primitive-local MIR dumps expose initialized optional storage, explicit
+  operations, unwrap success/failure blocks, and the exact non-returning
+  optional-access reason;
+- assembly uses the documented state/payload offsets and trap-only absent
+  failure; and
+- `TYP035` remains the expected boundary for fields, callable positions, class
+  payloads, checked views, and optional shared owners.

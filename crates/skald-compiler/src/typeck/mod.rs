@@ -5,6 +5,7 @@ mod containment;
 mod expression;
 mod function;
 mod literal;
+mod optional;
 mod optional_gate;
 mod program;
 mod shared;

@@ -146,6 +146,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::Temporary
                 | MirStorageKind::SharedAnchor
                 | MirStorageKind::ScalarSpill
+                | MirStorageKind::OptionalUnwrap
                 | MirStorageKind::SharedAllocation => continue,
             };
             initial.live.insert(place);
@@ -216,6 +217,14 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     {
                         self.require_live_place(block, &state, place, "shared-cast field source");
                     }
+                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::OptionalUnwrap {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
                     self.merge_state(*success_target, &state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }

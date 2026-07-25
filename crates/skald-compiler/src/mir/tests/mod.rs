@@ -22,6 +22,7 @@ mod object_fixtures;
 mod object_results;
 mod object_temporaries;
 mod objects;
+mod optional_values;
 mod robustness;
 mod shared;
 mod static_inheritance;

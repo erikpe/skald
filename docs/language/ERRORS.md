@@ -69,21 +69,22 @@ This applies to plain casts consumed directly and by owning inline copy
 operations, owner-preserving shared casts, and target-directed shared copy
 allocation.
 
-## Frozen optional failure direction
+## Optional failures
 
-The [optional-values contract](OPTIONAL_VALUES.md#failure) freezes three
-additional unrecoverable failures for the planned feature:
+The [optional-values contract](OPTIONAL_VALUES.md#failure) defines three
+unrecoverable failures:
 
 - checked access to an absent optional;
 - dynamic presence-guard count overflow; and
 - clearing, replacing, or destroying an optional while a checked payload view
   keeps it present.
 
-Each failure terminates before producing an invalid payload or dangling view,
-does not return to Skald, and does not guarantee remaining source-level
-cleanup. These failures are part of a **frozen design**, not the current
-executable language: optional syntax resolves, but type checking rejects it
-before HIR.
+Checked access to an absent primitive optional local is implemented and lowers
+to the compiler's non-returning illegal-instruction boundary. It terminates
+before producing a payload, does not return to Skald, and does not guarantee
+remaining source-level cleanup. Guard overflow and guarded mutation retain
+the same frozen behavior but become executable only with checked inline-class
+payload views.
 
 ## Cleanup and abrupt termination
 

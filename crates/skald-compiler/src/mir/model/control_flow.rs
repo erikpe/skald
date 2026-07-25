@@ -58,6 +58,13 @@ pub enum MirTerminator {
         failure_target: BlockId,
         span: Span,
     },
+    OptionalUnwrap {
+        source: super::ids::StorageId,
+        destination: super::ids::StorageId,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
     /// An explicit language-defined abnormal exit.
     Terminate {
         reason: MirTerminationReason,
@@ -68,6 +75,7 @@ pub enum MirTerminator {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirTerminationReason {
     ObjectCastFailure,
+    OptionalAccessFailure,
 }
 
 impl MirTerminator {
@@ -79,6 +87,7 @@ impl MirTerminator {
             | Self::Branch { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
+            | Self::OptionalUnwrap { span, .. }
             | Self::Terminate { span, .. } => *span,
         }
     }
@@ -100,6 +109,11 @@ impl MirTerminator {
                 ..
             } => [Some(*success_target), Some(*failure_target)],
             Self::SharedCast {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target)],
+            Self::OptionalUnwrap {
                 success_target,
                 failure_target,
                 ..

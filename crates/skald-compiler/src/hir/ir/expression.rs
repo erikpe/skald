@@ -13,7 +13,7 @@ use super::{
         HirCheckedObjectView, HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource,
         HirObjectView, HirSelectedCopyOperation, HirViewTarget,
     },
-    HirSharedTransfer, Type,
+    HirOptionalPlace, HirPresenceTestKind, HirSharedTransfer, Type,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -57,6 +57,11 @@ pub enum HirExpressionKind {
         arguments: Vec<HirCallArgument>,
     },
     TypeTest(HirTypeTest),
+    PresenceTest {
+        source: HirOptionalPlace,
+        kind: HirPresenceTestKind,
+    },
+    Unwrap(HirOptionalPlace),
     Grouped(Box<HirExpression>),
 }
 

@@ -1,16 +1,35 @@
 # Optional Values
 
-Status: frozen language design; syntax and resolution are implemented, while
-typed and executable support is planned. The [status matrix](STATUS.md) is
-authoritative for availability, and the [implemented grammar](GRAMMAR.md)
-remains the exact syntax currently accepted by the compiler.
+Status: frozen language design with an implemented primitive-local execution
+slice. The [status matrix](STATUS.md) is authoritative for availability, and
+the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
+accepted by the compiler.
 
-This document freezes Skald's source-level optional-value contract. Its source
-examples reach name resolution but are rejected with the temporary
-type-checking diagnostic `TYP035` until the corresponding executable profile
-is implemented. Compiler representation, verification, and ABI direction are
-defined separately in the
+This document freezes Skald's source-level optional-value contract. Primitive
+`i64?`, `u64?`, `u8?`, `f64?`, and `bool?` locals now execute end to end with
+explicit initialization, assignment, presence tests, and checked unwrap.
+Optional fields, parameters, results, class payloads, and shared owners remain
+at the focused `TYP035` type-checking boundary until their roadmap stages.
+Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
+
+## Implemented primitive-local slice
+
+The current executable profile permits primitive optional locals initialized
+from `none`, an exact ordinary primitive value, or another exact optional:
+
+```ska
+var empty: i64? = none;
+var present: i64? = 41;
+var copy: i64? = present;
+copy = empty;
+copy = 42;
+```
+
+`is some` and `is none` produce `bool`. Postfix `!` copies a present primitive
+payload and terminates unsuccessfully when the optional is absent. The
+optional itself never has truthiness and never implicitly becomes its payload.
+The same rules apply to all five primitive types.
 
 ## Core invariant
 
@@ -41,7 +60,8 @@ ownership:
 | Type | Meaning | Frozen profile |
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
-| `T?` | Inline optional containing zero or one `T` | Syntax/resolution implemented; execution planned |
+| primitive `T?` | Inline optional containing zero or one primitive `T` | Locals execute; stored/callable boundaries are planned |
+| class `T?` | Inline optional containing zero or one exact class `T` | Syntax/resolution implemented; execution planned |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
 | `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
@@ -80,9 +100,11 @@ var inline_value: Item? = none;
 var shared_owner: shared? Item = none;
 ```
 
-The expected type may come from a local or field initialization, assignment,
-argument, or return. `none` used without one unambiguous optional expectation
-is invalid. It does not have a universal runtime type.
+The expected type may ultimately come from a local or field initialization,
+assignment, argument, or return. The current executable slice supplies it
+through primitive local initialization and assignment. `none` used without
+one unambiguous optional expectation is invalid. It does not have a universal
+runtime type.
 
 An ordinary value may be injected into its corresponding optional:
 

@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP2 is next.
+Status: in progress; OP3 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -182,7 +182,7 @@ documents remain historical and are not migration targets.
 
 - [x] OP0 — Freeze language and compiler optional-value contracts
 - [x] OP1 — Add optional syntax and resolved type identities
-- [ ] OP2 — Execute primitive optional locals and checked inspection
+- [x] OP2 — Execute primitive optional locals and checked inspection
 - [ ] OP3 — Carry primitive optionals through stored and callable boundaries
 - [ ] OP4 — Implement inline-class optional lifecycle
 - [ ] OP5 — Enforce checked payload views and dynamic presence guards
@@ -272,26 +272,26 @@ HIR.
 **Purpose:** Deliver the smallest complete source-to-machine optional slice and
 establish reusable HIR, MIR, verification, control-flow, and backend machinery.
 
-- [ ] Type check primitive `T?` locals initialized from `none`, the exact
+- [x] Type check primitive `T?` locals initialized from `none`, the exact
       primitive `T`, or another exact `T?`; preserve source evaluation once.
-- [ ] Type check `is some`, `is none`, and primitive postfix unwrap as exact
+- [x] Type check `is some`, `is none`, and primitive postfix unwrap as exact
       `bool` and primitive value expressions without optional truthiness.
-- [ ] Introduce explicit HIR for empty construction, present injection,
+- [x] Introduce explicit HIR for empty construction, present injection,
       optional copy/assignment, presence tests, and checked unwrap.
-- [ ] Add initialized optional storage and explicit MIR operations for
+- [x] Add initialized optional storage and explicit MIR operations for
       absent/present initialization, primitive payload copy/store, runtime
       presence tests, and unwrap success/failure control flow.
-- [ ] Add a distinct optional-access termination reason, require every dynamic
+- [x] Add a distinct optional-access termination reason, require every dynamic
       unwrap failure edge to end in that reason, and preserve deterministic MIR
       dumps.
-- [ ] Verify compatible optional storage, initialization exactly once, legal
+- [x] Verify compatible optional storage, initialization exactly once, legal
       tag/payload operations, terminated failure edges, and identical
       initialized-wrapper state at CFG joins without pretending dynamic
       presence is statically known.
-- [ ] Lay out primitive optionals on x86-64 with one documented state plus
+- [x] Lay out primitive optionals on x86-64 with one documented state plus
       aligned payload, and lower presence branches and failure to verified
       comparisons and `ud2`.
-- [ ] Remove the temporary execution diagnostic for primitive optional locals
+- [x] Remove the temporary execution diagnostic for primitive optional locals
       and update types/values, functions/control flow, errors, phases/IR,
       backend, and debugging documentation for this exact implemented slice.
 

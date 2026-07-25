@@ -82,6 +82,9 @@ impl CallableChecker<'_, '_> {
             (Type::Class(_), MemberBodyKind::MethodOrDestructor) => {
                 unreachable!("method field copy assignment is handled before initializer policy")
             }
+            (Type::OptionalPrimitive(_), _) => {
+                unreachable!("optional fields are rejected before member body checking")
+            }
         };
         self.finish_field_assignment(target, body_kind, hir)
     }

@@ -101,7 +101,7 @@ fn rejects_interface_inline_optionals_but_recovers_other_declarations() {
 }
 
 #[test]
-fn optional_assignment_shape_reaches_the_type_check_gate() {
+fn primitive_optional_assignment_shape_reaches_typed_hir() {
     let output = resolve_text(
         "fn update() -> unit {\n\
            var value: i64? = none;\n\
@@ -112,9 +112,6 @@ fn optional_assignment_shape_reaches_the_type_check_gate() {
 
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
     let checked = crate::typeck::type_check(&output.program);
-    assert_eq!(checked.diagnostics.len(), 1);
-    assert_eq!(
-        checked.diagnostics.iter().next().unwrap().code,
-        crate::typeck::OPTIONAL_VALUES_NOT_IMPLEMENTED
-    );
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    assert!(checked.hir.is_some());
 }

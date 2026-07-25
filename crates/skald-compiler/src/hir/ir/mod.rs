@@ -9,6 +9,7 @@ mod body;
 mod declarations;
 mod expression;
 mod object;
+mod optional;
 mod shared;
 
 pub use body::{
@@ -41,6 +42,10 @@ pub use object::{
     HirObjectReturn, HirObjectSlice, HirObjectSource, HirObjectView, HirSelectedCopyOperation,
     HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
+pub use optional::{
+    HirOptionalAssignment, HirOptionalPlace, HirOptionalSource, HirPresenceTestKind,
+    HirPrimitiveType,
+};
 pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
     HirSharedCast, HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
@@ -59,6 +64,7 @@ pub enum Type {
     Class(ClassId),
     Interface(InterfaceId),
     Shared(HirSharedTarget),
+    OptionalPrimitive(HirPrimitiveType),
 }
 
 impl Type {
@@ -78,6 +84,7 @@ impl Type {
                 HirSharedTarget::Class(class) => format!("shared class {class}"),
                 HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
             }),
+            Self::OptionalPrimitive(payload) => Cow::Owned(format!("{}?", payload.name())),
         }
     }
 
@@ -93,7 +100,8 @@ impl Type {
             | Self::Unit
             | Self::Class(_)
             | Self::Interface(_)
-            | Self::Shared(_) => "a",
+            | Self::Shared(_)
+            | Self::OptionalPrimitive(_) => "a",
         }
     }
 }

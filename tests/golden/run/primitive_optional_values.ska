@@ -1,0 +1,17 @@
+fn main() -> i64 {
+    var value: i64? = none;
+    var copy: i64? = value;
+
+    if (copy is none) {
+        value = 40;
+    }
+    else {
+        value = 0;
+    }
+
+    copy = value;
+    if (copy is some) {
+        return copy! + 2;
+    }
+    return 0;
+}

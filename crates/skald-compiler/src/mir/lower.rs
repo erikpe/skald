@@ -15,6 +15,7 @@ mod control_effect;
 mod control_flow;
 mod expression;
 mod object_values;
+mod optional;
 mod places;
 mod program;
 mod shared;
@@ -269,5 +270,8 @@ fn lower_type(ty: Type) -> MirType {
                 MirSharedTarget::Interface(interface)
             }
         }),
+        Type::OptionalPrimitive(payload) => {
+            MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
+        }
     }
 }

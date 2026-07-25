@@ -17,6 +17,7 @@ result type `unit`:
 | `u8` | Unsigned integer values from 0 through 255. |
 | `f64` | IEEE-754 binary64 floating-point values. |
 | `bool` | The distinct values `false` and `true`. |
+| primitive `T?` | An explicitly optional primitive local containing either no `T` or one complete `T`. |
 | a class name | One exact nominal class value, including all of its inline fields. |
 | `unit` | Successful completion without a result payload. |
 
@@ -166,14 +167,12 @@ conversion, is not frozen. Object casts are defined separately in
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
 
-Optional values have a
-[frozen but not-yet-implemented contract](OPTIONAL_VALUES.md) for representing
-absence without making every value nullable. The contract defines inline
-`T?`, optional shared owners `shared? T`, `none`, presence tests, checked
-postfix `!`, injection, payload lifetime, lifecycle behavior, and explicit
-exclusions. The current compiler accepts and resolves those source shapes,
-then rejects them at the type-checking boundary because optional HIR and
-execution are not implemented yet.
+Optional values have a [frozen contract](OPTIONAL_VALUES.md) for representing
+absence without making every value nullable. Primitive `T?` locals are
+implemented with `none`, exact-value injection, optional copy and assignment,
+presence tests, and checked postfix `!`. Optionals have no truthiness and never
+implicitly convert to their payload. Optional fields, parameters, results,
+class payloads, and `shared? T` remain staged exclusions at type checking.
 
 Arrays are an open design area. Element lifetime, size and mutability, storage,
 construction, indexing, slicing, bounds failure, borrowing, and iteration must

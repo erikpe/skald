@@ -6,6 +6,7 @@ mod definition;
 mod ids;
 mod instruction;
 mod interface;
+mod optional;
 mod shared;
 mod value;
 
@@ -33,6 +34,10 @@ pub use instruction::{
 pub use interface::{
     MirInterfaceConformance, MirInterfaceDeclaration, MirInterfaceDeclarationTable,
     MirInterfaceRequirement, MirRequirementImplementation,
+};
+pub use optional::{
+    MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind,
+    MirPrimitiveType,
 };
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,

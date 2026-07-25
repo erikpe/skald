@@ -1,7 +1,7 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design; syntax and resolved identities are implemented,
-while HIR, MIR, backend, and executable support remain planned.
+Status: frozen compiler design with primitive optional locals implemented
+through HIR, MIR verification, x86-64 lowering, and native execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -9,10 +9,11 @@ authoritative for source currently accepted by the compiler.
 
 This document freezes phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
-and test obligations for explicit optionals. It describes the intended
-compiler boundary. Current AST and resolved IR contain the source-shaped forms
-and flat identities below; type checking rejects them with `TYP035` before
-current HIR, MIR, verification, or backend code can receive them.
+and test obligations for explicit optionals. AST and resolved IR contain all
+supported source-shaped forms and flat identities. Primitive optional locals
+continue through explicit typed HIR and MIR operations; the verifier proves
+their storage and failure-edge invariants, and the x86-64 backend executes
+them. Unsupported optional positions still stop at `TYP035`.
 
 ## Phase ownership
 
@@ -96,6 +97,11 @@ Flow-sensitive knowledge may classify a check as statically successful for
 optimization, but HIR source legality never depends on that classification.
 Every unwrap remains a checked semantic operation.
 
+The implemented primitive-local subset uses explicit HIR nodes for absent and
+present initialization, exact optional copy and assignment, presence tests,
+and primitive checked unwrap. Class payload lifecycle, checked places, shared
+owners, and callable boundaries remain later subsets of this same model.
+
 ## MIR optional storage model
 
 Every source-visible optional local, field, parameter, result, and owning
@@ -130,6 +136,13 @@ names:
 
 The backend executes those operations. It does not synthesize them from loads,
 stores, or cleanup lists.
+
+Primitive local MIR currently represents absent/present initialization,
+optional copy and assignment, presence tests, and unwrap as a success/failure
+terminator. Its failure successor is an explicit empty block ending in
+`OptionalAccessFailure`. Definite-initialization verification intersects
+initialized wrapper storage at CFG joins and deliberately does not treat
+dynamic presence as a static fact.
 
 ## Lifecycle state machine
 
@@ -287,10 +300,10 @@ does not initialize those bytes as a `T`; loads, projections, copying,
 assignment, and cleanup branch on verified state before addressing them as a
 payload.
 
-The state word distinguishes absence, unguarded presence, guarded presence,
-and any required internal transition. The exact bit or integer encoding is
-backend private and may change without changing source behavior or the C
-runtime ABI.
+For the implemented primitive-local subset, zero means absent and one means
+present. The reserved eight-byte word leaves the guarded and transition states
+backend-private for later inline-class stages; their exact future encoding may
+change without changing source behavior or the C runtime ABI.
 
 Fields use the same layout recursively. An optional exact class therefore
 contributes the complete payload layout to containment-cycle detection even
@@ -355,8 +368,8 @@ destination, failure edge, guard, or ownership effect is inconsistent.
 
 ## C runtime ABI
 
-The planned optional profile adds no C runtime symbol and requires no runtime
-ABI version bump. Optional state, guard counts, conditional ownership, checked
+The optional profile adds no C runtime symbol and requires no runtime ABI
+version bump. Optional state, guard counts, conditional ownership, checked
 access, and trap lowering remain compiler-owned.
 
 The current allocator and deallocator continue to receive only the same valid

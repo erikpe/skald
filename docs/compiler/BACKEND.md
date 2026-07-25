@@ -8,9 +8,10 @@ separate contract. The shared-handle/header layout, generated
 reference-counting realization, and executable shared-field layout are owned by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
 the current target profile below.
-The frozen [optional-values compiler contract](OPTIONAL_VALUES.md) separately
-owns planned optional layout, ABI, guard, and trap realization. No optional
-MIR is currently legal backend input.
+The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
+optional layout, ABI, guard, and trap realization. Verified primitive optional
+local MIR is legal backend input; stored/callable optionals, class payloads,
+checked views, and optional shared owners remain planned.
 
 ## Backend interface and target registry
 
@@ -70,13 +71,13 @@ inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
 input.
 
-When optional MIR is implemented, the x86-64 backend will follow the frozen
-layout and internal ABI in
-[Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): inline
-optionals use aligned state-plus-payload storage, `shared? T` uses one
-zero-or-canonical-handle word, and verified optional failures use the existing
-non-returning illegal-instruction trap. These are planned target rules and do
-not extend the current legality set.
+Primitive optional locals follow the frozen layout in
+[Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): an
+eight-byte state word precedes the payload at its required alignment. The
+backend writes a present payload before publishing state, branches before
+reading a copied or unwrapped payload, and lowers verified absent-access
+failure to `ud2`. `shared? T`, optional ABI boundaries, class payloads, and
+guarded views retain their planned target rules.
 
 ## Data layout
 
@@ -89,6 +90,7 @@ The x86-64 target layout is:
 | `f64` | 8 | 8 |
 | `u8` | 1 | 1 |
 | `bool` | 1 | 1 |
+| primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |

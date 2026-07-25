@@ -50,7 +50,8 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 | HirStatement::FieldCopyAssignment(_)
                 | HirStatement::CopyAssignment(_)
                 | HirStatement::SharedFieldWrite(_)
-                | HirStatement::SharedAssignment(_) => {}
+                | HirStatement::SharedAssignment(_)
+                | HirStatement::OptionalAssignment(_) => {}
             }
         }
     }

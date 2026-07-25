@@ -4,8 +4,8 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
-        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn, HirReturn,
-        HirReturnValue, HirSharedAssignment, HirStatement, Type,
+        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
+        HirOptionalAssignment, HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -79,8 +79,8 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::SharedAssignment(assignment) => {
                 self.check_shared_assignment(assignment)
             }
-            ResolvedStatement::OptionalAssignment(_) => {
-                unreachable!("the optional-value type-checking gate runs before body checking")
+            ResolvedStatement::OptionalAssignment(assignment) => {
+                self.check_optional_assignment(assignment)
             }
         }
     }
@@ -96,6 +96,25 @@ impl CallableChecker<'_, '_> {
             HirStatement::SharedAssignment(HirSharedAssignment {
                 destination: assignment.destination,
                 value,
+                span: assignment.span,
+            })
+        }))
+    }
+
+    fn check_optional_assignment(
+        &mut self,
+        assignment: &crate::resolve::ResolvedOptionalAssignment,
+    ) -> CheckedStatement {
+        let Type::OptionalPrimitive(payload) = self.binding_type(assignment.destination) else {
+            unreachable!("unsupported optional assignments are rejected before body checking");
+        };
+        let source =
+            self.check_optional_source(&assignment.source, payload, "optional local assignment");
+        CheckedStatement::falls_through(source.map(|source| {
+            HirStatement::OptionalAssignment(HirOptionalAssignment {
+                destination: assignment.destination,
+                payload,
+                source,
                 span: assignment.span,
             })
         }))
@@ -163,6 +182,13 @@ impl CallableChecker<'_, '_> {
             Type::Shared(target) => self
                 .check_shared_transfer(&local.initializer, target, "shared local initializer")
                 .map(HirLocalInitializer::Shared),
+            Type::OptionalPrimitive(payload) => self
+                .check_optional_source(
+                    &local.initializer,
+                    payload,
+                    "primitive optional local initializer",
+                )
+                .map(HirLocalInitializer::Optional),
             _ => self
                 .check_expression(&local.initializer)
                 .and_then(|initializer| {
@@ -332,6 +358,9 @@ impl CallableChecker<'_, '_> {
                     .with_primary_label(statement.span, "expected `return shared_expression;`"),
                 );
                 None
+            }
+            (Type::OptionalPrimitive(_), _) => {
+                unreachable!("optional results are rejected before body checking")
             }
         };
         CheckedStatement::terminates(hir)

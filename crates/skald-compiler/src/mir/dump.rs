@@ -266,6 +266,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::Temporary => "temporary",
             MirStorageKind::SharedAnchor => "shared-anchor",
             MirStorageKind::ScalarSpill => "scalar-spill",
+            MirStorageKind::OptionalUnwrap => "optional-unwrap",
             MirStorageKind::SharedAllocation => "shared-allocation",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
@@ -280,6 +281,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::SharedAnchor => output.push_str("<shared-anchor> "),
                 MirStorageKind::CheckedView(_) => output.push_str("<checked-view> "),
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
+                MirStorageKind::OptionalUnwrap => output.push_str("<optional-unwrap> "),
                 MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),
                 _ => unreachable!("verified language storage has a source binding"),
             },
@@ -520,6 +522,20 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, " from {}", replace.source);
                 write_span(output, replace.span);
             }
+            MirInstruction::OptionalInitialize(initialize) => {
+                let _ = write!(
+                    output,
+                    "optional-initialize {} from ",
+                    initialize.destination
+                );
+                dump_optional_source(output, initialize.source);
+                write_span(output, initialize.span);
+            }
+            MirInstruction::OptionalAssign(assignment) => {
+                let _ = write!(output, "optional-assign {} from ", assignment.destination);
+                dump_optional_source(output, assignment.source);
+                write_span(output, assignment.span);
+            }
         }
         output.push('\n');
     }
@@ -580,9 +596,23 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::OptionalUnwrap {
+            source,
+            destination,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "optional-unwrap {source} into {destination}, success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::Terminate { reason, span }) => {
             let reason = match reason {
                 MirTerminationReason::ObjectCastFailure => "object-cast-failure",
+                MirTerminationReason::OptionalAccessFailure => "optional-access-failure",
             };
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
@@ -722,8 +752,27 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             output.push_str(" is ");
             dump_view_target(output, *target);
         }
+        MirRvalueKind::OptionalPresence { source, kind } => {
+            let kind = match kind {
+                MirPresenceTestKind::Some => "some",
+                MirPresenceTestKind::None => "none",
+            };
+            let _ = write!(output, "optional-presence {kind} {source}");
+        }
     }
     let _ = write!(output, " : {}", rvalue.ty);
+}
+
+fn dump_optional_source(output: &mut String, source: MirOptionalSource) {
+    match source {
+        MirOptionalSource::Absent => output.push_str("absent"),
+        MirOptionalSource::Present(value) => {
+            let _ = write!(output, "present {value}");
+        }
+        MirOptionalSource::Copy(storage) => {
+            let _ = write!(output, "copy {storage}");
+        }
+    }
 }
 
 fn dump_place(output: &mut String, place: &MirPlace) {

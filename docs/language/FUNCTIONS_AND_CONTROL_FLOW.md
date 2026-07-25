@@ -133,10 +133,11 @@ final `else`. Every condition must have type exactly `bool`; there is no
 truthiness conversion. A conditional is a statement and does not produce a
 value.
 
-The frozen [optional-values contract](OPTIONAL_VALUES.md#presence-tests)
-adds `value is some` and `value is none` as `bool`-producing tests. It does not
-add optional truthiness. The tests now parse and resolve explicitly, but type
-checking rejects them until executable optional semantics are implemented.
+The [optional-values contract](OPTIONAL_VALUES.md#presence-tests) adds
+`value is some` and `value is none` as `bool`-producing tests. They execute for
+primitive optional locals and do not add optional truthiness. A presence test
+does not narrow the declared type; payload use still spells the checked
+postfix unwrap `value!`.
 
 Conditions are evaluated in source order. Evaluation stops at the first
 condition producing `true`, and only that arm executes. If no condition is

@@ -6,10 +6,11 @@ Source-visible meaning remains owned by the
 [language documentation](../language/README.md). Shared ownership's
 cross-phase invariants are specified separately in the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md).
-The frozen optional-value phase and IR additions are specified in the
+The optional-value phase and IR additions are specified in the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Optional tokens,
-source-shaped AST nodes, and flat resolved identities are implemented; typed
-HIR and every executable phase remain planned.
+source-shaped AST nodes, and flat resolved identities are implemented;
+primitive optional locals additionally have typed HIR, verified MIR, and
+executable backend lowering.
 
 ## Pipeline contract
 
@@ -39,11 +40,13 @@ Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
 The optional-values contract assigns each decision to these same phase owners.
-Syntax now preserves source shape and resolution assigns non-recursive optional
-target identities. Type checking deliberately emits `TYP035` before HIR.
-Future work will make HIR optional operations and access explicit, then make
-MIR storage, conditional lifecycle, guards, anchors, and failure edges
-executable and verified.
+Syntax preserves source shape and resolution assigns non-recursive optional
+target identities. For primitive locals, type checking selects explicit absent
+or present initialization, copy, assignment, presence, and unwrap HIR. MIR
+owns initialized storage and explicit unwrap success/failure control flow;
+verification proves compatible operations and definite wrapper initialization
+across CFG joins. `TYP035` remains the boundary for optional fields, callable
+boundaries, class payloads, and shared owners.
 
 ## Sources and diagnostics
 

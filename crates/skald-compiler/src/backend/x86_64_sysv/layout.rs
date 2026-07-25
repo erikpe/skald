@@ -17,11 +17,33 @@ pub(super) const SHARED_HANDLE_SIZE: usize = 8;
 pub(super) const SHARED_HANDLE_ALIGNMENT: usize = 8;
 pub(super) const SHARED_DYNAMIC_METADATA_OFFSET: i32 = 8;
 pub(super) const SHARED_HEADER_SIZE: usize = 16;
+const OPTIONAL_STATE_SIZE: usize = 8;
+const OPTIONAL_STATE_ALIGNMENT: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct TypeLayout {
     size: usize,
     alignment: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct OptionalLayout {
+    ty: TypeLayout,
+    payload_offset: usize,
+}
+
+impl OptionalLayout {
+    pub(super) const fn ty(self) -> TypeLayout {
+        self.ty
+    }
+
+    pub(super) const fn state_offset(self) -> usize {
+        0
+    }
+
+    pub(super) const fn payload_offset(self) -> usize {
+        self.payload_offset
+    }
 }
 
 impl TypeLayout {
@@ -91,6 +113,7 @@ impl DataLayout {
                 "interface views have no owning storage layout",
             )),
             MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
             MirType::Unit => Err(layout_error(
                 "payload-free type `unit` has no storage layout",
             )),
@@ -99,6 +122,13 @@ impl DataLayout {
                     .expect("every payload primitive has a target layout"))
             }
         }
+    }
+
+    pub(super) fn optional(
+        &self,
+        payload: crate::mir::MirPrimitiveType,
+    ) -> Result<OptionalLayout, BackendError> {
+        optional_layout(payload)
     }
 
     pub(super) fn class(&self, class: ClassId) -> Option<&ClassLayout> {
@@ -237,8 +267,26 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Interface(_)
         | MirType::Obj
         | MirType::Shared(_)
+        | MirType::OptionalPrimitive(_)
         | MirType::Unit => None,
     }
+}
+
+fn optional_layout(payload: crate::mir::MirPrimitiveType) -> Result<OptionalLayout, BackendError> {
+    let payload = primitive_layout(payload.payload_type())
+        .expect("every primitive optional payload has a target layout");
+    let alignment = OPTIONAL_STATE_ALIGNMENT.max(payload.alignment());
+    let payload_offset = abi::align_up(OPTIONAL_STATE_SIZE, payload.alignment())
+        .ok_or_else(|| layout_error("primitive optional payload offset exceeds target limits"))?;
+    let size = payload_offset
+        .checked_add(payload.size())
+        .and_then(|size| abi::align_up(size, alignment))
+        .filter(|size| *size <= MAX_ADDRESSABLE_SIZE)
+        .ok_or_else(|| layout_error("primitive optional layout exceeds target limits"))?;
+    Ok(OptionalLayout {
+        ty: TypeLayout::new(size, alignment),
+        payload_offset,
+    })
 }
 
 fn layout_class(base: Option<(ClassId, TypeLayout)>, fields: &[TypeLayout]) -> Option<ClassLayout> {
@@ -356,6 +404,28 @@ mod tests {
         );
         assert!(data.ty(MirType::Unit).is_err());
         assert!(data.ty(MirType::Obj).is_err());
+    }
+
+    #[test]
+    fn lays_out_primitive_optionals_with_state_before_aligned_payload() {
+        for (payload, expected) in [
+            (crate::mir::MirPrimitiveType::I64, (16, 8, 8)),
+            (crate::mir::MirPrimitiveType::U64, (16, 8, 8)),
+            (crate::mir::MirPrimitiveType::F64, (16, 8, 8)),
+            (crate::mir::MirPrimitiveType::U8, (16, 8, 8)),
+            (crate::mir::MirPrimitiveType::Bool, (16, 8, 8)),
+        ] {
+            let layout = optional_layout(payload).unwrap();
+            assert_eq!(
+                (
+                    layout.ty().size(),
+                    layout.ty().alignment(),
+                    layout.payload_offset()
+                ),
+                expected
+            );
+            assert_eq!(layout.state_offset(), 0);
+        }
     }
 
     #[test]

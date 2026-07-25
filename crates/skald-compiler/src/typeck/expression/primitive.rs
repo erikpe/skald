@@ -227,7 +227,8 @@ fn select_binary_operation(
             | Type::Obj
             | Type::Class(_)
             | Type::Interface(_)
-            | Type::Shared(_),
+            | Type::Shared(_)
+            | Type::OptionalPrimitive(_),
         ) => None,
     }
 }

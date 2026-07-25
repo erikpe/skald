@@ -20,6 +20,7 @@ mod cleanup;
 mod copy;
 mod finalize;
 mod object_abi;
+mod optional;
 mod ownership;
 mod terminator;
 mod type_operations;
@@ -82,6 +83,7 @@ fn lower_definition(
             data_layout,
             dispatch,
             function,
+            block.id,
             &frame,
             &mut instructions,
         );
@@ -92,7 +94,9 @@ fn lower_definition(
             .terminator
             .as_ref()
             .expect("verified block is terminated");
-        if !selector.select_type_operation_terminator(block_terminator, block.id)? {
+        if !selector.select_optional_terminator(block_terminator)?
+            && !selector.select_type_operation_terminator(block_terminator, block.id)?
+        {
             terminator::select(
                 block_terminator,
                 &frame,
@@ -140,6 +144,8 @@ struct InstructionSelector<'program, 'output> {
     dispatch: &'program DispatchMetadata,
     function: MirDefinitionRef<'program>,
     frame: &'program FrameLayout,
+    block: BlockId,
+    optional_sequence: usize,
     output: &'output mut Vec<Instruction>,
 }
 
@@ -149,6 +155,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
         data_layout: &'program DataLayout,
         dispatch: &'program DispatchMetadata,
         function: MirDefinitionRef<'program>,
+        block: BlockId,
         frame: &'program FrameLayout,
         output: &'output mut Vec<Instruction>,
     ) -> Self {
@@ -158,6 +165,8 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             dispatch,
             function,
             frame,
+            block,
+            optional_sequence: 0,
             output,
         }
     }
@@ -196,6 +205,12 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             }
             MirInstruction::SharedFieldReplace(replace) => {
                 self.select_shared_field_replace(replace)?
+            }
+            MirInstruction::OptionalInitialize(initialize) => {
+                self.select_optional_initialize(initialize)?
+            }
+            MirInstruction::OptionalAssign(assignment) => {
+                self.select_optional_assign(assignment)?
             }
         }
         Ok(())

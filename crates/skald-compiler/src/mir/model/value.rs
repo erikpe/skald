@@ -25,6 +25,7 @@ pub enum MirType {
     Obj,
     /// A non-null strong owner carrying one object view of a live allocation.
     Shared(super::shared::MirSharedTarget),
+    OptionalPrimitive(super::optional::MirPrimitiveType),
     Unit,
 }
 
@@ -32,7 +33,12 @@ impl MirType {
     pub const fn is_scalar_value(self) -> bool {
         !matches!(
             self,
-            Self::Class(_) | Self::Interface(_) | Self::Obj | Self::Shared(_) | Self::Unit
+            Self::Class(_)
+                | Self::Interface(_)
+                | Self::Obj
+                | Self::Shared(_)
+                | Self::Unit
+                | Self::OptionalPrimitive(_)
         )
     }
 }
@@ -49,6 +55,7 @@ impl fmt::Display for MirType {
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
             Self::Shared(target) => write!(formatter, "shared {target}"),
+            Self::OptionalPrimitive(payload) => write!(formatter, "{payload}?"),
             Self::Unit => formatter.write_str("unit"),
         }
     }
@@ -178,6 +185,10 @@ pub enum MirRvalueKind {
     TypeTest {
         source: super::instruction::MirObjectView,
         target: super::instruction::MirViewTarget,
+    },
+    OptionalPresence {
+        source: StorageId,
+        kind: super::optional::MirPresenceTestKind,
     },
 }
 

@@ -1,0 +1,5 @@
+fn main() -> i64 {
+    var value: i64? = 1;
+    var plain: i64 = value;
+    return plain;
+}

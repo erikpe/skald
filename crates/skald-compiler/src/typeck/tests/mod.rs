@@ -57,7 +57,10 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
                 assert_call_argument_is_fully_typed(argument);
             }
         }
-        HirExpressionKind::FieldRead(_) | HirExpressionKind::TypeTest(_) => {}
+        HirExpressionKind::FieldRead(_)
+        | HirExpressionKind::TypeTest(_)
+        | HirExpressionKind::PresenceTest { .. }
+        | HirExpressionKind::Unwrap(_) => {}
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)

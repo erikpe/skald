@@ -431,6 +431,7 @@ impl HirDumper {
                     }
                     HirLocalInitializer::Copy(copy) => dumper.copy_construction(copy),
                     HirLocalInitializer::Shared(value) => dumper.shared_transfer(value),
+                    HirLocalInitializer::Optional(source) => dumper.optional_source(source),
                 });
             }
             HirStatement::Return(statement) => {
@@ -537,6 +538,17 @@ impl HirDumper {
                     assignment.span,
                 );
                 self.indented(|dumper| dumper.shared_transfer(&assignment.value));
+            }
+            HirStatement::OptionalAssignment(assignment) => {
+                self.line(
+                    &format!(
+                        "OptionalAssignment {} : {}?",
+                        assignment.destination,
+                        assignment.payload.name()
+                    ),
+                    assignment.span,
+                );
+                self.indented(|dumper| dumper.optional_source(&assignment.source));
             }
         }
     }
@@ -689,6 +701,32 @@ impl HirDumper {
                     expression,
                 );
                 self.indented(|dumper| dumper.object_view("ObjectView", &test.source));
+            }
+            HirExpressionKind::PresenceTest { source, kind } => {
+                let kind = match kind {
+                    crate::hir::HirPresenceTestKind::Some => "Some",
+                    crate::hir::HirPresenceTestKind::None => "None",
+                };
+                self.typed_line(
+                    &format!("PresenceTest {kind} {}", source.binding),
+                    expression,
+                );
+            }
+            HirExpressionKind::Unwrap(source) => {
+                self.typed_line(&format!("OptionalUnwrap {}", source.binding), expression);
+            }
+        }
+    }
+
+    fn optional_source(&mut self, source: &crate::hir::HirOptionalSource) {
+        match source {
+            crate::hir::HirOptionalSource::Absent { span } => self.line("OptionalAbsent", *span),
+            crate::hir::HirOptionalSource::Present(value) => {
+                self.line("OptionalPresent", value.span);
+                self.indented(|dumper| dumper.expression(value));
+            }
+            crate::hir::HirOptionalSource::Copy(place) => {
+                self.line(&format!("OptionalCopy {}", place.binding), place.span);
             }
         }
     }

@@ -112,6 +112,20 @@ impl Verifier<'_> {
             MirInstruction::SharedFieldReplace(replace) => {
                 self.verify_shared_field_replace(function, block, replace)
             }
+            MirInstruction::OptionalInitialize(initialize) => self.verify_optional_initialize(
+                function,
+                block,
+                initialize.destination,
+                initialize.source,
+                defined_in_block,
+            ),
+            MirInstruction::OptionalAssign(assignment) => self.verify_optional_assign(
+                function,
+                block,
+                assignment.destination,
+                assignment.source,
+                defined_in_block,
+            ),
         }
     }
 
@@ -433,6 +447,9 @@ impl Verifier<'_> {
             }
             MirRvalueKind::TypeTest { source, target } => {
                 self.verify_type_test(function, block, rvalue, source, *target)
+            }
+            MirRvalueKind::OptionalPresence { source, .. } => {
+                self.verify_optional_presence(function, block, *source, rvalue.ty)
             }
         }
     }

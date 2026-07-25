@@ -49,6 +49,10 @@ impl BodyLowerer<'_> {
                 self.lower_shared_field_write(write);
                 self.finish_full_expression(write.span);
             }
+            HirStatement::OptionalAssignment(assignment) => {
+                self.lower_optional_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
         }
     }
 
@@ -103,6 +107,10 @@ impl BodyLowerer<'_> {
             crate::hir::HirLocalInitializer::Shared(transfer) => {
                 self.lower_shared_local(storage, transfer);
                 self.cleanup.register_shared(storage);
+                self.finish_full_expression(local.span);
+            }
+            crate::hir::HirLocalInitializer::Optional(source) => {
+                self.lower_optional_initialize(storage, source, local.span);
                 self.finish_full_expression(local.span);
             }
         }

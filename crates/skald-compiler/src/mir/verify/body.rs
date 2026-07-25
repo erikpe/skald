@@ -65,6 +65,7 @@ impl<'mir> Verifier<'mir> {
         }
         self.verify_cleanup_liveness(function);
         self.verify_shared_ownership(function);
+        self.verify_optional_initialization(function);
 
         for value in function.values() {
             if !defined_values.contains(&value.id) {
@@ -127,6 +128,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::SharedAnchor, None)
                     | (MirStorageKind::CheckedView(_), None)
                     | (MirStorageKind::ScalarSpill, None)
+                    | (MirStorageKind::OptionalUnwrap, None)
                     | (MirStorageKind::SharedAllocation, None)
             );
             if !source_matches_kind {
@@ -536,6 +538,20 @@ impl<'mir> Verifier<'mir> {
                 function,
                 block,
                 cast,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::OptionalUnwrap {
+                source,
+                destination,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_optional_unwrap_terminator(
+                function,
+                block,
+                *source,
+                *destination,
                 *success_target,
                 *failure_target,
             ),
