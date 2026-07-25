@@ -223,7 +223,13 @@ ownership, exact initialization on normal initializer returns, lifecycle
 metadata, and control-flow agreement. Stable shared locals and value
 parameters lower to explicit shared-pointee places and shared object origins
 for inherited projection, mutable member access, virtual/interface dispatch,
-  and `is`. The verifier ties every such place to a live owner and compatible
+and `is`. Type checking constructs every such borrowed place through one
+checked shared-pointee operation. That operation preserves the source's
+class/interface/`Obj` target, mutable access, complete-object origin,
+projections, span, and stable-versus-anchored owner provenance; receivers,
+aliases, casts, type tests, field access, and owning inline-copy consumers do
+not rediscover those facts from expression shape or an expected type. The
+verifier ties every such place to a live owner and compatible
 header metadata. Shared-backed receivers and alias arguments classify stable,
 copied-field, and adopted-produced provenance in HIR, then lower hidden owners
 to the explicit `SharedAnchor` MIR storage role. Plain checked places use the

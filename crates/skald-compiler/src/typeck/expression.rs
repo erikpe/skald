@@ -21,6 +21,7 @@ mod object_view_relation;
 mod place;
 mod primitive;
 mod receiver;
+mod shared_pointee;
 mod type_operations;
 
 pub(in crate::typeck) use object_view_relation::{

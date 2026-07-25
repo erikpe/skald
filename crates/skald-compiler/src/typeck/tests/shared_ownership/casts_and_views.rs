@@ -1,6 +1,57 @@
 use super::*;
 
 #[test]
+fn shared_pointee_boundary_preserves_view_targets_and_anchor_categories() {
+    let output = type_check_source(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Leaf implements Readable {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  leaf: shared Leaf;\n",
+        "  object: shared Obj;\n",
+        "  init() { self.leaf = new Leaf(2); self.object = new Leaf(3); }\n",
+        "}\n",
+        "fn inspect_leaf(ref value: Leaf) -> i64 { return value.read(); }\n",
+        "fn inspect_object(ref value: Obj) -> unit {}\n",
+        "fn inspect_readable(ref value: Readable) -> i64 { return value.read(); }\n",
+        "fn produce() -> shared Obj { return new Leaf(4); }\n",
+        "fn main() -> i64 {\n",
+        "  var leaf: shared Leaf = new Leaf(1);\n",
+        "  var object: shared Obj = leaf;\n",
+        "  var readable: shared Readable = leaf;\n",
+        "  var holder: Holder = Holder();\n",
+        "  inspect_object(object);\n",
+        "  inspect_object(holder.object);\n",
+        "  var copied: Leaf = (Leaf) object;\n",
+        "  var matches: bool = object is Leaf;\n",
+        "  return leaf.read() + readable.read() + holder.leaf.read()",
+        " + inspect_leaf(leaf) + inspect_readable(readable)",
+        " + inspect_leaf((Leaf) produce()) + copied.read();\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output
+        .hir
+        .expect("all shared-pointee view targets must type check");
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Origin Shared"));
+    assert!(dump.contains("Origin AnchoredShared"));
+    assert!(dump.contains("SharedPointee"));
+    assert!(dump.contains("AnchoredSharedPointee"));
+
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).expect("all shared-pointee anchor categories must verify");
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    assert!(main
+        .storage
+        .iter()
+        .any(|storage| storage.kind == crate::mir::MirStorageKind::SharedAnchor));
+}
+
+#[test]
 fn shared_backed_checked_places_cover_borrowing_mutation_and_inline_copy_consumers() {
     let output = type_check_source(concat!(
         "class Root {\n",

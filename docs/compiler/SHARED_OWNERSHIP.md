@@ -84,6 +84,16 @@ Typed HIR records:
 - the full-expression anchor requirement for every shared-backed checked place
   cast.
 
+Type checking has one checked shared-pointee conversion for the boundary from
+an owner source to a non-owning object place. It consumes the existing
+named-place or produced-owner classification and records a stable shared
+origin or an anchored shared origin together with the target, access,
+projections, source span, and anchor source. Class and interface receivers,
+alias arguments, plain checked-place casts, type tests, field access, and
+owning inline-copy consumers all use that operation. HIR therefore states the
+owner-versus-borrowed-place distinction directly; MIR lowering does not infer
+it from source expression shape or a consumer's expected type.
+
 HIR remains target-independent. It contains no header byte offset, reference
 count location, metadata slot, runtime symbol, register, or calling-convention
 classification.

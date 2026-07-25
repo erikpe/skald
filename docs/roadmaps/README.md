@@ -4,6 +4,19 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
+## Planned
+
+- [Explicit Shared Dereference](EXPLICIT_SHARED_DEREFERENCE_ROADMAP.md) —
+  **in progress**; the existing handle-to-place semantic boundary is
+  centralized and explicit syntax is next. The roadmap makes `*owner` and
+  `owner->member` the required source boundary for shared-pointee access while
+  preserving current ownership, hidden-anchor, MIR, backend, runtime, and ABI
+  behavior. It depends only on
+  the completed shared-ownership, object-cast, polymorphism, constructor,
+  alias, and deterministic-cleanup profiles.
+
+## Implementation baseline
+
 The completed polymorphism, object-cast, and constructor profiles remain the
 implementation baseline. Constructor overload and explicit-copy semantics are
 specified in [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).

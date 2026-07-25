@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         HirAccess, HirCheckedObjectView, HirExpression, HirExpressionKind, HirFieldPlace,
-        HirObjectOrigin, HirObjectPlace, Type,
+        HirObjectOrigin, HirObjectPlace, HirSharedPlace, HirSharedSource, Type,
     },
     identity::{BindingId, FieldId, ParameterId},
     object_path::{ObjectPath, ObjectProjection},
@@ -110,40 +110,8 @@ impl CallableChecker<'_, '_> {
             span,
         } = receiver
         {
-            let source = self.check_shared_source(source, false)?;
-            let source_target = super::alias::shared_view_target(source.target());
-            let view = crate::hir::HirObjectView {
-                source: crate::hir::HirViewSource::AnchoredShared {
-                    source: Box::new(source),
-                    target: source_target,
-                    access: HirAccess::Mutable,
-                    projections: projections.clone(),
-                    span: *span,
-                },
-                origin: Box::new(HirObjectOrigin::AnchoredShared {
-                    static_target: source_target,
-                    access: HirAccess::Mutable,
-                    span: *span,
-                }),
-                target: crate::hir::HirViewTarget::Class(*class),
-                access: HirAccess::Mutable,
-                span: *span,
-            };
-            let place = HirObjectPlace {
-                path: crate::object_path::ObjectPath {
-                    root: BindingId::Receiver(self.callable),
-                    projections: projections.clone(),
-                    class: *class,
-                    span: *span,
-                },
-                access: HirAccess::Mutable,
-            };
-            return Some(CheckedObjectReceiver {
-                place,
-                origin: (*view.origin).clone(),
-                checked_cast: None,
-                shared_view: Some(Box::new(view)),
-            });
+            let pointee = self.check_shared_pointee(source, projections.clone(), *span)?;
+            return Some(self.finish_shared_object_receiver(pointee, *class, *span));
         }
         let ResolvedObjectReceiver::CastRelative {
             cast,
@@ -155,6 +123,16 @@ impl CallableChecker<'_, '_> {
             let path = receiver
                 .binding_path()
                 .expect("ordinary receiver must retain its binding path");
+            if let Type::Shared(target) = self.binding_type(path.root) {
+                let source = HirSharedSource::Place(HirSharedPlace::Binding {
+                    binding: path.root,
+                    target,
+                    span: path.span,
+                });
+                let pointee =
+                    self.check_shared_pointee_source(source, path.projections.clone(), path.span)?;
+                return Some(self.finish_shared_object_receiver(pointee, path.class, path.span));
+            }
             let place = self.check_object_place(path, place_use)?;
             let origin = self.object_origin(&place);
             return Some(CheckedObjectReceiver {
@@ -193,6 +171,35 @@ impl CallableChecker<'_, '_> {
             checked_cast: Some(Box::new(checked)),
             shared_view: None,
         })
+    }
+
+    fn finish_shared_object_receiver(
+        &self,
+        pointee: super::shared_pointee::CheckedSharedPointee,
+        class: crate::identity::ClassId,
+        span: Span,
+    ) -> CheckedObjectReceiver {
+        let access = pointee.access();
+        let origin = pointee.origin();
+        let stable_binding = pointee.stable_binding();
+        let place = HirObjectPlace {
+            path: ObjectPath {
+                root: stable_binding.unwrap_or(BindingId::Receiver(self.callable)),
+                projections: pointee.projections().to_vec(),
+                class,
+                span,
+            },
+            access,
+        };
+        let shared_view = stable_binding
+            .is_none()
+            .then(|| Box::new(pointee.into_view(crate::hir::HirViewTarget::Class(class), access)));
+        CheckedObjectReceiver {
+            place,
+            origin,
+            checked_cast: None,
+            shared_view,
+        }
     }
 
     pub(in crate::typeck) fn check_object_place(
