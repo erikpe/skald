@@ -1,6 +1,7 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design; implementation is planned but not present.
+Status: frozen compiler design; syntax and resolved identities are implemented,
+while HIR, MIR, backend, and executable support remain planned.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -9,8 +10,9 @@ authoritative for source currently accepted by the compiler.
 This document freezes phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. It describes the intended
-compiler boundary without claiming that current AST, HIR, MIR, verification,
-or backend code already contains these forms.
+compiler boundary. Current AST and resolved IR contain the source-shaped forms
+and flat identities below; type checking rejects them with `TYP035` before
+current HIR, MIR, verification, or backend code can receive them.
 
 ## Phase ownership
 
@@ -38,10 +40,10 @@ families:
 - inline optional over a primitive or exact class payload; and
 - optional shared owner over a class, interface, or `Obj` shared target.
 
-The implementation should retain compact copyable type identities rather than
-making every existing type recursively heap allocated merely to represent one
-optional layer. A dedicated optional-target enum or an interned type identity
-is suitable; repeated phase-local boolean flags are not.
+Resolution retains compact copyable target enums rather than making every
+existing type recursively heap allocated merely to represent one optional
+layer. Inline optional payloads and optional shared targets are distinct flat
+families; repeated phase-local boolean flags are not used.
 
 The type model must preserve these distinctions:
 

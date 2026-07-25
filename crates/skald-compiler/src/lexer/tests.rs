@@ -73,6 +73,56 @@ fn recognizes_unit_as_a_keyword() {
 }
 
 #[test]
+fn reserves_none_but_keeps_presence_and_ownership_words_contextual() {
+    let (_, _, output) = lex_text("none some shared none_value some_value shared_value ? !");
+    let kinds: Vec<_> = output.tokens.iter().map(|token| token.kind).collect();
+
+    assert_eq!(
+        kinds,
+        [
+            TokenKind::None,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Identifier,
+            TokenKind::Question,
+            TokenKind::Bang,
+            TokenKind::Eof,
+        ]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
+fn optional_punctuation_preserves_utf8_boundaries_during_recovery() {
+    let (sources, source_id, output) = lex_text("none?é!");
+    let source = sources.get(source_id).unwrap();
+    let spellings: Vec<_> = output
+        .tokens
+        .iter()
+        .map(|token| source.slice(token.span.range()).unwrap())
+        .collect();
+
+    assert_eq!(spellings, ["none", "?", "é", "!", ""]);
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::None,
+            TokenKind::Question,
+            TokenKind::Invalid,
+            TokenKind::Bang,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(output.diagnostics.len(), 1);
+}
+
+#[test]
 fn recognizes_extern_as_a_keyword() {
     let (_, _, output) = lex_text("extern external");
 

@@ -18,6 +18,7 @@ use crate::{
 
 use super::{
     capabilities::CopyCapabilities, containment::validate_containment, function::CallableChecker,
+    optional_gate::reject_unimplemented_optionals,
 };
 
 mod class;
@@ -62,6 +63,7 @@ pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
 pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
 pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
+pub const OPTIONAL_VALUES_NOT_IMPLEMENTED: &str = "TYP035";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -78,6 +80,12 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    if reject_unimplemented_optionals(program, &mut diagnostics) {
+        return TypeCheckOutput {
+            hir: None,
+            diagnostics,
+        };
+    }
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
@@ -381,6 +389,9 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
+        }
+        ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. } => {
+            unreachable!("the optional-value type-checking gate runs before type lowering")
         }
     }
 }

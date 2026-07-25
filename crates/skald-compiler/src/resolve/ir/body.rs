@@ -171,6 +171,7 @@ pub enum ResolvedStatement {
     FieldAssignment(ResolvedFieldAssignment),
     ObjectAssignment(ResolvedObjectAssignment),
     SharedAssignment(ResolvedSharedAssignment),
+    OptionalAssignment(ResolvedOptionalAssignment),
 }
 
 impl ResolvedStatement {
@@ -185,8 +186,18 @@ impl ResolvedStatement {
             Self::FieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
             Self::SharedAssignment(statement) => statement.span,
+            Self::OptionalAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedOptionalAssignment {
+    pub destination: BindingId,
+    pub target: super::ResolvedTypeKind,
+    pub equal_span: Span,
+    pub source: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

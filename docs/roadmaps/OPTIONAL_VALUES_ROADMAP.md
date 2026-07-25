@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP1 is next.
+Status: in progress; OP2 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -181,7 +181,7 @@ documents remain historical and are not migration targets.
 ## Progress
 
 - [x] OP0 — Freeze language and compiler optional-value contracts
-- [ ] OP1 — Add optional syntax and resolved type identities
+- [x] OP1 — Add optional syntax and resolved type identities
 - [ ] OP2 — Execute primitive optional locals and checked inspection
 - [ ] OP3 — Carry primitive optionals through stored and callable boundaries
 - [ ] OP4 — Implement inline-class optional lifecycle
@@ -233,27 +233,27 @@ misrepresented.
 **Purpose:** Preserve every optional spelling, span, precedence boundary, and
 resolved identity before executable semantics are introduced.
 
-- [ ] Add `?` and postfix `!` punctuation tokens and reserve `none`; keep
+- [x] Add `?` and postfix `!` punctuation tokens and reserve `none`; keep
       `shared` and the presence-test word `some` contextual where the grammar
       requires contextual recognition.
-- [ ] Extend type syntax for primitive/exact-class `T?` and `shared? T`,
+- [x] Extend type syntax for primitive/exact-class `T?` and `shared? T`,
       retaining separate spans for the payload, `shared`, and each optional
       marker.
-- [ ] Parse `none`, `value is some`, `value is none`, and postfix unwrap in the
+- [x] Parse `none`, `value is some`, `value is none`, and postfix unwrap in the
       existing expression precedence hierarchy, including mixed `!`, `.`,
       `->`, calls, grouping, casts, unary operators, and malformed chains.
-- [ ] Recognize and diagnose `unit?`, bare interface/`Obj` optionals, `T??`,
+- [x] Recognize and diagnose `unit?`, bare interface/`Obj` optionals, `T??`,
       `shared T?`, `shared? T?`, `ref?`, missing targets, and repeated markers
       without losing later declaration or statement recovery.
-- [ ] Add non-recursive resolved optional target identities that preserve the
+- [x] Add non-recursive resolved optional target identities that preserve the
       distinction between inline optional payloads and optional shared owners
       without making all existing type enums recursively allocated.
-- [ ] Update syntax and resolved dumps with one deterministic canonical type
+- [x] Update syntax and resolved dumps with one deterministic canonical type
       spelling and explicit nodes for absence, presence tests, and unwrap.
-- [ ] Reject otherwise well-formed optional execution at the type-checking
+- [x] Reject otherwise well-formed optional execution at the type-checking
       boundary with one temporary “not implemented” diagnostic until the
       responsible executable task lands.
-- [ ] Update the implemented grammar, phases/IR documentation, feature status,
+- [x] Update the implemented grammar, phases/IR documentation, feature status,
       and debugging dump examples to match the newly accepted source and
       resolved shapes without claiming executable support.
 

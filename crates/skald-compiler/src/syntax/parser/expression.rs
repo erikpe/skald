@@ -10,6 +10,23 @@ impl Parser<'_> {
         }
 
         let is_token = self.advance();
+        if self.at_contextual("some") || self.at(TokenKind::None) {
+            let target = self.advance();
+            let kind = if target.kind == TokenKind::None {
+                PresenceTestKind::None
+            } else {
+                PresenceTestKind::Some
+            };
+            let span = self.cover(source.span(), target.span);
+            let expression = Expression::PresenceTest(PresenceTestExpr {
+                source: Box::new(source),
+                is_span: is_token.span,
+                kind,
+                target_span: target.span,
+                span,
+            });
+            return self.finish_type_or_presence_test(expression);
+        }
         let target = self.parse_name("expected a class, interface, or `Obj` after `is`")?;
         let span = self.cover(source.span(), target.span);
         let expression = Expression::TypeTest(TypeTestExpr {
@@ -18,6 +35,10 @@ impl Parser<'_> {
             target,
             span,
         });
+        self.finish_type_or_presence_test(expression)
+    }
+
+    fn finish_type_or_presence_test(&mut self, expression: Expression) -> Option<Expression> {
         if self.at_contextual("is") {
             let chained = self.advance();
             self.report(
@@ -26,7 +47,11 @@ impl Parser<'_> {
                 chained.span,
                 "group separate tests explicitly",
             );
-            let _ = self.parse_name("expected a type after `is`");
+            if self.at_contextual("some") || self.at(TokenKind::None) {
+                self.advance();
+            } else {
+                let _ = self.parse_name("expected a type or presence state after `is`");
+            }
             return None;
         }
         Some(expression)
@@ -135,6 +160,7 @@ impl Parser<'_> {
                 | TokenKind::NumericLiteral(_)
                 | TokenKind::True
                 | TokenKind::False
+                | TokenKind::None
                 | TokenKind::Star
                 | TokenKind::LeftParen
         )
@@ -163,13 +189,33 @@ impl Parser<'_> {
 
     fn parse_postfix(&mut self) -> Option<Expression> {
         let mut expression = self.parse_primary()?;
+        let mut postfix_depth = 0usize;
 
-        while self.at_any(&[TokenKind::LeftParen, TokenKind::Dot, TokenKind::Arrow]) {
+        while self.at_any(&[
+            TokenKind::LeftParen,
+            TokenKind::Dot,
+            TokenKind::Arrow,
+            TokenKind::Bang,
+        ]) {
+            if self.nesting_depth + postfix_depth >= MAX_SYNTAX_NESTING {
+                self.report_excessive_nesting(self.peek().span);
+                self.recover_from_excessive_nesting();
+                return None;
+            }
+            postfix_depth += 1;
             if self.at(TokenKind::LeftParen) {
                 let left_paren_span = self.peek().span;
                 expression = self.with_syntax_nesting(left_paren_span, move |parser| {
                     parser.finish_call(expression)
                 })?;
+            } else if self.at(TokenKind::Bang) {
+                let bang = self.advance();
+                let span = self.cover(expression.span(), bang.span);
+                expression = Expression::Unwrap(UnwrapExpr {
+                    source: Box::new(expression),
+                    bang_span: bang.span,
+                    span,
+                });
             } else {
                 expression = self.finish_member_access(expression)?;
             }
@@ -333,6 +379,10 @@ impl Parser<'_> {
             return self.parse_allocation();
         }
 
+        if let Some(token) = self.consume(TokenKind::None) {
+            return Some(Expression::Absent(AbsentExpr { span: token.span }));
+        }
+
         if let Some(token) = self.consume(TokenKind::Identifier) {
             let name = Name {
                 text: self.lexeme(token).to_owned(),
@@ -395,7 +445,7 @@ impl Parser<'_> {
             EXPECTED_EXPRESSION,
             "expected an expression",
             self.peek().span,
-            "expected an identifier, literal, `self`, unary `-`, or `(`",
+            "expected an identifier, literal, `none`, `self`, unary `-`, or `(`",
         );
         None
     }

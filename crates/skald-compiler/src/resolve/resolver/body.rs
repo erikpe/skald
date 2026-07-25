@@ -166,6 +166,11 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
         expression: &syntax::Expression,
     ) -> Option<ResolvedExpression> {
         match expression {
+            syntax::Expression::Absent(absent) => {
+                Some(ResolvedExpression::Absent(ResolvedAbsentExpr {
+                    span: absent.span,
+                }))
+            }
             syntax::Expression::Identifier(identifier) => self.resolve_identifier(identifier),
             syntax::Expression::NumericLiteral(literal) => Some(
                 ResolvedExpression::NumericLiteral(ResolvedNumericLiteralExpr {
@@ -242,6 +247,27 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                     }
                     _ => None,
                 }
+            }
+            syntax::Expression::PresenceTest(test) => {
+                let source = self.resolve_expression(&test.source)?;
+                Some(ResolvedExpression::PresenceTest(ResolvedPresenceTestExpr {
+                    source: Box::new(source),
+                    kind: match test.kind {
+                        syntax::PresenceTestKind::Some => ResolvedPresenceTestKind::Some,
+                        syntax::PresenceTestKind::None => ResolvedPresenceTestKind::None,
+                    },
+                    is_span: test.is_span,
+                    target_span: test.target_span,
+                    span: test.span,
+                }))
+            }
+            syntax::Expression::Unwrap(unwrap) => {
+                let source = self.resolve_expression(&unwrap.source)?;
+                Some(ResolvedExpression::Unwrap(ResolvedUnwrapExpr {
+                    source: Box::new(source),
+                    bang_span: unwrap.bang_span,
+                    span: unwrap.span,
+                }))
             }
             syntax::Expression::ObjectCast(cast) => {
                 let source = self.resolve_expression(&cast.source);

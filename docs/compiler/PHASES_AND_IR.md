@@ -7,8 +7,9 @@ Source-visible meaning remains owned by the
 cross-phase invariants are specified separately in the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md).
 The frozen optional-value phase and IR additions are specified in the
-[optional-values compiler contract](OPTIONAL_VALUES.md); they are planned and
-do not describe nodes accepted by the current compiler.
+[optional-values compiler contract](OPTIONAL_VALUES.md). Optional tokens,
+source-shaped AST nodes, and flat resolved identities are implemented; typed
+HIR and every executable phase remain planned.
 
 ## Pipeline contract
 
@@ -37,13 +38,12 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
-The optional-values contract assigns each future decision to these same phase
-owners: syntax preserves source shape, resolution interns non-recursive
-optional type identities, HIR records checked optional operations and access,
-MIR makes wrapper storage, conditional lifecycle, guards, anchors, and failure
-edges explicit, and verification proves the backend preconditions. This is a
-frozen extension contract, not a claim that current phase products contain
-optional nodes.
+The optional-values contract assigns each decision to these same phase owners.
+Syntax now preserves source shape and resolution assigns non-recursive optional
+target identities. Type checking deliberately emits `TYP035` before HIR.
+Future work will make HIR optional operations and access explicit, then make
+MIR storage, conditional lifecycle, guards, anchors, and failure edges
+executable and verified.
 
 ## Sources and diagnostics
 
@@ -83,6 +83,11 @@ diagnostic with recovery rather than unbounded recursion. The precise accepted
 source shape and nesting limit are owned by the
 [implemented grammar](../language/GRAMMAR.md).
 
+Optional AST nodes retain separate payload, `shared`, `?`, `!`, `is`, and
+presence-target spans. `none`, presence tests, and unwrap are distinct
+expression nodes; malformed and reserved optional type combinations recover
+without entering later phases.
+
 ## Resolution and identities
 
 Resolution is the only compiler phase that selects declarations from source
@@ -97,6 +102,12 @@ Optional direct class bases likewise carry `ClassId` rather than source
 spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
+
+Optional types use two flat, copyable resolved families rather than recursively
+wrapping the general type enum: an inline primitive/exact-class payload target,
+or an optional shared class/interface/`Obj` target. Resolved expressions retain
+explicit absence, presence-test, and unwrap nodes. Canonical dumps use `T?` and
+`shared? T` independently of source trivia.
 
 Resolved programs contain one canonical class hierarchy keyed by `ClassId`.
 It validates cycles, traverses direct-to-root chains, answers subtype and

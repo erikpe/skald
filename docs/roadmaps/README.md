@@ -11,8 +11,9 @@ progress. Completed roadmaps and resolved discovery records move to
   non-failing presence tests, checked postfix unwrap, conditional lifecycle,
   and dynamically guarded inline payload views while preserving every
   non-optional validity guarantee. OP0 froze the focused language and compiler
-  contracts in living documentation; OP1, adding syntax and resolved type
-  identities, is next. The roadmap depends on the
+  contracts in living documentation, and OP1 added syntax and resolved type
+  identities. OP2, executing primitive optional locals and checked inspection,
+  is next. The roadmap depends on the
   completed inline-object, alias, shared-ownership, polymorphism, object-cast,
   and constructor profiles.
 

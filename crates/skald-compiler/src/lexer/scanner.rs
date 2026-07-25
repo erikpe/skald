@@ -129,6 +129,7 @@ impl<'source> Lexer<'source> {
             "elif" => TokenKind::Elif,
             "else" => TokenKind::Else,
             "unit" => TokenKind::Unit,
+            "none" => TokenKind::None,
             _ => TokenKind::Identifier,
         };
         self.push_token(kind, start);
@@ -206,6 +207,8 @@ impl<'source> Lexer<'source> {
             '*' => TokenKind::Star,
             '=' => TokenKind::Equal,
             '.' => TokenKind::Dot,
+            '?' => TokenKind::Question,
+            '!' => TokenKind::Bang,
             _ => {
                 self.advance();
                 let span = self.span(start, self.offset);

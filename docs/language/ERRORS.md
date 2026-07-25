@@ -82,7 +82,8 @@ additional unrecoverable failures for the planned feature:
 Each failure terminates before producing an invalid payload or dangling view,
 does not return to Skald, and does not guarantee remaining source-level
 cleanup. These failures are part of a **frozen design**, not the current
-executable language: the compiler does not yet accept optional values.
+executable language: optional syntax resolves, but type checking rejects it
+before HIR.
 
 ## Cleanup and abrupt termination
 

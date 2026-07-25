@@ -65,6 +65,11 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
     ) -> Option<HirExpression> {
         match expression {
+            ResolvedExpression::Absent(_)
+            | ResolvedExpression::PresenceTest(_)
+            | ResolvedExpression::Unwrap(_) => {
+                unreachable!("the optional-value type-checking gate runs before HIR construction")
+            }
             ResolvedExpression::Binding(binding) => self.check_binding_expression(binding),
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
             ResolvedExpression::Boolean(boolean) => self.check_boolean_expression(boolean),

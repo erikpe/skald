@@ -1,14 +1,15 @@
 # Optional Values
 
-Status: frozen language design; compiler support is planned but not
-implemented. The [status matrix](STATUS.md) is authoritative for availability,
-and the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
-accepted by the compiler.
+Status: frozen language design; syntax and resolution are implemented, while
+typed and executable support is planned. The [status matrix](STATUS.md) is
+authoritative for availability, and the [implemented grammar](GRAMMAR.md)
+remains the exact syntax currently accepted by the compiler.
 
 This document freezes Skald's source-level optional-value contract. Its source
-examples describe the intended language and do not compile until the status
-matrix marks the corresponding profile implemented. Compiler representation,
-verification, and ABI direction are defined separately in the
+examples reach name resolution but are rejected with the temporary
+type-checking diagnostic `TYP035` until the corresponding executable profile
+is implemented. Compiler representation, verification, and ABI direction are
+defined separately in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 
 ## Core invariant
@@ -40,9 +41,9 @@ ownership:
 | Type | Meaning | Frozen profile |
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
-| `T?` | Inline optional containing zero or one `T` | Planned |
+| `T?` | Inline optional containing zero or one `T` | Syntax/resolution implemented; execution planned |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
-| `shared? T` | Optional containing zero or one `shared T` owner | Planned |
+| `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
 | `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
 

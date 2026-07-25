@@ -51,6 +51,7 @@ fn extern var return
 i64 u64 u8 f64 bool unit
 true false
 if elif else
+none
 ```
 
 `init`, `copy`, `assign`, and `destroy` are ordinary identifiers except in
@@ -76,8 +77,9 @@ initializer. Both spellings remain ordinary identifiers outside those shapes.
 alias-parameter and type-operation target positions; it remains an ordinary
 identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
-`implements`, `interface`, and `is` are likewise contextual in the
-exact forms below. None is reserved by the lexer.
+`implements`, `interface`, and `is` are likewise contextual in the exact forms
+below. `some` is contextual only after `is`; `none` is reserved by the lexer
+and forms either an absent expression or the target of a presence test.
 `shared` is contextual before an object target in stored and result types and
 inside a cast target. `new` is contextual before a class name and allocation
 argument list. Both remain ordinary identifiers elsewhere.
@@ -87,16 +89,11 @@ argument list. Both remain ordinary identifiers elsewhere.
 The complete punctuation and operator token set is:
 
 ```text
-( ) { } , : ; . -> + - * =
+( ) { } , : ; . -> + - * = ? !
 ```
 
-There are no string, character, comparison, division, bracket, or question-mark
-tokens in the implemented grammar.
-
-The frozen [optional-values design](OPTIONAL_VALUES.md) plans reserved `none`,
-contextual `shared` and `some`, plus `?` and postfix `!`. Those forms are not
-part of the implemented token or grammar contract yet; this note does not make
-them accepted syntax.
+There are no string, character, comparison, division, or bracket tokens in the
+implemented grammar.
 
 ## Literals
 
@@ -145,23 +142,29 @@ parameter-list                = "(" [parameter {"," parameter}] ")"
 parameter                     = value-parameter | alias-parameter
 value-parameter               = identifier ":" storage-type
 alias-parameter               = ["mut"] "ref" identifier ":" alias-target
-alias-target                  = identifier | "Obj"
+alias-target                  = identifier | identifier "?" | "Obj"
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
 named-type                    = identifier
 shared-target                 = identifier | "Obj"
 shared-type                   = "shared" shared-target
+inline-optional-type          = (primitive-type | named-type) "?"
+optional-shared-type          = "shared" "?" shared-target
 storage-type                  = primitive-type | named-type | shared-type
+                              | inline-optional-type | optional-shared-type
 result-type                   = storage-type | "unit"
 ```
 
 Parameter and argument lists do not accept trailing commas. Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
-named types are legal. Alias targets retain their separate
-`identifier | "Obj"` grammar and do not accept `shared T`. `Obj` is otherwise
-legal as the target of `shared Obj`. `unit` is syntactically restricted to
-result positions.
+named types are legal. Alias targets retain their separate grammar and do not
+accept `shared T`; `identifier?` preserves the planned optional-container alias
+shape. Resolution rejects interface payloads for inline optionals. `Obj` is
+legal as the target of `shared Obj` and `shared? Obj`, but not as `Obj?`.
+`unit` is syntactically restricted to result positions and `unit?` is rejected.
+Nested optionals, optional references, `shared T?`, and `shared? T?` are
+diagnosed with recovery rather than entering the AST.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
 defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
@@ -286,7 +289,8 @@ parenthesized expression and a block.
 ## Expressions
 
 ```text
-expression       = additive-expression ["is" view-target]
+expression       = additive-expression
+                   ["is" (view-target | "some" | "none")]
 view-target      = identifier
 
 additive-expression
@@ -308,7 +312,9 @@ object-cast-target
 
 postfix-expression
                  = primary-expression
-                   {member-suffix | dereference-member-suffix | call-suffix}
+                   {unwrap-suffix | member-suffix
+                    | dereference-member-suffix | call-suffix}
+unwrap-suffix    = "!"
 member-suffix    = "." identifier
 dereference-member-suffix
                  = "->" identifier
@@ -317,7 +323,8 @@ call-suffix      = "(" [argument-list] ")"
 argument-list    = expression {"," expression}
 
 primary-expression
-                 = identifier
+                 = "none"
+                 | identifier
                  | literal
                  | "self"
                  | allocation-expression
@@ -332,7 +339,7 @@ allocation-arguments
 
 From tightest to loosest binding, precedence is:
 
-1. postfix member access, dereferencing member access, and calls;
+1. postfix unwrap, member access, dereferencing member access, and calls;
 2. unary `-`, unary `*`, and object casts;
 3. binary `*`;
 4. binary `+` and `-`;
@@ -344,8 +351,9 @@ errors. Grouping overrides precedence and remains represented in the
 source-shaped syntax tree. `*owner.field` therefore means `*(owner.field)`;
 use `(*owner).field` or `owner->field` to select a member from `owner`'s
 pointee. Binary multiplication remains distinct by operator position, as in
-`value * *owner`. Allocation is a primary expression, so calls, `.` member
-access, and `->` member access may follow it in the same postfix chain.
+`value * *owner`. Allocation and `none` are primary expressions. Calls,
+postfix `!`, `.`, and `->` may participate in the same postfix chain; type
+checking rejects chains that are not meaningful for the operand type.
 These spellings are semantically distinct: `.` remains within an already
 selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
@@ -371,7 +379,8 @@ never accepted merely because recovery reaches later source.
 
 The current compiler limits simultaneously active recursive syntax constructs
 to 128 levels. Class bodies, function and class-member bodies, nested blocks,
-grouped expressions, unary expressions, and nested calls share this budget.
+grouped expressions, unary expressions, nested calls, and postfix chains share
+this budget.
 Exceeding it reports `PAR005`, omits the affected declaration from the partial
 syntax tree, and resumes at a later top-level declaration when possible.
 
@@ -393,6 +402,12 @@ particular, it does not define:
   access;
 - copy, assignment, destruction, temporary, or evaluation semantics;
 - foreign-call legality, target representation, or runtime behavior.
+
+Optional type and expression shapes currently cross lexing, parsing, and name
+resolution with explicit nodes and flat resolved target identities. Type
+checking rejects every such program with `TYP035`; no optional HIR, MIR,
+layout, ABI, or execution behavior is implemented yet. The frozen semantics
+belong to [Optional Values](OPTIONAL_VALUES.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

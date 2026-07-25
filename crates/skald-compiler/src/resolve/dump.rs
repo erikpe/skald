@@ -373,6 +373,38 @@ impl ResolvedDumper {
                 );
                 return;
             }
+            ResolvedTypeKind::Optional {
+                payload,
+                payload_span,
+                question_span,
+            } => {
+                self.line(
+                    &format!("Type Optional {}", render_optional_payload(payload)),
+                    type_syntax.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Payload", payload_span);
+                    dumper.line("Question", question_span);
+                });
+                return;
+            }
+            ResolvedTypeKind::OptionalShared {
+                target,
+                shared_span,
+                question_span,
+                target_span,
+            } => {
+                self.line(
+                    &format!("Type OptionalShared {}", render_shared_target(target)),
+                    type_syntax.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Shared", shared_span);
+                    dumper.line("Question", question_span);
+                    dumper.line("Target", target_span);
+                });
+                return;
+            }
         };
         self.line(&format!("Type {name}"), type_syntax.span);
     }
@@ -450,6 +482,20 @@ impl ResolvedDumper {
                     dumper.expression(&assignment.source);
                 });
             }
+            ResolvedStatement::OptionalAssignment(assignment) => {
+                self.line(
+                    &format!(
+                        "OptionalAssignment {} type {}",
+                        assignment.destination,
+                        render_type_kind(assignment.target)
+                    ),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.expression(&assignment.source);
+                });
+            }
         }
     }
 
@@ -473,6 +519,7 @@ impl ResolvedDumper {
 
     fn expression(&mut self, expression: &ResolvedExpression) {
         match expression {
+            ResolvedExpression::Absent(absent) => self.line("Absent", absent.span),
             ResolvedExpression::Binding(binding) => {
                 self.line(&format!("Binding {}", binding.binding), binding.span);
             }
@@ -526,6 +573,25 @@ impl ResolvedDumper {
                     test.span,
                 );
                 self.indented(|dumper| dumper.expression(&test.source));
+            }
+            ResolvedExpression::PresenceTest(test) => {
+                let kind = match test.kind {
+                    ResolvedPresenceTestKind::Some => "Some",
+                    ResolvedPresenceTestKind::None => "None",
+                };
+                self.line(&format!("PresenceTest {kind}"), test.span);
+                self.indented(|dumper| {
+                    dumper.expression(&test.source);
+                    dumper.line("Is", test.is_span);
+                    dumper.line(kind, test.target_span);
+                });
+            }
+            ResolvedExpression::Unwrap(unwrap) => {
+                self.line("Unwrap", unwrap.span);
+                self.indented(|dumper| {
+                    dumper.expression(&unwrap.source);
+                    dumper.line("Bang", unwrap.bang_span);
+                });
             }
             ResolvedExpression::ObjectCast(cast) => {
                 let mode = match cast.target_mode {
@@ -748,6 +814,23 @@ fn render_type_kind(kind: ResolvedTypeKind) -> String {
         ResolvedTypeKind::Class(class) => format!("class {class}"),
         ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
         ResolvedTypeKind::Shared(target) => format!("shared {}", render_shared_target(target)),
+        ResolvedTypeKind::Optional { payload, .. } => {
+            format!("{}?", render_optional_payload(payload))
+        }
+        ResolvedTypeKind::OptionalShared { target, .. } => {
+            format!("shared? {}", render_shared_target(target))
+        }
+    }
+}
+
+fn render_optional_payload(payload: ResolvedOptionalPayload) -> String {
+    match payload {
+        ResolvedOptionalPayload::I64 => "i64".to_owned(),
+        ResolvedOptionalPayload::U64 => "u64".to_owned(),
+        ResolvedOptionalPayload::U8 => "u8".to_owned(),
+        ResolvedOptionalPayload::F64 => "f64".to_owned(),
+        ResolvedOptionalPayload::Bool => "bool".to_owned(),
+        ResolvedOptionalPayload::Class(class) => format!("class {class}"),
     }
 }
 

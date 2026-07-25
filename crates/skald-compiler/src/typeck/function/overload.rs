@@ -162,6 +162,11 @@ impl CallableChecker<'_, '_> {
 
     fn static_expression_type(&self, expression: &ResolvedExpression) -> Type {
         match expression {
+            ResolvedExpression::Absent(_)
+            | ResolvedExpression::PresenceTest(_)
+            | ResolvedExpression::Unwrap(_) => {
+                unreachable!("the optional-value type-checking gate runs before overload analysis")
+            }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
                 NumericLiteralKind::I64 => Type::I64,

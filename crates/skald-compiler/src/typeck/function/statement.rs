@@ -79,6 +79,9 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::SharedAssignment(assignment) => {
                 self.check_shared_assignment(assignment)
             }
+            ResolvedStatement::OptionalAssignment(_) => {
+                unreachable!("the optional-value type-checking gate runs before body checking")
+            }
         }
     }
 

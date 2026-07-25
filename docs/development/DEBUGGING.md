@@ -134,19 +134,22 @@ rendered text. For a native-only failure, reproduce at the narrowest available
 layer: backend native unit test, golden executable, or direct C runtime harness.
 The [testing guide](TESTING.md) explains where the resulting regression belongs.
 
-## Planned optional-value inspection
+## Optional-value frontend inspection
 
-When optional-value implementation begins, inspect it at the narrowest owner
-defined by the frozen
+Inspect optional frontend behavior at the narrowest owner defined by the frozen
 [compiler contract](../compiler/OPTIONAL_VALUES.md#dumps-and-diagnostics):
 
-- tokens and AST for `?`, `!`, `none`, and `is some`/`is none`;
-- resolved and HIR dumps for canonical wrapper identities, contextual `none`,
-  injection, checked access, and selected payload consumers;
+- token and AST dumps currently expose `?`, `!`, reserved `none`, contextual
+  `some`, type-marker spans, presence tests, and unwrap nodes;
+- resolved dumps currently expose canonical flat inline-optional and
+  optional-shared targets plus absence, presence-test, and unwrap nodes;
+- `TYP035` is the expected current boundary before HIR;
+- future HIR dumps will expose injection, checked access, and selected payload
+  consumers;
 - MIR for initialized optional storage, conditional lifecycle, presence
   guards, shared anchors, and exact non-returning failure reasons; and
 - assembly for state/payload offsets, the `shared? T` zero niche, internal
   parameter/result lowering, and trap-only failures.
 
-These dump expectations are planned obligations. The current compiler has no
-optional nodes to inspect.
+MIR and assembly items remain planned obligations; the current compiler never
+lowers optional syntax past type checking.

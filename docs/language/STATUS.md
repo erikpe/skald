@@ -73,7 +73,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| [Optional values](OPTIONAL_VALUES.md) | **Frozen design** | Inline `T?`, optional shared owners `shared? T`, `none`, `is some`, `is none`, postfix checked `!`, lifecycle, presence guards, failures, and first-profile exclusions are settled. The current compiler does not yet accept optional syntax or values. |
+| [Optional values](OPTIONAL_VALUES.md) | **Frozen design** | The lexer, parser, and resolver accept supported `T?`, `shared? T`, `none`, `is some`, `is none`, and postfix `!` shapes, preserve their spans, assign flat optional target identities, and diagnose reserved exclusions. Type checking rejects every optional program with `TYP035`; no optional HIR or execution exists yet. |
 | Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |
 | Strings | **Exploratory direction** | An immutable language-facing string value is intended; its type/literal forms, encoding, byte semantics, ownership, storage, and library contract are open. |
 | [Recoverable and checked exceptions](ERRORS.md#recoverable-and-checked-exceptions) | **Exploratory direction** | Deterministic cleanup is a constraint, but syntax, exception values and sets, handlers, failed-construction behavior, and propagation remain open. |

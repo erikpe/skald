@@ -11,7 +11,8 @@ pub use body::{
     ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
     ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
-    ResolvedObjectAssignment, ResolvedReturn, ResolvedSharedAssignment, ResolvedStatement,
+    ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedReturn, ResolvedSharedAssignment,
+    ResolvedStatement,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
@@ -20,18 +21,20 @@ pub use declarations::{
     ResolvedFunctionDeclarationTable, ResolvedFunctionLinkage, ResolvedInitializerDeclaration,
     ResolvedInterfaceClaim, ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable,
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
-    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedParameter,
-    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
-    ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier,
+    ResolvedOptionalPayload, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
+    ResolvedReceiverAccess, ResolvedSharedTarget, ResolvedType, ResolvedTypeKind,
+    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
-    ResolvedAllocationExpr, ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr,
-    ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDereferenceExpr,
-    ResolvedDereferenceOperator, ResolvedDirectCallExpr, ResolvedExpression,
-    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
+    ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedBinaryExpr, ResolvedBinaryOperator,
+    ResolvedBindingExpr, ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode,
+    ResolvedDereferenceExpr, ResolvedDereferenceOperator, ResolvedDirectCallExpr,
+    ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
-    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator,
+    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
+    ResolvedPresenceTestKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};

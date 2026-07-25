@@ -23,6 +23,7 @@ pub enum TokenKind {
     Elif,
     Else,
     Unit,
+    None,
     Identifier,
     NumericLiteral(NumericLiteralKind),
     LeftParen,
@@ -38,6 +39,8 @@ pub enum TokenKind {
     Star,
     Equal,
     Dot,
+    Question,
+    Bang,
     Invalid,
     Eof,
 }
@@ -64,6 +67,7 @@ impl TokenKind {
             Self::Elif => "ELIF",
             Self::Else => "ELSE",
             Self::Unit => "UNIT",
+            Self::None => "NONE",
             Self::Identifier => "IDENTIFIER",
             Self::NumericLiteral(NumericLiteralKind::I64) => "INTEGER_LITERAL",
             Self::NumericLiteral(NumericLiteralKind::U64) => "U64_LITERAL",
@@ -82,6 +86,8 @@ impl TokenKind {
             Self::Star => "STAR",
             Self::Equal => "EQUAL",
             Self::Dot => "DOT",
+            Self::Question => "QUESTION",
+            Self::Bang => "BANG",
             Self::Invalid => "INVALID",
             Self::Eof => "EOF",
         }

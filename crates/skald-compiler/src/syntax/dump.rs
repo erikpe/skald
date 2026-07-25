@@ -218,6 +218,46 @@ impl AstDumper {
                 });
                 return;
             }
+            TypeKind::Optional {
+                payload,
+                payload_span,
+                question_span,
+            } => {
+                self.line(
+                    &format!("Type Optional {}?", render_optional_payload(payload)),
+                    type_syntax.span,
+                );
+                self.indented(|dumper| {
+                    match payload {
+                        OptionalPayloadKind::I64 => dumper.line("Payload I64", *payload_span),
+                        OptionalPayloadKind::U64 => dumper.line("Payload U64", *payload_span),
+                        OptionalPayloadKind::U8 => dumper.line("Payload U8", *payload_span),
+                        OptionalPayloadKind::F64 => dumper.line("Payload F64", *payload_span),
+                        OptionalPayloadKind::Bool => dumper.line("Payload Bool", *payload_span),
+                        OptionalPayloadKind::Named(name) => {
+                            dumper.named("Payload Named", &name.text, *payload_span)
+                        }
+                    }
+                    dumper.line("Question", *question_span);
+                });
+                return;
+            }
+            TypeKind::OptionalShared {
+                shared_span,
+                question_span,
+                target,
+            } => {
+                self.line(
+                    &format!("Type OptionalShared shared? {}", target.text),
+                    type_syntax.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Shared", *shared_span);
+                    dumper.line("Question", *question_span);
+                    dumper.named("Target", &target.text, target.span);
+                });
+                return;
+            }
             TypeKind::Named(name) => {
                 self.named("Type Named", &name.text, type_syntax.span);
                 return;
@@ -318,6 +358,7 @@ impl AstDumper {
 
     fn expression(&mut self, expression: &Expression) {
         match expression {
+            Expression::Absent(absent) => self.line("Absent", absent.span),
             Expression::Identifier(identifier) => {
                 self.named("Identifier", &identifier.name.text, identifier.span);
             }
@@ -367,6 +408,27 @@ impl AstDumper {
                     dumper.indented(|dumper| dumper.expression(&test.source));
                     dumper.line("Is", test.is_span);
                     dumper.named("Target", &test.target.text, test.target.span);
+                });
+            }
+            Expression::PresenceTest(test) => {
+                let state = match test.kind {
+                    PresenceTestKind::Some => "Some",
+                    PresenceTestKind::None => "None",
+                };
+                self.line(&format!("PresenceTest {state}"), test.span);
+                self.indented(|dumper| {
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&test.source));
+                    dumper.line("Is", test.is_span);
+                    dumper.line(state, test.target_span);
+                });
+            }
+            Expression::Unwrap(unwrap) => {
+                self.line("Unwrap", unwrap.span);
+                self.indented(|dumper| {
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&unwrap.source));
+                    dumper.line("Bang", unwrap.bang_span);
                 });
             }
             Expression::ObjectCast(cast) => {
@@ -476,5 +538,16 @@ impl AstDumper {
         self.indentation += 1;
         write_contents(self);
         self.indentation -= 1;
+    }
+}
+
+fn render_optional_payload(payload: &OptionalPayloadKind) -> &str {
+    match payload {
+        OptionalPayloadKind::I64 => "i64",
+        OptionalPayloadKind::U64 => "u64",
+        OptionalPayloadKind::U8 => "u8",
+        OptionalPayloadKind::F64 => "f64",
+        OptionalPayloadKind::Bool => "bool",
+        OptionalPayloadKind::Named(name) => &name.text,
     }
 }

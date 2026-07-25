@@ -38,6 +38,7 @@ pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
 pub const INVALID_DEREFERENCE: &str = "RES019";
 pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
+pub const INVALID_OPTIONAL_TYPE: &str = "RES022";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -119,6 +120,83 @@ fn resolve_type(
             };
             ResolvedTypeKind::Shared(target_kind)
         }
+        syntax::TypeKind::Optional {
+            payload,
+            payload_span,
+            question_span,
+        } => {
+            let payload = match payload {
+                syntax::OptionalPayloadKind::I64 => ResolvedOptionalPayload::I64,
+                syntax::OptionalPayloadKind::U64 => ResolvedOptionalPayload::U64,
+                syntax::OptionalPayloadKind::U8 => ResolvedOptionalPayload::U8,
+                syntax::OptionalPayloadKind::F64 => ResolvedOptionalPayload::F64,
+                syntax::OptionalPayloadKind::Bool => ResolvedOptionalPayload::Bool,
+                syntax::OptionalPayloadKind::Named(name) => match top_levels.get(&name.text) {
+                    Some(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::Class(class),
+                        ..
+                    }) => ResolvedOptionalPayload::Class(*class),
+                    Some(TopLevelSymbol {
+                        kind: TopLevelSymbolKind::Interface(_),
+                        ..
+                    }) => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_OPTIONAL_TYPE,
+                                format!(
+                                    "interface `{}` cannot be an inline optional payload",
+                                    name.text
+                                ),
+                            )
+                            .with_primary_label(
+                                type_syntax.span,
+                                "use `shared? Interface` for an optional owning view",
+                            ),
+                        );
+                        return None;
+                    }
+                    Some(symbol) => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                UNKNOWN_TYPE,
+                                format!("`{}` does not name an optional payload type", name.text),
+                            )
+                            .with_primary_label(name.span, "expected a concrete class")
+                            .with_secondary_label(symbol.name_span, "function declared here"),
+                        );
+                        return None;
+                    }
+                    None => {
+                        diagnostics.push(
+                            Diagnostic::error(
+                                UNKNOWN_TYPE,
+                                format!("unknown optional payload type `{}`", name.text),
+                            )
+                            .with_primary_label(
+                                name.span,
+                                "no concrete class with this name is declared",
+                            ),
+                        );
+                        return None;
+                    }
+                },
+            };
+            ResolvedTypeKind::Optional {
+                payload,
+                payload_span: *payload_span,
+                question_span: *question_span,
+            }
+        }
+        syntax::TypeKind::OptionalShared {
+            shared_span,
+            question_span,
+            target,
+        } => ResolvedTypeKind::OptionalShared {
+            target: resolve_optional_shared_target(target, top_levels, diagnostics)?,
+            shared_span: *shared_span,
+            question_span: *question_span,
+            target_span: target.span,
+        },
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
         syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
             Some(TopLevelSymbol {
@@ -153,6 +231,50 @@ fn resolve_type(
         kind,
         span: type_syntax.span,
     })
+}
+
+fn resolve_optional_shared_target(
+    target: &syntax::Name,
+    top_levels: &HashMap<String, TopLevelSymbol>,
+    diagnostics: &mut Diagnostics,
+) -> Option<ResolvedSharedTarget> {
+    if target.text == "Obj" {
+        return Some(ResolvedSharedTarget::Obj);
+    }
+    match top_levels.get(&target.text) {
+        Some(TopLevelSymbol {
+            kind: TopLevelSymbolKind::Class(class),
+            ..
+        }) => Some(ResolvedSharedTarget::Class(*class)),
+        Some(TopLevelSymbol {
+            kind: TopLevelSymbolKind::Interface(interface),
+            ..
+        }) => Some(ResolvedSharedTarget::Interface(*interface)),
+        Some(symbol) => {
+            diagnostics.push(
+                Diagnostic::error(
+                    UNKNOWN_TYPE,
+                    format!("`{}` does not name a shared object type", target.text),
+                )
+                .with_primary_label(target.span, "expected a class, interface, or `Obj`")
+                .with_secondary_label(symbol.name_span, "function declared here"),
+            );
+            None
+        }
+        None => {
+            diagnostics.push(
+                Diagnostic::error(
+                    UNKNOWN_TYPE,
+                    format!("unknown optional shared target `{}`", target.text),
+                )
+                .with_primary_label(
+                    target.span,
+                    "no class or interface with this name is declared",
+                ),
+            );
+            None
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

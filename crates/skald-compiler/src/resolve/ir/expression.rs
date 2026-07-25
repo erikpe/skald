@@ -12,6 +12,7 @@ use super::object_place::ResolvedObjectReceiver;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedExpression {
+    Absent(ResolvedAbsentExpr),
     Binding(ResolvedBindingExpr),
     NumericLiteral(ResolvedNumericLiteralExpr),
     Boolean(ResolvedBooleanExpr),
@@ -19,6 +20,8 @@ pub enum ResolvedExpression {
     Dereference(ResolvedDereferenceExpr),
     Binary(ResolvedBinaryExpr),
     TypeTest(ResolvedTypeTestExpr),
+    PresenceTest(ResolvedPresenceTestExpr),
+    Unwrap(ResolvedUnwrapExpr),
     ObjectCast(ResolvedObjectCastExpr),
     Allocation(ResolvedAllocationExpr),
     DirectCall(ResolvedDirectCallExpr),
@@ -32,6 +35,7 @@ pub enum ResolvedExpression {
 impl ResolvedExpression {
     pub const fn span(&self) -> Span {
         match self {
+            Self::Absent(expression) => expression.span,
             Self::Binding(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
@@ -39,6 +43,8 @@ impl ResolvedExpression {
             Self::Dereference(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
+            Self::PresenceTest(expression) => expression.span,
+            Self::Unwrap(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
@@ -49,6 +55,33 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedAbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedPresenceTestExpr {
+    pub source: Box<ResolvedExpression>,
+    pub kind: ResolvedPresenceTestKind,
+    pub is_span: Span,
+    pub target_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedPresenceTestKind {
+    Some,
+    None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedUnwrapExpr {
+    pub source: Box<ResolvedExpression>,
+    pub bang_span: Span,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

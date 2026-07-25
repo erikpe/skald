@@ -375,12 +375,14 @@ fn is_receiver_place(expression: &Expression) -> bool {
         Expression::MemberAccess(member) => is_receiver_place(&member.receiver),
         Expression::Unary(unary) if unary.operator == UnaryOperator::Dereference => true,
         Expression::NumericLiteral(_)
+        | Expression::Absent(_)
         | Expression::Boolean(_)
         | Expression::Unary(_)
         | Expression::Binary(_)
         | Expression::TypeTest(_)
+        | Expression::PresenceTest(_)
         | Expression::Allocation(_)
         | Expression::Call(_) => false,
-        Expression::ObjectCast(_) => true,
+        Expression::ObjectCast(_) | Expression::Unwrap(_) => true,
     }
 }

@@ -601,7 +601,9 @@ construction execute.
 The frozen [optional-values contract](OPTIONAL_VALUES.md) uses explicit `T?`
 rather than nullable plain class values. `T?` reserves inline payload storage,
 so it does not make recursive inline containment finite; `shared? T` is the
-planned finite optional-owner form. Neither form is accepted yet.
+planned finite optional-owner form. Both forms are accepted through resolution
+and then rejected before HIR; neither has class lifecycle or executable
+semantics yet.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
 class/interface/`Obj` alias views, slicing, virtual dispatch, interface
 dispatch, type tests, and checked object casts execute on x86-64. Their

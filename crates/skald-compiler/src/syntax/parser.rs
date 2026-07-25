@@ -24,6 +24,7 @@ pub const INVALID_CLASS_MEMBER: &str = "PAR006";
 pub const INVALID_CLASS_HEADER: &str = "PAR007";
 pub const INVALID_INTERFACE_MEMBER: &str = "PAR008";
 pub const INVALID_TYPE_TEST: &str = "PAR009";
+pub const INVALID_OPTIONAL_TYPE: &str = "PAR010";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///

@@ -61,10 +61,11 @@ allocation viewed through `shared Base` needs a separate lifecycle design.
 
 Every live Skald value denotes a value. A `shared T` value is therefore always
 a valid owning handle to one live heap allocation; it is never null, empty,
-dangling, or moved from. The frozen, not-yet-implemented
+dangling, or moved from. The frozen, not-yet-executable
 [optional-values contract](OPTIONAL_VALUES.md#shared-ownership) uses
 `shared? T` to represent absence around that ordinary owner. It never makes a
-`shared T` null.
+`shared T` null. The compiler currently accepts that type through resolution
+and rejects it before HIR.
 
 Safe Skald code cannot:
 
@@ -404,7 +405,7 @@ ownership design.
 
 This profile does not include:
 
-- the not-yet-implemented `shared? T` optional-owner form;
+- the not-yet-executable `shared? T` optional-owner form;
 - generalized `shared T?` or `shared? T?` boxes;
 - weak ownership;
 - explicit early release or user-visible reference counts;

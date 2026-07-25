@@ -299,6 +299,21 @@ impl CallableResolver<'_, '_> {
                         },
                     ));
                 }
+                if matches!(
+                    binding.ty,
+                    ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. }
+                ) {
+                    let source = self.resolve_expression(&assignment.value)?;
+                    return Some(ResolvedStatement::OptionalAssignment(
+                        ResolvedOptionalAssignment {
+                            destination: binding.id,
+                            target: binding.ty,
+                            equal_span: assignment.equal_span,
+                            source,
+                            span: assignment.span,
+                        },
+                    ));
+                }
             }
         }
 

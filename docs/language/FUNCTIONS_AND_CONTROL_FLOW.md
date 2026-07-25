@@ -135,8 +135,8 @@ value.
 
 The frozen [optional-values contract](OPTIONAL_VALUES.md#presence-tests)
 adds `value is some` and `value is none` as `bool`-producing tests. It does not
-add optional truthiness. These tests are not part of the implemented grammar
-or compiler yet.
+add optional truthiness. The tests now parse and resolve explicitly, but type
+checking rejects them until executable optional semantics are implemented.
 
 Conditions are evaluated in source order. Evaluation stops at the first
 condition producing `true`, and only that arm executes. If no condition is

@@ -483,6 +483,27 @@ pub enum ResolvedTypeKind {
     Class(ClassId),
     Interface(InterfaceId),
     Shared(ResolvedSharedTarget),
+    Optional {
+        payload: ResolvedOptionalPayload,
+        payload_span: Span,
+        question_span: Span,
+    },
+    OptionalShared {
+        target: ResolvedSharedTarget,
+        shared_span: Span,
+        question_span: Span,
+        target_span: Span,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedOptionalPayload {
+    I64,
+    U64,
+    U8,
+    F64,
+    Bool,
+    Class(ClassId),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

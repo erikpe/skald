@@ -124,6 +124,7 @@ impl Parser<'_> {
                 | TokenKind::NumericLiteral(NumericLiteralKind::F64)
                 | TokenKind::True
                 | TokenKind::False
+                | TokenKind::None
                 | TokenKind::Minus
                 | TokenKind::Star
                 | TokenKind::LeftParen

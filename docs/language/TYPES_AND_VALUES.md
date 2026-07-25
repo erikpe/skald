@@ -171,8 +171,9 @@ Optional values have a
 absence without making every value nullable. The contract defines inline
 `T?`, optional shared owners `shared? T`, `none`, presence tests, checked
 postfix `!`, injection, payload lifetime, lifecycle behavior, and explicit
-exclusions. The current compiler and implemented grammar do not yet accept
-those forms.
+exclusions. The current compiler accepts and resolves those source shapes,
+then rejects them at the type-checking boundary because optional HIR and
+execution are not implemented yet.
 
 Arrays are an open design area. Element lifetime, size and mutability, storage,
 construction, indexing, slicing, bounds failure, borrowing, and iteration must

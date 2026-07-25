@@ -142,18 +142,22 @@ When robustness testing finds a defect, retain the smallest focused regression
 at the owning layer. Add corpus data only when the bytes or source are clearer
 and more reusable than constructing the case in Rust.
 
-## Planned optional-value coverage
+## Optional-value coverage
 
 The frozen
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)
-requires coverage at every owning layer once implementation starts. Lexer and
-parser tests own the new forms and recovery; resolution and type-check tests
-own eligibility, expected-type-directed `none`, injection, overload ranking,
-and focused
-rejections; HIR/MIR tests own lifecycle, checked views, guards, anchors, and
-failure reasons; verifier mutations break one invariant at a time; backend
-tests own layout, ABI, zero-niche, and trap realization; native goldens own
-observable lifecycle and failure behavior.
+requires coverage at every owning layer. Current lexer and parser tests own
+tokens, contextual words, spans, precedence, bounded nesting, reserved forms,
+and recovery. Current resolution tests own flat target identities and
+source-shaped expression nodes; type-check tests own the single temporary
+`TYP035` boundary before HIR.
+
+Future semantic tests will own expected-type-directed `none`, injection,
+overload ranking, and focused rejections. HIR/MIR tests will own lifecycle,
+checked views, guards, anchors, and failure reasons; verifier mutations will
+break one invariant at a time; backend tests will own layout, ABI, zero-niche,
+and trap realization; native goldens will own observable lifecycle and failure
+behavior.
 
 That future coverage must include primitives, exact inline classes, optional
 shared class/interface/`Obj` owners, locals, fields, parameters, results,

@@ -204,7 +204,30 @@ pub enum TypeKind {
     Bool,
     Unit,
     Named(Name),
-    Shared { shared_span: Span, target: Name },
+    Shared {
+        shared_span: Span,
+        target: Name,
+    },
+    Optional {
+        payload: OptionalPayloadKind,
+        payload_span: Span,
+        question_span: Span,
+    },
+    OptionalShared {
+        shared_span: Span,
+        question_span: Span,
+        target: Name,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OptionalPayloadKind {
+    I64,
+    U64,
+    U8,
+    F64,
+    Bool,
+    Named(Name),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -306,12 +329,15 @@ pub struct ConditionalArm {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expression {
+    Absent(AbsentExpr),
     Identifier(IdentifierExpr),
     NumericLiteral(NumericLiteralExpr),
     Boolean(BooleanExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     TypeTest(TypeTestExpr),
+    PresenceTest(PresenceTestExpr),
+    Unwrap(UnwrapExpr),
     ObjectCast(ObjectCastExpr),
     Allocation(AllocationExpr),
     Call(CallExpr),
@@ -323,12 +349,15 @@ pub enum Expression {
 impl Expression {
     pub const fn span(&self) -> Span {
         match self {
+            Self::Absent(expression) => expression.span,
             Self::Identifier(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
+            Self::PresenceTest(expression) => expression.span,
+            Self::Unwrap(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
             Self::Call(expression) => expression.span,
@@ -337,6 +366,33 @@ impl Expression {
             Self::MemberAccess(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresenceTestExpr {
+    pub source: Box<Expression>,
+    pub is_span: Span,
+    pub kind: PresenceTestKind,
+    pub target_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PresenceTestKind {
+    Some,
+    None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UnwrapExpr {
+    pub source: Box<Expression>,
+    pub bang_span: Span,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
