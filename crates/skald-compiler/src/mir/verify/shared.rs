@@ -6,12 +6,12 @@ use crate::identity::CallableId;
 
 use super::{
     super::model::{
-        BlockId, MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirSharedAdopt,
-        MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCast, MirSharedCastSource,
-        MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy, MirSharedFieldInitialize,
-        MirSharedFieldReplace, MirSharedInitialize, MirSharedMove, MirSharedPublish,
-        MirSharedRelease, MirSharedTarget, MirStorageKind, MirTerminator, MirType, MirViewTarget,
-        StorageId, ValueId,
+        BlockId, MirArgument, MirBasicBlock, MirDefinitionRef, MirInstruction, MirPlaceBase,
+        MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
+        MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy,
+        MirSharedFieldCopy, MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize,
+        MirSharedMove, MirSharedPublish, MirSharedRelease, MirSharedTarget, MirStorageKind,
+        MirTerminator, MirType, MirViewTarget, StorageId, ValueId,
     },
     context::Verifier,
 };
@@ -83,6 +83,16 @@ impl<'mir> Verifier<'mir> {
             allocation.allocation,
             Some(allocation.class),
         );
+        if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
+            let source = self.verify_place(function, block, source);
+            if source.map(|source| source.ty) != Some(MirType::Class(allocation.class)) {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "shared copy-allocation source must have the exact allocation class",
+                );
+            }
+        }
     }
 
     pub(super) fn verify_shared_initialize(
@@ -570,9 +580,9 @@ impl<'mir> Verifier<'mir> {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum AllocationState {
-    Allocated,
+    Allocated(MirSharedAllocationMode),
     Initialized,
     Published,
 }
@@ -682,9 +692,15 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
             self.check_pointee_uses(block.id, state, instruction);
             match instruction {
                 MirInstruction::SharedAllocate(allocation) => {
+                    if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
+                        self.require_live_pointee(block.id, state, source);
+                    }
                     if state
                         .allocations
-                        .insert(allocation.allocation, AllocationState::Allocated)
+                        .insert(
+                            allocation.allocation,
+                            AllocationState::Allocated(allocation.mode.clone()),
+                        )
                         .is_some()
                     {
                         self.error(
@@ -699,9 +715,26 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         block.id,
                         state,
                         initialize.allocation,
-                        AllocationState::Allocated,
+                        AllocationState::Allocated(MirSharedAllocationMode::Initialize),
                         AllocationState::Initialized,
                         "shared initialization requires unpublished allocated storage",
+                    );
+                }
+                MirInstruction::CopyConstruct(copy)
+                    if let MirPlaceBase::SharedAllocationPayload(allocation) =
+                        copy.destination.base =>
+                {
+                    self.require_live_pointee(block.id, state, &copy.source);
+                    let expected = AllocationState::Allocated(MirSharedAllocationMode::Copy {
+                        source: copy.source.clone(),
+                    });
+                    self.transition(
+                        block.id,
+                        state,
+                        allocation,
+                        expected,
+                        AllocationState::Initialized,
+                        "shared copy allocation requires its established source and one selected copy construction",
                     );
                 }
                 MirInstruction::SharedPublish(publish) => {

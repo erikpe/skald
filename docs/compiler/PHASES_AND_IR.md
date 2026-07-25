@@ -189,7 +189,7 @@ alias arguments, field
 access and mutation, and exact-class owning copy construction, assignment,
 value arguments, and results. An owning HIR source wraps the checked view and
 may add the ordinary exact-ancestor slice path; it does not introduce another
-copy operation. The later shared extension will consume a target-directed
+copy operation. Shared copy allocation consumes a target-directed
 checked exact-class source in `new T(copy source)` while separately recording
 allocation and selected copy construction; allocation is not an effect of a
 cast node.
@@ -206,8 +206,9 @@ copy or adopt. Ordinary `new C(arguments)` retains exact `C`, its selected
 `InitializerId`, and typed source-ordered arguments. Shared locals, value
 parameters, results, and fields use this vocabulary, including compatible
 implicit up-views. Inline values and aliases do not implicitly manufacture an
-owner, external shared signatures remain invalid, and explicit copy allocation
-remains a structured typed exclusion. Shared casts record their source
+owner, and external shared signatures remain invalid. Explicit copy allocation
+records its checked source and selected exact-class copy operation separately
+from ordinary initializer overloads. Shared casts record their source
 provenance, static or runtime relation, target, and copy/adopt result ownership.
 
 MIR lowering accepts compatible shared local initialization and assignment
@@ -235,8 +236,8 @@ checked-view carrier through their immediate receiver, alias, field, or
 owning-inline-copy consumer. MIR verification tracks the carrier-to-owner
 dependency and requires the checked view to end before anchor release.
 Produced allocations retain exact dynamic provenance through shared up-views.
-A structured `HirLoweringError::UnsupportedSharedOwnership` gate remains for
-explicit copy allocation.
+Copy allocation lowers the established source and any anchor before allocating,
+then performs one exact copy construction before publication and adoption.
 
 ## MIR
 
@@ -316,7 +317,7 @@ transient values remain block-local. The verifier checks target relation,
 access, provenance, single definition, carrier liveness, failure termination,
 and consumer compatibility. Shared-owner casts use explicit static
 instructions or runtime success/failure terminators, with copy/adopt ownership
-performed only on success and no allocation operation. Future copy allocation
+performed only on success and no allocation operation. Copy allocation
 instead composes a target-directed checked source with explicit source `new`,
 exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.

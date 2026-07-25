@@ -23,6 +23,25 @@ impl Verifier<'_> {
         block: &MirBasicBlock,
         place: &MirPlace,
     ) -> Option<VerifiedPlace> {
+        self.verify_place_with_allocation_payload(function, block, place, false)
+    }
+
+    pub(super) fn verify_copy_allocation_destination(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+    ) -> Option<VerifiedPlace> {
+        self.verify_place_with_allocation_payload(function, block, place, true)
+    }
+
+    fn verify_place_with_allocation_payload(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+        allow_allocation_payload: bool,
+    ) -> Option<VerifiedPlace> {
         let storage_id = place.base.storage();
         let Some(storage) = function.storage(storage_id) else {
             self.block_error(
@@ -32,13 +51,22 @@ impl Verifier<'_> {
             );
             return None;
         };
-        if storage.kind == MirStorageKind::SharedAllocation {
+        if storage.kind == MirStorageKind::SharedAllocation
+            && (!allow_allocation_payload
+                || !matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)))
+        {
             self.block_error(
                 function.callable(),
                 block.id,
-                format!(
-                    "unpublished shared allocation storage {storage_id} cannot be used as a place"
-                ),
+                if matches!(place.base, MirPlaceBase::SharedAllocationPayload(_)) {
+                    format!(
+                        "shared allocation payload {storage_id} is only valid as a copy-allocation destination"
+                    )
+                } else {
+                    format!(
+                        "unpublished shared allocation storage {storage_id} cannot be used as a place"
+                    )
+                },
             );
             return None;
         }
@@ -88,6 +116,21 @@ impl Verifier<'_> {
                     block.id,
                     format!(
                         "shared-pointee base {storage_id} requires a stable or call-anchor owner"
+                    ),
+                );
+                return None;
+            }
+            (MirPlaceBase::SharedAllocationPayload(_), MirStorageKind::SharedAllocation)
+                if matches!(storage.ty, MirType::Class(_)) =>
+            {
+                MirAliasAccess::Mutable
+            }
+            (MirPlaceBase::SharedAllocationPayload(_), _) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!(
+                        "shared-allocation payload base {storage_id} requires exact unpublished allocation storage"
                     ),
                 );
                 return None;

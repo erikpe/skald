@@ -35,8 +35,8 @@ pub use interface::{
     MirInterfaceRequirement, MirRequirementImplementation,
 };
 pub use shared::{
-    MirSharedAdopt, MirSharedAllocate, MirSharedAllocationOrigin, MirSharedCast,
-    MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
+    MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
+    MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
     MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
     MirSharedPublish, MirSharedRelease, MirSharedTarget,
 };

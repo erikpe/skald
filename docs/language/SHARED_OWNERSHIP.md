@@ -91,8 +91,8 @@ same/ancestor/interface/`Obj` owner transfers, local initialization and
 assignment, internal callable parameters and results, shared fields, and
 polymorphic use through stable shared locals and value parameters cross
 verified target-independent MIR and execute on the current x86-64 backend.
-Explicit copy allocation remains a typed diagnostic until its checked source,
-anchor, and copy-constructor operation can be represented together.
+Explicit copy allocation uses the same verified checked-place and hidden-anchor
+pipeline and executes through the selected copy-constructor operation.
 
 The copy-allocation target must be concrete and copy-constructible. The source
 may be an existing or produced inline object, a `ref` or `mut ref` alias, or an

@@ -2,9 +2,9 @@
 
 use super::*;
 use crate::hir::{
-    HirSharedAllocation, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
-    HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,
-    HirSharedSource, HirSharedTarget, HirSharedTransfer,
+    HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment, HirSharedCast,
+    HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
+    HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
 };
 
 impl BodyLowerer<'_> {
@@ -172,7 +172,33 @@ impl BodyLowerer<'_> {
         destination: StorageId,
         allocation: &HirSharedAllocation,
     ) {
-        let arguments = self.lower_call_arguments(&allocation.arguments);
+        enum Initialization {
+            Initialize {
+                target: crate::identity::InitializerId,
+                arguments: Vec<MirArgument>,
+            },
+            Copy {
+                source: MirPlace,
+                operation: MirSelectedCopyOperation<crate::identity::CopyConstructorId>,
+            },
+        }
+
+        // Establish every borrowed source, checked view, and hidden anchor
+        // before allocating. A failing checked cast therefore cannot leak an
+        // unpublished allocation.
+        let initialization = match &allocation.mode {
+            HirSharedAllocationMode::Initialize {
+                initializer,
+                arguments,
+            } => Initialization::Initialize {
+                target: *initializer,
+                arguments: self.lower_call_arguments(arguments),
+            },
+            HirSharedAllocationMode::Copy { source, operation } => Initialization::Copy {
+                source: self.lower_object_source(source),
+                operation: lower_selected_copy_operation(*operation),
+            },
+        };
         let allocation_storage = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
             id: allocation_storage,
@@ -186,14 +212,33 @@ impl BodyLowerer<'_> {
             allocation: allocation_storage,
             class: allocation.class,
             origin: MirSharedAllocationOrigin::New,
+            mode: match &initialization {
+                Initialization::Initialize { .. } => MirSharedAllocationMode::Initialize,
+                Initialization::Copy { source, .. } => MirSharedAllocationMode::Copy {
+                    source: source.clone(),
+                },
+            },
             span: allocation.span,
         }));
-        self.emit(MirInstruction::SharedInitialize(MirSharedInitialize {
-            allocation: allocation_storage,
-            target: allocation.initializer,
-            arguments,
-            span: allocation.span,
-        }));
+        match initialization {
+            Initialization::Initialize { target, arguments } => {
+                self.emit(MirInstruction::SharedInitialize(MirSharedInitialize {
+                    allocation: allocation_storage,
+                    target,
+                    arguments,
+                    span: allocation.span,
+                }));
+            }
+            Initialization::Copy { source, operation } => {
+                self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
+                    destination: MirPlace::shared_allocation_payload(allocation_storage),
+                    source,
+                    class: allocation.class,
+                    operation,
+                    span: allocation.span,
+                }));
+            }
+        }
         self.emit(MirInstruction::SharedPublish(MirSharedPublish {
             allocation: allocation_storage,
             span: allocation.span,

@@ -352,6 +352,18 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.check_borrowed_arguments(block, state, &initialize.arguments);
                     self.consume_owned_arguments(block, state, &initialize.arguments);
                 }
+                MirInstruction::SharedAllocate(allocation) => {
+                    if let super::super::model::MirSharedAllocationMode::Copy { source } =
+                        &allocation.mode
+                    {
+                        self.require_live_place(
+                            block,
+                            state,
+                            source,
+                            "shared copy-allocation source",
+                        );
+                    }
+                }
                 MirInstruction::SharedFieldCopy(copy) => {
                     self.require_live_place(block, state, &copy.source, "shared field copy source");
                 }
@@ -371,6 +383,19 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         state,
                         &replace.destination,
                         "shared field replacement destination",
+                    );
+                }
+                MirInstruction::CopyConstruct(copy)
+                    if matches!(
+                        copy.destination.base,
+                        super::super::model::MirPlaceBase::SharedAllocationPayload(_)
+                    ) =>
+                {
+                    self.require_live_place(
+                        block,
+                        state,
+                        &copy.source,
+                        "shared copy-construction source",
                     );
                 }
                 MirInstruction::CopyConstruct(copy)

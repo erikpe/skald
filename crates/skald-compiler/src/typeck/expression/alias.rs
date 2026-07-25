@@ -404,6 +404,7 @@ impl CallableChecker<'_, '_> {
                         ViewSourceUse::AliasArgument
                             | ViewSourceUse::TypeTest
                             | ViewSourceUse::Cast
+                            | ViewSourceUse::CopyConstruction
                     ) {
                         self.diagnostics.push(
                             Diagnostic::error(
@@ -458,7 +459,9 @@ impl CallableChecker<'_, '_> {
                 if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_))
                     && matches!(
                         source_use,
-                        ViewSourceUse::AliasArgument | ViewSourceUse::Cast
+                        ViewSourceUse::AliasArgument
+                            | ViewSourceUse::Cast
+                            | ViewSourceUse::CopyConstruction
                     )
                 {
                     let source = self.check_shared_source(expression, false)?;
@@ -502,7 +505,9 @@ impl CallableChecker<'_, '_> {
             expression
                 if matches!(
                     source_use,
-                    ViewSourceUse::AliasArgument | ViewSourceUse::Cast
+                    ViewSourceUse::AliasArgument
+                        | ViewSourceUse::Cast
+                        | ViewSourceUse::CopyConstruction
                 ) && self.resolved_shared_target(expression).is_some()
                     && matches!(
                         expression,

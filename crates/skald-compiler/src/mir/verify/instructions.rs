@@ -273,9 +273,17 @@ impl Verifier<'_> {
         class: crate::identity::ClassId,
         operation: CopyOperationKind,
     ) {
-        let destination = self.verify_place(function, block, destination_place);
-        let source = self.verify_place(function, block, source_place);
         let construction = matches!(operation, CopyOperationKind::Construction);
+        let allocation_payload = matches!(
+            destination_place.base,
+            MirPlaceBase::SharedAllocationPayload(_)
+        );
+        let destination = if construction && allocation_payload {
+            self.verify_copy_allocation_destination(function, block, destination_place)
+        } else {
+            self.verify_place(function, block, destination_place)
+        };
+        let source = self.verify_place(function, block, source_place);
         if self.program.class(class).is_none() {
             self.block_error(
                 function.callable(),
@@ -297,6 +305,13 @@ impl Verifier<'_> {
                 function.callable(),
                 block.id,
                 "copy destination requires mutable access",
+            );
+        }
+        if allocation_payload && (!construction || !destination_place.projections.is_empty()) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "copy-allocation destination must name one complete unpublished payload",
             );
         }
         let destination_storage = function.storage(destination_place.base.storage());

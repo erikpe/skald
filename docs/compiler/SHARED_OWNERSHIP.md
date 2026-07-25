@@ -1,9 +1,8 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; shared-backed checked places execute
-on x86-64**.
+Status: **implemented through explicit exact-class copy allocation on x86-64**.
 This document is
-authoritative for the planned target-independent ownership representation,
+authoritative for the target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
 finalization, hidden anchors, and the minimal C allocation boundary. The
 source-visible contract is [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md).
@@ -31,14 +30,15 @@ runtime-checked success path; failure terminates and no cast allocates or
 copies payload. Plain checked-place casts classify stable, replaceable, and
 produced shared sources, preserve exact produced-allocation provenance, and
 use verified checked-view and owner-anchor lifetimes across every immediate
-non-owning or inline-copy consumer. Explicit copy allocation remains behind a
-structured lowering gate. The x86-64 backend executes the
+non-owning, inline-copy, and shared copy-allocation consumer. Explicit copy
+allocation evaluates and secures its checked source before allocation, invokes
+one selected exact-class copy operation, then publishes and adopts the owner.
+The x86-64 backend executes the
 frozen handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
 deallocation. [Runtime ABI version
 5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
 deallocation.
-Explicit copy allocation remains a typed exclusion.
 The completed
 [constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 supplied overload-selected ordinary initialization, the distinct copy

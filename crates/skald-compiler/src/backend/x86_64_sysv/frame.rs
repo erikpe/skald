@@ -220,6 +220,13 @@ impl FrameLayout {
                 i32::try_from(SHARED_HEADER_SIZE)
                     .map_err(|_| place_address_error(function.callable()))?,
             ),
+            MirPlaceBase::SharedAllocationPayload(_) => (
+                FramePlaceBase::SharedPointee {
+                    home: self.storage(storage_id),
+                },
+                i32::try_from(SHARED_HEADER_SIZE)
+                    .map_err(|_| place_address_error(function.callable()))?,
+            ),
             MirPlaceBase::Storage(_) => (FramePlaceBase::Direct, self.storage(storage_id)),
         };
         let mut ty = match (place.base, storage.ty) {

@@ -112,10 +112,10 @@ makes a result source-observable.
   and deterministic lifetime.
 - [Aliases and ownership](ALIASES_AND_OWNERSHIP.md) defines implemented
   call-scoped aliases, non-exclusive access, and current inline lifetime.
-- [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) freezes the
-  future non-null shared value, ordinary and exact-class copy allocation,
+- [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines the
+  implemented non-null shared value, ordinary and exact-class copy allocation,
   owner copy/release, dynamic destruction, cycle, and borrow-anchor semantics
-  without claiming compiler support. Dynamic-type-preserving cloning remains
+  as the current x86-64 profile. Dynamic-type-preserving cloning remains
   deferred.
 - [Polymorphism](POLYMORPHISM.md) defines implemented inheritance,
   class/interface/`Obj` views, slicing, virtual/interface dispatch, type tests,

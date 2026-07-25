@@ -164,8 +164,7 @@ fn supports_transfer(transfer: &HirSharedTransfer) -> bool {
             transfer.operation == HirOwnerTransfer::Copy
         }
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-            transfer.operation == HirOwnerTransfer::Adopt
-                && arguments_support_shared(&allocation.arguments)
+            transfer.operation == HirOwnerTransfer::Adopt && allocation_supports_shared(allocation)
         }
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
             transfer.operation == HirOwnerTransfer::Adopt && expression_supports_shared(call)
@@ -183,7 +182,7 @@ fn supports_shared_source(source: &HirSharedSource) -> bool {
     match source {
         HirSharedSource::Place(_) => true,
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-            arguments_support_shared(&allocation.arguments)
+            allocation_supports_shared(allocation)
         }
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
             expression_supports_shared(call)
@@ -191,6 +190,15 @@ fn supports_shared_source(source: &HirSharedSource) -> bool {
         HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
             supports_shared_source(&cast.source)
         }
+    }
+}
+
+fn allocation_supports_shared(allocation: &crate::hir::HirSharedAllocation) -> bool {
+    match &allocation.mode {
+        crate::hir::HirSharedAllocationMode::Initialize { arguments, .. } => {
+            arguments_support_shared(arguments)
+        }
+        crate::hir::HirSharedAllocationMode::Copy { source, .. } => source_supports_shared(source),
     }
 }
 

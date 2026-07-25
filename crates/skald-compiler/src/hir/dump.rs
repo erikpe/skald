@@ -832,18 +832,35 @@ impl HirDumper {
                 self.indented(|dumper| dumper.object_place(&place.receiver));
             }
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-                self.line(
-                    &format!(
-                        "SharedAllocation {} via {}",
-                        allocation.class, allocation.initializer
-                    ),
-                    allocation.span,
-                );
-                self.indented(|dumper| {
-                    for argument in &allocation.arguments {
-                        dumper.call_argument(argument);
+                match &allocation.mode {
+                    crate::hir::HirSharedAllocationMode::Initialize {
+                        initializer,
+                        arguments,
+                    } => {
+                        self.line(
+                            &format!(
+                                "SharedAllocation {} initialize via {}",
+                                allocation.class, initializer
+                            ),
+                            allocation.span,
+                        );
+                        self.indented(|dumper| {
+                            for argument in arguments {
+                                dumper.call_argument(argument);
+                            }
+                        });
                     }
-                });
+                    crate::hir::HirSharedAllocationMode::Copy { source, operation } => {
+                        self.line(
+                            &format!("SharedAllocation {} copy", allocation.class),
+                            allocation.span,
+                        );
+                        self.indented(|dumper| {
+                            dumper.selected_copy_operation(*operation);
+                            dumper.object_source(source);
+                        });
+                    }
+                }
             }
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
                 self.line("SharedCallResult", call.span);

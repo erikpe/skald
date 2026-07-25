@@ -442,6 +442,13 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                     "shared-allocate {} exact {} from {origin}",
                     allocation.allocation, allocation.class,
                 );
+                match &allocation.mode {
+                    MirSharedAllocationMode::Initialize => output.push_str(" initialize"),
+                    MirSharedAllocationMode::Copy { source } => {
+                        output.push_str(" copy ");
+                        dump_place(output, source);
+                    }
+                }
                 write_span(output, allocation.span);
             }
             MirInstruction::SharedInitialize(initialize) => {
@@ -732,6 +739,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
         }
         MirPlaceBase::SharedPointee(storage) => {
             let _ = write!(output, "shared-pointee({storage})");
+        }
+        MirPlaceBase::SharedAllocationPayload(storage) => {
+            let _ = write!(output, "shared-allocation-payload({storage})");
         }
     }
     for projection in &place.projections {

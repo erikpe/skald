@@ -1,6 +1,7 @@
 //! Direct object construction and initializer argument checking.
 
 use super::*;
+use crate::source::Span;
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_construction_initializer(
@@ -132,37 +133,46 @@ impl CallableChecker<'_, '_> {
                     arguments,
                 }
             }
-            crate::resolve::ResolvedConstructionMode::Copy { copy_span, source } => {
-                let source =
-                    if crate::typeck::function::copy::is_checked_object_source_expression(source) {
-                        self.check_object_source(source, construction.class, "copy construction")?
-                    } else {
-                        let checked = self.check_copy_construction_view(
-                            source,
-                            construction.class,
-                            construction.callee_span,
-                            construction.span,
-                        )?;
-                        crate::hir::HirObjectSource::Checked(Box::new(checked))
-                    };
-                let Some(operation) = self
-                    .copy_capabilities
-                    .constructor(construction.class)
-                    .selected()
-                else {
-                    self.report_unavailable_copy_operation(construction.class, true, *copy_span);
-                    return None;
-                };
-                crate::hir::HirConstructionMode::Copy {
-                    source: Box::new(source),
-                    operation,
-                }
-            }
+            crate::resolve::ResolvedConstructionMode::Copy { copy_span, source } => self
+                .check_copy_construction_mode(
+                    construction.class,
+                    source,
+                    construction.callee_span,
+                    construction.span,
+                    *copy_span,
+                    "copy construction",
+                )?,
         };
         Some(HirConstruction {
             class: construction.class,
             mode,
             span: construction.span,
+        })
+    }
+
+    pub(in crate::typeck) fn check_copy_construction_mode(
+        &mut self,
+        class: ClassId,
+        source: &crate::resolve::ResolvedExpression,
+        target_span: Span,
+        construction_span: Span,
+        copy_span: Span,
+        context: &'static str,
+    ) -> Option<crate::hir::HirConstructionMode> {
+        let source = if crate::typeck::function::copy::is_checked_object_source_expression(source) {
+            self.check_object_source(source, class, context)?
+        } else {
+            let checked =
+                self.check_copy_construction_view(source, class, target_span, construction_span)?;
+            crate::hir::HirObjectSource::Checked(Box::new(checked))
+        };
+        let Some(operation) = self.copy_capabilities.constructor(class).selected() else {
+            self.report_unavailable_copy_operation(class, true, copy_span);
+            return None;
+        };
+        Some(crate::hir::HirConstructionMode::Copy {
+            source: Box::new(source),
+            operation,
         })
     }
 }

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO12 complete, SO13 is next.
+Status: in progress; SO13 complete, SO14 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -29,8 +29,8 @@ and the complete cast direction matrix is
   targets, and both `new T(...)` allocation modes.
 - Typed HIR represents canonical shared targets, named and produced owner
   provenance, explicit copy/adopt transfers, ordinary allocation with one
-  selected initializer, and static/runtime owner-preserving casts. Explicit
-  copy allocation remains a typed exclusion.
+  selected initializer, explicit copy allocation with one selected exact-class
+  copy operation, and static/runtime owner-preserving casts.
 - MIR represents and verifies exact-class local owner initialization and
   assignment with distinct unpublished allocation storage, initialization,
   publication, adoption, named-owner copy, ownership move, release,
@@ -105,7 +105,7 @@ and the complete cast direction matrix is
 - [x] SO10 — Execute shared-owner casts
 - [x] SO11 — Anchor shared-backed calls
 - [x] SO12 — Anchor shared-backed checked places
-- [ ] SO13 — Add explicit exact-class copy allocation
+- [x] SO13 — Add explicit exact-class copy allocation
 - [ ] SO14 — Harden and publish shared ownership
 
 ## PR-sized implementation sequence
@@ -568,31 +568,31 @@ the view ending before that owner can be released.
 **Purpose:** Compose the established checked-place, exact copy, allocation, and
 anchor pipelines into `new T(copy source)` without adding cloning semantics.
 
-- [ ] Require concrete copy-constructible `T` and the resolved explicit-copy
+- [x] Require concrete copy-constructible `T` and the resolved explicit-copy
       construction mode; keep every `new T(arguments)` form in ordinary
       initializer overload resolution without copy fallback.
-- [ ] Accept existing and produced inline objects, `ref`/`mut ref` aliases,
+- [x] Accept existing and produced inline objects, `ref`/`mut ref` aliases,
       and shared-backed places as target-directed checked sources under the
       complete object-view and anchor rules.
-- [ ] Record the exact selected `T` copy constructor, checked target place,
+- [x] Record the exact selected `T` copy constructor, checked target place,
       source provenance, anchor category, and produced exact `shared T` owner
       in HIR.
-- [ ] Lower source evaluation and anchoring, dynamic check, exact-`T`
+- [x] Lower source evaluation and anchoring, dynamic check, exact-`T`
       allocation, one selected copy construction, publication, and result
       securing in that exact order.
-- [ ] Verify that failure precedes destination allocation, the source place and
+- [x] Verify that failure precedes destination allocation, the source place and
       anchor remain live through copy completion, publication occurs once, and
       the operation is never elided.
-- [ ] Write metadata for the class named by `new`, never copy source dynamic
+- [x] Write metadata for the class named by `new`, never copy source dynamic
       metadata, and preserve deliberate ancestor slicing.
-- [ ] Reject unavailable copy capability, interface/`Obj` allocation targets,
+- [x] Reject unavailable copy capability, interface/`Obj` allocation targets,
       statically impossible checked sources, ordinary-construction fallback,
       and any attempted dynamic-type-preserving clone.
-- [ ] Add inline/alias/produced/shared sources, same/up/down checked selection,
+- [x] Add inline/alias/produced/shared sources, same/up/down checked selection,
       explicit inner-cast refinement, slicing,
       unavailable-copy, source-once, failure-before-allocation, cleanup-order,
       verifier-corruption, assembly, and native tests.
-- [ ] Update shared construction, object-cast, lifecycle, phase, and backend
+- [x] Update shared construction, object-cast, lifecycle, phase, and backend
       documentation for executable copy allocation while retaining dynamic
       cloning as a deferred feature.
 

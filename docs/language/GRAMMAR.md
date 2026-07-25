@@ -393,13 +393,13 @@ access, forwarding, overlap, and lifetime.
 `shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
 `new T(copy source)` semantics. The parser and resolver accept these forms and
 retain their object identities and construction modes. Typed HIR supports
-shared storage, owner provenance, and ordinary allocation; explicit copy
-allocation remains a focused typed exclusion. The copy marker is not an
-ordinary initializer argument.
+shared storage, owner provenance, ordinary allocation, and explicit exact-class
+copy allocation. The copy marker is not an ordinary initializer argument.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus
-owning inline copy construction, assignment, value arguments, results, and
-slicing. Shared-owner casts remain a focused typed exclusion.
+owning inline and shared copy construction, assignment, value arguments,
+results, and slicing. Shared-owner casts execute without allocating or copying
+payload.
 [Polymorphism](POLYMORPHISM.md) owns inheritance, dispatch, interface views,
 type tests, and checked-cast semantics.

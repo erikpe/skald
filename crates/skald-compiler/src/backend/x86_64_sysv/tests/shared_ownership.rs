@@ -1,6 +1,54 @@
 use super::*;
 
 #[test]
+fn exact_copy_allocation_executes_for_inline_and_shared_sources() {
+    let mut output = assembly(concat!(
+        "class Value {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  copy(ref source: Value) { self.value = source.value + 1; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn copy_owner(source: shared Value) -> shared Value {\n",
+        "  return new Value(copy source);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var inline: Value = Value(40);\n",
+        "  var first: shared Value = new Value(copy inline);\n",
+        "  var second: shared Value = copy_owner(first);\n",
+        "  return second.read();\n",
+        "}\n",
+    ));
+
+    assert!(output.contains("call ska_rt_alloc"));
+    assert_system_assembler_accepts(&output);
+    output.push_str(simple_ownership_stubs());
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+#[test]
+fn failed_checked_copy_allocation_terminates_before_constructing_a_destination() {
+    let mut output = assembly(concat!(
+        "class Value {\n",
+        "  init() {}\n",
+        "  copy(ref source: Value) {}\n",
+        "}\n",
+        "class Other { init() {} }\n",
+        "fn copy_value(source: shared Obj) -> shared Value {\n",
+        "  return new Value(copy source);\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var impossible: shared Value = copy_value(new Other());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert_system_assembler_accepts(&output);
+    output.push_str(simple_ownership_stubs());
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn shared_fields_are_one_word_aligned_edges_after_the_inline_base_prefix() {
     let program = lower_text(concat!(
         "class Item { init() {} }\n",

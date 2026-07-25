@@ -5,7 +5,9 @@ use crate::{
     source::Span,
 };
 
-use super::{HirCallArgument, HirExpression, HirFieldPlace, Type};
+use super::{
+    HirCallArgument, HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation, Type,
+};
 
 /// The static object view carried by a non-null shared owner.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -156,13 +158,24 @@ pub struct HirSharedAssignment {
     pub span: Span,
 }
 
-/// Ordinary exact-class allocation and its selected initializer.
+/// Exact-class allocation and its already selected construction operation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirSharedAllocation {
     pub class: ClassId,
-    pub initializer: InitializerId,
-    pub arguments: Vec<HirCallArgument>,
+    pub mode: HirSharedAllocationMode,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirSharedAllocationMode {
+    Initialize {
+        initializer: InitializerId,
+        arguments: Vec<HirCallArgument>,
+    },
+    Copy {
+        source: Box<HirObjectSource>,
+        operation: HirSelectedCopyOperation<crate::identity::CopyConstructorId>,
+    },
 }
 
 /// Initialization or replacement of a shared owning field.

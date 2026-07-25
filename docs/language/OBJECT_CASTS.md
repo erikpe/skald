@@ -48,8 +48,8 @@ cast operand.
 
 The [implemented grammar](GRAMMAR.md) is authoritative for current acceptance.
 `(shared T) source` crosses every compiler phase. Stored `shared T` types and
-ordinary `new T(arguments)` execute; explicit copy allocation remains excluded
-until its checked source and anchor are implemented together.
+both ordinary `new T(arguments)` and explicit `new T(copy source)` allocation
+cross every compiler phase and execute on x86-64.
 
 ## Two cast results
 
@@ -305,7 +305,7 @@ first-class:
 | Exact-class value argument or result | Copy into the parameter or result destination |
 | Whole-object assignment to an owning exact `T` destination | Run exact `T` copy assignment |
 | `T(copy source)` | Copy-construct exact inline `T` from a target-directed checked place |
-| `new T(copy source)` | In the future shared profile, allocate exact `T` and copy-construct it from a target-directed checked place |
+| `new T(copy source)` | Allocate exact `T` and copy-construct it from a target-directed checked place |
 
 An interface or `Obj` place cast is valid only in view-consuming contexts
 because neither has standalone inline storage. A class place cast used in an

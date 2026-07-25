@@ -3,7 +3,7 @@
 use crate::hir::{
     HirCallArgument, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpression,
     HirExpressionKind, HirInterfaceReceiver, HirObjectCallTarget, HirObjectProducer,
-    HirObjectSource, HirSharedProducer, HirSharedSource, HirViewSource,
+    HirObjectSource, HirSharedAllocationMode, HirSharedProducer, HirSharedSource, HirViewSource,
 };
 
 pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bool {
@@ -58,10 +58,9 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
         HirCallArgument::Place(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
-            HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => allocation
-                .arguments
-                .iter()
-                .any(call_argument_contains_runtime_cast),
+            HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+                shared_allocation_contains_runtime_cast(allocation)
+            }
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
                 expression_contains_runtime_cast(call)
             }
@@ -77,10 +76,9 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
 fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
     match source {
         HirSharedSource::Place(_) => false,
-        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => allocation
-            .arguments
-            .iter()
-            .any(call_argument_contains_runtime_cast),
+        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
+            shared_allocation_contains_runtime_cast(allocation)
+        }
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
             expression_contains_runtime_cast(call)
         }
@@ -88,6 +86,15 @@ fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
             cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
                 || shared_source_contains_runtime_cast(&cast.source)
         }
+    }
+}
+
+fn shared_allocation_contains_runtime_cast(allocation: &crate::hir::HirSharedAllocation) -> bool {
+    match &allocation.mode {
+        HirSharedAllocationMode::Initialize { arguments, .. } => {
+            arguments.iter().any(call_argument_contains_runtime_cast)
+        }
+        HirSharedAllocationMode::Copy { source, .. } => object_source_contains_runtime_cast(source),
     }
 }
 

@@ -46,11 +46,22 @@ pub enum MirSharedAllocationOrigin {
     Unspecified,
 }
 
+/// The operation that must establish the unpublished payload before
+/// publication. Copy allocation repeats its already-established source here
+/// so verification can prove that a check succeeded before allocation and
+/// that the same source reaches the selected copy operation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirSharedAllocationMode {
+    Initialize,
+    Copy { source: MirPlace },
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedAllocate {
     pub allocation: StorageId,
     pub class: ClassId,
     pub origin: MirSharedAllocationOrigin,
+    pub mode: MirSharedAllocationMode,
     pub span: Span,
 }
 

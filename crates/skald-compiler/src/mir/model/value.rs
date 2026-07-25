@@ -96,6 +96,13 @@ impl MirPlace {
         }
     }
 
+    pub fn shared_allocation_payload(allocation: StorageId) -> Self {
+        Self {
+            base: MirPlaceBase::SharedAllocationPayload(allocation),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn project_field(mut self, field: FieldId) -> Self {
         self.projections.push(MirPlaceProjection::Field(field));
         self
@@ -114,6 +121,8 @@ pub enum MirPlaceBase {
     CheckedView(StorageId),
     /// The complete payload of the allocation retained by one shared owner.
     SharedPointee(StorageId),
+    /// The unpublished payload under construction in allocation storage.
+    SharedAllocationPayload(StorageId),
 }
 
 impl MirPlaceBase {
@@ -122,7 +131,8 @@ impl MirPlaceBase {
             Self::Storage(storage)
             | Self::AliasParameter(storage)
             | Self::CheckedView(storage)
-            | Self::SharedPointee(storage) => storage,
+            | Self::SharedPointee(storage)
+            | Self::SharedAllocationPayload(storage) => storage,
         }
     }
 }

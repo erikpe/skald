@@ -3,9 +3,9 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirExpressionKind, HirSharedAllocation, HirSharedCast, HirSharedCastKind, HirSharedPlace,
-        HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer, HirViewTarget,
-        Type,
+        HirConstructionMode, HirExpressionKind, HirSharedAllocation, HirSharedAllocationMode,
+        HirSharedCast, HirSharedCastKind, HirSharedPlace, HirSharedProducer, HirSharedSource,
+        HirSharedTarget, HirSharedTransfer, HirViewTarget, Type,
     },
     resolve::{
         ResolvedAllocationExpr, ResolvedConstructionMode, ResolvedExpression,
@@ -18,9 +18,7 @@ use super::{
         class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
     },
     function::CallableChecker,
-    program::{
-        lower_type, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION, UNSUPPORTED_SHARED_OPERATION,
-    },
+    program::{lower_type, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION},
 };
 
 pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
@@ -165,7 +163,7 @@ impl CallableChecker<'_, '_> {
                         "use `(shared T) source` to preserve an existing allocation",
                     )
                     .with_note(
-                        "use `new T(copy source)` to create a distinct allocation when copy allocation becomes available",
+                        "use `new T(copy source)` to create a distinct exact-class allocation",
                     ),
                 );
                 None
@@ -216,36 +214,45 @@ impl CallableChecker<'_, '_> {
         &mut self,
         allocation: &ResolvedAllocationExpr,
     ) -> Option<HirSharedAllocation> {
-        let ResolvedConstructionMode::Initialize { arguments } = &allocation.mode else {
-            self.diagnostics.push(
-                Diagnostic::error(
-                    UNSUPPORTED_SHARED_OPERATION,
-                    "explicit copy allocation is not available in typed HIR yet",
-                )
-                .with_primary_label(
-                    allocation.new_span,
-                    "ordinary allocation is implemented before copy allocation",
-                ),
-            );
-            return None;
+        let mode = match &allocation.mode {
+            ResolvedConstructionMode::Initialize { arguments } => {
+                let initializer = self.select_allocation_initializer(allocation)?;
+                let declaration = self
+                    .program
+                    .initializer(initializer)
+                    .expect("selected allocation initializer must exist");
+                let arguments = self.check_arguments(
+                    arguments,
+                    &declaration.parameters,
+                    allocation.target_span,
+                    "allocation initializer",
+                    None,
+                    Some(declaration.span),
+                )?;
+                HirSharedAllocationMode::Initialize {
+                    initializer,
+                    arguments,
+                }
+            }
+            ResolvedConstructionMode::Copy { copy_span, source } => {
+                let HirConstructionMode::Copy { source, operation } = self
+                    .check_copy_construction_mode(
+                        allocation.class,
+                        source,
+                        allocation.target_span,
+                        allocation.span,
+                        *copy_span,
+                        "copy allocation",
+                    )?
+                else {
+                    unreachable!("explicit copy mode must remain distinct from initialization")
+                };
+                HirSharedAllocationMode::Copy { source, operation }
+            }
         };
-        let initializer = self.select_allocation_initializer(allocation)?;
-        let declaration = self
-            .program
-            .initializer(initializer)
-            .expect("selected allocation initializer must exist");
-        let arguments = self.check_arguments(
-            arguments,
-            &declaration.parameters,
-            allocation.target_span,
-            "allocation initializer",
-            None,
-            Some(declaration.span),
-        )?;
         Some(HirSharedAllocation {
             class: allocation.class,
-            initializer,
-            arguments,
+            mode,
             span: allocation.span,
         })
     }
