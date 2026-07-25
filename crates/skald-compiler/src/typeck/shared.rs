@@ -11,6 +11,7 @@ use crate::{
         ResolvedAllocationExpr, ResolvedConstructionMode, ResolvedExpression,
         ResolvedObjectCastExpr, ResolvedSharedTarget,
     },
+    source::Span,
 };
 
 use super::{
@@ -18,7 +19,9 @@ use super::{
         class_provides_view, classify_object_view_relation, ObjectViewRelation, ObjectViewSource,
     },
     function::CallableChecker,
-    program::{lower_type, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION},
+    program::{
+        lower_type, IMPLICIT_SHARED_DEREFERENCE, INVALID_OBJECT_CAST, INVALID_SHARED_CONVERSION,
+    },
 };
 
 pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirSharedTarget {
@@ -316,7 +319,7 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn shared_target_name(&self, target: HirSharedTarget) -> String {
+    pub(in crate::typeck) fn shared_target_name(&self, target: HirSharedTarget) -> String {
         let name = match target {
             HirSharedTarget::Obj => "Obj".to_owned(),
             HirSharedTarget::Class(class) => self
@@ -331,6 +334,29 @@ impl CallableChecker<'_, '_> {
                 .unwrap_or_else(|| interface.to_string()),
         };
         format!("shared {name}")
+    }
+
+    pub(in crate::typeck) fn reject_implicit_shared_dereference<T>(
+        &mut self,
+        span: Span,
+        target: HirSharedTarget,
+        consumer_requirement: &str,
+    ) -> Option<T> {
+        self.diagnostics.push(
+            Diagnostic::error(
+                IMPLICIT_SHARED_DEREFERENCE,
+                "shared owner must be explicitly dereferenced for object-place use",
+            )
+            .with_primary_label(
+                span,
+                format!(
+                    "this expression has type `{}`; use `*` to select its pointee",
+                    self.shared_target_name(target)
+                ),
+            )
+            .with_note(consumer_requirement),
+        );
+        None
     }
 
     pub(super) fn resolved_shared_target(

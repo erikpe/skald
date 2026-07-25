@@ -77,9 +77,8 @@ Unrelated classes are invalid.
 A fresh inline construction, inline object-returning call, primitive binding
 or field, and any other produced inline value is not an alias source. A
 dereferenced produced shared allocation or shared-returning call is eligible
-because its owner is adopted into call-scoped anchor storage. The older
-implicit shared-owner argument remains temporarily accepted during the staged
-explicit-dereference migration.
+because its owner is adopted into call-scoped anchor storage. A raw shared
+handle is an owning value rather than an alias place and is rejected here.
 Initializer `self` is also ineligible while the enclosing object is incomplete;
 an already initialized direct field may be passed independently when its
 initializer-body rules permit.

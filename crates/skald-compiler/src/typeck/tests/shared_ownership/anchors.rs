@@ -14,10 +14,10 @@ fn shared_backed_alias_arguments_classify_stable_and_anchored_lifetimes() {
         "fn main() -> i64 {\n",
         "  var owner: shared Leaf = new Leaf();\n",
         "  var holder: Holder = Holder();\n",
-        "  inspect(owner);\n",
-        "  inspect(holder.edge);\n",
-        "  inspect(new Leaf());\n",
-        "  inspect(produce());\n",
+        "  inspect(*owner);\n",
+        "  inspect(*holder.edge);\n",
+        "  inspect(*new Leaf());\n",
+        "  inspect(*produce());\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -51,8 +51,8 @@ fn shared_backed_receivers_cover_inline_payload_subobjects() {
         "fn main() -> i64 {\n",
         "  var owner: shared Container = new Container();\n",
         "  var holder: Holder = Holder();\n",
-        "  return owner.leaf.read() + holder.edge.leaf.read() + new Container().leaf.read()",
-        " + produce().leaf.read() + ((shared Container) produce()).leaf.read();\n",
+        "  return owner->leaf.read() + holder.edge->leaf.read() + new Container()->leaf.read()",
+        " + produce()->leaf.read() + ((shared Container) produce())->leaf.read();\n",
         "}\n",
     ));
     assert_diagnostics(&output.diagnostics, &[]);
@@ -84,7 +84,7 @@ fn receiver_and_argument_anchors_precede_later_replacement_and_release_after_cal
         "}\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return inspect(holder.edge, replace(holder));\n",
+        "  return inspect(*holder.edge, replace(holder));\n",
         "}\n",
     ));
     assert_diagnostics(&output.diagnostics, &[]);
@@ -142,7 +142,7 @@ fn nested_shared_fields_anchor_each_owner_edge_without_graph_search() {
         "fn inspect(ref value: Leaf) -> unit {}\n",
         "fn main() -> i64 {\n",
         "  var outer: Outer = Outer();\n",
-        "  inspect(outer.edge.edge);\n",
+        "  inspect(*outer.edge->edge);\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -175,8 +175,8 @@ fn shared_anchors_support_forwarding_and_deliberately_overlapping_mutable_aliase
         "}\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  var before: i64 = forward(holder.edge);\n",
-        "  touch(holder.edge, holder.edge);\n",
+        "  var before: i64 = forward(*holder.edge);\n",
+        "  touch(*holder.edge, *holder.edge);\n",
         "  return before;\n",
         "}\n",
     ));
@@ -258,7 +258,7 @@ fn shared_interface_fields_and_producers_use_call_anchors() {
         "fn produce() -> shared Readable { return new Leaf(); }\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return holder.value.read() + produce().read();\n",
+        "  return holder.value->read() + produce()->read();\n",
         "}\n",
     ));
     assert_diagnostics(&output.diagnostics, &[]);
@@ -286,7 +286,7 @@ fn anchors_and_inline_temporaries_cleanup_in_reverse_completion_order() {
         "fn inspect(ref leaf: Leaf, value: i64) -> i64 { return value; }\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return inspect(holder.edge, ((Value) Value()).read());\n",
+        "  return inspect(*holder.edge, ((Value) Value()).read());\n",
         "}\n",
     ));
     assert_diagnostics(&output.diagnostics, &[]);

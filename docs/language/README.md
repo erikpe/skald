@@ -40,6 +40,8 @@ receiver is evaluated before its explicit arguments.
 | **place** | An addressable storage location, such as a local, parameter, `self`, or a field path. |
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
+| **shared owner** | A non-null owning `shared T` handle. It is a value distinct from the allocated object place it keeps alive. |
+| **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
@@ -78,6 +80,8 @@ profile
 uses non-null `shared T` handles, deterministic last-owner destruction, and
 hidden owning anchors for borrows from replaceable shared storage. Shared
 allocation is explicit through `new T(arguments)` or `new T(copy source)`.
+Pointee access is explicit: `.` stays within an inline object place, `->`
+crosses one shared edge, and general object-place consumers require `*owner`.
 Optionals and exceptional control flow remain unimplemented, and their final
 rules are not frozen.
 

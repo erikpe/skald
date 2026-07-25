@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         HirAccess, HirCheckedObjectView, HirExpression, HirExpressionKind, HirFieldPlace,
-        HirObjectOrigin, HirObjectPlace, HirSharedPlace, HirSharedSource, Type,
+        HirObjectOrigin, HirObjectPlace, Type,
     },
     identity::{BindingId, FieldId, ParameterId},
     object_path::{ObjectPath, ObjectProjection},
@@ -114,16 +114,6 @@ impl CallableChecker<'_, '_> {
                 self.check_explicit_shared_pointee(dereference, projections.clone(), *span)?;
             return Some(self.finish_shared_object_receiver(pointee, *class, *span));
         }
-        if let ResolvedObjectReceiver::SharedExpression {
-            source,
-            projections,
-            class,
-            span,
-        } = receiver
-        {
-            let pointee = self.check_shared_pointee(source, projections.clone(), *span)?;
-            return Some(self.finish_shared_object_receiver(pointee, *class, *span));
-        }
         let ResolvedObjectReceiver::CastRelative {
             cast,
             projections,
@@ -134,16 +124,6 @@ impl CallableChecker<'_, '_> {
             let path = receiver
                 .binding_path()
                 .expect("ordinary receiver must retain its binding path");
-            if let Type::Shared(target) = self.binding_type(path.root) {
-                let source = HirSharedSource::Place(HirSharedPlace::Binding {
-                    binding: path.root,
-                    target,
-                    span: path.span,
-                });
-                let pointee =
-                    self.check_shared_pointee_source(source, path.projections.clone(), path.span)?;
-                return Some(self.finish_shared_object_receiver(pointee, path.class, path.span));
-            }
             let place = self.check_object_place(path, place_use)?;
             let origin = self.object_origin(&place);
             return Some(CheckedObjectReceiver {
@@ -273,6 +253,13 @@ impl CallableChecker<'_, '_> {
         &mut self,
         expression: &ResolvedExpression,
     ) -> Option<HirObjectPlace> {
+        if let Some(target) = self.resolved_shared_target(expression) {
+            return self.reject_implicit_shared_dereference(
+                expression.span(),
+                target,
+                "copy source must be an existing object place",
+            );
+        }
         let place = match expression {
             ResolvedExpression::Binding(binding)
                 if matches!(self.binding_type(binding.binding), Type::Class(_)) =>
@@ -344,7 +331,7 @@ impl CallableChecker<'_, '_> {
         allow_initializing_self: bool,
     ) -> Option<HirObjectPlace> {
         let class = match self.binding_type(binding) {
-            Type::Class(class) | Type::Shared(crate::hir::HirSharedTarget::Class(class)) => class,
+            Type::Class(class) => class,
             _ => {
                 self.diagnostics.push(
                     Diagnostic::error(

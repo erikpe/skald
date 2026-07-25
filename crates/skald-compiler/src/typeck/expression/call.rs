@@ -5,7 +5,7 @@ use crate::{
     hir::{
         HirAccess, HirCallArgument, HirCopyArgument, HirExpressionKind, HirInterfaceCallTarget,
         HirInterfaceReceiver, HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin,
-        HirObjectView, HirSharedPlace, HirSharedSource, HirViewSource, HirViewTarget,
+        HirObjectView, HirViewSource, HirViewTarget,
     },
     identity::BindingId,
     resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
@@ -64,38 +64,26 @@ impl CallableChecker<'_, '_> {
         let (access, receiver) = match &call.receiver {
             crate::resolve::ResolvedInterfaceReceiver::Binding { binding, span } => {
                 let target = HirViewTarget::Interface(call.interface);
-                if let Type::Shared(shared_target) = self.binding_type(*binding) {
-                    let source = HirSharedSource::Place(HirSharedPlace::Binding {
+                let access = self.binding_access(*binding, false, *span)?;
+                let view = HirObjectView {
+                    source: HirViewSource::Forwarded {
                         binding: *binding,
-                        target: shared_target,
-                        span: *span,
-                    });
-                    let pointee = self.check_shared_pointee_source(source, Vec::new(), *span)?;
-                    let access = pointee.access();
-                    let view = pointee.into_view(target, access);
-                    (access, HirInterfaceReceiver::View(view))
-                } else {
-                    let access = self.binding_access(*binding, false, *span)?;
-                    let view = HirObjectView {
-                        source: HirViewSource::Forwarded {
-                            binding: *binding,
-                            target,
-                            access,
-                            span: *span,
-                        },
-                        origin: Box::new(HirObjectOrigin::Forwarded {
-                            binding: *binding,
-                            static_target: target,
-                            access,
-                            dispatch_limit: None,
-                            span: *span,
-                        }),
                         target,
                         access,
                         span: *span,
-                    };
-                    (access, HirInterfaceReceiver::View(view))
-                }
+                    },
+                    origin: Box::new(HirObjectOrigin::Forwarded {
+                        binding: *binding,
+                        static_target: target,
+                        access,
+                        dispatch_limit: None,
+                        span: *span,
+                    }),
+                    target,
+                    access,
+                    span: *span,
+                };
+                (access, HirInterfaceReceiver::View(view))
             }
             crate::resolve::ResolvedInterfaceReceiver::Cast(cast) => {
                 let mut checked = self.check_object_cast(cast)?;
@@ -114,13 +102,6 @@ impl CallableChecker<'_, '_> {
                     Vec::new(),
                     call.receiver_span,
                 )?;
-                let access = pointee.access();
-                let view = pointee.into_view(target, access);
-                (access, HirInterfaceReceiver::View(view))
-            }
-            crate::resolve::ResolvedInterfaceReceiver::SharedExpression(source) => {
-                let target = HirViewTarget::Interface(call.interface);
-                let pointee = self.check_shared_pointee(source, Vec::new(), call.receiver_span)?;
                 let access = pointee.access();
                 let view = pointee.into_view(target, access);
                 (access, HirInterfaceReceiver::View(view))

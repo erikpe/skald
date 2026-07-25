@@ -341,6 +341,9 @@ use `(*owner).field` or `owner->field` to select a member from `owner`'s
 pointee. Binary multiplication remains distinct by operator position, as in
 `value * *owner`. Allocation is a primary expression, so calls, `.` member
 access, and `->` member access may follow it in the same postfix chain.
+These spellings are semantically distinct: `.` remains within an already
+selected inline place, while `->` crosses exactly one shared edge. There is no
+implicit shared dereference.
 Declaration selection and call legality are semantic concerns.
 
 A parenthesized identifier followed by an adjacent expression is an object-cast

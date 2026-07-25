@@ -1,0 +1,39 @@
+error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/compile_fail/implicit_shared_member_access.ska:29:5
+    |
+29 |     owner.value;
+    |     ^^^^^ this expression has type `shared Leaf`
+  = note: use `owner->member` to cross one shared edge
+  = note: use `(*owner).member` when grouping is clearer
+
+error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/compile_fail/implicit_shared_member_access.ska:30:5
+    |
+30 |     owner.read();
+    |     ^^^^^ this expression has type `shared Leaf`
+  = note: use `owner->member` to cross one shared edge
+  = note: use `(*owner).member` when grouping is clearer
+
+error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/compile_fail/implicit_shared_member_access.ska:31:5
+    |
+31 |     readable.read();
+    |     ^^^^^^^^ this expression has type `shared Readable`
+  = note: use `owner->member` to cross one shared edge
+  = note: use `(*owner).member` when grouping is clearer
+
+error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/compile_fail/implicit_shared_member_access.ska:32:12
+    |
+32 |     holder.child.read();
+    |            ^^^^^ this expression has type `shared Leaf`
+  = note: use `owner->member` to cross one shared edge
+  = note: use `(*owner).member` when grouping is clearer
+
+error[RES021]: shared owner member access requires explicit dereference
+ --> tests/golden/compile_fail/implicit_shared_member_access.ska:33:5
+    |
+33 |     new Leaf(2).read();
+    |     ^^^^^^^^^^^ this expression has type `shared Leaf`
+  = note: use `owner->member` to cross one shared edge
+  = note: use `(*owner).member` when grouping is clearer

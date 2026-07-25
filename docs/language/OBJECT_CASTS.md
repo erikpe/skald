@@ -115,13 +115,13 @@ alias   --copy----> inline
 alias   ----X-----> shared
 
 *shared --borrow--> checked place
-shared  --copy----> inline
-shared  --owner---> shared
+*shared --copy----> inline
+ shared --owner---> shared
 ```
 
 The `X` entries mean that no **cast** performs that direction. The explicit
 copy-allocation form `new T(copy source)` may consume an inline, alias, or
-shared-backed source, select a checked `T` place, and create a distinct
+explicitly dereferenced shared source, select a checked `T` place, and create a distinct
 allocation, as described below. It is construction rather than a conversion
 to the original object's ownership.
 

@@ -24,6 +24,21 @@ impl CallableResolver<'_, '_> {
                 let ResolvedExpression::ObjectCast(cast) = resolved else {
                     unreachable!("object-cast syntax must resolve to an object-cast expression")
                 };
+                if matches!(
+                    cast.target_mode,
+                    crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
+                ) {
+                    let target = match cast.target.kind {
+                        ResolvedTypeKind::Class(class) => ResolvedSharedTarget::Class(class),
+                        ResolvedTypeKind::Interface(interface) => {
+                            ResolvedSharedTarget::Interface(interface)
+                        }
+                        ResolvedTypeKind::Obj => ResolvedSharedTarget::Obj,
+                        _ => unreachable!("shared cast target must be an object view"),
+                    };
+                    self.report_implicit_shared_member_access(cast.span, target);
+                    return None;
+                }
                 let ResolvedTypeKind::Class(class) = cast.target.kind else {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -37,18 +52,6 @@ impl CallableResolver<'_, '_> {
                     );
                     return None;
                 };
-                if matches!(
-                    cast.target_mode,
-                    crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
-                ) {
-                    let span = cast.span;
-                    return Some(ResolvedObjectReceiver::SharedExpression {
-                        source: Box::new(ResolvedExpression::ObjectCast(cast)),
-                        projections: Vec::new(),
-                        class,
-                        span,
-                    });
-                }
                 Some(ResolvedObjectReceiver::from_cast(cast, class))
             }
             syntax::Expression::Grouped(grouped) => Some(
@@ -60,16 +63,15 @@ impl CallableResolver<'_, '_> {
                 let ResolvedExpression::Allocation(allocation) = &source else {
                     unreachable!("allocation syntax must resolve as allocation")
                 };
-                Some(ResolvedObjectReceiver::SharedExpression {
-                    class: allocation.class,
-                    source: Box::new(source),
-                    projections: Vec::new(),
-                    span: expression.span(),
-                })
+                self.report_implicit_shared_member_access(
+                    expression.span(),
+                    ResolvedSharedTarget::Class(allocation.class),
+                );
+                None
             }
             syntax::Expression::Call(_) => {
                 let source = self.resolve_expression(expression)?;
-                let class = self.shared_expression_class(&source).or_else(|| {
+                let Some(target) = self.resolved_shared_target(&source) else {
                     self.diagnostics.push(
                         Diagnostic::error(
                             INVALID_MEMBER_SELECTION,
@@ -80,14 +82,10 @@ impl CallableResolver<'_, '_> {
                             "a produced method receiver must return `shared Class`",
                         ),
                     );
-                    None
-                })?;
-                Some(ResolvedObjectReceiver::SharedExpression {
-                    source: Box::new(source),
-                    projections: Vec::new(),
-                    class,
-                    span: expression.span(),
-                })
+                    return None;
+                };
+                self.report_implicit_shared_member_access(expression.span(), target);
+                None
             }
             syntax::Expression::MemberAccess(member) => {
                 let receiver = self.resolve_member_object_receiver(member)?;
@@ -245,8 +243,11 @@ impl CallableResolver<'_, '_> {
             return None;
         };
         let class = match binding.ty {
-            ResolvedTypeKind::Class(class)
-            | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) => class,
+            ResolvedTypeKind::Class(class) => class,
+            ResolvedTypeKind::Shared(target) => {
+                self.report_implicit_shared_member_access(identifier.span, target);
+                return None;
+            }
             _ => {
                 self.diagnostics.push(
                     Diagnostic::error(
@@ -327,19 +328,11 @@ impl CallableResolver<'_, '_> {
         if let ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) =
             declaration.type_syntax.kind
         {
-            return Some(ResolvedObjectReceiver::SharedExpression {
-                source: Box::new(ResolvedExpression::FieldAccess(
-                    crate::resolve::ResolvedFieldAccessExpr {
-                        receiver,
-                        field,
-                        member_span,
-                        span,
-                    },
-                )),
-                projections: Vec::new(),
-                class,
-                span,
-            });
+            self.report_implicit_shared_member_access(
+                member_span,
+                ResolvedSharedTarget::Class(class),
+            );
+            return None;
         }
         let ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
             self.diagnostics.push(
@@ -402,12 +395,5 @@ impl CallableResolver<'_, '_> {
             }
         }
         unreachable!("selected inherited member owner must be in the receiver base chain")
-    }
-
-    fn shared_expression_class(&self, expression: &ResolvedExpression) -> Option<ClassId> {
-        match self.resolved_shared_target(expression) {
-            Some(ResolvedSharedTarget::Class(class)) => Some(class),
-            _ => None,
-        }
     }
 }

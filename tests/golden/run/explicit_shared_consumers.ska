@@ -44,7 +44,7 @@ fn produce(value: i64) -> shared Leaf {
 
 fn main() -> i64 {
     var owner: shared Leaf = new Leaf(5);
-    ska_rt_println_i64(inspect(owner));
+    ska_rt_println_i64(inspect(*owner));
     ska_rt_println_i64(inspect(*owner));
 
     increment(*owner);

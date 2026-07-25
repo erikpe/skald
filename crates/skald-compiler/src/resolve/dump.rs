@@ -592,9 +592,6 @@ impl ResolvedDumper {
                     }
                     ResolvedInterfaceReceiver::Cast(_) => "checked-cast".to_owned(),
                     ResolvedInterfaceReceiver::Dereference(_) => "dereference".to_owned(),
-                    ResolvedInterfaceReceiver::SharedExpression(_) => {
-                        "shared-expression".to_owned()
-                    }
                 };
                 self.line(
                     &format!(
@@ -681,27 +678,6 @@ impl ResolvedDumper {
                 self.line(&format!("DereferenceReceiver class {class}"), *span);
                 self.indented(|dumper| {
                     dumper.dereference(dereference);
-                    for projection in projections {
-                        match projection {
-                            crate::object_path::ObjectProjection::Base(base) => {
-                                dumper.heading(&format!("BaseProjection {base}"));
-                            }
-                            crate::object_path::ObjectProjection::Field(field) => {
-                                dumper.heading(&format!("FieldProjection {field}"));
-                            }
-                        }
-                    }
-                });
-            }
-            ResolvedObjectReceiver::SharedExpression {
-                source,
-                projections,
-                class,
-                span,
-            } => {
-                self.line(&format!("SharedReceiver class {class}"), *span);
-                self.indented(|dumper| {
-                    dumper.expression(source);
                     for projection in projections {
                         match projection {
                             crate::object_path::ObjectProjection::Base(base) => {

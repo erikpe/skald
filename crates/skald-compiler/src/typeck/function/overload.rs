@@ -249,7 +249,6 @@ impl CallableChecker<'_, '_> {
                 self.static_cast_access(&cast.source)
             }
             ResolvedObjectReceiver::Dereference { .. } => HirAccess::Mutable,
-            ResolvedObjectReceiver::SharedExpression { .. } => HirAccess::Mutable,
         }
     }
 

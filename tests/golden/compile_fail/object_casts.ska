@@ -10,7 +10,7 @@ class Unrelated {
 
 fn invalid(ref root: Root) -> unit {
     ((Unrelated) root).touch();
-    ((shared Root) root).touch();
+    ((shared Root) root)->touch();
     var erased_copy: Root = (Obj) root;
 }
 

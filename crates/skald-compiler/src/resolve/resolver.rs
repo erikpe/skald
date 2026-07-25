@@ -37,6 +37,7 @@ pub const INVALID_OVERRIDE: &str = "RES017";
 pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
 pub const INVALID_DEREFERENCE: &str = "RES019";
 pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
+pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

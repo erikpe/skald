@@ -3,6 +3,50 @@
 use super::*;
 
 impl CallableResolver<'_, '_> {
+    pub(super) fn report_implicit_shared_member_access(
+        &mut self,
+        span: Span,
+        target: ResolvedSharedTarget,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                IMPLICIT_SHARED_DEREFERENCE,
+                "shared owner member access requires explicit dereference",
+            )
+            .with_primary_label(
+                span,
+                format!(
+                    "this expression has type `{}`",
+                    self.resolved_shared_target_name(target)
+                ),
+            )
+            .with_note("use `owner->member` to cross one shared edge")
+            .with_note("use `(*owner).member` when grouping is clearer"),
+        );
+    }
+
+    fn resolved_shared_target_name(&self, target: ResolvedSharedTarget) -> String {
+        match target {
+            ResolvedSharedTarget::Class(class) => format!(
+                "shared {}",
+                self.environment
+                    .classes
+                    .get(class)
+                    .expect("resolved shared class target must exist")
+                    .name
+            ),
+            ResolvedSharedTarget::Interface(interface) => format!(
+                "shared {}",
+                self.environment
+                    .interfaces
+                    .get(interface)
+                    .expect("resolved shared interface target must exist")
+                    .name
+            ),
+            ResolvedSharedTarget::Obj => "shared Obj".to_owned(),
+        }
+    }
+
     pub(super) fn resolve_dereference(
         &mut self,
         source: &syntax::Expression,

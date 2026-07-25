@@ -351,10 +351,8 @@ impl CallableResolver<'_, '_> {
             syntax::Expression::Identifier(identifier) => {
                 let binding = self.lookup_binding(&identifier.name.text)?;
                 let interface = match binding.ty {
-                    ResolvedTypeKind::Interface(interface)
-                    | ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Interface(
-                        interface,
-                    )) => interface,
+                    ResolvedTypeKind::Interface(interface) => interface,
+                    ResolvedTypeKind::Shared(_) => return None,
                     _ => return None,
                 };
                 Some((
@@ -382,26 +380,10 @@ impl CallableResolver<'_, '_> {
                     cast.target_mode,
                     crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
                 ) {
-                    return Some((
-                        ResolvedInterfaceReceiver::SharedExpression(Box::new(
-                            ResolvedExpression::ObjectCast(cast),
-                        )),
-                        interface,
-                        span,
-                    ));
+                    return None;
                 }
                 Some((
                     ResolvedInterfaceReceiver::Cast(Box::new(cast)),
-                    interface,
-                    span,
-                ))
-            }
-            syntax::Expression::MemberAccess(_) | syntax::Expression::Call(_) => {
-                let resolved = self.resolve_expression(expression)?;
-                let interface = self.shared_expression_interface(&resolved)?;
-                let span = expression.span();
-                Some((
-                    ResolvedInterfaceReceiver::SharedExpression(Box::new(resolved)),
                     interface,
                     span,
                 ))
@@ -428,17 +410,6 @@ impl CallableResolver<'_, '_> {
             span,
         ))
     }
-
-    fn shared_expression_interface(
-        &self,
-        expression: &ResolvedExpression,
-    ) -> Option<crate::identity::InterfaceId> {
-        match self.resolved_shared_target(expression) {
-            Some(ResolvedSharedTarget::Interface(interface)) => Some(interface),
-            _ => None,
-        }
-    }
-
     pub(super) fn select_member(
         &mut self,
         class: ClassId,

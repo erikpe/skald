@@ -113,7 +113,10 @@ resolved owner expression, class/interface/`Obj` target, source `*`-versus-`->`
 provenance, and exact operator and expression spans. The source AST keeps `.`
 and `->` distinct; resolution normalizes `->member` to one typed dereference
 followed by member selection without synthesizing a source `*` span or
-duplicating receiver evaluation.
+duplicating receiver evaluation. Resolution rejects raw shared member
+receivers; other object-place consumers reach type checking as owner
+expressions only so that it can issue the corresponding explicit-dereference
+diagnostic. No lower phase manufactures a pointee place from a raw handle.
 
 Ordinary construction and copy construction have type-distinct identities
 through every semantic phase. `InitializerId` names only an ordinary `init`
@@ -247,7 +250,7 @@ dependency and requires the checked view to end before anchor release.
 Produced allocations retain exact dynamic provenance through shared up-views.
 Copy allocation lowers the established source and any anchor before allocating,
 then performs one exact copy construction before publication and adoption.
-Explicit direct dereference is consumed at this HIR boundary and reuses these
+Explicit dereference is consumed at this HIR boundary and reuses these
 same shared views, origins, checked carriers, and anchors; MIR has no parallel
 explicit-dereference place or ownership operation.
 

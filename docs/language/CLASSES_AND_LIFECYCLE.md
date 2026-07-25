@@ -380,6 +380,8 @@ source. A source may be:
 
 - an existing live object place, including an owning local, value parameter,
   receiver, alias, or supported field projection;
+- a bounded pointee place explicitly selected from a shared owner with
+  `*owner`;
 - a fresh construction of the exact class; or
 - the exact-class result of an internal function or method.
 
@@ -399,6 +401,10 @@ document already requires it:
 ```ska
 var copy: T = source;
 ```
+
+If the source is shared, the owning context still requires explicit pointee
+selection: `var copy: T = *owner;`. This copies the selected object into
+independent inline storage; it does not copy or replace the shared handle.
 
 The explicit construction form is:
 

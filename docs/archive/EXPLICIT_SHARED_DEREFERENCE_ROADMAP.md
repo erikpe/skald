@@ -1,6 +1,6 @@
 # Explicit Shared Dereference Roadmap
 
-Status: in progress; SD2 is complete and SD3 is next.
+Status: complete.
 
 This roadmap makes the source boundary between a `shared T` owner handle and
 the object behind that handle explicit. Prefix `*owner` selects a temporary
@@ -136,7 +136,7 @@ invoke `Leaf` copy assignment on either allocation.
 - [x] SD0 — Centralize the shared handle-to-place semantic boundary
 - [x] SD1 — Add explicit dereference syntax and direct object access
 - [x] SD2 — Integrate dereference with every object-place consumer
-- [ ] SD3 — Require explicit dereference and publish the completed profile
+- [x] SD3 — Require explicit dereference and publish the completed profile
 
 ## PR-sized implementation sequence
 
@@ -293,44 +293,44 @@ remain syntactically and semantically distinct.
 remove superseded inference, migrate the repository, and leave all living
 documentation authoritative.
 
-- [ ] Reject `.member`, method/interface receiver, alias argument, plain cast,
+- [x] Reject `.member`, method/interface receiver, alias argument, plain cast,
       type test, and inline-copy uses that attempt to consume a raw `shared T`
       handle as an object place. Diagnostics must identify the owner type and
       recommend `->` for member selection or `*` for a general place consumer.
-- [ ] Remove resolver and type-checker fallback branches that manufacture a
+- [x] Remove resolver and type-checker fallback branches that manufacture a
       shared-backed object receiver or view without an explicit dereference.
       Rename residual `SharedExpression`-style vocabulary where it obscures
       the now-explicit source boundary.
-- [ ] Preserve direct handle operations and verify diagnostics do not
+- [x] Preserve direct handle operations and verify diagnostics do not
       recommend dereference for shared assignment, shared parameters/results,
       compatible shared up-views, or `(shared T) source`.
-- [ ] Migrate all current Rust source fixtures, top-level `.ska` corpora,
+- [x] Migrate all current Rust source fixtures, top-level `.ska` corpora,
       samples, run and compile-failure goldens, public-facade fixtures,
       deterministic phase dumps, and robustness seeds. Do not edit historical
       examples or milestone wording under `docs/archive/`.
-- [ ] Add exact compile-failure goldens for every removed implicit category,
+- [x] Add exact compile-failure goldens for every removed implicit category,
       ambiguous `.`/`->` paths, non-shared `*`, and deferred
       whole-pointee assignment. Keep diagnostics deterministic across repeated
       compiler processes.
-- [ ] Update all affected living source authorities, including `README.md`,
+- [x] Update all affected living source authorities, including `README.md`,
       the language overview, grammar, types/values, functions/control flow,
       classes/lifecycle, aliases/ownership, shared ownership, object casts,
       polymorphism, and status matrix. State that `.` stays within an inline
       place, `->` crosses one shared edge, and dereference yields a bounded
       non-owning place rather than inline ownership.
-- [ ] Update all affected living implementation and development authorities,
+- [x] Update all affected living implementation and development authorities,
       including compiler phases/IR, the shared-ownership compiler contract,
       debugging/dump vocabulary, and testing guidance. Audit backend and
       runtime documents, but do not revise representation or ABI claims when
       behavior is unchanged.
-- [ ] Confirm the final source migration does not change allocation count,
+- [x] Confirm the final source migration does not change allocation count,
       retain/release order, last-owner destruction, hidden-anchor count and
       order, dispatch target, cast failure timing, copy/slicing behavior,
       generated shared ABI, or native output.
-- [ ] Remove temporary compatibility wording from living documentation and
+- [x] Remove temporary compatibility wording from living documentation and
       tests. Record whole-pointee assignment only as a deferred/open direction,
       not an implemented capability.
-- [ ] Run documentation link/index validation, formatting and diff hygiene,
+- [x] Run documentation link/index validation, formatting and diff hygiene,
       the complete repository gate, the supported-toolchain gate, and the
       extended deterministic robustness suite.
 

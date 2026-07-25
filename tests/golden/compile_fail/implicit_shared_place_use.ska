@@ -1,0 +1,27 @@
+class Leaf {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    copy(ref source: Leaf) {
+        self.value = source.value;
+    }
+}
+
+fn inspect(ref leaf: Leaf) -> i64 {
+    return leaf.value;
+}
+
+fn main() -> i64 {
+    var owner: shared Leaf = new Leaf(1);
+    inspect(owner);
+    inspect(new Leaf(2));
+    var cast: Leaf = (Leaf) owner;
+    var matches: bool = owner is Leaf;
+    var inferred_copy: Leaf = owner;
+    var explicit_copy: Leaf = Leaf(copy owner);
+    var allocated_copy: shared Leaf = new Leaf(copy owner);
+    return 0;
+}

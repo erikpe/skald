@@ -196,8 +196,8 @@ use hidden anchors whenever a replaceable or produced owner must cover the
 complete consuming expression. Stable shared locals and value parameters
 borrow directly. Direct explicit forms use `owner->member` for member
 selection and `*owner is T` for a type test; `(*owner).member` is equivalent
-to the arrow form. The previous implicit direct spellings remain accepted
-during the staged explicit-dereference transition.
+to the arrow form. A raw shared handle is not an object place: `.` stays
+within inline storage and never crosses a shared edge.
 
 ## Non-owning conversions and access
 

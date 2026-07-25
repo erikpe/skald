@@ -43,8 +43,8 @@ accepted by every implemented object-place consumer: field access and
 mutation, class or interface calls, `ref` and `mut ref` arguments, checked
 casts and type tests, and target-directed inline local, field, value-parameter,
 result, assignment, slicing, `T(copy source)`, and `new T(copy source)` copies.
-Those uses retain the same stable-owner or hidden-anchor lifetime behavior as
-their existing shared-backed equivalents. Dereferencing does not allocate,
+Those uses retain the corresponding stable-owner or hidden-anchor lifetime
+behavior. Dereferencing does not allocate,
 copy an inline object, or transfer a strong owner. Non-shared operands are
 rejected.
 
@@ -54,11 +54,8 @@ handle itself. A dereferenced place is rejected in those contexts rather than
 being silently converted back into ownership. Whole-pointee assignment
 `*owner = source` is also unsupported; use `owner = replacement` to replace
 the handle or `owner->field = value` to mutate a supported field. Potential
-whole-pointee copy assignment is deferred because its behavior for a derived
+whole-pointee copy assignment is a deferred direction because its behavior for a derived
 allocation viewed through `shared Base` needs a separate lifecycle design.
-
-The older implicit owner-to-pointee spellings remain temporarily accepted as
-a compatibility oracle until the explicit-dereference cutover.
 
 ## Safety contract
 
@@ -252,8 +249,8 @@ order after the result is secured.
 The expression `*owner is T` is available for shared class, interface, and
 `Obj` pointees. It reads the allocation header's dynamic metadata and neither
 retains nor releases the owner. Statically guaranteed and impossible outcomes
-use the same closed-world classifier as inline and alias sources. The older
-implicit spelling remains accepted only during the staged migration.
+use the same closed-world classifier as inline and alias sources. The raw
+owner form `owner is T` is rejected because it omits pointee selection.
 
 ## Shared fields and lifecycle
 

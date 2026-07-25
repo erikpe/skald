@@ -36,7 +36,7 @@ class Leaf extends Middle {
 }
 
 fn classify(value: shared Obj) -> i64 {
-    if (value is Leaf) {
+    if (*value is Leaf) {
         return 1;
     } else {
         return 0;
@@ -48,8 +48,8 @@ fn main() -> i64 {
     var root: shared Root = leaf;
     var readable: shared Readable = leaf;
     var erased: shared Obj = leaf;
-    ska_rt_println_i64(root.read());
-    ska_rt_println_i64(readable.read());
+    ska_rt_println_i64(root->read());
+    ska_rt_println_i64(readable->read());
     ska_rt_println_i64(classify(erased));
     return 0;
 }

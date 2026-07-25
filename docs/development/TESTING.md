@@ -108,6 +108,13 @@ allocator success and fatal allocation failure. The process-determinism suite
 compares all phase products for a representative shared copy-allocation
 program.
 
+Explicit shared-dereference coverage must keep owner operations and pointee
+operations separate. Positive cases use `*owner` or `owner->member`; exact
+compile-failure goldens cover raw-handle member access, alias arguments,
+checked casts, type tests, inline copies, non-shared `*`, and unsupported
+whole-pointee assignment. Diagnostics for member selection recommend `->`;
+general object-place diagnostics recommend `*`.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

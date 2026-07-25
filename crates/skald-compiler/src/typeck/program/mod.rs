@@ -61,6 +61,7 @@ pub const NO_MATCHING_INITIALIZER: &str = "TYP030";
 pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
 pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
 pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
+pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {

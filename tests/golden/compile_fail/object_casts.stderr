@@ -10,7 +10,7 @@ error[TYP029]: object cast can never succeed
 error[TYP029]: shared-owner cast requires an existing or produced shared owner
  --> tests/golden/compile_fail/object_casts.ska:13:20
     |
-13 |     ((shared Root) root).touch();
+13 |     ((shared Root) root)->touch();
     |                    ^^^^ this expression has type `class c0`
   = note: create a distinct shared allocation explicitly with `new`
 

@@ -345,28 +345,12 @@ impl CallableChecker<'_, '_> {
                     let place = self.check_binding_place(binding.binding, binding.span, false)?;
                     let origin = self.object_origin(&place);
                     Some(CheckedObjectViewSource::Class { place, origin })
-                } else if let Type::Shared(_) = binding_type {
-                    if !matches!(
+                } else if let Type::Shared(target) = binding_type {
+                    self.reject_implicit_shared_view_source(
+                        expression,
+                        Type::Shared(target),
                         source_use,
-                        ViewSourceUse::AliasArgument
-                            | ViewSourceUse::TypeTest
-                            | ViewSourceUse::Cast
-                            | ViewSourceUse::CopyConstruction
-                    ) {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                source_use.diagnostic_code(),
-                                source_use.place_message(),
-                            )
-                            .with_primary_label(
-                                binding.span,
-                                "shared-owner borrowing is not available for this operation yet",
-                            ),
-                        );
-                        return None;
-                    }
-                    self.check_shared_pointee(expression, Vec::new(), binding.span)
-                        .map(CheckedObjectViewSource::Shared)
+                    )
                 } else {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -397,17 +381,12 @@ impl CallableChecker<'_, '_> {
                     .program
                     .field(access.field)
                     .expect("resolved field access must reference a field");
-                if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_))
-                    && matches!(
+                if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_)) {
+                    return self.reject_implicit_shared_view_source(
+                        expression,
+                        lower_type(&field.type_syntax),
                         source_use,
-                        ViewSourceUse::AliasArgument
-                            | ViewSourceUse::Cast
-                            | ViewSourceUse::CopyConstruction
-                    )
-                {
-                    return self
-                        .check_shared_pointee(expression, Vec::new(), expression.span())
-                        .map(CheckedObjectViewSource::Shared);
+                    );
                 }
                 let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
                     self.diagnostics.push(
@@ -441,12 +420,7 @@ impl CallableChecker<'_, '_> {
                 Some(CheckedObjectViewSource::Class { place, origin })
             }
             expression
-                if matches!(
-                    source_use,
-                    ViewSourceUse::AliasArgument
-                        | ViewSourceUse::Cast
-                        | ViewSourceUse::CopyConstruction
-                ) && self.resolved_shared_target(expression).is_some()
+                if self.resolved_shared_target(expression).is_some()
                     && matches!(
                         expression,
                         ResolvedExpression::Allocation(_)
@@ -456,8 +430,14 @@ impl CallableChecker<'_, '_> {
                             | ResolvedExpression::ObjectCast(_)
                     ) =>
             {
-                self.check_shared_pointee(expression, Vec::new(), expression.span())
-                    .map(CheckedObjectViewSource::Shared)
+                let target = self
+                    .resolved_shared_target(expression)
+                    .expect("guarded shared expression must retain its target");
+                self.reject_implicit_shared_view_source(
+                    expression,
+                    Type::Shared(target),
+                    source_use,
+                )
             }
             expression
                 if matches!(
@@ -479,6 +459,22 @@ impl CallableChecker<'_, '_> {
                 None
             }
         }
+    }
+
+    fn reject_implicit_shared_view_source(
+        &mut self,
+        expression: &ResolvedExpression,
+        owner_type: Type,
+        source_use: ViewSourceUse,
+    ) -> Option<CheckedObjectViewSource> {
+        let Type::Shared(target) = owner_type else {
+            unreachable!("implicit shared view rejection requires a shared owner");
+        };
+        self.reject_implicit_shared_dereference(
+            expression.span(),
+            target,
+            source_use.place_message(),
+        )
     }
 
     fn check_produced_inline_view_source(

@@ -13,7 +13,7 @@ fn shared_cast_program() -> MirProgram {
         "  var leaf: shared Leaf = (shared Leaf) erased;\n",
         "  var tagged: shared Tagged = (shared Tagged) leaf;\n",
         "  var root: shared Root = (shared Root) new Leaf();\n",
-        "  return leaf.tag() + tagged.tag() + root.tag();\n",
+        "  return leaf->tag() + tagged->tag() + root->tag();\n",
         "}\n",
     ))
 }
@@ -177,17 +177,17 @@ fn shared_upviews_retain_header_provenance_for_members_dispatch_and_type_tests()
         "  mut fn bump() -> i64 { self.value = self.value + 1; return self.value; }\n",
         "}\n",
         "fn classify(value: shared Obj) -> i64 {\n",
-        "  if (value is Leaf) { return 1; } else { return 0; }\n",
+        "  if (*value is Leaf) { return 1; } else { return 0; }\n",
         "}\n",
-        "fn relay(value: shared Root) -> i64 { return value.read(); }\n",
-        "fn bump(value: shared Leaf) -> i64 { return value.bump(); }\n",
+        "fn relay(value: shared Root) -> i64 { return value->read(); }\n",
+        "fn bump(value: shared Leaf) -> i64 { return value->bump(); }\n",
         "fn main() -> i64 {\n",
         "  var leaf: shared Leaf = new Leaf(10, 5);\n",
         "  var root: shared Root = leaf;\n",
         "  var readable: shared Readable = leaf;\n",
         "  var erased: shared Obj = leaf;\n",
         "  var bumped: i64 = bump(leaf);\n",
-        "  return bumped + root.read() + readable.read() + relay(leaf) + classify(erased);\n",
+        "  return bumped + root->read() + readable->read() + relay(leaf) + classify(erased);\n",
         "}\n",
     ));
     verify_mir(&program).expect("shared polymorphic views must verify");

@@ -114,7 +114,6 @@ pub enum ResolvedInterfaceReceiver {
     Binding { binding: BindingId, span: Span },
     Cast(Box<ResolvedObjectCastExpr>),
     Dereference(Box<ResolvedDereferenceExpr>),
-    SharedExpression(Box<ResolvedExpression>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

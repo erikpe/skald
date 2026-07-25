@@ -59,7 +59,7 @@ the destination of exactly one `copy-construct`, followed by
 full-expression cleanup. Allocation before a required check or publication
 before copy completion is malformed MIR.
 
-For a shared-backed receiver or alias argument, HIR distinguishes a stable
+For an explicitly dereferenced shared receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or
 adopted producer source. MIR declares each hidden owner as `shared-anchor`;
 the corresponding `shared-copy`, `shared-field-copy`, call result, allocation
@@ -67,7 +67,7 @@ adopt, or shared cast must precede the consuming call, and `shared-release`
 must follow it. Nested shared fields produce one anchor per owning edge.
 Inline base and field projections remain beneath the same shared-pointee root.
 
-For a shared-backed `(T) source`, inspect both lifetimes. HIR shows the
+For `(T) *source`, inspect both lifetimes. HIR shows the
 `SelectedView` under a static or runtime `CheckedSource` or checked consumer.
 MIR first creates any `shared-anchor`, then binds or checks a distinct
 `checked-view` carrier. On a normal success path, the consumer must complete,

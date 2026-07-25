@@ -56,6 +56,9 @@ A call supplies exactly one argument per parameter. Value arguments must have
 the exact declared type; alias arguments must designate a compatible place and
 provide the required access. The complete argument list is checked even when
 one argument is invalid, so independent source errors can be reported.
+When an alias argument borrows a shared pointee, the caller must write
+`*owner`; passing the raw shared handle instead selects an owning value and is
+rejected for the alias parameter.
 
 Functions and methods are not overloaded. The ordinary-initializer overload
 set reuses these argument-binding rules, then applies its separate compile-time
@@ -78,8 +81,9 @@ The implemented shared-ownership profile adds non-null shared value parameters
 and results without changing source evaluation order. Named
 arguments and returns copy an owner; produced values transfer their existing
 owner; the callee owns each shared value parameter; and the caller owns a
-completed shared result. Shared-backed receivers and alias arguments use
-hidden anchors where needed. Shared-backed checked places extend those anchors
+completed shared result. Explicitly dereferenced shared receivers and alias
+arguments use hidden anchors where needed. Dereferenced checked places extend
+those anchors
 through their complete immediate consumer. The complete rule is owned by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md#strong-owner-value-semantics).
 

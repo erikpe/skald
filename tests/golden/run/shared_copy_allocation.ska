@@ -38,7 +38,7 @@ fn slice_alias(ref dog: Dog) -> shared Animal {
 }
 
 fn copy_checked(source: shared Animal) -> shared Dog {
-    return new Dog(copy source);
+    return new Dog(copy *source);
 }
 
 fn main() -> i64 {
@@ -46,9 +46,9 @@ fn main() -> i64 {
     var sliced: shared Animal = slice_alias(inline);
     var source: shared Animal = new Dog(20, 7);
     var checked: shared Dog = copy_checked(source);
-    var produced: shared Animal = new Animal(copy new Dog(30, 9));
-    ska_rt_println_i64(sliced.read());
-    ska_rt_println_i64(checked.total());
-    ska_rt_println_i64(produced.read());
+    var produced: shared Animal = new Animal(copy *new Dog(30, 9));
+    ska_rt_println_i64(sliced->read());
+    ska_rt_println_i64(checked->total());
+    ska_rt_println_i64(produced->read());
     return 0;
 }

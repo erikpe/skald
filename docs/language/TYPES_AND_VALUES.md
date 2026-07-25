@@ -123,11 +123,11 @@ function values are not implemented; calls select named functions or methods.
 Prefix `*owner` explicitly selects the object place behind a `shared T`
 handle. Postfix `owner->member` selects one member through exactly one shared
 edge and is semantically equivalent to `(*owner).member`; the owner expression
-is evaluated once. These forms currently support direct fields, class and
-interface methods, inline subobject paths, field mutation, and type tests.
-Other object-place consumers are added separately. During this staged
-transition, the older implicit shared member and type-test spellings remain
-accepted for compatibility.
+is evaluated once. These forms support direct fields, class and interface
+methods, inline subobject paths, field mutation, alias arguments, checked
+casts and type tests, and owning inline-copy consumers. `.` never crosses a
+shared edge: a raw `shared T` handle must be dereferenced before it can be
+consumed as an object place.
 
 Precedence, associativity, grouping syntax, and the accepted postfix chain are
 defined by the [grammar](GRAMMAR.md#expressions). Statement legality and

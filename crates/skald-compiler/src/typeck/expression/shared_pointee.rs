@@ -163,7 +163,7 @@ impl CallableChecker<'_, '_> {
         Some(pointee)
     }
 
-    pub(super) fn check_shared_pointee(
+    fn check_shared_pointee(
         &mut self,
         expression: &ResolvedExpression,
         projections: Vec<ObjectProjection>,
@@ -173,7 +173,7 @@ impl CallableChecker<'_, '_> {
         self.check_shared_pointee_source(source, projections, span)
     }
 
-    pub(super) fn check_shared_pointee_source(
+    fn check_shared_pointee_source(
         &mut self,
         source: HirSharedSource,
         projections: Vec<ObjectProjection>,

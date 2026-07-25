@@ -18,7 +18,10 @@ virtual/interface dispatch, type tests, and checked object casts. The
 compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and
 whole-object assignment contexts, plus allocation-free owner-preserving shared
-casts and explicit exact-class shared copy allocation. The
+casts and explicit exact-class shared copy allocation. A `shared T` expression
+is an owner handle: `*owner` selects its bounded non-owning pointee place and
+`owner->member` crosses exactly one shared edge. Raw shared handles are not
+implicitly treated as inline objects. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.

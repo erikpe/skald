@@ -6,7 +6,7 @@ fn shared_anchor_program() -> MirProgram {
         "class Holder { edge: shared Leaf; init() { self.edge = new Leaf(); } }\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return holder.edge.read();\n",
+        "  return holder.edge->read();\n",
         "}\n",
     ))
 }
@@ -17,7 +17,7 @@ fn shared_checked_place_program() -> MirProgram {
         "class Holder { edge: shared Obj; init() { self.edge = new Leaf(); } }\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return ((Leaf) holder.edge).read();\n",
+        "  return ((Leaf) *holder.edge).read();\n",
         "}\n",
     ))
 }
@@ -114,7 +114,7 @@ fn verifier_rejects_releasing_a_shared_anchor_before_its_checked_view_ends() {
     let mut forged_exact = lower_text(concat!(
         "class Leaf { init() {} fn read() -> i64 { return 7; } }\n",
         "class Other { init() {} }\n",
-        "fn main() -> i64 { return ((Leaf) new Leaf()).read(); }\n",
+        "fn main() -> i64 { return ((Leaf) *new Leaf()).read(); }\n",
     ));
     let definition = forged_exact
         .definitions
@@ -157,7 +157,7 @@ fn rejects_corrupt_shared_pointee_origin_and_dead_owner_use() {
         "}\n",
         "fn main() -> i64 {\n",
         "  var value: shared Root = new Leaf();\n",
-        "  return value.read();\n",
+        "  return value->read();\n",
         "}\n",
     ));
 

@@ -11,7 +11,7 @@ fn shared_copy_allocation_program() -> MirProgram {
         "fn main() -> i64 {\n",
         "  var source: Value = Value(40);\n",
         "  var owner: shared Value = new Value(copy source);\n",
-        "  return owner.read();\n",
+        "  return owner->read();\n",
         "}\n",
     ))
 }
@@ -25,7 +25,7 @@ fn checked_shared_copy_allocation_program() -> MirProgram {
         "}\n",
         "class Other { init() {} }\n",
         "fn allocate_copy(erased: shared Obj) -> i64 {\n",
-        "  var owner: shared Value = new Value(copy erased);\n",
+        "  var owner: shared Value = new Value(copy *erased);\n",
         "  return 0;\n",
         "}\n",
         "fn main() -> i64 { return allocate_copy(new Value(40)); }\n",

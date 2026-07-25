@@ -1,0 +1,35 @@
+interface Readable {
+    fn read() -> i64;
+}
+
+class Leaf implements Readable {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Holder {
+    child: shared Leaf;
+
+    init(child: shared Leaf) {
+        self.child = child;
+    }
+}
+
+fn main() -> i64 {
+    var owner: shared Leaf = new Leaf(1);
+    var readable: shared Readable = owner;
+    var holder: Holder = Holder(owner);
+    owner.value;
+    owner.read();
+    readable.read();
+    holder.child.read();
+    new Leaf(2).read();
+    return 0;
+}

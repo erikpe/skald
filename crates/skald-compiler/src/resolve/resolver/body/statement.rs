@@ -208,7 +208,7 @@ impl CallableResolver<'_, '_> {
         &mut self,
         assignment: &syntax::FieldAssignmentStatement,
     ) -> Option<ResolvedFieldAssignment> {
-        let receiver = self.resolve_object_receiver(&assignment.place.receiver);
+        let receiver = self.resolve_member_object_receiver(&assignment.place);
         let selected = receiver.and_then(|receiver| {
             self.select_member(receiver.class(), &assignment.place.member)
                 .map(|member| {

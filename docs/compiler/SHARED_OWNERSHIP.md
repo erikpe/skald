@@ -85,7 +85,7 @@ Typed HIR records:
   cast.
 
 Type checking has one checked shared-pointee conversion for the boundary from
-an owner source to a non-owning object place. It consumes the existing
+an explicitly dereferenced owner source to a non-owning object place. It consumes the existing
 named-place or produced-owner classification and records a stable shared
 origin or an anchored shared origin together with the target, access,
 projections, source span, and anchor source. Class and interface receivers,
@@ -102,7 +102,9 @@ plain casts, type tests, and every target-directed owning inline copy consumer
 consume that node through the checked shared-pointee conversion above. The
 same path covers `T(copy *owner)` and `new T(copy *owner)`. The explicit syntax
 therefore changes no HIR ownership effect, MIR place, anchor state, backend
-layout, or runtime operation.
+layout, or runtime operation. Resolver and type checking reject every raw
+owner-to-pointee use before HIR; direct handle operations never enter this
+conversion.
 
 Shared-owner consumers do not accept this dereference node: owner
 initialization, assignment, value arguments/results, up-views, and shared

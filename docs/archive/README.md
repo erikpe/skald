@@ -38,6 +38,7 @@ Archived plans:
 - [Object casts](OBJECT_CASTS_ROADMAP.md)
 - [Constructor overloads and explicit copy construction](CONSTRUCTOR_SEMANTICS_ROADMAP.md)
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP_ROADMAP.md)
+- [Explicit shared dereference](EXPLICIT_SHARED_DEREFERENCE_ROADMAP.md)
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
