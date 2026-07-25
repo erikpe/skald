@@ -265,10 +265,15 @@ impl BodyLowerer<'_> {
         };
         let origin = produced_class.map_or_else(
             || match &view.source {
-                HirViewSource::AnchoredShared { target, .. } => MirObjectOrigin::Shared {
+                HirViewSource::AnchoredShared {
+                    source: shared_source,
+                    target,
+                    ..
+                } => MirObjectOrigin::Shared {
                     owner: source.base.storage(),
                     static_target: type_operations::lower_view_target(*target),
                     access: MirAliasAccess::Mutable,
+                    exact_dynamic_class: shared_source.exact_dynamic_class(),
                     span: view.span,
                 },
                 _ => self.lower_object_origin(&view.origin),
@@ -432,6 +437,7 @@ impl BodyLowerer<'_> {
                 owner: self.storage_for_binding(*binding),
                 static_target: lower_view_target(*static_target),
                 access: lower_access(*access),
+                exact_dynamic_class: None,
                 span: *span,
             },
             HirObjectOrigin::AnchoredShared { .. } => {

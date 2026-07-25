@@ -180,6 +180,11 @@ The complete allocation owner anchors every inline base and field subobject in
 its payload. This is containment, not object-graph search: following another
 shared field establishes another anchor for that owning edge.
 
+An explicit `(T) source` passed to an alias parameter first creates its bounded
+checked-view carrier. When the source is shared-backed, the same stable,
+copied-field, or adopted-produced owner classification covers that carrier
+through the call. The checked view ends before any hidden owner is released.
+
 ## Shared ownership boundary
 
 Shared ownership, heap allocation, and call-scoped shared borrowing are

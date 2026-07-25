@@ -91,7 +91,14 @@ impl Verifier<'_> {
             } else {
                 TypeRelation::StaticSuccess
             };
-            if self.classify_type_relation(source.ty, binding.view.target) != expected {
+            let relation_source = match binding.view.origin.as_ref() {
+                super::super::model::MirObjectOrigin::Shared {
+                    exact_dynamic_class: Some(class),
+                    ..
+                } => MirType::Class(*class),
+                _ => source.ty,
+            };
+            if self.classify_type_relation(relation_source, binding.view.target) != expected {
                 self.block_error(
                     function.callable(),
                     block.id,

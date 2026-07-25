@@ -634,11 +634,16 @@ fn dump_object_origin(output: &mut String, origin: &MirObjectOrigin) {
             owner,
             static_target,
             access,
+            exact_dynamic_class,
             ..
         } => {
             let _ = write!(output, "shared({owner} : ");
             dump_view_target(output, *static_target);
-            let _ = write!(output, " {access})");
+            let _ = write!(output, " {access}");
+            if let Some(class) = exact_dynamic_class {
+                let _ = write!(output, " exact {class}");
+            }
+            output.push(')');
         }
     }
 }

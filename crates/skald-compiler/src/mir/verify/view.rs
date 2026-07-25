@@ -165,8 +165,15 @@ impl Verifier<'_> {
                 owner,
                 static_target,
                 access,
+                exact_dynamic_class,
                 ..
-            } => self.verify_shared_origin(site, *owner, *static_target, *access),
+            } => self.verify_shared_origin(
+                site,
+                *owner,
+                *static_target,
+                *access,
+                *exact_dynamic_class,
+            ),
         }
     }
 
@@ -176,6 +183,7 @@ impl Verifier<'_> {
         owner: super::super::model::StorageId,
         static_target: MirViewTarget,
         access: MirAliasAccess,
+        exact_dynamic_class: Option<crate::identity::ClassId>,
     ) -> Option<VerifiedOrigin> {
         let Some(storage) = site.function.storage(owner) else {
             self.block_error(
@@ -227,10 +235,34 @@ impl Verifier<'_> {
                 format!("{} shared origin access is inconsistent", site.kind),
             );
         }
-        let static_class = match static_target {
+        if exact_dynamic_class.is_some_and(|class| {
+            self.program.class(class).is_none()
+                || !self.shared_target_accepts(
+                    match static_target {
+                        MirViewTarget::Class(class) => {
+                            super::super::model::MirSharedTarget::Class(class)
+                        }
+                        MirViewTarget::Interface(interface) => {
+                            super::super::model::MirSharedTarget::Interface(interface)
+                        }
+                        MirViewTarget::Obj => super::super::model::MirSharedTarget::Obj,
+                    },
+                    super::super::model::MirSharedTarget::Class(class),
+                )
+        }) {
+            self.block_error(
+                site.function.callable(),
+                site.block.id,
+                format!(
+                    "{} shared origin has incompatible exact dynamic provenance",
+                    site.kind
+                ),
+            );
+        }
+        let static_class = exact_dynamic_class.or(match static_target {
             MirViewTarget::Class(class) => Some(class),
             MirViewTarget::Interface(_) | MirViewTarget::Obj => None,
-        };
+        });
         Some(VerifiedOrigin {
             static_class,
             forwarded: true,

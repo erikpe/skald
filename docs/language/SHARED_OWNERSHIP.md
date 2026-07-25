@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **shared-backed call anchors implemented**. This
+Status: **shared-backed checked-place anchors implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -19,12 +19,14 @@ MIR, and execute as one-word owning edges on x86-64.
 Compatible shared up-views, stable shared-local and value-parameter member
 access, virtual/interface dispatch, and `is` type tests now execute without
 changing allocation identity or dynamic metadata. Shared-backed alias
-arguments and method/interface receivers now use explicit verified hidden
-owners for fields, nested places, and produced owners; stable owners borrow
-directly. Plain checked place casts still require the later hidden-anchor
-slice. Owner-preserving `(shared T) source` casts execute with retain for a
-named source and transfer for a produced source, after any required metadata
-check. Explicit copy allocation remains unavailable.
+arguments, method/interface receivers, and plain checked place casts now use
+explicit verified hidden owners for fields, nested places, and produced
+owners; stable owners borrow directly. Checked places may feed receivers,
+alias arguments, field access and mutation, and owning inline copy,
+assignment, argument, result, and slicing contexts. Owner-preserving
+`(shared T) source` casts execute with retain for a named source and transfer
+for a produced source, after any required metadata check. Explicit copy
+allocation remains unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix

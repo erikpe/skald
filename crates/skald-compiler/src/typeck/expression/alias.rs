@@ -134,8 +134,8 @@ impl CheckedObjectViewSource {
             }
             | Self::Obj { .. }
             | Self::Interface { .. }
-            | Self::Shared { .. }
-            | Self::AnchoredShared { .. } => None,
+            | Self::Shared { .. } => None,
+            Self::AnchoredShared { source, .. } => source.exact_dynamic_class(),
             Self::Produced { class, .. } => Some(*class),
         }
     }
@@ -401,7 +401,9 @@ impl CallableChecker<'_, '_> {
                 } else if let Type::Shared(target) = binding_type {
                     if !matches!(
                         source_use,
-                        ViewSourceUse::AliasArgument | ViewSourceUse::TypeTest
+                        ViewSourceUse::AliasArgument
+                            | ViewSourceUse::TypeTest
+                            | ViewSourceUse::Cast
                     ) {
                         self.diagnostics.push(
                             Diagnostic::error(
@@ -454,7 +456,10 @@ impl CallableChecker<'_, '_> {
                     .field(access.field)
                     .expect("resolved field access must reference a field");
                 if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_))
-                    && source_use == ViewSourceUse::AliasArgument
+                    && matches!(
+                        source_use,
+                        ViewSourceUse::AliasArgument | ViewSourceUse::Cast
+                    )
                 {
                     let source = self.check_shared_source(expression, false)?;
                     return Some(CheckedObjectViewSource::AnchoredShared {
@@ -495,7 +500,10 @@ impl CallableChecker<'_, '_> {
                 Some(CheckedObjectViewSource::Class { place, origin })
             }
             expression
-                if source_use == ViewSourceUse::AliasArgument
+                if matches!(
+                    source_use,
+                    ViewSourceUse::AliasArgument | ViewSourceUse::Cast
+                ) && self.resolved_shared_target(expression).is_some()
                     && matches!(
                         expression,
                         ResolvedExpression::Allocation(_)
@@ -519,18 +527,7 @@ impl CallableChecker<'_, '_> {
                 ) && !is_object_cast_expression(expression)
                     && self.resolved_object_class(expression).is_some() =>
             {
-                let class = self
-                    .resolved_object_class(expression)
-                    .expect("guarded produced object class");
-                let source = self.check_object_source(expression, class, "object-cast source")?;
-                let crate::hir::HirObjectSource::Produced(source) = source else {
-                    unreachable!("non-place object cast source must produce an object")
-                };
-                Some(CheckedObjectViewSource::Produced {
-                    span: expression.span(),
-                    source,
-                    class,
-                })
+                self.check_produced_inline_view_source(expression, source_use)
             }
             _ => {
                 self.diagnostics.push(
@@ -543,6 +540,32 @@ impl CallableChecker<'_, '_> {
                 None
             }
         }
+    }
+
+    fn check_produced_inline_view_source(
+        &mut self,
+        expression: &ResolvedExpression,
+        source_use: ViewSourceUse,
+    ) -> Option<CheckedObjectViewSource> {
+        let Some(class) = self.resolved_object_class(expression) else {
+            self.diagnostics.push(
+                Diagnostic::error(source_use.diagnostic_code(), source_use.place_message())
+                    .with_primary_label(
+                        expression.span(),
+                        "expected an object local, `self`, alias parameter, or grouping",
+                    ),
+            );
+            return None;
+        };
+        let source = self.check_object_source(expression, class, "object-cast source")?;
+        let crate::hir::HirObjectSource::Produced(source) = source else {
+            unreachable!("non-place object cast source must produce an object")
+        };
+        Some(CheckedObjectViewSource::Produced {
+            span: expression.span(),
+            source,
+            class,
+        })
     }
 
     fn convert_alias_argument(

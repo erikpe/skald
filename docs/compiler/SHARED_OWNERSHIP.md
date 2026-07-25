@@ -1,6 +1,7 @@
 # Shared-Ownership Compiler and Runtime Contract
 
-Status: **frozen implementation design; shared-owner casts execute on x86-64**.
+Status: **frozen implementation design; shared-backed checked places execute
+on x86-64**.
 This document is
 authoritative for the planned target-independent ownership representation,
 x86-64 allocation layout, generated reference-counting operations, dynamic
@@ -27,8 +28,11 @@ and MIR. Direct, virtual, and interface calls, inherited projections, mutable
 pointee access, and `is` use those places on x86-64. Shared casts retain a
 named owner or transfer a produced owner only on the statically guaranteed or
 runtime-checked success path; failure terminates and no cast allocates or
-copies payload. Other broader shared uses remain behind a structured lowering
-gate. The x86-64 backend executes the
+copies payload. Plain checked-place casts classify stable, replaceable, and
+produced shared sources, preserve exact produced-allocation provenance, and
+use verified checked-view and owner-anchor lifetimes across every immediate
+non-owning or inline-copy consumer. Explicit copy allocation remains behind a
+structured lowering gate. The x86-64 backend executes the
 frozen handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
 deallocation. [Runtime ABI version
@@ -147,6 +151,12 @@ canonical owner, source static target, and access; its complete address and
 metadata are deliberately derived only at the backend boundary. Verification
 checks the target and projection relation, mutable access, origin agreement,
 owner liveness at every use, and direct-versus-dynamic dispatch selection.
+For a shared-backed checked cast, the verifier also records the dependency
+from the checked-view carrier to that owner. Releasing the owner while the
+carrier is live is invalid; `EndCheckedView` must precede `SharedRelease` on
+every normal path. Exact dynamic provenance retained from an allocation is
+checked against that allocation and may prove a cast static even after a
+shared up-view.
 
 At a call boundary, caller-owned argument storage is initialized by copying a
 named owner or adopting a produced owner and is then consumed exactly once by

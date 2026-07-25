@@ -6,7 +6,7 @@ use crate::{
         Type,
     },
     identity::{ClassId, FunctionId, InitializerId, InterfaceId},
-    mir::{lower_hir, verify_mir},
+    mir::{dump_mir, lower_hir, verify_mir},
     typeck::{INVALID_SHARED_CONVERSION, UNSUPPORTED_SHARED_OPERATION},
 };
 
@@ -188,6 +188,121 @@ fn shared_backed_receivers_cover_inline_payload_subobjects() {
             .filter(|storage| storage.kind == crate::mir::MirStorageKind::SharedAnchor)
             .count(),
         4
+    );
+}
+
+#[test]
+fn shared_backed_checked_places_cover_borrowing_mutation_and_inline_copy_consumers() {
+    let output = type_check_source(concat!(
+        "class Root {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "class Leaf extends Root {\n",
+        "  extra: i64;\n",
+        "  init(value: i64) { super(value); self.extra = value + 1; }\n",
+        "  fn read() -> i64 { return self.value + self.extra; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  edge: shared Obj;\n",
+        "  init() { self.edge = new Leaf(2); }\n",
+        "}\n",
+        "fn inspect(ref value: Leaf) -> i64 { return value.read(); }\n",
+        "fn consume(value: Leaf) -> i64 { return value.read(); }\n",
+        "fn produce() -> shared Obj { return new Leaf(3); }\n",
+        "fn copy_result(value: shared Obj) -> Leaf { return (Leaf) value; }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Obj = new Leaf(1);\n",
+        "  var holder: Holder = Holder();\n",
+        "  var first: i64 = ((Leaf) owner).read();\n",
+        "  var second: i64 = inspect((Leaf) holder.edge);\n",
+        "  var third: i64 = inspect((Leaf) produce());\n",
+        "  var fourth: i64 = ((Leaf) new Leaf(4)).read();\n",
+        "  ((Leaf) holder.edge).extra = 5;\n",
+        "  var copied: Leaf = (Leaf) holder.edge;\n",
+        "  var sliced: Root = (Leaf) holder.edge;\n",
+        "  copied = (Leaf) holder.edge;\n",
+        "  var consumed: i64 = consume((Leaf) holder.edge);\n",
+        "  var returned: Leaf = copy_result(owner);\n",
+        "  return first + second + third + fourth + consumed",
+        " + copied.extra + sliced.value + returned.extra;\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output
+        .hir
+        .expect("shared-backed checked-place consumers must type check");
+    let dump = dump_hir(&hir);
+    assert_eq!(dump, dump_hir(&hir));
+    assert!(dump.contains("CheckedViewArgument runtime-terminate"));
+    assert!(dump.contains("CheckedSource runtime-terminate"));
+    assert!(dump.contains("SliceSource"));
+    assert!(dump.contains("AnchoredSharedPointee"));
+
+    let mir = lower_hir(&hir).expect("shared-backed checked-place consumers must lower");
+    verify_mir(&mir).expect("shared-backed checked-place lifetimes must verify");
+    let mir_dump = dump_mir(&mir);
+    assert_eq!(mir_dump, dump_mir(&mir));
+    assert!(mir_dump.contains("shared-anchor"));
+    assert!(mir_dump.contains("checked-cast"));
+    assert!(mir_dump.contains("end-checked-view"));
+    assert!(mir_dump.contains("shared-release"));
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    assert!(main
+        .storage
+        .iter()
+        .any(|storage| storage.kind == crate::mir::MirStorageKind::SharedAnchor));
+    assert!(main.body.blocks.iter().any(|block| {
+        matches!(
+            block.terminator,
+            Some(crate::mir::MirTerminator::CheckedCast { .. })
+        )
+    }));
+    assert!(main
+        .body
+        .blocks
+        .iter()
+        .flat_map(|block| &block.instructions)
+        .any(|instruction| matches!(instruction, crate::mir::MirInstruction::BindCheckedView(_))));
+}
+
+#[test]
+fn produced_shared_allocations_retain_exact_dynamic_knowledge_for_place_casts() {
+    let output = type_check_source(concat!(
+        "class Root { init() {} }\n",
+        "class Leaf extends Root {\n",
+        "  init() { super(); }\n",
+        "  fn read() -> i64 { return 7; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  return ((Leaf) new Leaf()).read()",
+        " + ((Leaf) ((shared Obj) new Leaf())).read();\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output
+        .hir
+        .expect("exact produced shared place casts must type check");
+    let mir = lower_hir(&hir).expect("exact produced shared place casts must lower");
+    verify_mir(&mir).expect("exact produced shared place casts must verify");
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    assert!(!main.body.blocks.iter().any(|block| {
+        matches!(
+            block.terminator,
+            Some(crate::mir::MirTerminator::CheckedCast { .. })
+        )
+    }));
+    assert_eq!(
+        main.body
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter(|instruction| matches!(
+                instruction,
+                crate::mir::MirInstruction::BindCheckedView(_)
+            ))
+            .count(),
+        2
     );
 }
 

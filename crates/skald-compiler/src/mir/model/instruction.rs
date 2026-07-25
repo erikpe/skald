@@ -328,6 +328,9 @@ pub enum MirObjectOrigin {
         owner: StorageId,
         static_target: MirViewTarget,
         access: MirAliasAccess,
+        /// Exact dynamic class retained when this owner was produced from a
+        /// known allocation in the current full expression.
+        exact_dynamic_class: Option<ClassId>,
         span: Span,
     },
 }

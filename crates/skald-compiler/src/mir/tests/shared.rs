@@ -43,6 +43,17 @@ fn shared_anchor_program() -> MirProgram {
     ))
 }
 
+fn shared_checked_place_program() -> MirProgram {
+    lower_text(concat!(
+        "class Leaf { init() {} fn read() -> i64 { return 7; } }\n",
+        "class Holder { edge: shared Obj; init() { self.edge = new Leaf(); } }\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder();\n",
+        "  return ((Leaf) holder.edge).read();\n",
+        "}\n",
+    ))
+}
+
 fn main_instructions(program: &MirProgram) -> &[MirInstruction] {
     &program
         .definitions
@@ -161,6 +172,82 @@ fn verifier_rejects_forged_or_ended_shared_call_anchors() {
     assert!(has_error(
         &ended,
         "shared pointee is used without a live owner"
+    ));
+}
+
+#[test]
+fn verifier_rejects_releasing_a_shared_anchor_before_its_checked_view_ends() {
+    let mut program = shared_checked_place_program();
+    let definition = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let block = definition
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::EndCheckedView(_)))
+                && block.instructions.iter().any(|instruction| {
+                    matches!(
+                        instruction,
+                        MirInstruction::SharedRelease(release)
+                            if definition.storage[release.owner.index()].kind
+                                == MirStorageKind::SharedAnchor
+                    )
+                })
+        })
+        .expect("cast success block must end its checked view and anchor");
+    let end = block
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::EndCheckedView(_)))
+        .unwrap();
+    let release = block
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::SharedRelease(_)))
+        .unwrap();
+    block.instructions.swap(end, release);
+
+    assert!(has_error(
+        &program,
+        "shared owner is released before its checked view ends"
+    ));
+
+    let mut forged_exact = lower_text(concat!(
+        "class Leaf { init() {} fn read() -> i64 { return 7; } }\n",
+        "class Other { init() {} }\n",
+        "fn main() -> i64 { return ((Leaf) new Leaf()).read(); }\n",
+    ));
+    let definition = forged_exact
+        .definitions
+        .get_mut_for_test(forged_exact.entry_function)
+        .unwrap();
+    let origin = definition
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::BindCheckedView(binding) => Some(binding.view.origin.as_mut()),
+            _ => None,
+        })
+        .expect("static shared-backed cast must bind a checked view");
+    let MirObjectOrigin::Shared {
+        exact_dynamic_class,
+        ..
+    } = origin
+    else {
+        panic!("produced shared allocation must retain shared origin");
+    };
+    *exact_dynamic_class = Some(ClassId::new(1));
+    assert!(has_error(
+        &forged_exact,
+        "shared origin has incompatible exact dynamic provenance"
     ));
 }
 

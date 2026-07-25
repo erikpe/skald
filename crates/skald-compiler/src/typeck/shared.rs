@@ -183,7 +183,7 @@ impl CallableChecker<'_, '_> {
         let target_view =
             self.check_view_target(&cast.target, cast.target_span, INVALID_OBJECT_CAST)?;
         let target = shared_target_from_view(target_view);
-        let exact_dynamic_class = shared_source_exact_dynamic_class(&source);
+        let exact_dynamic_class = source.exact_dynamic_class();
         let relation_source = exact_dynamic_class.map_or_else(
             || ObjectViewSource::Dynamic(shared_target_view(source.target())),
             ObjectViewSource::ExactClass,
@@ -304,6 +304,82 @@ impl CallableChecker<'_, '_> {
         };
         format!("shared {name}")
     }
+
+    pub(super) fn resolved_shared_target(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirSharedTarget> {
+        match expression {
+            ResolvedExpression::Binding(binding) => match self.binding_type(binding.binding) {
+                Type::Shared(target) => Some(target),
+                _ => None,
+            },
+            ResolvedExpression::FieldAccess(access) => {
+                self.program
+                    .field(access.field)
+                    .and_then(|field| match field.type_syntax.kind {
+                        crate::resolve::ResolvedTypeKind::Shared(target) => {
+                            Some(lower_shared_target(target))
+                        }
+                        _ => None,
+                    })
+            }
+            ResolvedExpression::Allocation(allocation) => {
+                Some(HirSharedTarget::Class(allocation.class))
+            }
+            ResolvedExpression::DirectCall(call) => self
+                .program
+                .declarations
+                .get(call.function)
+                .and_then(|declaration| match declaration.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Shared(target) => {
+                        Some(lower_shared_target(target))
+                    }
+                    _ => None,
+                }),
+            ResolvedExpression::MethodCall(call) => {
+                self.program
+                    .method(call.method)
+                    .and_then(|method| match method.return_type.kind {
+                        crate::resolve::ResolvedTypeKind::Shared(target) => {
+                            Some(lower_shared_target(target))
+                        }
+                        _ => None,
+                    })
+            }
+            ResolvedExpression::InterfaceCall(call) => self
+                .program
+                .interface(call.interface)
+                .and_then(|interface| interface.requirements.get(call.requirement.index()))
+                .and_then(|requirement| match requirement.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Shared(target) => {
+                        Some(lower_shared_target(target))
+                    }
+                    _ => None,
+                }),
+            ResolvedExpression::Grouped(grouped) => {
+                self.resolved_shared_target(&grouped.expression)
+            }
+            ResolvedExpression::ObjectCast(cast)
+                if matches!(
+                    cast.target_mode,
+                    crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
+                ) =>
+            {
+                match cast.target.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => {
+                        Some(HirSharedTarget::Class(class))
+                    }
+                    crate::resolve::ResolvedTypeKind::Interface(interface) => {
+                        Some(HirSharedTarget::Interface(interface))
+                    }
+                    crate::resolve::ResolvedTypeKind::Obj => Some(HirSharedTarget::Obj),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 const fn shared_target_from_view(target: HirViewTarget) -> HirSharedTarget {
@@ -319,15 +395,5 @@ const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
         HirSharedTarget::Obj => HirViewTarget::Obj,
         HirSharedTarget::Class(class) => HirViewTarget::Class(class),
         HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
-    }
-}
-
-fn shared_source_exact_dynamic_class(source: &HirSharedSource) -> Option<crate::identity::ClassId> {
-    match source {
-        HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-            Some(allocation.class)
-        }
-        HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
-        HirSharedSource::Place(_) | HirSharedSource::Produced(HirSharedProducer::Call(_)) => None,
     }
 }

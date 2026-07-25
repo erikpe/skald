@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO11 complete, SO12 is next.
+Status: in progress; SO12 complete, SO13 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -38,11 +38,11 @@ and the complete cast direction matrix is
   initialization, secure replacement, user and synthesized copy lifecycle,
   inheritance, and reverse destruction through explicit projected MIR
   operations. Polymorphic transfers, views, casts, and call-scoped anchors
-  execute; shared-backed plain checked places remain structurally gated. The
-  x86-64 backend executes one-word local and field
-  handles, checked allocation and retain, secure-before-release assignment,
-  recursively generated dynamic complete finalization, and last-owner
-  deallocation.
+  execute, including shared-backed plain checked places with explicit
+  checked-view and owner-anchor lifetimes. The x86-64 backend executes
+  one-word local and field handles, checked allocation and retain,
+  secure-before-release assignment, recursively generated dynamic complete
+  finalization, and last-owner deallocation.
 - Internal functions, initializers, methods, and interface requirements carry
   same-target shared owners through explicit caller argument consumption,
   callee parameter cleanup, and shared return handoff. The x86-64 ABI uses one
@@ -104,7 +104,7 @@ and the complete cast direction matrix is
 - [x] SO9 — Add polymorphic shared views and dispatch
 - [x] SO10 — Execute shared-owner casts
 - [x] SO11 — Anchor shared-backed calls
-- [ ] SO12 — Anchor shared-backed checked places
+- [x] SO12 — Anchor shared-backed checked places
 - [ ] SO13 — Add explicit exact-class copy allocation
 - [ ] SO14 — Harden and publish shared ownership
 
@@ -535,24 +535,24 @@ call anchor is explicit and verified before code generation.
 **Purpose:** Extend the proven call-anchor state machine to plain checked-place
 casts and their immediate non-owning or inline-copy consumers.
 
-- [ ] Classify a shared-backed `(T) source` as stable-owner, produced-owner, or
+- [x] Classify a shared-backed `(T) source` as stable-owner, produced-owner, or
       hidden-copy anchored before its static or runtime target selection.
-- [ ] Cover checked places consumed by method receivers, `ref`/`mut ref`
+- [x] Cover checked places consumed by method receivers, `ref`/`mut ref`
       arguments, field access and mutation, exact-class inline initialization,
       value arguments/results, slicing, and owning assignment.
-- [ ] Preserve one source evaluation, cast failure after lifetime safety,
+- [x] Preserve one source evaluation, cast failure after lifetime safety,
       checked-view end before anchor release, and result/copy completion before
       full-expression cleanup.
-- [ ] Reuse call-anchor storage and cleanup machinery while keeping checked
+- [x] Reuse call-anchor storage and cleanup machinery while keeping checked
       view carriers and owner anchors distinct in HIR, MIR, dumps, and
       verification.
-- [ ] Verify source category, access, target relation, contained projection,
+- [x] Verify source category, access, target relation, contained projection,
       anchor coverage, success/failure edges, copy completion, and every normal
       cleanup path.
-- [ ] Add stable local, replaceable field, produced owner, inline subobject,
+- [x] Add stable local, replaceable field, produced owner, inline subobject,
       receiver, alias, inline-copy, slicing, mutation, failure-order,
       verifier-corruption, and destruction-timing tests.
-- [ ] Update casts, aliases, phases, and debugging documentation for
+- [x] Update casts, aliases, phases, and debugging documentation for
       shared-backed checked-place anchors.
 
 **Tests:** Focused cast/alias/copy/type-check tests, exact HIR/MIR dumps,

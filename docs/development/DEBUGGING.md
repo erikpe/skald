@@ -60,6 +60,15 @@ adopt, or shared cast must precede the consuming call, and `shared-release`
 must follow it. Nested shared fields produce one anchor per owning edge.
 Inline base and field projections remain beneath the same shared-pointee root.
 
+For a shared-backed `(T) source`, inspect both lifetimes. HIR shows the
+`SelectedView` under a static or runtime `CheckedSource` or checked consumer.
+MIR first creates any `shared-anchor`, then binds or checks a distinct
+`checked-view` carrier. On a normal success path, the consumer must complete,
+`end-checked-view` must appear, and only then may `shared-release` end the
+anchor. A produced allocation may appear as an `exact` shared origin and fold
+the target selection to a static binding even when an intervening shared view
+has a broader static target.
+
 MIR verification runs at three boundaries:
 
 1. immediately after HIR lowering in debug builds;

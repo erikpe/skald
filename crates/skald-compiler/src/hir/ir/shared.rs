@@ -119,6 +119,17 @@ impl HirSharedSource {
             Self::Produced(_) => HirOwnerTransfer::Adopt,
         }
     }
+
+    /// Exact dynamic knowledge retained by a source whose complete allocation
+    /// was produced in this expression. Named places and call results remain
+    /// dynamic even when their static shared target names a class.
+    pub const fn exact_dynamic_class(&self) -> Option<ClassId> {
+        match self {
+            Self::Produced(HirSharedProducer::Allocation(allocation)) => Some(allocation.class),
+            Self::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
+            Self::Place(_) | Self::Produced(HirSharedProducer::Call(_)) => None,
+        }
+    }
 }
 
 /// The owner operation selected at a consuming value boundary.

@@ -317,6 +317,36 @@ fn shared_call_anchor_survives_later_argument_replacement_until_call_completion(
 }
 
 #[test]
+fn checked_place_anchor_survives_later_argument_replacement_until_call_completion() {
+    let mut output = assembly(concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn observed() -> i64;\n",
+        "class Leaf {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  destroy { observe(self.value); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  edge: shared Obj;\n",
+        "  init() { self.edge = new Leaf(7); }\n",
+        "}\n",
+        "fn inspect(ref value: Leaf, later: i64) -> i64 {\n",
+        "  return observed() * 20 + value.value + later;\n",
+        "}\n",
+        "fn replace(mut ref holder: Holder) -> i64 {\n",
+        "  holder.edge = new Leaf(9);\n",
+        "  return 2;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder();\n",
+        "  return inspect((Leaf) holder.edge, replace(holder));\n",
+        "}\n",
+    ));
+    output.push_str(anchor_observer_stubs());
+    assert_eq!(run_native_assembly(&output).code(), Some(9));
+}
+
+#[test]
 fn shared_casts_execute_named_retain_produced_transfer_and_cross_view_checks() {
     let mut output = assembly(concat!(
         "interface Left { fn value() -> i64; }\n",
@@ -353,6 +383,21 @@ fn failed_shared_cast_terminates_before_establishing_a_result_owner() {
         "  var erased: shared Obj = new Other();\n",
         "  var leaf: shared Leaf = (shared Leaf) erased;\n",
         "  return 0;\n",
+        "}\n",
+    ));
+    output.push_str(simple_ownership_stubs());
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
+fn failed_shared_backed_place_cast_terminates_after_safe_source_evaluation() {
+    let mut output = assembly(concat!(
+        "class Leaf { init() {} fn read() -> i64 { return 1; } }\n",
+        "class Other { init() {} }\n",
+        "class Holder { edge: shared Obj; init() { self.edge = new Other(); } }\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder();\n",
+        "  return ((Leaf) holder.edge).read();\n",
         "}\n",
     ));
     output.push_str(simple_ownership_stubs());

@@ -1,0 +1,54 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Root {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Leaf extends Root {
+    extra: i64;
+
+    init(value: i64, extra: i64) {
+        super(value);
+        self.extra = extra;
+    }
+
+    fn read() -> i64 {
+        return self.value + self.extra;
+    }
+}
+
+class Holder {
+    edge: shared Obj;
+
+    init() {
+        self.edge = new Leaf(10, 5);
+    }
+}
+
+fn inspect(ref value: Leaf) -> i64 {
+    return value.read();
+}
+
+fn produce() -> shared Obj {
+    return new Leaf(3, 4);
+}
+
+fn main() -> i64 {
+    var holder: Holder = Holder();
+    ska_rt_println_i64(((Leaf) holder.edge).read());
+    ((Leaf) holder.edge).extra = 7;
+    var copied: Leaf = (Leaf) holder.edge;
+    var sliced: Root = (Leaf) holder.edge;
+    var assigned: Leaf = Leaf(0, 0);
+    assigned = (Leaf) holder.edge;
+    ska_rt_println_i64(inspect((Leaf) holder.edge));
+    ska_rt_println_i64(copied.read());
+    ska_rt_println_i64(sliced.value);
+    ska_rt_println_i64(assigned.read());
+    ska_rt_println_i64(((Leaf) produce()).read());
+    return 0;
+}

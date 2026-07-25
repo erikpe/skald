@@ -191,9 +191,10 @@ the header supplies the complete payload address and dynamic-class metadata;
 and the declared `T` supplies the static target. Compatible shared owner
 up-views change only that static target. Member access, virtual/interface
 dispatch, and `is` therefore preserve one allocation and do not copy, slice,
-retain, release, or allocate. Shared-backed aliases whose lifetime can outlast
-one stable expression require hidden anchors and remain a later ownership
-slice.
+retain, release, or allocate. Shared-backed aliases and checked-place casts
+use hidden anchors whenever a replaceable or produced owner must cover the
+complete consuming expression. Stable shared locals and value parameters
+borrow directly.
 
 ## Non-owning conversions and access
 

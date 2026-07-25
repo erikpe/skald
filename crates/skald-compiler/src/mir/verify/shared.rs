@@ -583,6 +583,8 @@ struct SharedState {
     live_owners: HashSet<StorageId>,
     owner_origins: HashMap<StorageId, StorageId>,
     released_owners: HashSet<StorageId>,
+    /// Checked-view carrier to the shared owner that keeps its payload live.
+    active_checked_views: HashMap<StorageId, StorageId>,
     initialized_fields: HashSet<super::super::model::MirPlace>,
     pending_full_expression_boundary: bool,
 }
@@ -637,14 +639,22 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     true_target,
                     false_target,
                     ..
-                })
-                | Some(MirTerminator::CheckedCast {
-                    success_target: true_target,
-                    failure_target: false_target,
-                    ..
                 }) => {
                     self.merge(*true_target, &state, &mut incoming, &mut pending);
                     self.merge(*false_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::CheckedCast {
+                    binding,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.require_live_pointee(block.id, &state, &binding.view.source);
+                    self.require_live_shared_origin(block.id, &state, &binding.view.origin);
+                    let mut success = state.clone();
+                    self.begin_checked_view(block.id, &mut success, binding);
+                    self.merge(*success_target, &success, &mut incoming, &mut pending);
+                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
                 }
                 Some(MirTerminator::SharedCast {
                     cast,
@@ -785,6 +795,16 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                 }
                 MirInstruction::SharedRelease(release) => {
+                    if state
+                        .active_checked_views
+                        .values()
+                        .any(|owner| *owner == release.owner)
+                    {
+                        self.error(
+                            block.id,
+                            "shared owner is released before its checked view ends",
+                        );
+                    }
                     if !state.live_owners.remove(&release.owner) {
                         self.error(block.id, "shared owner is released without being live");
                     } else {
@@ -848,9 +868,15 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 | MirInstruction::Cleanup(_)
                 | MirInstruction::Store(_)
                 | MirInstruction::CopyConstruct(_)
-                | MirInstruction::CopyAssign(_)
-                | MirInstruction::BindCheckedView(_)
-                | MirInstruction::EndCheckedView(_) => {}
+                | MirInstruction::CopyAssign(_) => {}
+                MirInstruction::BindCheckedView(binding) => {
+                    self.require_live_pointee(block.id, state, &binding.view.source);
+                    self.require_live_shared_origin(block.id, state, &binding.view.origin);
+                    self.begin_checked_view(block.id, state, binding);
+                }
+                MirInstruction::EndCheckedView(end) => {
+                    state.active_checked_views.remove(&end.carrier);
+                }
                 MirInstruction::Initialize(initialize) => {
                     let transferred =
                         self.transfer_call_arguments(block.id, state, &initialize.arguments);
@@ -978,6 +1004,28 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         }
     }
 
+    fn begin_checked_view(
+        &mut self,
+        block: BlockId,
+        state: &mut SharedState,
+        binding: &super::super::model::MirCheckedViewBinding,
+    ) {
+        let super::super::model::MirPlaceBase::SharedPointee(owner) = binding.view.source.base
+        else {
+            return;
+        };
+        if state
+            .active_checked_views
+            .insert(binding.destination, owner)
+            .is_some()
+        {
+            self.error(
+                block,
+                "shared-backed checked-view carrier is activated more than once",
+            );
+        }
+    }
+
     fn require_live_pointee(
         &mut self,
         block: BlockId,
@@ -998,11 +1046,29 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         state: &SharedState,
         origin: &super::super::model::MirObjectOrigin,
     ) {
-        let super::super::model::MirObjectOrigin::Shared { owner, .. } = origin else {
+        let super::super::model::MirObjectOrigin::Shared {
+            owner,
+            exact_dynamic_class,
+            ..
+        } = origin
+        else {
             return;
         };
         if !state.live_owners.contains(owner) {
             self.error(block, "shared object origin is used without a live owner");
+        }
+        if let Some(class) = exact_dynamic_class {
+            let exact_origin = state
+                .owner_origins
+                .get(owner)
+                .and_then(|origin| self.function.storage(*origin))
+                .is_some_and(|origin| origin.ty == MirType::Class(*class));
+            if !exact_origin {
+                self.error(
+                    block,
+                    "shared object origin exact dynamic provenance does not match its allocation",
+                );
+            }
         }
     }
 
@@ -1084,6 +1150,12 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 "shared allocation is not published and adopted on normal return",
             );
         }
+        if !state.active_checked_views.is_empty() {
+            self.error(
+                block.id,
+                "shared-backed checked view remains live on normal return",
+            );
+        }
         if matches!(
             self.function.callable(),
             CallableId::Initializer(_) | CallableId::CopyConstructor(_)
@@ -1163,6 +1235,7 @@ impl SharedState {
         self.allocations == other.allocations
             && self.live_owners == other.live_owners
             && self.owner_origins == other.owner_origins
+            && self.active_checked_views == other.active_checked_views
             && self.initialized_fields == other.initialized_fields
             && self.pending_full_expression_boundary == other.pending_full_expression_boundary
     }

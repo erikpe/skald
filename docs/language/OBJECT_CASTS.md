@@ -6,8 +6,10 @@ conversion matrix between inline class places, non-owning aliases, and shared
 owners. The current compiler implements plain checked-place casts for method
 receivers, alias arguments, field access, exact-class copy construction and
 assignment, value parameters, results, and owning slicing. Produced inline
-sources use owning full-expression temporaries. Shared-owner casts execute in
-target-directed owning contexts.
+sources use owning full-expression temporaries. Shared-backed sources borrow
+stable owners directly and anchor replaceable or produced owners through the
+checked consumer. Shared-owner casts execute in target-directed owning
+contexts.
 
 Primitive conversions, optional casts, unsafe reinterpretation, user-defined
 conversions, and external object ABI are outside this profile.
@@ -360,4 +362,5 @@ Local aliases remain a separate future design. The cast profile does not
 implicitly introduce `ref` locals, reference values, alias assignment, or
 escaping borrows. Shared storage and ordinary allocation are typed separately.
 A shared-owner cast is a shared value in a target-directed owning context;
-immediately borrowing that produced owner still depends on hidden anchors.
+immediately borrowing that produced owner uses the same implemented hidden
+anchor and checked-view lifetime.

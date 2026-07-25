@@ -229,9 +229,14 @@ for inherited projection, mutable member access, virtual/interface dispatch,
   and `is`. The verifier ties every such place to a live owner and compatible
 header metadata. Shared-backed receivers and alias arguments classify stable,
 copied-field, and adopted-produced provenance in HIR, then lower hidden owners
-to the explicit `SharedAnchor` MIR storage role. A structured
-`HirLoweringError::UnsupportedSharedOwnership` gate remains for shared-backed
-plain checked places and explicit copy allocation.
+to the explicit `SharedAnchor` MIR storage role. Plain checked places use the
+same source classification and anchor storage while retaining a distinct
+checked-view carrier through their immediate receiver, alias, field, or
+owning-inline-copy consumer. MIR verification tracks the carrier-to-owner
+dependency and requires the checked view to end before anchor release.
+Produced allocations retain exact dynamic provenance through shared up-views.
+A structured `HirLoweringError::UnsupportedSharedOwnership` gate remains for
+explicit copy allocation.
 
 ## MIR
 
@@ -261,6 +266,8 @@ explicit:
   full-expression boundaries;
 - projected shared-field copy, initialization, secure replacement, synthesized
   lifecycle steps, and reverse-order destruction-plan releases; and
+- checked-place carriers with explicit shared-owner dependencies and
+  full-expression-ordered view end before anchor release; and
 - basic blocks with explicit return, jump, boolean-branch, checked-cast, and
   unrecoverable-failure terminators.
 
