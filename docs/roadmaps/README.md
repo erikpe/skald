@@ -5,8 +5,8 @@ progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
 - [Shared-Ownership Maintainability Discoveries](SHARED_OWNERSHIP_DISCOVERIES.md)
-  — pending verifier-module and phase-test organization follow-ups discovered
-  during shared-ownership closeout; no language behavior is missing.
+  — pending phase-test organization follow-up discovered during
+  shared-ownership closeout; no language behavior is missing.
 
 The completed polymorphism, object-cast, and constructor profiles remain the
 implementation baseline. Constructor overload and explicit-copy semantics are
