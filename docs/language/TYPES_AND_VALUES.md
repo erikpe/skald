@@ -17,7 +17,7 @@ result type `unit`:
 | `u8` | Unsigned integer values from 0 through 255. |
 | `f64` | IEEE-754 binary64 floating-point values. |
 | `bool` | The distinct values `false` and `true`. |
-| primitive `T?` | An explicitly optional primitive local containing either no `T` or one complete `T`. |
+| primitive `T?` | An explicitly optional primitive owning value containing either no `T` or one complete `T`. |
 | a class name | One exact nominal class value, including all of its inline fields. |
 | `unit` | Successful completion without a result payload. |
 
@@ -168,11 +168,13 @@ places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
 
 Optional values have a [frozen contract](OPTIONAL_VALUES.md) for representing
-absence without making every value nullable. Primitive `T?` locals are
-implemented with `none`, exact-value injection, optional copy and assignment,
-presence tests, and checked postfix `!`. Optionals have no truthiness and never
-implicitly convert to their payload. Optional fields, parameters, results,
-class payloads, and `shared? T` remain staged exclusions at type checking.
+absence without making every value nullable. Primitive `T?` owning locals,
+fields, and internal parameters/results are implemented with `none`,
+exact-value injection, optional copy and assignment, initializer ranking,
+presence tests, and checked postfix `!`. Optionals have no truthiness and
+never implicitly convert to their payload. Optional class payloads,
+optional-container aliases, and `shared? T` remain staged exclusions at type
+checking.
 
 Arrays are an open design area. Element lifetime, size and mutability, storage,
 construction, indexing, slicing, bounds failure, borrowing, and iteration must

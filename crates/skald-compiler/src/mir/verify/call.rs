@@ -529,6 +529,36 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
+            (MirType::OptionalPrimitive(_), Some(_), _) => self.block_error(
+                function.callable(),
+                block.id,
+                "optional-returning call must not have a scalar result",
+            ),
+            (MirType::OptionalPrimitive(payload), None, destination) => {
+                let complete_destination = call.destination.as_ref().is_some_and(|place| {
+                    place.projections.is_empty()
+                        && matches!(place.base, MirPlaceBase::Storage(_))
+                        && function
+                            .storage(place.base.storage())
+                            .is_some_and(|storage| {
+                                matches!(
+                                    storage.kind,
+                                    MirStorageKind::Local
+                                        | MirStorageKind::Temporary
+                                        | MirStorageKind::Argument
+                                )
+                            })
+                });
+                if destination.map(|place| place.ty) != Some(MirType::OptionalPrimitive(payload))
+                    || !complete_destination
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional-returning call requires complete matching caller-owned destination storage",
+                    );
+                }
+            }
             (_, Some(_), Some(_)) => self.block_error(
                 function.callable(),
                 block.id,

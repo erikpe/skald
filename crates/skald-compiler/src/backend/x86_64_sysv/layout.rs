@@ -250,6 +250,7 @@ impl<'mir> LayoutBuilder<'mir> {
     fn field(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
         match ty {
             MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
             _ => primitive_layout(ty).ok_or_else(|| match ty {
                 MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
                 MirType::Unit => layout_error("field type `unit` has no target layout"),

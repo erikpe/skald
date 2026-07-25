@@ -42,7 +42,7 @@ receiver is evaluated before its explicit arguments.
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **shared owner** | A non-null owning `shared T` handle. It is a value distinct from the allocated object place it keeps alive. |
-| **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Its design, syntax, and resolved identities exist, but typed and executable support does not. |
+| **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Primitive `T?` executes in owning locals, fields, and internal calls; other payload families remain staged. |
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
@@ -84,8 +84,9 @@ hidden owning anchors for borrows from replaceable shared storage. Shared
 allocation is explicit through `new T(arguments)` or `new T(copy source)`.
 Pointee access is explicit: `.` stays within an inline object place, `->`
 crosses one shared edge, and general object-place consumers require `*owner`.
-Explicit optional values remain non-executable, but their source contract is
-frozen and their syntax and resolved identities are implemented as described
+Primitive optional values execute across owning local, field, and internal
+callable boundaries. The broader source contract is frozen and its remaining
+syntax and resolved identities are implemented as described
 in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked

@@ -461,7 +461,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.check_borrowed_arguments(block, state, &call.arguments);
                     self.consume_owned_arguments(block, state, &call.arguments);
                     if let Some(destination) = &call.destination {
-                        self.initialize_place(block, state, destination);
+                        if matches!(self.place_type(destination), Some(MirType::Class(_))) {
+                            self.initialize_place(block, state, destination);
+                        }
                     }
                 }
                 MirInstruction::Cleanup(cleanup)
@@ -613,6 +615,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
             let MirArgument::OwnedPlace(place) = argument else {
                 continue;
             };
+            if !self
+                .function
+                .storage(place.base.storage())
+                .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
+            {
+                continue;
+            }
             if !state.live_arguments.remove(place) || !self.place_is_live(state, place) {
                 self.block_error(
                     block.id,
@@ -712,33 +721,35 @@ impl CleanupLivenessAnalysis<'_, '_> {
         if matches!(storage.kind, MirStorageKind::AliasParameter(_)) {
             return false;
         }
-        let mut ty = storage.ty;
+        self.place_type(place) == Some(MirType::Class(expected_class))
+    }
+
+    fn place_type(&self, place: &MirPlace) -> Option<MirType> {
+        let mut ty = self.function.storage(place.base.storage())?.ty;
         for projection in &place.projections {
             match *projection {
                 MirPlaceProjection::Base(base) => {
                     let MirType::Class(owner) = ty else {
-                        return false;
+                        return None;
                     };
                     if self.program.direct_base(owner) != Some(base) {
-                        return false;
+                        return None;
                     }
                     ty = MirType::Class(base);
                 }
                 MirPlaceProjection::Field(field_id) => {
                     let MirType::Class(owner) = ty else {
-                        return false;
+                        return None;
                     };
                     if field_id.class() != owner {
-                        return false;
+                        return None;
                     }
-                    let Some(field) = self.program.field(field_id) else {
-                        return false;
-                    };
+                    let field = self.program.field(field_id)?;
                     ty = field.ty;
                 }
             }
         }
-        ty == MirType::Class(expected_class)
+        Some(ty)
     }
 
     fn is_owning_local_root(&self, place: &MirPlace) -> bool {

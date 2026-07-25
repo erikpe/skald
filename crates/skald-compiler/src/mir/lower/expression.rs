@@ -72,10 +72,10 @@ impl BodyLowerer<'_> {
             } => self.lower_interface_call(expression, receiver, *target, arguments),
             HirExpressionKind::TypeTest(test) => Some(self.lower_type_test(expression, test)),
             HirExpressionKind::PresenceTest { source, kind } => {
-                Some(self.lower_presence_test(expression, *source, *kind))
+                Some(self.lower_presence_test(expression, source, *kind))
             }
             HirExpressionKind::Unwrap(source) => {
-                Some(self.lower_optional_unwrap(expression, *source))
+                Some(self.lower_optional_unwrap(expression, source))
             }
         }
     }

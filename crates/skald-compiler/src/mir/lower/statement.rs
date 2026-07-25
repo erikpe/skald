@@ -122,6 +122,18 @@ impl BodyLowerer<'_> {
                 self.lower_expression(value)
                     .expect("typed return expression must produce a scalar value"),
             ),
+            Some(crate::hir::HirReturnValue::Optional(source)) => {
+                let destination = self
+                    .return_storage
+                    .expect("optional-returning body must have return storage");
+                let source = self.lower_optional_source(source);
+                self.emit(MirInstruction::OptionalInitialize(MirOptionalInitialize {
+                    destination: MirPlace::base(destination),
+                    source,
+                    span: statement.span,
+                }));
+                None
+            }
             Some(crate::hir::HirReturnValue::Object(crate::hir::HirObjectReturn::Copy {
                 source,
                 operation,

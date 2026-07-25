@@ -55,7 +55,10 @@ impl Verifier<'_> {
                     self.verify_value_argument(site, index, *value, parameter.ty, defined)
                 }
                 (MirArgument::OwnedPlace(place), MirParameterMode::Value)
-                    if matches!(parameter.ty, MirType::Class(_)) =>
+                    if matches!(
+                        parameter.ty,
+                        MirType::Class(_) | MirType::OptionalPrimitive(_)
+                    ) =>
                 {
                     self.verify_owned_place_argument(
                         site,

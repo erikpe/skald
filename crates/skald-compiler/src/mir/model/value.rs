@@ -187,7 +187,7 @@ pub enum MirRvalueKind {
         target: super::instruction::MirViewTarget,
     },
     OptionalPresence {
-        source: StorageId,
+        source: MirPlace,
         kind: super::optional::MirPresenceTestKind,
     },
 }

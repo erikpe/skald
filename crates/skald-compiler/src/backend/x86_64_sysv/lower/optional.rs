@@ -3,7 +3,7 @@
 use crate::{
     backend::BackendError,
     mir::{
-        MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPresenceTestKind,
+        MirOptionalAssign, MirOptionalInitialize, MirOptionalSource, MirPlace, MirPresenceTestKind,
         MirPrimitiveType, MirTerminationReason, MirTerminator, MirType, StorageId, ValueId,
     },
 };
@@ -23,19 +23,19 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         initialize: &MirOptionalInitialize,
     ) -> Result<(), BackendError> {
-        self.select_optional_write(initialize.destination, initialize.source)
+        self.select_optional_write(&initialize.destination, &initialize.source)
     }
 
     pub(super) fn select_optional_assign(
         &mut self,
         assignment: &MirOptionalAssign,
     ) -> Result<(), BackendError> {
-        self.select_optional_write(assignment.destination, assignment.source)
+        self.select_optional_write(&assignment.destination, &assignment.source)
     }
 
     pub(super) fn select_optional_presence(
         &mut self,
-        source: StorageId,
+        source: &MirPlace,
         kind: MirPresenceTestKind,
         result: ValueId,
     ) -> Result<(), BackendError> {
@@ -77,11 +77,11 @@ impl InstructionSelector<'_, '_> {
                 failure_target,
                 ..
             } => {
-                self.load_state(*source)?;
+                self.load_state(source)?;
                 self.output.push(Instruction::Test(Register::Rax));
                 self.output
                     .push(Instruction::JumpIfEqual(block_label(*failure_target)));
-                let payload = self.optional_payload(*source)?;
+                let payload = self.optional_payload(source)?;
                 self.copy_payload_to_storage(*destination, payload)?;
                 self.output
                     .push(Instruction::Jump(block_label(*success_target)));
@@ -98,16 +98,16 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
-    fn select_optional_write(
+    pub(super) fn select_optional_write(
         &mut self,
-        destination: StorageId,
-        source: MirOptionalSource,
+        destination: &MirPlace,
+        source: &MirOptionalSource,
     ) -> Result<(), BackendError> {
         match source {
             MirOptionalSource::Absent => self.store_state(destination, false)?,
             MirOptionalSource::Present(value_id) => {
                 let payload = self.optional_payload(destination)?;
-                self.copy_value_to_payload(value_id, payload)?;
+                self.copy_value_to_payload(*value_id, payload)?;
                 self.store_state(destination, true)?;
             }
             MirOptionalSource::Copy(source) => {
@@ -120,8 +120,15 @@ impl InstructionSelector<'_, '_> {
                 self.store_state(destination, false)?;
                 self.output.push(Instruction::Jump(finished.clone()));
                 self.output.push(Instruction::Label(present));
-                let source_payload = self.optional_payload(source)?;
+                // Place lowering uses `r11` for indirect bases. Preserve the
+                // destination address before lowering the source so projected
+                // or parameter-backed places cannot alias the scratch register.
                 let destination_payload = self.optional_payload(destination)?;
+                let destination_payload = (
+                    destination_payload.0,
+                    self.stabilize_optional_operand(destination_payload.1),
+                );
+                let source_payload = self.optional_payload(source)?;
                 self.copy_payload(source_payload, destination_payload);
                 self.store_state(destination, true)?;
                 self.output.push(Instruction::Label(finished));
@@ -130,14 +137,14 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn load_state(&mut self, storage: StorageId) -> Result<(), BackendError> {
-        let state = self.optional_state(storage)?;
+    fn load_state(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        let state = self.optional_state(place)?;
         value::load_rax(state, self.output);
         Ok(())
     }
 
-    fn store_state(&mut self, storage: StorageId, present: bool) -> Result<(), BackendError> {
-        let state = self.optional_state(storage)?;
+    fn store_state(&mut self, place: &MirPlace, present: bool) -> Result<(), BackendError> {
+        let state = self.optional_state(place)?;
         self.output.push(Instruction::MoveImmediate64 {
             bits: u64::from(present),
             destination: Register::Rax,
@@ -146,38 +153,35 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn optional_state(&self, storage: StorageId) -> Result<Operand, BackendError> {
-        let payload = self.optional_type(storage)?;
+    fn optional_state(&mut self, place: &MirPlace) -> Result<Operand, BackendError> {
+        let (payload, operand) = self.optional_base(place)?;
         let layout = self.data_layout.optional(payload)?;
         let offset = i32::try_from(layout.state_offset())
             .expect("optional state offset fits the target displacement");
-        Ok(value::memory(
-            Register::Rbp,
-            self.frame.storage(storage) + offset,
-        ))
+        offset_operand(operand, offset, self.function.callable())
     }
 
-    fn optional_payload(&self, storage: StorageId) -> Result<OptionalPayload, BackendError> {
-        let payload = self.optional_type(storage)?;
+    fn optional_payload(&mut self, place: &MirPlace) -> Result<OptionalPayload, BackendError> {
+        let (payload, operand) = self.optional_base(place)?;
         let layout = self.data_layout.optional(payload)?;
         let offset = i32::try_from(layout.payload_offset())
             .expect("optional payload offset fits the target displacement");
         Ok((
             payload,
-            value::memory(Register::Rbp, self.frame.storage(storage) + offset),
+            offset_operand(operand, offset, self.function.callable())?,
         ))
     }
 
-    fn optional_type(&self, storage: StorageId) -> Result<MirPrimitiveType, BackendError> {
-        let ty = self
-            .function
-            .storage(storage)
-            .expect("verified optional operation identifies storage")
-            .ty;
+    fn optional_base(
+        &mut self,
+        place: &MirPlace,
+    ) -> Result<(MirPrimitiveType, Operand), BackendError> {
+        let (layout, operand) = self.frame_place(place)?;
+        let ty = layout.ty();
         let MirType::OptionalPrimitive(payload) = ty else {
             unreachable!("verified optional operation has optional storage");
         };
-        Ok(payload)
+        Ok((payload, operand))
     }
 
     fn copy_value_to_payload(
@@ -230,6 +234,21 @@ impl InstructionSelector<'_, '_> {
         }
     }
 
+    fn stabilize_optional_operand(&mut self, operand: Operand) -> Operand {
+        let Operand::Memory {
+            base: Register::R11,
+            displacement,
+        } = operand
+        else {
+            return operand;
+        };
+        self.output.push(Instruction::Move {
+            source: Register::R11.into(),
+            destination: Register::Rcx.into(),
+        });
+        value::memory(Register::Rcx, displacement)
+    }
+
     fn next_optional_label(&mut self, suffix: &str) -> Label {
         let sequence = self.optional_sequence;
         self.optional_sequence += 1;
@@ -241,6 +260,24 @@ impl InstructionSelector<'_, '_> {
             suffix
         ))
     }
+}
+
+fn offset_operand(
+    operand: Operand,
+    offset: i32,
+    callable: crate::identity::CallableId,
+) -> Result<Operand, BackendError> {
+    let Operand::Memory { base, displacement } = operand else {
+        unreachable!("optional places lower to memory operands");
+    };
+    let displacement = displacement.checked_add(offset).ok_or_else(|| {
+        BackendError::new(
+            crate::backend::Target::X86_64SysV,
+            Some(callable),
+            "optional payload displacement exceeds x86-64 limits",
+        )
+    })?;
+    Ok(value::memory(base, displacement))
 }
 
 fn optional_label(result: ValueId, suffix: &str) -> Label {

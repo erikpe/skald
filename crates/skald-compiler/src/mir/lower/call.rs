@@ -140,6 +140,64 @@ impl BodyLowerer<'_> {
         self.full_expression_has_shared_effect = true;
     }
 
+    pub(super) fn lower_optional_call(
+        &mut self,
+        expression: &HirExpression,
+        destination: StorageId,
+    ) {
+        let (target, receiver, arguments) = match &expression.kind {
+            crate::hir::HirExpressionKind::DirectCall {
+                function,
+                arguments,
+            } => (
+                MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::MethodCall {
+                receiver,
+                target,
+                arguments,
+            } => (
+                MirCallTarget::Method(lower_method_target(*target)),
+                Some(self.lower_method_receiver(receiver).into()),
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::InterfaceCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                let receiver = match receiver {
+                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
+                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
+                };
+                (
+                    MirCallTarget::Interface(MirInterfaceCallTarget {
+                        interface: target.interface,
+                        requirement: target.requirement,
+                    }),
+                    Some(receiver.into()),
+                    self.lower_call_arguments(arguments),
+                )
+            }
+            crate::hir::HirExpressionKind::Grouped(inner) => {
+                self.lower_optional_call(inner, destination);
+                return;
+            }
+            _ => unreachable!("optional producer must contain a call expression"),
+        };
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            shared_result: None,
+            destination: Some(MirPlace::base(destination)),
+            span: expression.span,
+        }));
+    }
+
     pub(super) fn lower_call_arguments(
         &mut self,
         arguments: &[HirCallArgument],
@@ -174,6 +232,22 @@ impl BodyLowerer<'_> {
                     } else {
                         LoweredArgument::Ready(MirArgument::Value(value))
                     }
+                }
+                HirCallArgument::Optional { source, payload } => {
+                    let ty = Type::OptionalPrimitive(*payload);
+                    let storage = self.new_optional_storage(
+                        MirStorageKind::Argument,
+                        "optional-argument",
+                        ty,
+                        source.span(),
+                    );
+                    let source = self.lower_optional_source(source);
+                    self.emit(MirInstruction::OptionalInitialize(MirOptionalInitialize {
+                        destination: MirPlace::base(storage),
+                        source,
+                        span: argument.span(),
+                    }));
+                    LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
                 }
                 HirCallArgument::Place(place) => {
                     LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))

@@ -109,6 +109,14 @@ impl InstructionSelector<'_, '_> {
                                     .ty,
                             )?;
                         }
+                        MirSynthesizedFieldCopy::OptionalPrimitive { field, .. } => {
+                            let destination = destination.clone().project_field(field);
+                            let source = source.clone().project_field(field);
+                            self.select_optional_write(
+                                &destination,
+                                &crate::mir::MirOptionalSource::Copy(source),
+                            )?;
+                        }
                         MirSynthesizedFieldCopy::Shared { field } => {
                             self.select_shared_field_construction(
                                 &destination.clone().project_field(field),
@@ -189,6 +197,14 @@ impl InstructionSelector<'_, '_> {
                                     .field(field)
                                     .expect("verified copy field must exist")
                                     .ty,
+                            )?;
+                        }
+                        MirSynthesizedFieldCopy::OptionalPrimitive { field, .. } => {
+                            let destination = destination.clone().project_field(field);
+                            let source = source.clone().project_field(field);
+                            self.select_optional_write(
+                                &destination,
+                                &crate::mir::MirOptionalSource::Copy(source),
                             )?;
                         }
                         MirSynthesizedFieldCopy::Shared { field } => {

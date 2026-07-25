@@ -65,9 +65,10 @@ prerequisites and validation are defined by the
 The frozen optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
-resolved identities are implemented; current phase and backend descriptions
-remain authoritative for executable behavior while HIR and later work is
-still planned.
+resolved identities are implemented; primitive optional locals, fields, and
+internal callable boundaries also execute through typed HIR and verified MIR.
+Current phase and backend descriptions remain authoritative while
+resource-bearing optional payload work is still planned.
 
 ## Pipeline
 

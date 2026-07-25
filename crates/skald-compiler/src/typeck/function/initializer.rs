@@ -82,9 +82,33 @@ impl CallableChecker<'_, '_> {
             (Type::Class(_), MemberBodyKind::MethodOrDestructor) => {
                 unreachable!("method field copy assignment is handled before initializer policy")
             }
-            (Type::OptionalPrimitive(_), _) => {
-                unreachable!("optional fields are rejected before member body checking")
-            }
+            (Type::OptionalPrimitive(payload), body_kind) => self
+                .check_optional_source(
+                    &assignment.value,
+                    payload,
+                    if body_kind.initializes_receiver() {
+                        "primitive optional field initializer"
+                    } else {
+                        "primitive optional field assignment"
+                    },
+                )
+                .map(|source| {
+                    HirStatement::OptionalAssignment(crate::hir::HirOptionalAssignment {
+                        destination: crate::hir::HirOptionalPlace {
+                            storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
+                            payload,
+                            span: assignment.span,
+                        },
+                        payload,
+                        source,
+                        kind: if body_kind.initializes_receiver() {
+                            crate::hir::HirOptionalWriteKind::Initialize
+                        } else {
+                            crate::hir::HirOptionalWriteKind::Assign
+                        },
+                        span: assignment.span,
+                    })
+                }),
         };
         self.finish_field_assignment(target, body_kind, hir)
     }

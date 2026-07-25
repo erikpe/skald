@@ -13,8 +13,9 @@ progress. Completed roadmaps and resolved discovery records move to
   non-optional validity guarantee. OP0 froze the focused language and compiler
   contracts in living documentation, OP1 added syntax and resolved type
   identities, and OP2 executes primitive optional locals and checked
-  inspection. OP3, carrying primitive optionals through stored and callable
-  boundaries, is next. The roadmap depends on the
+  inspection. OP3 carries primitive optionals through stored and callable
+  boundaries; OP4, inline-class optional lifecycle, is next. The roadmap
+  depends on the
   completed inline-object, alias, shared-ownership, polymorphism, object-cast,
   and constructor profiles.
 

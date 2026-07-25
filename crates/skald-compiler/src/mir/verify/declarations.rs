@@ -97,12 +97,6 @@ impl<'mir> Verifier<'mir> {
                     "function result cannot have a non-owning interface or `Obj` type",
                 );
             }
-            if matches!(declaration.return_type, MirType::OptionalPrimitive(_)) {
-                self.function_error(
-                    declaration.id,
-                    "primitive optional function results are not supported yet",
-                );
-            }
             if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
                 if declaration.parameters.iter().any(|parameter| {
                     parameter.mode != MirParameterMode::Value
@@ -112,6 +106,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
+                                | MirType::OptionalPrimitive(_)
                         )
                 }) {
                     self.function_error(
@@ -121,7 +116,11 @@ impl<'mir> Verifier<'mir> {
                 }
                 if matches!(
                     declaration.return_type,
-                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Shared(_)
+                    MirType::Class(_)
+                        | MirType::Interface(_)
+                        | MirType::Obj
+                        | MirType::Shared(_)
+                        | MirType::OptionalPrimitive(_)
                 ) {
                     self.function_error(
                         declaration.id,
@@ -254,10 +253,6 @@ impl<'mir> Verifier<'mir> {
                         "field {} cannot have payload-free type `unit`",
                         field.id
                     )),
-                    MirType::OptionalPrimitive(_) => self.program_error(format!(
-                        "field {} cannot have primitive optional type yet",
-                        field.id
-                    )),
                     MirType::Class(target) if self.program.class(target).is_none() => {
                         self.program_error(format!(
                             "field {} has undeclared class type {target}",
@@ -366,12 +361,6 @@ impl<'mir> Verifier<'mir> {
                 if matches!(method.return_type, MirType::Interface(_) | MirType::Obj) {
                     self.program_error(format!(
                         "method {} cannot return a non-owning interface or `Obj` type",
-                        method.id
-                    ));
-                }
-                if matches!(method.return_type, MirType::OptionalPrimitive(_)) {
-                    self.program_error(format!(
-                        "method {} cannot return a primitive optional yet",
                         method.id
                     ));
                 }
@@ -531,6 +520,13 @@ impl<'mir> Verifier<'mir> {
                 (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
                     *id == field.id
                 }
+                (
+                    MirType::OptionalPrimitive(payload),
+                    MirSynthesizedFieldCopy::OptionalPrimitive {
+                        field: id,
+                        payload: step_payload,
+                    },
+                ) => *id == field.id && payload == *step_payload,
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
@@ -577,6 +573,13 @@ impl<'mir> Verifier<'mir> {
                 (ty, MirSynthesizedFieldCopy::Primitive { field: id }) if ty.is_scalar_value() => {
                     *id == field.id
                 }
+                (
+                    MirType::OptionalPrimitive(payload),
+                    MirSynthesizedFieldCopy::OptionalPrimitive {
+                        field: id,
+                        payload: step_payload,
+                    },
+                ) => *id == field.id && payload == *step_payload,
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
@@ -602,13 +605,6 @@ impl<'mir> Verifier<'mir> {
                 {
                     self.program_error(format!(
                         "{owner} value parameter {index} cannot have a non-owning interface or `Obj` type"
-                    ));
-                }
-                MirParameterMode::Value
-                    if matches!(parameter.ty, MirType::OptionalPrimitive(_)) =>
-                {
-                    self.program_error(format!(
-                        "{owner} primitive optional value parameter {index} is not supported yet"
                     ));
                 }
                 MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias

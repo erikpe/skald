@@ -1,7 +1,10 @@
 //! Primitive optional storage and checked-access lowering.
 
 use crate::{
-    hir::{HirOptionalPlace, HirOptionalSource, HirPresenceTestKind},
+    hir::{
+        HirOptionalOperand, HirOptionalPlace, HirOptionalSource, HirOptionalStorage,
+        HirPresenceTestKind, Type,
+    },
     mir::{
         MirInstruction, MirOptionalAssign, MirOptionalInitialize, MirOptionalSource,
         MirPresenceTestKind, MirPrimitiveType, MirRvalueKind, MirStorage, MirStorageKind,
@@ -20,7 +23,7 @@ impl BodyLowerer<'_> {
     ) {
         let source = self.lower_optional_source(source);
         self.emit(MirInstruction::OptionalInitialize(MirOptionalInitialize {
-            destination,
+            destination: crate::mir::MirPlace::base(destination),
             source,
             span,
         }));
@@ -30,22 +33,34 @@ impl BodyLowerer<'_> {
         &mut self,
         assignment: &crate::hir::HirOptionalAssignment,
     ) {
-        let destination = self.storage_for_binding(assignment.destination);
+        let destination = self.lower_optional_place(&assignment.destination);
         let source = self.lower_optional_source(&assignment.source);
-        self.emit(MirInstruction::OptionalAssign(MirOptionalAssign {
-            destination,
-            source,
-            span: assignment.span,
-        }));
+        self.emit(match assignment.kind {
+            crate::hir::HirOptionalWriteKind::Initialize => {
+                MirInstruction::OptionalInitialize(MirOptionalInitialize {
+                    destination,
+                    source,
+                    span: assignment.span,
+                })
+            }
+            crate::hir::HirOptionalWriteKind::Assign => {
+                MirInstruction::OptionalAssign(MirOptionalAssign {
+                    destination,
+                    source,
+                    span: assignment.span,
+                })
+            }
+        });
+        self.finish_full_expression(assignment.span);
     }
 
     pub(super) fn lower_presence_test(
         &mut self,
         expression: &crate::hir::HirExpression,
-        source: HirOptionalPlace,
+        source: &HirOptionalOperand,
         kind: HirPresenceTestKind,
     ) -> crate::mir::ValueId {
-        let source = self.storage_for_binding(source.binding);
+        let source = self.lower_optional_operand(source);
         self.assign(
             MirRvalueKind::OptionalPresence {
                 source,
@@ -62,10 +77,10 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_optional_unwrap(
         &mut self,
         expression: &crate::hir::HirExpression,
-        source: HirOptionalPlace,
+        source: &HirOptionalOperand,
     ) -> crate::mir::ValueId {
-        let source_storage = self.storage_for_binding(source.binding);
-        let payload = lower_primitive_type(source.payload);
+        let source_storage = self.lower_optional_operand(source);
+        let payload = lower_primitive_type(source.payload());
         let destination = StorageId::new(self.input.callable, self.storage.len());
         self.storage.push(MirStorage {
             id: destination,
@@ -104,7 +119,10 @@ impl BodyLowerer<'_> {
         )
     }
 
-    fn lower_optional_source(&mut self, source: &HirOptionalSource) -> MirOptionalSource {
+    pub(super) fn lower_optional_source(
+        &mut self,
+        source: &HirOptionalSource,
+    ) -> MirOptionalSource {
         match source {
             HirOptionalSource::Absent { .. } => MirOptionalSource::Absent,
             HirOptionalSource::Present(expression) => MirOptionalSource::Present(
@@ -112,9 +130,69 @@ impl BodyLowerer<'_> {
                     .expect("typed primitive optional payload must produce a scalar value"),
             ),
             HirOptionalSource::Copy(place) => {
-                MirOptionalSource::Copy(self.storage_for_binding(place.binding))
+                MirOptionalSource::Copy(self.lower_optional_place(place))
+            }
+            HirOptionalSource::Produced(expression) => {
+                let destination = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "optional-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_call(expression, destination);
+                MirOptionalSource::Copy(crate::mir::MirPlace::base(destination))
             }
         }
+    }
+
+    pub(super) fn lower_optional_place(
+        &mut self,
+        place: &HirOptionalPlace,
+    ) -> crate::mir::MirPlace {
+        match &place.storage {
+            HirOptionalStorage::Binding(binding) => {
+                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
+            }
+            HirOptionalStorage::Field(field) => self.lower_field_place(field),
+        }
+    }
+
+    fn lower_optional_operand(&mut self, operand: &HirOptionalOperand) -> crate::mir::MirPlace {
+        match operand {
+            HirOptionalOperand::Place(place) => self.lower_optional_place(place),
+            HirOptionalOperand::Produced(expression) => {
+                let destination = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "optional-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_call(expression, destination);
+                crate::mir::MirPlace::base(destination)
+            }
+        }
+    }
+
+    pub(super) fn new_optional_storage(
+        &mut self,
+        kind: MirStorageKind,
+        name: &str,
+        ty: crate::hir::Type,
+        span: crate::source::Span,
+    ) -> StorageId {
+        let Type::OptionalPrimitive(payload) = ty else {
+            unreachable!("optional storage requires an optional primitive type");
+        };
+        let id = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id,
+            source: None,
+            name: format!("{name}-{}", id.index()),
+            kind,
+            ty: MirType::OptionalPrimitive(lower_primitive_type(payload)),
+            span,
+        });
+        id
     }
 }
 

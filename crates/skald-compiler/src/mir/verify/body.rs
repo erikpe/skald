@@ -169,11 +169,16 @@ impl<'mir> Verifier<'mir> {
                     | MirStorageKind::Argument
                     | MirStorageKind::Temporary
                     | MirStorageKind::SharedAnchor
-            ) && !matches!(storage.ty, MirType::Class(_) | MirType::Shared(_))
-            {
+            ) && !matches!(
+                storage.ty,
+                MirType::Class(_) | MirType::Shared(_) | MirType::OptionalPrimitive(_)
+            ) {
                 self.function_error(
                     function.callable(),
-                    format!("compiler-owned storage {} must have class type", storage.id),
+                    format!(
+                        "compiler-owned storage {} must have an owning aggregate type",
+                        storage.id
+                    ),
                 );
             }
             if storage.kind == MirStorageKind::SharedAllocation
@@ -253,6 +258,24 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(
                         function.callable(),
                         "object-returning definition must identify exactly one matching return storage slot",
+                    );
+                }
+            }
+            MirType::OptionalPrimitive(payload) => {
+                let Some(return_storage) = function.return_storage() else {
+                    self.function_error(
+                        function.callable(),
+                        "optional-returning definition has no return storage",
+                    );
+                    return;
+                };
+                let valid = slots.len() == 1
+                    && slots[0].id == return_storage
+                    && slots[0].ty == MirType::OptionalPrimitive(payload);
+                if !valid {
+                    self.function_error(
+                        function.callable(),
+                        "optional-returning definition must identify exactly one matching return storage slot",
                     );
                 }
             }
@@ -450,6 +473,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
+                                | MirType::OptionalPrimitive(_)
                         ) {
                             self.block_error(
                                 function.callable(),
@@ -471,6 +495,7 @@ impl<'mir> Verifier<'mir> {
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::Shared(_)
+                            | MirType::OptionalPrimitive(_)
                     )
                 {
                     self.block_error(
@@ -550,7 +575,7 @@ impl<'mir> Verifier<'mir> {
             }) => self.verify_optional_unwrap_terminator(
                 function,
                 block,
-                *source,
+                source,
                 *destination,
                 *success_target,
                 *failure_target,

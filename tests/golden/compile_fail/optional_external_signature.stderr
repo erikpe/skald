@@ -1,0 +1,6 @@
+error[TYP009]: external function `inspect` has an unsupported signature
+ --> tests/golden/compile_fail/optional_external_signature.ska:1:1
+   |
+1 | extern fn inspect(value: i64?) -> i64?;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected by-value `i64`, `u64`, `u8`, `f64`, or `bool` parameters and a result of type `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`
+  = note: the source function name must also be its exact linker symbol

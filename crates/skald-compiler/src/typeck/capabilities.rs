@@ -184,6 +184,32 @@ fn compute_class<I: Copy>(
                     ResolvedTypeKind::Shared(_) => {
                         fields.push(HirSynthesizedFieldCopy::Shared { field: field.id });
                     }
+                    ResolvedTypeKind::Optional { payload, .. } => {
+                        let payload = match payload {
+                            crate::resolve::ResolvedOptionalPayload::I64 => {
+                                crate::hir::HirPrimitiveType::I64
+                            }
+                            crate::resolve::ResolvedOptionalPayload::U64 => {
+                                crate::hir::HirPrimitiveType::U64
+                            }
+                            crate::resolve::ResolvedOptionalPayload::U8 => {
+                                crate::hir::HirPrimitiveType::U8
+                            }
+                            crate::resolve::ResolvedOptionalPayload::F64 => {
+                                crate::hir::HirPrimitiveType::F64
+                            }
+                            crate::resolve::ResolvedOptionalPayload::Bool => {
+                                crate::hir::HirPrimitiveType::Bool
+                            }
+                            crate::resolve::ResolvedOptionalPayload::Class(_) => {
+                                unreachable!("class optionals are gated before capabilities")
+                            }
+                        };
+                        fields.push(HirSynthesizedFieldCopy::OptionalPrimitive {
+                            field: field.id,
+                            payload,
+                        });
+                    }
                     _ => fields.push(HirSynthesizedFieldCopy::Primitive { field: field.id }),
                 }
             }

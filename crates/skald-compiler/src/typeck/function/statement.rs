@@ -5,7 +5,8 @@ use crate::{
     hir::{
         BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
         HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
-        HirOptionalAssignment, HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, Type,
+        HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
+        HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
@@ -112,9 +113,14 @@ impl CallableChecker<'_, '_> {
             self.check_optional_source(&assignment.source, payload, "optional local assignment");
         CheckedStatement::falls_through(source.map(|source| {
             HirStatement::OptionalAssignment(HirOptionalAssignment {
-                destination: assignment.destination,
+                destination: HirOptionalPlace {
+                    storage: HirOptionalStorage::Binding(assignment.destination),
+                    payload,
+                    span: assignment.span,
+                },
                 payload,
                 source,
+                kind: HirOptionalWriteKind::Assign,
                 span: assignment.span,
             })
         }))
@@ -359,8 +365,27 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
-            (Type::OptionalPrimitive(_), _) => {
-                unreachable!("optional results are rejected before body checking")
+            (Type::OptionalPrimitive(payload), Some(value)) => self
+                .check_optional_source(value, payload, "primitive optional return")
+                .map(|value| {
+                    HirStatement::Return(HirReturn {
+                        value: Some(HirReturnValue::Optional(value)),
+                        span: statement.span,
+                    })
+                }),
+            (Type::OptionalPrimitive(payload), None) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RETURN,
+                        format!(
+                            "{} must return a `{}` value",
+                            self.callable_name,
+                            Type::OptionalPrimitive(payload).name()
+                        ),
+                    )
+                    .with_primary_label(statement.span, "expected `return optional_expression;`"),
+                );
+                None
             }
         };
         CheckedStatement::terminates(hir)

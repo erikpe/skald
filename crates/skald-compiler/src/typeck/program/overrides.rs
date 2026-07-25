@@ -9,7 +9,7 @@ use crate::{
     source::Span,
 };
 
-use super::INVALID_OVERRIDE_SIGNATURE;
+use super::{same_resolved_type, INVALID_OVERRIDE_SIGNATURE};
 
 pub(super) fn validate_override_signatures(
     program: &ResolvedProgram,
@@ -88,7 +88,7 @@ fn signature_mismatch(
                 ),
             ));
         }
-        if parameter.type_syntax.kind != expected.type_syntax.kind {
+        if !same_resolved_type(&parameter.type_syntax, &expected.type_syntax) {
             return Some(mismatch(
                 format!(
                     "override method `{}` has an incompatible type for parameter {}",
@@ -102,7 +102,7 @@ fn signature_mismatch(
             ));
         }
     }
-    if method.return_type.kind != inherited.return_type.kind {
+    if !same_resolved_type(&method.return_type, &inherited.return_type) {
         return Some(mismatch(
             format!(
                 "override method `{}` has an incompatible result type",

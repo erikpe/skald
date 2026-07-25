@@ -250,6 +250,7 @@ pub struct HirReturn {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirReturnValue {
     Scalar(HirExpression),
+    Optional(HirOptionalSource),
     Object(HirObjectReturn),
     Shared(HirSharedTransfer),
 }

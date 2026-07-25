@@ -109,7 +109,7 @@ impl FrameLayout {
                     | MirStorageKind::CheckedView(_),
                     _,
                 )
-                | (MirStorageKind::Parameter, MirType::Class(_)) => {
+                | (MirStorageKind::Parameter, MirType::Class(_) | MirType::OptionalPrimitive(_)) => {
                     (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)
                 }
                 (_, MirType::Class(_) | MirType::Unit) => {
@@ -196,7 +196,10 @@ impl FrameLayout {
             ),
             MirPlaceBase::Storage(_)
                 if storage.kind == MirStorageKind::Parameter
-                    && matches!(storage.ty, MirType::Class(_)) =>
+                    && matches!(
+                        storage.ty,
+                        MirType::Class(_) | MirType::OptionalPrimitive(_)
+                    ) =>
             {
                 (
                     FramePlaceBase::OwnedParameter {

@@ -429,6 +429,10 @@ pub enum MirSynthesizedFieldCopy<I> {
     Primitive {
         field: FieldId,
     },
+    OptionalPrimitive {
+        field: FieldId,
+        payload: super::MirPrimitiveType,
+    },
     Shared {
         field: FieldId,
     },
@@ -441,9 +445,10 @@ pub enum MirSynthesizedFieldCopy<I> {
 impl<I> MirSynthesizedFieldCopy<I> {
     pub const fn field(&self) -> FieldId {
         match self {
-            Self::Primitive { field } | Self::Shared { field } | Self::Class { field, .. } => {
-                *field
-            }
+            Self::Primitive { field }
+            | Self::OptionalPrimitive { field, .. }
+            | Self::Shared { field }
+            | Self::Class { field, .. } => *field,
         }
     }
 }

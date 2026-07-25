@@ -2,7 +2,7 @@
 
 use crate::{identity::BindingId, source::Span};
 
-use super::HirExpression;
+use super::{HirExpression, HirFieldPlace};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirPrimitiveType {
@@ -35,11 +35,17 @@ impl HirPrimitiveType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirOptionalPlace {
-    pub binding: BindingId,
+    pub storage: HirOptionalStorage,
     pub payload: HirPrimitiveType,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirOptionalStorage {
+    Binding(BindingId),
+    Field(HirFieldPlace),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -47,6 +53,25 @@ pub enum HirOptionalSource {
     Absent { span: Span },
     Present(HirExpression),
     Copy(HirOptionalPlace),
+    Produced(Box<HirExpression>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirOptionalOperand {
+    Place(HirOptionalPlace),
+    Produced(Box<HirExpression>),
+}
+
+impl HirOptionalOperand {
+    pub const fn payload(&self) -> HirPrimitiveType {
+        match self {
+            Self::Place(place) => place.payload,
+            Self::Produced(expression) => match expression.ty {
+                super::Type::OptionalPrimitive(payload) => payload,
+                _ => panic!("produced optional operand must have optional type"),
+            },
+        }
+    }
 }
 
 impl HirOptionalSource {
@@ -55,16 +80,24 @@ impl HirOptionalSource {
             Self::Absent { span } => *span,
             Self::Present(expression) => expression.span,
             Self::Copy(place) => place.span,
+            Self::Produced(expression) => expression.span,
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirOptionalAssignment {
-    pub destination: BindingId,
+    pub destination: HirOptionalPlace,
     pub payload: HirPrimitiveType,
     pub source: HirOptionalSource,
+    pub kind: HirOptionalWriteKind,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirOptionalWriteKind {
+    Initialize,
+    Assign,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

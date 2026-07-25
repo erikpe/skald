@@ -9,8 +9,9 @@ cross-phase invariants are specified separately in the
 The optional-value phase and IR additions are specified in the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Optional tokens,
 source-shaped AST nodes, and flat resolved identities are implemented;
-primitive optional locals additionally have typed HIR, verified MIR, and
-executable backend lowering.
+primitive optional owning locals, fields, internal parameters/results, and
+temporaries additionally have typed HIR, verified MIR, and executable backend
+lowering.
 
 ## Pipeline contract
 
@@ -41,12 +42,13 @@ diagnostic, identity, or IR registry.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
-target identities. For primitive locals, type checking selects explicit absent
-or present initialization, copy, assignment, presence, and unwrap HIR. MIR
-owns initialized storage and explicit unwrap success/failure control flow;
-verification proves compatible operations and definite wrapper initialization
-across CFG joins. `TYP035` remains the boundary for optional fields, callable
-boundaries, class payloads, and shared owners.
+target identities. For primitive owning values, type checking selects explicit
+absent or present initialization, copy, assignment, overload injection,
+field/call boundaries, presence, and unwrap HIR. MIR owns initialized places,
+caller-owned argument/result aggregates, and explicit unwrap success/failure
+control flow; verification proves compatible operations and definite wrapper
+initialization across CFG joins. `TYP035` remains the boundary for class
+payloads, optional shared owners, and optional-container aliases.
 
 ## Sources and diagnostics
 

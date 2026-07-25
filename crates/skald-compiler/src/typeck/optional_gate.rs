@@ -22,11 +22,9 @@ pub(super) fn reject_unsupported_optionals(
         )
         .with_primary_label(
             span,
-            "only primitive optional locals are executable in the current profile",
+            "primitive optional values execute only in owning value positions",
         )
-        .with_note(
-            "optional fields, parameters, results, class payloads, shared owners, and aliases remain planned",
-        ),
+        .with_note("class payloads, shared owners, and optional-container aliases remain planned"),
     );
     true
 }
@@ -36,15 +34,19 @@ fn first_unsupported_optional_span(program: &ResolvedProgram) -> Option<Span> {
 
     for interface in program.interfaces.iter() {
         for requirement in &interface.requirements {
-            record_type(&mut first, &requirement.return_type);
+            record_unsupported_type(&mut first, &requirement.return_type);
             for parameter in &requirement.parameters {
-                record_type(&mut first, &parameter.type_syntax);
+                record_unsupported_parameter(
+                    &mut first,
+                    parameter.binding_mode,
+                    &parameter.type_syntax,
+                );
             }
         }
     }
     for class in program.classes.iter() {
         for field in &class.fields {
-            record_type(&mut first, &field.type_syntax);
+            record_unsupported_type(&mut first, &field.type_syntax);
         }
         for initializer in &class.initializers {
             record_parameters(&mut first, &initializer.parameters);
@@ -53,16 +55,25 @@ fn first_unsupported_optional_span(program: &ResolvedProgram) -> Option<Span> {
             record_parameters(&mut first, &copy.parameters);
         }
         if let Some(assignment) = &class.copy_assignment_declaration {
-            record_type(&mut first, &assignment.parameter.type_syntax);
+            record_unsupported_parameter(
+                &mut first,
+                assignment.parameter.binding_mode,
+                &assignment.parameter.type_syntax,
+            );
         }
         for method in &class.methods {
             record_parameters(&mut first, &method.parameters);
-            record_type(&mut first, &method.return_type);
+            record_unsupported_type(&mut first, &method.return_type);
         }
     }
     for declaration in program.declarations.iter() {
-        record_parameters(&mut first, &declaration.parameters);
-        record_type(&mut first, &declaration.return_type);
+        if matches!(
+            declaration.linkage,
+            crate::resolve::ResolvedFunctionLinkage::Internal
+        ) {
+            record_parameters(&mut first, &declaration.parameters);
+            record_unsupported_type(&mut first, &declaration.return_type);
+        }
     }
     for definition in program.definitions.iter() {
         for local in &definition.locals {
@@ -89,14 +100,31 @@ fn first_unsupported_optional_span(program: &ResolvedProgram) -> Option<Span> {
 
 fn record_parameters(first: &mut Option<Span>, parameters: &[crate::resolve::ResolvedParameter]) {
     for parameter in parameters {
-        record_type(first, &parameter.type_syntax);
+        record_unsupported_parameter(first, parameter.binding_mode, &parameter.type_syntax);
     }
 }
 
-fn record_type(first: &mut Option<Span>, ty: &ResolvedType) {
+fn record_unsupported_parameter(
+    first: &mut Option<Span>,
+    mode: crate::resolve::ResolvedParameterBindingMode,
+    ty: &ResolvedType,
+) {
+    if mode != crate::resolve::ResolvedParameterBindingMode::Value
+        && matches!(ty.kind, ResolvedTypeKind::Optional { .. })
+    {
+        record_span(first, ty.span);
+        return;
+    }
+    record_unsupported_type(first, ty);
+}
+
+fn record_unsupported_type(first: &mut Option<Span>, ty: &ResolvedType) {
     if matches!(
         ty.kind,
-        ResolvedTypeKind::Optional { .. } | ResolvedTypeKind::OptionalShared { .. }
+        ResolvedTypeKind::Optional {
+            payload: ResolvedOptionalPayload::Class(_),
+            ..
+        } | ResolvedTypeKind::OptionalShared { .. }
     ) {
         record_span(first, ty.span);
     }

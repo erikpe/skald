@@ -143,12 +143,13 @@ Inspect optional frontend behavior at the narrowest owner defined by the frozen
   `some`, type-marker spans, presence tests, and unwrap nodes;
 - resolved dumps currently expose canonical flat inline-optional and
   optional-shared targets plus absence, presence-test, and unwrap nodes;
-- primitive-local HIR dumps expose absent/present initialization, copy,
-  assignment, presence tests, and checked value extraction;
-- primitive-local MIR dumps expose initialized optional storage, explicit
-  operations, unwrap success/failure blocks, and the exact non-returning
-  optional-access reason;
-- assembly uses the documented state/payload offsets and trap-only absent
-  failure; and
-- `TYP035` remains the expected boundary for fields, callable positions, class
-  payloads, checked views, and optional shared owners.
+- primitive-value HIR dumps expose absent/present initialization, field places,
+  arguments/results, produced calls, copy, assignment, presence tests, and
+  checked value extraction;
+- primitive-value MIR dumps expose initialized optional places, caller-owned
+  argument/result aggregates, explicit operations, unwrap success/failure
+  blocks, and the exact non-returning optional-access reason;
+- assembly uses the documented state/payload offsets, recursive field layout,
+  hidden destination ABI, and trap-only absent failure; and
+- `TYP035` remains the expected boundary for class payloads, checked views,
+  optional-container aliases, and optional shared owners.

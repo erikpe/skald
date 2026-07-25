@@ -172,6 +172,17 @@ impl<'hir> BodyLowerer<'hir> {
                 ty: lower_type(Type::Shared(target)),
                 span: self.input.source_body.span,
             });
+        } else if let Type::OptionalPrimitive(payload) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "optional-return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: MirType::OptionalPrimitive(optional::lower_primitive_type(payload)),
+                span: self.input.source_body.span,
+            });
         }
         if let Some(class) = self.input.receiver_class {
             let id = StorageId::new(self.input.callable, self.storage.len());

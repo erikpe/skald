@@ -36,8 +36,8 @@ impl InstructionSelector<'_, '_> {
             self.select_type_test(source, *target, assignment.result);
             return Ok(());
         }
-        if let MirRvalueKind::OptionalPresence { source, kind } = assignment.rvalue.kind {
-            return self.select_optional_presence(source, kind, assignment.result);
+        if let MirRvalueKind::OptionalPresence { source, kind } = &assignment.rvalue.kind {
+            return self.select_optional_presence(source, *kind, assignment.result);
         }
         let destination = value::frame_value(self.frame, assignment.result);
         self.select_rvalue(&assignment.rvalue.kind, assignment.rvalue.ty, destination)

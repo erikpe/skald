@@ -37,6 +37,29 @@ fn optional_assignment_preserves_initialized_wrapper_state_across_cfg_joins() {
 }
 
 #[test]
+fn lowers_optional_fields_arguments_and_results_as_verified_places() {
+    let source = "class Holder {\n\
+        value: i64?;\n\
+        init(value: i64?) { self.value = value; }\n\
+        mut fn replace(value: i64?) -> i64? { self.value = value; return self.value; }\n\
+    }\n\
+    fn forward(value: i64?) -> i64? { return value; }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(none);\n\
+        var result: i64? = holder.replace(forward(42));\n\
+        return result!;\n\
+    }\n";
+    let program = lower_text(source);
+
+    verify_mir(&program).expect("stored and callable primitive optionals must verify");
+    let dump = dump_mir(&program);
+    assert!(dump.contains("optional-initialize"));
+    assert!(dump.contains("optional-argument"));
+    assert!(dump.contains("optional-return"));
+    assert!(dump.contains(".field"));
+}
+
+#[test]
 fn verifier_rejects_uninitialized_use_and_mismatched_failure_edges() {
     let mut uninitialized = lower_text(OPTIONAL_SOURCE);
     let function = uninitialized

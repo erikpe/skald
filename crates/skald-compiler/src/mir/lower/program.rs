@@ -243,6 +243,12 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                         HirSynthesizedFieldCopy::Primitive { field } => {
                             MirSynthesizedFieldCopy::Primitive { field }
                         }
+                        HirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
+                            MirSynthesizedFieldCopy::OptionalPrimitive {
+                                field,
+                                payload: super::optional::lower_primitive_type(payload),
+                            }
+                        }
                         HirSynthesizedFieldCopy::Shared { field } => {
                             MirSynthesizedFieldCopy::Shared { field }
                         }

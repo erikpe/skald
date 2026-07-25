@@ -1,22 +1,25 @@
 # Optional Values
 
-Status: frozen language design with an implemented primitive-local execution
-slice. The [status matrix](STATUS.md) is authoritative for availability, and
+Status: frozen language design with primitive optionals implemented across
+owning locals, fields, and internal callable boundaries. The
+[status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
 
 This document freezes Skald's source-level optional-value contract. Primitive
-`i64?`, `u64?`, `u8?`, `f64?`, and `bool?` locals now execute end to end with
-explicit initialization, assignment, presence tests, and checked unwrap.
-Optional fields, parameters, results, class payloads, and shared owners remain
-at the focused `TYP035` type-checking boundary until their roadmap stages.
+`i64?`, `u64?`, `u8?`, `f64?`, and `bool?` values now execute end to end in
+owning locals, fields, internal value parameters/results, methods, interfaces,
+virtual overrides, and initializer overloads. Class payloads, optional shared
+owners, and aliases to optional containers remain at the focused `TYP035`
+type-checking boundary until their roadmap stages.
 Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 
-## Implemented primitive-local slice
+## Implemented primitive-value slice
 
-The current executable profile permits primitive optional locals initialized
-from `none`, an exact ordinary primitive value, or another exact optional:
+The current executable profile permits primitive optional owning values
+initialized from `none`, an exact ordinary primitive value, or another exact
+optional:
 
 ```ska
 var empty: i64? = none;
@@ -60,7 +63,7 @@ ownership:
 | Type | Meaning | Frozen profile |
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
-| primitive `T?` | Inline optional containing zero or one primitive `T` | Locals execute; stored/callable boundaries are planned |
+| primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
 | class `T?` | Inline optional containing zero or one exact class `T` | Syntax/resolution implemented; execution planned |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
 | `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
@@ -100,9 +103,9 @@ var inline_value: Item? = none;
 var shared_owner: shared? Item = none;
 ```
 
-The expected type may ultimately come from a local or field initialization,
-assignment, argument, or return. The current executable slice supplies it
-through primitive local initialization and assignment. `none` used without
+The expected type may come from a local or field initialization, assignment,
+argument, return, or initializer candidate. The current executable slice
+supplies all of those boundaries for primitive optionals. `none` used without
 one unambiguous optional expectation is invalid. It does not have a universal
 runtime type.
 

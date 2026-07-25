@@ -139,12 +139,10 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
             | MirType::U8
             | MirType::Bool
             | MirType::Class(_)
-            | MirType::Shared(_) => Some(ScalarClass::Integer),
+            | MirType::Shared(_)
+            | MirType::OptionalPrimitive(_) => Some(ScalarClass::Integer),
             MirType::F64 => Some(ScalarClass::Sse),
-            MirType::Interface(_)
-            | MirType::Obj
-            | MirType::OptionalPrimitive(_)
-            | MirType::Unit => None,
+            MirType::Interface(_) | MirType::Obj | MirType::Unit => None,
         },
     }
 }
@@ -364,6 +362,31 @@ mod tests {
             [ArgumentLocation::IntegerRegister(Register::Rdi)]
         );
         assert_eq!(layout.stack_size(), 0);
+    }
+
+    #[test]
+    fn classifies_optional_aggregate_addresses_as_integer_arguments() {
+        let layout = CallLayout::classify_internal_call(
+            &MirParameter::values([
+                MirType::OptionalPrimitive(crate::mir::MirPrimitiveType::I64),
+                MirType::OptionalPrimitive(crate::mir::MirPrimitiveType::F64),
+            ]),
+            false,
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(
+            layout.return_destination(),
+            Some(ArgumentLocation::IntegerRegister(Register::Rdi))
+        );
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+                ArgumentLocation::IntegerRegister(Register::Rdx),
+            ]
+        );
     }
 
     #[test]

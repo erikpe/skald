@@ -149,17 +149,18 @@ The frozen
 requires coverage at every owning layer. Current lexer and parser tests own
 tokens, contextual words, spans, precedence, bounded nesting, reserved forms,
 and recovery. Current resolution tests own flat target identities and
-source-shaped expression nodes. Primitive-local type-check and HIR tests own
-expected-type-directed `none`, exact injection, copy, assignment, presence,
-unwrap, truthiness rejection, and the remaining `TYP035` boundaries.
-Primitive MIR tests own initialized storage, explicit operations, CFG joins,
-and optional-access failure edges; verifier mutations break one invariant at a
-time. Backend tests own primitive layout, instruction selection, traps, and
-native execution, while golden tests cover successful execution, truthiness,
-and implicit-unwrap diagnostics.
+source-shaped expression nodes. Primitive-value type-check and HIR tests own
+expected-type-directed `none`, exact injection, initializer ranking, fields,
+calls/results, exact signatures, copy, assignment, presence, unwrap,
+truthiness rejection, external rejection, and the remaining `TYP035`
+boundaries. Primitive MIR tests own initialized places, explicit operations,
+CFG joins, aggregate calls, synthesized field lifecycle, and optional-access
+failure edges; verifier mutations break one invariant at a time. Backend tests
+own primitive and field layout, instruction selection, hidden destinations,
+register/stack pressure, traps, and native execution, while golden tests cover
+successful execution, truthiness, and implicit-unwrap diagnostics.
 
-Future semantic tests extend those owners to overload ranking and stored or
-callable boundaries. Later HIR/MIR tests own class lifecycle, checked views,
+Later HIR/MIR tests own class payload lifecycle, checked views,
 guards, anchors, and shared failure reasons; backend tests add ABI and
 zero-niche realization; native goldens observe lifecycle and ownership.
 

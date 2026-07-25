@@ -2,7 +2,7 @@
 
 use crate::source::Span;
 
-use super::{StorageId, ValueId};
+use super::{MirPlace, ValueId};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPrimitiveType {
@@ -31,23 +31,23 @@ impl std::fmt::Display for MirPrimitiveType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MirOptionalSource {
     Absent,
     Present(ValueId),
-    Copy(StorageId),
+    Copy(MirPlace),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalInitialize {
-    pub destination: StorageId,
+    pub destination: MirPlace,
     pub source: MirOptionalSource,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirOptionalAssign {
-    pub destination: StorageId,
+    pub destination: MirPlace,
     pub source: MirOptionalSource,
     pub span: Span,
 }

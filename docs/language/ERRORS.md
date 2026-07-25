@@ -79,12 +79,13 @@ unrecoverable failures:
 - clearing, replacing, or destroying an optional while a checked payload view
   keeps it present.
 
-Checked access to an absent primitive optional local is implemented and lowers
-to the compiler's non-returning illegal-instruction boundary. It terminates
-before producing a payload, does not return to Skald, and does not guarantee
-remaining source-level cleanup. Guard overflow and guarded mutation retain
-the same frozen behavior but become executable only with checked inline-class
-payload views.
+Checked access to an absent primitive optional owning value—including a local,
+field, parameter, or call result—is implemented and lowers to the compiler's
+non-returning illegal-instruction boundary. It terminates before producing a
+payload, does not return to Skald, and does not guarantee remaining
+source-level cleanup. Guard overflow and guarded mutation retain the same
+frozen behavior but become executable only with checked inline-class payload
+views.
 
 ## Cleanup and abrupt termination
 

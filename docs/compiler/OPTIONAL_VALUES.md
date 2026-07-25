@@ -1,7 +1,8 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design with primitive optional locals implemented
-through HIR, MIR verification, x86-64 lowering, and native execution.
+Status: frozen compiler design with primitive optional owning locals, fields,
+and internal callable boundaries implemented through HIR, MIR verification,
+x86-64 lowering, and native execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -10,10 +11,11 @@ authoritative for source currently accepted by the compiler.
 This document freezes phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. AST and resolved IR contain all
-supported source-shaped forms and flat identities. Primitive optional locals
-continue through explicit typed HIR and MIR operations; the verifier proves
-their storage and failure-edge invariants, and the x86-64 backend executes
-them. Unsupported optional positions still stop at `TYP035`.
+supported source-shaped forms and flat identities. Primitive optionals continue
+through explicit typed HIR and MIR places, calls, and lifecycle operations; the
+verifier proves their storage, aggregate-boundary, and failure-edge invariants,
+and the x86-64 backend executes them. Unsupported payload families and aliases
+still stop at `TYP035`.
 
 ## Phase ownership
 
@@ -97,10 +99,11 @@ Flow-sensitive knowledge may classify a check as statically successful for
 optimization, but HIR source legality never depends on that classification.
 Every unwrap remains a checked semantic operation.
 
-The implemented primitive-local subset uses explicit HIR nodes for absent and
-present initialization, exact optional copy and assignment, presence tests,
-and primitive checked unwrap. Class payload lifecycle, checked places, shared
-owners, and callable boundaries remain later subsets of this same model.
+The implemented primitive-value subset uses explicit HIR nodes for absent and
+present initialization, exact optional copy and assignment, field places,
+arguments/results, produced calls, presence tests, and checked unwrap. Class
+payload lifecycle, guarded checked places, and shared owners remain later
+subsets of this same model.
 
 ## MIR optional storage model
 
@@ -300,7 +303,7 @@ does not initialize those bytes as a `T`; loads, projections, copying,
 assignment, and cleanup branch on verified state before addressing them as a
 payload.
 
-For the implemented primitive-local subset, zero means absent and one means
+For the implemented primitive-value subset, zero means absent and one means
 present. The reserved eight-byte word leaves the guarded and transition states
 backend-private for later inline-class stages; their exact future encoding may
 change without changing source behavior or the C runtime ABI.

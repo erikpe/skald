@@ -13,7 +13,7 @@ use super::{
         HirCheckedObjectView, HirFieldPlace, HirMethodReceiver, HirObjectPlace, HirObjectSource,
         HirObjectView, HirSelectedCopyOperation, HirViewTarget,
     },
-    HirOptionalPlace, HirPresenceTestKind, HirSharedTransfer, Type,
+    HirOptionalOperand, HirOptionalSource, HirPresenceTestKind, HirSharedTransfer, Type,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -58,10 +58,10 @@ pub enum HirExpressionKind {
     },
     TypeTest(HirTypeTest),
     PresenceTest {
-        source: HirOptionalPlace,
+        source: HirOptionalOperand,
         kind: HirPresenceTestKind,
     },
-    Unwrap(HirOptionalPlace),
+    Unwrap(HirOptionalOperand),
     Grouped(Box<HirExpression>),
 }
 
@@ -115,6 +115,10 @@ impl HirMethodCallTarget {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirCallArgument {
     Value(HirExpression),
+    Optional {
+        source: HirOptionalSource,
+        payload: super::HirPrimitiveType,
+    },
     Place(HirObjectPlace),
     View(HirObjectView),
     CheckedView(Box<HirCheckedObjectView>),
@@ -133,6 +137,7 @@ impl HirCallArgument {
     pub const fn span(&self) -> Span {
         match self {
             Self::Value(expression) => expression.span,
+            Self::Optional { source, .. } => source.span(),
             Self::Place(place) => place.span(),
             Self::View(view) => view.span,
             Self::CheckedView(view) => view.span,

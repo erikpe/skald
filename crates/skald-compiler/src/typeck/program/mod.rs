@@ -405,3 +405,19 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         }
     }
 }
+
+/// Compares resolved type identities while ignoring source-location metadata
+/// carried by compound type syntax.
+pub(super) fn same_resolved_type(left: &ResolvedType, right: &ResolvedType) -> bool {
+    match (&left.kind, &right.kind) {
+        (
+            ResolvedTypeKind::Optional { payload: left, .. },
+            ResolvedTypeKind::Optional { payload: right, .. },
+        ) => left == right,
+        (
+            ResolvedTypeKind::OptionalShared { target: left, .. },
+            ResolvedTypeKind::OptionalShared { target: right, .. },
+        ) => left == right,
+        (left, right) => left == right,
+    }
+}

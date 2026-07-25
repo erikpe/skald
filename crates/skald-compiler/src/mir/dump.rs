@@ -159,6 +159,10 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
                     MirSynthesizedFieldCopy::Primitive { field } => {
                         let _ = writeln!(output, "          Primitive {field}");
                     }
+                    MirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
+                        let _ =
+                            writeln!(output, "          OptionalPrimitive {field} : {payload}?");
+                    }
                     MirSynthesizedFieldCopy::Shared { field } => {
                         let _ = writeln!(output, "          Shared {field}");
                     }
@@ -523,17 +527,17 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 write_span(output, replace.span);
             }
             MirInstruction::OptionalInitialize(initialize) => {
-                let _ = write!(
-                    output,
-                    "optional-initialize {} from ",
-                    initialize.destination
-                );
-                dump_optional_source(output, initialize.source);
+                output.push_str("optional-initialize ");
+                dump_place(output, &initialize.destination);
+                output.push_str(" from ");
+                dump_optional_source(output, &initialize.source);
                 write_span(output, initialize.span);
             }
             MirInstruction::OptionalAssign(assignment) => {
-                let _ = write!(output, "optional-assign {} from ", assignment.destination);
-                dump_optional_source(output, assignment.source);
+                output.push_str("optional-assign ");
+                dump_place(output, &assignment.destination);
+                output.push_str(" from ");
+                dump_optional_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
         }
@@ -603,9 +607,11 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             failure_target,
             span,
         }) => {
+            output.push_str("optional-unwrap ");
+            dump_place(output, source);
             let _ = write!(
                 output,
-                "optional-unwrap {source} into {destination}, success {success_target}, failure {failure_target}"
+                " into {destination}, success {success_target}, failure {failure_target}"
             );
             write_span(output, *span);
         }
@@ -757,20 +763,22 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 MirPresenceTestKind::Some => "some",
                 MirPresenceTestKind::None => "none",
             };
-            let _ = write!(output, "optional-presence {kind} {source}");
+            let _ = write!(output, "optional-presence {kind} ");
+            dump_place(output, source);
         }
     }
     let _ = write!(output, " : {}", rvalue.ty);
 }
 
-fn dump_optional_source(output: &mut String, source: MirOptionalSource) {
+fn dump_optional_source(output: &mut String, source: &MirOptionalSource) {
     match source {
         MirOptionalSource::Absent => output.push_str("absent"),
         MirOptionalSource::Present(value) => {
             let _ = write!(output, "present {value}");
         }
-        MirOptionalSource::Copy(storage) => {
-            let _ = write!(output, "copy {storage}");
+        MirOptionalSource::Copy(place) => {
+            output.push_str("copy ");
+            dump_place(output, place);
         }
     }
 }

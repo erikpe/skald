@@ -59,7 +59,7 @@ pub enum MirTerminator {
         span: Span,
     },
     OptionalUnwrap {
-        source: super::ids::StorageId,
+        source: super::value::MirPlace,
         destination: super::ids::StorageId,
         success_target: BlockId,
         failure_target: BlockId,

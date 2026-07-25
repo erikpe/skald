@@ -299,6 +299,12 @@ impl HirDumper {
                             HirSynthesizedFieldCopy::Primitive { field } => {
                                 dumper.raw_line(&format!("Primitive {field}"));
                             }
+                            HirSynthesizedFieldCopy::OptionalPrimitive { field, payload } => {
+                                dumper.raw_line(&format!(
+                                    "OptionalPrimitive {field} : {}?",
+                                    payload.name()
+                                ));
+                            }
                             HirSynthesizedFieldCopy::Shared { field } => {
                                 dumper.raw_line(&format!("Shared {field}"));
                             }
@@ -472,6 +478,7 @@ impl HirDumper {
                             });
                         }
                         HirReturnValue::Shared(value) => dumper.shared_transfer(value),
+                        HirReturnValue::Optional(source) => dumper.optional_source(source),
                     });
                 }
             }
@@ -542,13 +549,16 @@ impl HirDumper {
             HirStatement::OptionalAssignment(assignment) => {
                 self.line(
                     &format!(
-                        "OptionalAssignment {} : {}?",
-                        assignment.destination,
+                        "OptionalAssignment {:?} : {}?",
+                        assignment.kind,
                         assignment.payload.name()
                     ),
                     assignment.span,
                 );
-                self.indented(|dumper| dumper.optional_source(&assignment.source));
+                self.indented(|dumper| {
+                    dumper.optional_place(&assignment.destination);
+                    dumper.optional_source(&assignment.source);
+                });
             }
         }
     }
@@ -707,13 +717,12 @@ impl HirDumper {
                     crate::hir::HirPresenceTestKind::Some => "Some",
                     crate::hir::HirPresenceTestKind::None => "None",
                 };
-                self.typed_line(
-                    &format!("PresenceTest {kind} {}", source.binding),
-                    expression,
-                );
+                self.typed_line(&format!("PresenceTest {kind}"), expression);
+                self.indented(|dumper| dumper.optional_operand(source));
             }
             HirExpressionKind::Unwrap(source) => {
-                self.typed_line(&format!("OptionalUnwrap {}", source.binding), expression);
+                self.typed_line("OptionalUnwrap", expression);
+                self.indented(|dumper| dumper.optional_operand(source));
             }
         }
     }
@@ -726,7 +735,34 @@ impl HirDumper {
                 self.indented(|dumper| dumper.expression(value));
             }
             crate::hir::HirOptionalSource::Copy(place) => {
-                self.line(&format!("OptionalCopy {}", place.binding), place.span);
+                self.line("OptionalCopy", place.span);
+                self.indented(|dumper| dumper.optional_place(place));
+            }
+            crate::hir::HirOptionalSource::Produced(expression) => {
+                self.line("OptionalProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+        }
+    }
+
+    fn optional_operand(&mut self, operand: &crate::hir::HirOptionalOperand) {
+        match operand {
+            crate::hir::HirOptionalOperand::Place(place) => self.optional_place(place),
+            crate::hir::HirOptionalOperand::Produced(expression) => {
+                self.line("OptionalProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+        }
+    }
+
+    fn optional_place(&mut self, place: &crate::hir::HirOptionalPlace) {
+        match &place.storage {
+            crate::hir::HirOptionalStorage::Binding(binding) => {
+                self.line(&format!("OptionalPlace {binding}"), place.span);
+            }
+            crate::hir::HirOptionalStorage::Field(field) => {
+                self.line("OptionalFieldPlace", place.span);
+                self.indented(|dumper| dumper.field_place(field));
             }
         }
     }
@@ -800,6 +836,13 @@ impl HirDumper {
             HirCallArgument::Value(expression) => {
                 self.line("ValueArgument", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
+            }
+            HirCallArgument::Optional { source, payload } => {
+                self.line(
+                    &format!("OptionalArgument {}?", payload.name()),
+                    source.span(),
+                );
+                self.indented(|dumper| dumper.optional_source(source));
             }
             HirCallArgument::Place(place) => {
                 self.line("PlaceArgument", place.span());

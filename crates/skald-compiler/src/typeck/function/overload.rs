@@ -18,6 +18,7 @@ use crate::{
 #[derive(Clone, Copy)]
 struct ArgumentAnalysis {
     ty: Type,
+    absent: bool,
     object: Option<ObjectArgument>,
 }
 
@@ -153,19 +154,36 @@ impl CallableChecker<'_, '_> {
     }
 
     fn analyze_argument(&self, expression: &ResolvedExpression) -> ArgumentAnalysis {
+        if matches!(expression, ResolvedExpression::Absent(_)) {
+            return ArgumentAnalysis {
+                ty: Type::Unit,
+                absent: true,
+                object: None,
+            };
+        }
         let ty = self.static_expression_type(expression);
         let object = matches!(ty, Type::Class(_) | Type::Interface(_) | Type::Obj)
             .then(|| self.object_argument(expression))
             .flatten();
-        ArgumentAnalysis { ty, object }
+        ArgumentAnalysis {
+            ty,
+            absent: false,
+            object,
+        }
     }
 
     fn static_expression_type(&self, expression: &ResolvedExpression) -> Type {
         match expression {
-            ResolvedExpression::Absent(_)
-            | ResolvedExpression::PresenceTest(_)
-            | ResolvedExpression::Unwrap(_) => {
-                unreachable!("the optional-value type-checking gate runs before overload analysis")
+            ResolvedExpression::Absent(_) => {
+                unreachable!("absent arguments are handled before static type analysis")
+            }
+            ResolvedExpression::PresenceTest(_) => Type::Bool,
+            ResolvedExpression::Unwrap(unwrap) => {
+                let Type::OptionalPrimitive(payload) = self.static_expression_type(&unwrap.source)
+                else {
+                    unreachable!("resolved unwrap source must have an optional type");
+                };
+                payload.payload_type()
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
@@ -301,6 +319,11 @@ impl CallableChecker<'_, '_> {
         let expected = lower_type(&parameter.type_syntax);
         match parameter.binding_mode {
             ResolvedParameterBindingMode::Value => match expected {
+                Type::OptionalPrimitive(payload) => {
+                    argument.absent
+                        || argument.ty == Type::OptionalPrimitive(payload)
+                        || argument.ty == payload.payload_type()
+                }
                 Type::Class(target) => {
                     let Type::Class(actual) = argument.ty else {
                         return false;
@@ -322,7 +345,7 @@ impl CallableChecker<'_, '_> {
                     };
                     crate::typeck::shared::target_accepts(self.program, expected, actual)
                 }
-                primitive => argument.ty == primitive,
+                primitive => !argument.absent && argument.ty == primitive,
             },
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
@@ -377,7 +400,12 @@ impl CallableChecker<'_, '_> {
             .all(|(candidate, other)| {
                 let candidate = lower_type(&candidate.type_syntax);
                 let other = lower_type(&other.type_syntax);
-                let compatible = self.parameter_type_accepts(candidate, other);
+                let compatible = self.parameter_type_accepts(candidate, other)
+                    || matches!(
+                        (candidate, other),
+                        (candidate, Type::OptionalPrimitive(payload))
+                            if candidate == payload.payload_type()
+                    );
                 strict |= compatible && candidate != other;
                 compatible
             })
@@ -461,7 +489,13 @@ impl CallableChecker<'_, '_> {
     fn argument_type_list(&self, arguments: &[ArgumentAnalysis]) -> String {
         arguments
             .iter()
-            .map(|argument| self.type_name(argument.ty))
+            .map(|argument| {
+                if argument.absent {
+                    "none".to_owned()
+                } else {
+                    self.type_name(argument.ty)
+                }
+            })
             .collect::<Vec<_>>()
             .join(", ")
     }

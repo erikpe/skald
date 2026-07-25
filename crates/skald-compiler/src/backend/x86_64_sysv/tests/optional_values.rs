@@ -53,3 +53,61 @@ fn absent_primitive_optional_unwrap_terminates() {
 
     assert!(!run_native_assembly(&output).success());
 }
+
+#[test]
+fn optional_fields_calls_results_and_stack_pressure_execute() {
+    let source = "class Holder {\n\
+        value: i64?;\n\
+        init(value: i64?) { self.value = value; }\n\
+        mut fn replace(value: i64?) -> i64? {\n\
+            self.value = self.value;\n\
+            self.value = value;\n\
+            return self.value;\n\
+        }\n\
+    }\n\
+    fn choose(a: i64?, b: i64?, c: i64?, d: i64?, e: i64?, f: i64?, g: i64?) -> i64? {\n\
+        if (g is some) { return g; }\n\
+        return a;\n\
+    }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(none);\n\
+        var result: i64? = holder.replace(choose(1, 2, 3, 4, 5, 6, 7));\n\
+        var copy: Holder = holder;\n\
+        copy = holder;\n\
+        return copy.value!;\n\
+    }\n";
+    let output = assembly(source);
+
+    assert!(output.contains("call .Lska_fn_"));
+    assert!(output.contains("mov qword ptr [rsp]"));
+    assert_eq!(run_native_assembly(&output).code(), Some(7), "{output}");
+}
+
+#[test]
+fn optional_values_execute_through_virtual_and_interface_calls() {
+    let source = "interface Maybe {\n\
+        fn forward(value: i64?) -> i64?;\n\
+    }\n\
+    class Base {\n\
+        init() {}\n\
+        virtual fn forward(value: i64?) -> i64? { return value; }\n\
+    }\n\
+    class Derived extends Base implements Maybe {\n\
+        init() { super(); }\n\
+        override fn forward(value: i64?) -> i64? { return value; }\n\
+    }\n\
+    fn through_interface(ref source: Maybe, value: i64?) -> i64? {\n\
+        return source.forward(value);\n\
+    }\n\
+    fn through_virtual(ref source: Base, value: i64?) -> i64? {\n\
+        return source.forward(value);\n\
+    }\n\
+    fn main() -> i64 {\n\
+        var item: Derived = Derived();\n\
+        var left: i64? = through_interface(item, 20);\n\
+        var right: i64? = through_virtual(item, 22);\n\
+        return left! + right!;\n\
+    }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}

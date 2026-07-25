@@ -310,11 +310,11 @@ fn signature_difference(
         if parameter_mode_kind(actual.binding_mode) != parameter_mode_kind(expected.binding_mode) {
             return Some("a parameter binding mode differs from the interface requirement");
         }
-        if actual.type_syntax.kind != expected.type_syntax.kind {
+        if !super::same_resolved_type(&actual.type_syntax, &expected.type_syntax) {
             return Some("a parameter type differs from the interface requirement");
         }
     }
-    (method.return_type.kind != requirement.return_type.kind)
+    (!super::same_resolved_type(&method.return_type, &requirement.return_type))
         .then_some("result type differs from the interface requirement")
 }
 

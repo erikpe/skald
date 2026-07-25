@@ -25,9 +25,12 @@ pub(super) fn spill_parameters(
     output: &mut Vec<Instruction>,
 ) -> Result<(), BackendError> {
     let has_return_destination = function.return_storage().is_some_and(|storage| {
-        function
-            .storage(storage)
-            .is_some_and(|storage| matches!(storage.ty, MirType::Class(_)))
+        function.storage(storage).is_some_and(|storage| {
+            matches!(
+                storage.ty,
+                MirType::Class(_) | MirType::OptionalPrimitive(_)
+            )
+        })
     });
     let layout = classify_call(
         signature.parameters,
@@ -327,7 +330,10 @@ impl InstructionSelector<'_, '_> {
                 )?;
             }
             (MirArgument::OwnedPlace(place), MirParameterMode::Value)
-                if matches!(parameter.ty, MirType::Class(_)) =>
+                if matches!(
+                    parameter.ty,
+                    MirType::Class(_) | MirType::OptionalPrimitive(_)
+                ) =>
             {
                 self.select_place_address(place, locations.value())?;
             }

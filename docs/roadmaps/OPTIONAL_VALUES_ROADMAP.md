@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP3 is next.
+Status: in progress; OP4 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -183,7 +183,7 @@ documents remain historical and are not migration targets.
 - [x] OP0 — Freeze language and compiler optional-value contracts
 - [x] OP1 — Add optional syntax and resolved type identities
 - [x] OP2 — Execute primitive optional locals and checked inspection
-- [ ] OP3 — Carry primitive optionals through stored and callable boundaries
+- [x] OP3 — Carry primitive optionals through stored and callable boundaries
 - [ ] OP4 — Implement inline-class optional lifecycle
 - [ ] OP5 — Enforce checked payload views and dynamic presence guards
 - [ ] OP6 — Implement optional shared owners
@@ -311,27 +311,27 @@ optional positions remain rejected.
 internal calls before class payload lifecycle or shared ownership adds further
 conditional resources.
 
-- [ ] Permit primitive optional fields and enforce explicit exactly-once
+- [x] Permit primitive optional fields and enforce explicit exactly-once
       initialization with `none`, `T`, or exact `T?`.
-- [ ] Implement absent/present field reads and assignment using the lifecycle
+- [x] Implement absent/present field reads and assignment using the lifecycle
       matrix, including receiver-before-source evaluation and overlapping
       source/destination safety.
-- [ ] Include primitive optional fields in synthesized class construction,
+- [x] Include primitive optional fields in synthesized class construction,
       copy construction, copy assignment, and destruction plans without
       reading absent payload bytes.
-- [ ] Permit primitive optional value parameters and results for internal
+- [x] Permit primitive optional value parameters and results for internal
       functions, methods, interfaces, initializers, and virtual overrides under
       one documented exact-signature rule.
-- [ ] Implement the documented x86-64 internal parameter/result convention,
+- [x] Implement the documented x86-64 internal parameter/result convention,
       including register/stack classification, result preservation, call
       marshaling, and field/temporary layout.
-- [ ] Contextually type `none` at arguments and returns. Extend initializer
+- [x] Contextually type `none` at arguments and returns. Extend initializer
       applicability/specificity so exact `T` beats injected `T?`, `none`
       admits only optional candidates, and ambiguous optional candidates
       remain deterministic errors.
-- [ ] Reject every optional external parameter/result before MIR and keep the
+- [x] Reject every optional external parameter/result before MIR and keep the
       runtime ABI surface and version unchanged.
-- [ ] Update classes/lifecycle, functions/control flow, polymorphism,
+- [x] Update classes/lifecycle, functions/control flow, polymorphism,
       modules/interoperation, backend, runtime ABI, phases/IR, and testing
       documentation alongside the new positions.
 

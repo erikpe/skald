@@ -3,15 +3,17 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirExpression, HirExpressionKind, HirOptionalPlace, HirOptionalSource, HirPresenceTestKind,
-        HirPrimitiveType, Type,
+        HirExpression, HirExpressionKind, HirOptionalOperand, HirOptionalPlace, HirOptionalSource,
+        HirOptionalStorage, HirPresenceTestKind, HirPrimitiveType, Type,
     },
     resolve::{
         ResolvedExpression, ResolvedPresenceTestExpr, ResolvedPresenceTestKind, ResolvedUnwrapExpr,
     },
 };
 
-use super::{function::CallableChecker, program::TYPE_MISMATCH};
+use super::{
+    expression::is_call_through_groups, function::CallableChecker, program::TYPE_MISMATCH,
+};
 
 impl CallableChecker<'_, '_> {
     pub(super) fn check_optional_source(
@@ -32,6 +34,9 @@ impl CallableChecker<'_, '_> {
         }
 
         let value = self.check_expression(source)?;
+        if value.ty == Type::OptionalPrimitive(payload) {
+            return Some(HirOptionalSource::Produced(Box::new(value)));
+        }
         if value.ty != payload.payload_type() {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -53,7 +58,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         test: &ResolvedPresenceTestExpr,
     ) -> Option<HirExpression> {
-        let source = self.require_optional_place(&test.source, test.span, "presence test")?;
+        let source = self.require_optional_operand(&test.source, test.span, "presence test")?;
         Some(HirExpression {
             kind: HirExpressionKind::PresenceTest {
                 source,
@@ -71,22 +76,33 @@ impl CallableChecker<'_, '_> {
         &mut self,
         unwrap: &ResolvedUnwrapExpr,
     ) -> Option<HirExpression> {
-        let source = self.require_optional_place(&unwrap.source, unwrap.span, "checked unwrap")?;
+        let source =
+            self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+        let payload = source.payload();
         Some(HirExpression {
             kind: HirExpressionKind::Unwrap(source),
-            ty: source.payload.payload_type(),
+            ty: payload.payload_type(),
             span: unwrap.span,
         })
     }
 
-    fn require_optional_place(
+    fn require_optional_operand(
         &mut self,
         expression: &ResolvedExpression,
         span: crate::source::Span,
         context: &'static str,
-    ) -> Option<HirOptionalPlace> {
+    ) -> Option<HirOptionalOperand> {
         if let Some(place) = self.optional_place(expression) {
-            return Some(place);
+            return Some(HirOptionalOperand::Place(place));
+        }
+        if is_call_through_groups(expression) {
+            if let Some(value) = self.check_expression(expression) {
+                if matches!(value.ty, Type::OptionalPrimitive(_)) {
+                    return Some(HirOptionalOperand::Produced(Box::new(value)));
+                }
+                self.report_non_optional_operand(value.ty, span, context);
+                return None;
+            }
         }
         let actual = self.check_expression(expression).map(|value| value.ty);
         let label = actual.map_or_else(
@@ -103,14 +119,17 @@ impl CallableChecker<'_, '_> {
         None
     }
 
-    fn optional_place(&self, expression: &ResolvedExpression) -> Option<HirOptionalPlace> {
+    pub(super) fn optional_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirOptionalPlace> {
         match expression {
             ResolvedExpression::Binding(binding) => {
                 let Type::OptionalPrimitive(payload) = self.binding_type(binding.binding) else {
                     return None;
                 };
                 Some(HirOptionalPlace {
-                    binding: binding.binding,
+                    storage: HirOptionalStorage::Binding(binding.binding),
                     payload,
                     span: binding.span,
                 })
@@ -122,8 +141,40 @@ impl CallableChecker<'_, '_> {
                         ..place
                     })
             }
+            ResolvedExpression::FieldAccess(access) => {
+                let expression = self.check_field_read(access)?;
+                let Type::OptionalPrimitive(payload) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::FieldRead(place) = expression.kind else {
+                    unreachable!("field checking must produce a field-read expression");
+                };
+                Some(HirOptionalPlace {
+                    storage: HirOptionalStorage::Field(place),
+                    payload,
+                    span: expression.span,
+                })
+            }
             _ => None,
         }
+    }
+
+    fn report_non_optional_operand(
+        &mut self,
+        actual: Type,
+        span: crate::source::Span,
+        context: &'static str,
+    ) {
+        self.diagnostics.push(
+            Diagnostic::error(
+                TYPE_MISMATCH,
+                format!("{context} requires a primitive optional value"),
+            )
+            .with_primary_label(
+                span,
+                format!("expression has non-optional type `{}`", actual.name()),
+            ),
+        );
     }
 
     fn report_optional_payload_mismatch(

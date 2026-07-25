@@ -10,8 +10,8 @@ reference-counting realization, and executable shared-field layout are owned by 
 the current target profile below.
 The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
 optional layout, ABI, guard, and trap realization. Verified primitive optional
-local MIR is legal backend input; stored/callable optionals, class payloads,
-checked views, and optional shared owners remain planned.
+local, field, parameter, result, and temporary MIR is legal backend input;
+class payloads, checked views, and optional shared owners remain planned.
 
 ## Backend interface and target registry
 
@@ -71,13 +71,15 @@ inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
 input.
 
-Primitive optional locals follow the frozen layout in
+Primitive optional owning values follow the frozen layout in
 [Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): an
 eight-byte state word precedes the payload at its required alignment. The
 backend writes a present payload before publishing state, branches before
 reading a copied or unwrapped payload, and lowers verified absent-access
-failure to `ud2`. `shared? T`, optional ABI boundaries, class payloads, and
-guarded views retain their planned target rules.
+failure to `ud2`. Fields use that layout recursively. Internal primitive
+optional parameters/results use the documented pointer aggregate convention;
+`shared? T`, class payloads, and guarded views retain their planned target
+rules.
 
 ## Data layout
 
@@ -183,10 +185,11 @@ compiler-private address conventions for inline objects:
   first address selects the static class subobject or complete-object identity;
   forwarding preserves the latter two components unchanged. Read-only and
   mutable access use the same representation;
-- an exact-class value parameter is an address to caller-created parameter
-  storage whose ownership transfer was already selected in MIR; and
-- an exact-class result uses a hidden destination address before the receiver
-  and explicit arguments.
+- an exact-class or primitive-optional value parameter is an address to
+  caller-created aggregate storage whose ownership transfer was already
+  selected in MIR; and
+- an exact-class or primitive-optional result uses a hidden destination address
+  before the receiver and explicit arguments.
 
 For an object-returning method, the hidden result destination precedes all
 three receiver components. Each object alias's complete-object and metadata
@@ -212,10 +215,11 @@ alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
 `rbp`-relative addressing.
 
-Return destinations and owned class parameters store an incoming pointer in a
-frame home. Receivers and aliases additionally store complete-object and
-metadata homes for forwarding. Projecting a MIR place loads the appropriate
-base when indirect, then accumulates checked target base and field offsets.
+Return destinations and owned class or primitive-optional parameters store an
+incoming pointer in a frame home. Receivers and aliases additionally store
+complete-object and metadata homes for forwarding. Projecting a MIR place
+loads the appropriate base when indirect, then accumulates checked target base
+and field offsets.
 Byte fields use byte-width loads and stores; wider primitive and address
 values use their target-width operations.
 
