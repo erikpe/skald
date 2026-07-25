@@ -296,8 +296,9 @@ all use this same call facade. Stable shared local/parameter pointee places
 derive their complete payload at header offset 16 and dynamic metadata at
 offset 8, then reuse ordinary field layout, virtual/interface dispatch, and
 type-test machinery. Shared-owner casts execute from owner storage and shared
-fields. Shared-backed alias and anchor contexts remain gated by their owning
-frontend or MIR phases.
+fields. Verified call anchors use the same one-word owner representation and
+the existing retain/release lowering; they add no target ABI or C runtime
+operation.
 
 ## Symbols and process entry
 

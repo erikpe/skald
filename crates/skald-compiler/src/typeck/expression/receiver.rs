@@ -11,6 +11,15 @@ use super::CallableChecker;
 
 impl CallableChecker<'_, '_> {
     pub(super) fn object_origin(&self, place: &HirObjectPlace) -> HirObjectOrigin {
+        let root_type = self.binding_type(place.root());
+        if let Type::Shared(crate::hir::HirSharedTarget::Class(static_class)) = root_type {
+            return HirObjectOrigin::Shared {
+                binding: place.root(),
+                static_target: HirViewTarget::Class(static_class),
+                access: place.access,
+                span: place.span(),
+            };
+        }
         if let Some((projection_index, field)) = place
             .projections()
             .iter()
@@ -43,19 +52,10 @@ impl CallableChecker<'_, '_> {
             };
         }
 
-        let root_type = self.binding_type(place.root());
         let static_class = match root_type {
-            Type::Class(class) | Type::Shared(crate::hir::HirSharedTarget::Class(class)) => class,
+            Type::Class(class) => class,
             _ => unreachable!("a class object place must have a class-capable root"),
         };
-        if matches!(root_type, Type::Shared(_)) {
-            return HirObjectOrigin::Shared {
-                binding: place.root(),
-                static_target: HirViewTarget::Class(static_class),
-                access: place.access,
-                span: place.span(),
-            };
-        }
         if self.binding_carries_dynamic_origin(place.root()) {
             return HirObjectOrigin::Forwarded {
                 binding: place.root(),

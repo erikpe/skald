@@ -6,7 +6,7 @@ use crate::{
     source::Span,
 };
 
-use super::ResolvedObjectCastExpr;
+use super::{ResolvedExpression, ResolvedObjectCastExpr};
 
 pub type ResolvedObjectPlace = ObjectPath;
 
@@ -17,6 +17,12 @@ pub enum ResolvedObjectReceiver {
     BindingPath(ResolvedObjectPlace),
     CastRelative {
         cast: Box<ResolvedObjectCastExpr>,
+        projections: Vec<ObjectProjection>,
+        class: ClassId,
+        span: Span,
+    },
+    SharedExpression {
+        source: Box<ResolvedExpression>,
         projections: Vec<ObjectProjection>,
         class: ClassId,
         span: Span,
@@ -42,6 +48,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => path.class,
             Self::CastRelative { class, .. } => *class,
+            Self::SharedExpression { class, .. } => *class,
         }
     }
 
@@ -49,20 +56,21 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => path.span,
             Self::CastRelative { span, .. } => *span,
+            Self::SharedExpression { span, .. } => *span,
         }
     }
 
     pub const fn binding_path(&self) -> Option<&ResolvedObjectPlace> {
         match self {
             Self::BindingPath(path) => Some(path),
-            Self::CastRelative { .. } => None,
+            Self::CastRelative { .. } | Self::SharedExpression { .. } => None,
         }
     }
 
     pub const fn root(&self) -> Option<BindingId> {
         match self {
             Self::BindingPath(path) => Some(path.root),
-            Self::CastRelative { .. } => None,
+            Self::CastRelative { .. } | Self::SharedExpression { .. } => None,
         }
     }
 
@@ -70,6 +78,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => &path.projections,
             Self::CastRelative { projections, .. } => projections,
+            Self::SharedExpression { projections, .. } => projections,
         }
     }
 
@@ -77,6 +86,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(_) => None,
             Self::CastRelative { cast, .. } => Some(cast),
+            Self::SharedExpression { .. } => None,
         }
     }
 
@@ -90,6 +100,17 @@ impl ResolvedObjectReceiver {
                 ..
             } => Self::CastRelative {
                 cast,
+                projections,
+                class,
+                span,
+            },
+            Self::SharedExpression {
+                source,
+                projections,
+                class,
+                ..
+            } => Self::SharedExpression {
+                source,
                 projections,
                 class,
                 span,
@@ -108,6 +129,19 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Base(base));
                 Self::CastRelative {
                     cast,
+                    projections,
+                    class: base,
+                    span,
+                }
+            }
+            Self::SharedExpression {
+                source,
+                mut projections,
+                ..
+            } => {
+                projections.push(ObjectProjection::Base(base));
+                Self::SharedExpression {
+                    source,
                     projections,
                     class: base,
                     span,
@@ -133,6 +167,21 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Field(field));
                 Self::CastRelative {
                     cast,
+                    projections,
+                    class,
+                    span,
+                }
+            }
+            Self::SharedExpression {
+                source,
+                mut projections,
+                class: receiver_class,
+                ..
+            } => {
+                assert_eq!(field.class(), receiver_class);
+                projections.push(ObjectProjection::Field(field));
+                Self::SharedExpression {
+                    source,
                     projections,
                     class,
                     span,

@@ -301,6 +301,8 @@ pub enum MirStorageKind {
     /// Caller-owned storage transferred to one callee value parameter.
     Argument,
     Temporary,
+    /// Compiler-owned strong owner keeping a shared-backed call view alive.
+    SharedAnchor,
     /// Compiler-owned scalar home used to preserve block-local MIR values
     /// across checked-cast control-flow edges.
     ScalarSpill,

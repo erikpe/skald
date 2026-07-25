@@ -141,7 +141,7 @@ fn checked_class_casts_feed_every_owning_copy_context() {
     let Some(HirReturnValue::Object(HirObjectReturn::Copy { source, .. })) = &returned.value else {
         panic!("cast return must use copy construction");
     };
-    assert!(matches!(source, HirObjectSource::Checked(_)));
+    assert!(matches!(&**source, HirObjectSource::Checked(_)));
 
     let mir = lower_hir(&hir).expect("owning cast sources must lower");
     let dump = dump_mir(&mir);

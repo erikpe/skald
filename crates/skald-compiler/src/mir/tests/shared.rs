@@ -32,6 +32,17 @@ fn shared_cast_program() -> MirProgram {
     ))
 }
 
+fn shared_anchor_program() -> MirProgram {
+    lower_text(concat!(
+        "class Leaf { init() {} fn read() -> i64 { return 7; } }\n",
+        "class Holder { edge: shared Leaf; init() { self.edge = new Leaf(); } }\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder();\n",
+        "  return holder.edge.read();\n",
+        "}\n",
+    ))
+}
+
 fn main_instructions(program: &MirProgram) -> &[MirInstruction] {
     &program
         .definitions
@@ -105,6 +116,52 @@ fn shared_lifetime_dump_is_exact_and_deterministic() {
     assert!(dump.contains("shared-adopt"));
     assert!(dump.contains("end-full-expression"));
     assert!(dump.contains("shared-release"));
+}
+
+#[test]
+fn verifier_rejects_forged_or_ended_shared_call_anchors() {
+    let mut forged = shared_anchor_program();
+    let definition = forged
+        .definitions
+        .get_mut_for_test(forged.entry_function)
+        .unwrap();
+    let anchor = definition
+        .storage
+        .iter_mut()
+        .find(|storage| storage.kind == MirStorageKind::SharedAnchor)
+        .unwrap();
+    anchor.kind = MirStorageKind::Temporary;
+    assert!(has_error(
+        &forged,
+        "shared origin requires a stable or call-anchor owner"
+    ));
+
+    let mut ended = shared_anchor_program();
+    let instructions = main_instructions_mut(&mut ended);
+    let release = instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::SharedRelease(release)
+                    if release.owner
+                        == instructions.iter().find_map(|candidate| match candidate {
+                            MirInstruction::SharedFieldCopy(copy) => Some(copy.destination),
+                            _ => None,
+                        }).unwrap()
+            )
+        })
+        .unwrap();
+    let release = instructions.remove(release);
+    let call = instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::Call(_)))
+        .unwrap();
+    instructions.insert(call, release);
+    assert!(has_error(
+        &ended,
+        "shared pointee is used without a live owner"
+    ));
 }
 
 #[test]
@@ -402,7 +459,7 @@ fn rejects_corrupt_shared_pointee_origin_and_dead_owner_use() {
     *static_target = MirViewTarget::Obj;
     assert!(has_error(
         &wrong_origin,
-        "shared origin requires a stable owner with the declared static target"
+        "shared origin requires a stable or call-anchor owner with the declared static target"
     ));
 
     let mut dead_owner = program;
@@ -718,7 +775,7 @@ fn rejects_move_before_release_and_live_full_expression_temporaries() {
         .retain(|instruction| !matches!(instruction, MirInstruction::SharedMove(_)));
     assert!(has_error(
         &live_temporary,
-        "temporary remains live at full-expression boundary"
+        "shared temporary remains live at full-expression boundary"
     ));
 }
 

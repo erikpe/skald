@@ -19,6 +19,7 @@ pub(super) struct ResolvedCallableBody {
 #[derive(Clone, Copy)]
 pub(super) struct BodyResolutionEnvironment<'program> {
     top_levels: &'program HashMap<String, TopLevelSymbol>,
+    functions: &'program ResolvedFunctionDeclarationTable,
     classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     hierarchy: &'program ResolvedClassHierarchy,
@@ -27,12 +28,14 @@ pub(super) struct BodyResolutionEnvironment<'program> {
 impl<'program> BodyResolutionEnvironment<'program> {
     pub(super) fn new(
         top_levels: &'program HashMap<String, TopLevelSymbol>,
+        functions: &'program ResolvedFunctionDeclarationTable,
         classes: &'program ResolvedClassDeclarationTable,
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         hierarchy: &'program ResolvedClassHierarchy,
     ) -> Self {
         Self {
             top_levels,
+            functions,
             classes,
             interfaces,
             hierarchy,

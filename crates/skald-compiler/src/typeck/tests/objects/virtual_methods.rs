@@ -392,11 +392,12 @@ fn object_result_virtual_calls_use_the_same_explicit_target() {
     let HirStatement::Return(return_) = &through.body.statements[0] else {
         panic!("through must return the virtual object call");
     };
-    let Some(HirReturnValue::Object(crate::hir::HirObjectReturn::Copy {
-        source: crate::hir::HirObjectSource::Produced(producer),
-        ..
-    })) = &return_.value
+    let Some(HirReturnValue::Object(crate::hir::HirObjectReturn::Copy { source, .. })) =
+        &return_.value
     else {
+        panic!("virtual object result must remain an explicit producer");
+    };
+    let crate::hir::HirObjectSource::Produced(producer) = &**source else {
         panic!("virtual object result must remain an explicit producer");
     };
     let crate::hir::HirObjectProducer::Call(call) = producer else {

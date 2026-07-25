@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **frozen design; shared-owner casts implemented**. This
+Status: **shared-backed call anchors implemented**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -19,10 +19,12 @@ MIR, and execute as one-word owning edges on x86-64.
 Compatible shared up-views, stable shared-local and value-parameter member
 access, virtual/interface dispatch, and `is` type tests now execute without
 changing allocation identity or dynamic metadata. Shared-backed alias
-arguments and plain checked place casts still require the later hidden-anchor
-slices. Owner-preserving `(shared T) source` casts execute with retain for a
+arguments and method/interface receivers now use explicit verified hidden
+owners for fields, nested places, and produced owners; stable owners borrow
+directly. Plain checked place casts still require the later hidden-anchor
+slice. Owner-preserving `(shared T) source` casts execute with retain for a
 named source and transfer for a produced source, after any required metadata
-check. Explicit copy allocation and anchors remain unavailable.
+check. Explicit copy allocation remains unavailable.
 Compiler and runtime realization is frozen separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
@@ -212,13 +214,12 @@ order; Skald does not promise data-race safety or thread-safe sharing in this
 initial profile.
 
 Stable shared locals and value parameters may be used directly as class method
-receivers and as the roots of inherited base and field projections. A
-`shared Interface` may call that interface's requirements. These operations
-borrow the existing payload for the duration of the expression; they do not
-create an owner, allocate, copy, slice, or replace the handle's static target.
-The shared owner itself remains live for the complete operation. Borrowing
-from a replaceable shared field or passing a shared-backed alias beyond this
-stable expression boundary is reserved for the hidden-anchor implementation.
+receivers, alias arguments, and roots of inherited base and field projections.
+A `shared Interface` may call that interface's requirements. A replaceable
+shared field is copied into a hidden strong owner before its pointee is
+exposed; a produced owner is adopted into hidden storage. These anchors cover
+inline payload subobjects, remain live through the complete call, and are
+released in reverse completion order after the result is secured.
 
 The expression `owner is T` is available for shared class, interface, and
 `Obj` owners. It reads the allocation header's dynamic metadata and neither

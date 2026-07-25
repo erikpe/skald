@@ -884,6 +884,7 @@ impl HirDumper {
                     target,
                     access,
                     span,
+                    ..
                 } => dumper.line(
                     &format!(
                         "ForwardedView {binding} : {} {}",
@@ -897,6 +898,7 @@ impl HirDumper {
                     target,
                     access,
                     span,
+                    ..
                 } => dumper.line(
                     &format!(
                         "SharedPointee {binding} : {} {}",
@@ -905,6 +907,23 @@ impl HirDumper {
                     ),
                     *span,
                 ),
+                HirViewSource::AnchoredShared {
+                    source,
+                    target,
+                    access,
+                    span,
+                    ..
+                } => {
+                    dumper.line(
+                        &format!(
+                            "AnchoredSharedPointee : {} {}",
+                            view_target_name(*target),
+                            access_name(*access)
+                        ),
+                        *span,
+                    );
+                    dumper.indented(|dumper| dumper.shared_source(source));
+                }
             }
             dumper.object_origin(&view.origin);
         });
@@ -959,7 +978,13 @@ impl HirDumper {
 
     fn field_place(&mut self, place: &HirFieldPlace) {
         self.line(&format!("FieldPlace {}", place.field), place.span);
-        self.indented(|dumper| dumper.object_place(&place.receiver));
+        self.indented(|dumper| {
+            if let Some(view) = &place.shared_view {
+                dumper.object_view("SharedFieldReceiver", view);
+            } else {
+                dumper.object_place(&place.receiver);
+            }
+        });
     }
 
     fn object_place(&mut self, place: &HirObjectPlace) {
@@ -980,8 +1005,12 @@ impl HirDumper {
     fn method_receiver(&mut self, receiver: &HirMethodReceiver) {
         self.heading("Receiver");
         self.indented(|dumper| {
-            dumper.object_place(&receiver.place);
-            dumper.object_origin(&receiver.origin);
+            if let Some(view) = &receiver.shared_view {
+                dumper.object_view("SharedMethodReceiver", view);
+            } else {
+                dumper.object_place(&receiver.place);
+                dumper.object_origin(&receiver.origin);
+            }
         });
     }
 
@@ -1025,6 +1054,18 @@ impl HirDumper {
             } => self.line(
                 &format!(
                     "Origin Shared {binding} : {} {}",
+                    view_target_name(*static_target),
+                    access_name(*access)
+                ),
+                *span,
+            ),
+            HirObjectOrigin::AnchoredShared {
+                static_target,
+                access,
+                span,
+            } => self.line(
+                &format!(
+                    "Origin AnchoredShared : {} {}",
                     view_target_name(*static_target),
                     access_name(*access)
                 ),

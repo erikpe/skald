@@ -6,9 +6,11 @@ use crate::object_path::ObjectProjection;
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
-        let receiver = match &place.checked_cast {
-            Some(cast) => self.lower_checked_object_view(cast).source,
-            None => self.lower_object_place(&place.receiver),
+        let receiver = match (&place.checked_cast, &place.shared_view) {
+            (Some(cast), None) => self.lower_checked_object_view(cast).source,
+            (None, Some(view)) => self.lower_object_view(view).source,
+            (None, None) => self.lower_object_place(&place.receiver),
+            (Some(_), Some(_)) => unreachable!("a field carrier has one provenance"),
         };
         receiver.project_field(place.field)
     }
@@ -27,6 +29,7 @@ impl BodyLowerer<'_> {
                 | MirStorageKind::Local => MirPlace::base(storage),
                 MirStorageKind::Argument
                 | MirStorageKind::Temporary
+                | MirStorageKind::SharedAnchor
                 | MirStorageKind::ScalarSpill
                 | MirStorageKind::SharedAllocation => {
                     unreachable!("HIR object paths cannot use compiler-owned storage")

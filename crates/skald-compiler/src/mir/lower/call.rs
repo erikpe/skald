@@ -246,12 +246,33 @@ impl BodyLowerer<'_> {
                     _ => unreachable!("forwarded HIR views require indirect storage"),
                 }
             }
-            HirViewSource::Shared { binding, .. } => {
-                MirPlace::shared_pointee(self.storage_for_binding(*binding))
-            }
+            HirViewSource::Shared {
+                binding,
+                projections,
+                ..
+            } => projections.iter().fold(
+                MirPlace::shared_pointee(self.storage_for_binding(*binding)),
+                lower_projection,
+            ),
+            HirViewSource::AnchoredShared {
+                source,
+                projections,
+                ..
+            } => projections.iter().fold(
+                MirPlace::shared_pointee(self.new_shared_anchor(source, view.span)),
+                lower_projection,
+            ),
         };
         let origin = produced_class.map_or_else(
-            || self.lower_object_origin(&view.origin),
+            || match &view.source {
+                HirViewSource::AnchoredShared { target, .. } => MirObjectOrigin::Shared {
+                    owner: source.base.storage(),
+                    static_target: type_operations::lower_view_target(*target),
+                    access: MirAliasAccess::Mutable,
+                    span: view.span,
+                },
+                _ => self.lower_object_origin(&view.origin),
+            },
             |dynamic_class| MirObjectOrigin::Exact {
                 complete: source.clone(),
                 dynamic_class,
@@ -272,6 +293,13 @@ impl BodyLowerer<'_> {
     ) -> MirMethodReceiver {
         if let Some(cast) = &receiver.checked_cast {
             let view = self.lower_checked_object_view(cast);
+            return MirMethodReceiver {
+                place: view.source,
+                origin: view.origin,
+            };
+        }
+        if let Some(view) = &receiver.shared_view {
+            let view = self.lower_object_view(view);
             return MirMethodReceiver {
                 place: view.source,
                 origin: view.origin,
@@ -406,6 +434,9 @@ impl BodyLowerer<'_> {
                 access: lower_access(*access),
                 span: *span,
             },
+            HirObjectOrigin::AnchoredShared { .. } => {
+                unreachable!("anchored origins are bound while lowering their view source")
+            }
             HirObjectOrigin::Produced { .. } => {
                 unreachable!("produced origins are replaced while lowering their source")
             }
@@ -425,6 +456,16 @@ pub(super) const fn lower_method_target(target: HirMethodCallTarget) -> MirMetho
             slot,
             selected,
         },
+    }
+}
+
+fn lower_projection(
+    place: MirPlace,
+    projection: &crate::object_path::ObjectProjection,
+) -> MirPlace {
+    match *projection {
+        crate::object_path::ObjectProjection::Base(base) => place.project_base(base),
+        crate::object_path::ObjectProjection::Field(field) => place.project_field(field),
     }
 }
 

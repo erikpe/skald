@@ -328,12 +328,88 @@ impl CallableResolver<'_, '_> {
                     return None;
                 };
                 let span = cast.span;
+                if matches!(
+                    cast.target_mode,
+                    crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
+                ) {
+                    return Some((
+                        ResolvedInterfaceReceiver::SharedExpression(Box::new(
+                            ResolvedExpression::ObjectCast(cast),
+                        )),
+                        interface,
+                        span,
+                    ));
+                }
                 Some((
                     ResolvedInterfaceReceiver::Cast(Box::new(cast)),
                     interface,
                     span,
                 ))
             }
+            syntax::Expression::MemberAccess(_) | syntax::Expression::Call(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let interface = self.shared_expression_interface(&resolved)?;
+                let span = expression.span();
+                Some((
+                    ResolvedInterfaceReceiver::SharedExpression(Box::new(resolved)),
+                    interface,
+                    span,
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    fn shared_expression_interface(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<crate::identity::InterfaceId> {
+        let kind = match expression {
+            ResolvedExpression::FieldAccess(access) => {
+                self.environment
+                    .classes
+                    .get(access.field.class())?
+                    .field(access.field)?
+                    .type_syntax
+                    .kind
+            }
+            ResolvedExpression::DirectCall(call) => {
+                self.environment
+                    .functions
+                    .get(call.function)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::MethodCall(call) => {
+                self.environment
+                    .classes
+                    .get(call.method.class())?
+                    .method(call.method)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::InterfaceCall(call) => {
+                self.environment
+                    .interfaces
+                    .get(call.interface)?
+                    .requirements
+                    .get(call.requirement.index())?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::ObjectCast(cast) => match cast.target_mode {
+                crate::resolve::ResolvedObjectCastTargetMode::Shared { .. } => cast.target.kind,
+                crate::resolve::ResolvedObjectCastTargetMode::Plain => return None,
+            },
+            ResolvedExpression::Grouped(grouped) => {
+                return self.shared_expression_interface(&grouped.expression)
+            }
+            _ => return None,
+        };
+        match kind {
+            ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Interface(
+                interface,
+            )) => Some(interface),
             _ => None,
         }
     }

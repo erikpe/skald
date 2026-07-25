@@ -92,7 +92,7 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn check_shared_source(
+    pub(super) fn check_shared_source(
         &mut self,
         expression: &ResolvedExpression,
         cast_source: bool,

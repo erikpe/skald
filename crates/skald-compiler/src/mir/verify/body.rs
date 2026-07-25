@@ -124,6 +124,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::Return, None)
                     | (MirStorageKind::Argument, None)
                     | (MirStorageKind::Temporary, None)
+                    | (MirStorageKind::SharedAnchor, None)
                     | (MirStorageKind::CheckedView(_), None)
                     | (MirStorageKind::ScalarSpill, None)
                     | (MirStorageKind::SharedAllocation, None)
@@ -162,7 +163,10 @@ impl<'mir> Verifier<'mir> {
             }
             if matches!(
                 storage.kind,
-                MirStorageKind::Return | MirStorageKind::Argument | MirStorageKind::Temporary
+                MirStorageKind::Return
+                    | MirStorageKind::Argument
+                    | MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
             ) && !matches!(storage.ty, MirType::Class(_) | MirType::Shared(_))
             {
                 self.function_error(
@@ -187,6 +191,7 @@ impl<'mir> Verifier<'mir> {
                     MirStorageKind::Local
                         | MirStorageKind::Parameter
                         | MirStorageKind::Temporary
+                        | MirStorageKind::SharedAnchor
                         | MirStorageKind::Argument
                         | MirStorageKind::Return
                 )

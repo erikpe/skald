@@ -154,6 +154,7 @@ impl<'mir> Verifier<'mir> {
                 storage.kind,
                 MirStorageKind::Local
                     | MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
                     | MirStorageKind::Argument
                     | MirStorageKind::Return
             ) && allocation_class.is_some_and(|class| {
@@ -265,6 +266,7 @@ impl<'mir> Verifier<'mir> {
                     destination.kind,
                     MirStorageKind::Local
                         | MirStorageKind::Temporary
+                        | MirStorageKind::SharedAnchor
                         | MirStorageKind::Argument
                         | MirStorageKind::Return
                 )
@@ -299,6 +301,7 @@ impl<'mir> Verifier<'mir> {
                 storage.kind,
                 MirStorageKind::Local
                     | MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
                     | MirStorageKind::Argument
                     | MirStorageKind::Return
             ) && storage.ty == MirType::Shared(cast.target)
@@ -508,7 +511,10 @@ impl<'mir> Verifier<'mir> {
         if !function.storage(release.owner).is_some_and(|storage| {
             matches!(
                 storage.kind,
-                MirStorageKind::Local | MirStorageKind::Parameter | MirStorageKind::Temporary
+                MirStorageKind::Local
+                    | MirStorageKind::Parameter
+                    | MirStorageKind::Temporary
+                    | MirStorageKind::SharedAnchor
             ) && matches!(storage.ty, MirType::Shared(_))
         }) {
             self.block_error(
@@ -809,7 +815,15 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                             "shared temporary remains live at full-expression boundary",
                         );
                     }
-                    state.pending_full_expression_boundary = false;
+                    let owners_remain = state.live_owners.iter().any(|owner| {
+                        self.function.storage(*owner).is_some_and(|storage| {
+                            matches!(
+                                storage.kind,
+                                MirStorageKind::Temporary | MirStorageKind::SharedAnchor
+                            )
+                        })
+                    });
+                    state.pending_full_expression_boundary = owners_remain;
                 }
                 MirInstruction::Call(call) => {
                     let transferred =

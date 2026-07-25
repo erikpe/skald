@@ -111,6 +111,7 @@ fn view_source_contains_runtime_cast(source: &HirViewSource) -> bool {
         HirViewSource::Place(_)
         | HirViewSource::Forwarded { .. }
         | HirViewSource::Shared { .. } => false,
+        HirViewSource::AnchoredShared { source, .. } => shared_source_contains_runtime_cast(source),
     }
 }
 

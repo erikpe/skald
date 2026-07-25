@@ -2,8 +2,8 @@
 
 Status: authoritative for executable class and `Obj` aliases. Interface views
 follow the same source rules and lower through verified MIR; their backend
-execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared
-ownership and shared-backed borrow anchors are frozen but not implemented in
+execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
+call borrows and their hidden owner anchors are implemented as specified by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
 aliases into other future value families remain unfrozen. Feature maturity is
 authoritative in the [status matrix](STATUS.md).
@@ -42,9 +42,9 @@ are semantically invalid.
 
 The designated type may be one concrete class, one interface, or `Obj`.
 Primitive, `unit`, optional, array, and function alias parameter types are
-unsupported. The current compiler also rejects shared-backed sources; the
-frozen extension borrows the allocated class/interface/`Obj` pointee rather
-than treating `shared T` as the alias's designated type. `Obj` is a universal
+unsupported. A shared-backed source borrows the allocated
+class/interface/`Obj` pointee rather than treating `shared T` as the alias's
+designated type. `Obj` is a universal
 non-owning target with no members or inline storage. Interfaces expose only
 their declared requirements. Alias modifiers are not accepted on locals,
 fields, results, elements, statics, or captures.
@@ -58,6 +58,9 @@ forwarded interface/`Obj` view. Its root may be:
 - an owning exact-class value parameter;
 - a live method or destructor `self`;
 - an existing `ref` or `mut ref` parameter being forwarded.
+- a stable shared local or value parameter;
+- a shared field or nested shared place, through a hidden copied owner; or
+- a produced shared owner, through hidden storage that adopts the result.
 
 Any number of exact-class field projections may follow a supported root.
 Grouping around a root or projection preserves the same place. This includes
@@ -69,8 +72,10 @@ A concrete class source may convert to the same class, any ancestor class, or
 An `Obj` view may be forwarded only to `Obj`; there is no implicit downcast.
 Unrelated classes are invalid.
 
-A fresh construction, object-returning call, primitive binding or field, and
-any other produced value is not an alias source.
+A fresh inline construction, inline object-returning call, primitive binding
+or field, and any other produced inline value is not an alias source. A
+produced shared allocation or shared-returning call is eligible because its
+owner is adopted into call-scoped anchor storage.
 Initializer `self` is also ineligible while the enclosing object is incomplete;
 an already initialized direct field may be passed independently when its
 initializer-body rules permit.
@@ -164,16 +169,21 @@ Conversely, source syntax provides no way to retain the alias after the call:
 aliases cannot be fields, results, local values, elements, statics, captures,
 or heap contents, and the binding cannot be assigned or rebound.
 
-All currently eligible places have stable inline storage for the call, and a
-fresh temporary cannot be borrowed. The implemented subset therefore needs no
-caller-owned borrow anchor, lifetime extension, ownership-provenance tag, or
-exclusivity analysis. The current normal-flow language also has no exceptional
-call exit requiring an anchor cleanup rule.
+Stable inline places, forwarded aliases, and stable shared locals or value
+parameters need no new owner. A replaceable shared field or nested place is
+copied into hidden owner storage at its receiver or argument evaluation
+position. A produced shared owner is adopted there. The owner remains live
+through the call, including later argument effects, and is released with other
+full-expression temporaries in reverse completion order.
 
-## Future ownership boundary
+The complete allocation owner anchors every inline base and field subobject in
+its payload. This is containment, not object-graph search: following another
+shared field establishes another anchor for that owning edge.
 
-Shared ownership and heap allocation have a **frozen design** but are not
-usable in the current compiler. The focused
+## Shared ownership boundary
+
+Shared ownership, heap allocation, and call-scoped shared borrowing are
+implemented through the current roadmap slice. The focused
 [shared-ownership authority](SHARED_OWNERSHIP.md) defines non-null owning
 handles, copy/adopt/release value semantics, dynamic last-owner destruction,
 strong-cycle leaks, and shared-backed borrowing.
@@ -213,9 +223,9 @@ object address to be source-visible, a particular parameter representation,
 frame home, register class, field offset, or calling convention.
 
 The current target realization is an implementation concern recorded in the
-[backend and target contract](../compiler/BACKEND.md). Frozen future
-allocation, reference counting, anchoring, and ownership-runtime mechanisms
+[backend and target contract](../compiler/BACKEND.md). Allocation, reference
+counting, anchoring, and ownership-runtime mechanisms
 are specified in the
-[shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md);
-they remain outside the current
-[runtime ABI](../compiler/RUNTIME_ABI.md#responsibility-boundary).
+[shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
+Anchors compile to ordinary retain/adopt/release operations and require no
+additional C runtime entry point.

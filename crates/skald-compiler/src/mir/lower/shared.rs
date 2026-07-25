@@ -67,7 +67,7 @@ impl BodyLowerer<'_> {
         self.full_expression_has_shared_effect = true;
     }
 
-    fn lower_shared_source(
+    pub(super) fn lower_shared_source(
         &mut self,
         destination: StorageId,
         source: &HirSharedSource,
@@ -219,17 +219,44 @@ impl BodyLowerer<'_> {
             ty: lower_type(Type::Shared(target)),
             span,
         });
-        self.full_expression_shared_temporaries.push(storage);
+        self.full_expression_temporaries
+            .push(FullExpressionTemporary::Shared(storage));
+        storage
+    }
+
+    pub(super) fn new_shared_anchor(
+        &mut self,
+        source: &HirSharedSource,
+        span: crate::source::Span,
+    ) -> StorageId {
+        let storage = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: storage,
+            source: None,
+            name: format!("shared-anchor-{}", storage.index()),
+            kind: MirStorageKind::SharedAnchor,
+            ty: lower_type(Type::Shared(source.target())),
+            span,
+        });
+        self.lower_shared_source(storage, source, span);
+        self.full_expression_temporaries
+            .push(FullExpressionTemporary::Shared(storage));
+        self.full_expression_has_shared_effect = true;
         storage
     }
 
     fn consume_shared_temporary(&mut self, storage: StorageId) {
         let index = self
-            .full_expression_shared_temporaries
+            .full_expression_temporaries
             .iter()
-            .rposition(|candidate| *candidate == storage)
+            .rposition(|candidate| {
+                matches!(
+                    candidate,
+                    FullExpressionTemporary::Shared(candidate) if *candidate == storage
+                )
+            })
             .expect("consumed shared temporary must belong to the current full expression");
-        self.full_expression_shared_temporaries.remove(index);
+        self.full_expression_temporaries.remove(index);
     }
 }
 

@@ -52,6 +52,14 @@ operation and checked exact-`T` source. MIR then shows any `checked_cast`
 success/failure edge before one `copy_construct`, followed by the checked-view
 and produced-temporary full-expression cleanup.
 
+For a shared-backed receiver or alias argument, HIR distinguishes a stable
+`SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or
+adopted producer source. MIR declares each hidden owner as `shared-anchor`;
+the corresponding `shared-copy`, `shared-field-copy`, call result, allocation
+adopt, or shared cast must precede the consuming call, and `shared-release`
+must follow it. Nested shared fields produce one anchor per owning edge.
+Inline base and field projections remain beneath the same shared-pointee root.
+
 MIR verification runs at three boundaries:
 
 1. immediately after HIR lowering in debug builds;

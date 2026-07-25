@@ -91,6 +91,7 @@ impl<'ast> ProgramResolver<'ast> {
             &class_declarations,
             BodyResolutionEnvironment::new(
                 &self.top_levels,
+                &function_declarations,
                 &class_declarations,
                 &interfaces,
                 &hierarchy,
@@ -300,6 +301,7 @@ impl<'ast> ProgramResolver<'ast> {
                     BaseInitializationPolicy::Forbidden,
                     BodyResolutionEnvironment::new(
                         &self.top_levels,
+                        functions,
                         classes,
                         interfaces,
                         hierarchy,

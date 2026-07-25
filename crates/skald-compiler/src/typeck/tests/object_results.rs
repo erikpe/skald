@@ -104,12 +104,12 @@ fn records_constructor_elision_as_typed_destination_selection() {
     let HirStatement::Return(result) = &grouped.body.statements[0] else {
         panic!("expected grouped return");
     };
+    let Some(HirReturnValue::Object(HirObjectReturn::Copy { source, .. })) = &result.value else {
+        panic!("grouped return must copy a produced construction");
+    };
     assert!(matches!(
-        &result.value,
-        Some(HirReturnValue::Object(HirObjectReturn::Copy {
-            source: HirObjectSource::Produced(HirObjectProducer::Construct(_)),
-            ..
-        }))
+        &**source,
+        HirObjectSource::Produced(HirObjectProducer::Construct(_))
     ));
 
     let main = hir.definitions.get(hir.entry_function).unwrap();

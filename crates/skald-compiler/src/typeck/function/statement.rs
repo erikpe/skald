@@ -297,7 +297,7 @@ impl CallableChecker<'_, '_> {
                         return CheckedStatement::terminates(None);
                     };
                     HirObjectReturn::Copy {
-                        source,
+                        source: Box::new(source),
                         operation,
                         class,
                         span: value.span(),

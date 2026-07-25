@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO10 complete, SO11 is next.
+Status: in progress; SO11 complete, SO12 is next.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -37,8 +37,9 @@ and the complete cast direction matrix is
   full-expression boundary, and normal cleanup. Shared fields participate in
   initialization, secure replacement, user and synthesized copy lifecycle,
   inheritance, and reverse destruction through explicit projected MIR
-  operations. Polymorphic transfers, views, and casts execute; anchors remain
-  structurally gated. The x86-64 backend executes one-word local and field
+  operations. Polymorphic transfers, views, casts, and call-scoped anchors
+  execute; shared-backed plain checked places remain structurally gated. The
+  x86-64 backend executes one-word local and field
   handles, checked allocation and retain, secure-before-release assignment,
   recursively generated dynamic complete finalization, and last-owner
   deallocation.
@@ -102,7 +103,7 @@ and the complete cast direction matrix is
 - [x] SO8 — Execute shared-field layout and lifecycle
 - [x] SO9 — Add polymorphic shared views and dispatch
 - [x] SO10 — Execute shared-owner casts
-- [ ] SO11 — Anchor shared-backed calls
+- [x] SO11 — Anchor shared-backed calls
 - [ ] SO12 — Anchor shared-backed checked places
 - [ ] SO13 — Add explicit exact-class copy allocation
 - [ ] SO14 — Harden and publish shared ownership
@@ -494,31 +495,31 @@ storage.
 **Purpose:** Guarantee that direct non-owning receivers and alias arguments
 reached through shared storage outlive the complete call.
 
-- [ ] Classify each shared-backed borrow in HIR as covered by a stable existing
+- [x] Classify each shared-backed borrow in HIR as covered by a stable existing
       owner, a produced owner whose lifetime is extended, a hidden copy of a
       replaceable owner place, or an inherited outer alias lifetime.
-- [ ] Support direct `ref`/`mut ref` arguments and method receivers reached
+- [x] Support direct `ref`/`mut ref` arguments and method receivers reached
       through shared locals, parameters, fields, nested places, produced
       owners, and inline field/base subobjects in shared payloads.
-- [ ] Create hidden owner storage at the receiver or argument evaluation
+- [x] Create hidden owner storage at the receiver or argument evaluation
       position, before later user code can replace the source place.
-- [ ] Keep receiver anchors before explicit argument anchors, preserve
+- [x] Keep receiver anchors before explicit argument anchors, preserve
       left-to-right argument order, secure call results first, and release
       anchors with other full-expression temporaries in reverse completion
       order.
-- [ ] Make a complete allocation's anchor cover every inline base or field
+- [x] Make a complete allocation's anchor cover every inline base or field
       subobject within its payload; do not search the object graph or infer
       ownership from an existing alias.
-- [ ] Extend MIR with explicit anchor storage/lifetimes and verify source
+- [x] Extend MIR with explicit anchor storage/lifetimes and verify source
       category, retain/adopt operation, view-before-release ordering,
       projection containment, call coverage, and all normal exits.
-- [ ] Keep anchor selection and lowering in cohesive provenance/lifetime
+- [x] Keep anchor selection and lowering in cohesive provenance/lifetime
       owners rather than scattering special cases through call, field, and
       cleanup code.
-- [ ] Add replacement-during-call, produced receiver, nested shared field,
+- [x] Add replacement-during-call, produced receiver, nested shared field,
       inline subobject, forwarding, overlapping mutable alias, result-order,
       verifier-corruption, and destruction-timing tests.
-- [ ] Update aliases, phases, and debugging documentation for explicit hidden
+- [x] Update aliases, phases, and debugging documentation for explicit hidden
       call anchors.
 
 **Tests:** Focused alias/call/type-check tests, exact HIR/MIR anchor dumps, MIR

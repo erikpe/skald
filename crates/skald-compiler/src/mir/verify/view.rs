@@ -187,7 +187,7 @@ impl Verifier<'_> {
         };
         let valid_owner = matches!(
             storage.kind,
-            MirStorageKind::Local | MirStorageKind::Parameter
+            MirStorageKind::Local | MirStorageKind::Parameter | MirStorageKind::SharedAnchor
         ) && storage.ty
             == MirType::Shared(match static_target {
                 MirViewTarget::Class(class) => super::super::model::MirSharedTarget::Class(class),
@@ -201,18 +201,12 @@ impl Verifier<'_> {
                 site.function.callable(),
                 site.block.id,
                 format!(
-                    "{} shared origin requires a stable owner with the declared static target",
+                    "{} shared origin requires a stable or call-anchor owner with the declared static target",
                     site.kind
                 ),
             );
         }
-        if site.subject.base != MirPlaceBase::SharedPointee(owner)
-            || site
-                .subject
-                .projections
-                .iter()
-                .any(|projection| matches!(projection, MirPlaceProjection::Field(_)))
-        {
+        if site.subject.base != MirPlaceBase::SharedPointee(owner) {
             self.block_error(
                 site.function.callable(),
                 site.block.id,

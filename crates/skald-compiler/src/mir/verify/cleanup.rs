@@ -144,6 +144,7 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::Local
                 | MirStorageKind::Argument
                 | MirStorageKind::Temporary
+                | MirStorageKind::SharedAnchor
                 | MirStorageKind::ScalarSpill
                 | MirStorageKind::SharedAllocation => continue,
             };
@@ -467,7 +468,8 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         .iter()
                         .map(|cleanup| cleanup.destination.clone())
                         .collect();
-                    if actual != expected {
+                    if (actual.is_empty() && !expected.is_empty()) || !expected.starts_with(&actual)
+                    {
                         self.block_error(
                             block.id,
                             "full-expression temporaries must be cleaned in reverse completion order",

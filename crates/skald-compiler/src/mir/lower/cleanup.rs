@@ -16,34 +16,33 @@ impl BodyLowerer<'_> {
                 span,
             }));
         }
-        if self.full_expression_temporaries.is_empty()
-            && self.full_expression_shared_temporaries.is_empty()
-            && !self.full_expression_has_shared_effect
-        {
+        if self.full_expression_temporaries.is_empty() && !self.full_expression_has_shared_effect {
             return;
         }
-        let temporaries = self
-            .full_expression_temporaries
-            .drain(..)
-            .rev()
-            .map(|mut cleanup| {
-                cleanup.span = span;
-                cleanup
-            })
-            .collect();
-        let shared_temporaries: Vec<_> = self
-            .full_expression_shared_temporaries
-            .drain(..)
-            .rev()
-            .collect();
-        for owner in shared_temporaries {
-            self.emit(MirInstruction::SharedRelease(MirSharedRelease {
-                owner,
-                span,
-            }));
+        let temporaries: Vec<_> = self.full_expression_temporaries.drain(..).rev().collect();
+        let mut inline = Vec::new();
+        for temporary in temporaries {
+            match temporary {
+                super::FullExpressionTemporary::Inline(mut cleanup) => {
+                    cleanup.span = span;
+                    inline.push(cleanup);
+                }
+                super::FullExpressionTemporary::Shared(owner) => {
+                    if !inline.is_empty() {
+                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                            temporaries: std::mem::take(&mut inline),
+                            span,
+                        }));
+                    }
+                    self.emit(MirInstruction::SharedRelease(MirSharedRelease {
+                        owner,
+                        span,
+                    }));
+                }
+            }
         }
         self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
-            temporaries,
+            temporaries: inline,
             span,
         }));
         self.full_expression_has_shared_effect = false;

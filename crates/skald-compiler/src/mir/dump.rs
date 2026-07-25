@@ -264,6 +264,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::Local => "local",
             MirStorageKind::Argument => "argument",
             MirStorageKind::Temporary => "temporary",
+            MirStorageKind::SharedAnchor => "shared-anchor",
             MirStorageKind::ScalarSpill => "scalar-spill",
             MirStorageKind::SharedAllocation => "shared-allocation",
         };
@@ -276,6 +277,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::Return => output.push_str("<return> "),
                 MirStorageKind::Argument => output.push_str("<argument> "),
                 MirStorageKind::Temporary => output.push_str("<temporary> "),
+                MirStorageKind::SharedAnchor => output.push_str("<shared-anchor> "),
                 MirStorageKind::CheckedView(_) => output.push_str("<checked-view> "),
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
                 MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),

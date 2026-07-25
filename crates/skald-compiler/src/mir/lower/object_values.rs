@@ -115,11 +115,12 @@ impl BodyLowerer<'_> {
                 );
                 let destination = MirPlace::base(storage);
                 self.lower_object_producer(producer, destination.clone());
-                self.full_expression_temporaries.push(MirCleanup {
-                    destination: destination.clone(),
-                    target: producer.class(),
-                    span: producer.span(),
-                });
+                self.full_expression_temporaries
+                    .push(FullExpressionTemporary::Inline(MirCleanup {
+                        destination: destination.clone(),
+                        target: producer.class(),
+                        span: producer.span(),
+                    }));
                 destination
             }
             HirObjectSource::Checked(view) => self.lower_checked_object_view(view).source,

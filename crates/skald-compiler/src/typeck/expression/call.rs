@@ -72,6 +72,7 @@ impl CallableChecker<'_, '_> {
                             binding: *binding,
                             target,
                             access,
+                            projections: Vec::new(),
                             span: *span,
                         }
                     } else {
@@ -113,6 +114,29 @@ impl CallableChecker<'_, '_> {
                 let access = checked.view.access;
                 checked.consumer_access = required_access;
                 (access, HirInterfaceReceiver::Checked(Box::new(checked)))
+            }
+            crate::resolve::ResolvedInterfaceReceiver::SharedExpression(source) => {
+                let source = self.check_shared_source(source, false)?;
+                let target = HirViewTarget::Interface(call.interface);
+                let source_target = super::alias::shared_view_target(source.target());
+                let view = HirObjectView {
+                    source: HirViewSource::AnchoredShared {
+                        source: Box::new(source),
+                        target: source_target,
+                        access: HirAccess::Mutable,
+                        projections: Vec::new(),
+                        span: call.receiver_span,
+                    },
+                    origin: Box::new(HirObjectOrigin::AnchoredShared {
+                        static_target: source_target,
+                        access: HirAccess::Mutable,
+                        span: call.receiver_span,
+                    }),
+                    target,
+                    access: HirAccess::Mutable,
+                    span: call.receiver_span,
+                };
+                (HirAccess::Mutable, HirInterfaceReceiver::View(view))
             }
         };
         if !access.permits(required_access) {
@@ -158,8 +182,7 @@ impl CallableChecker<'_, '_> {
         &mut self,
         call: &crate::resolve::ResolvedMethodCallExpr,
     ) -> Option<HirExpression> {
-        let (receiver, origin, checked_cast) =
-            self.check_object_receiver(&call.receiver, ObjectPlaceUse::Member)?;
+        let receiver = self.check_object_receiver(&call.receiver, ObjectPlaceUse::Member)?;
         let method = self
             .program
             .method(call.method)
@@ -168,8 +191,8 @@ impl CallableChecker<'_, '_> {
         if self
             .receiver
             .is_some_and(|context| context.body_kind.initializes_receiver())
-            && receiver.root() == BindingId::Receiver(self.callable)
-            && receiver.path.is_root()
+            && receiver.place.root() == BindingId::Receiver(self.callable)
+            && receiver.place.path.is_root()
         {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -181,7 +204,7 @@ impl CallableChecker<'_, '_> {
             valid = false;
         }
         if method.receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
-            && receiver.access == HirAccess::ReadOnly
+            && receiver.place.access == HirAccess::ReadOnly
         {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -209,7 +232,7 @@ impl CallableChecker<'_, '_> {
             ResolvedMethodDispatch::VirtualRoot { family, slot }
             | ResolvedMethodDispatch::Override { family, slot, .. } => {
                 if matches!(
-                    origin,
+                    receiver.origin,
                     HirObjectOrigin::Exact { .. }
                         | HirObjectOrigin::Produced { .. }
                         | HirObjectOrigin::Forwarded {
@@ -230,9 +253,10 @@ impl CallableChecker<'_, '_> {
         valid.then_some(HirExpression {
             kind: HirExpressionKind::MethodCall {
                 receiver: HirMethodReceiver {
-                    place: receiver,
-                    origin: Box::new(origin),
-                    checked_cast,
+                    place: receiver.place,
+                    origin: Box::new(receiver.origin),
+                    checked_cast: receiver.checked_cast,
+                    shared_view: receiver.shared_view,
                 },
                 target,
                 arguments,

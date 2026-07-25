@@ -241,7 +241,7 @@ pub enum HirConstructionMode {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirObjectReturn {
     Copy {
-        source: HirObjectSource,
+        source: Box<HirObjectSource>,
         operation: HirSelectedCopyOperation<CopyConstructorId>,
         class: ClassId,
         span: Span,
@@ -342,6 +342,13 @@ pub enum HirObjectOrigin {
         access: HirAccess,
         span: Span,
     },
+    /// Provenance placeholder for a call-scoped hidden shared owner. MIR
+    /// lowering binds it to the concrete anchor storage created for the view.
+    AnchoredShared {
+        static_target: HirViewTarget,
+        access: HirAccess,
+        span: Span,
+    },
     /// An exact object produced into a compiler-owned full-expression
     /// temporary. MIR lowering replaces this marker with the temporary place.
     Produced { dynamic_class: ClassId, span: Span },
@@ -356,6 +363,9 @@ pub struct HirMethodReceiver {
     /// Present when the receiver place is defined by a full-expression checked
     /// cast rather than by an ordinary stable binding path.
     pub checked_cast: Option<Box<HirCheckedObjectView>>,
+    /// Present when receiver evaluation first materializes a hidden strong
+    /// owner for a shared field or produced shared value.
+    pub shared_view: Option<Box<HirObjectView>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -412,6 +422,17 @@ pub enum HirViewSource {
         binding: BindingId,
         target: HirViewTarget,
         access: HirAccess,
+        projections: Vec<crate::object_path::ObjectProjection>,
+        span: Span,
+    },
+    /// A shared owner that must be materialized into hidden call-scoped
+    /// storage before exposing its pointee. Places are retained and produced
+    /// owners are adopted; both remain live through the full expression.
+    AnchoredShared {
+        source: Box<super::HirSharedSource>,
+        target: HirViewTarget,
+        access: HirAccess,
+        projections: Vec<crate::object_path::ObjectProjection>,
         span: Span,
     },
 }
@@ -420,6 +441,7 @@ pub enum HirViewSource {
 pub struct HirFieldPlace {
     pub receiver: HirObjectPlace,
     pub checked_cast: Option<Box<HirCheckedObjectView>>,
+    pub shared_view: Option<Box<HirObjectView>>,
     pub field: FieldId,
     pub span: Span,
 }

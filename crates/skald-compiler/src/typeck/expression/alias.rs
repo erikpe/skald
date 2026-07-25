@@ -3,8 +3,8 @@
 use super::*;
 use crate::{
     hir::{
-        HirAccess, HirCallArgument, HirObjectOrigin, HirObjectPlace, HirObjectView, HirViewSource,
-        HirViewTarget, Type,
+        HirAccess, HirCallArgument, HirObjectOrigin, HirObjectPlace, HirObjectView,
+        HirSharedSource, HirSharedTarget, HirViewSource, HirViewTarget, Type,
     },
     identity::BindingId,
     resolve::{ResolvedExpression, ResolvedTypeKind},
@@ -76,6 +76,11 @@ pub(super) enum CheckedObjectViewSource {
         access: HirAccess,
         span: Span,
     },
+    AnchoredShared {
+        source: HirSharedSource,
+        target: HirViewTarget,
+        span: Span,
+    },
     Produced {
         source: crate::hir::HirObjectProducer,
         class: crate::identity::ClassId,
@@ -89,6 +94,7 @@ impl CheckedObjectViewSource {
             Self::Class { place, .. } => place.access,
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
             Self::Shared { access, .. } => *access,
+            Self::AnchoredShared { .. } => HirAccess::Mutable,
             Self::Produced { .. } => HirAccess::Mutable,
         }
     }
@@ -97,7 +103,7 @@ impl CheckedObjectViewSource {
         match self {
             Self::Class { place, .. } => place.span(),
             Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
-            Self::Shared { span, .. } => *span,
+            Self::Shared { span, .. } | Self::AnchoredShared { span, .. } => *span,
             Self::Produced { span, .. } => *span,
         }
     }
@@ -107,7 +113,7 @@ impl CheckedObjectViewSource {
             Self::Class { place, .. } => HirViewTarget::Class(place.class()),
             Self::Obj { .. } => HirViewTarget::Obj,
             Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
-            Self::Shared { target, .. } => *target,
+            Self::Shared { target, .. } | Self::AnchoredShared { target, .. } => *target,
             Self::Produced { class, .. } => HirViewTarget::Class(*class),
         }
     }
@@ -122,12 +128,14 @@ impl CheckedObjectViewSource {
                 origin:
                     HirObjectOrigin::Forwarded { .. }
                     | HirObjectOrigin::Shared { .. }
+                    | HirObjectOrigin::AnchoredShared { .. }
                     | HirObjectOrigin::Produced { .. },
                 ..
             }
             | Self::Obj { .. }
             | Self::Interface { .. }
-            | Self::Shared { .. } => None,
+            | Self::Shared { .. }
+            | Self::AnchoredShared { .. } => None,
             Self::Produced { class, .. } => Some(*class),
         }
     }
@@ -197,12 +205,36 @@ impl CheckedObjectViewSource {
                     binding,
                     target: source_target,
                     access: source_access,
+                    projections: Vec::new(),
                     span,
                 },
                 origin: Box::new(HirObjectOrigin::Shared {
                     binding,
                     static_target: source_target,
                     access: source_access,
+                    span,
+                }),
+                target,
+                access,
+                span,
+            },
+            Self::AnchoredShared {
+                source,
+                target: source_target,
+                span,
+            } => HirObjectView {
+                source: HirViewSource::AnchoredShared {
+                    source: Box::new(source),
+                    target: source_target,
+                    access: HirAccess::Mutable,
+                    projections: Vec::new(),
+                    span,
+                },
+                // Lowering replaces this placeholder with the anchor-backed
+                // complete allocation origin.
+                origin: Box::new(HirObjectOrigin::AnchoredShared {
+                    static_target: source_target,
+                    access: HirAccess::Mutable,
                     span,
                 }),
                 target,
@@ -367,7 +399,10 @@ impl CallableChecker<'_, '_> {
                     let origin = self.object_origin(&place);
                     Some(CheckedObjectViewSource::Class { place, origin })
                 } else if let Type::Shared(target) = binding_type {
-                    if source_use != ViewSourceUse::TypeTest {
+                    if !matches!(
+                        source_use,
+                        ViewSourceUse::AliasArgument | ViewSourceUse::TypeTest
+                    ) {
                         self.diagnostics.push(
                             Diagnostic::error(
                                 source_use.diagnostic_code(),
@@ -408,6 +443,7 @@ impl CallableChecker<'_, '_> {
                     CheckedObjectViewSource::Obj { span, .. }
                     | CheckedObjectViewSource::Interface { span, .. }
                     | CheckedObjectViewSource::Shared { span, .. }
+                    | CheckedObjectViewSource::AnchoredShared { span, .. }
                     | CheckedObjectViewSource::Produced { span, .. } => *span = grouped.span,
                 }
                 Some(source)
@@ -417,6 +453,16 @@ impl CallableChecker<'_, '_> {
                     .program
                     .field(access.field)
                     .expect("resolved field access must reference a field");
+                if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_))
+                    && source_use == ViewSourceUse::AliasArgument
+                {
+                    let source = self.check_shared_source(expression, false)?;
+                    return Some(CheckedObjectViewSource::AnchoredShared {
+                        target: shared_view_target(source.target()),
+                        span: expression.span(),
+                        source,
+                    });
+                }
                 let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -447,6 +493,24 @@ impl CallableChecker<'_, '_> {
                 let place = self.check_object_place(path, ObjectPlaceUse::Alias)?;
                 let origin = self.object_origin(&place);
                 Some(CheckedObjectViewSource::Class { place, origin })
+            }
+            expression
+                if source_use == ViewSourceUse::AliasArgument
+                    && matches!(
+                        expression,
+                        ResolvedExpression::Allocation(_)
+                            | ResolvedExpression::DirectCall(_)
+                            | ResolvedExpression::MethodCall(_)
+                            | ResolvedExpression::InterfaceCall(_)
+                            | ResolvedExpression::ObjectCast(_)
+                    ) =>
+            {
+                let source = self.check_shared_source(expression, false)?;
+                Some(CheckedObjectViewSource::AnchoredShared {
+                    target: shared_view_target(source.target()),
+                    span: expression.span(),
+                    source,
+                })
             }
             expression
                 if matches!(
@@ -678,15 +742,50 @@ impl CallableChecker<'_, '_> {
                 ));
                 None
             }
+            (
+                source @ (CheckedObjectViewSource::Shared { .. }
+                | CheckedObjectViewSource::AnchoredShared { .. }),
+                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
+            ) => {
+                let actual = source.static_target();
+                let expected_target = match expected {
+                    Type::Class(class) => HirViewTarget::Class(class),
+                    Type::Interface(interface) => HirViewTarget::Interface(interface),
+                    Type::Obj => HirViewTarget::Obj,
+                    _ => unreachable!(),
+                };
+                if !crate::typeck::shared::target_accepts(
+                    self.program,
+                    view_shared_target(expected_target),
+                    view_shared_target(actual),
+                ) {
+                    self.diagnostics.push(mismatch(
+                        &view_target_name(self.program, actual),
+                        &view_target_name(self.program, expected_target),
+                        source_span,
+                        "shared-backed aliases convert implicitly only to compatible up-views",
+                    ));
+                    return None;
+                }
+                let projections = shared_up_projections(self.program, actual, expected_target);
+                let mut view = source.into_view(expected_target, required);
+                match &mut view.source {
+                    HirViewSource::Shared {
+                        projections: selected,
+                        ..
+                    }
+                    | HirViewSource::AnchoredShared {
+                        projections: selected,
+                        ..
+                    } => *selected = projections,
+                    _ => unreachable!("shared source must produce a shared-backed view"),
+                }
+                Some(HirCallArgument::View(view))
+            }
             (_, Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool | Type::Unit) => None,
             (_, Type::Shared(_)) => None,
             (CheckedObjectViewSource::Produced { .. }, _) => {
                 unreachable!("produced views enter alias arguments only through explicit casts")
-            }
-            (CheckedObjectViewSource::Shared { .. }, _) => {
-                unreachable!(
-                    "shared views are not alias-argument sources before anchored borrowing"
-                )
             }
         }
     }
@@ -708,6 +807,51 @@ impl CallableChecker<'_, '_> {
         }
         None
     }
+}
+
+const fn view_shared_target(target: HirViewTarget) -> HirSharedTarget {
+    match target {
+        HirViewTarget::Class(class) => HirSharedTarget::Class(class),
+        HirViewTarget::Interface(interface) => HirSharedTarget::Interface(interface),
+        HirViewTarget::Obj => HirSharedTarget::Obj,
+    }
+}
+
+fn view_target_name(program: &crate::resolve::ResolvedProgram, target: HirViewTarget) -> String {
+    match target {
+        HirViewTarget::Class(class) => program
+            .class(class)
+            .expect("view class must exist")
+            .name
+            .clone(),
+        HirViewTarget::Interface(interface) => program
+            .interface(interface)
+            .expect("view interface must exist")
+            .name
+            .clone(),
+        HirViewTarget::Obj => "Obj".to_owned(),
+    }
+}
+
+fn shared_up_projections(
+    program: &crate::resolve::ResolvedProgram,
+    actual: HirViewTarget,
+    expected: HirViewTarget,
+) -> Vec<crate::object_path::ObjectProjection> {
+    let (HirViewTarget::Class(actual), HirViewTarget::Class(expected)) = (actual, expected) else {
+        return Vec::new();
+    };
+    if actual == expected {
+        return Vec::new();
+    }
+    program
+        .hierarchy
+        .base_chain(actual)
+        .expect("compatible shared class view must have valid ancestry")
+        .take_while(|class| *class != expected)
+        .chain(std::iter::once(expected))
+        .map(crate::object_path::ObjectProjection::Base)
+        .collect()
 }
 
 fn is_object_cast_expression(expression: &ResolvedExpression) -> bool {
@@ -772,6 +916,9 @@ fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
         } => *origin_span = span,
         HirObjectOrigin::Shared {
             span: origin_span, ..
+        }
+        | HirObjectOrigin::AnchoredShared {
+            span: origin_span, ..
         } => *origin_span = span,
         HirObjectOrigin::Produced {
             span: origin_span, ..
@@ -779,7 +926,7 @@ fn set_origin_span(origin: &mut HirObjectOrigin, span: Span) {
     }
 }
 
-const fn shared_view_target(target: crate::hir::HirSharedTarget) -> HirViewTarget {
+pub(super) const fn shared_view_target(target: crate::hir::HirSharedTarget) -> HirViewTarget {
     match target {
         crate::hir::HirSharedTarget::Class(class) => HirViewTarget::Class(class),
         crate::hir::HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),

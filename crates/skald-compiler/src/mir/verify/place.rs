@@ -73,8 +73,12 @@ impl Verifier<'_> {
                 return None;
             }
             (MirPlaceBase::SharedPointee(_), kind)
-                if matches!(kind, MirStorageKind::Local | MirStorageKind::Parameter)
-                    && matches!(storage.ty, MirType::Shared(_)) =>
+                if matches!(
+                    kind,
+                    MirStorageKind::Local
+                        | MirStorageKind::Parameter
+                        | MirStorageKind::SharedAnchor
+                ) && matches!(storage.ty, MirType::Shared(_)) =>
             {
                 MirAliasAccess::Mutable
             }
@@ -83,7 +87,7 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!(
-                        "shared-pointee base {storage_id} requires a stable local or parameter owner"
+                        "shared-pointee base {storage_id} requires a stable or call-anchor owner"
                     ),
                 );
                 return None;

@@ -289,6 +289,34 @@ fn shared_views_execute_deep_virtual_interface_and_mutable_member_access() {
 }
 
 #[test]
+fn shared_call_anchor_survives_later_argument_replacement_until_call_completion() {
+    let mut output = assembly(concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn observed() -> i64;\n",
+        "class Leaf {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read(later: i64) -> i64 { return observed() * 20 + self.value + later; }\n",
+        "  destroy { observe(self.value); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  edge: shared Leaf;\n",
+        "  init() { self.edge = new Leaf(7); }\n",
+        "}\n",
+        "fn replace(mut ref holder: Holder) -> i64 {\n",
+        "  holder.edge = new Leaf(9);\n",
+        "  return 2;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var holder: Holder = Holder();\n",
+        "  return holder.edge.read(replace(holder));\n",
+        "}\n",
+    ));
+    output.push_str(anchor_observer_stubs());
+    assert_eq!(run_native_assembly(&output).code(), Some(9));
+}
+
+#[test]
 fn shared_casts_execute_named_retain_produced_transfer_and_cross_view_checks() {
     let mut output = assembly(concat!(
         "interface Left { fn value() -> i64; }\n",
@@ -365,6 +393,37 @@ fn intentional_strong_cycle_leaks_while_acyclic_controls_finalize() {
 fn simple_ownership_stubs() -> &'static str {
     concat!(
         "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
+fn anchor_observer_stubs() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".align 8\n",
+        ".Lanchor_observed: .zero 8\n",
+        "\n.text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    inc qword ptr [rip + .Lanchor_observed]\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl observed\n",
+        ".type observed, @function\n",
+        "observed:\n",
+        "    mov rax, qword ptr [rip + .Lanchor_observed]\n",
+        "    ret\n",
+        ".size observed, .-observed\n",
         ".globl ska_rt_alloc\n",
         ".type ska_rt_alloc, @function\n",
         "ska_rt_alloc:\n",

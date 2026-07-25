@@ -85,6 +85,12 @@ struct LoweredBody {
     body: MirBody,
 }
 
+#[derive(Clone)]
+enum FullExpressionTemporary {
+    Inline(MirCleanup),
+    Shared(StorageId),
+}
+
 struct BodyLowerer<'hir> {
     input: BodyLoweringInput<'hir>,
     return_storage: Option<StorageId>,
@@ -95,8 +101,7 @@ struct BodyLowerer<'hir> {
     values: Vec<MirValue>,
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
-    full_expression_temporaries: Vec<MirCleanup>,
-    full_expression_shared_temporaries: Vec<StorageId>,
+    full_expression_temporaries: Vec<FullExpressionTemporary>,
     full_expression_checked_views: Vec<StorageId>,
     full_expression_has_shared_effect: bool,
 }
@@ -115,7 +120,6 @@ impl<'hir> BodyLowerer<'hir> {
             body: MirBodyBuilder::new(input.callable, input.source_body.span),
             cleanup: CleanupPlanner::new(),
             full_expression_temporaries: Vec::new(),
-            full_expression_shared_temporaries: Vec::new(),
             full_expression_checked_views: Vec::new(),
             full_expression_has_shared_effect: false,
             return_storage: None,

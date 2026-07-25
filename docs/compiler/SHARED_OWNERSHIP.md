@@ -109,7 +109,7 @@ retain/release policy. Optimization may remove an operation only after MIR
 represents it and only when ownership, destruction timing, and failure behavior
 remain unchanged.
 
-The implemented local-owner state machine separates an allocation storage slot
+The implemented owner state machine separates an allocation storage slot
 from owner storage:
 
 ```text
@@ -136,12 +136,13 @@ exactly once, and rejects a full-expression boundary with a live owning
 temporary. Normal return requires every local owner to have been released.
 CFG joins require identical shared allocation and owner states. These
 operations are target-independent and carry no handle size, header offset, or
-runtime symbol.
+runtime symbol. Hidden call owners use the distinct `SharedAnchor` storage
+role, so dumps and verification can distinguish them from general temporaries.
 
 `MirPlaceBase::SharedPointee(owner)` is the target-independent root for a
-borrowed payload place. Its owner must be a live stable local or value
-parameter with a compatible shared target. Base and field identities remain
-semantic projections. `MirObjectOrigin::Shared` separately retains the
+borrowed payload place. Its owner must be a live stable local/value parameter
+or `SharedAnchor` with a compatible shared target. Base and inline-field
+identities remain semantic projections. `MirObjectOrigin::Shared` separately retains the
 canonical owner, source static target, and access; its complete address and
 metadata are deliberately derived only at the backend boundary. Verification
 checks the target and projection relation, mutable access, origin agreement,
@@ -354,9 +355,11 @@ constructor runs; the produced owner is secured before the view and anchor
 end. A cast from an existing alias uses its verified outer lifetime and
 creates no shared owner.
 
-HIR need only record provenance and the required anchor category. MIR owns the
-explicit storage and lifetime operations. Neither phase performs arbitrary
-object-graph search or a general exclusivity borrow analysis.
+HIR records whether a borrow is forwarded, covered by stable owner storage, or
+requires an anchor carrying a copied place or adopted producer. MIR owns the
+explicit `SharedAnchor` storage and copy/adopt/release lifetime operations.
+Neither phase performs arbitrary object-graph search or a general exclusivity
+borrow analysis.
 
 ## Minimal C runtime ABI
 

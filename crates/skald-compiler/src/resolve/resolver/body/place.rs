@@ -26,12 +26,58 @@ impl CallableResolver<'_, '_> {
                     );
                     return None;
                 };
+                if matches!(
+                    cast.target_mode,
+                    crate::resolve::ResolvedObjectCastTargetMode::Shared { .. }
+                ) {
+                    let span = cast.span;
+                    return Some(ResolvedObjectReceiver::SharedExpression {
+                        source: Box::new(ResolvedExpression::ObjectCast(cast)),
+                        projections: Vec::new(),
+                        class,
+                        span,
+                    });
+                }
                 Some(ResolvedObjectReceiver::from_cast(cast, class))
             }
             syntax::Expression::Grouped(grouped) => Some(
                 self.resolve_object_receiver(&grouped.expression)?
                     .with_span(grouped.span),
             ),
+            syntax::Expression::Allocation(_) => {
+                let source = self.resolve_expression(expression)?;
+                let ResolvedExpression::Allocation(allocation) = &source else {
+                    unreachable!("allocation syntax must resolve as allocation")
+                };
+                Some(ResolvedObjectReceiver::SharedExpression {
+                    class: allocation.class,
+                    source: Box::new(source),
+                    projections: Vec::new(),
+                    span: expression.span(),
+                })
+            }
+            syntax::Expression::Call(_) => {
+                let source = self.resolve_expression(expression)?;
+                let class = self.shared_expression_class(&source).or_else(|| {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            "call result is not a shared class owner",
+                        )
+                        .with_primary_label(
+                            expression.span(),
+                            "a produced method receiver must return `shared Class`",
+                        ),
+                    );
+                    None
+                })?;
+                Some(ResolvedObjectReceiver::SharedExpression {
+                    source: Box::new(source),
+                    projections: Vec::new(),
+                    class,
+                    span: expression.span(),
+                })
+            }
             syntax::Expression::MemberAccess(member) => {
                 let receiver = self.resolve_object_receiver(&member.receiver)?;
                 let selected = self.select_member(receiver.class(), &member.member)?;
@@ -218,6 +264,23 @@ impl CallableResolver<'_, '_> {
             .get(field.class())
             .and_then(|class| class.field(field))
             .expect("member symbols must reference declaration metadata");
+        if let ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) =
+            declaration.type_syntax.kind
+        {
+            return Some(ResolvedObjectReceiver::SharedExpression {
+                source: Box::new(ResolvedExpression::FieldAccess(
+                    crate::resolve::ResolvedFieldAccessExpr {
+                        receiver,
+                        field,
+                        member_span,
+                        span,
+                    },
+                )),
+                projections: Vec::new(),
+                class,
+                span,
+            });
+        }
         let ResolvedTypeKind::Class(class) = declaration.type_syntax.kind else {
             self.diagnostics.push(
                 Diagnostic::error(
@@ -279,5 +342,44 @@ impl CallableResolver<'_, '_> {
             }
         }
         unreachable!("selected inherited member owner must be in the receiver base chain")
+    }
+
+    fn shared_expression_class(&self, expression: &ResolvedExpression) -> Option<ClassId> {
+        let kind = match expression {
+            ResolvedExpression::DirectCall(call) => {
+                self.environment
+                    .functions
+                    .get(call.function)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::MethodCall(call) => {
+                self.environment
+                    .classes
+                    .get(call.method.class())?
+                    .method(call.method)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::InterfaceCall(call) => {
+                self.environment
+                    .interfaces
+                    .get(call.interface)?
+                    .requirements
+                    .get(call.requirement.index())?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                return self.shared_expression_class(&grouped.expression)
+            }
+            _ => return None,
+        };
+        match kind {
+            ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) => {
+                Some(class)
+            }
+            _ => None,
+        }
     }
 }

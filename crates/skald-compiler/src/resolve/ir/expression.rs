@@ -96,6 +96,7 @@ pub struct ResolvedInterfaceCallExpr {
 pub enum ResolvedInterfaceReceiver {
     Binding { binding: BindingId, span: Span },
     Cast(Box<ResolvedObjectCastExpr>),
+    SharedExpression(Box<ResolvedExpression>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

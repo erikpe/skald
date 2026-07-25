@@ -458,6 +458,7 @@ impl<'mir> Verifier<'mir> {
                         storage.kind,
                         MirStorageKind::Local
                             | MirStorageKind::Temporary
+                            | MirStorageKind::SharedAnchor
                             | MirStorageKind::Argument
                             | MirStorageKind::Return
                     ) && matches!(
