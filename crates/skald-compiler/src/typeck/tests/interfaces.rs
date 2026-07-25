@@ -130,7 +130,7 @@ fn selects_inherited_conformance_and_interface_calls_by_identity() {
     assert!(dump.contains("i0:requirement0 -> c1:method0"));
     assert!(dump.contains("InterfaceCall i0 i0:requirement0"));
     assert!(dump.contains("ViewArgument -> interface i0 readonly"));
-    let mir = crate::mir::lower_hir(&hir).expect("interface HIR must lower to MIR");
+    let mir = crate::mir::lower_hir(&hir);
     crate::mir::verify_mir(&mir).expect("lowered interface MIR must verify");
 }
 
@@ -236,6 +236,6 @@ fn enforces_mutable_interface_receiver_access() {
          fn main() -> i64 { return 0; }\n",
     );
     assert!(!valid.has_errors(), "{:?}", valid.diagnostics);
-    let mir = crate::mir::lower_hir(valid.hir.as_ref().unwrap()).unwrap();
+    let mir = crate::mir::lower_hir(valid.hir.as_ref().unwrap());
     crate::mir::verify_mir(&mir).unwrap();
 }

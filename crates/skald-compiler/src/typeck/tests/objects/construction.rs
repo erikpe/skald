@@ -210,7 +210,7 @@ fn constructs_class_fields_and_exposes_them_only_after_successful_initialization
         ]
     );
 
-    let mir = lower_hir(&hir).unwrap();
+    let mir = lower_hir(&hir);
     assert!(verify_mir(&mir).is_ok());
     let parent_initializer = mir
         .member_definition(parent.initializers[0].id.into())
@@ -431,7 +431,7 @@ fn selects_exact_primitive_initializer_overloads_into_hir() {
         ]
     );
 
-    let mir = lower_hir(&hir).unwrap();
+    let mir = lower_hir(&hir);
     assert!(verify_mir(&mir).is_ok());
     let main = mir.definitions.get(mir.entry_function).unwrap();
     let lowered: Vec<_> = main

@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation Roadmap
 
-Status: in progress; SO13 complete, SO14 is next.
+Status: complete.
 
 This roadmap implements the frozen non-null `shared T` object model, explicit
 heap allocation, deterministic reference-counted lifetime, and shared-backed
@@ -106,7 +106,7 @@ and the complete cast direction matrix is
 - [x] SO11 — Anchor shared-backed calls
 - [x] SO12 — Anchor shared-backed checked places
 - [x] SO13 — Add explicit exact-class copy allocation
-- [ ] SO14 — Harden and publish shared ownership
+- [x] SO14 — Harden and publish shared ownership
 
 ## PR-sized implementation sequence
 
@@ -609,33 +609,33 @@ failure and no dynamic cloning.
 **Purpose:** Audit the complete ownership matrix, remove rollout scaffolding,
 and make shared ownership a dependable current contract.
 
-- [ ] Exercise named and produced owners in every local, field, parameter,
+- [x] Exercise named and produced owners in every local, field, parameter,
       result, assignment, receiver, alias, cast, ordinary allocation, and copy
       allocation position, including mixed inline/shared object graphs.
-- [ ] Audit all normal control-flow paths for owner balance, result-before-
+- [x] Audit all normal control-flow paths for owner balance, result-before-
       cleanup ordering, last-owner destruction, anchor coverage, and absence
       of use-after-release or double finalization.
-- [ ] Add malformed public-MIR and backend legality coverage for every shared
+- [x] Add malformed public-MIR and backend legality coverage for every shared
       operation, header/finalizer invariant, target mismatch, invalid lifetime,
       and external/static exclusion.
-- [ ] Add deterministic HIR/MIR/assembly/process tests and native goldens for
+- [x] Add deterministic HIR/MIR/assembly/process tests and native goldens for
       count behavior observable through destruction, dynamic finalization,
       cascades, cycles, call pressure, cast failure, and allocation failure.
-- [ ] Audit touched Rust modules by responsibility. Resolve high-priority
+- [x] Audit touched Rust modules by responsibility. Resolve high-priority
       ownership, call, cleanup-verifier, metadata, or lowering hotspots; record
       larger lower-priority findings in an indexed shared-ownership discoveries
       document rather than expanding the final task.
-- [ ] Remove temporary unsupported-feature branches, stale “future shared”
+- [x] Remove temporary unsupported-feature branches, stale “future shared”
       language, and roadmap codes from living code, tests, diagnostics, and
       general documentation.
-- [ ] Update grammar, status, language overview, ownership, lifecycle, casts,
+- [x] Update grammar, status, language overview, ownership, lifecycle, casts,
       polymorphism, errors, compiler architecture, phases, backend, runtime ABI,
       debugging, testing, and runtime guides so each fact has one crisp
       authority and current summaries link to it.
-- [ ] Confirm all exclusions remain rejected: null/optional/weak handles, raw
+- [x] Confirm all exclusions remain rejected: null/optional/weak handles, raw
       ownership construction, early release/count access, external shared ABI,
       statics, arrays, atomics, exceptions, and dynamic cloning.
-- [ ] Run the complete repository, MSRV, long robustness, documentation,
+- [x] Run the complete repository, MSRV, long robustness, documentation,
       deterministic-process, assembler, native, runtime, and diff-hygiene
       gates; then archive this roadmap.
 

@@ -371,6 +371,6 @@ operation is executable.
 The implemented class lifecycle, polymorphism, object-place cast, and
 cast-relative receiver work were prerequisites and are complete. This roadmap
 is the completed prerequisite for
-[Shared Ownership and Heap Allocation](../roadmaps/SHARED_OWNERSHIP_ROADMAP.md).
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP_ROADMAP.md).
 Shared storage, `new`, owner lifetimes, and hidden anchors remain in that
 dependent roadmap.

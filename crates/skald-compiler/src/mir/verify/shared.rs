@@ -720,22 +720,22 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         "shared initialization requires unpublished allocated storage",
                     );
                 }
-                MirInstruction::CopyConstruct(copy)
-                    if let MirPlaceBase::SharedAllocationPayload(allocation) =
-                        copy.destination.base =>
-                {
-                    self.require_live_pointee(block.id, state, &copy.source);
-                    let expected = AllocationState::Allocated(MirSharedAllocationMode::Copy {
-                        source: copy.source.clone(),
-                    });
-                    self.transition(
-                        block.id,
-                        state,
-                        allocation,
-                        expected,
-                        AllocationState::Initialized,
-                        "shared copy allocation requires its established source and one selected copy construction",
-                    );
+                MirInstruction::CopyConstruct(copy) => {
+                    if let MirPlaceBase::SharedAllocationPayload(allocation) = copy.destination.base
+                    {
+                        self.require_live_pointee(block.id, state, &copy.source);
+                        let expected = AllocationState::Allocated(MirSharedAllocationMode::Copy {
+                            source: copy.source.clone(),
+                        });
+                        self.transition(
+                            block.id,
+                            state,
+                            allocation,
+                            expected,
+                            AllocationState::Initialized,
+                            "shared copy allocation requires its established source and one selected copy construction",
+                        );
+                    }
                 }
                 MirInstruction::SharedPublish(publish) => {
                     self.transition(
@@ -900,7 +900,6 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 MirInstruction::Assign(_)
                 | MirInstruction::Cleanup(_)
                 | MirInstruction::Store(_)
-                | MirInstruction::CopyConstruct(_)
                 | MirInstruction::CopyAssign(_) => {}
                 MirInstruction::BindCheckedView(binding) => {
                     self.require_live_pointee(block.id, state, &binding.view.source);

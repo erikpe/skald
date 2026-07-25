@@ -14,7 +14,7 @@ mod verify;
 pub(crate) mod test_fixtures;
 
 pub use dump::dump_mir;
-pub use lower::{lower_hir, HirLoweringError};
+pub use lower::lower_hir;
 pub use model::{
     BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBaseCopy, MirBasicBlock,
     MirBinaryOperation, MirBody, MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature,

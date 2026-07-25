@@ -1,0 +1,11 @@
+class Widget {
+    init() {}
+}
+
+fn main() -> i64 {
+    var owner: shared Widget = new Widget();
+    release(owner);
+    strong_count(owner);
+    clone(owner);
+    return 0;
+}

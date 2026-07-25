@@ -188,7 +188,7 @@ through the call. The checked view ends before any hidden owner is released.
 ## Shared ownership boundary
 
 Shared ownership, heap allocation, and call-scoped shared borrowing are
-implemented through the current roadmap slice. The focused
+implemented. The focused
 [shared-ownership authority](SHARED_OWNERSHIP.md) defines non-null owning
 handles, copy/adopt/release value semantics, dynamic last-owner destruction,
 strong-cycle leaks, and shared-backed borrowing.

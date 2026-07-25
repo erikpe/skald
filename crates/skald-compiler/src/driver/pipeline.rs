@@ -29,7 +29,6 @@ pub struct AssemblyArtifact {
 #[derive(Debug)]
 pub enum CompilationError {
     Diagnostics(CompilationReport),
-    HirLowering(crate::mir::HirLoweringError),
     MirVerification(crate::mir::MirVerificationErrors),
     Backend(BackendError),
 }
@@ -74,7 +73,7 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    let mir = lower_hir(&hir).map_err(CompilationError::HirLowering)?;
+    let mir = lower_hir(&hir);
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;
 

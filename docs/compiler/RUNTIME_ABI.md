@@ -152,7 +152,7 @@ public ABI for:
 Future language designs may require some of these responsibilities, but they
 do not exist merely because a runtime library is present.
 
-Shared ownership uses this minimal boundary as frozen in the
+Shared ownership uses this minimal boundary as defined in the
 [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#minimal-c-runtime-abi).
 Reference counting, metadata, anchors, and finalizer selection remain
 compiler-owned.

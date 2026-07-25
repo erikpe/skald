@@ -98,15 +98,26 @@ direct-base contexts. Verifier mutations should independently cover table
 density, declaration/definition agreement, selected target and signature,
 source lifetime, and undeclared call targets.
 
+Shared-ownership coverage is intentionally distributed by responsibility.
+Type-check and MIR tests cover owners in local, field, call, result, cast,
+receiver, alias, ordinary-allocation, and copy-allocation positions. Backend
+tests cover the header, count updates, hidden anchors, dynamic finalization,
+cascading field release, cycles, and malformed-input rejection. Native goldens
+observe destruction order and failure status; direct C runtime tests own
+allocator success and fatal allocation failure. The process-determinism suite
+compares all phase products for a representative shared copy-allocation
+program.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
-products for representative object-lifetime and polymorphism programs from
-two independent test processes. The golden runner invokes `skac` twice for
-every successful assembly and every compile failure, comparing assembly or
-diagnostic bytes. It also executes every native case twice and compares status,
-stdout, and stderr before evaluating the checked-in expectations.
+products for representative object-lifetime, polymorphism, and shared-ownership
+programs from two independent test processes. The golden runner invokes `skac`
+twice for every successful assembly and every compile failure, comparing
+assembly or diagnostic bytes. It also executes every native case twice and
+compares status, stdout, and stderr before evaluating the checked-in
+expectations.
 
 Preserve this process isolation for behavior affected by identity allocation,
 table traversal, filesystem paths, labels, diagnostics, or formatting. A

@@ -70,7 +70,7 @@ fn inherited_fields_and_methods_use_identity_selected_base_receivers() {
         panic!("update must retain its method receiver");
     };
     assert_eq!(receiver.place.access, HirAccess::Mutable);
-    let mir = lower_hir(&hir).expect("inherited member places must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("inherited member MIR must verify");
     assert!(crate::mir::dump_mir(&mir).contains(".base(c1).base(c0)"));
 }
@@ -158,7 +158,7 @@ fn alias_upcasts_retain_access_target_and_complete_source_identity() {
     assert!(dump.contains("ViewArgument -> Obj readonly"));
     assert!(dump.contains("ForwardedView f2:p0 : Obj readonly"));
     assert!(dump.contains("-> base c1 -> base c0 : class c0"));
-    let mir = lower_hir(&hir).expect("class and Obj views must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("class and Obj view MIR must verify");
     let mir_dump = crate::mir::dump_mir(&mir);
     assert!(mir_dump.contains("-> class c0 readonly"));
@@ -259,7 +259,7 @@ fn slicing_is_explicit_across_owning_destinations_and_never_elided() {
     let dump = crate::hir::dump_hir(&hir);
     assert!(dump.contains("SliceSource [c1 -> c0] -> c0"));
     assert_eq!(dump, crate::hir::dump_hir(&hir));
-    let mir = lower_hir(&hir).expect("all owning slice contexts must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("all lowered owning slice contexts must verify");
     let mir_dump = crate::mir::dump_mir(&mir);
     assert!(mir_dump.contains(".base(c1).base(c0)"));
@@ -315,7 +315,7 @@ fn obj_views_lower_to_verified_mir() {
     ));
     assert!(output.diagnostics.is_empty());
     let hir = output.hir.unwrap();
-    let mir = lower_hir(&hir).expect("static object views must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("lowered static object views must verify");
     let dump = crate::mir::dump_mir(&mir);
     assert!(dump.contains("view(indirect("));

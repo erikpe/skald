@@ -34,15 +34,13 @@ non-owning, inline-copy, and shared copy-allocation consumer. Explicit copy
 allocation evaluates and secures its checked source before allocation, invokes
 one selected exact-class copy operation, then publishes and adopts the owner.
 The x86-64 backend executes the
-frozen handle, header, checked retain, one-word internal ABI, count-one
+defined handle, header, checked retain, one-word internal ABI, count-one
 publication, recursively generated complete finalization, and last-owner
 deallocation. [Runtime ABI version
 5](RUNTIME_ABI.md) provides only checked byte allocation and exact-base
-deallocation.
-The completed
-[constructor-semantics roadmap](../archive/CONSTRUCTOR_SEMANTICS_ROADMAP.md)
-supplied overload-selected ordinary initialization, the distinct copy
-constructor identity, and reusable ordinary-versus-copy construction modes.
+deallocation. Ordinary initializer overloads, the distinct copy-constructor
+identity, and reusable ordinary-versus-copy construction modes are defined by
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).
 
 ## Responsibility split
 
@@ -439,4 +437,3 @@ native execution.
 
 Strong cycles intentionally remain allocated, so leak detection must
 distinguish that specified behavior from an owner lost by incorrect lowering.
-No implementation roadmap is defined by this document.

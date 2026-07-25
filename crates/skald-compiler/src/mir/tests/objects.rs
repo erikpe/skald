@@ -27,7 +27,7 @@ fn lowers_complete_source_ordered_initializer_vectors_from_hir() {
     second_definition.callable = second.into();
     definition.initializers.push(second_definition);
 
-    let mir = lower_hir(&hir).unwrap();
+    let mir = lower_hir(&hir);
     assert_eq!(
         mir.class(class)
             .unwrap()

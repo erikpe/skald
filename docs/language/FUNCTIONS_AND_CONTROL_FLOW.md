@@ -191,7 +191,7 @@ Postfix calls on a cast result use explicit grouping, for example
 `((Leaf) value).read()`. Cast execution does not reorder receivers or later
 arguments.
 
-The frozen shared copy-allocation form `new T(copy source)` is one such
+The shared copy-allocation form `new T(copy source)` is one such
 consuming context. It evaluates and target-checks the copy source before
 allocating the destination, keeps the source and any anchor live through
 exact-`T` copy construction, and secures the produced owner before

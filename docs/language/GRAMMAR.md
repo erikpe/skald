@@ -391,10 +391,10 @@ member rules, containment, receivers, initialization, and object places.
 access, forwarding, overlap, and lifetime.
 [Shared ownership and heap allocation](SHARED_OWNERSHIP.md) defines
 `shared T`, ordinary `new T(arguments)`, and explicit copy-allocation
-`new T(copy source)` semantics. The parser and resolver accept these forms and
-retain their object identities and construction modes. Typed HIR supports
-shared storage, owner provenance, ordinary allocation, and explicit exact-class
-copy allocation. The copy marker is not an ordinary initializer argument.
+`new T(copy source)` semantics. The compiler implements these forms through
+resolved identities, typed owner provenance, verified MIR lifetimes, native
+allocation and deterministic last-owner destruction. The copy marker is not an
+ordinary initializer argument.
 [Object casts](OBJECT_CASTS.md) defines `(T) source` and `(shared T) source`
 forms, precedence, and type-name disambiguation. Plain casts are currently
 implemented for non-owning receiver, alias-argument, and field consumers plus

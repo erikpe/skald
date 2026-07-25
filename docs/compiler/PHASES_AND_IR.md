@@ -3,11 +3,9 @@
 Status: authoritative for current compiler phase inputs, products, invariants,
 verification boundaries, deterministic dumps, and phase-facing public paths.
 Source-visible meaning remains owned by the
-[language documentation](../language/README.md). The frozen additions required
-for shared ownership are specified separately in the
-[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). That
-contract distinguishes the implemented typed-HIR vocabulary from the
-remaining MIR, backend, and runtime work.
+[language documentation](../language/README.md). Shared ownership's
+cross-phase invariants are specified separately in the
+[shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md).
 
 ## Pipeline contract
 
@@ -20,16 +18,14 @@ The target-independent compiler path is:
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
 | Resolution | `resolve::resolve` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
-| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` or structured `HirLoweringError` |
+| MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
 `driver::compile_source_to_assembly` composes these phases with target
 selection and backend emission. It stops after any source phase that produced
 an error. Successful type checking always produces HIR; failed type checking
-produces no HIR. HIR lowering currently represents every typed operation in
-target-independent MIR. Its result type retains a structured lowering-error
-boundary so future staged work need not turn a temporary phase gap into a
-panic. The
+produces no HIR. HIR lowering represents every typed operation directly in
+target-independent MIR. The
 [backend and target contract](BACKEND.md)
 defines how verified MIR is checked and realized for a selected target; driver
 behavior is separate from the target-independent phase model and is defined by
@@ -362,7 +358,7 @@ analyses and transformations must have explicit ordering and must return MIR
 that satisfies the same verifier boundary. Compiler correctness must not
 depend on an optimization pass being enabled.
 
-The frozen shared-ownership extension preserves this division of
+The shared-ownership implementation preserves this division of
 responsibility: HIR records owner provenance and anchor requirements, MIR
 makes copy/adopt/release and anchor lifetimes explicit, and verification proves
 their structural ownership invariants before a backend realizes them. Exact

@@ -18,42 +18,21 @@ mod object_values;
 mod places;
 mod program;
 mod shared;
-mod shared_gate;
 mod statement;
 mod type_operations;
 
 use cleanup::CleanupPlanner;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HirLoweringError {
-    UnsupportedSharedOwnership { span: crate::source::Span },
-}
-
-impl std::fmt::Display for HirLoweringError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnsupportedSharedOwnership { .. } => {
-                formatter.write_str("shared ownership operation is outside the current MIR profile")
-            }
-        }
-    }
-}
-
-impl std::error::Error for HirLoweringError {}
-
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
-pub fn lower_hir(hir: &HirProgram) -> Result<MirProgram, HirLoweringError> {
-    if let Some(span) = shared_gate::first_unsupported_shared_span(hir) {
-        return Err(HirLoweringError::UnsupportedSharedOwnership { span });
-    }
+pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
     if let Err(errors) = super::verify_mir(&mir) {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
-    Ok(mir)
+    mir
 }
 
 fn lower_selected_copy_operation<I>(

@@ -118,7 +118,7 @@ fn lowers_shared_targets_allocations_and_owner_provenance_into_hir() {
     assert!(dump.contains("SharedField c2:field1"));
     assert!(dump.contains("SharedField c2:field0"));
 
-    let mir = lower_hir(&hir).expect("shared up-views must lower after SO9");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared up-view MIR must verify");
 }
 
@@ -149,7 +149,7 @@ fn shared_backed_alias_arguments_classify_stable_and_anchored_lifetimes() {
     assert_eq!(dump.matches("SharedPointee").count(), 4);
     assert_eq!(dump.matches("AnchoredSharedPointee").count(), 3);
 
-    let mir = lower_hir(&hir).expect("shared-backed aliases must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared call anchors must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(
@@ -180,7 +180,7 @@ fn shared_backed_receivers_cover_inline_payload_subobjects() {
     ));
     assert_diagnostics(&output.diagnostics, &[]);
     let hir = output.hir.expect("shared-backed receivers must type check");
-    let mir = lower_hir(&hir).expect("shared-backed receivers must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared receiver anchors must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(
@@ -240,7 +240,7 @@ fn shared_backed_checked_places_cover_borrowing_mutation_and_inline_copy_consume
     assert!(dump.contains("SliceSource"));
     assert!(dump.contains("AnchoredSharedPointee"));
 
-    let mir = lower_hir(&hir).expect("shared-backed checked-place consumers must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared-backed checked-place lifetimes must verify");
     let mir_dump = dump_mir(&mir);
     assert_eq!(mir_dump, dump_mir(&mir));
@@ -284,7 +284,7 @@ fn produced_shared_allocations_retain_exact_dynamic_knowledge_for_place_casts() 
     let hir = output
         .hir
         .expect("exact produced shared place casts must type check");
-    let mir = lower_hir(&hir).expect("exact produced shared place casts must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("exact produced shared place casts must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert!(!main.body.blocks.iter().any(|block| {
@@ -327,7 +327,7 @@ fn receiver_and_argument_anchors_precede_later_replacement_and_release_after_cal
     ));
     assert_diagnostics(&output.diagnostics, &[]);
     let hir = output.hir.expect("replacement-safe call must type check");
-    let mir = lower_hir(&hir).expect("replacement-safe call must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("replacement-safe anchor MIR must verify");
     let definition = mir.definitions.get(mir.entry_function).unwrap();
     let instructions = &definition.body.blocks[0].instructions;
@@ -388,7 +388,7 @@ fn nested_shared_fields_anchor_each_owner_edge_without_graph_search() {
     let hir = output
         .hir
         .expect("nested shared field borrow must type check");
-    let mir = lower_hir(&hir).expect("nested shared field borrow must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("nested shared anchors must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(
@@ -422,7 +422,7 @@ fn shared_anchors_support_forwarding_and_deliberately_overlapping_mutable_aliase
     let hir = output
         .hir
         .expect("shared alias forwarding and overlap must type check");
-    let mir = lower_hir(&hir).expect("shared alias forwarding and overlap must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared alias forwarding and overlap must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(
@@ -454,7 +454,7 @@ fn shared_call_result_is_secured_before_receiver_anchor_cleanup() {
     let hir = output
         .hir
         .expect("anchored shared-result call must type check");
-    let mir = lower_hir(&hir).expect("anchored shared-result call must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("anchored shared-result call must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     let instructions = &main.body.blocks[0].instructions;
@@ -503,7 +503,7 @@ fn shared_interface_fields_and_producers_use_call_anchors() {
     let hir = output
         .hir
         .expect("shared interface receivers must type check");
-    let mir = lower_hir(&hir).expect("shared interface receivers must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared interface anchors must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     assert_eq!(
@@ -529,7 +529,7 @@ fn anchors_and_inline_temporaries_cleanup_in_reverse_completion_order() {
     ));
     assert_diagnostics(&output.diagnostics, &[]);
     let hir = output.hir.expect("mixed temporary call must type check");
-    let mir = lower_hir(&hir).expect("mixed temporary call must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("mixed temporary cleanup must verify");
     let main = mir.definitions.get(mir.entry_function).unwrap();
     let instructions = &main.body.blocks[0].instructions;
@@ -584,7 +584,7 @@ fn shared_polymorphic_consumers_keep_static_targets_and_header_origins() {
     let dump = dump_hir(&hir);
     assert!(dump.contains("Origin Shared"));
     assert!(dump.contains("SharedPointee"));
-    let mir = lower_hir(&hir).expect("stable shared views must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("stable shared views must verify");
 }
 
@@ -609,7 +609,7 @@ fn shared_casts_classify_static_runtime_and_produced_owner_transfer() {
     assert!(dump.contains("SharedCast runtime-terminate -> shared class c1"));
     assert!(dump.contains("SharedCast static -> shared interface i0"));
     assert!(dump.contains("SharedTransfer Adopt"));
-    let mir = lower_hir(&hir).expect("shared casts must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("shared cast MIR must verify");
 }
 
@@ -841,7 +841,7 @@ fn copy_allocation_records_the_selected_operation_and_checked_source() {
             .selected()
             .unwrap()
     );
-    let mir = lower_hir(&hir).expect("copy allocation must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("copy-allocation MIR must verify");
 }
 
@@ -877,7 +877,7 @@ fn copy_allocation_accepts_alias_produced_and_shared_checked_sources() {
     let hir = output
         .hir
         .expect("all supported copy sources must type-check");
-    let mir = lower_hir(&hir).expect("all supported copy sources must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("all supported copy sources must verify");
     let copy_allocations = mir
         .definitions

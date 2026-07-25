@@ -73,11 +73,13 @@ operations, even when a class receives synthesized field-wise behavior.
 
 The broader direction keeps nullability and ownership visible in source types,
 preserves or reduces access through conversions, and prevents non-owning views
-from escaping their valid source lifetime. The frozen shared-ownership design
+from escaping their valid source lifetime. The implemented shared-ownership
+profile
 uses non-null `shared T` handles, deterministic last-owner destruction, and
 hidden owning anchors for borrows from replaceable shared storage. Shared
-allocation is not a current compiler feature. Optionals and exceptional
-control flow also remain unimplemented, and their final rules are not frozen.
+allocation is explicit through `new T(arguments)` or `new T(copy source)`.
+Optionals and exceptional control flow remain unimplemented, and their final
+rules are not frozen.
 
 External function declarations are trusted ABI assertions. They form a focused
 interoperation boundary rather than a proof that foreign code satisfies Skald

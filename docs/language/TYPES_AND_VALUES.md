@@ -153,7 +153,7 @@ The language performs no primitive casts or user-defined conversions. Numeric
 conversion behavior, including integer width changes and numeric/boolean
 conversion, is not frozen. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
-places, while future shared casts preserve existing allocations. Neither form
+places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
 
 Optional values are an exploratory direction for representing absence without
@@ -171,11 +171,11 @@ but its type name, literal syntax and encoding, byte/text semantics, copying,
 slicing, storage, and library boundary are not frozen. No representation or
 literal-lowering strategy is a language guarantee.
 
-Function values are not implemented or frozen. Shared ownership is also not
-implemented, but its non-null value type, compatible views, and
-copy/adopt/release behavior are frozen in
-[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Their current
-maturity is recorded in the [status matrix](STATUS.md#not-implemented).
+Function values are not implemented or frozen. Shared ownership's implemented
+non-null value type, compatible views, and copy/adopt/release behavior are
+defined in [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md).
+Remaining exclusions are recorded in the
+[status matrix](STATUS.md#not-implemented).
 Implemented polymorphic views, slicing, tests, and checked casts are separated
 into the [polymorphism profile](POLYMORPHISM.md). Legacy examples are not
 usable syntax or settled semantics.

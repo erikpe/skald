@@ -1,6 +1,6 @@
 # Shared Ownership and Heap Allocation
 
-Status: **shared-backed checked-place anchors implemented**. This
+Status: **implemented on x86-64**. This
 document is authoritative for the source-visible semantics of `shared T`,
 heap allocation, shared copying and assignment, deterministic last-owner
 destruction, borrowing from shared storage, and strong cycles. The
@@ -25,9 +25,10 @@ owners; stable owners borrow directly. Checked places may feed receivers,
 alias arguments, field access and mutation, and owning inline copy,
 assignment, argument, result, and slicing contexts. Owner-preserving
 `(shared T) source` casts execute with retain for a named source and transfer
-for a produced source, after any required metadata check. Explicit copy
-allocation remains unavailable.
-Compiler and runtime realization is frozen separately in the
+for a produced source, after any required metadata check. Explicit
+`new T(copy source)` allocation accepts inline, alias, produced, and
+shared-backed checked sources.
+Compiler and runtime realization is defined separately in the
 [shared-ownership implementation contract](../compiler/SHARED_OWNERSHIP.md).
 Object conversion syntax and the complete inline/alias/shared direction matrix
 are owned by [Object Casts](OBJECT_CASTS.md).
@@ -57,7 +58,7 @@ garbage collection or a conservative runtime root scan.
 
 ## Type and construction forms
 
-The frozen source forms are:
+The source forms are:
 
 ```ska
 shared Widget
@@ -278,7 +279,7 @@ dynamic class where dispatch requires it.
 static-or-runtime classification. It evaluates the source once and does not
 change ownership.
 
-The frozen cast profile provides two distinct shared-backed operations:
+The cast profile provides two distinct shared-backed operations:
 
 ```ska
 ((Dog) shared_animal).speak();
@@ -374,9 +375,9 @@ Future checked exceptions may extend allocation and cleanup behavior only by
 explicitly revising this contract. They are not implied by the shared
 ownership design.
 
-## Initial exclusions
+## Exclusions
 
-This frozen profile does not include:
+This profile does not include:
 
 - optional or nullable shared handles;
 - weak ownership;
@@ -392,5 +393,5 @@ This frozen profile does not include:
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 
-These exclusions bound the first implementation. They do not reserve syntax or
+These exclusions bound the current implementation. They do not reserve syntax or
 freeze the eventual designs of the omitted features.

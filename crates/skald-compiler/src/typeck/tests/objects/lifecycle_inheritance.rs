@@ -173,7 +173,7 @@ fn user_and_synthesized_copy_operations_compose_in_both_directions() {
         })
     );
 
-    let mir = lower_hir(&hir).expect("composed user and synthesized copies must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("composed base copy plans must verify");
     let MirCopyCapability::User(copy) = &mir.class(ClassId::new(3)).unwrap().copy_constructor
     else {
@@ -311,7 +311,7 @@ fn each_initializer_in_a_deep_chain_selects_its_base_overload_independently() {
     }
     assert_eq!(hir_dump, crate::hir::dump_hir(&hir));
 
-    let mir = lower_hir(&hir).expect("overloaded base initialization must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("overloaded base initialization must verify");
     for (class, base) in [
         (ClassId::new(1), ClassId::new(0)),
@@ -548,7 +548,7 @@ fn mir_lowering_preserves_static_inheritance_semantics() {
         "fn main() -> i64 { return 0; }\n",
     ));
     let hir = output.hir.unwrap();
-    let mir = lower_hir(&hir).expect("static inheritance must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("lowered static inheritance must verify");
     let derived = mir.class(ClassId::new(1)).unwrap();
     assert_eq!(derived.direct_base.unwrap().class, ClassId::new(0));

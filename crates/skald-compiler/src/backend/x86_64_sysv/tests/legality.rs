@@ -162,9 +162,9 @@ fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
 
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert!(error.message().contains("input MIR failed verification"));
-    assert!(error
-        .message()
-        .contains("external function cannot declare alias or object value parameters"));
+    assert!(error.message().contains(
+        "external function cannot declare alias, object value, or shared-owner parameters"
+    ));
 }
 
 #[test]
@@ -179,9 +179,9 @@ fn external_alias_signature_is_a_structured_verification_error() {
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error.message().contains("input MIR failed verification"));
-    assert!(error
-        .message()
-        .contains("external function cannot declare alias or object value parameters"));
+    assert!(error.message().contains(
+        "external function cannot declare alias, object value, or shared-owner parameters"
+    ));
 }
 
 #[test]
@@ -205,9 +205,61 @@ fn external_interface_signature_is_rejected_before_instruction_selection() {
     let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
     assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains(
+        "external function cannot declare alias, object value, or shared-owner parameters"
+    ));
+}
+
+#[test]
+fn external_shared_signatures_are_rejected_at_the_backend_boundary() {
+    let mut parameter = counter_member_program();
+    let declaration = &mut parameter.declarations.entries_mut_for_test()[0];
+    declaration.parameters =
+        MirParameter::values([MirType::Shared(MirSharedTarget::Class(ClassId::new(0)))]);
+
+    let error = emit_assembly(Target::X86_64SysV, &parameter).unwrap_err();
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains(
+        "external function cannot declare alias, object value, or shared-owner parameters"
+    ));
+
+    let mut result = counter_member_program();
+    result.declarations.entries_mut_for_test()[0].return_type =
+        MirType::Shared(MirSharedTarget::Class(ClassId::new(0)));
+
+    let error = emit_assembly(Target::X86_64SysV, &result).unwrap_err();
+    assert!(error.message().contains("input MIR failed verification"));
     assert!(error
         .message()
-        .contains("external function cannot declare alias or object value parameters"));
+        .contains("external function cannot return an object value or shared owner"));
+}
+
+#[test]
+fn malformed_shared_lifetime_is_rejected_before_instruction_selection() {
+    let mut mir = lower_source_to_mir(concat!(
+        "class Resource { init() {} destroy {} }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Resource = new Resource();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let function = mir
+        .definitions
+        .get_mut_for_test(mir.entry_function)
+        .unwrap();
+    let initialize = function.body.blocks[0]
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::SharedInitialize(_)))
+        .expect("shared allocation must have an initialization step");
+    function.body.blocks[0].instructions.remove(initialize);
+
+    let error = emit_assembly(Target::X86_64SysV, &mir).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error
+        .message()
+        .contains("shared publication requires completed initialization"));
 }
 
 #[test]

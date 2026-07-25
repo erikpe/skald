@@ -12,11 +12,13 @@ The compiler is named `skac`, and Skald source files use the `.ska` suffix.
 The current implementation accepts one UTF-8 source file and supports
 primitive values, functions, lexical control flow, exact nominal inline
 classes, deterministic copying and destruction, owning class parameters and
-results, call-scoped object views, single inheritance, virtual/interface
-dispatch, type tests, and checked object casts. The
+results, non-null reference-counted shared objects, owning shared fields,
+hidden borrow anchors, call-scoped object views, single inheritance,
+virtual/interface dispatch, type tests, and checked object casts. The
 compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and
-whole-object assignment contexts. The
+whole-object assignment contexts, plus allocation-free owner-preserving shared
+casts and explicit exact-class shared copy allocation. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.

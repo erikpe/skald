@@ -59,7 +59,7 @@ fn explicit_copy_selects_one_copy_operation_and_is_not_elided() {
     };
     assert_eq!(source.kind, HirCheckedObjectViewKind::Static);
 
-    let mir = lower_hir(&hir).unwrap();
+    let mir = lower_hir(&hir);
     let main = mir.definitions.get(hir.entry_function).unwrap();
     let copy_count = main
         .body
@@ -113,7 +113,7 @@ fn target_directed_copy_supports_static_slicing_and_dynamic_downcasts() {
     assert_eq!(view.kind, HirCheckedObjectViewKind::RuntimeTerminate);
     assert_eq!(view.class, Some(ClassId::new(1)));
 
-    let mut mir = lower_hir(&hir).expect("dynamic copy construction must lower");
+    let mut mir = lower_hir(&hir);
     assert!(verify_mir(&mir).is_ok());
     let body = &mir.definitions.get(FunctionId::new(1)).unwrap().body;
     assert!(body.blocks.iter().any(|block| matches!(

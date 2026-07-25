@@ -54,7 +54,7 @@ fn checked_object_casts_support_direct_receivers_alias_arguments_and_fields() {
     };
     assert!(receiver.checked_cast.is_some());
 
-    let mir = lower_hir(&hir).expect("checked casts must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("lowered checked casts must verify");
     let dump = dump_mir(&mir);
     assert!(dump.contains("checked-cast"));
@@ -82,7 +82,7 @@ fn checked_interface_casts_support_requirement_receivers() {
         receiver,
         crate::hir::HirInterfaceReceiver::Checked(_)
     ));
-    let mir = lower_hir(&hir).expect("interface cast must lower");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("interface cast MIR must verify");
 }
 
@@ -143,7 +143,7 @@ fn checked_class_casts_feed_every_owning_copy_context() {
     };
     assert!(matches!(&**source, HirObjectSource::Checked(_)));
 
-    let mir = lower_hir(&hir).expect("owning cast sources must lower");
+    let mir = lower_hir(&hir);
     let dump = dump_mir(&mir);
     if let Err(errors) = verify_mir(&mir) {
         panic!("owning cast-source MIR must verify: {errors}\n{dump}");
@@ -288,7 +288,7 @@ fn classifies_type_tests_from_exact_and_forwarded_class_obj_and_interface_views(
         HirViewSource::Forwarded { .. }
     ));
 
-    let mir = lower_hir(&hir).expect("typed type operations must lower to MIR");
+    let mir = lower_hir(&hir);
     verify_mir(&mir).expect("lowered type operations must verify");
     let dump = dump_mir(&mir);
     assert!(dump.contains("const.bool true"));

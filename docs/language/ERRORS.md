@@ -30,9 +30,9 @@ than source-language exceptions.
 ## Current runtime failures
 
 The implemented source language has no `panic`, `throw`, `try`, `catch`, or
-other runtime-failure construct. It also has no implemented bounds checks,
-checked casts, allocation, optional extraction, integer division, or similar
-operation requiring a general language panic policy.
+other runtime-failure construct. Checked object casts, shared allocation, and
+strong-count overflow have focused unrecoverable failure rules; there is no
+general language panic policy.
 
 The repository's bootstrap output functions are ordinary external calls. Their
 current runtime contract terminates the process unsuccessfully when a write or
@@ -50,8 +50,8 @@ unsuccessfully without returning to Skald or guaranteeing remaining
 source-level cleanup. It does not introduce a catchable exception or settle a
 general panic facility.
 
-The frozen, unimplemented
-[shared-ownership design](SHARED_OWNERSHIP.md#unrecoverable-failures) applies
+The implemented
+[shared-ownership profile](SHARED_OWNERSHIP.md#unrecoverable-failures) applies
 the same non-returning boundary to allocation failure and `u64` strong-count
 overflow. Neither failure is catchable or guarantees remaining cleanup.
 Its explicit `new T(copy source)` copy-allocation form completes any required
@@ -59,15 +59,15 @@ target-directed dynamic check before allocating its destination; failure
 therefore cannot leave a copy destination awaiting cleanup.
 Strong-count underflow, invalid handles, double finalization, and use after
 release are compiler/runtime defects rather than source-level failures. These
-rules do not change current compiler support or establish a general panic
-facility.
+rules do not establish a general panic facility.
 
-The implemented [object-cast design](OBJECT_CASTS.md#failure) defines that a
+The implemented [object-cast profile](OBJECT_CASTS.md#failure) defines that a
 dynamically unsuccessful cast
 terminates without producing a null or invalid view and without guaranteeing
 remaining cleanup. A statically impossible cast is rejected at compile time.
 This applies to plain casts consumed directly and by owning inline copy
-operations. Shared-owner casts remain unimplemented.
+operations, owner-preserving shared casts, and target-directed shared copy
+allocation.
 
 ## Cleanup and abrupt termination
 

@@ -51,7 +51,7 @@ optimization.
 Target legality, layout, calling conventions, and code generation are defined
 by the [backend and target contract](BACKEND.md). The public runtime C surface
 and compiler/runtime compatibility mechanism are defined by the
-[runtime ABI](RUNTIME_ABI.md). The frozen ownership, ordinary/copy-allocation,
+[runtime ABI](RUNTIME_ABI.md). The implemented ownership, ordinary/copy-allocation,
 header, finalizer, anchor, and compiler/runtime responsibility design is
 defined by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). Driver

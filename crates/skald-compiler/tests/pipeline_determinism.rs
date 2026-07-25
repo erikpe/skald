@@ -23,6 +23,8 @@ const OBJECT_TEST_NAME: &str = "object_lifetime_phase_products_are_deterministic
 const POLYMORPHISM_HELPER_OUTPUT: &str = "SKALD_POLYMORPHISM_DETERMINISM_OUTPUT";
 const POLYMORPHISM_TEST_NAME: &str =
     "polymorphism_phase_products_are_deterministic_across_processes";
+const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
+const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -41,6 +43,16 @@ fn polymorphism_phase_products_are_deterministic_across_processes() {
         POLYMORPHISM_HELPER_OUTPUT,
         POLYMORPHISM_TEST_NAME,
         polymorphism_phase_dump,
+    );
+}
+
+#[test]
+fn shared_ownership_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "shared-ownership",
+        SHARED_HELPER_OUTPUT,
+        SHARED_TEST_NAME,
+        shared_ownership_phase_dump,
     );
 }
 
@@ -109,6 +121,12 @@ fn polymorphism_phase_dump() -> String {
     complete_phase_dump(include_str!("../../../tests/golden/run/polymorphism.ska"))
 }
 
+fn shared_ownership_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/shared_copy_allocation.ska"
+    ))
+}
+
 fn complete_phase_dump(text: &str) -> String {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("determinism.ska", text);
@@ -123,7 +141,7 @@ fn complete_phase_dump(text: &str) -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
-    let mir = run_mir_pipeline(lower_hir(&hir).unwrap()).unwrap();
+    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
     let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
 
     format!(

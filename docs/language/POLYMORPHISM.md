@@ -392,7 +392,7 @@ The cast uses the same static-success, static-impossibility, or runtime
 classification as `is`. It preserves complete-object
 identity, dynamic metadata, and source access. Failure retains the current
 unrecoverable behavior. Inline owning contexts may copy from a class cast
-place; future `(shared Target)` casts preserve an existing shared allocation.
+place; `(shared Target)` casts preserve an existing shared allocation.
 The complete direction, slicing, lifetime, anchor, and allocation rules belong
 to [Object Casts](OBJECT_CASTS.md).
 
@@ -428,9 +428,6 @@ This profile excludes:
 - standalone inline `Obj` or interface values, fields, value parameters, or
   results;
 - local/general reference values and stored cast views;
-- the implementation of `shared`, heap allocation, reference counting, borrow
-  anchors, and dynamic shared destruction, whose future semantics are frozen
-  separately in [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md);
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, optionals, closures, generics, statics/globals, and reflection;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
@@ -439,9 +436,11 @@ This profile excludes:
 - `super` field/method access, qualified base calls, and explicit destructor
   calls.
 
-Their exclusion keeps this implemented profile bounded. Some exclusions,
-including shared ownership, have a separate frozen design; the
-[status matrix](STATUS.md) distinguishes those from still-open directions.
+Their exclusion keeps this implemented profile bounded. Shared ownership is a
+separate implemented profile defined by
+[Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md); the
+[status matrix](STATUS.md) distinguishes current contracts from open
+directions.
 
 ## Implementation boundary
 

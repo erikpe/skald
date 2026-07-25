@@ -415,7 +415,7 @@ fn object_result_virtual_calls_use_the_same_explicit_target() {
         } if family == VirtualFamilyId::new(0)
             && selected == MethodId::new(ClassId::new(1), 0)
     ));
-    let mir = lower_hir(&hir).unwrap();
+    let mir = lower_hir(&hir);
     verify_mir(&mir).unwrap();
     let through = mir.definitions.get(FunctionId::new(0)).unwrap();
     let object_call = through.body.blocks[0]
@@ -468,5 +468,5 @@ fn virtual_call_dump_is_exact_and_lowers_to_verified_mir() {
             "              Origin Forwarded f0:p0 : class c0 readonly",
         ]
     );
-    verify_mir(&lower_hir(&hir).unwrap()).unwrap();
+    verify_mir(&lower_hir(&hir)).unwrap();
 }

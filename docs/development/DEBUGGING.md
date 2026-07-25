@@ -52,6 +52,13 @@ operation and checked exact-`T` source. MIR then shows any `checked_cast`
 success/failure edge before one `copy_construct`, followed by the checked-view
 and produced-temporary full-expression cleanup.
 
+For `new T(copy source)`, that same source and checked-view sequence must
+precede `shared-allocate`. MIR then names the unpublished allocation payload as
+the destination of exactly one `copy-construct`, followed by
+`shared-publish`, `shared-adopt`, checked-view end, and reverse
+full-expression cleanup. Allocation before a required check or publication
+before copy completion is malformed MIR.
+
 For a shared-backed receiver or alias argument, HIR distinguishes a stable
 `SharedPointee` from an `AnchoredSharedPointee` and retains the copied field or
 adopted producer source. MIR declares each hidden owner as `shared-anchor`;

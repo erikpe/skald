@@ -187,7 +187,7 @@ const DERIVED_SHARED_SOURCE: &str = concat!(
 );
 
 #[test]
-fn lowers_the_frozen_handle_header_and_runtime_call_contract() {
+fn lowers_the_current_handle_header_and_runtime_call_contract() {
     let output = assembly(DERIVED_SHARED_SOURCE);
 
     assert!(output.contains("mov rdi, 32\n    call ska_rt_alloc"));

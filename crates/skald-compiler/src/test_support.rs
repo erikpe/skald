@@ -101,7 +101,6 @@ pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
             .hir
             .expect("successful type checking must produce typed HIR"),
     )
-    .expect("test source must use HIR representable in MIR")
 }
 
 pub(crate) fn lower_source_to_assembly(

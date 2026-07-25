@@ -102,21 +102,24 @@ impl<'mir> Verifier<'mir> {
                     parameter.mode != MirParameterMode::Value
                         || matches!(
                             parameter.ty,
-                            MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                            MirType::Class(_)
+                                | MirType::Interface(_)
+                                | MirType::Obj
+                                | MirType::Shared(_)
                         )
                 }) {
                     self.function_error(
                         declaration.id,
-                        "external function cannot declare alias or object value parameters",
+                        "external function cannot declare alias, object value, or shared-owner parameters",
                     );
                 }
                 if matches!(
                     declaration.return_type,
-                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj | MirType::Shared(_)
                 ) {
                     self.function_error(
                         declaration.id,
-                        "external function cannot return an object value",
+                        "external function cannot return an object value or shared owner",
                     );
                 }
                 if symbol != &declaration.name || !is_source_identifier(symbol) {

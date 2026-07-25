@@ -89,11 +89,11 @@ impl CallableChecker<'_, '_> {
                 self.diagnostics.push(
                     Diagnostic::error(
                         INVALID_OBJECT_CONTEXT,
-                        "shared allocation is not implemented in typed HIR",
+                        "shared allocation must be consumed as a shared owner",
                     )
                     .with_primary_label(
                         allocation.new_span,
-                        "allocation cannot cross type checking yet",
+                        "store, pass, return, or otherwise consume this produced owner",
                     ),
                 );
                 None
