@@ -11,8 +11,10 @@ stable owners directly and anchor replaceable or produced owners through the
 checked consumer. Shared-owner casts execute in target-directed owning
 contexts.
 
-Primitive conversions, optional casts, unsafe reinterpretation, user-defined
-conversions, and external object ABI are outside this profile.
+Primitive conversions, unsafe reinterpretation, user-defined conversions, and
+external object ABI are outside this profile. Optional-result casts are an
+explicit exclusion of the frozen
+[optional-values contract](OPTIONAL_VALUES.md#explicit-exclusions).
 
 ## Source forms and precedence
 
@@ -347,9 +349,10 @@ Static impossibility is a compile-time error. Dynamic failure terminates the
 process unsuccessfully without producing a value, returning to Skald, or
 guaranteeing remaining cleanup.
 
-There is no null result and no unchecked object cast. A future optional cast
-must be designed together with explicit optional values; recoverable cast
-exceptions likewise belong to the future exception design.
+There is no null result and no unchecked object cast. The frozen initial
+optional profile deliberately does not add failed casts returning optionals;
+such an extension requires a separate design. Recoverable cast exceptions
+likewise belong to the future exception design.
 
 ## Expression-only cast profile
 

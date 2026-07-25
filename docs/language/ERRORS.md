@@ -69,6 +69,21 @@ This applies to plain casts consumed directly and by owning inline copy
 operations, owner-preserving shared casts, and target-directed shared copy
 allocation.
 
+## Frozen optional failure direction
+
+The [optional-values contract](OPTIONAL_VALUES.md#failure) freezes three
+additional unrecoverable failures for the planned feature:
+
+- checked access to an absent optional;
+- dynamic presence-guard count overflow; and
+- clearing, replacing, or destroying an optional while a checked payload view
+  keeps it present.
+
+Each failure terminates before producing an invalid payload or dangling view,
+does not return to Skald, and does not guarantee remaining source-level
+cleanup. These failures are part of a **frozen design**, not the current
+executable language: the compiler does not yet accept optional values.
+
 ## Cleanup and abrupt termination
 
 The implemented deterministic cleanup rules apply to normal block
@@ -112,7 +127,9 @@ must settle:
 - failed construction, failed copying, destructor behavior, and nested failure;
 - interaction with external functions and unrecoverable runtime termination;
   and
-- deterministic cleanup on every exceptional edge.
+- deterministic cleanup on every exceptional edge, including ending optional
+  presence guards before a recoverable transfer can cross a checked payload
+  consumer.
 
 Lowering through native unwinding, explicit control flow, hidden results, or
 another mechanism is a compiler decision. No source rule should be inferred

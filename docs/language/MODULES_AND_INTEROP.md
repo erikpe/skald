@@ -102,6 +102,11 @@ Some type shapes above can be parsed in a general declaration position but
 are rejected semantically for external functions. Their appearance in the
 grammar does not extend the interoperability contract.
 
+The frozen
+[optional-values contract](OPTIONAL_VALUES.md#declaration-and-abi-boundary)
+retains this rejection for every optional parameter and result. It does not
+define a foreign optional representation or ownership convention.
+
 The [shared-ownership profile](SHARED_OWNERSHIP.md#exclusions)
 deliberately preserves this restriction: shared values do not cross the
 external boundary, and the allocator functions remain compiler/runtime

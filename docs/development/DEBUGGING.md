@@ -133,3 +133,20 @@ For an exact diagnostic mismatch, compare the structured diagnostic before its
 rendered text. For a native-only failure, reproduce at the narrowest available
 layer: backend native unit test, golden executable, or direct C runtime harness.
 The [testing guide](TESTING.md) explains where the resulting regression belongs.
+
+## Planned optional-value inspection
+
+When optional-value implementation begins, inspect it at the narrowest owner
+defined by the frozen
+[compiler contract](../compiler/OPTIONAL_VALUES.md#dumps-and-diagnostics):
+
+- tokens and AST for `?`, `!`, `none`, and `is some`/`is none`;
+- resolved and HIR dumps for canonical wrapper identities, contextual `none`,
+  injection, checked access, and selected payload consumers;
+- MIR for initialized optional storage, conditional lifecycle, presence
+  guards, shared anchors, and exact non-returning failure reasons; and
+- assembly for state/payload offsets, the `shared? T` zero niche, internal
+  parameter/result lowering, and trap-only failures.
+
+These dump expectations are planned obligations. The current compiler has no
+optional nodes to inspect.

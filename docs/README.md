@@ -17,6 +17,9 @@ Use the authority closest to the behavior:
   [implemented grammar](language/GRAMMAR.md);
 - type, value, literal, and expression semantics belong in
   [types and values](language/TYPES_AND_VALUES.md);
+- the frozen, not-yet-implemented source contract for explicit `T?` and
+  `shared? T` values belongs in
+  [optional values](language/OPTIONAL_VALUES.md);
 - callable, binding, statement, return, and evaluation-order semantics belong
   in [functions and control flow](language/FUNCTIONS_AND_CONTROL_FLOW.md);
 - exact classes, inline containment, receivers, ordinary initializer
@@ -44,6 +47,9 @@ Use the authority closest to the behavior:
   policy belong in the [compiler architecture](compiler/README.md);
 - phase products, IR responsibilities, verification, dumps, and trust
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- the frozen, not-yet-implemented optional IR, verification, x86-64 layout,
+  and internal ABI contract belongs in
+  [the optional-values compiler contract](compiler/OPTIONAL_VALUES.md);
 - implemented shared-owner lowering, allocation layout, generated reference
   counting, finalizers, and the future minimal allocation ABI belong in the
   [shared-ownership compiler and runtime contract](compiler/SHARED_OWNERSHIP.md);

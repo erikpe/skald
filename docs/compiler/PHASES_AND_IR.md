@@ -6,6 +6,9 @@ Source-visible meaning remains owned by the
 [language documentation](../language/README.md). Shared ownership's
 cross-phase invariants are specified separately in the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md).
+The frozen optional-value phase and IR additions are specified in the
+[optional-values compiler contract](OPTIONAL_VALUES.md); they are planned and
+do not describe nodes accepted by the current compiler.
 
 ## Pipeline contract
 
@@ -33,6 +36,14 @@ behavior is separate from the target-independent phase model and is defined by
 
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
+
+The optional-values contract assigns each future decision to these same phase
+owners: syntax preserves source shape, resolution interns non-recursive
+optional type identities, HIR records checked optional operations and access,
+MIR makes wrapper storage, conditional lifecycle, guards, anchors, and failure
+edges explicit, and verification proves the backend preconditions. This is a
+frozen extension contract, not a claim that current phase products contain
+optional nodes.
 
 ## Sources and diagnostics
 

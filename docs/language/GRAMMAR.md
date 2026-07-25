@@ -93,6 +93,11 @@ The complete punctuation and operator token set is:
 There are no string, character, comparison, division, bracket, or question-mark
 tokens in the implemented grammar.
 
+The frozen [optional-values design](OPTIONAL_VALUES.md) plans reserved `none`,
+contextual `shared` and `some`, plus `?` and postfix `!`. Those forms are not
+part of the implemented token or grammar contract yet; this note does not make
+them accepted syntax.
+
 ## Literals
 
 ```text

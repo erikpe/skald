@@ -8,6 +8,9 @@ separate contract. The shared-handle/header layout, generated
 reference-counting realization, and executable shared-field layout are owned by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md), not by
 the current target profile below.
+The frozen [optional-values compiler contract](OPTIONAL_VALUES.md) separately
+owns planned optional layout, ABI, guard, and trap realization. No optional
+MIR is currently legal backend input.
 
 ## Backend interface and target registry
 
@@ -66,6 +69,14 @@ Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
 input.
+
+When optional MIR is implemented, the x86-64 backend will follow the frozen
+layout and internal ABI in
+[Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): inline
+optionals use aligned state-plus-payload storage, `shared? T` uses one
+zero-or-canonical-handle word, and verified optional failures use the existing
+non-returning illegal-instruction trap. These are planned target rules and do
+not extend the current legality set.
 
 ## Data layout
 

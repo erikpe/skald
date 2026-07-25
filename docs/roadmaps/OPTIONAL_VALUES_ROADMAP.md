@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: planned; OP0 is next.
+Status: in progress; OP1 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -180,7 +180,7 @@ documents remain historical and are not migration targets.
 
 ## Progress
 
-- [ ] OP0 — Freeze language and compiler optional-value contracts
+- [x] OP0 — Freeze language and compiler optional-value contracts
 - [ ] OP1 — Add optional syntax and resolved type identities
 - [ ] OP2 — Execute primitive optional locals and checked inspection
 - [ ] OP3 — Carry primitive optionals through stored and callable boundaries
@@ -197,25 +197,25 @@ documents remain historical and are not migration targets.
 **Purpose:** Establish one authoritative source contract and one compiler
 contract before syntax or representation code depends on them.
 
-- [ ] Add `docs/language/OPTIONAL_VALUES.md` with the complete type grid,
+- [x] Add `docs/language/OPTIONAL_VALUES.md` with the complete type grid,
       `none`, injection, presence tests, checked unwrap, lifecycle matrix,
       direct payload construction, presence guards, failure behavior,
       declaration positions, and exclusions above.
-- [ ] Add `docs/compiler/OPTIONAL_VALUES.md` with phase ownership, proposed
+- [x] Add `docs/compiler/OPTIONAL_VALUES.md` with phase ownership, proposed
       resolved/HIR/MIR distinctions, initialized optional storage invariants,
       conditional ownership, checked-view/anchor interaction, verifier
       obligations, x86-64 layouts, internal ABI direction, trap lowering, and
       the unchanged C runtime ABI boundary.
-- [ ] Update `docs/README.md`, `docs/language/README.md`,
+- [x] Update `docs/README.md`, `docs/language/README.md`,
       `docs/language/STATUS.md`, and `docs/language/TYPES_AND_VALUES.md` to link
       the focused frozen design while stating that compiler support is still
       planned.
-- [ ] Update the optional-facing future sections in aliases, lifecycle,
+- [x] Update the optional-facing future sections in aliases, lifecycle,
       functions/control flow, shared ownership, object casts, polymorphism,
       errors, modules/interoperation, compiler overview, phases/IR, backend,
       runtime ABI, debugging, and testing documentation so none contradicts
       the frozen design or claims implementation.
-- [ ] Record `shared T?`, `shared? T?`, optional casts, arrays, exceptions,
+- [x] Record `shared T?`, `shared? T?`, optional casts, arrays, exceptions,
       concurrency, and external ABI mappings as explicit exclusions rather
       than unresolved syntax.
 

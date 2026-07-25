@@ -40,9 +40,12 @@ the same read-only source-binding semantics as part of their more specialized
 External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
-The designated type may be one concrete class, one interface, or `Obj`.
-Primitive, `unit`, optional, array, and function alias parameter types are
-unsupported. A shared-backed source is explicitly dereferenced, as in
+The implemented designated type may be one concrete class, one interface, or
+`Obj`. Primitive, `unit`, array, and function alias parameter types are
+unsupported. The frozen optional contract permits the future container
+borrows `ref value: T?` and `mut ref value: T?`; these aliases designate an
+always-present optional wrapper, not an optional reference, and are not yet
+implemented. A shared-backed source is explicitly dereferenced, as in
 `inspect(*owner)`, and borrows the allocated class/interface/`Obj` pointee
 rather than treating `shared T` as the alias's designated type. `Obj` is a
 universal non-owning target with no members or inline storage. Interfaces
@@ -214,10 +217,12 @@ sources, lexical lifetime, initialization, control-flow joins, interaction
 with relocation, and any anchoring requirement are not frozen. The current
 parameter restrictions do not implicitly specify that larger feature.
 
-Optional payloads and array elements are not alias sources because neither
-value family is implemented. Any future design must define how a conditional
-payload or element remains present and at a stable location while aliased;
-the current parameter model does not settle those constraints. Implemented
+Optional values are not implemented. Their
+[frozen contract](OPTIONAL_VALUES.md#aliases)
+permits aliases to optional containers and bounds a checked `value!` payload
+view to one complete immediate consumer under a dynamic presence guard. It
+does not introduce `ref?`, stored payload aliases, or optional reference
+values. Array elements remain an open alias-source design area. Implemented
 polymorphic alias conversions and checked casts are defined by
 [polymorphism](POLYMORPHISM.md) and
 [object casts](OBJECT_CASTS.md). Checked places exist only for one consuming

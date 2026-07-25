@@ -157,6 +157,14 @@ Shared ownership uses this minimal boundary as defined in the
 Reference counting, metadata, anchors, and finalizer selection remain
 compiler-owned.
 
+The frozen
+[optional-values compiler contract](OPTIONAL_VALUES.md#c-runtime-abi)
+adds no public C symbol and requires no runtime ABI version change. Optional
+state, presence guards, conditional lifecycle, and failure traps are
+compiler-owned; an absent `shared? T` zero word never crosses into ordinary
+shared-owner or allocator operations. This describes the planned feature
+boundary, not current compiler support.
+
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
 transition, and focused tests.

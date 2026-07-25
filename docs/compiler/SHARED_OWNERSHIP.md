@@ -8,6 +8,10 @@ finalization, hidden anchors, and the minimal C allocation boundary. The
 source-visible contract is [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md).
 Object cast legality and consuming contexts are owned by
 [Object Casts](../language/OBJECT_CASTS.md).
+The frozen, not-yet-implemented
+[optional-values compiler contract](OPTIONAL_VALUES.md) wraps ordinary shared
+ownership as `shared? T`; it does not weaken the non-null handle invariants
+defined here.
 
 Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical
@@ -466,3 +470,8 @@ native execution.
 
 Strong cycles intentionally remain allocated, so leak detection must
 distinguish that specified behavior from an owner lost by incorrect lowering.
+
+Future optional-owner lowering must prove that zero represents only absent
+`shared? T` storage and never reaches the non-null operations in this
+contract. Present optional owners reuse the same copy, adopt, release,
+metadata, finalization, and anchor rules.

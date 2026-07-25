@@ -4,14 +4,15 @@ This directory contains implementation roadmaps that are planned or in
 progress. Completed roadmaps and resolved discovery records move to
 [`../archive/`](../archive/README.md).
 
-## Planned
+## In progress
 
-- [Explicit Optional Values](OPTIONAL_VALUES_ROADMAP.md) — **planned**. Adds
+- [Explicit Optional Values](OPTIONAL_VALUES_ROADMAP.md) — **in progress**. Adds
   inline `T?`, optional shared owners spelled `shared? T`, explicit `none`,
   non-failing presence tests, checked postfix unwrap, conditional lifecycle,
   and dynamically guarded inline payload views while preserving every
-  non-optional validity guarantee. OP0, freezing the focused language and
-  compiler contracts in living documentation, is next. It depends on the
+  non-optional validity guarantee. OP0 froze the focused language and compiler
+  contracts in living documentation; OP1, adding syntax and resolved type
+  identities, is next. The roadmap depends on the
   completed inline-object, alias, shared-ownership, polymorphism, object-cast,
   and constructor profiles.
 

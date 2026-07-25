@@ -590,14 +590,18 @@ deallocation or any particular storage operation.
 
 ## Unsupported extensions
 
-The implemented executable class model does not yet include nullable object
-references, static members, access modifiers, `final`, abstract members,
+The implemented executable class model does not yet include optional values,
+static members, access modifiers, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base
 destruction plan. Ordinary direct and base-initializer overloads,
 the distinct `copy` declaration, and target-directed `T(copy source)`
 construction execute.
+The frozen [optional-values contract](OPTIONAL_VALUES.md) uses explicit `T?`
+rather than nullable plain class values. `T?` reserves inline payload storage,
+so it does not make recursive inline containment finite; `shared? T` is the
+planned finite optional-owner form. Neither form is accepted yet.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
 class/interface/`Obj` alias views, slicing, virtual dispatch, interface
 dispatch, type tests, and checked object casts execute on x86-64. Their

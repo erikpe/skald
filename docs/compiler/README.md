@@ -62,6 +62,12 @@ by [Debugging the Compiler](../development/DEBUGGING.md). Contributor
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
+The frozen but not-yet-implemented optional representation, IR, verification,
+x86-64 layout, checked-view, and internal calling-convention decisions are
+owned by the [optional-values compiler contract](OPTIONAL_VALUES.md). Current
+phase and backend descriptions remain authoritative for executable compiler
+behavior until that work lands.
+
 ## Pipeline
 
 ```text

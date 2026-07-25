@@ -141,3 +141,22 @@ scheduled, or pre-release validation and remains reproducible.
 When robustness testing finds a defect, retain the smallest focused regression
 at the owning layer. Add corpus data only when the bytes or source are clearer
 and more reusable than constructing the case in Rust.
+
+## Planned optional-value coverage
+
+The frozen
+[optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)
+requires coverage at every owning layer once implementation starts. Lexer and
+parser tests own the new forms and recovery; resolution and type-check tests
+own eligibility, expected-type-directed `none`, injection, overload ranking,
+and focused
+rejections; HIR/MIR tests own lifecycle, checked views, guards, anchors, and
+failure reasons; verifier mutations break one invariant at a time; backend
+tests own layout, ABI, zero-niche, and trap realization; native goldens own
+observable lifecycle and failure behavior.
+
+That future coverage must include primitives, exact inline classes, optional
+shared class/interface/`Obj` owners, locals, fields, parameters, results,
+temporaries, aliases, polymorphic views, nested/overlapping checked consumers,
+and every explicit exclusion. This is a test plan for a frozen design, not a
+claim of current executable coverage.

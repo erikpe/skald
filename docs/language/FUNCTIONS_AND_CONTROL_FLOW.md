@@ -133,6 +133,11 @@ final `else`. Every condition must have type exactly `bool`; there is no
 truthiness conversion. A conditional is a statement and does not produce a
 value.
 
+The frozen [optional-values contract](OPTIONAL_VALUES.md#presence-tests)
+adds `value is some` and `value is none` as `bool`-producing tests. It does not
+add optional truthiness. These tests are not part of the implemented grammar
+or compiler yet.
+
 Conditions are evaluated in source order. Evaluation stops at the first
 condition producing `true`, and only that arm executes. If no condition is
 true, the `else` body executes when present; otherwise execution continues

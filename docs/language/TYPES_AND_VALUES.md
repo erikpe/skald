@@ -166,10 +166,13 @@ conversion, is not frozen. Object casts are defined separately in
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
 
-Optional values are an exploratory direction for representing absence without
-making every value nullable. Their type syntax, empty value, presence checks,
-extraction, conversions, payload lifetime, and lifecycle behavior are open;
-older `T?` and `none` examples are not reserved syntax.
+Optional values have a
+[frozen but not-yet-implemented contract](OPTIONAL_VALUES.md) for representing
+absence without making every value nullable. The contract defines inline
+`T?`, optional shared owners `shared? T`, `none`, presence tests, checked
+postfix `!`, injection, payload lifetime, lifecycle behavior, and explicit
+exclusions. The current compiler and implemented grammar do not yet accept
+those forms.
 
 Arrays are an open design area. Element lifetime, size and mutability, storage,
 construction, indexing, slicing, bounds failure, borrowing, and iteration must
