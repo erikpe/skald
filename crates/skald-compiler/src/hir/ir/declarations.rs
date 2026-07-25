@@ -276,6 +276,7 @@ pub enum HirDestructionStep {
     UserBody(DestructorId),
     Field(FieldId),
     SharedField(FieldId),
+    OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
     Base(ClassId),
 }

@@ -38,8 +38,9 @@ pub use interface::{
 pub use optional::{
     MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
     MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
-    MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd, MirPresenceTestKind,
-    MirPrimitiveType,
+    MirOptionalSharedAssign, MirOptionalSharedCleanup, MirOptionalSharedInitialize,
+    MirOptionalSharedSource, MirOptionalSharedUnwrap, MirOptionalSource, MirOptionalViewBegin,
+    MirOptionalViewEnd, MirPresenceTestKind, MirPrimitiveType,
 };
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,

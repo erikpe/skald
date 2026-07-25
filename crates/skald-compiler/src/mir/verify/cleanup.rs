@@ -228,6 +228,14 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.merge_state(*success_target, &state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::OptionalSharedUnwrap {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::BeginOptionalView {
                     success_target,
                     absent_target,
@@ -246,7 +254,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.merge_state(*success_target, &state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
-                Some(MirTerminator::Return { .. }) | Some(MirTerminator::ReturnShared { .. }) => {
+                Some(MirTerminator::Return { .. })
+                | Some(MirTerminator::ReturnShared { .. })
+                | Some(MirTerminator::ReturnOptionalShared { .. }) => {
                     self.check_normal_return(block, &state)
                 }
                 Some(MirTerminator::Terminate { .. }) => {}
@@ -265,7 +275,11 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 self.apply_block(block, &mut state);
                 if matches!(
                     block.terminator,
-                    Some(MirTerminator::Return { .. } | MirTerminator::ReturnShared { .. })
+                    Some(
+                        MirTerminator::Return { .. }
+                            | MirTerminator::ReturnShared { .. }
+                            | MirTerminator::ReturnOptionalShared { .. }
+                    )
                 ) {
                     self.check_normal_return(block, &state);
                 }

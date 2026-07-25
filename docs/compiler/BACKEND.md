@@ -11,8 +11,8 @@ the current target profile below.
 The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
 optional layout, ABI, guard, and trap realization. Verified primitive and
 exact-class optional local, field, parameter, result, and temporary MIR is
-legal backend input, including checked class payload views. Optional shared
-owners remain planned.
+legal backend input, including checked class payload views and optional shared
+owners.
 
 ## Backend interface and target registry
 
@@ -82,8 +82,11 @@ reserved class bytes and conditional lifecycle calls. State zero is absent,
 one is present and unguarded, and greater values count active views. Begin,
 end, overflow, and pinned-mutation checks lower inline without runtime helpers.
 Fields use that layout recursively. Internal inline optional parameters/results
-use the documented pointer aggregate convention; `shared? T` retains its
-planned target rules.
+use the documented pointer aggregate convention. `shared? T` is one
+integer-class word: zero is absent and a nonzero word is the existing canonical
+shared handle. Calls pass it in registers or stack slots and return it in
+`rax`; generated conditional retain/release paths branch around zero before
+entering ordinary shared machinery.
 
 ## Data layout
 
@@ -98,6 +101,7 @@ The x86-64 target layout is:
 | `bool` | 1 | 1 |
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
+| `shared? T` | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
 

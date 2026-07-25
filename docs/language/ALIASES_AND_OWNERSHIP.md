@@ -217,8 +217,8 @@ sources, lexical lifetime, initialization, control-flow joins, interaction
 with relocation, and any anchoring requirement are not frozen. The current
 parameter restrictions do not implicitly specify that larger feature.
 
-Optional syntax and resolved identities are implemented, but optional alias
-semantics and execution are not. Their
+Optional owning values, including `shared? T`, execute, but optional-container
+alias semantics do not. Their
 [frozen contract](OPTIONAL_VALUES.md#aliases)
 reserves aliases to optional containers and bounds a checked `value!` payload
 view to one complete immediate consumer under a dynamic presence guard. It

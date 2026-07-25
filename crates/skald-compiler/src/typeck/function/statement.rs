@@ -140,6 +140,19 @@ impl CallableChecker<'_, '_> {
                 );
                 CheckedStatement::falls_through(value.map(HirStatement::ClassOptionalAssignment))
             }
+            Type::OptionalShared(target) => {
+                let destination = crate::hir::HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::Binding(assignment.destination),
+                    target,
+                    span: assignment.span,
+                };
+                let value = self.check_optional_shared_assignment(
+                    destination,
+                    &assignment.source,
+                    "optional shared local assignment",
+                );
+                CheckedStatement::falls_through(value.map(HirStatement::OptionalSharedAssignment))
+            }
             _ => unreachable!("resolved optional assignment must target optional storage"),
         }
     }
@@ -220,6 +233,13 @@ impl CallableChecker<'_, '_> {
                     "class optional local initializer",
                 )
                 .map(HirLocalInitializer::ClassOptional),
+            Type::OptionalShared(target) => self
+                .check_optional_shared_initialize(
+                    target,
+                    &local.initializer,
+                    "optional shared local initializer",
+                )
+                .map(HirLocalInitializer::OptionalShared),
             _ => self
                 .check_expression(&local.initializer)
                 .and_then(|initializer| {
@@ -431,6 +451,28 @@ impl CallableChecker<'_, '_> {
                         ),
                     )
                     .with_primary_label(statement.span, "expected an optional object value"),
+                );
+                None
+            }
+            (Type::OptionalShared(target), Some(value)) => self
+                .check_optional_shared_initialize(target, value, "optional shared return")
+                .map(|value| {
+                    HirStatement::Return(HirReturn {
+                        value: Some(HirReturnValue::OptionalShared(value)),
+                        span: statement.span,
+                    })
+                }),
+            (Type::OptionalShared(target), None) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_RETURN,
+                        format!(
+                            "{} must return a `{}` value",
+                            self.callable_name,
+                            Type::OptionalShared(target).name()
+                        ),
+                    )
+                    .with_primary_label(statement.span, "expected an optional shared-owner value"),
                 );
                 None
             }

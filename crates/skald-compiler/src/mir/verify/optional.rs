@@ -4,14 +4,135 @@ use std::collections::{BTreeMap, HashSet, VecDeque};
 
 use super::{
     super::model::{
-        MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSource, MirPlace,
-        MirPrimitiveType, MirProgram, MirRvalueKind, MirStorageKind, MirTerminationReason,
-        MirTerminator, MirType, OptionalGuardId, StorageId, ValueId,
+        MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
+        MirOptionalSource, MirPlace, MirPrimitiveType, MirProgram, MirRvalueKind, MirSharedTarget,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, OptionalGuardId, StorageId,
+        ValueId,
     },
     context::Verifier,
 };
 
 impl Verifier<'_> {
+    pub(super) fn verify_optional_shared_operation(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        destination: &MirPlace,
+        source: &MirOptionalSharedSource,
+        target: MirSharedTarget,
+    ) {
+        self.verify_shared_target_declared(function.callable(), target);
+        if self
+            .verify_place(function, block, destination)
+            .map(|place| place.ty)
+            != Some(MirType::OptionalShared(target))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared destination has the wrong exact target type",
+            );
+        }
+        let actual = match source {
+            MirOptionalSharedSource::Absent => return,
+            MirOptionalSharedSource::Present(owner) => {
+                function
+                    .storage(*owner)
+                    .and_then(|storage| match storage.ty {
+                        MirType::Shared(target) => Some(target),
+                        _ => None,
+                    })
+            }
+            MirOptionalSharedSource::Move(owner) => {
+                function
+                    .storage(*owner)
+                    .and_then(|storage| match storage.ty {
+                        MirType::OptionalShared(target) => Some(target),
+                        _ => None,
+                    })
+            }
+            MirOptionalSharedSource::Copy(place) => self
+                .verify_place(function, block, place)
+                .and_then(|place| match place.ty {
+                    MirType::OptionalShared(target) => Some(target),
+                    _ => None,
+                }),
+        };
+        if !actual.is_some_and(|actual| self.shared_target_accepts(target, actual)) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared source is not a compatible owner",
+            );
+        }
+    }
+
+    pub(super) fn verify_optional_shared_cleanup(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        cleanup: &crate::mir::MirOptionalSharedCleanup,
+    ) {
+        if self
+            .verify_place(function, block, &cleanup.destination)
+            .map(|place| place.ty)
+            != Some(MirType::OptionalShared(cleanup.target))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared cleanup has the wrong exact target type",
+            );
+        }
+    }
+
+    pub(super) fn verify_optional_shared_unwrap_terminator(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        unwrap: &crate::mir::MirOptionalSharedUnwrap,
+        success_target: crate::mir::BlockId,
+        failure_target: crate::mir::BlockId,
+    ) {
+        let source_valid = self
+            .verify_place(function, block, &unwrap.source)
+            .is_some_and(|place| place.ty == MirType::OptionalShared(unwrap.target));
+        let destination_valid = function.storage(unwrap.destination).is_some_and(|storage| {
+            matches!(
+                storage.kind,
+                MirStorageKind::Temporary | MirStorageKind::SharedAnchor
+            ) && storage.ty == MirType::Shared(unwrap.target)
+                && storage.source.is_none()
+        });
+        if !source_valid || !destination_valid {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared unwrap requires matching optional source and fresh shared owner",
+            );
+        }
+        self.verify_block_target(function, block, success_target);
+        self.verify_block_target(function, block, failure_target);
+        if success_target == failure_target
+            || !function.block(failure_target).is_some_and(|failure| {
+                failure.instructions.is_empty()
+                    && matches!(
+                        failure.terminator,
+                        Some(MirTerminator::Terminate {
+                            reason: MirTerminationReason::OptionalAccessFailure,
+                            ..
+                        })
+                    )
+            })
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional shared unwrap failure edge must be distinct and terminate with optional-access failure",
+            );
+        }
+    }
+
     pub(super) fn verify_optional_view_begin(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -178,7 +299,11 @@ impl Verifier<'_> {
         if !matches!(
             self.verify_place(function, block, source)
                 .map(|place| place.ty),
-            Some(MirType::OptionalPrimitive(_) | MirType::OptionalClass(_))
+            Some(
+                MirType::OptionalPrimitive(_)
+                    | MirType::OptionalClass(_)
+                    | MirType::OptionalShared(_)
+            )
         ) {
             self.block_error(
                 function.callable(),
@@ -324,6 +449,47 @@ impl Verifier<'_> {
                             &state,
                         );
                     }
+                    MirInstruction::OptionalSharedInitialize(initialize) => {
+                        require_initialized_optional_shared_source(
+                            self,
+                            function,
+                            block,
+                            &initialize.source,
+                            &state,
+                        );
+                        if !state.insert(initialize.destination.clone()) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional shared storage is initialized more than once",
+                            );
+                        }
+                    }
+                    MirInstruction::OptionalSharedAssign(assignment) => {
+                        require_initialized(
+                            self,
+                            function,
+                            block,
+                            &assignment.destination,
+                            &state,
+                            "optional shared assignment destination",
+                        );
+                        require_initialized_optional_shared_source(
+                            self,
+                            function,
+                            block,
+                            &assignment.source,
+                            &state,
+                        );
+                    }
+                    MirInstruction::OptionalSharedCleanup(cleanup) => require_initialized(
+                        self,
+                        function,
+                        block,
+                        &cleanup.destination,
+                        &state,
+                        "optional shared cleanup destination",
+                    ),
                     MirInstruction::ClassOptionalInitialize(initialize) => {
                         require_initialized_class_source(
                             self,
@@ -372,13 +538,22 @@ impl Verifier<'_> {
                         }
                     }
                     MirInstruction::Call(call) => {
+                        if let Some(result) = call.shared_result {
+                            if function.storage(result).is_some_and(|storage| {
+                                matches!(storage.ty, MirType::OptionalShared(_))
+                            }) {
+                                state.insert(MirPlace::base(result));
+                            }
+                        }
                         if let Some(destination) = &call.destination {
                             if function
                                 .storage(destination.base.storage())
                                 .is_some_and(|storage| {
                                     matches!(
                                         storage.ty,
-                                        MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                                        MirType::OptionalPrimitive(_)
+                                            | MirType::OptionalClass(_)
+                                            | MirType::OptionalShared(_)
                                     )
                                 })
                                 && !state.insert(destination.clone())
@@ -425,6 +600,16 @@ impl Verifier<'_> {
                     "optional unwrap source",
                 );
             }
+            if let Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) = &block.terminator {
+                require_initialized(
+                    self,
+                    function,
+                    block,
+                    &unwrap.source,
+                    &state,
+                    "optional shared unwrap source",
+                );
+            }
             match &block.terminator {
                 Some(MirTerminator::BeginOptionalView { begin, .. }) => require_initialized(
                     self,
@@ -444,13 +629,18 @@ impl Verifier<'_> {
                 ),
                 _ => {}
             }
-            if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
+            if matches!(
+                block.terminator,
+                Some(MirTerminator::Return { .. } | MirTerminator::ReturnOptionalShared { .. })
+            ) {
                 if let Some(return_storage) = function.return_storage() {
                     let place = MirPlace::base(return_storage);
                     if function.storage(return_storage).is_some_and(|storage| {
                         matches!(
                             storage.ty,
-                            MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                            MirType::OptionalPrimitive(_)
+                                | MirType::OptionalClass(_)
+                                | MirType::OptionalShared(_)
                         )
                     }) {
                         require_initialized(
@@ -636,7 +826,11 @@ impl Verifier<'_> {
                         &mut reported_joins,
                     );
                 }
-                Some(MirTerminator::Return { .. } | MirTerminator::ReturnShared { .. }) => {
+                Some(
+                    MirTerminator::Return { .. }
+                    | MirTerminator::ReturnShared { .. }
+                    | MirTerminator::ReturnOptionalShared { .. },
+                ) => {
                     if !state.active.is_empty() {
                         self.block_error(
                             function.callable(),
@@ -886,7 +1080,9 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
             function.storage(**storage).is_some_and(|storage| {
                 matches!(
                     storage.ty,
-                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                    MirType::OptionalPrimitive(_)
+                        | MirType::OptionalClass(_)
+                        | MirType::OptionalShared(_)
                 )
             })
         })
@@ -911,6 +1107,18 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
                     MirInstruction::OptionalAssign(assignment) => {
                         seed_projected(&mut state, &assignment.destination);
                         if let MirOptionalSource::Copy(source) = &assignment.source {
+                            seed_projected(&mut state, source);
+                        }
+                    }
+                    MirInstruction::OptionalSharedInitialize(initialize) => {
+                        seed_projected(&mut state, &initialize.destination);
+                        if let MirOptionalSharedSource::Copy(source) = &initialize.source {
+                            seed_projected(&mut state, source);
+                        }
+                    }
+                    MirInstruction::OptionalSharedAssign(assignment) => {
+                        seed_projected(&mut state, &assignment.destination);
+                        if let MirOptionalSharedSource::Copy(source) = &assignment.source {
                             seed_projected(&mut state, source);
                         }
                     }
@@ -941,6 +1149,9 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
             if let Some(MirTerminator::OptionalUnwrap { source, .. }) = &block.terminator {
                 seed_projected(&mut state, source);
             }
+            if let Some(MirTerminator::OptionalSharedUnwrap { unwrap, .. }) = &block.terminator {
+                seed_projected(&mut state, &unwrap.source);
+            }
         }
     }
     state
@@ -966,14 +1177,27 @@ fn apply_initializations(
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 state.insert(initialize.destination.clone());
             }
+            MirInstruction::OptionalSharedInitialize(initialize) => {
+                state.insert(initialize.destination.clone());
+            }
             MirInstruction::Call(call) => {
+                if let Some(result) = call.shared_result {
+                    if function
+                        .storage(result)
+                        .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+                    {
+                        state.insert(MirPlace::base(result));
+                    }
+                }
                 if let Some(destination) = &call.destination {
                     if function
                         .storage(destination.base.storage())
                         .is_some_and(|storage| {
                             matches!(
                                 storage.ty,
-                                MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                                MirType::OptionalPrimitive(_)
+                                    | MirType::OptionalClass(_)
+                                    | MirType::OptionalShared(_)
                             )
                         })
                     {
@@ -1047,10 +1271,9 @@ fn initialize_optional_fields_inner(
     for field in &declaration.fields {
         let place = root.clone().project_field(field.id);
         match field.ty {
-            MirType::OptionalPrimitive(_) => {
-                state.insert(place);
-            }
-            MirType::OptionalClass(_) => {
+            MirType::OptionalPrimitive(_)
+            | MirType::OptionalClass(_)
+            | MirType::OptionalShared(_) => {
                 state.insert(place);
             }
             MirType::Class(nested) => {
@@ -1096,6 +1319,30 @@ fn require_initialized_class_source(
             place,
             state,
             "class optional copy source",
+        );
+    }
+}
+
+fn require_initialized_optional_shared_source(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    block: &MirBasicBlock,
+    source: &MirOptionalSharedSource,
+    state: &HashSet<MirPlace>,
+) {
+    let place = match source {
+        MirOptionalSharedSource::Copy(place) => Some(place.clone()),
+        MirOptionalSharedSource::Move(owner) => Some(MirPlace::base(*owner)),
+        MirOptionalSharedSource::Absent | MirOptionalSharedSource::Present(_) => None,
+    };
+    if let Some(place) = place {
+        require_initialized(
+            verifier,
+            function,
+            block,
+            &place,
+            state,
+            "optional shared copy source",
         );
     }
 }

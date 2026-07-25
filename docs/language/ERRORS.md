@@ -79,7 +79,7 @@ unrecoverable failures:
 - clearing, replacing, or destroying an optional while a checked payload view
   keeps it present.
 
-Checked access to an absent primitive or exact-class optional owning
+Checked access to an absent primitive, exact-class, or optional shared owning
 value—including a local, field, parameter, or call result—is implemented and
 lowers to the compiler's non-returning illegal-instruction boundary. Guard
 overflow and guarded mutation are also executable for checked inline-class

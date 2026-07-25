@@ -1,8 +1,8 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design with primitive and exact inline-class optional
-owning locals, fields, and internal callable boundaries implemented through
-HIR, MIR verification, x86-64 lowering, and native execution.
+Status: frozen compiler design with primitive, exact inline-class, and optional
+shared-owner locals, fields, and internal callable boundaries implemented
+through HIR, MIR verification, x86-64 lowering, and native execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
@@ -13,10 +13,11 @@ initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. AST and resolved IR contain all
 supported source-shaped forms and flat identities. Primitive and exact-class
 optionals continue through explicit typed HIR and MIR places, calls, and
-lifecycle and checked-view operations; the verifier proves their storage,
+lifecycle and checked-view operations; optional shared owners likewise
+continue through explicit owner operations; the verifier proves their storage,
 aggregate-boundary, conditional ownership, guard, anchor, and failure-edge
-invariants, and the x86-64 backend executes them. Optional shared owners and
-optional-container aliases still stop at `TYP035`.
+invariants, and the x86-64 backend executes them. Optional-container aliases
+still stop at `TYP035`.
 
 ## Phase ownership
 
@@ -100,11 +101,11 @@ Flow-sensitive knowledge may classify a check as statically successful for
 optimization, but HIR source legality never depends on that classification.
 Every unwrap remains a checked semantic operation.
 
-The implemented inline subset uses explicit HIR nodes for absent and present
+The implemented optional subset uses explicit HIR nodes for absent and present
 initialization, exact optional copy and assignment, field places,
 arguments/results, produced calls, presence tests, conditional class lifecycle,
-checked primitive unwrap, and guarded class payload places. Optional shared
-owners remain a later subset of this same model.
+checked primitive unwrap, guarded class payload places, optional-owner
+copy/adopt/move/release, and secured shared unwrap.
 
 ## MIR optional storage model
 

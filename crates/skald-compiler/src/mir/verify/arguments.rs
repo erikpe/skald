@@ -71,7 +71,10 @@ impl Verifier<'_> {
                     );
                 }
                 (MirArgument::SharedOwner(owner), MirParameterMode::Value)
-                    if matches!(parameter.ty, MirType::Shared(_)) =>
+                    if matches!(
+                        parameter.ty,
+                        MirType::Shared(_) | MirType::OptionalShared(_)
+                    ) =>
                 {
                     self.verify_shared_owner_argument(
                         site,

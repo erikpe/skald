@@ -212,6 +212,67 @@ impl BodyLowerer<'_> {
         self.end_optional_views_from(optional_mark, expression.span);
     }
 
+    pub(super) fn lower_optional_shared_call(
+        &mut self,
+        expression: &HirExpression,
+        destination: StorageId,
+    ) {
+        let optional_mark = self.optional_view_mark();
+        let (target, receiver, arguments) = match &expression.kind {
+            crate::hir::HirExpressionKind::DirectCall {
+                function,
+                arguments,
+            } => (
+                MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::MethodCall {
+                receiver,
+                target,
+                arguments,
+            } => (
+                MirCallTarget::Method(lower_method_target(*target)),
+                Some(self.lower_method_receiver(receiver).into()),
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::InterfaceCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                let receiver = match receiver {
+                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
+                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
+                };
+                (
+                    MirCallTarget::Interface(MirInterfaceCallTarget {
+                        interface: target.interface,
+                        requirement: target.requirement,
+                    }),
+                    Some(receiver.into()),
+                    self.lower_call_arguments(arguments),
+                )
+            }
+            crate::hir::HirExpressionKind::Grouped(inner) => {
+                self.lower_optional_shared_call(inner, destination);
+                return;
+            }
+            _ => unreachable!("optional shared producer must contain a call expression"),
+        };
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            shared_result: Some(destination),
+            destination: None,
+            span: expression.span,
+        }));
+        self.end_optional_views_from(optional_mark, expression.span);
+        self.full_expression_has_shared_effect = true;
+    }
+
     pub(super) fn lower_call_arguments(
         &mut self,
         arguments: &[HirCallArgument],
@@ -272,6 +333,16 @@ impl BodyLowerer<'_> {
                     );
                     self.lower_class_optional_initialize(storage, value);
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
+                }
+                HirCallArgument::OptionalShared(value) => {
+                    let storage = self.new_optional_storage(
+                        MirStorageKind::Argument,
+                        "optional-shared-argument",
+                        Type::OptionalShared(value.target),
+                        value.span,
+                    );
+                    self.lower_optional_shared_initialize(storage, value);
+                    LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
                 HirCallArgument::Place(place) => {
                     LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))

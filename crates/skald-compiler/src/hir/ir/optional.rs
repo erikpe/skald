@@ -5,7 +5,10 @@ use crate::{
     source::Span,
 };
 
-use super::{HirAccess, HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation};
+use super::{
+    HirAccess, HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation,
+    HirSharedSource, HirSharedTarget,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirPrimitiveType {
@@ -55,6 +58,47 @@ pub enum HirOptionalStorage {
 pub struct HirClassOptionalPlace {
     pub storage: HirOptionalStorage,
     pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalSharedPlace {
+    pub storage: HirOptionalStorage,
+    pub target: HirSharedTarget,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirOptionalSharedSource {
+    Absent { span: Span },
+    Present(HirSharedSource),
+    Copy(HirOptionalSharedPlace),
+    Produced(Box<HirExpression>),
+}
+
+impl HirOptionalSharedSource {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Absent { span } => *span,
+            Self::Present(source) => source.span(),
+            Self::Copy(place) => place.span,
+            Self::Produced(expression) => expression.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalSharedInitialize {
+    pub target: HirSharedTarget,
+    pub source: HirOptionalSharedSource,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirOptionalSharedAssignment {
+    pub destination: HirOptionalSharedPlace,
+    pub source: HirOptionalSharedSource,
+    pub kind: HirOptionalWriteKind,
     pub span: Span,
 }
 
@@ -116,9 +160,22 @@ pub enum HirOptionalOperand {
     Produced(Box<HirExpression>),
     ClassPlace(HirClassOptionalPlace),
     ClassProduced(Box<HirExpression>),
+    SharedPlace(HirOptionalSharedPlace),
+    SharedProduced(Box<HirExpression>),
 }
 
 impl HirOptionalOperand {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Place(place) => place.span,
+            Self::Produced(expression) => expression.span,
+            Self::ClassPlace(place) => place.span,
+            Self::ClassProduced(expression) => expression.span,
+            Self::SharedPlace(place) => place.span,
+            Self::SharedProduced(expression) => expression.span,
+        }
+    }
+
     pub const fn payload(&self) -> HirPrimitiveType {
         match self {
             Self::Place(place) => place.payload,
@@ -126,7 +183,10 @@ impl HirOptionalOperand {
                 super::Type::OptionalPrimitive(payload) => payload,
                 _ => panic!("produced optional operand must have optional type"),
             },
-            Self::ClassPlace(_) | Self::ClassProduced(_) => {
+            Self::ClassPlace(_)
+            | Self::ClassProduced(_)
+            | Self::SharedPlace(_)
+            | Self::SharedProduced(_) => {
                 panic!("class optional payload access is implemented by checked views")
             }
         }
@@ -139,8 +199,21 @@ impl HirOptionalOperand {
                 super::Type::OptionalClass(class) => class,
                 _ => panic!("produced class optional operand must have optional class type"),
             },
-            Self::Place(_) | Self::Produced(_) => {
+            Self::Place(_) | Self::Produced(_) | Self::SharedPlace(_) | Self::SharedProduced(_) => {
                 panic!("primitive optional operands have no class payload")
+            }
+        }
+    }
+
+    pub const fn shared_target(&self) -> HirSharedTarget {
+        match self {
+            Self::SharedPlace(place) => place.target,
+            Self::SharedProduced(expression) => match expression.ty {
+                super::Type::OptionalShared(target) => target,
+                _ => panic!("produced optional owner operand must have optional shared type"),
+            },
+            Self::Place(_) | Self::Produced(_) | Self::ClassPlace(_) | Self::ClassProduced(_) => {
+                panic!("inline optional operands have no shared target")
             }
         }
     }

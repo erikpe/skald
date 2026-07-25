@@ -174,6 +174,7 @@ impl<'mir> Verifier<'mir> {
                 storage.ty,
                 MirType::Class(_)
                     | MirType::Shared(_)
+                    | MirType::OptionalShared(_)
                     | MirType::OptionalPrimitive(_)
                     | MirType::OptionalClass(_)
             ) {
@@ -196,7 +197,7 @@ impl<'mir> Verifier<'mir> {
                     ),
                 );
             }
-            if matches!(storage.ty, MirType::Shared(_))
+            if matches!(storage.ty, MirType::Shared(_) | MirType::OptionalShared(_))
                 && !matches!(
                     storage.kind,
                     MirStorageKind::Local
@@ -234,7 +235,7 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
-            if let MirType::Shared(target) = storage.ty {
+            if let MirType::Shared(target) | MirType::OptionalShared(target) = storage.ty {
                 self.verify_shared_target_declared(function.callable(), target);
             }
         }
@@ -316,6 +317,24 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(
                         function.callable(),
                         "shared-returning definition must identify exactly one matching return owner slot",
+                    );
+                }
+            }
+            MirType::OptionalShared(target) => {
+                let Some(return_storage) = function.return_storage() else {
+                    self.function_error(
+                        function.callable(),
+                        "optional-shared-returning definition has no return storage",
+                    );
+                    return;
+                };
+                let valid = slots.len() == 1
+                    && slots[0].id == return_storage
+                    && slots[0].ty == MirType::OptionalShared(target);
+                if !valid {
+                    self.function_error(
+                        function.callable(),
+                        "optional-shared-returning definition must identify exactly one matching return owner slot",
                     );
                 }
             }
@@ -495,6 +514,7 @@ impl<'mir> Verifier<'mir> {
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
+                                | MirType::OptionalShared(_)
                                 | MirType::OptionalPrimitive(_)
                                 | MirType::OptionalClass(_)
                         ) {
@@ -518,6 +538,7 @@ impl<'mir> Verifier<'mir> {
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::Shared(_)
+                            | MirType::OptionalShared(_)
                             | MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
                     )
@@ -540,6 +561,20 @@ impl<'mir> Verifier<'mir> {
                         function.callable(),
                         block.id,
                         "shared return must transfer the definition's matching return owner",
+                    );
+                }
+            }
+            Some(MirTerminator::ReturnOptionalShared { owner, .. }) => {
+                let valid = matches!(return_type, MirType::OptionalShared(_))
+                    && function.return_storage() == Some(*owner)
+                    && function.storage(*owner).is_some_and(|storage| {
+                        storage.kind == MirStorageKind::Return && storage.ty == return_type
+                    });
+                if !valid {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional shared return must transfer the definition's matching return owner",
                     );
                 }
             }
@@ -601,6 +636,18 @@ impl<'mir> Verifier<'mir> {
                 block,
                 source,
                 *destination,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::OptionalSharedUnwrap {
+                unwrap,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_optional_shared_unwrap_terminator(
+                function,
+                block,
+                unwrap,
                 *success_target,
                 *failure_target,
             ),

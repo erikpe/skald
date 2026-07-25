@@ -52,6 +52,7 @@ pub enum HirSharedProducer {
     Allocation(HirSharedAllocation),
     Call(Box<HirExpression>),
     Cast(Box<HirSharedCast>),
+    OptionalUnwrap(super::HirOptionalOperand),
 }
 
 impl HirSharedProducer {
@@ -63,6 +64,7 @@ impl HirSharedProducer {
                 _ => unreachable!("shared call producer must have a shared result"),
             },
             Self::Cast(cast) => cast.target,
+            Self::OptionalUnwrap(operand) => operand.shared_target(),
         }
     }
 
@@ -71,6 +73,7 @@ impl HirSharedProducer {
             Self::Allocation(allocation) => allocation.span,
             Self::Call(call) => call.span,
             Self::Cast(cast) => cast.span,
+            Self::OptionalUnwrap(operand) => operand.span(),
         }
     }
 }
@@ -129,7 +132,10 @@ impl HirSharedSource {
         match self {
             Self::Produced(HirSharedProducer::Allocation(allocation)) => Some(allocation.class),
             Self::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
-            Self::Place(_) | Self::Produced(HirSharedProducer::Call(_)) => None,
+            Self::Place(_)
+            | Self::Produced(HirSharedProducer::Call(_) | HirSharedProducer::OptionalUnwrap(_)) => {
+                None
+            }
         }
     }
 }

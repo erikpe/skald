@@ -126,6 +126,25 @@ impl Verifier<'_> {
                 &assignment.source,
                 defined_in_block,
             ),
+            MirInstruction::OptionalSharedInitialize(initialize) => self
+                .verify_optional_shared_operation(
+                    function,
+                    block,
+                    &initialize.destination,
+                    &initialize.source,
+                    initialize.target,
+                ),
+            MirInstruction::OptionalSharedAssign(assignment) => self
+                .verify_optional_shared_operation(
+                    function,
+                    block,
+                    &assignment.destination,
+                    &assignment.source,
+                    assignment.target,
+                ),
+            MirInstruction::OptionalSharedCleanup(cleanup) => {
+                self.verify_optional_shared_cleanup(function, block, cleanup)
+            }
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 self.verify_class_optional_places(
                     function,

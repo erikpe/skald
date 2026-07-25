@@ -52,6 +52,22 @@ fn optionals_have_no_truthiness_or_implicit_unwrap() {
 }
 
 #[test]
+fn optional_container_aliases_remain_at_the_focused_gate() {
+    let output = check_text(
+        "class Item { init() {} }\n\
+         fn inspect(ref value: Item?) -> unit {}\n\
+         fn main() -> i64 { return 0; }\n",
+    );
+
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1, "{:?}", output.diagnostics);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        OPTIONAL_VALUES_NOT_IMPLEMENTED
+    );
+}
+
+#[test]
 fn primitive_optional_fields_parameters_and_results_cross_the_type_boundary() {
     let output = check_text(
         "class Holder {\n\
@@ -158,16 +174,40 @@ fn optional_signature_matching_is_exact_for_overrides_and_interfaces() {
 }
 
 #[test]
-fn unsupported_optional_positions_still_stop_before_hir() {
+fn optional_shared_owners_type_across_owning_positions_and_unwrap() {
     let output = check_text(
-        "class Item { init() {} } fn main() -> i64 { var item: shared? Item = none; return 0; }",
+        "interface Readable { fn read() -> i64; }\n\
+         class Item implements Readable {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           fn read() -> i64 { return self.value; }\n\
+         }\n\
+         class Holder {\n\
+           item: shared? Item;\n\
+           init(item: shared? Item) { self.item = item; }\n\
+           mut fn replace(item: shared? Item) -> shared? Item {\n\
+             self.item = item;\n\
+             return self.item;\n\
+           }\n\
+         }\n\
+         fn forward(item: shared? Item) -> shared? Item { return item; }\n\
+         fn main() -> i64 {\n\
+           var item: shared? Item = none;\n\
+           item = new Item(40);\n\
+           var readable: shared? Readable = item;\n\
+           var object: shared? Obj = readable;\n\
+           var holder: Holder = Holder(forward(item));\n\
+           item = holder.replace(none);\n\
+           item = new Item(42);\n\
+           if (item is some) { return item!->read(); }\n\
+           return 0;\n\
+         }\n",
     );
-    assert!(output.hir.is_none());
-    assert_eq!(output.diagnostics.len(), 1, "{:?}", output.diagnostics);
-    assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        OPTIONAL_VALUES_NOT_IMPLEMENTED
-    );
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.expect("optional shared owners must produce HIR"));
+    assert!(dump.contains("OptionalSharedInitialization"));
+    assert!(dump.contains("OptionalSharedAssignment"));
+    assert!(dump.contains("OptionalSharedUnwrap"));
 }
 
 #[test]

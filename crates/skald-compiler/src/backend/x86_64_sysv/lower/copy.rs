@@ -140,6 +140,18 @@ impl InstructionSelector<'_, '_> {
                                 &source.clone().project_field(field),
                             )?;
                         }
+                        MirSynthesizedFieldCopy::OptionalShared { field, target } => {
+                            self.select_optional_shared_initialize(
+                                &crate::mir::MirOptionalSharedInitialize {
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirOptionalSharedSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
+                                    target,
+                                    span: self.function.span(),
+                                },
+                            )?;
+                        }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_construction_operation(
                                 operation,
@@ -264,6 +276,18 @@ impl InstructionSelector<'_, '_> {
                                 &source.clone().project_field(field),
                             )?;
                         }
+                        MirSynthesizedFieldCopy::OptionalShared { field, target } => {
+                            self.select_optional_shared_assign(
+                                &crate::mir::MirOptionalSharedAssign {
+                                    destination: destination.clone().project_field(field),
+                                    source: crate::mir::MirOptionalSharedSource::Copy(
+                                        source.clone().project_field(field),
+                                    ),
+                                    target,
+                                    span: self.function.span(),
+                                },
+                            )?;
+                        }
                         MirSynthesizedFieldCopy::Class { field, operation } => {
                             self.select_assignment_operation(
                                 operation,
@@ -338,6 +362,7 @@ impl InstructionSelector<'_, '_> {
             | MirType::Interface(_)
             | MirType::Obj
             | MirType::Shared(_)
+            | MirType::OptionalShared(_)
             | MirType::OptionalPrimitive(_)
             | MirType::OptionalClass(_)
             | MirType::Unit => {

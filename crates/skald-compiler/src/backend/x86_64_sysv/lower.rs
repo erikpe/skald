@@ -212,6 +212,15 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::OptionalAssign(assignment) => {
                 self.select_optional_assign(assignment)?
             }
+            MirInstruction::OptionalSharedInitialize(initialize) => {
+                self.select_optional_shared_initialize(initialize)?
+            }
+            MirInstruction::OptionalSharedAssign(assignment) => {
+                self.select_optional_shared_assign(assignment)?
+            }
+            MirInstruction::OptionalSharedCleanup(cleanup) => {
+                self.select_optional_shared_cleanup(cleanup)?
+            }
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 self.select_class_optional_initialize(initialize)?
             }

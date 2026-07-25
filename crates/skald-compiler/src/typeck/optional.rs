@@ -5,8 +5,10 @@ use crate::{
     hir::{
         HirCheckedOptionalView, HirClassOptionalAssignment, HirClassOptionalInitialize,
         HirClassOptionalPlace, HirClassOptionalSource, HirExpression, HirExpressionKind,
-        HirOptionalOperand, HirOptionalPlace, HirOptionalSource, HirOptionalStorage,
-        HirPresenceTestKind, HirPrimitiveType, Type,
+        HirOptionalOperand, HirOptionalPlace, HirOptionalSharedAssignment,
+        HirOptionalSharedInitialize, HirOptionalSharedPlace, HirOptionalSharedSource,
+        HirOptionalSource, HirOptionalStorage, HirPresenceTestKind, HirPrimitiveType,
+        HirSharedTarget, Type,
     },
     resolve::{
         ResolvedExpression, ResolvedPresenceTestExpr, ResolvedPresenceTestKind, ResolvedUnwrapExpr,
@@ -18,6 +20,137 @@ use super::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_optional_shared_initialize(
+        &mut self,
+        target: HirSharedTarget,
+        source: &ResolvedExpression,
+        context: &'static str,
+    ) -> Option<HirOptionalSharedInitialize> {
+        Some(HirOptionalSharedInitialize {
+            target,
+            source: self.check_optional_shared_source(source, target, context)?,
+            span: source.span(),
+        })
+    }
+
+    pub(super) fn check_optional_shared_assignment(
+        &mut self,
+        destination: HirOptionalSharedPlace,
+        source: &ResolvedExpression,
+        context: &'static str,
+    ) -> Option<HirOptionalSharedAssignment> {
+        Some(HirOptionalSharedAssignment {
+            source: self.check_optional_shared_source(source, destination.target, context)?,
+            destination,
+            kind: crate::hir::HirOptionalWriteKind::Assign,
+            span: source.span(),
+        })
+    }
+
+    fn check_optional_shared_source(
+        &mut self,
+        source: &ResolvedExpression,
+        target: HirSharedTarget,
+        context: &'static str,
+    ) -> Option<HirOptionalSharedSource> {
+        if let ResolvedExpression::Absent(absent) = source {
+            return Some(HirOptionalSharedSource::Absent { span: absent.span });
+        }
+        if let Some(place) = self.optional_shared_place(source) {
+            if super::shared::target_accepts(self.program, target, place.target) {
+                return Some(HirOptionalSharedSource::Copy(place));
+            }
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!(
+                        "{context} requires `{}`",
+                        self.optional_shared_target_name(target)
+                    ),
+                )
+                .with_primary_label(
+                    place.span,
+                    format!(
+                        "source has type `{}`",
+                        self.optional_shared_target_name(place.target)
+                    ),
+                ),
+            );
+            return None;
+        }
+        if is_call_through_groups(source) {
+            let expression = self.check_expression(source)?;
+            if let Type::OptionalShared(actual) = expression.ty {
+                if super::shared::target_accepts(self.program, target, actual) {
+                    return Some(HirOptionalSharedSource::Produced(Box::new(expression)));
+                }
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        TYPE_MISMATCH,
+                        format!(
+                            "{context} requires `{}`",
+                            self.optional_shared_target_name(target)
+                        ),
+                    )
+                    .with_primary_label(
+                        expression.span,
+                        format!(
+                            "source has type `{}`",
+                            self.optional_shared_target_name(actual)
+                        ),
+                    ),
+                );
+                return None;
+            }
+        }
+        self.check_shared_transfer(source, target, context)
+            .map(|transfer| HirOptionalSharedSource::Present(transfer.source))
+    }
+
+    pub(super) fn optional_shared_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirOptionalSharedPlace> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                let Type::OptionalShared(target) = self.binding_type(binding.binding) else {
+                    return None;
+                };
+                Some(HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::Binding(binding.binding),
+                    target,
+                    span: binding.span,
+                })
+            }
+            ResolvedExpression::Grouped(grouped) => self
+                .optional_shared_place(&grouped.expression)
+                .map(|place| HirOptionalSharedPlace {
+                    span: grouped.span,
+                    ..place
+                }),
+            ResolvedExpression::FieldAccess(access) => {
+                let expression = self.check_field_read(access)?;
+                let Type::OptionalShared(target) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::FieldRead(place) = expression.kind else {
+                    unreachable!("field checking must produce a field-read expression");
+                };
+                Some(HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::Field(place),
+                    target,
+                    span: expression.span,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    fn optional_shared_target_name(&self, target: HirSharedTarget) -> String {
+        self.shared_target_name(target)
+            .replacen("shared ", "shared? ", 1)
+    }
+
     pub(super) fn check_class_optional_initialize(
         &mut self,
         class: crate::identity::ClassId,
@@ -250,12 +383,15 @@ impl CallableChecker<'_, '_> {
             self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
         if matches!(
             source,
-            HirOptionalOperand::ClassPlace(_) | HirOptionalOperand::ClassProduced(_)
+            HirOptionalOperand::ClassPlace(_)
+                | HirOptionalOperand::ClassProduced(_)
+                | HirOptionalOperand::SharedPlace(_)
+                | HirOptionalOperand::SharedProduced(_)
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
                     crate::typeck::program::INVALID_OBJECT_CONTEXT,
-                    "an inline class payload is an object place, not a scalar value",
+                    "this optional payload is not a scalar value",
                 )
                 .with_primary_label(
                     unwrap.span,
@@ -286,7 +422,10 @@ impl CallableChecker<'_, '_> {
                 HirOptionalStorage::Field(field) => field.receiver.access,
             },
             HirOptionalOperand::ClassProduced(_) => crate::hir::HirAccess::Mutable,
-            HirOptionalOperand::Place(_) | HirOptionalOperand::Produced(_) => {
+            HirOptionalOperand::Place(_)
+            | HirOptionalOperand::Produced(_)
+            | HirOptionalOperand::SharedPlace(_)
+            | HirOptionalOperand::SharedProduced(_) => {
                 self.diagnostics.push(
                     Diagnostic::error(
                         crate::typeck::program::INVALID_OBJECT_CONTEXT,
@@ -304,7 +443,7 @@ impl CallableChecker<'_, '_> {
         })
     }
 
-    fn require_optional_operand(
+    pub(super) fn require_optional_operand(
         &mut self,
         expression: &ResolvedExpression,
         span: crate::source::Span,
@@ -316,16 +455,22 @@ impl CallableChecker<'_, '_> {
         if let Some(place) = self.class_optional_place(expression) {
             return Some(HirOptionalOperand::ClassPlace(place));
         }
+        if let Some(place) = self.optional_shared_place(expression) {
+            return Some(HirOptionalOperand::SharedPlace(place));
+        }
         if is_call_through_groups(expression) {
             if let Some(value) = self.check_expression(expression) {
                 if matches!(
                     value.ty,
-                    Type::OptionalPrimitive(_) | Type::OptionalClass(_)
+                    Type::OptionalPrimitive(_) | Type::OptionalClass(_) | Type::OptionalShared(_)
                 ) {
                     return Some(match value.ty {
                         Type::OptionalPrimitive(_) => HirOptionalOperand::Produced(Box::new(value)),
                         Type::OptionalClass(_) => {
                             HirOptionalOperand::ClassProduced(Box::new(value))
+                        }
+                        Type::OptionalShared(_) => {
+                            HirOptionalOperand::SharedProduced(Box::new(value))
                         }
                         _ => unreachable!(),
                     });

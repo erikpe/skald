@@ -157,6 +157,51 @@ fn select_plan(
                 );
                 output.push(Instruction::Label(labels.complete));
             }
+            MirDestructionStep::OptionalSharedField(field) => {
+                let field_declaration = program
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
+                if !matches!(field_declaration.ty, MirType::OptionalShared(_)) {
+                    return Err(finalizer_error(format!(
+                        "finalizer for {class} contains non-optional-shared field {field}"
+                    )));
+                }
+                let field_offset = data_layout
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("field {field} has no target layout")))?
+                    .offset;
+                let field_offset = i32::try_from(field_offset)
+                    .ok()
+                    .and_then(|offset| complete_offset.checked_add(offset))
+                    .ok_or_else(|| {
+                        finalizer_error(
+                            "finalizer optional-shared-field address exceeds target limits",
+                        )
+                    })?;
+                let finished = Label::new(format!(
+                    "finalize_optional_shared_{}_{}_{}",
+                    complete_class.index(),
+                    field.index(),
+                    output.len()
+                ));
+                load_complete_address(field_offset, Register::R11, output);
+                output.push(Instruction::Move {
+                    source: memory(Register::R11, 0),
+                    destination: Register::Rax.into(),
+                });
+                output.push(Instruction::Test(Register::Rax));
+                output.push(Instruction::JumpIfEqual(finished.clone()));
+                let labels = release_labels(complete_class, field, output.len());
+                emit_release_loaded_handle(
+                    labels.failure,
+                    labels.last,
+                    labels.complete.clone(),
+                    dispatch.finalizer_displacement(),
+                    output,
+                );
+                output.push(Instruction::Label(labels.complete));
+                output.push(Instruction::Label(finished));
+            }
             MirDestructionStep::OptionalClassField(field) => {
                 let field_declaration = program
                     .field(field)

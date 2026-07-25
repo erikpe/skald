@@ -57,6 +57,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
         HirCallArgument::Value(expression) => expression_contains_runtime_cast(expression),
         HirCallArgument::Optional { .. } => true,
         HirCallArgument::ClassOptional(_) => true,
+        HirCallArgument::OptionalShared(_) => true,
         HirCallArgument::CheckedView(view) => checked_view_contains_runtime_cast(view),
         HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
@@ -72,6 +73,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
                 cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
                     || shared_source_contains_runtime_cast(&cast.source)
             }
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
             HirSharedSource::Place(_) => false,
         },
     }
@@ -90,6 +92,7 @@ fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
             cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
                 || shared_source_contains_runtime_cast(&cast.source)
         }
+        HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
     }
 }
 

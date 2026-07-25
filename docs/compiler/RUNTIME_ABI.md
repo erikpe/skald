@@ -14,6 +14,11 @@ The runtime is a C11 static library built as
 `runtime/include/skald_runtime.h`; declarations not present in that header are
 implementation-private and are not ABI entry points.
 
+Optional values add no runtime entry point or ABI-version change. The
+`shared? T` zero niche is handled entirely by generated branches; zero is
+never passed to allocation, deallocation, finalization, or ordinary
+shared-owner machinery.
+
 The current public surface is:
 
 ```c

@@ -57,6 +57,10 @@ impl BodyLowerer<'_> {
                 self.lower_class_optional_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
+            HirStatement::OptionalSharedAssignment(assignment) => {
+                self.lower_optional_shared_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
         }
     }
 
@@ -122,6 +126,12 @@ impl BodyLowerer<'_> {
             crate::hir::HirLocalInitializer::ClassOptional(value) => {
                 self.lower_class_optional_initialize(storage, value);
                 self.cleanup.register_class_optional(storage, value.class);
+                self.finish_full_expression(local.span);
+            }
+            crate::hir::HirLocalInitializer::OptionalShared(value) => {
+                self.lower_optional_shared_initialize(storage, value);
+                self.cleanup
+                    .register_optional_shared(storage, super::lower_shared_target(value.target));
                 self.finish_full_expression(local.span);
             }
         }
@@ -193,6 +203,19 @@ impl BodyLowerer<'_> {
                 self.finish_full_expression(statement.span);
                 self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
                 self.terminate(MirTerminator::ReturnShared {
+                    owner: destination,
+                    span: statement.span,
+                });
+                return;
+            }
+            Some(crate::hir::HirReturnValue::OptionalShared(value)) => {
+                let destination = self
+                    .return_storage
+                    .expect("optional-shared-returning body must have return storage");
+                self.lower_optional_shared_initialize(destination, value);
+                self.finish_full_expression(statement.span);
+                self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
+                self.terminate(MirTerminator::ReturnOptionalShared {
                     owner: destination,
                     span: statement.span,
                 });

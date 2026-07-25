@@ -192,6 +192,12 @@ fn compute_class<I: Copy>(
                     ResolvedTypeKind::Shared(_) => {
                         fields.push(HirSynthesizedFieldCopy::Shared { field: field.id });
                     }
+                    ResolvedTypeKind::OptionalShared { target, .. } => {
+                        fields.push(HirSynthesizedFieldCopy::OptionalShared {
+                            field: field.id,
+                            target: crate::typeck::shared::lower_shared_target(target),
+                        });
+                    }
                     ResolvedTypeKind::Optional { payload, .. } => {
                         let payload = match payload {
                             crate::resolve::ResolvedOptionalPayload::I64 => {

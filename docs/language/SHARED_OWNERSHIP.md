@@ -61,11 +61,12 @@ allocation viewed through `shared Base` needs a separate lifecycle design.
 
 Every live Skald value denotes a value. A `shared T` value is therefore always
 a valid owning handle to one live heap allocation; it is never null, empty,
-dangling, or moved from. The frozen, not-yet-executable
+dangling, or moved from. The executable
 [optional-values contract](OPTIONAL_VALUES.md#shared-ownership) uses
 `shared? T` to represent absence around that ordinary owner. It never makes a
-`shared T` null. The compiler currently accepts that type through resolution
-and rejects it before HIR.
+`shared T` null. A successful `owner!` first retains a nonzero canonical
+handle into an ordinary owner; only that secured owner may enter existing
+dereference, cast, anchor, metadata, and release operations.
 
 Safe Skald code cannot:
 

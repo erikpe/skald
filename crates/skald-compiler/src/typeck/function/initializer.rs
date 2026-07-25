@@ -63,6 +63,37 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
+            (Type::OptionalShared(shared_target), body_kind) => {
+                let destination = crate::hir::HirOptionalSharedPlace {
+                    storage: crate::hir::HirOptionalStorage::Field(target.place.clone()),
+                    target: shared_target,
+                    span: assignment.span,
+                };
+                if body_kind.initializes_receiver() {
+                    self.check_optional_shared_initialize(
+                        shared_target,
+                        &assignment.value,
+                        "optional shared field initializer",
+                    )
+                    .map(|value| {
+                        HirStatement::OptionalSharedAssignment(
+                            crate::hir::HirOptionalSharedAssignment {
+                                destination,
+                                source: value.source,
+                                kind: crate::hir::HirOptionalWriteKind::Initialize,
+                                span: assignment.span,
+                            },
+                        )
+                    })
+                } else {
+                    self.check_optional_shared_assignment(
+                        destination,
+                        &assignment.value,
+                        "optional shared field assignment",
+                    )
+                    .map(HirStatement::OptionalSharedAssignment)
+                }
+            }
             (
                 Type::Bool
                 | Type::I64

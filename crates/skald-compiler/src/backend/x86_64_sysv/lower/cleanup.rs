@@ -65,6 +65,12 @@ impl InstructionSelector<'_, '_> {
                         "cleanup_shared_field",
                     )?;
                 }
+                MirDestructionStep::OptionalSharedField(field) => {
+                    self.release_optional_shared_place(
+                        &destination.clone().project_field(field),
+                        "cleanup_optional_shared_field",
+                    )?;
+                }
                 MirDestructionStep::OptionalClassField(field) => {
                     let field_class = match self
                         .program

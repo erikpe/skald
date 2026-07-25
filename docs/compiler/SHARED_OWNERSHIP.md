@@ -8,10 +8,11 @@ finalization, hidden anchors, and the minimal C allocation boundary. The
 source-visible contract is [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md).
 Object cast legality and consuming contexts are owned by
 [Object Casts](../language/OBJECT_CASTS.md).
-The frozen, not-yet-implemented
+The implemented
 [optional-values compiler contract](OPTIONAL_VALUES.md) wraps ordinary shared
 ownership as `shared? T`; it does not weaken the non-null handle invariants
-defined here.
+defined here. Its zero niche is tested and branched around before existing
+retain, release, metadata, dereference, anchor, cast, or finalization paths.
 
 Source AST and resolved IR retain shared targets, exact allocation class
 identities, and ordinary-versus-copy allocation modes. Typed HIR has canonical

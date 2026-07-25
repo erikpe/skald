@@ -90,6 +90,9 @@ impl BodyLowerer<'_> {
             HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
                 self.lower_shared_cast(destination, cast);
             }
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
+                self.lower_optional_shared_unwrap(operand, destination);
+            }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
                 let source = self.lower_field_place(place);
                 self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {

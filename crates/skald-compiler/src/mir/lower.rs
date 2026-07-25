@@ -70,6 +70,7 @@ enum FullExpressionTemporary {
     Inline(MirCleanup),
     Shared(StorageId),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
+    OptionalShared(crate::mir::MirOptionalSharedCleanup),
 }
 
 struct BodyLowerer<'hir> {
@@ -133,6 +134,9 @@ impl<'hir> BodyLowerer<'hir> {
                     Type::OptionalClass(class) => {
                         lowerer.cleanup.register_class_optional(*storage, class)
                     }
+                    Type::OptionalShared(target) => lowerer
+                        .cleanup
+                        .register_optional_shared(*storage, lower_shared_target(target)),
                     _ => {}
                 }
             }
@@ -209,6 +213,17 @@ impl<'hir> BodyLowerer<'hir> {
                 ty: MirType::OptionalClass(class),
                 span: self.input.source_body.span,
             });
+        } else if let Type::OptionalShared(target) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "optional-shared-return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: lower_type(Type::OptionalShared(target)),
+                span: self.input.source_body.span,
+            });
         }
         if let Some(class) = self.input.receiver_class {
             let id = StorageId::new(self.input.callable, self.storage.len());
@@ -274,6 +289,9 @@ impl<'hir> BodyLowerer<'hir> {
                 cleanup::PlannedCleanup::ClassOptional(cleanup) => {
                     self.emit_class_optional_cleanup(cleanup)
                 }
+                cleanup::PlannedCleanup::OptionalShared(cleanup) => {
+                    self.emit(MirInstruction::OptionalSharedCleanup(cleanup))
+                }
             }
         }
     }
@@ -317,9 +335,24 @@ fn lower_type(ty: Type) -> MirType {
                 MirSharedTarget::Interface(interface)
             }
         }),
+        Type::OptionalShared(target) => MirType::OptionalShared(match target {
+            crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
+            crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
+            crate::hir::HirSharedTarget::Interface(interface) => {
+                MirSharedTarget::Interface(interface)
+            }
+        }),
         Type::OptionalPrimitive(payload) => {
             MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
         }
         Type::OptionalClass(class) => MirType::OptionalClass(class),
+    }
+}
+
+const fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
+    match target {
+        crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
+        crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
+        crate::hir::HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
     }
 }

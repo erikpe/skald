@@ -171,6 +171,21 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
+            ResolvedExpression::Unwrap(unwrap) => {
+                let operand =
+                    self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+                if !matches!(
+                    operand,
+                    crate::hir::HirOptionalOperand::SharedPlace(_)
+                        | crate::hir::HirOptionalOperand::SharedProduced(_)
+                ) {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                }
+                Some(HirSharedSource::Produced(
+                    HirSharedProducer::OptionalUnwrap(operand),
+                ))
+            }
             ResolvedExpression::Dereference(dereference) => {
                 self.diagnostics.push(
                     Diagnostic::error(
@@ -430,6 +445,54 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedTypeKind::Obj => Some(HirSharedTarget::Obj),
                     _ => None,
                 }
+            }
+            ResolvedExpression::Unwrap(unwrap) => {
+                self.resolved_optional_shared_target(&unwrap.source)
+            }
+            _ => None,
+        }
+    }
+
+    fn resolved_optional_shared_target(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<HirSharedTarget> {
+        let resolved = match expression {
+            ResolvedExpression::Binding(binding) => {
+                return match self.binding_type(binding.binding) {
+                    Type::OptionalShared(target) => Some(target),
+                    _ => None,
+                }
+            }
+            ResolvedExpression::FieldAccess(access) => {
+                self.program.field(access.field)?.type_syntax.kind
+            }
+            ResolvedExpression::DirectCall(call) => {
+                self.program
+                    .declarations
+                    .get(call.function)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::MethodCall(call) => {
+                self.program.method(call.method)?.return_type.kind
+            }
+            ResolvedExpression::InterfaceCall(call) => {
+                self.program
+                    .interface(call.interface)?
+                    .requirements
+                    .get(call.requirement.index())?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                return self.resolved_optional_shared_target(&grouped.expression)
+            }
+            _ => return None,
+        };
+        match resolved {
+            crate::resolve::ResolvedTypeKind::OptionalShared { target, .. } => {
+                Some(lower_shared_target(target))
             }
             _ => None,
         }

@@ -116,6 +116,9 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 }
                 HirDestructionStep::Field(field) => MirDestructionStep::Field(field),
                 HirDestructionStep::SharedField(field) => MirDestructionStep::SharedField(field),
+                HirDestructionStep::OptionalSharedField(field) => {
+                    MirDestructionStep::OptionalSharedField(field)
+                }
                 HirDestructionStep::OptionalClassField(field) => {
                     MirDestructionStep::OptionalClassField(field)
                 }
@@ -263,6 +266,12 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                         },
                         HirSynthesizedFieldCopy::Shared { field } => {
                             MirSynthesizedFieldCopy::Shared { field }
+                        }
+                        HirSynthesizedFieldCopy::OptionalShared { field, target } => {
+                            MirSynthesizedFieldCopy::OptionalShared {
+                                field,
+                                target: lower_shared_target(target),
+                            }
                         }
                         HirSynthesizedFieldCopy::Class { field, operation } => {
                             MirSynthesizedFieldCopy::Class {

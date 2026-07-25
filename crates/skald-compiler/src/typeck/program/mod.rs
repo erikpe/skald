@@ -408,8 +408,8 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
             }
             crate::resolve::ResolvedOptionalPayload::Class(class) => Type::OptionalClass(class),
         },
-        ResolvedTypeKind::OptionalShared { .. } => {
-            unreachable!("unsupported optional shared owner is rejected before type lowering")
+        ResolvedTypeKind::OptionalShared { target, .. } => {
+            Type::OptionalShared(crate::typeck::shared::lower_shared_target(target))
         }
     }
 }

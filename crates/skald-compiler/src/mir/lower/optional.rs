@@ -340,6 +340,145 @@ impl BodyLowerer<'_> {
         }
     }
 
+    pub(super) fn lower_optional_shared_initialize(
+        &mut self,
+        destination: StorageId,
+        value: &crate::hir::HirOptionalSharedInitialize,
+    ) {
+        let source = self.lower_optional_shared_source(&value.source);
+        self.emit(MirInstruction::OptionalSharedInitialize(
+            crate::mir::MirOptionalSharedInitialize {
+                destination: crate::mir::MirPlace::base(destination),
+                source,
+                target: super::lower_shared_target(value.target),
+                span: value.span,
+            },
+        ));
+    }
+
+    pub(super) fn lower_optional_shared_assignment(
+        &mut self,
+        assignment: &crate::hir::HirOptionalSharedAssignment,
+    ) {
+        let source = self.lower_optional_shared_source(&assignment.source);
+        let destination = self.lower_optional_shared_place(&assignment.destination);
+        let operation = crate::mir::MirOptionalSharedAssign {
+            destination,
+            source,
+            target: super::lower_shared_target(assignment.destination.target),
+            span: assignment.span,
+        };
+        match assignment.kind {
+            crate::hir::HirOptionalWriteKind::Initialize => {
+                self.emit(MirInstruction::OptionalSharedInitialize(
+                    crate::mir::MirOptionalSharedInitialize {
+                        destination: operation.destination,
+                        source: operation.source,
+                        target: operation.target,
+                        span: operation.span,
+                    },
+                ));
+            }
+            crate::hir::HirOptionalWriteKind::Assign => {
+                self.emit(MirInstruction::OptionalSharedAssign(operation));
+            }
+        }
+    }
+
+    fn lower_optional_shared_source(
+        &mut self,
+        source: &crate::hir::HirOptionalSharedSource,
+    ) -> crate::mir::MirOptionalSharedSource {
+        match source {
+            crate::hir::HirOptionalSharedSource::Absent { .. } => {
+                crate::mir::MirOptionalSharedSource::Absent
+            }
+            crate::hir::HirOptionalSharedSource::Present(source) => {
+                let storage = self.new_untracked_shared_storage(source.target(), source.span());
+                self.lower_shared_source(storage, source, source.span());
+                crate::mir::MirOptionalSharedSource::Present(storage)
+            }
+            crate::hir::HirOptionalSharedSource::Copy(place) => {
+                crate::mir::MirOptionalSharedSource::Copy(self.lower_optional_shared_place(place))
+            }
+            crate::hir::HirOptionalSharedSource::Produced(expression) => {
+                let target = match expression.ty {
+                    Type::OptionalShared(target) => target,
+                    _ => unreachable!("optional shared producer must have optional shared type"),
+                };
+                let storage = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "optional-shared-result",
+                    Type::OptionalShared(target),
+                    expression.span,
+                );
+                self.lower_optional_shared_call(expression, storage);
+                crate::mir::MirOptionalSharedSource::Move(storage)
+            }
+        }
+    }
+
+    fn lower_optional_shared_place(
+        &mut self,
+        place: &crate::hir::HirOptionalSharedPlace,
+    ) -> crate::mir::MirPlace {
+        match &place.storage {
+            HirOptionalStorage::Binding(binding) => {
+                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
+            }
+            HirOptionalStorage::Field(field) => self.lower_field_place(field),
+        }
+    }
+
+    fn new_untracked_shared_storage(
+        &mut self,
+        target: crate::hir::HirSharedTarget,
+        span: crate::source::Span,
+    ) -> StorageId {
+        let storage = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: storage,
+            source: None,
+            name: format!("optional-shared-source-{}", storage.index()),
+            kind: MirStorageKind::Temporary,
+            ty: MirType::Shared(super::lower_shared_target(target)),
+            span,
+        });
+        storage
+    }
+
+    pub(super) fn lower_optional_shared_unwrap(
+        &mut self,
+        operand: &HirOptionalOperand,
+        destination: StorageId,
+    ) {
+        let source = self.lower_optional_operand(operand);
+        let target = super::lower_shared_target(operand.shared_target());
+        let success_target = self.body.allocate_block(operand.span());
+        let failure_target = self.body.allocate_block(operand.span());
+        self.terminate(MirTerminator::OptionalSharedUnwrap {
+            unwrap: crate::mir::MirOptionalSharedUnwrap {
+                source,
+                destination,
+                target,
+                span: operand.span(),
+            },
+            success_target,
+            failure_target,
+            span: operand.span(),
+        });
+        self.body
+            .select_block(failure_target)
+            .expect("allocated optional-owner failure block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalAccessFailure,
+            span: operand.span(),
+        });
+        self.body
+            .select_block(success_target)
+            .expect("allocated optional-owner success block must be selectable");
+    }
+
     pub(super) fn lower_optional_operand(
         &mut self,
         operand: &HirOptionalOperand,
@@ -373,6 +512,30 @@ impl BodyLowerer<'_> {
                                 Type::OptionalClass(class) => class,
                                 _ => unreachable!(),
                             },
+                            span: expression.span,
+                        },
+                    ),
+                );
+                crate::mir::MirPlace::base(destination)
+            }
+            HirOptionalOperand::SharedPlace(place) => self.lower_optional_shared_place(place),
+            HirOptionalOperand::SharedProduced(expression) => {
+                let target = match expression.ty {
+                    Type::OptionalShared(target) => target,
+                    _ => unreachable!(),
+                };
+                let destination = self.new_optional_storage(
+                    MirStorageKind::Temporary,
+                    "optional-shared-result",
+                    expression.ty,
+                    expression.span,
+                );
+                self.lower_optional_shared_call(expression, destination);
+                self.full_expression_temporaries.push(
+                    super::FullExpressionTemporary::OptionalShared(
+                        crate::mir::MirOptionalSharedCleanup {
+                            destination: crate::mir::MirPlace::base(destination),
+                            target: super::lower_shared_target(target),
                             span: expression.span,
                         },
                     ),
@@ -460,6 +623,9 @@ impl BodyLowerer<'_> {
                 MirType::OptionalPrimitive(lower_primitive_type(payload))
             }
             Type::OptionalClass(class) => MirType::OptionalClass(class),
+            Type::OptionalShared(target) => {
+                MirType::OptionalShared(super::lower_shared_target(target))
+            }
             _ => unreachable!("optional storage requires an optional type"),
         };
         let id = StorageId::new(self.input.callable, self.storage.len());

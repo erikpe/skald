@@ -123,6 +123,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 MirDestructionStep::SharedField(field) => {
                     let _ = writeln!(output, "        SharedField {field}");
                 }
+                MirDestructionStep::OptionalSharedField(field) => {
+                    let _ = writeln!(output, "        OptionalSharedField {field}");
+                }
                 MirDestructionStep::OptionalClassField(field) => {
                     let _ = writeln!(output, "        OptionalClassField {field}");
                 }
@@ -168,6 +171,12 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
                     }
                     MirSynthesizedFieldCopy::Shared { field } => {
                         let _ = writeln!(output, "          Shared {field}");
+                    }
+                    MirSynthesizedFieldCopy::OptionalShared { field, target } => {
+                        let _ = writeln!(
+                            output,
+                            "          OptionalShared {field} : shared? {target}"
+                        );
                     }
                     MirSynthesizedFieldCopy::OptionalClass {
                         field,
@@ -555,6 +564,25 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_optional_source(output, &assignment.source);
                 write_span(output, assignment.span);
             }
+            MirInstruction::OptionalSharedInitialize(initialize) => {
+                output.push_str("optional-shared-initialize ");
+                dump_place(output, &initialize.destination);
+                output.push_str(" from ");
+                dump_optional_shared_source(output, &initialize.source);
+                write_span(output, initialize.span);
+            }
+            MirInstruction::OptionalSharedAssign(assignment) => {
+                output.push_str("optional-shared-assign ");
+                dump_place(output, &assignment.destination);
+                output.push_str(" from ");
+                dump_optional_shared_source(output, &assignment.source);
+                write_span(output, assignment.span);
+            }
+            MirInstruction::OptionalSharedCleanup(cleanup) => {
+                output.push_str("optional-shared-cleanup ");
+                dump_place(output, &cleanup.destination);
+                write_span(output, cleanup.span);
+            }
             MirInstruction::ClassOptionalInitialize(initialize) => {
                 output.push_str("class-optional-initialize ");
                 dump_place(output, &initialize.destination);
@@ -597,6 +625,10 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
         }
         Some(MirTerminator::ReturnShared { owner, span }) => {
             let _ = write!(output, "return-shared {owner}");
+            write_span(output, *span);
+        }
+        Some(MirTerminator::ReturnOptionalShared { owner, span }) => {
+            let _ = write!(output, "return-optional-shared {owner}");
             write_span(output, *span);
         }
         Some(MirTerminator::Goto { target, span }) => {
@@ -655,6 +687,21 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             let _ = write!(
                 output,
                 " into {destination}, success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::OptionalSharedUnwrap {
+            unwrap,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            output.push_str("optional-shared-unwrap ");
+            dump_place(output, &unwrap.source);
+            let _ = write!(
+                output,
+                " into {}, success {success_target}, failure {failure_target}",
+                unwrap.destination
             );
             write_span(output, *span);
         }
@@ -854,6 +901,22 @@ fn dump_optional_source(output: &mut String, source: &MirOptionalSource) {
         MirOptionalSource::Copy(place) => {
             output.push_str("copy ");
             dump_place(output, place);
+        }
+    }
+}
+
+fn dump_optional_shared_source(output: &mut String, source: &MirOptionalSharedSource) {
+    match source {
+        MirOptionalSharedSource::Absent => output.push_str("absent"),
+        MirOptionalSharedSource::Present(owner) => {
+            let _ = write!(output, "present {owner}");
+        }
+        MirOptionalSharedSource::Copy(place) => {
+            output.push_str("copy ");
+            dump_place(output, place);
+        }
+        MirOptionalSharedSource::Move(owner) => {
+            let _ = write!(output, "move {owner}");
         }
     }
 }

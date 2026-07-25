@@ -43,15 +43,17 @@ diagnostic, identity, or IR registry.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
-target identities. For primitive owning values, type checking selects explicit
+target identities. For optional owning values, type checking selects explicit
 absent or present initialization, copy, assignment, overload injection,
-field/call boundaries, presence, primitive extraction, and checked class
-payload views. MIR owns initialized places, caller-owned argument/result
+field/call boundaries, presence, primitive extraction, checked class payload
+views, and optional shared copy/adopt/move/release and secured unwrap. MIR owns
+initialized places, caller-owned argument/result
 aggregates, explicit unwrap success/failure control flow, begin/end guard
 operations, and guarded-mutation checks. Verification proves compatible
 operations, definite wrapper initialization, balanced compatible guards,
-anchor ordering, and identical guard state across CFG joins. `TYP035` remains
-the boundary for optional shared owners and optional-container aliases.
+anchor ordering, isolation of the zero niche from ordinary owners, and
+identical initialized optional state across CFG joins. `TYP035` remains the
+boundary for optional-container aliases and reserved optional shapes.
 
 ## Sources and diagnostics
 

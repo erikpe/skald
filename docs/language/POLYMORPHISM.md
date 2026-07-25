@@ -199,6 +199,12 @@ selection and `*owner is T` for a type test; `(*owner).member` is equivalent
 to the arrow form. A raw shared handle is not an object place: `.` stays
 within inline storage and never crosses a shared edge.
 
+`shared? T` lifts the same compatible class/interface/`Obj` target relation
+without making the optional itself an object view. Presence testing observes
+only the optional state. Postfix `!` secures an ordinary `shared T`; up-views,
+dispatch, type tests, and shared casts then use the unchanged plain-owner
+rules and metadata.
+
 ## Non-owning conversions and access
 
 Alias parameters extend to class, interface, and `Obj` targets. They remain
@@ -433,10 +439,11 @@ This profile excludes:
 - local/general reference values and stored cast views;
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, closures, generics, statics/globals, and reflection;
-- optional shared owners and lifted compatible shared views. Primitive and
-  exact-class optional parameters/results are implemented as exact virtual and
-  interface signature components; checked optional class payload views support
-  the existing direct, virtual, interface, cast, and type-test consumers;
+- optional-container aliases. Primitive, exact-class, and optional shared-owner
+  parameters/results are implemented as exact virtual and interface signature
+  components; checked optional class payload views and secured optional-owner
+  unwrap support the existing direct, virtual, interface, cast, and type-test
+  consumers;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
 - unsafe or unchecked casts, user-visible dispatch tables, and user-defined
   conversions; and

@@ -17,6 +17,7 @@ use super::{
         MirDefinitionRef, MirFunctionDefinitionTable, MirMemberDefinition, MirMemberDefinitionTable,
     },
     interface::{MirInterfaceConformance, MirInterfaceDeclarationTable, MirInterfaceRequirement},
+    shared::MirSharedTarget,
     value::MirType,
 };
 
@@ -441,6 +442,10 @@ pub enum MirSynthesizedFieldCopy<I> {
     Shared {
         field: FieldId,
     },
+    OptionalShared {
+        field: FieldId,
+        target: MirSharedTarget,
+    },
     Class {
         field: FieldId,
         operation: MirSelectedCopyOperation<I>,
@@ -454,6 +459,7 @@ impl<I> MirSynthesizedFieldCopy<I> {
             | Self::OptionalPrimitive { field, .. }
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }
+            | Self::OptionalShared { field, .. }
             | Self::Class { field, .. } => *field,
         }
     }
@@ -517,6 +523,7 @@ pub enum MirDestructionStep {
     UserBody(DestructorId),
     Field(FieldId),
     SharedField(FieldId),
+    OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
     Base(ClassId),
 }

@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP6 is next.
+Status: in progress; OP6 is complete and OP7 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -186,7 +186,7 @@ documents remain historical and are not migration targets.
 - [x] OP3 — Carry primitive optionals through stored and callable boundaries
 - [x] OP4 — Implement inline-class optional lifecycle
 - [x] OP5 — Enforce checked payload views and dynamic presence guards
-- [ ] OP6 — Implement optional shared owners
+- [x] OP6 — Implement optional shared owners
 - [ ] OP7 — Complete alias, overload, conversion, and polymorphism integration
 - [ ] OP8 — Harden diagnostics, documentation, and end-to-end behavior
 
@@ -442,33 +442,33 @@ every invalidating transition fails before ending the payload lifetime.
 ordinary `shared T` non-null and reusing the existing allocation, metadata,
 anchor, cast, and finalization model.
 
-- [ ] Type check `shared? T` locals, fields, parameters, results, temporaries,
+- [x] Type check `shared? T` locals, fields, parameters, results, temporaries,
       assignments, and exact virtual/interface signatures for every current
       class/interface/`Obj` shared target.
-- [ ] Construct absence from `none`; inject named `shared T` by owner copy and
+- [x] Construct absence from `none`; inject named `shared T` by owner copy and
       produced allocation/call/cast results by existing adopt or move rules.
-- [ ] Lift only currently valid shared target compatibility and owner-preserving
+- [x] Lift only currently valid shared target compatibility and owner-preserving
       casts through optionality, preserving exact produced-allocation
       provenance and overload specificity.
-- [ ] Implement absent/present owner copy, secure-before-release assignment,
+- [x] Implement absent/present owner copy, secure-before-release assignment,
       conditional release, result transfer, field lifecycle, temporary
       cleanup, and dynamic last-owner destruction.
-- [ ] Make `owner!` secure one ordinary non-null `shared T` before its
+- [x] Make `owner!` secure one ordinary non-null `shared T` before its
       consumer. Continue to require ordinary `*` or `->` pointee selection
       after unwrap, and diagnose direct optional-owner dereference or member
       access.
-- [ ] Add explicit HIR/MIR optional-owner operations and verification that
+- [x] Add explicit HIR/MIR optional-owner operations and verification that
       absence accounts for no strong owner, presence accounts for exactly one,
       zero is never passed to a normal shared operation, and CFG joins retain
       consistent initialized optional-owner storage.
-- [ ] Implement the one-word x86-64 zero-niche representation, guarded
+- [x] Implement the one-word x86-64 zero-niche representation, guarded
       retain/release/metadata/dereference operations, register/stack/result
       classification, and normal trap failures without changing allocation
       headers or the C runtime ABI.
-- [ ] Reuse existing shared anchors after unwrap for pointee places reached from
+- [x] Reuse existing shared anchors after unwrap for pointee places reached from
       replaceable or produced owners; do not add a presence guard once the
       non-null owner has been secured.
-- [ ] Update optional values, language/compiler shared ownership, aliases,
+- [x] Update optional values, language/compiler shared ownership, aliases,
       object casts, polymorphism, classes/lifecycle, phases/IR, backend,
       runtime ABI, errors, and testing documentation with the implemented
       optional-owner contract and unchanged plain-owner guarantees.

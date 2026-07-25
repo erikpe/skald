@@ -139,6 +139,7 @@ fn lower_class_declaration(
         .filter_map(|field| match field.ty {
             Type::Class(_) => Some(HirDestructionStep::Field(field.id)),
             Type::Shared(_) => Some(HirDestructionStep::SharedField(field.id)),
+            Type::OptionalShared(_) => Some(HirDestructionStep::OptionalSharedField(field.id)),
             Type::OptionalClass(_) => Some(HirDestructionStep::OptionalClassField(field.id)),
             _ => None,
         })

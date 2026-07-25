@@ -324,6 +324,9 @@ impl<'mir> Verifier<'mir> {
                     .filter_map(|field| match field.ty {
                         MirType::Class(_) => Some(MirDestructionStep::Field(field.id)),
                         MirType::Shared(_) => Some(MirDestructionStep::SharedField(field.id)),
+                        MirType::OptionalShared(_) => {
+                            Some(MirDestructionStep::OptionalSharedField(field.id))
+                        }
                         MirType::OptionalClass(_) => {
                             Some(MirDestructionStep::OptionalClassField(field.id))
                         }
@@ -551,6 +554,13 @@ impl<'mir> Verifier<'mir> {
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
+                (
+                    MirType::OptionalShared(target),
+                    MirSynthesizedFieldCopy::OptionalShared {
+                        field: id,
+                        target: step_target,
+                    },
+                ) => *id == field.id && target == *step_target,
                 _ => false,
             };
             if !valid {
@@ -620,6 +630,13 @@ impl<'mir> Verifier<'mir> {
                 (MirType::Shared(_), MirSynthesizedFieldCopy::Shared { field: id }) => {
                     *id == field.id
                 }
+                (
+                    MirType::OptionalShared(target),
+                    MirSynthesizedFieldCopy::OptionalShared {
+                        field: id,
+                        target: step_target,
+                    },
+                ) => *id == field.id && target == *step_target,
                 _ => false,
             };
             if !valid {

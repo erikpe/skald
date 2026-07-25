@@ -338,7 +338,10 @@ impl InstructionSelector<'_, '_> {
                 self.select_place_address(place, locations.value())?;
             }
             (MirArgument::SharedOwner(owner), MirParameterMode::Value)
-                if matches!(parameter.ty, MirType::Shared(_)) =>
+                if matches!(
+                    parameter.ty,
+                    MirType::Shared(_) | MirType::OptionalShared(_)
+                ) =>
             {
                 self.marshal_shared_owner(*owner, locations.value());
             }

@@ -17,6 +17,134 @@ fn class_optional_layout_reserves_an_aligned_exact_payload() {
 }
 
 #[test]
+fn optional_shared_owner_uses_the_zero_niche_one_word_layout() {
+    let program = lower_text(
+        "class Value { init() {} }\n\
+         class Holder { value: shared? Value; init() { self.value = none; } }\n\
+         fn main() -> i64 { var value: shared? Value = none; return 0; }\n",
+    );
+    let layouts = layout::DataLayout::compute(&program).unwrap();
+    let field = layouts.field(FieldId::new(ClassId::new(1), 0)).unwrap();
+    let optional = layouts
+        .ty(MirType::OptionalShared(MirSharedTarget::Class(
+            ClassId::new(0),
+        )))
+        .unwrap();
+
+    assert_eq!(field.offset, 0);
+    assert_eq!(optional.size(), 8);
+    assert_eq!(optional.alignment(), 8);
+}
+
+#[test]
+fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execute() {
+    let source = concat!(
+        "extern fn ska_rt_println_i64(value: i64) -> unit;\n",
+        "class Value {\n",
+        "  marker: i64;\n",
+        "  init(marker: i64) { self.marker = marker; }\n",
+        "  fn read() -> i64 { return self.marker; }\n",
+        "  destroy { ska_rt_println_i64(self.marker); }\n",
+        "}\n",
+        "class Holder {\n",
+        "  value: shared? Value;\n",
+        "  init(value: shared? Value) { self.value = value; }\n",
+        "}\n",
+        "fn forward(value: shared? Value) -> shared? Value { return value; }\n",
+        "fn main() -> i64 {\n",
+        "  var first: shared? Value = new Value(42);\n",
+        "  var second: shared? Value = first;\n",
+        "  first = first;\n",
+        "  var holder: Holder = Holder(forward(second));\n",
+        "  var copied: Holder = holder;\n",
+        "  copied = copied;\n",
+        "  first = none;\n",
+        "  second = none;\n",
+        "  return copied.value!->read();\n",
+        "}\n",
+    );
+    let mir_dump = crate::mir::dump_mir(&lower_text(source));
+    assert!(mir_dump.contains("optional-shared-initialize"));
+    assert!(mir_dump.contains("optional-shared-assign"));
+    assert!(mir_dump.contains("optional-shared-cleanup"));
+    assert!(mir_dump.contains("optional-shared-unwrap"));
+    assert!(mir_dump.contains("return-optional-shared"));
+
+    let mut output = assembly(source);
+    output.push_str(optional_ownership_stubs());
+    output.push_str(println_i64_stub());
+    let result = run_native_assembly_output(&output);
+
+    assert_eq!(result.status.code(), Some(42), "{output}");
+    assert_eq!(result.stdout, b"42\n");
+    assert!(result.stderr.is_empty());
+}
+
+#[test]
+fn optional_shared_parameters_results_and_stack_pressure_execute() {
+    let source = "class Value { marker: i64; init(marker: i64) { self.marker = marker; } }\n\
+        fn choose(a: shared? Value, b: shared? Value, c: shared? Value,\n\
+                  d: shared? Value, e: shared? Value, f: shared? Value,\n\
+                  g: shared? Value) -> shared? Value {\n\
+          if (g is some) { return g; }\n\
+          return a;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var result: shared? Value = choose(none, none, none, none, none, none, new Value(42));\n\
+          return result!->marker;\n\
+        }\n";
+    let mut output = assembly(source);
+    output.push_str(optional_ownership_stubs());
+
+    assert!(output.contains("mov qword ptr [rsp]"));
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_shared_unwrap_secures_anchors_and_composes_with_runtime_casts() {
+    let source = "interface Readable { fn read() -> i64; }\n\
+        class Value implements Readable {\n\
+          marker: i64;\n\
+          init(marker: i64) { self.marker = marker; }\n\
+          fn read() -> i64 { return self.marker; }\n\
+        }\n\
+        class Holder {\n\
+          value: shared? Value;\n\
+          init(value: shared? Value) { self.value = value; }\n\
+          mut fn clear() -> i64 { self.value = none; return 0; }\n\
+        }\n\
+        fn consume(ref value: Value, ignored: i64) -> i64 {\n\
+          return value.marker + ignored;\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var concrete: shared? Value = new Value(42);\n\
+          var readable: shared? Readable = concrete;\n\
+          var object: shared? Obj = readable;\n\
+          var recovered: shared Value = (shared Value) object!;\n\
+          var holder: Holder = Holder(recovered);\n\
+          return consume(*holder.value!, holder.clear());\n\
+        }\n";
+    let mut output = assembly(source);
+    output.push_str(optional_ownership_stubs());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn absent_optional_shared_unwrap_terminates() {
+    let mut output = assembly(
+        "class Value { init() {} fn read() -> i64 { return 42; } }\n\
+         fn main() -> i64 {\n\
+           var value: shared? Value = none;\n\
+           return value!->read();\n\
+         }\n",
+    );
+    output.push_str(optional_ownership_stubs());
+
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn primitive_optionals_execute_present_payloads_for_every_primitive() {
     let output = assembly(
         "fn main() -> i64 {\n\

@@ -99,7 +99,8 @@ impl FrameLayout {
         let mut object_origins = Vec::with_capacity(function.storage_entries().len());
         for storage in function.storage_entries() {
             let (size, alignment) = match (storage.kind, storage.ty) {
-                (MirStorageKind::SharedAllocation, _) | (_, MirType::Shared(_)) => {
+                (MirStorageKind::SharedAllocation, _)
+                | (_, MirType::Shared(_) | MirType::OptionalShared(_)) => {
                     (SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)
                 }
                 (
@@ -187,12 +188,17 @@ impl FrameLayout {
             .storage(storage_id)
             .expect("verified place base must identify storage");
         let (base, mut displacement) = match place.base {
-            MirPlaceBase::Storage(_) if storage.kind == MirStorageKind::Return => (
-                FramePlaceBase::Return {
-                    home: self.storage(storage_id),
-                },
-                0,
-            ),
+            MirPlaceBase::Storage(_)
+                if storage.kind == MirStorageKind::Return
+                    && !matches!(storage.ty, MirType::OptionalShared(_)) =>
+            {
+                (
+                    FramePlaceBase::Return {
+                        home: self.storage(storage_id),
+                    },
+                    0,
+                )
+            }
             MirPlaceBase::Storage(_) if storage.kind == MirStorageKind::Receiver => (
                 FramePlaceBase::Receiver {
                     home: self.storage(storage_id),

@@ -24,8 +24,7 @@ use super::{
 
 mod count;
 
-pub(super) use count::emit_release_loaded_handle;
-use count::emit_retain_loaded_handle;
+pub(super) use count::{emit_release_loaded_handle, emit_retain_loaded_handle};
 
 const STRONG_COUNT_OFFSET: i32 = 0;
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";

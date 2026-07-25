@@ -42,7 +42,7 @@ receiver is evaluated before its explicit arguments.
 | **binding** | A source name associated with a value place or a non-owning alias place. |
 | **owner** | A place responsible for the lifetime and eventual destruction of its class value. |
 | **shared owner** | A non-null owning `shared T` handle. It is a value distinct from the allocated object place it keeps alive. |
-| **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Primitive and exact-class `T?` execute across owning boundaries; class unwrap supplies a bounded checked payload view. Optional shared owners remain staged. |
+| **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Primitive, exact-class, and shared-owner optionals execute across internal owning boundaries; class unwrap supplies a bounded checked payload view and shared unwrap secures an ordinary non-null owner. |
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
@@ -84,10 +84,10 @@ hidden owning anchors for borrows from replaceable shared storage. Shared
 allocation is explicit through `new T(arguments)` or `new T(copy source)`.
 Pointee access is explicit: `.` stays within an inline object place, `->`
 crosses one shared edge, and general object-place consumers require `*owner`.
-Primitive and exact-class inline optional values execute across owning local,
-field, and internal callable boundaries, including dynamically guarded checked
-class payload views. The broader source contract is frozen and its remaining
-syntax and resolved identities are implemented as described
+Primitive, exact-class inline, and shared-owner optional values execute across
+owning local, field, and internal callable boundaries, including dynamically
+guarded checked class payload views and secured ordinary owners from
+`shared? T` unwrap. The broader source contract is frozen as described
 in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
@@ -119,9 +119,8 @@ makes a result source-observable.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, and operator availability.
 - [Optional values](OPTIONAL_VALUES.md) freezes the explicit `T?` and
-  `shared? T` source contract, records the implemented syntax/resolution
-  boundary, and specifies planned presence, checked access, lifecycle,
-  aliasing, failure, and exclusions.
+  `shared? T` source contract and specifies implemented presence, checked
+  access, lifecycle, failure, and the remaining aliasing exclusions.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, and evaluation order.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal

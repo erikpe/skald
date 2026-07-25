@@ -228,6 +228,7 @@ fn select_binary_operation(
             | Type::Class(_)
             | Type::Interface(_)
             | Type::Shared(_)
+            | Type::OptionalShared(_)
             | Type::OptionalPrimitive(_)
             | Type::OptionalClass(_),
         ) => None,

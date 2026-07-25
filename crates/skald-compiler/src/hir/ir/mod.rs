@@ -45,8 +45,9 @@ pub use object::{
 pub use optional::{
     HirCheckedOptionalView, HirClassOptionalAssignment, HirClassOptionalInitialize,
     HirClassOptionalPlace, HirClassOptionalSource, HirOptionalAssignment, HirOptionalOperand,
-    HirOptionalPlace, HirOptionalSource, HirOptionalStorage, HirOptionalWriteKind,
-    HirPresenceTestKind, HirPrimitiveType,
+    HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
+    HirOptionalSharedPlace, HirOptionalSharedSource, HirOptionalSource, HirOptionalStorage,
+    HirOptionalWriteKind, HirPresenceTestKind, HirPrimitiveType,
 };
 pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,
@@ -66,6 +67,7 @@ pub enum Type {
     Class(ClassId),
     Interface(InterfaceId),
     Shared(HirSharedTarget),
+    OptionalShared(HirSharedTarget),
     OptionalPrimitive(HirPrimitiveType),
     OptionalClass(ClassId),
 }
@@ -87,6 +89,13 @@ impl Type {
                 HirSharedTarget::Class(class) => format!("shared class {class}"),
                 HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
             }),
+            Self::OptionalShared(target) => Cow::Owned(match target {
+                HirSharedTarget::Obj => "shared? Obj".to_owned(),
+                HirSharedTarget::Class(class) => format!("shared? class {class}"),
+                HirSharedTarget::Interface(interface) => {
+                    format!("shared? interface {interface}")
+                }
+            }),
             Self::OptionalPrimitive(payload) => Cow::Owned(format!("{}?", payload.name())),
             Self::OptionalClass(class) => Cow::Owned(format!("class {class}?")),
         }
@@ -105,6 +114,7 @@ impl Type {
             | Self::Class(_)
             | Self::Interface(_)
             | Self::Shared(_)
+            | Self::OptionalShared(_)
             | Self::OptionalPrimitive(_)
             | Self::OptionalClass(_) => "a",
         }

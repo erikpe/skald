@@ -595,8 +595,11 @@ optional fields in ordinary initialization and synthesized copy
 construction/assignment. They must be initialized exactly once and may hold
 `none`; a present exact-class payload is destroyed conditionally in reverse
 field order. Checked optional-class payload access uses bounded presence
-guards. The model does not yet include optional shared owners, static members,
-access modifiers, `final`, abstract members,
+guards. Optional `shared? T` fields also execute: absence owns nothing,
+presence owns one strong handle, synthesized copy retains conditionally, and
+assignment/destruction conditionally release in the ordinary reverse field
+order. The model does not yet include static members, access modifiers,
+`final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base
@@ -608,8 +611,8 @@ rather than nullable plain class values. Primitive optional fields use inline
 state plus payload storage and participate in the class lifecycle described
 above. Exact-class `T?` reserves inline payload storage and applies the existing
 payload copy/assignment/destruction operations conditionally, so it does not
-make recursive inline containment finite; `shared? T` remains the planned
-finite optional-owner form.
+make recursive inline containment finite; executable `shared? T` is the finite
+optional-owner form.
 Direct-base syntax, hierarchy validation, inherited selection and lifecycle,
 class/interface/`Obj` alias views, slicing, virtual dispatch, interface
 dispatch, type tests, and checked object casts execute on x86-64. Their

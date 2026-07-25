@@ -195,6 +195,9 @@ impl HirDumper {
                             HirDestructionStep::SharedField(field) => {
                                 dumper.raw_line(&format!("SharedField {field}"));
                             }
+                            HirDestructionStep::OptionalSharedField(field) => {
+                                dumper.raw_line(&format!("OptionalSharedField {field}"));
+                            }
                             HirDestructionStep::OptionalClassField(field) => {
                                 dumper.raw_line(&format!("OptionalClassField {field}"));
                             }
@@ -310,6 +313,12 @@ impl HirDumper {
                             }
                             HirSynthesizedFieldCopy::Shared { field } => {
                                 dumper.raw_line(&format!("Shared {field}"));
+                            }
+                            HirSynthesizedFieldCopy::OptionalShared { field, target } => {
+                                dumper.raw_line(&format!(
+                                    "OptionalShared {field} : {}",
+                                    optional_shared_target_name(*target)
+                                ));
                             }
                             HirSynthesizedFieldCopy::OptionalClass {
                                 field,
@@ -451,6 +460,9 @@ impl HirDumper {
                     HirLocalInitializer::Shared(value) => dumper.shared_transfer(value),
                     HirLocalInitializer::Optional(source) => dumper.optional_source(source),
                     HirLocalInitializer::ClassOptional(value) => dumper.class_optional_value(value),
+                    HirLocalInitializer::OptionalShared(value) => {
+                        dumper.optional_shared_value(value)
+                    }
                 });
             }
             HirStatement::Return(statement) => {
@@ -493,6 +505,9 @@ impl HirDumper {
                         HirReturnValue::Shared(value) => dumper.shared_transfer(value),
                         HirReturnValue::Optional(source) => dumper.optional_source(source),
                         HirReturnValue::ClassOptional(value) => dumper.class_optional_value(value),
+                        HirReturnValue::OptionalShared(value) => {
+                            dumper.optional_shared_value(value)
+                        }
                     });
                 }
             }
@@ -584,6 +599,19 @@ impl HirDumper {
                 );
                 self.indented(|dumper| {
                     dumper.class_optional_source(&assignment.source);
+                });
+            }
+            HirStatement::OptionalSharedAssignment(assignment) => {
+                self.line(
+                    &format!(
+                        "OptionalSharedAssignment {}",
+                        optional_shared_target_name(assignment.destination.target)
+                    ),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.optional_shared_place(&assignment.destination);
+                    dumper.optional_shared_source(&assignment.source);
                 });
             }
         }
@@ -818,6 +846,11 @@ impl HirDumper {
                 self.line("ClassOptionalProduced", expression.span);
                 self.indented(|dumper| dumper.expression(expression));
             }
+            crate::hir::HirOptionalOperand::SharedPlace(place) => self.optional_shared_place(place),
+            crate::hir::HirOptionalOperand::SharedProduced(expression) => {
+                self.line("OptionalSharedProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
         }
     }
 
@@ -916,6 +949,16 @@ impl HirDumper {
                     value.span,
                 );
                 self.indented(|dumper| dumper.class_optional_source(&value.source));
+            }
+            HirCallArgument::OptionalShared(value) => {
+                self.line(
+                    &format!(
+                        "OptionalSharedArgument {}",
+                        optional_shared_target_name(value.target)
+                    ),
+                    value.span,
+                );
+                self.indented(|dumper| dumper.optional_shared_source(&value.source));
             }
             HirCallArgument::Place(place) => {
                 self.line("PlaceArgument", place.span());
@@ -1030,6 +1073,63 @@ impl HirDumper {
                     cast.span,
                 );
                 self.indented(|dumper| dumper.shared_source(&cast.source));
+            }
+            HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
+                self.line("OptionalSharedUnwrap", operand.span());
+                self.indented(|dumper| dumper.optional_operand(operand));
+            }
+        }
+    }
+
+    fn optional_shared_value(&mut self, value: &crate::hir::HirOptionalSharedInitialize) {
+        self.line(
+            &format!(
+                "OptionalSharedInitialization {}",
+                optional_shared_target_name(value.target)
+            ),
+            value.span,
+        );
+        self.indented(|dumper| dumper.optional_shared_source(&value.source));
+    }
+
+    fn optional_shared_source(&mut self, source: &crate::hir::HirOptionalSharedSource) {
+        match source {
+            crate::hir::HirOptionalSharedSource::Absent { span } => {
+                self.line("OptionalSharedAbsent", *span)
+            }
+            crate::hir::HirOptionalSharedSource::Present(source) => {
+                self.line("OptionalSharedPresent", source.span());
+                self.indented(|dumper| dumper.shared_source(source));
+            }
+            crate::hir::HirOptionalSharedSource::Copy(place) => {
+                self.line("OptionalSharedCopy", place.span);
+                self.indented(|dumper| dumper.optional_shared_place(place));
+            }
+            crate::hir::HirOptionalSharedSource::Produced(expression) => {
+                self.line("OptionalSharedProduced", expression.span);
+                self.indented(|dumper| dumper.expression(expression));
+            }
+        }
+    }
+
+    fn optional_shared_place(&mut self, place: &crate::hir::HirOptionalSharedPlace) {
+        match &place.storage {
+            crate::hir::HirOptionalStorage::Binding(binding) => self.line(
+                &format!(
+                    "OptionalSharedPlace {binding} : {}",
+                    optional_shared_target_name(place.target)
+                ),
+                place.span,
+            ),
+            crate::hir::HirOptionalStorage::Field(field) => {
+                self.line(
+                    &format!(
+                        "OptionalSharedFieldPlace : {}",
+                        optional_shared_target_name(place.target)
+                    ),
+                    place.span,
+                );
+                self.indented(|dumper| dumper.field_place(field));
             }
         }
     }
@@ -1331,6 +1431,10 @@ fn shared_target_name(target: HirSharedTarget) -> String {
         HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
         HirSharedTarget::Obj => "shared Obj".to_owned(),
     }
+}
+
+fn optional_shared_target_name(target: HirSharedTarget) -> String {
+    shared_target_name(target).replacen("shared ", "shared? ", 1)
 }
 
 const fn parameter_mode_name(mode: HirParameterMode) -> &'static str {

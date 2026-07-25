@@ -5,7 +5,9 @@ use crate::{
     source::Span,
 };
 
-use super::{MirPlace, MirSelectedCopyOperation, OptionalGuardId, ValueId};
+use super::{
+    MirPlace, MirSelectedCopyOperation, MirSharedTarget, OptionalGuardId, StorageId, ValueId,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MirPrimitiveType {
@@ -114,5 +116,44 @@ pub struct MirOptionalViewEnd {
     pub guard: OptionalGuardId,
     pub source: MirPlace,
     pub class: ClassId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MirOptionalSharedSource {
+    Absent,
+    Present(StorageId),
+    Copy(MirPlace),
+    Move(StorageId),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalSharedInitialize {
+    pub destination: MirPlace,
+    pub source: MirOptionalSharedSource,
+    pub target: MirSharedTarget,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalSharedAssign {
+    pub destination: MirPlace,
+    pub source: MirOptionalSharedSource,
+    pub target: MirSharedTarget,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalSharedCleanup {
+    pub destination: MirPlace,
+    pub target: MirSharedTarget,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirOptionalSharedUnwrap {
+    pub source: MirPlace,
+    pub destination: StorageId,
+    pub target: MirSharedTarget,
     pub span: Span,
 }

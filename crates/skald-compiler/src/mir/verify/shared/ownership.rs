@@ -129,6 +129,30 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     self.merge(*success_target, &state, &mut incoming, &mut pending);
                     self.merge(*failure_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::OptionalSharedUnwrap {
+                    unwrap,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    let mut success = state.clone();
+                    if success.live_owners.contains(&unwrap.destination)
+                        || success.released_owners.contains(&unwrap.destination)
+                    {
+                        self.error(
+                            block.id,
+                            "optional shared unwrap destination is already initialized",
+                        );
+                    } else {
+                        success.live_owners.insert(unwrap.destination);
+                        success
+                            .owner_origins
+                            .insert(unwrap.destination, unwrap.destination);
+                        success.pending_full_expression_boundary = true;
+                    }
+                    self.merge(*success_target, &success, &mut incoming, &mut pending);
+                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::BeginOptionalView {
                     success_target,
                     absent_target,
@@ -150,6 +174,9 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
                 Some(MirTerminator::ReturnShared { owner, .. }) => {
                     self.check_return(block, &state, Some(*owner))
+                }
+                Some(MirTerminator::ReturnOptionalShared { .. }) => {
+                    self.check_return(block, &state, None)
                 }
                 Some(MirTerminator::Terminate { .. }) | None => {}
             }
@@ -326,6 +353,27 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 MirInstruction::SharedFieldReplace(replace) => {
                     self.consume_field_transfer_source(block.id, state, replace.source);
                 }
+                MirInstruction::OptionalSharedInitialize(initialize) => {
+                    if let crate::mir::MirOptionalSharedSource::Present(owner) = initialize.source {
+                        self.consume_optional_shared_source(block.id, state, owner);
+                    }
+                    if !initialize.destination.projections.is_empty()
+                        && !state
+                            .initialized_fields
+                            .insert(initialize.destination.clone())
+                    {
+                        self.error(
+                            block.id,
+                            "optional shared field is initialized more than once",
+                        );
+                    }
+                }
+                MirInstruction::OptionalSharedAssign(assignment) => {
+                    if let crate::mir::MirOptionalSharedSource::Present(owner) = assignment.source {
+                        self.consume_optional_shared_source(block.id, state, owner);
+                    }
+                }
+                MirInstruction::OptionalSharedCleanup(_) => {}
                 MirInstruction::EndFullExpression(_) => {
                     if state.live_owners.iter().any(|owner| {
                         self.function
@@ -351,7 +399,14 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     let transferred =
                         self.transfer_call_arguments(block.id, state, &call.arguments);
                     if let Some(result) = call.shared_result {
-                        if state.live_owners.contains(&result)
+                        if self
+                            .function
+                            .storage(result)
+                            .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+                        {
+                            // Optional-owner initialization is verified by the
+                            // optional definite-initialization analysis.
+                        } else if state.live_owners.contains(&result)
                             || state.released_owners.contains(&result)
                         {
                             self.error(
@@ -597,6 +652,13 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
             let MirArgument::SharedOwner(owner) = argument else {
                 continue;
             };
+            if self
+                .function
+                .storage(*owner)
+                .is_some_and(|storage| matches!(storage.ty, MirType::OptionalShared(_)))
+            {
+                continue;
+            }
             transferred = true;
             if !state.live_owners.remove(owner) {
                 self.error(block, "shared call argument is not a live owner");
@@ -606,6 +668,23 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
             }
         }
         transferred
+    }
+
+    fn consume_optional_shared_source(
+        &mut self,
+        block: BlockId,
+        state: &mut SharedState,
+        source: StorageId,
+    ) {
+        if !state.live_owners.remove(&source) {
+            self.error(
+                block,
+                "optional shared injection source is not a live ordinary owner",
+            );
+        } else {
+            state.owner_origins.remove(&source);
+            state.released_owners.insert(source);
+        }
     }
 
     fn transition(
@@ -670,7 +749,12 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                             class
                                 .fields
                                 .iter()
-                                .filter(|field| matches!(field.ty, MirType::Shared(_)))
+                                .filter(|field| {
+                                    matches!(
+                                        field.ty,
+                                        MirType::Shared(_) | MirType::OptionalShared(_)
+                                    )
+                                })
                                 .map(|field| MirPlace::base(receiver).project_field(field.id)),
                         );
                     }

@@ -332,6 +332,19 @@ impl CallableChecker<'_, '_> {
                         || argument.ty == Type::OptionalClass(class)
                         || argument.ty == Type::Class(class)
                 }
+                Type::OptionalShared(expected) => {
+                    argument.absent
+                        || match argument.ty {
+                            Type::OptionalShared(actual) | Type::Shared(actual) => {
+                                crate::typeck::shared::target_accepts(
+                                    self.program,
+                                    expected,
+                                    actual,
+                                )
+                            }
+                            _ => false,
+                        }
+                }
                 Type::Class(target) => {
                     let Type::Class(actual) = argument.ty else {
                         return false;
@@ -391,6 +404,10 @@ impl CallableChecker<'_, '_> {
             (Type::Shared(actual), Type::Shared(expected)) => {
                 crate::typeck::shared::target_accepts(self.program, expected, actual)
             }
+            (Type::OptionalShared(actual), Type::OptionalShared(expected))
+            | (Type::Shared(actual), Type::OptionalShared(expected)) => {
+                crate::typeck::shared::target_accepts(self.program, expected, actual)
+            }
             _ => false,
         }
     }
@@ -418,6 +435,17 @@ impl CallableChecker<'_, '_> {
                         (candidate, other),
                         (Type::Class(candidate), Type::OptionalClass(payload))
                             if candidate == payload
+                    )
+                    || matches!(
+                        (candidate, other),
+                        (
+                            Type::Shared(candidate) | Type::OptionalShared(candidate),
+                            Type::OptionalShared(expected)
+                        ) if crate::typeck::shared::target_accepts(
+                            self.program,
+                            expected,
+                            candidate
+                        )
                     );
                 strict |= compatible && candidate != other;
                 compatible

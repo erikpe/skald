@@ -34,6 +34,10 @@ pub enum MirTerminator {
         owner: super::ids::StorageId,
         span: Span,
     },
+    ReturnOptionalShared {
+        owner: super::ids::StorageId,
+        span: Span,
+    },
     Goto {
         target: BlockId,
         span: Span,
@@ -61,6 +65,12 @@ pub enum MirTerminator {
     OptionalUnwrap {
         source: super::value::MirPlace,
         destination: super::ids::StorageId,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
+    OptionalSharedUnwrap {
+        unwrap: super::optional::MirOptionalSharedUnwrap,
         success_target: BlockId,
         failure_target: BlockId,
         span: Span,
@@ -98,11 +108,13 @@ impl MirTerminator {
         match self {
             Self::Return { span, .. }
             | Self::ReturnShared { span, .. }
+            | Self::ReturnOptionalShared { span, .. }
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
             | Self::OptionalUnwrap { span, .. }
+            | Self::OptionalSharedUnwrap { span, .. }
             | Self::BeginOptionalView { span, .. }
             | Self::CheckOptionalMutation { span, .. }
             | Self::Terminate { span, .. } => *span,
@@ -113,7 +125,9 @@ impl MirTerminator {
     /// the true edge always precedes the false edge.
     pub fn successors(&self) -> impl Iterator<Item = BlockId> {
         let targets = match self {
-            Self::Return { .. } | Self::ReturnShared { .. } => [None, None, None],
+            Self::Return { .. } | Self::ReturnShared { .. } | Self::ReturnOptionalShared { .. } => {
+                [None, None, None]
+            }
             Self::Goto { target, .. } => [Some(*target), None, None],
             Self::Branch {
                 true_target,
@@ -131,6 +145,11 @@ impl MirTerminator {
                 ..
             } => [Some(*success_target), Some(*failure_target), None],
             Self::OptionalUnwrap {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::OptionalSharedUnwrap {
                 success_target,
                 failure_target,
                 ..

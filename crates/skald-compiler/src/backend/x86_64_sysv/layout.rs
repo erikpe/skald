@@ -112,7 +112,9 @@ impl DataLayout {
             MirType::Interface(_) => Err(layout_error(
                 "interface views have no owning storage layout",
             )),
-            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            MirType::Shared(_) | MirType::OptionalShared(_) => {
+                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
+            }
             MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
             MirType::OptionalClass(class) => {
                 let payload = self
@@ -267,7 +269,9 @@ impl<'mir> LayoutBuilder<'mir> {
 
     fn field(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
         match ty {
-            MirType::Shared(_) => Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT)),
+            MirType::Shared(_) | MirType::OptionalShared(_) => {
+                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
+            }
             MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
             MirType::OptionalClass(_) => {
                 unreachable!("optional class dependencies are handled recursively")
@@ -289,6 +293,7 @@ fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
         | MirType::Interface(_)
         | MirType::Obj
         | MirType::Shared(_)
+        | MirType::OptionalShared(_)
         | MirType::OptionalPrimitive(_)
         | MirType::OptionalClass(_)
         | MirType::Unit => None,

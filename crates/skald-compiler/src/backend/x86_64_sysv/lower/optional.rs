@@ -5,8 +5,10 @@ use crate::{
     mir::{
         MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
         MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
-        MirOptionalSource, MirOptionalViewEnd, MirPlace, MirPresenceTestKind, MirPrimitiveType,
-        MirTerminationReason, MirTerminator, MirType, StorageId, ValueId,
+        MirOptionalSharedAssign, MirOptionalSharedCleanup, MirOptionalSharedInitialize,
+        MirOptionalSharedSource, MirOptionalSource, MirOptionalViewEnd, MirPlace,
+        MirPresenceTestKind, MirPrimitiveType, MirTerminationReason, MirTerminator, MirType,
+        StorageId, ValueId,
     },
 };
 
@@ -15,12 +17,113 @@ use super::{
         machine::{ByteRegister, Instruction, Label, Operand, Register, XmmRegister},
         symbol,
     },
-    block_label, value, InstructionSelector,
+    block_label,
+    ownership::{emit_release_loaded_handle, emit_retain_loaded_handle},
+    value, InstructionSelector,
 };
+
+const OPTIONAL_SHARED_PRESERVED_HANDLE_SIZE: u32 = 16;
 
 type OptionalPayload = (MirPrimitiveType, Operand);
 
 impl InstructionSelector<'_, '_> {
+    pub(super) fn select_optional_shared_initialize(
+        &mut self,
+        initialize: &MirOptionalSharedInitialize,
+    ) -> Result<(), BackendError> {
+        self.load_optional_shared_source(&initialize.source, true)?;
+        self.store_optional_shared_place(&initialize.destination)
+    }
+
+    pub(super) fn select_optional_shared_assign(
+        &mut self,
+        assignment: &MirOptionalSharedAssign,
+    ) -> Result<(), BackendError> {
+        self.load_optional_shared_source(&assignment.source, true)?;
+        self.output.push(Instruction::ReserveStack(
+            OPTIONAL_SHARED_PRESERVED_HANDLE_SIZE,
+        ));
+        value::store_rax(value::memory(Register::Rsp, 0), self.output);
+        self.release_optional_shared_place(&assignment.destination, "optional_assign")?;
+        value::load_rax(value::memory(Register::Rsp, 0), self.output);
+        self.output.push(Instruction::ReleaseStack(
+            OPTIONAL_SHARED_PRESERVED_HANDLE_SIZE,
+        ));
+        self.store_optional_shared_place(&assignment.destination)
+    }
+
+    pub(super) fn select_optional_shared_cleanup(
+        &mut self,
+        cleanup: &MirOptionalSharedCleanup,
+    ) -> Result<(), BackendError> {
+        self.release_optional_shared_place(&cleanup.destination, "optional_cleanup")
+    }
+
+    fn load_optional_shared_source(
+        &mut self,
+        source: &MirOptionalSharedSource,
+        retain_copy: bool,
+    ) -> Result<(), BackendError> {
+        match source {
+            MirOptionalSharedSource::Absent => {
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 0,
+                    destination: Register::Rax,
+                });
+            }
+            MirOptionalSharedSource::Present(storage) | MirOptionalSharedSource::Move(storage) => {
+                value::load_rax(value::frame_storage(self.frame, *storage), self.output);
+            }
+            MirOptionalSharedSource::Copy(place) => {
+                let (_, operand) = self.frame_place(place)?;
+                value::load_rax(operand, self.output);
+                if retain_copy {
+                    let absent = self.next_optional_label("shared_copy_absent");
+                    let failure = self.next_optional_label("shared_copy_invalid");
+                    let complete = self.next_optional_label("shared_copy_complete");
+                    self.output.push(Instruction::Test(Register::Rax));
+                    self.output.push(Instruction::JumpIfEqual(absent.clone()));
+                    emit_retain_loaded_handle(failure.clone(), self.output);
+                    self.output.push(Instruction::Jump(complete.clone()));
+                    self.output.push(Instruction::Label(failure));
+                    self.output.push(Instruction::Trap);
+                    self.output.push(Instruction::Label(absent));
+                    self.output.push(Instruction::Label(complete));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn release_optional_shared_place(
+        &mut self,
+        place: &MirPlace,
+        purpose: &str,
+    ) -> Result<(), BackendError> {
+        let (_, operand) = self.frame_place(place)?;
+        value::load_rax(operand, self.output);
+        let complete = self.next_optional_label(&format!("{purpose}_complete"));
+        self.output.push(Instruction::Test(Register::Rax));
+        self.output.push(Instruction::JumpIfEqual(complete.clone()));
+        let failure = self.next_optional_label(&format!("{purpose}_invalid"));
+        let last = self.next_optional_label(&format!("{purpose}_last"));
+        emit_release_loaded_handle(
+            failure,
+            last,
+            complete.clone(),
+            self.dispatch.finalizer_displacement(),
+            self.output,
+        );
+        self.output.push(Instruction::Label(complete));
+        Ok(())
+    }
+
+    fn store_optional_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        self.materialize_place_address(place, Register::Rdx)?;
+        value::store_rax(value::memory(Register::Rdx, 0), self.output);
+        Ok(())
+    }
+
     pub(super) fn select_class_optional_initialize(
         &mut self,
         initialize: &MirClassOptionalInitialize,
@@ -276,6 +379,29 @@ impl InstructionSelector<'_, '_> {
         terminator: &MirTerminator,
     ) -> Result<bool, BackendError> {
         match terminator {
+            MirTerminator::OptionalSharedUnwrap {
+                unwrap,
+                success_target,
+                failure_target,
+                ..
+            } => {
+                let (_, source) = self.frame_place(&unwrap.source)?;
+                value::load_rax(source, self.output);
+                self.output.push(Instruction::Test(Register::Rax));
+                self.output
+                    .push(Instruction::JumpIfEqual(block_label(*failure_target)));
+                let failure = self.next_optional_label("shared_unwrap_invalid");
+                emit_retain_loaded_handle(failure.clone(), self.output);
+                value::store_rax(
+                    value::frame_storage(self.frame, unwrap.destination),
+                    self.output,
+                );
+                self.output
+                    .push(Instruction::Jump(block_label(*success_target)));
+                self.output.push(Instruction::Label(failure));
+                self.output.push(Instruction::Trap);
+                Ok(true)
+            }
             MirTerminator::OptionalUnwrap {
                 source,
                 destination,
@@ -463,6 +589,10 @@ impl InstructionSelector<'_, '_> {
         let state = match frame.ty() {
             MirType::OptionalPrimitive(_) => self.optional_state(place)?,
             MirType::OptionalClass(_) => self.class_optional_state(place)?,
+            MirType::OptionalShared(_) => {
+                let (_, operand) = self.frame_place(place)?;
+                operand
+            }
             _ => unreachable!("verified presence test has optional storage"),
         };
         value::load_rax(state, self.output);

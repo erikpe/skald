@@ -477,6 +477,38 @@ impl<'mir> Verifier<'mir> {
             }
             return;
         }
+        if let MirType::OptionalShared(target) = return_type {
+            if call.result.is_some() || call.destination.is_some() {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "optional-shared-returning call must not have a scalar or object result",
+                );
+            }
+            let valid = call.shared_result.is_some_and(|result| {
+                function.storage(result).is_some_and(|storage| {
+                    matches!(
+                        storage.kind,
+                        MirStorageKind::Local
+                            | MirStorageKind::Temporary
+                            | MirStorageKind::Argument
+                            | MirStorageKind::Return
+                    ) && matches!(
+                        storage.ty,
+                        MirType::OptionalShared(destination)
+                            if self.shared_target_accepts(destination, target)
+                    )
+                })
+            });
+            if !valid {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "optional-shared-returning call requires matching caller-owned result storage",
+                );
+            }
+            return;
+        }
         if call.shared_result.is_some() {
             self.block_error(
                 function.callable(),

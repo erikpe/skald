@@ -855,7 +855,8 @@ impl CallableChecker<'_, '_> {
                 | Type::Bool
                 | Type::Unit
                 | Type::OptionalPrimitive(_)
-                | Type::OptionalClass(_),
+                | Type::OptionalClass(_)
+                | Type::OptionalShared(_),
             ) => None,
             (_, Type::Shared(_)) => None,
             (CheckedObjectViewSource::Produced { .. }, _) => {

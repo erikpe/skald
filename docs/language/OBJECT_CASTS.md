@@ -88,6 +88,11 @@ produced source transfers its existing owner. The result never allocates,
 copies object payload, slices, or changes dynamic metadata.
 
 Neither an inline object nor a `ref`/`mut ref` alias may be cast to `shared T`.
+
+An optional shared owner is not itself a cast source. Postfix unwrap first
+secures an ordinary non-null owner, after which the existing cast rules apply:
+`(shared T) optional_owner!`. The cast never observes or accepts the optional
+zero niche.
 An alias has no authority to manufacture ownership, and converting an inline
 object would require a new allocation rather than an identity-preserving cast.
 

@@ -319,6 +319,15 @@ impl CallableChecker<'_, '_> {
                         .check_class_optional_initialize(class, source, "class optional argument")
                         .map(HirCallArgument::ClassOptional);
                 }
+                if let Type::OptionalShared(target) = parameter_type {
+                    return self
+                        .check_optional_shared_initialize(
+                            target,
+                            source,
+                            "optional shared argument",
+                        )
+                        .map(HirCallArgument::OptionalShared);
+                }
                 let argument = self.check_expression(source)?;
                 require_type(
                     argument.ty,

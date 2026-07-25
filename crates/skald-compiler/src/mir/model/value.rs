@@ -25,6 +25,7 @@ pub enum MirType {
     Obj,
     /// A non-null strong owner carrying one object view of a live allocation.
     Shared(super::shared::MirSharedTarget),
+    OptionalShared(super::shared::MirSharedTarget),
     OptionalPrimitive(super::optional::MirPrimitiveType),
     OptionalClass(ClassId),
     Unit,
@@ -38,6 +39,7 @@ impl MirType {
                 | Self::Interface(_)
                 | Self::Obj
                 | Self::Shared(_)
+                | Self::OptionalShared(_)
                 | Self::Unit
                 | Self::OptionalPrimitive(_)
                 | Self::OptionalClass(_)
@@ -57,6 +59,7 @@ impl fmt::Display for MirType {
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
             Self::Shared(target) => write!(formatter, "shared {target}"),
+            Self::OptionalShared(target) => write!(formatter, "shared? {target}"),
             Self::OptionalPrimitive(payload) => write!(formatter, "{payload}?"),
             Self::OptionalClass(class) => write!(formatter, "class {class}?"),
             Self::Unit => formatter.write_str("unit"),

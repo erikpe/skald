@@ -7,7 +7,7 @@ use crate::backend::x86_64_sysv::{
 
 use super::{super::value, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET};
 
-pub(super) fn emit_retain_loaded_handle(failure: Label, output: &mut Vec<Instruction>) {
+pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut Vec<Instruction>) {
     output.push(Instruction::Test(Register::Rax));
     output.push(Instruction::JumpIfEqual(failure.clone()));
     output.push(Instruction::Move {

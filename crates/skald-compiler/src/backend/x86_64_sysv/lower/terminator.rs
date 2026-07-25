@@ -27,7 +27,8 @@ pub(super) fn select(
             }
             output.push(Instruction::Jump(epilogue.clone()));
         }
-        MirTerminator::ReturnShared { owner, .. } => {
+        MirTerminator::ReturnShared { owner, .. }
+        | MirTerminator::ReturnOptionalShared { owner, .. } => {
             value::load_rax(value::frame_storage(frame, *owner), output);
             output.push(Instruction::Jump(epilogue.clone()));
         }
@@ -48,6 +49,7 @@ pub(super) fn select(
         MirTerminator::CheckedCast { .. }
         | MirTerminator::SharedCast { .. }
         | MirTerminator::OptionalUnwrap { .. }
+        | MirTerminator::OptionalSharedUnwrap { .. }
         | MirTerminator::BeginOptionalView { .. }
         | MirTerminator::CheckOptionalMutation { .. }
         | MirTerminator::Terminate { .. } => {

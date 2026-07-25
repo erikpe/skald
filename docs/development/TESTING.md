@@ -16,6 +16,11 @@ extra temporaries, missed conditional cleanup, and incorrect argument/result
 ownership. Checked-view tests additionally cover bounded consumers, nested
 guards, invalidating later arguments, shared-root anchor order, and failure
 traps.
+Optional shared-owner coverage additionally checks the one-word zero niche,
+copy/adopt/move and conditional release, field and callable ownership,
+self-assignment, target lifting and casts after unwrap, secured-anchor lifetime,
+ABI register/stack pressure, absent-access failure, and exactly-once
+last-owner finalization.
 
 | Layer | Location | Use it for |
 |---|---|---|

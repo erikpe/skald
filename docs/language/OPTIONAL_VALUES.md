@@ -1,7 +1,8 @@
 # Optional Values
 
-Status: frozen language design with primitive and exact inline-class optionals
-implemented across owning locals, fields, and internal callable boundaries. The
+Status: frozen language design with primitive, exact inline-class, and optional
+shared-owner values implemented across owning locals, fields, and internal
+callable boundaries. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -12,8 +13,9 @@ values now execute end to end in
 owning locals, fields, internal value parameters/results, methods, interfaces,
 virtual overrides, and initializer overloads. Inline class payload access
 through postfix `!` executes as a bounded checked view. Optional shared owners
-and aliases to optional containers remain at the focused `TYP035` type-checking
-boundary until their roadmap stages.
+execute through the same internal owning positions and secure a normal
+non-null owner on unwrap. Aliases to optional containers remain at the focused
+`TYP035` type-checking boundary until OP7.
 Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 
@@ -82,7 +84,7 @@ ownership:
 | primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
 | class `T?` | Inline optional containing zero or one exact class `T` | Owning lifecycle, internal boundaries, and bounded checked payload access execute |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
-| `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
+| `shared? T` | Optional containing zero or one `shared T` owner | Internal owning lifecycle and checked unwrap execute |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |
 | `shared? T?` | Optional owner of a non-null shared box containing `T?` | Reserved and rejected |
 
