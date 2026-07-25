@@ -1,6 +1,6 @@
 # Explicit Shared Dereference Roadmap
 
-Status: in progress; SD1 is complete and SD2 is next.
+Status: in progress; SD2 is complete and SD3 is next.
 
 This roadmap makes the source boundary between a `shared T` owner handle and
 the object behind that handle explicit. Prefix `*owner` selects a temporary
@@ -135,7 +135,7 @@ invoke `Leaf` copy assignment on either allocation.
 
 - [x] SD0 — Centralize the shared handle-to-place semantic boundary
 - [x] SD1 — Add explicit dereference syntax and direct object access
-- [ ] SD2 — Integrate dereference with every object-place consumer
+- [x] SD2 — Integrate dereference with every object-place consumer
 - [ ] SD3 — Require explicit dereference and publish the completed profile
 
 ## PR-sized implementation sequence
@@ -241,38 +241,38 @@ verified one-edge `->` semantics.
 **Purpose:** Complete the explicit handle-to-place matrix so the final task can
 remove implicit conversions without losing any supported source capability.
 
-- [ ] Accept explicit dereferenced places as `ref` and `mut ref` arguments,
+- [x] Accept explicit dereferenced places as `ref` and `mut ref` arguments,
       preserving call-scoped access restriction, forwarding rules,
       non-exclusivity, and hidden anchor selection.
-- [ ] Require plain checked casts over a shared allocation to consume the
+- [x] Require plain checked casts over a shared allocation to consume the
       dereferenced place, as in `(Dog) *animal_owner`, while keeping
       `(shared Dog) animal_owner` an owner operation over the handle.
-- [ ] Accept dereferenced class places in the existing target-directed inline
+- [x] Accept dereferenced class places in the existing target-directed inline
       local/field initialization, value-parameter, result, copy-construction,
       slicing, and owning-destination copy-assignment source paths.
-- [ ] Accept dereferenced checked sources in `T(copy *owner)` and
+- [x] Accept dereferenced checked sources in `T(copy *owner)` and
       `new T(copy *owner)`, preserving source-once evaluation, dynamic check
       before destination allocation, selected exact-`T` copy construction,
       source lifetime through completion, and result securing before cleanup.
-- [ ] Cover shared fields, nested replaceable places, shared up-views,
+- [x] Cover shared fields, nested replaceable places, shared up-views,
       produced calls and allocations, and class/interface/`Obj` targets across
       each compatible consumer. Interface and `Obj` dereferences remain valid
       only in view-consuming contexts without standalone inline storage.
-- [ ] Keep shared local/field initialization, shared assignment, shared
+- [x] Keep shared local/field initialization, shared assignment, shared
       arguments/results, implicit compatible owner up-views, and shared-owner
       casts operating directly on the handle. Reject unnecessary dereference
       where a shared owner is required rather than silently re-owning a
       borrowed place.
-- [ ] Reject `*owner = source` with a dedicated whole-pointee-assignment
+- [x] Reject `*owner = source` with a dedicated whole-pointee-assignment
       diagnostic. Continue to accept `owner->field = source` wherever the
       selected field's existing mutation and lifecycle policy permits it.
-- [ ] Keep legacy implicit owner-to-pointee forms temporarily accepted only
+- [x] Keep legacy implicit owner-to-pointee forms temporarily accepted only
       until the final cutover, and add equivalence tests proving each explicit
       form produces the same ownership, anchoring, failure, dispatch, copy,
       cleanup, and native observation.
-- [ ] Update affected focused living documentation for the completed explicit
+- [x] Update affected focused living documentation for the completed explicit
       consumer matrix and the deferred whole-pointee-assignment boundary.
-- [ ] Add focused negative coverage for owner/pointee confusion, non-shared
+- [x] Add focused negative coverage for owner/pointee confusion, non-shared
       dereference, access restriction, impossible checked relations,
       unsupported interface/`Obj` owning destinations, and whole-pointee
       assignment.

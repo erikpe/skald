@@ -193,3 +193,29 @@ fn rejects_dereference_of_non_shared_values_deterministically() {
         .iter()
         .all(|diagnostic| diagnostic.message == "dereference requires a shared owner"));
 }
+
+#[test]
+fn rejects_whole_pointee_assignment_with_a_dedicated_diagnostic() {
+    let output = resolve_text(concat!(
+        "class Leaf {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Leaf = new Leaf(1);\n",
+        "  var source: Leaf = Leaf(2);\n",
+        "  *owner = source;\n",
+        "  (*owner) = source;\n",
+        "  owner->value = 3;\n",
+        "  return owner->value;\n",
+        "}\n",
+    ));
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_POINTEE_ASSIGNMENT));
+    assert!(diagnostics.iter().all(|diagnostic| {
+        diagnostic.message == "a complete shared pointee cannot be replaced"
+    }));
+}

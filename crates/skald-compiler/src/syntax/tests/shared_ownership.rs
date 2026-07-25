@@ -225,3 +225,29 @@ fn malformed_dereference_member_recovers_to_later_statements() {
         Some(Statement::Return(_))
     ));
 }
+
+#[test]
+fn parses_whole_pointee_assignment_for_semantic_rejection() {
+    let (_, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  *owner = source;\n",
+        "  (*owner) = source;\n",
+        "  owner->field = 1;\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let main = function(&output.ast, 0);
+    assert!(matches!(
+        main.body.statements[0],
+        Statement::ObjectAssignment(_)
+    ));
+    assert!(matches!(
+        main.body.statements[1],
+        Statement::ObjectAssignment(_)
+    ));
+    assert!(matches!(
+        main.body.statements[2],
+        Statement::FieldAssignment(_)
+    ));
+}

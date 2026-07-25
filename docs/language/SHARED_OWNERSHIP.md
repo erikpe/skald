@@ -36,16 +36,29 @@ Ordinary overload and explicit-copy semantics are owned by
 [Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
 prerequisite rather than redefined by shared allocation.
 
-Direct pointee access has explicit source forms. Prefix `*source` selects a
-bounded non-owning place from a `shared T` owner, while `source->member`
-selects one member through one shared edge and evaluates `source` once. Direct
-field reads and mutation, class or interface calls, inline subobject paths,
-nested shared edges, produced receivers, and `*source is T` use the same
-stable-owner or hidden-anchor lifetime behavior as existing shared-backed
-borrows. Dereferencing does not allocate, copy an inline object, or transfer a
-strong owner. Non-shared operands are rejected. The older implicit direct
-member and type-test forms remain temporarily accepted while the explicit
-consumer matrix is completed.
+Pointee access has explicit source forms. Prefix `*source` selects a bounded
+non-owning place from a `shared T` owner, while `source->member` selects one
+member through one shared edge and evaluates `source` once. The place is
+accepted by every implemented object-place consumer: field access and
+mutation, class or interface calls, `ref` and `mut ref` arguments, checked
+casts and type tests, and target-directed inline local, field, value-parameter,
+result, assignment, slicing, `T(copy source)`, and `new T(copy source)` copies.
+Those uses retain the same stable-owner or hidden-anchor lifetime behavior as
+their existing shared-backed equivalents. Dereferencing does not allocate,
+copy an inline object, or transfer a strong owner. Non-shared operands are
+rejected.
+
+Owner contexts remain deliberately distinct: shared initialization,
+assignment, arguments, results, up-views, and `(shared T) source` consume the
+handle itself. A dereferenced place is rejected in those contexts rather than
+being silently converted back into ownership. Whole-pointee assignment
+`*owner = source` is also unsupported; use `owner = replacement` to replace
+the handle or `owner->field = value` to mutate a supported field. Potential
+whole-pointee copy assignment is deferred because its behavior for a derived
+allocation viewed through `shared Base` needs a separate lifecycle design.
+
+The older implicit owner-to-pointee spellings remain temporarily accepted as
+a compatibility oracle until the explicit-dereference cutover.
 
 ## Safety contract
 
@@ -107,9 +120,10 @@ Explicit copy allocation uses the same verified checked-place and hidden-anchor
 pipeline and executes through the selected copy-constructor operation.
 
 The copy-allocation target must be concrete and copy-constructible. The source
-may be an existing or produced inline object, a `ref` or `mut ref` alias, or an
-object reached through shared ownership, subject to the checked-place rules in
-[Object Casts](OBJECT_CASTS.md). It executes in this order:
+may be an existing or produced inline object, a `ref` or `mut ref` alias, or
+an explicitly dereferenced shared pointee such as `*owner`, subject to the
+checked-place rules in [Object Casts](OBJECT_CASTS.md). It executes in this
+order:
 
 1. evaluate the copy source exactly once and establish any required temporary
    or hidden owning anchor;
@@ -227,18 +241,19 @@ alias arguments are legal for inline objects. Effects follow source evaluation
 order; Skald does not promise data-race safety or thread-safe sharing in this
 initial profile.
 
-Stable shared locals and value parameters may be used directly as class method
-receivers, alias arguments, and roots of inherited base and field projections.
-A `shared Interface` may call that interface's requirements. A replaceable
-shared field is copied into a hidden strong owner before its pointee is
-exposed; a produced owner is adopted into hidden storage. These anchors cover
-inline payload subobjects, remain live through the complete call, and are
-released in reverse completion order after the result is secured.
+`*owner` and `owner->member` expose the pointee of stable shared locals and
+value parameters as class or interface receivers, alias arguments, and roots
+of inherited base and field projections. A replaceable shared field is copied
+into a hidden strong owner before its pointee is exposed; a produced owner is
+adopted into hidden storage. These anchors cover inline payload subobjects,
+remain live through the complete call, and are released in reverse completion
+order after the result is secured.
 
-The expression `owner is T` is available for shared class, interface, and
-`Obj` owners. It reads the allocation header's dynamic metadata and neither
+The expression `*owner is T` is available for shared class, interface, and
+`Obj` pointees. It reads the allocation header's dynamic metadata and neither
 retains nor releases the owner. Statically guaranteed and impossible outcomes
-use the same closed-world classifier as inline and alias sources.
+use the same closed-world classifier as inline and alias sources. The older
+implicit spelling remains accepted only during the staged migration.
 
 ## Shared fields and lifecycle
 
@@ -286,19 +301,19 @@ class. They never slice. Direct, virtual, and interface method calls operate on
 the allocated complete object using the static target for selection and the
 dynamic class where dispatch requires it.
 
-`is` accepts a shared class/interface/`Obj` source and uses the existing
-static-or-runtime classification. It evaluates the source once and does not
-change ownership.
+`is` accepts an explicitly dereferenced shared class/interface/`Obj` pointee
+and uses the existing static-or-runtime classification. It evaluates the
+owner source once and does not change ownership.
 
 The cast profile provides two distinct shared-backed operations:
 
 ```ska
-((Dog) shared_animal).speak();
-var copied: Dog = (Dog) shared_animal;
+((Dog) *shared_animal).speak();
+var copied: Dog = (Dog) *shared_animal;
 var owner: shared Dog = (shared Dog) shared_animal;
 ```
 
-`(Dog) shared_animal` is a checked non-owning place view. An immediate call
+`(Dog) *shared_animal` is a checked non-owning place view. An immediate call
 borrows it; an inline `Dog` destination copy-constructs an independent exact
 `Dog` and may slice a more-derived dynamic object. `(shared Dog) shared_animal`
 creates or transfers an owner of the same allocation; it does not allocate,

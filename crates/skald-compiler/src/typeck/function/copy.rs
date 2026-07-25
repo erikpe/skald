@@ -154,6 +154,15 @@ impl CallableChecker<'_, '_> {
         context: &'static str,
     ) -> Option<HirObjectSource> {
         match expression {
+            crate::resolve::ResolvedExpression::Dereference(_) => {
+                let checked = self.check_copy_construction_view(
+                    expression,
+                    class,
+                    expression.span(),
+                    expression.span(),
+                )?;
+                return self.finish_checked_object_source(checked, class, context);
+            }
             crate::resolve::ResolvedExpression::ObjectCast(cast) => {
                 let checked = self.check_object_cast(cast)?;
                 return self.finish_checked_object_source(checked, class, context);
@@ -366,6 +375,13 @@ impl CallableChecker<'_, '_> {
                 crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
                 _ => None,
             },
+            crate::resolve::ResolvedExpression::Dereference(dereference) => {
+                match dereference.target {
+                    crate::resolve::ResolvedSharedTarget::Class(class) => Some(class),
+                    crate::resolve::ResolvedSharedTarget::Interface(_)
+                    | crate::resolve::ResolvedSharedTarget::Obj => None,
+                }
+            }
             crate::resolve::ResolvedExpression::Grouped(grouped) => {
                 self.resolved_object_class(&grouped.expression)
             }
@@ -490,7 +506,8 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
     expression: &crate::resolve::ResolvedExpression,
 ) -> bool {
     match expression {
-        crate::resolve::ResolvedExpression::ObjectCast(_) => true,
+        crate::resolve::ResolvedExpression::Dereference(_)
+        | crate::resolve::ResolvedExpression::ObjectCast(_) => true,
         crate::resolve::ResolvedExpression::Grouped(grouped) => {
             is_checked_object_source_expression(&grouped.expression)
         }

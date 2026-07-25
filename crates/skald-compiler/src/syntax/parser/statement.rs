@@ -373,6 +373,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         Expression::Identifier(_) | Expression::SelfValue(_) => true,
         Expression::Grouped(grouped) => is_receiver_place(&grouped.expression),
         Expression::MemberAccess(member) => is_receiver_place(&member.receiver),
+        Expression::Unary(unary) if unary.operator == UnaryOperator::Dereference => true,
         Expression::NumericLiteral(_)
         | Expression::Boolean(_)
         | Expression::Unary(_)

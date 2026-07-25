@@ -96,11 +96,20 @@ it from source expression shape or a consumer's expected type.
 
 Resolution represents an explicit `*owner` or the dereference implied by
 `owner->member` with one typed dereference node carrying its resolved shared
-target, owner source, operator provenance, and spans. Direct fields, class and
-interface receivers, inline projection, mutation, and type tests consume that
-node through the checked shared-pointee conversion above. The explicit syntax
+target, owner source, operator provenance, and spans. Direct fields,
+class/interface receivers, inline projection, mutation, alias arguments,
+plain casts, type tests, and every target-directed owning inline copy consumer
+consume that node through the checked shared-pointee conversion above. The
+same path covers `T(copy *owner)` and `new T(copy *owner)`. The explicit syntax
 therefore changes no HIR ownership effect, MIR place, anchor state, backend
 layout, or runtime operation.
+
+Shared-owner consumers do not accept this dereference node: owner
+initialization, assignment, value arguments/results, up-views, and shared
+casts operate on the handle. Resolution also rejects a dereference as a
+whole-object assignment destination with a dedicated diagnostic; field
+assignment through a dereferenced receiver remains an ordinary supported
+projection.
 
 HIR remains target-independent. It contains no header byte offset, reference
 count location, metadata slot, runtime symbol, register, or calling-convention

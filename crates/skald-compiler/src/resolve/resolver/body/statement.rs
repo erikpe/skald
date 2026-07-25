@@ -256,6 +256,23 @@ impl CallableResolver<'_, '_> {
         &mut self,
         assignment: &syntax::ObjectAssignmentStatement,
     ) -> Option<ResolvedStatement> {
+        if let Some(operator_span) = dereference_operator_through_groups(&assignment.place) {
+            if self.resolve_expression(&assignment.place).is_some() {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_POINTEE_ASSIGNMENT,
+                        "a complete shared pointee cannot be replaced",
+                    )
+                    .with_primary_label(operator_span, "whole-pointee assignment is not supported")
+                    .with_secondary_label(
+                        assignment.equal_span,
+                        "replace the shared owner or assign one of the pointee's fields",
+                    ),
+                );
+            }
+            return None;
+        }
+
         if let Some(place) = terminal_member_through_groups(&assignment.place) {
             let field_assignment = syntax::FieldAssignmentStatement {
                 place: place.clone(),
@@ -323,6 +340,20 @@ impl CallableResolver<'_, '_> {
         }
         scope.insert(name.to_owned(), symbol);
         true
+    }
+}
+
+fn dereference_operator_through_groups(expression: &syntax::Expression) -> Option<Span> {
+    match expression {
+        syntax::Expression::Unary(unary)
+            if unary.operator == syntax::UnaryOperator::Dereference =>
+        {
+            Some(unary.operator_span)
+        }
+        syntax::Expression::Grouped(grouped) => {
+            dereference_operator_through_groups(&grouped.expression)
+        }
+        _ => None,
     }
 }
 

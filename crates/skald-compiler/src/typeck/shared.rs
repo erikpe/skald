@@ -168,6 +168,27 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
+            ResolvedExpression::Dereference(dereference) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        if cast_source {
+                            INVALID_OBJECT_CAST
+                        } else {
+                            INVALID_SHARED_CONVERSION
+                        },
+                        "a dereferenced pointee is not a shared owner",
+                    )
+                    .with_primary_label(
+                        dereference.span,
+                        "remove `*` when this context requires the owner handle",
+                    )
+                    .with_secondary_label(
+                        dereference.operator_span,
+                        "dereference selects a bounded non-owning place",
+                    ),
+                );
+                None
+            }
             _ => {
                 let _ = self.check_expression(expression);
                 self.report_non_shared_source(expression, cast_source);

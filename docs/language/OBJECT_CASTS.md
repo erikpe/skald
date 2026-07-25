@@ -28,7 +28,7 @@ Examples:
 
 ```ska
 ((Leaf) value).read()
-(Leaf) value
+(Leaf) *shared_value
 (shared Leaf) shared_value
 ```
 
@@ -100,8 +100,8 @@ exists only when `T` is a class.
 | Produced inline class object | Checked view backed by its full-expression temporary | Copy-construct or assign exact `T`; may slice | Invalid |
 | `ref S` alias | Checked read-only borrowed view | Copy-construct or assign exact `T`; may slice | Invalid |
 | `mut ref S` alias | Checked mutable borrowed view | Copy-construct or assign exact `T`; may slice | Invalid |
-| Existing `shared S` owner | Checked borrowed view, anchored when its place is replaceable | Copy-construct or assign exact `T`; may slice | Copy one owner of the same allocation |
-| Produced `shared S` owner | Checked view backed by the produced owner | Copy-construct or assign exact `T`; may slice | Transfer the produced owner of the same allocation |
+| Dereferenced existing `shared S` owner | Checked borrowed view, anchored when its place is replaceable | Copy-construct or assign exact `T`; may slice | The undereferenced owner copies one owner of the same allocation |
+| Dereferenced produced `shared S` owner | Checked view backed by the produced owner | Copy-construct or assign exact `T`; may slice | The undereferenced producer transfers its owner of the same allocation |
 
 The conceptual directions are:
 
@@ -114,7 +114,7 @@ alias   --borrow--> checked place
 alias   --copy----> inline
 alias   ----X-----> shared
 
-shared  --borrow--> checked place
+*shared --borrow--> checked place
 shared  --copy----> inline
 shared  --owner---> shared
 ```
@@ -130,7 +130,7 @@ first selects a borrowed target-class place; the inline destination then uses
 the existing exact-class copy construction or assignment operation:
 
 ```ska
-var inline_leaf: Leaf = (Leaf) shared_object;
+var inline_leaf: Leaf = (Leaf) *shared_object;
 ```
 
 `inline_leaf` has independent identity and lifetime. If the allocation's
@@ -155,7 +155,7 @@ named class the target of checked-place selection. A matching explicit cast is
 not required for an exact-class source:
 
 ```ska
-var dog: shared Dog = new Dog(copy source_dog);
+var dog: shared Dog = new Dog(copy *source_owner);
 ```
 
 The copy source evaluates once and is anchored before any target-directed
@@ -168,7 +168,7 @@ copy are effects of `new`, not of an implicit cast node.
 
 An explicit inner cast remains available when the program intends an
 additional refinement before copying. For example,
-`new Animal(copy (Dog) source)` first checks and selects `Dog`, then copies the
+`new Animal(copy (Dog) *source)` first checks and selects `Dog`, then copies the
 `Animal` subobject into an exact `Animal` allocation.
 
 The class named by `new`, not the source's complete dynamic class, determines

@@ -12,8 +12,10 @@ fn inspect(ref borrowed: Leaf) -> i64 {
 fn main() -> i64 {
     var number: i64 = 1;
     var inline: Leaf = Leaf();
+    var owner: shared Leaf = new Leaf();
     *number;
     inline->missing;
     *done();
+    *owner = inline;
     return 0;
 }

@@ -42,12 +42,12 @@ are semantically invalid.
 
 The designated type may be one concrete class, one interface, or `Obj`.
 Primitive, `unit`, optional, array, and function alias parameter types are
-unsupported. A shared-backed source borrows the allocated
-class/interface/`Obj` pointee rather than treating `shared T` as the alias's
-designated type. `Obj` is a universal
-non-owning target with no members or inline storage. Interfaces expose only
-their declared requirements. Alias modifiers are not accepted on locals,
-fields, results, elements, statics, or captures.
+unsupported. A shared-backed source is explicitly dereferenced, as in
+`inspect(*owner)`, and borrows the allocated class/interface/`Obj` pointee
+rather than treating `shared T` as the alias's designated type. `Obj` is a
+universal non-owning target with no members or inline storage. Interfaces
+expose only their declared requirements. Alias modifiers are not accepted on
+locals, fields, results, elements, statics, or captures.
 
 ## Eligible argument places
 
@@ -58,9 +58,11 @@ forwarded interface/`Obj` view. Its root may be:
 - an owning exact-class value parameter;
 - a live method or destructor `self`;
 - an existing `ref` or `mut ref` parameter being forwarded.
-- a stable shared local or value parameter;
-- a shared field or nested shared place, through a hidden copied owner; or
-- a produced shared owner, through hidden storage that adopts the result.
+- a dereferenced stable shared local or value parameter;
+- a dereferenced shared field or nested shared place, through a hidden copied
+  owner; or
+- a dereferenced produced shared owner, through hidden storage that adopts the
+  result.
 
 Any number of exact-class field projections may follow a supported root.
 Grouping around a root or projection preserves the same place. This includes
@@ -74,8 +76,10 @@ Unrelated classes are invalid.
 
 A fresh inline construction, inline object-returning call, primitive binding
 or field, and any other produced inline value is not an alias source. A
-produced shared allocation or shared-returning call is eligible because its
-owner is adopted into call-scoped anchor storage.
+dereferenced produced shared allocation or shared-returning call is eligible
+because its owner is adopted into call-scoped anchor storage. The older
+implicit shared-owner argument remains temporarily accepted during the staged
+explicit-dereference migration.
 Initializer `self` is also ineligible while the enclosing object is incomplete;
 an already initialized direct field may be passed independently when its
 initializer-body rules permit.
