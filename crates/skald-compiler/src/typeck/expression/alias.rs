@@ -77,6 +77,11 @@ pub(super) enum CheckedObjectViewSource {
         class: crate::identity::ClassId,
         span: Span,
     },
+    Optional {
+        view: crate::hir::HirCheckedOptionalView,
+        class: crate::identity::ClassId,
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
 }
 
 impl CheckedObjectViewSource {
@@ -86,6 +91,7 @@ impl CheckedObjectViewSource {
             Self::Obj { access, .. } | Self::Interface { access, .. } => *access,
             Self::Shared(source) => source.access(),
             Self::Produced { .. } => HirAccess::Mutable,
+            Self::Optional { view, .. } => view.access,
         }
     }
 
@@ -95,6 +101,7 @@ impl CheckedObjectViewSource {
             Self::Obj { span, .. } | Self::Interface { span, .. } => *span,
             Self::Shared(source) => source.span(),
             Self::Produced { span, .. } => *span,
+            Self::Optional { view, .. } => view.span,
         }
     }
 
@@ -105,6 +112,7 @@ impl CheckedObjectViewSource {
             Self::Interface { interface, .. } => HirViewTarget::Interface(*interface),
             Self::Shared(source) => source.static_target(),
             Self::Produced { class, .. } => HirViewTarget::Class(*class),
+            Self::Optional { class, .. } => HirViewTarget::Class(*class),
         }
     }
 
@@ -126,6 +134,7 @@ impl CheckedObjectViewSource {
             | Self::Interface { .. } => None,
             Self::Shared(source) => source.exact_dynamic_class(),
             Self::Produced { class, .. } => Some(*class),
+            Self::Optional { class, .. } => Some(*class),
         }
     }
 
@@ -185,6 +194,26 @@ impl CheckedObjectViewSource {
                 span,
             },
             Self::Shared(source) => source.into_view(target, access),
+            Self::Optional {
+                view,
+                class,
+                projections,
+            } => {
+                let span = view.span;
+                HirObjectView {
+                    source: HirViewSource::OptionalPayload {
+                        view: Box::new(view),
+                        projections,
+                    },
+                    origin: Box::new(HirObjectOrigin::Produced {
+                        dynamic_class: class,
+                        span,
+                    }),
+                    target,
+                    access,
+                    span,
+                }
+            }
         }
     }
 }
@@ -324,6 +353,15 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Dereference(dereference) => self
                 .check_explicit_shared_pointee(dereference, Vec::new(), dereference.span)
                 .map(CheckedObjectViewSource::Shared),
+            ResolvedExpression::Unwrap(unwrap) => {
+                let view = self.check_class_optional_view(unwrap)?;
+                let class = view.source.class();
+                Some(CheckedObjectViewSource::Optional {
+                    view,
+                    class,
+                    projections: Vec::new(),
+                })
+            }
             ResolvedExpression::Binding(binding) => {
                 let binding_type = self.binding_type(binding.binding);
                 if binding_type == Type::Obj {
@@ -373,6 +411,7 @@ impl CallableChecker<'_, '_> {
                     | CheckedObjectViewSource::Interface { span, .. }
                     | CheckedObjectViewSource::Produced { span, .. } => *span = grouped.span,
                     CheckedObjectViewSource::Shared(source) => source.set_span(grouped.span),
+                    CheckedObjectViewSource::Optional { view, .. } => view.span = grouped.span,
                 }
                 Some(source)
             }
@@ -381,6 +420,42 @@ impl CallableChecker<'_, '_> {
                     .program
                     .field(access.field)
                     .expect("resolved field access must reference a field");
+                if matches!(
+                    access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
+                ) {
+                    let ResolvedTypeKind::Class(class) = field.type_syntax.kind else {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                source_use.diagnostic_code(),
+                                source_use.object_message(),
+                            )
+                            .with_primary_label(
+                                access.member_span,
+                                "this field has a primitive type",
+                            ),
+                        );
+                        return None;
+                    };
+                    let receiver =
+                        self.check_object_receiver(&access.receiver, ObjectPlaceUse::Alias)?;
+                    let optional = receiver
+                        .optional_view
+                        .expect("optional receiver must retain its checked payload view");
+                    let HirViewSource::OptionalPayload {
+                        view,
+                        mut projections,
+                    } = optional.source
+                    else {
+                        unreachable!("optional receiver must use optional payload provenance")
+                    };
+                    projections.push(crate::object_path::ObjectProjection::Field(access.field));
+                    return Some(CheckedObjectViewSource::Optional {
+                        view: *view,
+                        class,
+                        projections,
+                    });
+                }
                 if matches!(field.type_syntax.kind, ResolvedTypeKind::Shared(_)) {
                     return self.reject_implicit_shared_view_source(
                         expression,
@@ -728,6 +803,47 @@ impl CallableChecker<'_, '_> {
                 source.set_projections(projections);
                 Some(HirCallArgument::View(
                     source.into_view(expected_target, required),
+                ))
+            }
+            (
+                CheckedObjectViewSource::Optional {
+                    view,
+                    class,
+                    mut projections,
+                },
+                expected @ (Type::Class(_) | Type::Interface(_) | Type::Obj),
+            ) => {
+                let expected_target = match expected {
+                    Type::Class(class) => HirViewTarget::Class(class),
+                    Type::Interface(interface) => HirViewTarget::Interface(interface),
+                    Type::Obj => HirViewTarget::Obj,
+                    _ => unreachable!(),
+                };
+                if !super::object_view_relation::class_provides_view(
+                    self.program,
+                    class,
+                    expected_target,
+                ) {
+                    self.diagnostics.push(mismatch(
+                        &view_target_name(self.program, HirViewTarget::Class(class)),
+                        &view_target_name(self.program, expected_target),
+                        source_span,
+                        "checked optional payload converts only to compatible up-views",
+                    ));
+                    return None;
+                }
+                projections.extend(shared_up_projections(
+                    self.program,
+                    HirViewTarget::Class(class),
+                    expected_target,
+                ));
+                Some(HirCallArgument::View(
+                    CheckedObjectViewSource::Optional {
+                        view,
+                        class,
+                        projections,
+                    }
+                    .into_view(expected_target, required),
                 ))
             }
             (

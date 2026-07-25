@@ -756,6 +756,28 @@ impl ResolvedDumper {
                     }
                 });
             }
+            ResolvedObjectReceiver::OptionalPayload {
+                unwrap,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(&format!("OptionalPayloadReceiver class {class}"), *span);
+                self.indented(|dumper| {
+                    dumper.heading("Optional");
+                    dumper.indented(|dumper| dumper.expression(&unwrap.source));
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 

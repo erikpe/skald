@@ -377,6 +377,8 @@ pub struct HirMethodReceiver {
     /// Present when receiver evaluation first materializes a hidden strong
     /// owner for a shared field or produced shared value.
     pub shared_view: Option<Box<HirObjectView>>,
+    /// Present when receiver evaluation unwraps an inline-class optional.
+    pub optional_view: Option<Box<HirObjectView>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -446,6 +448,12 @@ pub enum HirViewSource {
         projections: Vec<crate::object_path::ObjectProjection>,
         span: Span,
     },
+    /// A checked exact-class payload whose presence is pinned for the
+    /// immediate consumer.
+    OptionalPayload {
+        view: Box<super::HirCheckedOptionalView>,
+        projections: Vec<crate::object_path::ObjectProjection>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -453,6 +461,7 @@ pub struct HirFieldPlace {
     pub receiver: HirObjectPlace,
     pub checked_cast: Option<Box<HirCheckedObjectView>>,
     pub shared_view: Option<Box<HirObjectView>>,
+    pub optional_view: Option<Box<HirObjectView>>,
     pub field: FieldId,
     pub span: Span,
 }

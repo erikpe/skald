@@ -5,8 +5,8 @@ use crate::{
     mir::{
         MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
         MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
-        MirOptionalSource, MirPlace, MirPresenceTestKind, MirPrimitiveType, MirTerminationReason,
-        MirTerminator, MirType, StorageId, ValueId,
+        MirOptionalSource, MirOptionalViewEnd, MirPlace, MirPresenceTestKind, MirPrimitiveType,
+        MirTerminationReason, MirTerminator, MirType, StorageId, ValueId,
     },
 };
 
@@ -91,6 +91,7 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         cleanup: &MirClassOptionalCleanup,
     ) -> Result<(), BackendError> {
+        self.trap_if_class_optional_pinned(&cleanup.destination)?;
         let finished = self.next_optional_label("class_cleanup_finished");
         self.load_class_optional_state(&cleanup.destination)?;
         self.output.push(Instruction::Test(Register::Rax));
@@ -115,6 +116,7 @@ impl InstructionSelector<'_, '_> {
         {
             return Ok(());
         }
+        self.trap_if_class_optional_pinned(&assignment.destination)?;
         let source_present = self.next_optional_label("class_source_present");
         let destination_present = self.next_optional_label("class_destination_present");
         let finished = self.next_optional_label("class_assign_finished");
@@ -291,8 +293,78 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::Jump(block_label(*success_target)));
                 Ok(true)
             }
+            MirTerminator::BeginOptionalView {
+                begin,
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            } => {
+                self.load_class_optional_state(&begin.source)?;
+                self.output.push(Instruction::Test(Register::Rax));
+                self.output
+                    .push(Instruction::JumpIfEqual(block_label(*absent_target)));
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: u64::MAX,
+                    destination: Register::Rcx,
+                });
+                self.output.push(Instruction::Compare {
+                    source: Register::Rcx,
+                    destination: Register::Rax,
+                });
+                self.output
+                    .push(Instruction::JumpIfEqual(block_label(*overflow_target)));
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rdx,
+                });
+                self.output.push(Instruction::Add {
+                    source: Register::Rdx,
+                    destination: Register::Rax,
+                });
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::Rdx.into(),
+                });
+                let state = self.class_optional_state(&begin.source)?;
+                self.output.push(Instruction::Move {
+                    source: Register::Rdx.into(),
+                    destination: Register::Rax.into(),
+                });
+                value::store_rax(state, self.output);
+                self.output
+                    .push(Instruction::Jump(block_label(*success_target)));
+                Ok(true)
+            }
+            MirTerminator::CheckOptionalMutation {
+                source,
+                success_target,
+                failure_target,
+                ..
+            } => {
+                self.load_class_optional_state(source)?;
+                self.output.push(Instruction::Test(Register::Rax));
+                self.output
+                    .push(Instruction::JumpIfEqual(block_label(*success_target)));
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rcx,
+                });
+                self.output.push(Instruction::Compare {
+                    source: Register::Rcx,
+                    destination: Register::Rax,
+                });
+                self.output
+                    .push(Instruction::JumpIfEqual(block_label(*success_target)));
+                self.output
+                    .push(Instruction::Jump(block_label(*failure_target)));
+                Ok(true)
+            }
             MirTerminator::Terminate {
-                reason: MirTerminationReason::OptionalAccessFailure,
+                reason:
+                    MirTerminationReason::OptionalAccessFailure
+                    | MirTerminationReason::OptionalGuardOverflow
+                    | MirTerminationReason::OptionalPinnedMutation,
                 ..
             } => {
                 self.output.push(Instruction::Trap);
@@ -300,6 +372,51 @@ impl InstructionSelector<'_, '_> {
             }
             _ => Ok(false),
         }
+    }
+
+    pub(super) fn select_optional_view_end(
+        &mut self,
+        end: &MirOptionalViewEnd,
+    ) -> Result<(), BackendError> {
+        self.load_class_optional_state(&end.source)?;
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::Rdx,
+        });
+        self.output.push(Instruction::Subtract {
+            source: Register::Rdx,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdx.into(),
+        });
+        let state = self.class_optional_state(&end.source)?;
+        self.output.push(Instruction::Move {
+            source: Register::Rdx.into(),
+            destination: Register::Rax.into(),
+        });
+        value::store_rax(state, self.output);
+        Ok(())
+    }
+
+    fn trap_if_class_optional_pinned(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        let allowed = self.next_optional_label("mutation_allowed");
+        self.load_class_optional_state(place)?;
+        self.output.push(Instruction::Test(Register::Rax));
+        self.output.push(Instruction::JumpIfEqual(allowed.clone()));
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::Rcx,
+        });
+        self.output.push(Instruction::Compare {
+            source: Register::Rcx,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::JumpIfEqual(allowed.clone()));
+        self.output.push(Instruction::Trap);
+        self.output.push(Instruction::Label(allowed));
+        Ok(())
     }
 
     pub(super) fn select_optional_write(

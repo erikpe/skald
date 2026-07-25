@@ -9,6 +9,7 @@ use super::{
 
 impl BodyLowerer<'_> {
     pub(super) fn finish_full_expression(&mut self, span: Span) {
+        self.end_optional_views_from(0, span);
         let checked_views: Vec<_> = self.full_expression_checked_views.drain(..).rev().collect();
         for carrier in checked_views {
             self.emit(MirInstruction::EndCheckedView(MirCheckedViewEnd {
@@ -46,7 +47,7 @@ impl BodyLowerer<'_> {
                             span,
                         }));
                     }
-                    self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
+                    self.emit_class_optional_cleanup(cleanup);
                 }
             }
         }
@@ -79,12 +80,8 @@ pub(super) enum PlannedCleanup {
 }
 
 impl PlannedCleanup {
-    pub(super) fn into_instruction(self) -> MirInstruction {
-        match self {
-            Self::Inline(cleanup) => MirInstruction::Cleanup(cleanup),
-            Self::Shared(release) => MirInstruction::SharedRelease(release),
-            Self::ClassOptional(cleanup) => MirInstruction::ClassOptionalCleanup(cleanup),
-        }
+    pub(super) const fn requires_optional_check(&self) -> bool {
+        matches!(self, Self::ClassOptional(_))
     }
 }
 

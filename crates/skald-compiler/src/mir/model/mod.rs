@@ -24,7 +24,7 @@ pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,
     MirMemberDefinition, MirMemberDefinitionTable, MirStorage, MirStorageKind,
 };
-pub use ids::{BlockId, StorageId, ValueId};
+pub use ids::{BlockId, OptionalGuardId, StorageId, ValueId};
 pub use instruction::{
     MirArgument, MirAssignment, MirCall, MirCallReceiver, MirCallTarget, MirCheckedViewBinding,
     MirCheckedViewEnd, MirCleanup, MirCopyAssignment, MirCopyConstruction, MirEndFullExpression,
@@ -38,7 +38,8 @@ pub use interface::{
 pub use optional::{
     MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
     MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
-    MirOptionalSource, MirPresenceTestKind, MirPrimitiveType,
+    MirOptionalSource, MirOptionalViewBegin, MirOptionalViewEnd, MirPresenceTestKind,
+    MirPrimitiveType,
 };
 pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,

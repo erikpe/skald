@@ -71,6 +71,101 @@ fn absent_primitive_optional_unwrap_terminates() {
 }
 
 #[test]
+fn checked_class_payload_views_execute_mutation_and_overlap() {
+    let source = "class Item {\n\
+        value: i64;\n\
+        init(value: i64) { self.value = value; }\n\
+        mut fn set(value: i64) -> unit { self.value = value; }\n\
+    }\n\
+    class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+    fn sum(ref left: Item, ref right: Item) -> i64 { return left.value + right.value; }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(Item(20));\n\
+        holder.item!.set(21);\n\
+        return sum(holder.item!, holder.item!);\n\
+    }\n";
+
+    let output = assembly(source);
+    assert!(
+        output.contains("0xffffffffffffffff"),
+        "guard overflow must be checked without a runtime helper"
+    );
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+#[test]
+fn checked_class_payload_view_terminates_before_later_argument_can_clear_it() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+    class Holder {\n\
+        item: Item?;\n\
+        init(item: Item?) { self.item = item; }\n\
+        mut fn clear() -> i64 { self.item = none; return 0; }\n\
+    }\n\
+    fn consume(ref item: Item, ignored: i64) -> i64 { return item.value + ignored; }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(Item(42));\n\
+        return consume(holder.item!, holder.clear());\n\
+    }\n";
+
+    assert!(!run_native_assembly(&assembly(source)).success());
+}
+
+#[test]
+fn checked_class_payload_view_rejects_reentrant_clearing() {
+    let source = "class Holder {\n\
+        item: Item?;\n\
+        init(item: Item?) { self.item = item; }\n\
+        mut fn clear() -> unit { self.item = none; }\n\
+    }\n\
+    class Item {\n\
+        owner: shared Holder;\n\
+        init(owner: shared Holder) { self.owner = owner; }\n\
+        mut fn set_owner(owner: shared Holder) -> unit { self.owner = owner; }\n\
+        mut fn clear_owner() -> unit { self.owner->clear(); }\n\
+    }\n\
+    fn main() -> i64 {\n\
+        var bootstrap: shared Holder = new Holder(none);\n\
+        var holder: shared Holder = new Holder(Item(bootstrap));\n\
+        holder->item!.set_owner(holder);\n\
+        holder->item!.clear_owner();\n\
+        return 42;\n\
+    }\n";
+    let mut output = assembly(source);
+    output.push_str(optional_ownership_stubs());
+
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
+fn copied_class_payload_is_unpinned_before_later_arguments() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+    class Holder {\n\
+        item: Item?;\n\
+        init(item: Item?) { self.item = item; }\n\
+        mut fn clear() -> i64 { self.item = none; return 0; }\n\
+    }\n\
+    fn consume(item: Item, ignored: i64) -> i64 { return item.value + ignored; }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(Item(42));\n\
+        return consume(holder.item!, holder.clear());\n\
+    }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
+#[test]
+fn absent_checked_class_payload_view_terminates() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+    class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+    fn main() -> i64 {\n\
+        var holder: Holder = Holder(none);\n\
+        return holder.item!.value;\n\
+    }\n";
+
+    assert!(!run_native_assembly(&assembly(source)).success());
+}
+
+#[test]
 fn optional_fields_calls_results_and_stack_pressure_execute() {
     let source = "class Holder {\n\
         value: i64?;\n\
@@ -177,4 +272,20 @@ fn class_optional_parameters_and_results_execute_under_stack_pressure() {
 
     assert!(output.contains("mov qword ptr [rsp]"));
     assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+fn optional_ownership_stubs() -> &'static str {
+    concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
 }

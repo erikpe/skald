@@ -67,9 +67,9 @@ checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
 resolved identities are implemented; primitive and exact-class optional
 locals, fields, lifecycle, and internal callable boundaries also execute
-through typed HIR and verified MIR. Current phase and backend descriptions
-remain authoritative while checked payload views and optional shared owners
-are still planned.
+through typed HIR and verified MIR, including bounded checked class payload
+views and dynamic presence guards. Current phase and backend descriptions
+remain authoritative while optional shared owners are still planned.
 
 ## Pipeline
 

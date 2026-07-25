@@ -44,6 +44,7 @@ pub enum MirInstruction {
     ClassOptionalAssign(super::optional::MirClassOptionalAssign),
     ClassOptionalPublish(super::optional::MirClassOptionalPublish),
     ClassOptionalCleanup(super::optional::MirClassOptionalCleanup),
+    EndOptionalView(super::optional::MirOptionalViewEnd),
 }
 
 impl MirInstruction {
@@ -76,6 +77,7 @@ impl MirInstruction {
             Self::ClassOptionalAssign(instruction) => instruction.span,
             Self::ClassOptionalPublish(instruction) => instruction.span,
             Self::ClassOptionalCleanup(instruction) => instruction.span,
+            Self::EndOptionalView(instruction) => instruction.span,
         }
     }
 }

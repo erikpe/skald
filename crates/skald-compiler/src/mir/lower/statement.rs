@@ -96,6 +96,7 @@ impl BodyLowerer<'_> {
                 self.finish_full_expression(local.span);
             }
             crate::hir::HirLocalInitializer::Copy(copy) => {
+                let optional_mark = self.optional_view_mark();
                 let source = self.lower_object_source(&copy.source);
                 self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                     destination: self.lower_object_place(&copy.destination),
@@ -104,6 +105,7 @@ impl BodyLowerer<'_> {
                     operation: lower_selected_copy_operation(copy.operation),
                     span: copy.span,
                 }));
+                self.end_optional_views_from(optional_mark, copy.span);
                 self.cleanup
                     .register_owned(storage, copy.destination.class());
                 self.finish_full_expression(local.span);
@@ -160,6 +162,7 @@ impl BodyLowerer<'_> {
                     self.return_storage
                         .expect("object-returning body must have return storage"),
                 );
+                let optional_mark = self.optional_view_mark();
                 let source = self.lower_object_source(source);
                 self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                     destination,
@@ -168,6 +171,7 @@ impl BodyLowerer<'_> {
                     operation: lower_selected_copy_operation(*operation),
                     span: *span,
                 }));
+                self.end_optional_views_from(optional_mark, *span);
                 None
             }
             Some(crate::hir::HirReturnValue::Object(crate::hir::HirObjectReturn::Construct {
@@ -196,8 +200,23 @@ impl BodyLowerer<'_> {
             }
             None => None,
         };
+        let cleanups = self.cleanup.for_all_scopes(statement.span);
+        let spilled_value = value
+            .filter(|_| {
+                cleanups
+                    .iter()
+                    .any(|cleanup| cleanup.requires_optional_check())
+            })
+            .map(|value| {
+                self.spill_scalar(value, lower_type(self.input.return_type), statement.span)
+            });
         self.finish_full_expression(statement.span);
-        self.emit_cleanups(self.cleanup.for_all_scopes(statement.span));
+        self.emit_cleanups(cleanups);
+        let value = spilled_value
+            .map(|(storage, ty)| {
+                self.assign(MirRvalueKind::Load(storage.into()), ty, statement.span)
+            })
+            .or(value);
         self.terminate(MirTerminator::Return {
             value,
             span: statement.span,
@@ -233,6 +252,7 @@ impl BodyLowerer<'_> {
 
     fn lower_field_copy_construction(&mut self, statement: &crate::hir::HirFieldCopyConstruction) {
         let destination = self.lower_field_place(&statement.place);
+        let optional_mark = self.optional_view_mark();
         let source = self.lower_object_source(&statement.source);
         self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
             destination,
@@ -241,11 +261,13 @@ impl BodyLowerer<'_> {
             operation: lower_selected_copy_operation(statement.operation),
             span: statement.span,
         }));
+        self.end_optional_views_from(optional_mark, statement.span);
         self.finish_full_expression(statement.span);
     }
 
     fn lower_field_copy_assignment(&mut self, statement: &crate::hir::HirFieldCopyAssignment) {
         let destination = self.lower_field_place(&statement.place);
+        let optional_mark = self.optional_view_mark();
         let source = self.lower_object_source(&statement.source);
         self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
             destination,
@@ -254,10 +276,12 @@ impl BodyLowerer<'_> {
             operation: lower_selected_copy_operation(statement.operation),
             span: statement.span,
         }));
+        self.end_optional_views_from(optional_mark, statement.span);
         self.finish_full_expression(statement.span);
     }
 
     fn lower_copy_assignment(&mut self, statement: &crate::hir::HirCopyAssignment) {
+        let optional_mark = self.optional_view_mark();
         let source = self.lower_object_source(&statement.source);
         self.emit(MirInstruction::CopyAssign(MirCopyAssignment {
             destination: self.lower_object_place(&statement.destination),
@@ -266,6 +290,7 @@ impl BodyLowerer<'_> {
             operation: lower_selected_copy_operation(statement.operation),
             span: statement.span,
         }));
+        self.end_optional_views_from(optional_mark, statement.span);
         self.finish_full_expression(statement.span);
     }
 }

@@ -13,9 +13,9 @@ initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. AST and resolved IR contain all
 supported source-shaped forms and flat identities. Primitive and exact-class
 optionals continue through explicit typed HIR and MIR places, calls, and
-lifecycle operations; the verifier proves their storage, aggregate-boundary,
-conditional ownership, and failure-edge invariants, and the x86-64 backend
-executes them. Checked class payload views, optional shared owners, and
+lifecycle and checked-view operations; the verifier proves their storage,
+aggregate-boundary, conditional ownership, guard, anchor, and failure-edge
+invariants, and the x86-64 backend executes them. Optional shared owners and
 optional-container aliases still stop at `TYP035`.
 
 ## Phase ownership
@@ -103,8 +103,8 @@ Every unwrap remains a checked semantic operation.
 The implemented inline subset uses explicit HIR nodes for absent and present
 initialization, exact optional copy and assignment, field places,
 arguments/results, produced calls, presence tests, conditional class lifecycle,
-and checked primitive unwrap. Guarded class payload places and shared owners
-remain later subsets of this same model.
+checked primitive unwrap, and guarded class payload places. Optional shared
+owners remain a later subset of this same model.
 
 ## MIR optional storage model
 
@@ -150,9 +150,10 @@ dynamic presence as a static fact.
 
 Exact-class optional MIR additionally records conditional initialization,
 publication after destination-directed construction, copy construction,
-assignment, and cleanup. Optional payload projections designate only reserved
-exact-class bytes and are valid construction/lifecycle destinations; ordinary
-source access to those bytes remains unavailable until checked views land.
+assignment, cleanup, and explicit begin/end checked-view operations. A
+successful begin yields the exact payload projection; ordinary source access
+to those bytes is valid only for its verified immediate consumer while the
+matching guard is active.
 
 ## Lifecycle state machine
 
@@ -310,10 +311,11 @@ does not initialize those bytes as a `T`; loads, projections, copying,
 assignment, and cleanup branch on verified state before addressing them as a
 payload.
 
-For the implemented primitive-value subset, zero means absent and one means
-present. The reserved eight-byte word leaves the guarded and transition states
-backend-private for later inline-class stages; their exact future encoding may
-change without changing source behavior or the C runtime ABI.
+Zero means absent, one means present without an active view, and values from
+two through the maximum word value represent a present payload with one or
+more active guards. Beginning a view traps rather than overflowing the word;
+clearing, replacement, and destruction accept only zero or one and trap before
+mutating guarded storage.
 
 Fields use the same layout recursively. An optional exact class therefore
 contributes the complete payload layout to containment-cycle detection even

@@ -404,10 +404,11 @@ particular, it does not define:
 - foreign-call legality, target representation, or runtime behavior.
 
 Optional type and expression shapes cross lexing, parsing, and name resolution
-with explicit nodes and flat resolved target identities. Primitive optional
-locals also cross explicit HIR, MIR, verification, x86-64 layout, and
-execution. Other optional positions retain the focused `TYP035` boundary. The
-semantics and exact implemented slice belong to
+with explicit nodes and flat resolved target identities. Primitive and
+exact-class inline optionals cross explicit HIR, MIR, verification, x86-64
+layout, and execution, including bounded checked class payload views. Optional
+shared owners and optional-container aliases retain the focused `TYP035`
+boundary. The semantics and exact implemented slice belong to
 [Optional Values](OPTIONAL_VALUES.md).
 
 Use the [language overview](README.md) for the broad model and the

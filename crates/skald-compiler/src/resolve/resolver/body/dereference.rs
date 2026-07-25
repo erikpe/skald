@@ -141,6 +141,58 @@ impl CallableResolver<'_, '_> {
         }
     }
 
+    pub(super) fn resolved_optional_class(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<ClassId> {
+        let kind = match expression {
+            ResolvedExpression::Binding(binding) => self.binding_type(binding.binding)?,
+            ResolvedExpression::FieldAccess(access) => {
+                self.environment
+                    .classes
+                    .get(access.field.class())?
+                    .field(access.field)?
+                    .type_syntax
+                    .kind
+            }
+            ResolvedExpression::DirectCall(call) => {
+                self.environment
+                    .functions
+                    .get(call.function)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::MethodCall(call) => {
+                self.environment
+                    .classes
+                    .get(call.method.class())?
+                    .method(call.method)?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::InterfaceCall(call) => {
+                self.environment
+                    .interfaces
+                    .get(call.interface)?
+                    .requirements
+                    .get(call.requirement.index())?
+                    .return_type
+                    .kind
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                return self.resolved_optional_class(&grouped.expression)
+            }
+            _ => return None,
+        };
+        match kind {
+            ResolvedTypeKind::Optional {
+                payload: ResolvedOptionalPayload::Class(class),
+                ..
+            } => Some(class),
+            _ => None,
+        }
+    }
+
     fn binding_type(&self, binding: BindingId) -> Option<ResolvedTypeKind> {
         if binding == BindingId::Receiver(self.callable) {
             return self.receiver_class.map(ResolvedTypeKind::Class);

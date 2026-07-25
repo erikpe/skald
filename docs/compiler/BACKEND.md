@@ -11,8 +11,8 @@ the current target profile below.
 The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
 optional layout, ABI, guard, and trap realization. Verified primitive and
 exact-class optional local, field, parameter, result, and temporary MIR is
-legal backend input; checked class payload views and optional shared owners
-remain planned.
+legal backend input, including checked class payload views. Optional shared
+owners remain planned.
 
 ## Backend interface and target registry
 
@@ -78,9 +78,11 @@ eight-byte state word precedes the payload at its required alignment. The
 backend writes a present payload before publishing state, branches before
 reading a copied or unwrapped payload, and lowers verified absent-access
 failure to `ud2`. Exact-class payloads use the same state prefix with aligned
-reserved class bytes and conditional lifecycle calls. Fields use that layout
-recursively. Internal inline optional parameters/results use the documented
-pointer aggregate convention; `shared? T` and guarded views retain their
+reserved class bytes and conditional lifecycle calls. State zero is absent,
+one is present and unguarded, and greater values count active views. Begin,
+end, overflow, and pinned-mutation checks lower inline without runtime helpers.
+Fields use that layout recursively. Internal inline optional parameters/results
+use the documented pointer aggregate convention; `shared? T` retains its
 planned target rules.
 
 ## Data layout

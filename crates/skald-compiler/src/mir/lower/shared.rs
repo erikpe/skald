@@ -186,6 +186,7 @@ impl BodyLowerer<'_> {
         // Establish every borrowed source, checked view, and hidden anchor
         // before allocating. A failing checked cast therefore cannot leak an
         // unpublished allocation.
+        let optional_mark = self.optional_view_mark();
         let initialization = match &allocation.mode {
             HirSharedAllocationMode::Initialize {
                 initializer,
@@ -239,6 +240,7 @@ impl BodyLowerer<'_> {
                 }));
             }
         }
+        self.end_optional_views_from(optional_mark, allocation.span);
         self.emit(MirInstruction::SharedPublish(MirSharedPublish {
             allocation: allocation_storage,
             span: allocation.span,

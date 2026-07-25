@@ -9,15 +9,21 @@ impl BodyLowerer<'_> {
         expression: &HirExpression,
         test: &HirTypeTest,
     ) -> ValueId {
+        let optional_mark = self.optional_view_mark();
+        // Source evaluation is observable even when the type relation is
+        // statically known; checked optional views begin here.
+        let source = self.lower_object_view(&test.source);
         let kind = match test.kind {
             HirTypeTestKind::StaticSuccess => MirRvalueKind::ConstantBool(true),
             HirTypeTestKind::StaticFailure => MirRvalueKind::ConstantBool(false),
             HirTypeTestKind::Runtime => MirRvalueKind::TypeTest {
-                source: self.lower_object_view(&test.source),
+                source,
                 target: lower_view_target(test.target),
             },
         };
-        self.assign(kind, MirType::Bool, expression.span)
+        let result = self.assign(kind, MirType::Bool, expression.span);
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
     }
 }
 

@@ -37,6 +37,7 @@ pub(in crate::typeck) struct CheckedObjectReceiver {
     pub origin: HirObjectOrigin,
     pub checked_cast: Option<Box<HirCheckedObjectView>>,
     pub shared_view: Option<Box<crate::hir::HirObjectView>>,
+    pub optional_view: Option<Box<crate::hir::HirObjectView>>,
 }
 
 impl CallableChecker<'_, '_> {
@@ -93,6 +94,7 @@ impl CallableChecker<'_, '_> {
             receiver: checked.place,
             checked_cast: checked.checked_cast,
             shared_view: checked.shared_view,
+            optional_view: checked.optional_view,
             field,
             span,
         })
@@ -114,6 +116,50 @@ impl CallableChecker<'_, '_> {
                 self.check_explicit_shared_pointee(dereference, projections.clone(), *span)?;
             return Some(self.finish_shared_object_receiver(pointee, *class, *span));
         }
+        if let ResolvedObjectReceiver::OptionalPayload {
+            unwrap,
+            projections,
+            class,
+            span,
+        } = receiver
+        {
+            let view = self.check_class_optional_view(unwrap)?;
+            let access = view.access;
+            let root_class = view.source.class();
+            let source = crate::hir::HirViewSource::OptionalPayload {
+                view: Box::new(view),
+                projections: projections.clone(),
+            };
+            let optional_view = crate::hir::HirObjectView {
+                source,
+                origin: Box::new(HirObjectOrigin::Produced {
+                    dynamic_class: root_class,
+                    span: *span,
+                }),
+                target: crate::hir::HirViewTarget::Class(*class),
+                access,
+                span: *span,
+            };
+            let place = HirObjectPlace {
+                path: crate::object_path::ObjectPath {
+                    root: BindingId::Receiver(self.callable),
+                    projections: Vec::new(),
+                    class: *class,
+                    span: *span,
+                },
+                access,
+            };
+            return Some(CheckedObjectReceiver {
+                place,
+                origin: HirObjectOrigin::Produced {
+                    dynamic_class: root_class,
+                    span: *span,
+                },
+                checked_cast: None,
+                shared_view: None,
+                optional_view: Some(Box::new(optional_view)),
+            });
+        }
         let ResolvedObjectReceiver::CastRelative {
             cast,
             projections,
@@ -131,6 +177,7 @@ impl CallableChecker<'_, '_> {
                 origin,
                 checked_cast: None,
                 shared_view: None,
+                optional_view: None,
             });
         };
         let mut checked = self.check_object_cast(cast)?;
@@ -161,6 +208,7 @@ impl CallableChecker<'_, '_> {
             origin,
             checked_cast: Some(Box::new(checked)),
             shared_view: None,
+            optional_view: None,
         })
     }
 
@@ -190,6 +238,7 @@ impl CallableChecker<'_, '_> {
             origin,
             checked_cast: None,
             shared_view,
+            optional_view: None,
         }
     }
 

@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP5 is next.
+Status: in progress; OP6 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -185,7 +185,7 @@ documents remain historical and are not migration targets.
 - [x] OP2 — Execute primitive optional locals and checked inspection
 - [x] OP3 — Carry primitive optionals through stored and callable boundaries
 - [x] OP4 — Implement inline-class optional lifecycle
-- [ ] OP5 — Enforce checked payload views and dynamic presence guards
+- [x] OP5 — Enforce checked payload views and dynamic presence guards
 - [ ] OP6 — Implement optional shared owners
 - [ ] OP7 — Complete alias, overload, conversion, and polymorphism integration
 - [ ] OP8 — Harden diagnostics, documentation, and end-to-end behavior
@@ -397,32 +397,32 @@ next task.
 re-entrant clearing, replacement, destruction, or alias overlap to create a
 dangling payload view.
 
-- [ ] Classify each successful inline unwrap as an owning copy consumer or a
+- [x] Classify each successful inline unwrap as an owning copy consumer or a
       bounded non-owning checked payload place with its exact root, access, and
       immediate consumer recorded in HIR.
-- [ ] Support checked payload places for primitive field access/mutation,
+- [x] Support checked payload places for primitive field access/mutation,
       direct/virtual/interface methods, `ref`/`mut ref` arguments, casts, type
       tests, inline copy consumers, and nested inline projections.
-- [ ] Add explicit MIR begin/end optional-view operations and storage state
+- [x] Add explicit MIR begin/end optional-view operations and storage state
       capable of representing absence, presence, and nested active guards.
-- [ ] Pin before later evaluation can invalidate the payload and unpin after
+- [x] Pin before later evaluation can invalidate the payload and unpin after
       the complete consumer, preserving receiver-before-arguments,
       left-to-right arguments, result securing, and reverse temporary cleanup.
-- [ ] Reject or terminate clearing, replacing, destroying, or guard-count
+- [x] Reject or terminate clearing, replacing, destroying, or guard-count
       overflow while pinned, while continuing to permit ordinary mutation of
       the present payload.
-- [ ] Add distinct optional-pinned-mutation and optional-guard-overflow
+- [x] Add distinct optional-pinned-mutation and optional-guard-overflow
       termination reasons and require well-formed non-returning failure edges.
-- [ ] Combine a presence guard with the existing stable/copied/adopted shared
+- [x] Combine a presence guard with the existing stable/copied/adopted shared
       owner anchor whenever the optional container is reached through shared
       storage; end the checked payload view before releasing its anchor.
-- [ ] Verify begin/end pairing, compatible payload roots, active-guard
+- [x] Verify begin/end pairing, compatible payload roots, active-guard
       liveness, legal mutation transitions, anchor coverage, normal-exit guard
       exhaustion, and identical guard state at CFG joins.
-- [ ] Lower state/count checks and updates without a runtime helper. Preserve
+- [x] Lower state/count checks and updates without a runtime helper. Preserve
       one existing optional state word where the documented encoding permits,
       and trap before a forbidden transition changes payload lifetime.
-- [ ] Update optional values, aliases/ownership, object casts, polymorphism,
+- [x] Update optional values, aliases/ownership, object casts, polymorphism,
       functions/control flow, errors, phases/IR, backend, debugging, and
       testing documentation with the implemented checked-view boundary.
 

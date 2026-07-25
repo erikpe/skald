@@ -53,12 +53,15 @@ impl BodyLowerer<'_> {
             } => self.lower_direct_call(expression, *function, arguments),
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
             HirExpressionKind::FieldRead(place) => {
+                let optional_mark = self.optional_view_mark();
                 let place = self.lower_field_place(place);
-                Some(self.assign(
+                let result = self.assign(
                     MirRvalueKind::Load(place),
                     lower_type(expression.ty),
                     expression.span,
-                ))
+                );
+                self.end_optional_views_from(optional_mark, expression.span);
+                Some(result)
             }
             HirExpressionKind::MethodCall {
                 receiver,

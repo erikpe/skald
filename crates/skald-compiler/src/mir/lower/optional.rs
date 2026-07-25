@@ -30,6 +30,7 @@ impl BodyLowerer<'_> {
         destination: crate::mir::MirPlace,
         value: &HirClassOptionalInitialize,
     ) {
+        let optional_mark = self.optional_view_mark();
         match &value.source {
             HirClassOptionalSource::Produced(expression) => {
                 self.lower_optional_call(expression, destination);
@@ -71,6 +72,7 @@ impl BodyLowerer<'_> {
                 ));
             }
         }
+        self.end_optional_views_from(optional_mark, value.span);
     }
 
     pub(super) fn lower_class_optional_assignment(
@@ -112,6 +114,11 @@ impl BodyLowerer<'_> {
             }
             source => self.lower_class_optional_source(source),
         };
+        let self_copy =
+            matches!(&source, MirClassOptionalSource::Copy(source) if source == &destination);
+        if !self_copy {
+            self.check_optional_mutation(destination.clone(), assignment.span);
+        }
         self.emit(MirInstruction::ClassOptionalAssign(
             MirClassOptionalAssign {
                 destination,
@@ -126,6 +133,39 @@ impl BodyLowerer<'_> {
                 span: assignment.span,
             },
         ));
+    }
+
+    pub(super) fn check_optional_mutation(
+        &mut self,
+        source: crate::mir::MirPlace,
+        span: crate::source::Span,
+    ) {
+        let success_target = self.body.allocate_block(span);
+        let failure_target = self.body.allocate_block(span);
+        self.terminate(MirTerminator::CheckOptionalMutation {
+            source,
+            success_target,
+            failure_target,
+            span,
+        });
+        self.body
+            .select_block(failure_target)
+            .expect("allocated optional-mutation failure block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalPinnedMutation,
+            span,
+        });
+        self.body
+            .select_block(success_target)
+            .expect("allocated optional-mutation success block must be selectable");
+    }
+
+    pub(super) fn emit_class_optional_cleanup(
+        &mut self,
+        cleanup: crate::mir::MirClassOptionalCleanup,
+    ) {
+        self.check_optional_mutation(cleanup.destination.clone(), cleanup.span);
+        self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
     }
 
     fn lower_class_optional_source(
@@ -300,7 +340,10 @@ impl BodyLowerer<'_> {
         }
     }
 
-    fn lower_optional_operand(&mut self, operand: &HirOptionalOperand) -> crate::mir::MirPlace {
+    pub(super) fn lower_optional_operand(
+        &mut self,
+        operand: &HirOptionalOperand,
+    ) -> crate::mir::MirPlace {
         match operand {
             HirOptionalOperand::Place(place) => self.lower_optional_place(place),
             HirOptionalOperand::Produced(expression) => {
@@ -339,6 +382,72 @@ impl BodyLowerer<'_> {
         }
     }
 
+    pub(super) fn optional_view_mark(&self) -> usize {
+        self.active_optional_guards.len()
+    }
+
+    pub(super) fn begin_optional_view(
+        &mut self,
+        view: &crate::hir::HirCheckedOptionalView,
+    ) -> crate::mir::MirPlace {
+        let source = self.lower_optional_operand(&view.source);
+        let class = view.source.class();
+        let guard = crate::mir::OptionalGuardId::new(self.input.callable, self.next_optional_guard);
+        self.next_optional_guard += 1;
+        let success_target = self.body.allocate_block(view.span);
+        let absent_target = self.body.allocate_block(view.span);
+        let overflow_target = self.body.allocate_block(view.span);
+        self.terminate(MirTerminator::BeginOptionalView {
+            begin: crate::mir::MirOptionalViewBegin {
+                guard,
+                source: source.clone(),
+                class,
+                span: view.span,
+            },
+            success_target,
+            absent_target,
+            overflow_target,
+            span: view.span,
+        });
+        self.body
+            .select_block(absent_target)
+            .expect("allocated optional-view absence block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalAccessFailure,
+            span: view.span,
+        });
+        self.body
+            .select_block(overflow_target)
+            .expect("allocated optional-view overflow block must be selectable");
+        self.terminate(MirTerminator::Terminate {
+            reason: MirTerminationReason::OptionalGuardOverflow,
+            span: view.span,
+        });
+        self.body
+            .select_block(success_target)
+            .expect("allocated optional-view success block must be selectable");
+        self.active_optional_guards
+            .push(super::ActiveOptionalGuard {
+                guard,
+                source: source.clone(),
+                class,
+            });
+        source.project_optional_payload(class)
+    }
+
+    pub(super) fn end_optional_views_from(&mut self, mark: usize, span: crate::source::Span) {
+        let guards: Vec<_> = self.active_optional_guards.drain(mark..).rev().collect();
+        for guard in guards {
+            self.emit(MirInstruction::EndOptionalView(
+                crate::mir::MirOptionalViewEnd {
+                    guard: guard.guard,
+                    source: guard.source,
+                    class: guard.class,
+                    span,
+                },
+            ));
+        }
+    }
     pub(super) fn new_optional_storage(
         &mut self,
         kind: MirStorageKind,

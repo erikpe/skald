@@ -14,7 +14,8 @@ progress. Completed roadmaps and resolved discovery records move to
   contracts in living documentation, OP1 added syntax and resolved type
   identities, and OP2 executes primitive optional locals and checked
   inspection. OP3 carries primitive optionals through stored and callable
-  boundaries; OP4, inline-class optional lifecycle, is next. The roadmap
+  boundaries. OP4 added inline-class optional lifecycle, and OP5 added bounded
+  checked payload views with dynamic presence guards; OP6 is next. The roadmap
   depends on the
   completed inline-object, alias, shared-ownership, polymorphism, object-cast,
   and constructor profiles.

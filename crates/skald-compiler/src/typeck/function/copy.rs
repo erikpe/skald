@@ -163,8 +163,31 @@ impl CallableChecker<'_, '_> {
                 )?;
                 return self.finish_checked_object_source(checked, class, context);
             }
+            crate::resolve::ResolvedExpression::Unwrap(_) => {
+                let checked = self.check_copy_construction_view(
+                    expression,
+                    class,
+                    expression.span(),
+                    expression.span(),
+                )?;
+                return self.finish_checked_object_source(checked, class, context);
+            }
             crate::resolve::ResolvedExpression::ObjectCast(cast) => {
                 let checked = self.check_object_cast(cast)?;
+                return self.finish_checked_object_source(checked, class, context);
+            }
+            crate::resolve::ResolvedExpression::FieldAccess(access)
+                if matches!(
+                    access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
+                ) =>
+            {
+                let checked = self.check_copy_construction_view(
+                    expression,
+                    class,
+                    expression.span(),
+                    expression.span(),
+                )?;
                 return self.finish_checked_object_source(checked, class, context);
             }
             crate::resolve::ResolvedExpression::Grouped(grouped)
@@ -507,11 +530,18 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
 ) -> bool {
     match expression {
         crate::resolve::ResolvedExpression::Dereference(_)
+        | crate::resolve::ResolvedExpression::Unwrap(_)
         | crate::resolve::ResolvedExpression::ObjectCast(_) => true,
         crate::resolve::ResolvedExpression::Grouped(grouped) => {
             is_checked_object_source_expression(&grouped.expression)
         }
-        crate::resolve::ResolvedExpression::FieldAccess(access) => access.receiver.cast().is_some(),
+        crate::resolve::ResolvedExpression::FieldAccess(access) => {
+            access.receiver.cast().is_some()
+                || matches!(
+                    access.receiver,
+                    crate::resolve::ResolvedObjectReceiver::OptionalPayload { .. }
+                )
+        }
         _ => false,
     }
 }

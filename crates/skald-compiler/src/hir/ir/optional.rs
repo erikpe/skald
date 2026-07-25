@@ -5,7 +5,7 @@ use crate::{
     source::Span,
 };
 
-use super::{HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation};
+use super::{HirAccess, HirExpression, HirFieldPlace, HirObjectSource, HirSelectedCopyOperation};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum HirPrimitiveType {
@@ -131,6 +131,27 @@ impl HirOptionalOperand {
             }
         }
     }
+
+    pub const fn class(&self) -> ClassId {
+        match self {
+            Self::ClassPlace(place) => place.class,
+            Self::ClassProduced(expression) => match expression.ty {
+                super::Type::OptionalClass(class) => class,
+                _ => panic!("produced class optional operand must have optional class type"),
+            },
+            Self::Place(_) | Self::Produced(_) => {
+                panic!("primitive optional operands have no class payload")
+            }
+        }
+    }
+}
+
+/// One checked, non-owning view of an exact inline-class optional payload.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirCheckedOptionalView {
+    pub source: HirOptionalOperand,
+    pub access: HirAccess,
+    pub span: Span,
 }
 
 impl HirOptionalSource {

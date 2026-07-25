@@ -18,7 +18,7 @@ result type `unit`:
 | `f64` | IEEE-754 binary64 floating-point values. |
 | `bool` | The distinct values `false` and `true`. |
 | primitive `T?` | An explicitly optional primitive owning value containing either no `T` or one complete `T`. |
-| class `T?` | An explicitly optional inline owner containing either no payload or one complete exact-class `T`; checked payload access is not implemented yet. |
+| class `T?` | An explicitly optional inline owner containing either no payload or one complete exact-class `T`; postfix `!` supplies a bounded dynamically guarded payload place. |
 | a class name | One exact nominal class value, including all of its inline fields. |
 | `unit` | Successful completion without a result payload. |
 
@@ -172,8 +172,8 @@ Optional values have a [frozen contract](OPTIONAL_VALUES.md) for representing
 absence without making every value nullable. Primitive and exact-class `T?`
 owning locals, fields, and internal parameters/results are implemented with
 `none`, exact-value injection, optional copy and assignment, initializer
-ranking, presence tests, and conditional class lifecycle. Primitive postfix
-`!` is implemented; checked class payload access is staged. Optionals have no
+ranking, presence tests, conditional class lifecycle, and checked class payload
+places. Primitive and class postfix `!` are implemented. Optionals have no
 truthiness and never implicitly convert to their payload. Optional-container
 aliases and `shared? T` remain staged exclusions at type checking.
 

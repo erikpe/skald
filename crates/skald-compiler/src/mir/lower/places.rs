@@ -6,11 +6,17 @@ use crate::object_path::ObjectProjection;
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
-        let receiver = match (&place.checked_cast, &place.shared_view) {
-            (Some(cast), None) => self.lower_checked_object_view(cast).source,
-            (None, Some(view)) => self.lower_object_view(view).source,
-            (None, None) => self.lower_object_place(&place.receiver),
-            (Some(_), Some(_)) => unreachable!("a field carrier has one provenance"),
+        let receiver = match (
+            &place.checked_cast,
+            &place.shared_view,
+            &place.optional_view,
+        ) {
+            (Some(cast), None, None) => self.lower_checked_object_view(cast).source,
+            (None, Some(view), None) | (None, None, Some(view)) => {
+                self.lower_object_view(view).source
+            }
+            (None, None, None) => self.lower_object_place(&place.receiver),
+            _ => unreachable!("a field carrier has one provenance"),
         };
         receiver.project_field(place.field)
     }

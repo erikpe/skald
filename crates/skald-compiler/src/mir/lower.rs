@@ -85,6 +85,15 @@ struct BodyLowerer<'hir> {
     full_expression_temporaries: Vec<FullExpressionTemporary>,
     full_expression_checked_views: Vec<StorageId>,
     full_expression_has_shared_effect: bool,
+    next_optional_guard: usize,
+    active_optional_guards: Vec<ActiveOptionalGuard>,
+}
+
+#[derive(Clone)]
+struct ActiveOptionalGuard {
+    guard: OptionalGuardId,
+    source: MirPlace,
+    class: ClassId,
 }
 
 impl<'hir> BodyLowerer<'hir> {
@@ -103,6 +112,8 @@ impl<'hir> BodyLowerer<'hir> {
             full_expression_temporaries: Vec::new(),
             full_expression_checked_views: Vec::new(),
             full_expression_has_shared_effect: false,
+            next_optional_guard: 0,
+            active_optional_guards: Vec::new(),
             return_storage: None,
             receiver_storage: None,
             input,
@@ -253,7 +264,17 @@ impl<'hir> BodyLowerer<'hir> {
 
     fn emit_cleanups(&mut self, cleanups: Vec<cleanup::PlannedCleanup>) {
         for cleanup in cleanups {
-            self.emit(cleanup.into_instruction());
+            match cleanup {
+                cleanup::PlannedCleanup::Inline(cleanup) => {
+                    self.emit(MirInstruction::Cleanup(cleanup))
+                }
+                cleanup::PlannedCleanup::Shared(release) => {
+                    self.emit(MirInstruction::SharedRelease(release))
+                }
+                cleanup::PlannedCleanup::ClassOptional(cleanup) => {
+                    self.emit_class_optional_cleanup(cleanup)
+                }
+            }
         }
     }
 

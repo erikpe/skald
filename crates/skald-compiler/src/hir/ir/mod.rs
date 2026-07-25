@@ -43,10 +43,10 @@ pub use object::{
     HirSynthesizedCopy, HirSynthesizedFieldCopy, HirUserCopy, HirViewSource, HirViewTarget,
 };
 pub use optional::{
-    HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
-    HirClassOptionalSource, HirOptionalAssignment, HirOptionalOperand, HirOptionalPlace,
-    HirOptionalSource, HirOptionalStorage, HirOptionalWriteKind, HirPresenceTestKind,
-    HirPrimitiveType,
+    HirCheckedOptionalView, HirClassOptionalAssignment, HirClassOptionalInitialize,
+    HirClassOptionalPlace, HirClassOptionalSource, HirOptionalAssignment, HirOptionalOperand,
+    HirOptionalPlace, HirOptionalSource, HirOptionalStorage, HirOptionalWriteKind,
+    HirPresenceTestKind, HirPrimitiveType,
 };
 pub use shared::{
     HirOwnerTransfer, HirSharedAllocation, HirSharedAllocationMode, HirSharedAssignment,

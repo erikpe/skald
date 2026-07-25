@@ -594,8 +594,9 @@ The implemented executable class model includes primitive and exact-class
 optional fields in ordinary initialization and synthesized copy
 construction/assignment. They must be initialized exactly once and may hold
 `none`; a present exact-class payload is destroyed conditionally in reverse
-field order. It does not yet include checked optional-class payload access or
-optional shared owners, static members, access modifiers, `final`, abstract members,
+field order. Checked optional-class payload access uses bounded presence
+guards. The model does not yet include optional shared owners, static members,
+access modifiers, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base

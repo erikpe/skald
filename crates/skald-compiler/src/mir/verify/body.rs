@@ -66,6 +66,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_cleanup_liveness(function);
         self.verify_shared_ownership(function);
         self.verify_optional_initialization(function);
+        self.verify_optional_guards(function);
 
         for value in function.values() {
             if !defined_values.contains(&value.id) {
@@ -600,6 +601,32 @@ impl<'mir> Verifier<'mir> {
                 block,
                 source,
                 *destination,
+                *success_target,
+                *failure_target,
+            ),
+            Some(MirTerminator::BeginOptionalView {
+                begin,
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            }) => self.verify_optional_view_begin(
+                function,
+                block,
+                begin,
+                *success_target,
+                *absent_target,
+                *overflow_target,
+            ),
+            Some(MirTerminator::CheckOptionalMutation {
+                source,
+                success_target,
+                failure_target,
+                ..
+            }) => self.verify_optional_mutation_check(
+                function,
+                block,
+                source,
                 *success_target,
                 *failure_target,
             ),

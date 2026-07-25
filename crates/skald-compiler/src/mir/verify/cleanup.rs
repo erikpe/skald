@@ -228,6 +228,24 @@ impl CleanupLivenessAnalysis<'_, '_> {
                     self.merge_state(*success_target, &state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
                 }
+                Some(MirTerminator::BeginOptionalView {
+                    success_target,
+                    absent_target,
+                    overflow_target,
+                    ..
+                }) => {
+                    for target in [*success_target, *absent_target, *overflow_target] {
+                        self.merge_state(target, &state, &mut incoming, &mut pending);
+                    }
+                }
+                Some(MirTerminator::CheckOptionalMutation {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
                 Some(MirTerminator::Return { .. }) | Some(MirTerminator::ReturnShared { .. }) => {
                     self.check_normal_return(block, &state)
                 }

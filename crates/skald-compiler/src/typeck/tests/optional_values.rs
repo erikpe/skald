@@ -198,16 +198,33 @@ fn class_optionals_type_across_owning_positions_without_payload_access() {
 }
 
 #[test]
-fn class_optional_unwrap_remains_reserved_for_checked_views() {
+fn class_optional_unwrap_supplies_bounded_checked_object_consumers() {
     let output = check_text(
-        "class Item { init() {} }\n\
-         fn main() -> i64 { var item: Item? = Item(); item!; return 0; }\n",
+        "class Item {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           mut fn set(value: i64) -> unit { self.value = value; }\n\
+         }\n\
+         class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+         fn inspect(ref item: Item) -> i64 { return item.value; }\n\
+         fn main() -> i64 {\n\
+           var holder: Holder = Holder(Item(1));\n\
+           holder.item!.set(40);\n\
+           holder.item!.value = holder.item!.value + 1;\n\
+           var copied: Item = holder.item!;\n\
+           if (holder.item! is Item) { return inspect(holder.item!) + copied.value - 40; }\n\
+           return 0;\n\
+         }\n",
     );
-    assert!(output.hir.is_none());
-    assert!(output
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.code == OPTIONAL_VALUES_NOT_IMPLEMENTED));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(
+        &output
+            .hir
+            .expect("checked payload consumers must produce HIR"),
+    );
+    assert!(dump.contains("CheckedOptionalPayload"));
+    assert!(dump.contains("OptionalMethodReceiver"));
+    assert!(dump.contains("OptionalFieldReceiver"));
 }
 
 #[test]

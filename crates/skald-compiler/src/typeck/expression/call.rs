@@ -225,6 +225,7 @@ impl CallableChecker<'_, '_> {
                     origin: Box::new(receiver.origin),
                     checked_cast: receiver.checked_cast,
                     shared_view: receiver.shared_view,
+                    optional_view: receiver.optional_view,
                 },
                 target,
                 arguments,

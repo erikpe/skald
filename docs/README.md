@@ -47,8 +47,8 @@ Use the authority closest to the behavior:
   policy belong in the [compiler architecture](compiler/README.md);
 - phase products, IR responsibilities, verification, dumps, and trust
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
-- the implemented primitive-optional HIR, verification, x86-64 layout, and
-  internal ABI plus the frozen remaining optional design belong in
+- the implemented inline-optional HIR, checked views, verification, x86-64
+  layout, and internal ABI plus the frozen remaining optional design belong in
   [the optional-values compiler contract](compiler/OPTIONAL_VALUES.md);
 - implemented shared-owner lowering, allocation layout, generated reference
   counting, finalizers, and the future minimal allocation ABI belong in the

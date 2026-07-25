@@ -1095,6 +1095,29 @@ impl HirDumper {
                     );
                     dumper.indented(|dumper| dumper.shared_source(source));
                 }
+                HirViewSource::OptionalPayload { view, projections } => {
+                    dumper.line(
+                        &format!(
+                            "CheckedOptionalPayload class {} {}",
+                            view.source.class(),
+                            access_name(view.access)
+                        ),
+                        view.span,
+                    );
+                    dumper.indented(|dumper| {
+                        dumper.optional_operand(&view.source);
+                        for projection in projections {
+                            match projection {
+                                crate::object_path::ObjectProjection::Base(base) => {
+                                    dumper.heading(&format!("BaseProjection {base}"));
+                                }
+                                crate::object_path::ObjectProjection::Field(field) => {
+                                    dumper.heading(&format!("FieldProjection {field}"));
+                                }
+                            }
+                        }
+                    });
+                }
             }
             dumper.object_origin(&view.origin);
         });
@@ -1152,6 +1175,8 @@ impl HirDumper {
         self.indented(|dumper| {
             if let Some(view) = &place.shared_view {
                 dumper.object_view("SharedFieldReceiver", view);
+            } else if let Some(view) = &place.optional_view {
+                dumper.object_view("OptionalFieldReceiver", view);
             } else {
                 dumper.object_place(&place.receiver);
             }
@@ -1178,6 +1203,8 @@ impl HirDumper {
         self.indented(|dumper| {
             if let Some(view) = &receiver.shared_view {
                 dumper.object_view("SharedMethodReceiver", view);
+            } else if let Some(view) = &receiver.optional_view {
+                dumper.object_view("OptionalMethodReceiver", view);
             } else {
                 dumper.object_place(&receiver.place);
                 dumper.object_origin(&receiver.origin);

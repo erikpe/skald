@@ -433,10 +433,10 @@ This profile excludes:
 - local/general reference values and stored cast views;
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, closures, generics, statics/globals, and reflection;
-- checked optional class payload views, optional shared owners, guarded payload
-  views, and lifted compatible shared views. Primitive and exact-class optional
-  parameters/results are implemented as exact virtual and interface signature
-  components;
+- optional shared owners and lifted compatible shared views. Primitive and
+  exact-class optional parameters/results are implemented as exact virtual and
+  interface signature components; checked optional class payload views support
+  the existing direct, virtual, interface, cast, and type-test consumers;
 - exceptions, failed-construction unwinding, and partial-copy cleanup;
 - unsafe or unchecked casts, user-visible dispatch tables, and user-defined
   conversions; and

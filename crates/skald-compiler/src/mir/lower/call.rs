@@ -18,9 +18,13 @@ impl BodyLowerer<'_> {
         function: FunctionId,
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
+        let optional_mark = self.optional_view_mark();
         // Argument evaluation is fixed left-to-right.
         let arguments = self.lower_call_arguments(arguments);
-        self.emit_scalar_call(MirCallTarget::Direct(function), None, arguments, expression)
+        let result =
+            self.emit_scalar_call(MirCallTarget::Direct(function), None, arguments, expression);
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
     }
 
     pub(super) fn lower_method_call(
@@ -30,15 +34,18 @@ impl BodyLowerer<'_> {
         target: HirMethodCallTarget,
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
+        let optional_mark = self.optional_view_mark();
         // Receiver selection precedes all explicit argument effects.
         let receiver = self.lower_method_receiver(receiver);
         let arguments = self.lower_call_arguments(arguments);
-        self.emit_scalar_call(
+        let result = self.emit_scalar_call(
             MirCallTarget::Method(lower_method_target(target)),
             Some(receiver.into()),
             arguments,
             expression,
-        )
+        );
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
     }
 
     pub(super) fn lower_interface_call(
@@ -48,13 +55,14 @@ impl BodyLowerer<'_> {
         target: HirInterfaceCallTarget,
         arguments: &[HirCallArgument],
     ) -> Option<ValueId> {
+        let optional_mark = self.optional_view_mark();
         // Receiver selection precedes all explicit argument effects.
         let receiver = match receiver {
             HirInterfaceReceiver::View(view) => self.lower_object_view(view),
             HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
         };
         let arguments = self.lower_call_arguments(arguments);
-        self.emit_scalar_call(
+        let result = self.emit_scalar_call(
             MirCallTarget::Interface(MirInterfaceCallTarget {
                 interface: target.interface,
                 requirement: target.requirement,
@@ -62,7 +70,9 @@ impl BodyLowerer<'_> {
             Some(receiver.into()),
             arguments,
             expression,
-        )
+        );
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
     }
 
     fn emit_scalar_call(
@@ -87,6 +97,7 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_shared_call(&mut self, expression: &HirExpression, destination: StorageId) {
+        let optional_mark = self.optional_view_mark();
         let (target, receiver, arguments) = match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
                 function,
@@ -137,6 +148,7 @@ impl BodyLowerer<'_> {
             destination: None,
             span: expression.span,
         }));
+        self.end_optional_views_from(optional_mark, expression.span);
         self.full_expression_has_shared_effect = true;
     }
 
@@ -145,6 +157,7 @@ impl BodyLowerer<'_> {
         expression: &HirExpression,
         destination: MirPlace,
     ) {
+        let optional_mark = self.optional_view_mark();
         let (target, receiver, arguments) = match &expression.kind {
             crate::hir::HirExpressionKind::DirectCall {
                 function,
@@ -196,6 +209,7 @@ impl BodyLowerer<'_> {
             destination: Some(destination),
             span: expression.span,
         }));
+        self.end_optional_views_from(optional_mark, expression.span);
     }
 
     pub(super) fn lower_call_arguments(
@@ -269,6 +283,7 @@ impl BodyLowerer<'_> {
                     LoweredArgument::Ready(MirArgument::View(self.lower_checked_object_view(view)))
                 }
                 HirCallArgument::Copy(copy) => {
+                    let optional_mark = self.optional_view_mark();
                     let source = self.lower_object_source(&copy.source);
                     let destination = self.new_object_storage(
                         MirStorageKind::Argument,
@@ -283,6 +298,7 @@ impl BodyLowerer<'_> {
                         operation: lower_selected_copy_operation(copy.operation),
                         span: copy.span,
                     }));
+                    self.end_optional_views_from(optional_mark, copy.span);
                     LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(destination)))
                 }
                 HirCallArgument::Shared(transfer) => {
@@ -315,6 +331,7 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_view(&mut self, view: &HirObjectView) -> MirObjectView {
         let produced_class = match &view.source {
             HirViewSource::Produced(producer) => Some(producer.class()),
+            HirViewSource::OptionalPayload { view, .. } => Some(view.source.class()),
             _ => None,
         };
         let source = match &view.source {
@@ -346,6 +363,12 @@ impl BodyLowerer<'_> {
                 MirPlace::shared_pointee(self.new_shared_anchor(source, view.span)),
                 lower_projection,
             ),
+            HirViewSource::OptionalPayload {
+                view: optional,
+                projections,
+            } => projections
+                .iter()
+                .fold(self.begin_optional_view(optional), lower_projection),
         };
         let origin = produced_class.map_or_else(
             || match &view.source {
@@ -388,6 +411,13 @@ impl BodyLowerer<'_> {
             };
         }
         if let Some(view) = &receiver.shared_view {
+            let view = self.lower_object_view(view);
+            return MirMethodReceiver {
+                place: view.source,
+                origin: view.origin,
+            };
+        }
+        if let Some(view) = &receiver.optional_view {
             let view = self.lower_object_view(view);
             return MirMethodReceiver {
                 place: view.source,

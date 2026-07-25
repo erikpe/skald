@@ -179,11 +179,11 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::PresenceTest(_) => Type::Bool,
             ResolvedExpression::Unwrap(unwrap) => {
-                let Type::OptionalPrimitive(payload) = self.static_expression_type(&unwrap.source)
-                else {
-                    unreachable!("resolved unwrap source must have an optional type");
-                };
-                payload.payload_type()
+                match self.static_expression_type(&unwrap.source) {
+                    Type::OptionalPrimitive(payload) => payload.payload_type(),
+                    Type::OptionalClass(class) => Type::Class(class),
+                    _ => unreachable!("resolved unwrap source must have an optional type"),
+                }
             }
             ResolvedExpression::Binding(binding) => self.binding_type(binding.binding),
             ResolvedExpression::NumericLiteral(literal) => match literal.kind {
@@ -272,6 +272,9 @@ impl CallableChecker<'_, '_> {
                 self.static_cast_access(&cast.source)
             }
             ResolvedObjectReceiver::Dereference { .. } => HirAccess::Mutable,
+            ResolvedObjectReceiver::OptionalPayload { unwrap, .. } => {
+                self.static_cast_access(&unwrap.source)
+            }
         }
     }
 

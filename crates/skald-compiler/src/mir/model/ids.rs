@@ -40,3 +40,4 @@ macro_rules! owned_id {
 owned_id!(StorageId, "s");
 owned_id!(ValueId, "v");
 owned_id!(BlockId, "b");
+owned_id!(OptionalGuardId, "g");

@@ -3,10 +3,10 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
-        HirClassOptionalSource, HirExpression, HirExpressionKind, HirOptionalOperand,
-        HirOptionalPlace, HirOptionalSource, HirOptionalStorage, HirPresenceTestKind,
-        HirPrimitiveType, Type,
+        HirCheckedOptionalView, HirClassOptionalAssignment, HirClassOptionalInitialize,
+        HirClassOptionalPlace, HirClassOptionalSource, HirExpression, HirExpressionKind,
+        HirOptionalOperand, HirOptionalPlace, HirOptionalSource, HirOptionalStorage,
+        HirPresenceTestKind, HirPrimitiveType, Type,
     },
     resolve::{
         ResolvedExpression, ResolvedPresenceTestExpr, ResolvedPresenceTestKind, ResolvedUnwrapExpr,
@@ -254,10 +254,13 @@ impl CallableChecker<'_, '_> {
         ) {
             self.diagnostics.push(
                 Diagnostic::error(
-                    crate::typeck::OPTIONAL_VALUES_NOT_IMPLEMENTED,
-                    "checked class-optional payload views are not executable yet",
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "an inline class payload is an object place, not a scalar value",
                 )
-                .with_primary_label(unwrap.span, "class optional unwrap is implemented in OP5"),
+                .with_primary_label(
+                    unwrap.span,
+                    "consume this checked payload as a member receiver, alias, cast, type test, or copy source",
+                ),
             );
             return None;
         }
@@ -265,6 +268,38 @@ impl CallableChecker<'_, '_> {
         Some(HirExpression {
             kind: HirExpressionKind::Unwrap(source),
             ty: payload.payload_type(),
+            span: unwrap.span,
+        })
+    }
+
+    pub(super) fn check_class_optional_view(
+        &mut self,
+        unwrap: &ResolvedUnwrapExpr,
+    ) -> Option<HirCheckedOptionalView> {
+        let source =
+            self.require_optional_operand(&unwrap.source, unwrap.span, "checked unwrap")?;
+        let access = match &source {
+            HirOptionalOperand::ClassPlace(place) => match &place.storage {
+                HirOptionalStorage::Binding(binding) => {
+                    self.binding_access(*binding, false, unwrap.span)?
+                }
+                HirOptionalStorage::Field(field) => field.receiver.access,
+            },
+            HirOptionalOperand::ClassProduced(_) => crate::hir::HirAccess::Mutable,
+            HirOptionalOperand::Place(_) | HirOptionalOperand::Produced(_) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                        "checked object view requires an inline class optional",
+                    )
+                    .with_primary_label(unwrap.span, "this optional has a primitive payload"),
+                );
+                return None;
+            }
+        };
+        Some(HirCheckedOptionalView {
+            source,
+            access,
             span: unwrap.span,
         })
     }

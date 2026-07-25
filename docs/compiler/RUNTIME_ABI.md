@@ -162,9 +162,10 @@ The frozen
 adds no public C symbol and requires no runtime ABI version change. Optional
 state, presence guards, conditional lifecycle, and failure traps are
 compiler-owned; an absent `shared? T` zero word never crosses into ordinary
-shared-owner or allocator operations. Primitive optional locals, fields, and
-internal calls implement this compiler-owned boundary without changing the
-runtime marker or adding a runtime symbol.
+shared-owner or allocator operations. Primitive and exact-class inline
+optionals, including checked payload guard counts and failure traps, implement
+this compiler-owned boundary without changing the runtime marker or adding a
+runtime symbol.
 
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version

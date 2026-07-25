@@ -11,8 +11,9 @@ This document freezes Skald's source-level optional-value contract. Primitive
 values now execute end to end in
 owning locals, fields, internal value parameters/results, methods, interfaces,
 virtual overrides, and initializer overloads. Inline class payload access
-through postfix `!`, optional shared owners, and aliases to optional containers
-remain at the focused `TYP035` type-checking boundary until their roadmap stages.
+through postfix `!` executes as a bounded checked view. Optional shared owners
+and aliases to optional containers remain at the focused `TYP035` type-checking
+boundary until their roadmap stages.
 Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 
@@ -45,9 +46,9 @@ copied_item = none;
 ```
 
 They work in locals, fields, internal value parameters/results, produced call
-results, initializer overloads, and synthesized class lifecycle. Presence tests
-are implemented. Checked non-owning class payload access remains OP5, so
-`item!`, `item!.field`, and `item!.run()` are still rejected for now.
+results, initializer overloads, and synthesized class lifecycle. Presence
+tests and checked class payload consumers execute, including `item!.field`,
+`item!.run()`, aliases, casts, type tests, and owning copies.
 
 ## Core invariant
 
@@ -79,7 +80,7 @@ ownership:
 |---|---|---|
 | `T` | Always-present inline `T` | Existing contract |
 | primitive `T?` | Inline optional containing zero or one primitive `T` | Owning locals, fields, and internal callable boundaries execute |
-| class `T?` | Inline optional containing zero or one exact class `T` | Owning lifecycle and internal boundaries execute; checked payload access is planned |
+| class `T?` | Inline optional containing zero or one exact class `T` | Owning lifecycle, internal boundaries, and bounded checked payload access execute |
 | `shared T` | Always-present non-null shared owner of `T` | Existing contract |
 | `shared? T` | Optional containing zero or one `shared T` owner | Syntax/resolution implemented; execution planned |
 | `shared T?` | Non-null shared box containing `T?` | Reserved and rejected |

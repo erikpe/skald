@@ -1,17 +1,149 @@
 //! Primitive optional structure and definite-initialization verification.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 
 use super::{
     super::model::{
         MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSource, MirPlace,
-        MirPrimitiveType, MirProgram, MirRvalueKind, MirStorageKind, MirTerminator, MirType,
-        StorageId, ValueId,
+        MirPrimitiveType, MirProgram, MirRvalueKind, MirStorageKind, MirTerminationReason,
+        MirTerminator, MirType, OptionalGuardId, StorageId, ValueId,
     },
     context::Verifier,
 };
 
 impl Verifier<'_> {
+    pub(super) fn verify_optional_view_begin(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        begin: &crate::mir::MirOptionalViewBegin,
+        success_target: crate::mir::BlockId,
+        absent_target: crate::mir::BlockId,
+        overflow_target: crate::mir::BlockId,
+    ) {
+        if begin.guard.callable() != function.callable() {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional guard belongs to another callable",
+            );
+        }
+        if self
+            .verify_place(function, block, &begin.source)
+            .map(|place| place.ty)
+            != Some(MirType::OptionalClass(begin.class))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-view source has the wrong exact class type",
+            );
+        }
+        for target in [success_target, absent_target, overflow_target] {
+            self.verify_block_target(function, block, target);
+        }
+        if success_target == absent_target
+            || success_target == overflow_target
+            || absent_target == overflow_target
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-view success, absence, and overflow edges must be distinct",
+            );
+        }
+        self.require_failure_edge(
+            function,
+            block,
+            absent_target,
+            MirTerminationReason::OptionalAccessFailure,
+            "optional-view absence edge must terminate with optional-access failure",
+        );
+        self.require_failure_edge(
+            function,
+            block,
+            overflow_target,
+            MirTerminationReason::OptionalGuardOverflow,
+            "optional-view overflow edge must terminate with optional-guard overflow",
+        );
+    }
+
+    pub(super) fn verify_optional_mutation_check(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        source: &MirPlace,
+        success_target: crate::mir::BlockId,
+        failure_target: crate::mir::BlockId,
+    ) {
+        if !matches!(
+            self.verify_place(function, block, source)
+                .map(|place| place.ty),
+            Some(MirType::OptionalClass(_))
+        ) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional mutation check requires exact-class optional storage",
+            );
+        }
+        self.verify_block_target(function, block, success_target);
+        self.verify_block_target(function, block, failure_target);
+        if success_target == failure_target {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional mutation success and failure edges must be distinct",
+            );
+        }
+        self.require_failure_edge(
+            function,
+            block,
+            failure_target,
+            MirTerminationReason::OptionalPinnedMutation,
+            "optional mutation failure edge must terminate with optional-pinned-mutation",
+        );
+    }
+
+    pub(super) fn verify_optional_view_end(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        end: &crate::mir::MirOptionalViewEnd,
+    ) {
+        if end.guard.callable() != function.callable()
+            || self
+                .verify_place(function, block, &end.source)
+                .map(|place| place.ty)
+                != Some(MirType::OptionalClass(end.class))
+        {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional-view end has an incompatible guard root",
+            );
+        }
+    }
+
+    fn require_failure_edge(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        target: crate::mir::BlockId,
+        reason: MirTerminationReason,
+        message: &'static str,
+    ) {
+        if function.block(target).is_some_and(|failure| {
+            !failure.instructions.is_empty()
+                || !matches!(
+                    failure.terminator,
+                    Some(MirTerminator::Terminate { reason: actual, .. }) if actual == reason
+                )
+        }) {
+            self.block_error(function.callable(), block.id, message);
+        }
+    }
+
     pub(super) fn verify_optional_initialize(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -293,6 +425,25 @@ impl Verifier<'_> {
                     "optional unwrap source",
                 );
             }
+            match &block.terminator {
+                Some(MirTerminator::BeginOptionalView { begin, .. }) => require_initialized(
+                    self,
+                    function,
+                    block,
+                    &begin.source,
+                    &state,
+                    "optional-view source",
+                ),
+                Some(MirTerminator::CheckOptionalMutation { source, .. }) => require_initialized(
+                    self,
+                    function,
+                    block,
+                    source,
+                    &state,
+                    "optional mutation-check source",
+                ),
+                _ => {}
+            }
             if matches!(block.terminator, Some(MirTerminator::Return { .. })) {
                 if let Some(return_storage) = function.return_storage() {
                     let place = MirPlace::base(return_storage);
@@ -313,6 +464,328 @@ impl Verifier<'_> {
                     }
                 }
             }
+        }
+    }
+
+    pub(super) fn verify_optional_guards(&mut self, function: MirDefinitionRef<'_>) {
+        if function.body().entry.index() >= function.body().blocks.len() {
+            return;
+        }
+        let mut incoming = vec![None; function.body().blocks.len()];
+        incoming[function.body().entry.index()] = Some(OptionalGuardState::default());
+        let mut pending = VecDeque::from([function.body().entry]);
+        let mut reported_joins = HashSet::new();
+
+        while let Some(block_id) = pending.pop_front() {
+            let Some(block) = function.block(block_id) else {
+                continue;
+            };
+            let Some(mut state) = incoming[block_id.index()].clone() else {
+                continue;
+            };
+            for instruction in &block.instructions {
+                self.verify_guarded_payload_instruction(function, block, instruction, &state);
+                if !state.mutation_permits.is_empty()
+                    && !matches!(
+                        instruction,
+                        MirInstruction::ClassOptionalAssign(_)
+                            | MirInstruction::ClassOptionalCleanup(_)
+                    )
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional mutation check is not immediately followed by its transition",
+                    );
+                    state.mutation_permits.clear();
+                }
+                match instruction {
+                    MirInstruction::EndOptionalView(end) => {
+                        let expected = (end.source.clone(), end.class);
+                        let ordered = state.order.last() == Some(&end.guard);
+                        if !ordered || state.active.remove(&end.guard) != Some(expected) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional view must end its matching active guard in reverse begin order",
+                            );
+                        }
+                        if ordered {
+                            state.order.pop();
+                        }
+                    }
+                    MirInstruction::ClassOptionalAssign(assignment) => {
+                        let self_copy = matches!(
+                            &assignment.source,
+                            crate::mir::MirClassOptionalSource::Copy(source)
+                                if source == &assignment.destination
+                        );
+                        if !self_copy && !state.mutation_permits.remove(&assignment.destination) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "class optional assignment lacks a matching mutation check",
+                            );
+                        }
+                    }
+                    MirInstruction::ClassOptionalCleanup(cleanup) => {
+                        if !state.mutation_permits.remove(&cleanup.destination) {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "class optional cleanup lacks a matching mutation check",
+                            );
+                        }
+                    }
+                    MirInstruction::SharedRelease(release)
+                        if state.active.values().any(|(source, _)| {
+                            matches!(
+                                source.base,
+                                crate::mir::MirPlaceBase::SharedPointee(owner)
+                                    if owner == release.owner
+                            )
+                        }) =>
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "optional payload guard outlives its shared container anchor",
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            if !state.mutation_permits.is_empty() {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    "optional mutation check has no immediate transition",
+                );
+                state.mutation_permits.clear();
+            }
+
+            match &block.terminator {
+                Some(MirTerminator::BeginOptionalView {
+                    begin,
+                    success_target,
+                    absent_target,
+                    overflow_target,
+                    ..
+                }) => {
+                    self.require_active_payload_guards(function, block, &begin.source, &state);
+                    let mut success = state.clone();
+                    if success
+                        .active
+                        .insert(begin.guard, (begin.source.clone(), begin.class))
+                        .is_some()
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "optional guard begins more than once",
+                        );
+                    } else {
+                        success.order.push(begin.guard);
+                    }
+                    merge_optional_guard_state(
+                        self,
+                        function,
+                        *success_target,
+                        &success,
+                        &mut incoming,
+                        &mut pending,
+                        &mut reported_joins,
+                    );
+                    for target in [*absent_target, *overflow_target] {
+                        merge_optional_guard_state(
+                            self,
+                            function,
+                            target,
+                            &state,
+                            &mut incoming,
+                            &mut pending,
+                            &mut reported_joins,
+                        );
+                    }
+                }
+                Some(MirTerminator::CheckOptionalMutation {
+                    source,
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.require_active_payload_guards(function, block, source, &state);
+                    let mut success = state.clone();
+                    success.mutation_permits.insert(source.clone());
+                    merge_optional_guard_state(
+                        self,
+                        function,
+                        *success_target,
+                        &success,
+                        &mut incoming,
+                        &mut pending,
+                        &mut reported_joins,
+                    );
+                    merge_optional_guard_state(
+                        self,
+                        function,
+                        *failure_target,
+                        &state,
+                        &mut incoming,
+                        &mut pending,
+                        &mut reported_joins,
+                    );
+                }
+                Some(MirTerminator::Return { .. } | MirTerminator::ReturnShared { .. }) => {
+                    if !state.active.is_empty() {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "optional payload guard remains active on normal return",
+                        );
+                    }
+                }
+                Some(terminator) => {
+                    if let MirTerminator::CheckedCast { binding, .. } = terminator {
+                        self.require_active_payload_guards(
+                            function,
+                            block,
+                            &binding.view.source,
+                            &state,
+                        );
+                    }
+                    for target in terminator.successors() {
+                        merge_optional_guard_state(
+                            self,
+                            function,
+                            target,
+                            &state,
+                            &mut incoming,
+                            &mut pending,
+                            &mut reported_joins,
+                        );
+                    }
+                }
+                None => {}
+            }
+        }
+    }
+
+    fn verify_guarded_payload_instruction(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        instruction: &MirInstruction,
+        state: &OptionalGuardState,
+    ) {
+        match instruction {
+            MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
+                MirRvalueKind::Load(source) | MirRvalueKind::OptionalPresence { source, .. } => {
+                    self.require_active_payload_guards(function, block, source, state);
+                }
+                MirRvalueKind::TypeTest { source, .. } => {
+                    self.require_active_payload_guards(function, block, &source.source, state);
+                }
+                _ => {}
+            },
+            MirInstruction::Call(call) => {
+                if let Some(receiver) = &call.receiver {
+                    let place = match receiver {
+                        crate::mir::MirCallReceiver::Method(receiver) => &receiver.place,
+                        crate::mir::MirCallReceiver::Interface(view) => &view.source,
+                    };
+                    self.require_active_payload_guards(function, block, place, state);
+                }
+                for argument in &call.arguments {
+                    let place = match argument {
+                        crate::mir::MirArgument::Place(place)
+                        | crate::mir::MirArgument::OwnedPlace(place) => Some(place),
+                        crate::mir::MirArgument::View(view) => Some(&view.source),
+                        crate::mir::MirArgument::Value(_)
+                        | crate::mir::MirArgument::SharedOwner(_) => None,
+                    };
+                    if let Some(place) = place {
+                        self.require_active_payload_guards(function, block, place, state);
+                    }
+                }
+            }
+            MirInstruction::Store(store) => {
+                self.require_active_payload_guards(function, block, &store.destination, state);
+            }
+            MirInstruction::Initialize(initialize) => {
+                self.require_guarded_nested_destination(
+                    function,
+                    block,
+                    &initialize.destination,
+                    state,
+                );
+            }
+            MirInstruction::CopyConstruct(copy) => {
+                self.require_active_payload_guards(function, block, &copy.source, state);
+                self.require_guarded_nested_destination(function, block, &copy.destination, state);
+            }
+            MirInstruction::CopyAssign(copy) => {
+                self.require_active_payload_guards(function, block, &copy.source, state);
+                self.require_active_payload_guards(function, block, &copy.destination, state);
+            }
+            MirInstruction::BindCheckedView(binding) => {
+                self.require_active_payload_guards(function, block, &binding.view.source, state);
+            }
+            MirInstruction::EndOptionalView(end) => {
+                self.require_active_payload_guards(function, block, &end.source, state);
+            }
+            _ => {}
+        }
+    }
+
+    fn require_guarded_nested_destination(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+        state: &OptionalGuardState,
+    ) {
+        if place
+            .projections
+            .iter()
+            .enumerate()
+            .any(|(index, projection)| {
+                matches!(
+                    projection,
+                    crate::mir::MirPlaceProjection::OptionalPayload(_)
+                ) && index + 1 < place.projections.len()
+            })
+        {
+            self.require_active_payload_guards(function, block, place, state);
+        }
+    }
+
+    fn require_active_payload_guards(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        place: &MirPlace,
+        state: &OptionalGuardState,
+    ) {
+        let mut root = MirPlace {
+            base: place.base,
+            projections: Vec::new(),
+        };
+        for projection in &place.projections {
+            if let crate::mir::MirPlaceProjection::OptionalPayload(class) = projection {
+                if !state
+                    .active
+                    .values()
+                    .any(|(source, guarded_class)| source == &root && guarded_class == class)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional payload place is used without its matching active guard",
+                    );
+                }
+            }
+            root.projections.push(*projection);
         }
     }
 
@@ -365,6 +838,43 @@ impl Verifier<'_> {
                 "optional source payload type does not match its destination",
             );
         }
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct OptionalGuardState {
+    active: BTreeMap<OptionalGuardId, (MirPlace, crate::identity::ClassId)>,
+    order: Vec<OptionalGuardId>,
+    mutation_permits: HashSet<MirPlace>,
+}
+
+fn merge_optional_guard_state(
+    verifier: &mut Verifier<'_>,
+    function: MirDefinitionRef<'_>,
+    target: crate::mir::BlockId,
+    state: &OptionalGuardState,
+    incoming: &mut [Option<OptionalGuardState>],
+    pending: &mut VecDeque<crate::mir::BlockId>,
+    reported_joins: &mut HashSet<crate::mir::BlockId>,
+) {
+    if target.callable() != function.callable() || target.index() >= incoming.len() {
+        return;
+    }
+    match &incoming[target.index()] {
+        None => {
+            incoming[target.index()] = Some(state.clone());
+            pending.push_back(target);
+        }
+        Some(existing) if existing != state => {
+            if reported_joins.insert(target) {
+                verifier.block_error(
+                    function.callable(),
+                    target,
+                    "optional guard state differs across control-flow paths",
+                );
+            }
+        }
+        Some(_) => {}
     }
 }
 
@@ -598,7 +1108,14 @@ fn require_initialized(
     state: &HashSet<MirPlace>,
     context: &'static str,
 ) {
-    if !state.contains(place) {
+    let complete_external_object = !place.projections.is_empty()
+        && matches!(
+            place.base,
+            crate::mir::MirPlaceBase::SharedPointee(_)
+                | crate::mir::MirPlaceBase::AliasParameter(_)
+                | crate::mir::MirPlaceBase::CheckedView(_)
+        );
+    if !state.contains(place) && !complete_external_object {
         verifier.block_error(
             function.callable(),
             block.id,

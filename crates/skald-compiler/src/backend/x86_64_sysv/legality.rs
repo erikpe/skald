@@ -113,7 +113,8 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::ClassOptionalInitialize(_)
                     | MirInstruction::ClassOptionalAssign(_)
                     | MirInstruction::ClassOptionalPublish(_)
-                    | MirInstruction::ClassOptionalCleanup(_) => {}
+                    | MirInstruction::ClassOptionalCleanup(_)
+                    | MirInstruction::EndOptionalView(_) => {}
                 }
             }
         }

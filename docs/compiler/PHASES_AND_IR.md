@@ -11,7 +11,8 @@ The optional-value phase and IR additions are specified in the
 source-shaped AST nodes, and flat resolved identities are implemented;
 primitive and exact-class optional owning locals, fields, internal
 parameters/results, and temporaries additionally have typed HIR, verified MIR,
-conditional lifecycle operations, and executable backend lowering.
+conditional lifecycle operations, dynamically guarded checked payload views,
+and executable backend lowering.
 
 ## Pipeline contract
 
@@ -44,11 +45,13 @@ The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
 target identities. For primitive owning values, type checking selects explicit
 absent or present initialization, copy, assignment, overload injection,
-field/call boundaries, presence, and unwrap HIR. MIR owns initialized places,
-caller-owned argument/result aggregates, and explicit unwrap success/failure
-control flow; verification proves compatible operations and definite wrapper
-initialization across CFG joins. `TYP035` remains the boundary for class
-payloads, optional shared owners, and optional-container aliases.
+field/call boundaries, presence, primitive extraction, and checked class
+payload views. MIR owns initialized places, caller-owned argument/result
+aggregates, explicit unwrap success/failure control flow, begin/end guard
+operations, and guarded-mutation checks. Verification proves compatible
+operations, definite wrapper initialization, balanced compatible guards,
+anchor ordering, and identical guard state across CFG joins. `TYP035` remains
+the boundary for optional shared owners and optional-container aliases.
 
 ## Sources and diagnostics
 

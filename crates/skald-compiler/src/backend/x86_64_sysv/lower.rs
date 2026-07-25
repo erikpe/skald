@@ -224,6 +224,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             MirInstruction::ClassOptionalCleanup(cleanup) => {
                 self.select_class_optional_cleanup(cleanup)?
             }
+            MirInstruction::EndOptionalView(end) => self.select_optional_view_end(end)?,
         }
         Ok(())
     }

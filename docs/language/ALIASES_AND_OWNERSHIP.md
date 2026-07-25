@@ -220,7 +220,7 @@ parameter restrictions do not implicitly specify that larger feature.
 Optional syntax and resolved identities are implemented, but optional alias
 semantics and execution are not. Their
 [frozen contract](OPTIONAL_VALUES.md#aliases)
-permits aliases to optional containers and bounds a checked `value!` payload
+reserves aliases to optional containers and bounds a checked `value!` payload
 view to one complete immediate consumer under a dynamic presence guard. It
 does not introduce `ref?`, stored payload aliases, or optional reference
 values. Array elements remain an open alias-source design area. Implemented

@@ -318,6 +318,13 @@ The cast place is not a valid whole-object assignment destination, even when
 its access is mutable, because it remains alias-rooted. Supported field
 mutation and mutable method calls do not rebind the view.
 
+An exact-class optional unwrap composes with this matrix: `(T) value!` first
+establishes the optional payload's presence guard and then performs the ordinary
+static or dynamic place cast. The guard covers the cast and its complete
+consumer, and ends before any shared anchor or owning temporary that keeps the
+optional container alive. A failed cast or absent unwrap terminates through its
+own distinct verified failure edge.
+
 ## Lifetime and anchors
 
 The checked place remains live through its complete consuming full expression:

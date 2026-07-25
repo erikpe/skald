@@ -577,6 +577,12 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &cleanup.destination);
                 write_span(output, cleanup.span);
             }
+            MirInstruction::EndOptionalView(end) => {
+                let _ = write!(output, "end-optional-view {} ", end.guard);
+                dump_place(output, &end.source);
+                let _ = write!(output, " : class {}", end.class);
+                write_span(output, end.span);
+            }
         }
         output.push('\n');
     }
@@ -652,10 +658,42 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::BeginOptionalView {
+            begin,
+            success_target,
+            absent_target,
+            overflow_target,
+            span,
+        }) => {
+            let _ = write!(output, "begin-optional-view {} ", begin.guard);
+            dump_place(output, &begin.source);
+            let _ = write!(
+                output,
+                " : class {}, success {success_target}, absent {absent_target}, overflow {overflow_target}",
+                begin.class
+            );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::CheckOptionalMutation {
+            source,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            output.push_str("check-optional-mutation ");
+            dump_place(output, source);
+            let _ = write!(
+                output,
+                ", success {success_target}, failure {failure_target}"
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::Terminate { reason, span }) => {
             let reason = match reason {
                 MirTerminationReason::ObjectCastFailure => "object-cast-failure",
                 MirTerminationReason::OptionalAccessFailure => "optional-access-failure",
+                MirTerminationReason::OptionalGuardOverflow => "optional-guard-overflow",
+                MirTerminationReason::OptionalPinnedMutation => "optional-pinned-mutation",
             };
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);

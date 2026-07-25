@@ -54,6 +54,26 @@ impl CallableResolver<'_, '_> {
                 };
                 Some(ResolvedObjectReceiver::from_cast(cast, class))
             }
+            syntax::Expression::Unwrap(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::Unwrap(unwrap) = resolved else {
+                    unreachable!("unwrap syntax must resolve to an unwrap expression")
+                };
+                let Some(class) = self.resolved_optional_class(&unwrap.source) else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            "member selection requires an inline class payload",
+                        )
+                        .with_primary_label(
+                            unwrap.span,
+                            "this unwrap does not produce an inline class place",
+                        ),
+                    );
+                    return None;
+                };
+                Some(ResolvedObjectReceiver::from_optional_payload(unwrap, class))
+            }
             syntax::Expression::Grouped(grouped) => Some(
                 self.resolve_object_receiver(&grouped.expression)?
                     .with_span(grouped.span),

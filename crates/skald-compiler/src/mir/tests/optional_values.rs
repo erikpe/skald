@@ -116,6 +116,156 @@ fn verifier_rejects_uninitialized_use_and_mismatched_failure_edges() {
 }
 
 #[test]
+fn lowers_checked_class_payload_guards_before_shared_anchor_release() {
+    let program = lower_text(
+        "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+         class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+         fn make() -> shared Holder { return new Holder(Item(42)); }\n\
+         fn main() -> i64 { return (*make()).item!.value; }\n",
+    );
+    let dump = dump_mir(&program);
+    let begin = dump.find("begin-optional-view").unwrap();
+    let end = dump.find("end-optional-view").unwrap();
+    let release = dump.find("shared-release").unwrap();
+
+    assert!(begin < end, "{dump}");
+    assert!(end < release, "{dump}");
+    assert!(dump.contains("terminate optional-guard-overflow"));
+}
+
+#[test]
+fn verifier_rejects_mismatched_leaked_and_misrouted_optional_guards() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+        class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+        fn main() -> i64 { var holder: Holder = Holder(Item(42)); return holder.item!.value; }\n";
+    let program = lower_text(source);
+
+    let mut unguarded_use = program.clone();
+    let main = unguarded_use
+        .definitions
+        .get_mut_for_test(unguarded_use.entry_function)
+        .unwrap();
+    let block = main
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+        })
+        .unwrap();
+    let end = block
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::EndOptionalView(_)))
+        .unwrap();
+    let end = block.instructions.remove(end);
+    block.instructions.insert(0, end);
+    assert!(verify_mir(&unguarded_use)
+        .unwrap_err()
+        .to_string()
+        .contains("used without its matching active guard"));
+
+    let mut leaked = program.clone();
+    let main = leaked
+        .definitions
+        .get_mut_for_test(leaked.entry_function)
+        .unwrap();
+    for block in &mut main.body.blocks {
+        block
+            .instructions
+            .retain(|instruction| !matches!(instruction, MirInstruction::EndOptionalView(_)));
+    }
+    assert!(verify_mir(&leaked)
+        .unwrap_err()
+        .to_string()
+        .contains("optional payload guard remains active on normal return"));
+
+    let mut mismatched = program.clone();
+    let main = mismatched
+        .definitions
+        .get_mut_for_test(mismatched.entry_function)
+        .unwrap();
+    let end = main
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::EndOptionalView(end) => Some(end),
+            _ => None,
+        })
+        .unwrap();
+    end.class = ClassId::new(1);
+    assert!(verify_mir(&mismatched)
+        .unwrap_err()
+        .to_string()
+        .contains("optional-view end has an incompatible guard root"));
+
+    let mut misrouted = program;
+    let main = misrouted
+        .definitions
+        .get_mut_for_test(misrouted.entry_function)
+        .unwrap();
+    let overflow = main
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::BeginOptionalView {
+                overflow_target, ..
+            }) => Some(overflow_target),
+            _ => None,
+        })
+        .unwrap();
+    main.body.blocks[overflow.index()].terminator = Some(MirTerminator::Terminate {
+        reason: MirTerminationReason::OptionalAccessFailure,
+        span: main.body.blocks[overflow.index()].span,
+    });
+    assert!(verify_mir(&misrouted)
+        .unwrap_err()
+        .to_string()
+        .contains("optional-view overflow edge must terminate with optional-guard overflow"));
+}
+
+#[test]
+fn verifier_rejects_reordered_nested_optional_guards() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+        class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+        fn sum(ref left: Item, ref right: Item) -> i64 { return left.value + right.value; }\n\
+        fn main() -> i64 {\n\
+            var holder: Holder = Holder(Item(21));\n\
+            return sum(holder.item!, holder.item!);\n\
+        }\n";
+    let mut program = lower_text(source);
+    let main = program
+        .definitions
+        .get_mut_for_test(program.entry_function)
+        .unwrap();
+    let mut ends = main
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .filter_map(|instruction| match instruction {
+            MirInstruction::EndOptionalView(end) => Some(end),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(ends.len(), 2);
+    let first_guard = ends[0].guard;
+    ends[0].guard = ends[1].guard;
+    ends[1].guard = first_guard;
+
+    assert!(verify_mir(&program)
+        .unwrap_err()
+        .to_string()
+        .contains("reverse begin order"));
+}
+
+#[test]
 fn lowers_class_optional_lifecycle_fields_arguments_results_and_cleanup() {
     let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
         class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\

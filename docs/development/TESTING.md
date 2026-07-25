@@ -13,7 +13,9 @@ Optional-value coverage spans type/capability/containment tests, HIR and MIR
 shape and verifier tests, target layout tests, and native lifecycle tests.
 Exact-class optional native tests use side-effect-visible destructors to catch
 extra temporaries, missed conditional cleanup, and incorrect argument/result
-ownership.
+ownership. Checked-view tests additionally cover bounded consumers, nested
+guards, invalidating later arguments, shared-root anchor order, and failure
+traps.
 
 | Layer | Location | Use it for |
 |---|---|---|
@@ -155,23 +157,17 @@ The frozen
 requires coverage at every owning layer. Current lexer and parser tests own
 tokens, contextual words, spans, precedence, bounded nesting, reserved forms,
 and recovery. Current resolution tests own flat target identities and
-source-shaped expression nodes. Primitive-value type-check and HIR tests own
+source-shaped expression nodes. Inline-optional type-check and HIR tests own
 expected-type-directed `none`, exact injection, initializer ranking, fields,
 calls/results, exact signatures, copy, assignment, presence, unwrap,
-truthiness rejection, external rejection, and the remaining `TYP035`
-boundaries. Primitive MIR tests own initialized places, explicit operations,
-CFG joins, aggregate calls, synthesized field lifecycle, and optional-access
-failure edges; verifier mutations break one invariant at a time. Backend tests
-own primitive and field layout, instruction selection, hidden destinations,
-register/stack pressure, traps, and native execution, while golden tests cover
-successful execution, truthiness, and implicit-unwrap diagnostics.
+truthiness rejection, external rejection, checked class payload consumers, and
+the remaining `TYP035` boundaries. MIR tests own initialized places, explicit
+operations, CFG joins, aggregate calls, synthesized field lifecycle, checked
+view/anchor order, and exact failure edges; verifier mutations break one
+invariant at a time, including missing, mismatched, leaked, and reordered
+guards. Backend tests own layout, instruction selection, guard counts, hidden
+destinations, register/stack pressure, traps, and native execution.
 
-Later HIR/MIR tests own class payload lifecycle, checked views,
-guards, anchors, and shared failure reasons; backend tests add ABI and
-zero-niche realization; native goldens observe lifecycle and ownership.
-
-That future coverage must include primitives, exact inline classes, optional
-shared class/interface/`Obj` owners, locals, fields, parameters, results,
-temporaries, aliases, polymorphic views, nested/overlapping checked consumers,
-and every explicit exclusion. This is a test plan for a frozen design, not a
-claim of current executable coverage.
+Future optional-owner coverage must add shared class/interface/`Obj` owners,
+zero-niche realization, and secured-owner unwrap while preserving the existing
+inline optional and checked-view matrix.

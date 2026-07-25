@@ -211,6 +211,9 @@ impl Verifier<'_> {
                     );
                 }
             }
+            MirInstruction::EndOptionalView(end) => {
+                self.verify_optional_view_end(function, block, end)
+            }
         }
     }
 

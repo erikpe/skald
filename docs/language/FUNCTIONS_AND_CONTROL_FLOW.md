@@ -138,8 +138,9 @@ The [optional-values contract](OPTIONAL_VALUES.md#presence-tests) adds
 primitive and exact-class optional locals, fields, parameters, and produced
 call results and
 do not add optional truthiness. A presence test does not narrow the declared
-type. Primitive payload use spells checked postfix unwrap `value!`; class
-payload unwrap remains reserved until checked payload views are implemented.
+type. Primitive payload use spells checked postfix unwrap `value!`; a class
+payload unwrap supplies a bounded checked place to its immediate field,
+method, alias, cast, type-test, or owning-copy consumer.
 
 Conditions are evaluated in source order. Evaluation stops at the first
 condition producing `true`, and only that arm executes. If no condition is

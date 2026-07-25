@@ -54,6 +54,7 @@ impl BodyLowerer<'_> {
                 }));
             }
             HirConstructionMode::Copy { source, operation } => {
+                let optional_mark = self.optional_view_mark();
                 let source = self.lower_object_source(source);
                 self.emit(MirInstruction::CopyConstruct(MirCopyConstruction {
                     destination,
@@ -62,11 +63,13 @@ impl BodyLowerer<'_> {
                     operation: lower_selected_copy_operation(*operation),
                     span,
                 }));
+                self.end_optional_views_from(optional_mark, span);
             }
         }
     }
 
     fn lower_object_call(&mut self, call: &HirObjectCall, destination: MirPlace) {
+        let optional_mark = self.optional_view_mark();
         let (target, receiver) = match &call.target {
             HirObjectCallTarget::Direct(function) => (MirCallTarget::Direct(*function), None),
             HirObjectCallTarget::Method { receiver, target } => (
@@ -101,6 +104,7 @@ impl BodyLowerer<'_> {
             destination: Some(destination),
             span: call.span,
         }));
+        self.end_optional_views_from(optional_mark, call.span);
     }
 
     pub(super) fn lower_object_source(&mut self, source: &HirObjectSource) -> MirPlace {

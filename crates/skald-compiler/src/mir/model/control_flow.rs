@@ -65,6 +65,19 @@ pub enum MirTerminator {
         failure_target: BlockId,
         span: Span,
     },
+    BeginOptionalView {
+        begin: super::optional::MirOptionalViewBegin,
+        success_target: BlockId,
+        absent_target: BlockId,
+        overflow_target: BlockId,
+        span: Span,
+    },
+    CheckOptionalMutation {
+        source: super::value::MirPlace,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
     /// An explicit language-defined abnormal exit.
     Terminate {
         reason: MirTerminationReason,
@@ -76,6 +89,8 @@ pub enum MirTerminator {
 pub enum MirTerminationReason {
     ObjectCastFailure,
     OptionalAccessFailure,
+    OptionalGuardOverflow,
+    OptionalPinnedMutation,
 }
 
 impl MirTerminator {
@@ -88,6 +103,8 @@ impl MirTerminator {
             | Self::CheckedCast { span, .. }
             | Self::SharedCast { span, .. }
             | Self::OptionalUnwrap { span, .. }
+            | Self::BeginOptionalView { span, .. }
+            | Self::CheckOptionalMutation { span, .. }
             | Self::Terminate { span, .. } => *span,
         }
     }
@@ -96,29 +113,44 @@ impl MirTerminator {
     /// the true edge always precedes the false edge.
     pub fn successors(&self) -> impl Iterator<Item = BlockId> {
         let targets = match self {
-            Self::Return { .. } | Self::ReturnShared { .. } => [None, None],
-            Self::Goto { target, .. } => [Some(*target), None],
+            Self::Return { .. } | Self::ReturnShared { .. } => [None, None, None],
+            Self::Goto { target, .. } => [Some(*target), None, None],
             Self::Branch {
                 true_target,
                 false_target,
                 ..
-            } => [Some(*true_target), Some(*false_target)],
+            } => [Some(*true_target), Some(*false_target), None],
             Self::CheckedCast {
                 success_target,
                 failure_target,
                 ..
-            } => [Some(*success_target), Some(*failure_target)],
+            } => [Some(*success_target), Some(*failure_target), None],
             Self::SharedCast {
                 success_target,
                 failure_target,
                 ..
-            } => [Some(*success_target), Some(*failure_target)],
+            } => [Some(*success_target), Some(*failure_target), None],
             Self::OptionalUnwrap {
                 success_target,
                 failure_target,
                 ..
-            } => [Some(*success_target), Some(*failure_target)],
-            Self::Terminate { .. } => [None, None],
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::BeginOptionalView {
+                success_target,
+                absent_target,
+                overflow_target,
+                ..
+            } => [
+                Some(*success_target),
+                Some(*absent_target),
+                Some(*overflow_target),
+            ],
+            Self::CheckOptionalMutation {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::Terminate { .. } => [None, None, None],
         };
         targets.into_iter().flatten()
     }
