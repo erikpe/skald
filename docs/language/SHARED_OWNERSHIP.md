@@ -36,6 +36,17 @@ Ordinary overload and explicit-copy semantics are owned by
 [Classes and Lifecycle](CLASSES_AND_LIFECYCLE.md) and are an implementation
 prerequisite rather than redefined by shared allocation.
 
+Direct pointee access has explicit source forms. Prefix `*source` selects a
+bounded non-owning place from a `shared T` owner, while `source->member`
+selects one member through one shared edge and evaluates `source` once. Direct
+field reads and mutation, class or interface calls, inline subobject paths,
+nested shared edges, produced receivers, and `*source is T` use the same
+stable-owner or hidden-anchor lifetime behavior as existing shared-backed
+borrows. Dereferencing does not allocate, copy an inline object, or transfer a
+strong owner. Non-shared operands are rejected. The older implicit direct
+member and type-test forms remain temporarily accepted while the explicit
+consumer matrix is completed.
+
 ## Safety contract
 
 Every live Skald value denotes a value. A `shared T` value is therefore always

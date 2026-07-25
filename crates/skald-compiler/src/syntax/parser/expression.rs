@@ -76,12 +76,16 @@ impl Parser<'_> {
     }
 
     fn parse_unary(&mut self) -> Option<Expression> {
-        if self.at(TokenKind::Minus) {
+        if self.at_any(&[TokenKind::Minus, TokenKind::Star]) {
             let operator = self.advance();
             let operand = self.with_syntax_nesting(operator.span, |parser| parser.parse_unary())?;
             let span = self.cover(operator.span, operand.span());
             return Some(Expression::Unary(UnaryExpr {
-                operator: UnaryOperator::Negate,
+                operator: match operator.kind {
+                    TokenKind::Minus => UnaryOperator::Negate,
+                    TokenKind::Star => UnaryOperator::Dereference,
+                    _ => unreachable!("unary parser accepted a non-unary operator"),
+                },
                 operator_span: operator.span,
                 operand: Box::new(operand),
                 span,
@@ -131,6 +135,7 @@ impl Parser<'_> {
                 | TokenKind::NumericLiteral(_)
                 | TokenKind::True
                 | TokenKind::False
+                | TokenKind::Star
                 | TokenKind::LeftParen
         )
     }
@@ -159,7 +164,7 @@ impl Parser<'_> {
     fn parse_postfix(&mut self) -> Option<Expression> {
         let mut expression = self.parse_primary()?;
 
-        while self.at_any(&[TokenKind::LeftParen, TokenKind::Dot]) {
+        while self.at_any(&[TokenKind::LeftParen, TokenKind::Dot, TokenKind::Arrow]) {
             if self.at(TokenKind::LeftParen) {
                 let left_paren_span = self.peek().span;
                 expression = self.with_syntax_nesting(left_paren_span, move |parser| {
@@ -174,12 +179,24 @@ impl Parser<'_> {
     }
 
     fn finish_member_access(&mut self, receiver: Expression) -> Option<Expression> {
-        let dot = self.advance();
-        let member = self.parse_name("expected a member name after `.`")?;
+        let operator = self.advance();
+        let member = self.parse_name(match operator.kind {
+            TokenKind::Dot => "expected a member name after `.`",
+            TokenKind::Arrow => "expected a member name after `->`",
+            _ => unreachable!("member parser accepted a non-member operator"),
+        })?;
         let span = self.cover(receiver.span(), member.span);
         Some(Expression::MemberAccess(MemberAccessExpr {
             receiver: Box::new(receiver),
-            dot_span: dot.span,
+            operator: match operator.kind {
+                TokenKind::Dot => MemberAccessOperator::Dot {
+                    span: operator.span,
+                },
+                TokenKind::Arrow => MemberAccessOperator::Arrow {
+                    span: operator.span,
+                },
+                _ => unreachable!("member parser accepted a non-member operator"),
+            },
             member,
             span,
         }))

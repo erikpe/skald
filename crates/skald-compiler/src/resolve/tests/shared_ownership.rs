@@ -138,3 +138,58 @@ fn unknown_shared_targets_do_not_gain_placeholder_identities() {
     let consume = output.program.declarations.get(FunctionId::new(0)).unwrap();
     assert!(consume.parameters.is_empty());
 }
+
+#[test]
+fn resolves_explicit_star_and_arrow_to_typed_dereference_receivers() {
+    let output = resolve_text(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Leaf implements Readable {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 1; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn make() -> shared Leaf { return new Leaf(); }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Leaf = new Leaf();\n",
+        "  var direct: i64 = owner->read();\n",
+        "  var grouped: i64 = (*owner).read();\n",
+        "  var produced: i64 = make()->read();\n",
+        "  var matches: bool = *owner is Leaf;\n",
+        "  return direct + grouped + produced;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("DereferenceReceiver class c0"));
+    assert!(dump.contains("Dereference Star target class c0"));
+    assert!(dump.contains("Dereference Arrow target class c0"));
+    assert!(dump.contains("TypeTest target class c0"));
+}
+
+#[test]
+fn rejects_dereference_of_non_shared_values_deterministically() {
+    let output = resolve_text(concat!(
+        "class Leaf { init() {} }\n",
+        "fn done() -> unit {}\n",
+        "fn inspect(ref borrowed: Leaf) -> i64 {\n",
+        "  *borrowed;\n",
+        "  return 0;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var number: i64 = 1;\n",
+        "  var inline: Leaf = Leaf();\n",
+        "  *number;\n",
+        "  inline->missing;\n",
+        "  *done();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 4);
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_DEREFERENCE));
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.message == "dereference requires a shared owner"));
+}

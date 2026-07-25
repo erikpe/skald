@@ -171,6 +171,13 @@ impl CallableChecker<'_, '_> {
             },
             ResolvedExpression::Boolean(_) | ResolvedExpression::TypeTest(_) => Type::Bool,
             ResolvedExpression::Unary(unary) => self.static_expression_type(&unary.operand),
+            ResolvedExpression::Dereference(dereference) => match dereference.target {
+                crate::resolve::ResolvedSharedTarget::Obj => Type::Obj,
+                crate::resolve::ResolvedSharedTarget::Class(class) => Type::Class(class),
+                crate::resolve::ResolvedSharedTarget::Interface(interface) => {
+                    Type::Interface(interface)
+                }
+            },
             ResolvedExpression::Binary(binary) => self.static_expression_type(&binary.left),
             ResolvedExpression::ObjectCast(cast) => lower_type(&cast.target),
             ResolvedExpression::DirectCall(call) => self
@@ -241,6 +248,7 @@ impl CallableChecker<'_, '_> {
             ResolvedObjectReceiver::CastRelative { cast, .. } => {
                 self.static_cast_access(&cast.source)
             }
+            ResolvedObjectReceiver::Dereference { .. } => HirAccess::Mutable,
             ResolvedObjectReceiver::SharedExpression { .. } => HirAccess::Mutable,
         }
     }

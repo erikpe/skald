@@ -292,6 +292,7 @@ multiplicative-expression
                  = unary-expression {"*" unary-expression}
 
 unary-expression = "-" unary-expression
+                 | "*" unary-expression
                  | object-cast-expression
                  | postfix-expression
 
@@ -301,8 +302,11 @@ object-cast-target
                  = view-target | "shared" view-target
 
 postfix-expression
-                 = primary-expression {member-suffix | call-suffix}
+                 = primary-expression
+                   {member-suffix | dereference-member-suffix | call-suffix}
 member-suffix    = "." identifier
+dereference-member-suffix
+                 = "->" identifier
 call-suffix      = "(" [argument-list] ")"
                  | copy-construction-arguments
 argument-list    = expression {"," expression}
@@ -323,18 +327,21 @@ allocation-arguments
 
 From tightest to loosest binding, precedence is:
 
-1. postfix member access and calls;
-2. unary `-` and object casts;
+1. postfix member access, dereferencing member access, and calls;
+2. unary `-`, unary `*`, and object casts;
 3. binary `*`;
 4. binary `+` and `-`;
 5. contextual `is`.
 
-Postfix and binary operators associate left to right. Unary `-` associates
-right to left. `is` is non-associative, so chained tests are syntax errors.
-Grouping overrides precedence and remains represented in the source-shaped
-syntax tree. Allocation is a primary expression, so calls and member access
-may follow it in the same postfix chain. Declaration selection and call
-legality are semantic concerns.
+Postfix and binary operators associate left to right. Unary `-` and `*`
+associate right to left. `is` is non-associative, so chained tests are syntax
+errors. Grouping overrides precedence and remains represented in the
+source-shaped syntax tree. `*owner.field` therefore means `*(owner.field)`;
+use `(*owner).field` or `owner->field` to select a member from `owner`'s
+pointee. Binary multiplication remains distinct by operator position, as in
+`value * *owner`. Allocation is a primary expression, so calls, `.` member
+access, and `->` member access may follow it in the same postfix chain.
+Declaration selection and call legality are semantic concerns.
 
 A parenthesized identifier followed by an adjacent expression is an object-cast
 candidate. Cast syntax deliberately wins over grouped callable spelling:

@@ -194,7 +194,10 @@ dispatch, and `is` therefore preserve one allocation and do not copy, slice,
 retain, release, or allocate. Shared-backed aliases and checked-place casts
 use hidden anchors whenever a replaceable or produced owner must cover the
 complete consuming expression. Stable shared locals and value parameters
-borrow directly.
+borrow directly. Direct explicit forms use `owner->member` for member
+selection and `*owner is T` for a type test; `(*owner).member` is equivalent
+to the arrow form. The previous implicit direct spellings remain accepted
+during the staged explicit-dereference transition.
 
 ## Non-owning conversions and access
 

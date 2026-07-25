@@ -125,6 +125,7 @@ impl Parser<'_> {
                 | TokenKind::True
                 | TokenKind::False
                 | TokenKind::Minus
+                | TokenKind::Star
                 | TokenKind::LeftParen
         )
     }

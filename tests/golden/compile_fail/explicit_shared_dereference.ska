@@ -1,0 +1,19 @@
+class Leaf {
+    init() {}
+}
+
+fn done() -> unit {}
+
+fn inspect(ref borrowed: Leaf) -> i64 {
+    *borrowed;
+    return 0;
+}
+
+fn main() -> i64 {
+    var number: i64 = 1;
+    var inline: Leaf = Leaf();
+    *number;
+    inline->missing;
+    *done();
+    return 0;
+}

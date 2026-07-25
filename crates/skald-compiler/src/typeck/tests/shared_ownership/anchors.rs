@@ -208,7 +208,7 @@ fn shared_call_result_is_secured_before_receiver_anchor_cleanup() {
         "class Holder { node: shared Node; init() { self.node = new Node(); } }\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  var child: shared Leaf = holder.node.child();\n",
+        "  var child: shared Leaf = holder.node->child();\n",
         "  return 0;\n",
         "}\n",
     ));

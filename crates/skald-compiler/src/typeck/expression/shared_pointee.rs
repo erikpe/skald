@@ -1,13 +1,14 @@
 //! Checked projection from shared-owner values to non-owning object places.
 
 use crate::{
+    diagnostics::Diagnostic,
     hir::{
         HirAccess, HirObjectOrigin, HirObjectView, HirSharedPlace, HirSharedSource,
         HirSharedTarget, HirViewSource, HirViewTarget,
     },
     identity::BindingId,
     object_path::ObjectProjection,
-    resolve::ResolvedExpression,
+    resolve::{ResolvedDereferenceExpr, ResolvedExpression},
     source::Span,
 };
 
@@ -136,6 +137,32 @@ impl CheckedSharedPointee {
 }
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_explicit_shared_pointee(
+        &mut self,
+        dereference: &ResolvedDereferenceExpr,
+        projections: Vec<ObjectProjection>,
+        span: Span,
+    ) -> Option<CheckedSharedPointee> {
+        let pointee = self.check_shared_pointee(&dereference.source, projections, span)?;
+        let resolved_target = shared_target_view(crate::typeck::shared::lower_shared_target(
+            dereference.target,
+        ));
+        if pointee.static_target() != resolved_target {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    crate::typeck::program::INVALID_OBJECT_CONTEXT,
+                    "resolved dereference target does not match its shared owner",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "dereference target is inconsistent with this owner",
+                ),
+            );
+            return None;
+        }
+        Some(pointee)
+    }
+
     pub(super) fn check_shared_pointee(
         &mut self,
         expression: &ResolvedExpression,

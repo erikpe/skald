@@ -4,10 +4,12 @@ use super::*;
 use crate::{
     diagnostics::Diagnostic,
     identity::{BindingId, CallableId, ClassId},
+    source::TextRange,
 };
 
 mod allocation;
 mod call;
+mod dereference;
 mod place;
 mod statement;
 
@@ -179,10 +181,23 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 }))
             }
             syntax::Expression::Unary(unary) => {
+                if unary.operator == syntax::UnaryOperator::Dereference {
+                    return self
+                        .resolve_dereference(
+                            &unary.operand,
+                            ResolvedDereferenceOperator::Star,
+                            unary.operator_span,
+                            unary.span,
+                        )
+                        .map(ResolvedExpression::Dereference);
+                }
                 let operand = self.resolve_expression(&unary.operand)?;
                 Some(ResolvedExpression::Unary(ResolvedUnaryExpr {
                     operator: match unary.operator {
                         syntax::UnaryOperator::Negate => ResolvedUnaryOperator::Negate,
+                        syntax::UnaryOperator::Dereference => {
+                            unreachable!("dereference returned above")
+                        }
                     },
                     operator_span: unary.operator_span,
                     operand: Box::new(operand),
@@ -336,6 +351,19 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             .iter()
             .rev()
             .find_map(|scope| scope.get(name).copied())
+    }
+
+    fn cover(&self, start: Span, end: Span) -> Span {
+        assert_eq!(
+            start.source_id(),
+            end.source_id(),
+            "resolved expression children must belong to one source"
+        );
+        Span::new(
+            start.source_id(),
+            TextRange::new(start.range().start(), end.range().end())
+                .expect("resolved expression children must retain source order"),
+        )
     }
 
     fn report_unknown(&mut self, name: &str, span: Span, kind: &'static str) {

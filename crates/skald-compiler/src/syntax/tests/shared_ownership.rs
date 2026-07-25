@@ -153,3 +153,75 @@ fn shared_types_do_not_change_alias_parameter_grammar() {
     assert_eq!(output.ast.declarations.len(), 1);
     assert_eq!(function(&output.ast, 0).name.text, "main");
 }
+
+#[test]
+fn explicit_dereference_preserves_precedence_member_spelling_and_spans() {
+    let (sources, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var product: i64 = value * *owner;\n",
+        "  var selected: i64 = *owner.field;\n",
+        "  owner->child.value;\n",
+        "  make()->read();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let main = function(&output.ast, 0);
+
+    let Statement::Local(product) = &main.body.statements[0] else {
+        panic!("expected product local");
+    };
+    let Expression::Binary(product) = &product.initializer else {
+        panic!("expected binary multiplication");
+    };
+    assert_eq!(product.operator, BinaryOperator::Multiply);
+    let Expression::Unary(dereference) = product.right.as_ref() else {
+        panic!("right operand must be a dereference");
+    };
+    assert_eq!(dereference.operator, UnaryOperator::Dereference);
+    assert_eq!(source_text(&sources, dereference.operator_span), "*");
+
+    let Statement::Local(selected) = &main.body.statements[1] else {
+        panic!("expected selected local");
+    };
+    let Expression::Unary(dereference) = &selected.initializer else {
+        panic!("prefix dereference must bind outside postfix member access");
+    };
+    assert!(matches!(
+        dereference.operand.as_ref(),
+        Expression::MemberAccess(_)
+    ));
+
+    let Statement::Expression(path) = &main.body.statements[2] else {
+        panic!("expected member path statement");
+    };
+    let Expression::MemberAccess(outer) = &path.expression else {
+        panic!("expected outer member access");
+    };
+    assert!(matches!(outer.operator, MemberAccessOperator::Dot { .. }));
+    let Expression::MemberAccess(inner) = outer.receiver.as_ref() else {
+        panic!("expected inner member access");
+    };
+    assert!(matches!(inner.operator, MemberAccessOperator::Arrow { .. }));
+    assert_eq!(source_text(&sources, inner.operator.span()), "->");
+
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Unary Dereference"));
+    assert!(dump.contains("Arrow @"));
+}
+
+#[test]
+fn malformed_dereference_member_recovers_to_later_statements() {
+    let (_, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "  owner->;\n",
+        "  return 7;\n",
+        "}\n",
+    ));
+    assert!(output.has_errors());
+    let main = function(&output.ast, 0);
+    assert!(matches!(
+        main.body.statements.last(),
+        Some(Statement::Return(_))
+    ));
+}

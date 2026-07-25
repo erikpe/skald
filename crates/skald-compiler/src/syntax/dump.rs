@@ -343,6 +343,7 @@ impl AstDumper {
             Expression::Unary(unary) => {
                 let operator = match unary.operator {
                     UnaryOperator::Negate => "Negate",
+                    UnaryOperator::Dereference => "Dereference",
                 };
                 self.line(&format!("Unary {operator}"), unary.span);
                 self.indented(|dumper| dumper.expression(&unary.operand));
@@ -438,7 +439,11 @@ impl AstDumper {
         self.indented(|dumper| {
             dumper.heading("Receiver");
             dumper.indented(|dumper| dumper.expression(&member.receiver));
-            dumper.line("Dot", member.dot_span);
+            let (operator, span) = match member.operator {
+                MemberAccessOperator::Dot { span } => ("Dot", span),
+                MemberAccessOperator::Arrow { span } => ("Arrow", span),
+            };
+            dumper.line(operator, span);
             dumper.named("Member", &member.member.text, member.member.span);
         });
     }

@@ -15,10 +15,11 @@ pub use ast::{
     CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm,
     ConditionalStatement, CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression,
     ExpressionStatement, ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl,
-    GroupedExpr, IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MethodDecl,
-    MethodModifier, Name, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
-    ObjectCastTargetMode, Parameter, ParameterBindingMode, ReturnStatement, SelfExpr, Statement,
-    TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
+    GroupedExpr, IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr,
+    MemberAccessOperator, MethodDecl, MethodModifier, Name, NumericLiteralExpr,
+    ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode, Parameter,
+    ParameterBindingMode, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
+    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
 };
 pub use dump::dump_ast;
 pub use parser::{

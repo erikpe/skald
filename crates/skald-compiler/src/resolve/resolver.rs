@@ -35,6 +35,7 @@ pub const INHERITED_MEMBER_COLLISION: &str = "RES015";
 pub const INVALID_BASE_INITIALIZATION: &str = "RES016";
 pub const INVALID_OVERRIDE: &str = "RES017";
 pub const INVALID_INTERFACE_CLAIM: &str = "RES018";
+pub const INVALID_DEREFERENCE: &str = "RES019";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

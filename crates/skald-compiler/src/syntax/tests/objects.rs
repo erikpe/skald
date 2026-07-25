@@ -45,7 +45,7 @@ fn parses_the_restricted_class_and_member_surface_without_lookup() {
         source_text(&sources, assignment.place.receiver.span()),
         "self"
     );
-    assert_eq!(source_text(&sources, assignment.place.dot_span), ".");
+    assert_eq!(source_text(&sources, assignment.place.operator.span()), ".");
     assert_eq!(source_text(&sources, assignment.place.member.span), "value");
     assert_eq!(source_text(&sources, assignment.equal_span), "=");
 

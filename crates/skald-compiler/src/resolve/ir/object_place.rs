@@ -6,7 +6,7 @@ use crate::{
     source::Span,
 };
 
-use super::{ResolvedExpression, ResolvedObjectCastExpr};
+use super::{ResolvedDereferenceExpr, ResolvedExpression, ResolvedObjectCastExpr};
 
 pub type ResolvedObjectPlace = ObjectPath;
 
@@ -17,6 +17,12 @@ pub enum ResolvedObjectReceiver {
     BindingPath(ResolvedObjectPlace),
     CastRelative {
         cast: Box<ResolvedObjectCastExpr>,
+        projections: Vec<ObjectProjection>,
+        class: ClassId,
+        span: Span,
+    },
+    Dereference {
+        dereference: Box<ResolvedDereferenceExpr>,
         projections: Vec<ObjectProjection>,
         class: ClassId,
         span: Span,
@@ -48,6 +54,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => path.class,
             Self::CastRelative { class, .. } => *class,
+            Self::Dereference { class, .. } => *class,
             Self::SharedExpression { class, .. } => *class,
         }
     }
@@ -56,6 +63,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => path.span,
             Self::CastRelative { span, .. } => *span,
+            Self::Dereference { span, .. } => *span,
             Self::SharedExpression { span, .. } => *span,
         }
     }
@@ -63,14 +71,18 @@ impl ResolvedObjectReceiver {
     pub const fn binding_path(&self) -> Option<&ResolvedObjectPlace> {
         match self {
             Self::BindingPath(path) => Some(path),
-            Self::CastRelative { .. } | Self::SharedExpression { .. } => None,
+            Self::CastRelative { .. }
+            | Self::Dereference { .. }
+            | Self::SharedExpression { .. } => None,
         }
     }
 
     pub const fn root(&self) -> Option<BindingId> {
         match self {
             Self::BindingPath(path) => Some(path.root),
-            Self::CastRelative { .. } | Self::SharedExpression { .. } => None,
+            Self::CastRelative { .. }
+            | Self::Dereference { .. }
+            | Self::SharedExpression { .. } => None,
         }
     }
 
@@ -78,6 +90,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(path) => &path.projections,
             Self::CastRelative { projections, .. } => projections,
+            Self::Dereference { projections, .. } => projections,
             Self::SharedExpression { projections, .. } => projections,
         }
     }
@@ -86,7 +99,7 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(_) => None,
             Self::CastRelative { cast, .. } => Some(cast),
-            Self::SharedExpression { .. } => None,
+            Self::Dereference { .. } | Self::SharedExpression { .. } => None,
         }
     }
 
@@ -100,6 +113,17 @@ impl ResolvedObjectReceiver {
                 ..
             } => Self::CastRelative {
                 cast,
+                projections,
+                class,
+                span,
+            },
+            Self::Dereference {
+                dereference,
+                projections,
+                class,
+                ..
+            } => Self::Dereference {
+                dereference,
                 projections,
                 class,
                 span,
@@ -129,6 +153,19 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Base(base));
                 Self::CastRelative {
                     cast,
+                    projections,
+                    class: base,
+                    span,
+                }
+            }
+            Self::Dereference {
+                dereference,
+                mut projections,
+                ..
+            } => {
+                projections.push(ObjectProjection::Base(base));
+                Self::Dereference {
+                    dereference,
                     projections,
                     class: base,
                     span,
@@ -167,6 +204,25 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Field(field));
                 Self::CastRelative {
                     cast,
+                    projections,
+                    class,
+                    span,
+                }
+            }
+            Self::Dereference {
+                dereference,
+                mut projections,
+                class: receiver_class,
+                ..
+            } => {
+                assert_eq!(
+                    field.class(),
+                    receiver_class,
+                    "dereference-relative projection must belong to the current terminal class"
+                );
+                projections.push(ObjectProjection::Field(field));
+                Self::Dereference {
+                    dereference,
                     projections,
                     class,
                     span,

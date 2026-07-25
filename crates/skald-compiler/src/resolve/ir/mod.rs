@@ -26,8 +26,9 @@ pub use declarations::{
 };
 pub use expression::{
     ResolvedAllocationExpr, ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr,
-    ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDirectCallExpr,
-    ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
+    ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDereferenceExpr,
+    ResolvedDereferenceOperator, ResolvedDirectCallExpr, ResolvedExpression,
+    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedTypeTestExpr, ResolvedUnaryExpr,
     ResolvedUnaryOperator,

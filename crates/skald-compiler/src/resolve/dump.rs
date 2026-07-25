@@ -505,6 +505,9 @@ impl ResolvedDumper {
                 self.line(&format!("Unary {operator}"), unary.span);
                 self.indented(|dumper| dumper.expression(&unary.operand));
             }
+            ResolvedExpression::Dereference(dereference) => {
+                self.dereference(dereference);
+            }
             ResolvedExpression::Binary(binary) => {
                 let operator = match binary.operator {
                     ResolvedBinaryOperator::Add => "Add",
@@ -588,6 +591,7 @@ impl ResolvedDumper {
                         format!("{binding}")
                     }
                     ResolvedInterfaceReceiver::Cast(_) => "checked-cast".to_owned(),
+                    ResolvedInterfaceReceiver::Dereference(_) => "dereference".to_owned(),
                     ResolvedInterfaceReceiver::SharedExpression(_) => {
                         "shared-expression".to_owned()
                     }
@@ -600,6 +604,9 @@ impl ResolvedDumper {
                     call.span,
                 );
                 self.indented(|dumper| {
+                    if let ResolvedInterfaceReceiver::Dereference(dereference) = &call.receiver {
+                        dumper.dereference(dereference);
+                    }
                     for argument in &call.arguments {
                         dumper.expression(argument);
                     }
@@ -665,6 +672,27 @@ impl ResolvedDumper {
                     }
                 });
             }
+            ResolvedObjectReceiver::Dereference {
+                dereference,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(&format!("DereferenceReceiver class {class}"), *span);
+                self.indented(|dumper| {
+                    dumper.dereference(dereference);
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
             ResolvedObjectReceiver::SharedExpression {
                 source,
                 projections,
@@ -687,6 +715,21 @@ impl ResolvedDumper {
                 });
             }
         }
+    }
+
+    fn dereference(&mut self, dereference: &ResolvedDereferenceExpr) {
+        let operator = match dereference.operator {
+            ResolvedDereferenceOperator::Star => "Star",
+            ResolvedDereferenceOperator::Arrow => "Arrow",
+        };
+        self.line(
+            &format!(
+                "Dereference {operator} target {}",
+                render_shared_target(dereference.target)
+            ),
+            dereference.span,
+        );
+        self.indented(|dumper| dumper.expression(&dereference.source));
     }
 
     fn heading(&mut self, name: &str) {

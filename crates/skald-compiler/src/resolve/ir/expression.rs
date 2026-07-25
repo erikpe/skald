@@ -16,6 +16,7 @@ pub enum ResolvedExpression {
     NumericLiteral(ResolvedNumericLiteralExpr),
     Boolean(ResolvedBooleanExpr),
     Unary(ResolvedUnaryExpr),
+    Dereference(ResolvedDereferenceExpr),
     Binary(ResolvedBinaryExpr),
     TypeTest(ResolvedTypeTestExpr),
     ObjectCast(ResolvedObjectCastExpr),
@@ -35,6 +36,7 @@ impl ResolvedExpression {
             Self::NumericLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
+            Self::Dereference(expression) => expression.span,
             Self::Binary(expression) => expression.span,
             Self::TypeTest(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
@@ -47,6 +49,21 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedDereferenceExpr {
+    pub source: Box<ResolvedExpression>,
+    pub target: super::ResolvedSharedTarget,
+    pub operator: ResolvedDereferenceOperator,
+    pub operator_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedDereferenceOperator {
+    Star,
+    Arrow,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -96,6 +113,7 @@ pub struct ResolvedInterfaceCallExpr {
 pub enum ResolvedInterfaceReceiver {
     Binding { binding: BindingId, span: Span },
     Cast(Box<ResolvedObjectCastExpr>),
+    Dereference(Box<ResolvedDereferenceExpr>),
     SharedExpression(Box<ResolvedExpression>),
 }
 

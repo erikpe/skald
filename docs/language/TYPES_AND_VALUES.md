@@ -111,6 +111,7 @@ The implemented expression families have these value effects:
 | primitive field selection | The field's stored primitive value. |
 | direct function call | The declared primitive or `unit` result; an exact-class result is an object producer restricted to object contexts. |
 | method call | The declared primitive or `unit` result; an exact-class result has the same object-context restriction. |
+| shared dereference | A bounded non-owning class, interface, or `Obj` place selected from a `shared T` owner; it does not copy or transfer ownership. |
 | unary or binary arithmetic | A value of the operand type under the rules below. |
 | construction | An exact-class object producer restricted to supported object contexts. |
 
@@ -118,6 +119,15 @@ Using a complete class binding, `self`, or class-typed field as an ordinary
 scalar expression is an error. Those forms can still be valid object places in
 the contexts described above. Calls through arbitrary expression values and
 function values are not implemented; calls select named functions or methods.
+
+Prefix `*owner` explicitly selects the object place behind a `shared T`
+handle. Postfix `owner->member` selects one member through exactly one shared
+edge and is semantically equivalent to `(*owner).member`; the owner expression
+is evaluated once. These forms currently support direct fields, class and
+interface methods, inline subobject paths, field mutation, and type tests.
+Other object-place consumers are added separately. During this staged
+transition, the older implicit shared member and type-test spellings remain
+accepted for compatibility.
 
 Precedence, associativity, grouping syntax, and the accepted postfix chain are
 defined by the [grammar](GRAMMAR.md#expressions). Statement legality and

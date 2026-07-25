@@ -7,7 +7,7 @@ impl CallableResolver<'_, '_> {
         &mut self,
         member: &syntax::MemberAccessExpr,
     ) -> Option<ResolvedExpression> {
-        let receiver = self.resolve_object_receiver(&member.receiver)?;
+        let receiver = self.resolve_member_object_receiver(member)?;
         let selected = self.select_member(receiver.class(), &member.member)?;
         let receiver =
             self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
@@ -214,40 +214,41 @@ impl CallableResolver<'_, '_> {
                 }
             }
             syntax::Expression::MemberAccess(member) => {
-                if let Some((receiver, interface, receiver_span)) =
-                    self.interface_receiver(&member.receiver)
-                {
-                    let declaration = self
-                        .environment
-                        .interfaces
-                        .get(interface)
-                        .expect("interface binding type must reference a declaration");
-                    let Some(requirement) = declaration
-                        .requirements
-                        .iter()
-                        .find(|requirement| requirement.name == member.member.text)
-                    else {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                UNKNOWN_MEMBER,
-                                format!(
-                                    "interface `{}` has no requirement `{}`",
-                                    declaration.name, member.member.text
-                                ),
-                            )
-                            .with_primary_label(member.member.span, "unknown requirement"),
-                        );
-                        return None;
-                    };
-                    return Some(CallTarget::Interface {
-                        receiver,
-                        interface,
-                        requirement: requirement.id,
-                        receiver_span,
-                        member_span: member.member.span,
-                    });
-                }
-                let receiver = self.resolve_object_receiver(&member.receiver)?;
+                let receiver = match member.operator {
+                    syntax::MemberAccessOperator::Dot { .. } => {
+                        if let Some((receiver, interface, receiver_span)) =
+                            self.interface_receiver(&member.receiver)
+                        {
+                            return self.select_interface_call_target(
+                                member,
+                                receiver,
+                                interface,
+                                receiver_span,
+                            );
+                        }
+                        self.resolve_object_receiver(&member.receiver)?
+                    }
+                    syntax::MemberAccessOperator::Arrow {
+                        span: operator_span,
+                    } => {
+                        let span = self.cover(member.receiver.span(), operator_span);
+                        let dereference = self.resolve_dereference(
+                            &member.receiver,
+                            ResolvedDereferenceOperator::Arrow,
+                            operator_span,
+                            span,
+                        )?;
+                        if let ResolvedSharedTarget::Interface(interface) = dereference.target {
+                            return self.select_interface_call_target(
+                                member,
+                                ResolvedInterfaceReceiver::Dereference(Box::new(dereference)),
+                                interface,
+                                span,
+                            );
+                        }
+                        self.object_receiver_from_dereference(dereference)?
+                    }
+                };
                 let selected = self.select_member(receiver.class(), &member.member)?;
                 let receiver =
                     self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
@@ -289,6 +290,44 @@ impl CallableResolver<'_, '_> {
         }
     }
 
+    fn select_interface_call_target(
+        &mut self,
+        member: &syntax::MemberAccessExpr,
+        receiver: ResolvedInterfaceReceiver,
+        interface: crate::identity::InterfaceId,
+        receiver_span: Span,
+    ) -> Option<CallTarget> {
+        let declaration = self
+            .environment
+            .interfaces
+            .get(interface)
+            .expect("interface receiver type must reference a declaration");
+        let Some(requirement) = declaration
+            .requirements
+            .iter()
+            .find(|requirement| requirement.name == member.member.text)
+        else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    UNKNOWN_MEMBER,
+                    format!(
+                        "interface `{}` has no requirement `{}`",
+                        declaration.name, member.member.text
+                    ),
+                )
+                .with_primary_label(member.member.span, "unknown requirement"),
+            );
+            return None;
+        };
+        Some(CallTarget::Interface {
+            receiver,
+            interface,
+            requirement: requirement.id,
+            receiver_span,
+            member_span: member.member.span,
+        })
+    }
+
     fn interface_receiver(
         &mut self,
         expression: &syntax::Expression,
@@ -298,6 +337,17 @@ impl CallableResolver<'_, '_> {
         Span,
     )> {
         match expression {
+            syntax::Expression::Unary(unary)
+                if unary.operator == syntax::UnaryOperator::Dereference =>
+            {
+                let dereference = self.resolve_dereference(
+                    &unary.operand,
+                    ResolvedDereferenceOperator::Star,
+                    unary.operator_span,
+                    unary.span,
+                )?;
+                self.interface_receiver_from_dereference(dereference)
+            }
             syntax::Expression::Identifier(identifier) => {
                 let binding = self.lookup_binding(&identifier.name.text)?;
                 let interface = match binding.ty {
@@ -360,56 +410,31 @@ impl CallableResolver<'_, '_> {
         }
     }
 
+    fn interface_receiver_from_dereference(
+        &self,
+        dereference: ResolvedDereferenceExpr,
+    ) -> Option<(
+        ResolvedInterfaceReceiver,
+        crate::identity::InterfaceId,
+        Span,
+    )> {
+        let ResolvedSharedTarget::Interface(interface) = dereference.target else {
+            return None;
+        };
+        let span = dereference.span;
+        Some((
+            ResolvedInterfaceReceiver::Dereference(Box::new(dereference)),
+            interface,
+            span,
+        ))
+    }
+
     fn shared_expression_interface(
         &self,
         expression: &ResolvedExpression,
     ) -> Option<crate::identity::InterfaceId> {
-        let kind = match expression {
-            ResolvedExpression::FieldAccess(access) => {
-                self.environment
-                    .classes
-                    .get(access.field.class())?
-                    .field(access.field)?
-                    .type_syntax
-                    .kind
-            }
-            ResolvedExpression::DirectCall(call) => {
-                self.environment
-                    .functions
-                    .get(call.function)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::MethodCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::InterfaceCall(call) => {
-                self.environment
-                    .interfaces
-                    .get(call.interface)?
-                    .requirements
-                    .get(call.requirement.index())?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::ObjectCast(cast) => match cast.target_mode {
-                crate::resolve::ResolvedObjectCastTargetMode::Shared { .. } => cast.target.kind,
-                crate::resolve::ResolvedObjectCastTargetMode::Plain => return None,
-            },
-            ResolvedExpression::Grouped(grouped) => {
-                return self.shared_expression_interface(&grouped.expression)
-            }
-            _ => return None,
-        };
-        match kind {
-            ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Interface(
-                interface,
-            )) => Some(interface),
+        match self.resolved_shared_target(expression) {
+            Some(ResolvedSharedTarget::Interface(interface)) => Some(interface),
             _ => None,
         }
     }

@@ -8,6 +8,17 @@ impl CallableResolver<'_, '_> {
         expression: &syntax::Expression,
     ) -> Option<ResolvedObjectReceiver> {
         match expression {
+            syntax::Expression::Unary(unary)
+                if unary.operator == syntax::UnaryOperator::Dereference =>
+            {
+                let dereference = self.resolve_dereference(
+                    &unary.operand,
+                    ResolvedDereferenceOperator::Star,
+                    unary.operator_span,
+                    unary.span,
+                )?;
+                self.object_receiver_from_dereference(dereference)
+            }
             syntax::Expression::ObjectCast(_) => {
                 let resolved = self.resolve_expression(expression)?;
                 let ResolvedExpression::ObjectCast(cast) = resolved else {
@@ -79,7 +90,7 @@ impl CallableResolver<'_, '_> {
                 })
             }
             syntax::Expression::MemberAccess(member) => {
-                let receiver = self.resolve_object_receiver(&member.receiver)?;
+                let receiver = self.resolve_member_object_receiver(member)?;
                 let selected = self.select_member(receiver.class(), &member.member)?;
                 let receiver =
                     self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
@@ -116,6 +127,55 @@ impl CallableResolver<'_, '_> {
                 .resolve_object_place(expression)
                 .map(ResolvedObjectReceiver::from_place),
         }
+    }
+
+    pub(super) fn resolve_member_object_receiver(
+        &mut self,
+        member: &syntax::MemberAccessExpr,
+    ) -> Option<ResolvedObjectReceiver> {
+        match member.operator {
+            syntax::MemberAccessOperator::Dot { .. } => {
+                self.resolve_object_receiver(&member.receiver)
+            }
+            syntax::MemberAccessOperator::Arrow {
+                span: operator_span,
+            } => {
+                let span = self.cover(member.receiver.span(), operator_span);
+                let dereference = self.resolve_dereference(
+                    &member.receiver,
+                    ResolvedDereferenceOperator::Arrow,
+                    operator_span,
+                    span,
+                )?;
+                self.object_receiver_from_dereference(dereference)
+            }
+        }
+    }
+
+    pub(super) fn object_receiver_from_dereference(
+        &mut self,
+        dereference: ResolvedDereferenceExpr,
+    ) -> Option<ResolvedObjectReceiver> {
+        let ResolvedSharedTarget::Class(class) = dereference.target else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_MEMBER_SELECTION,
+                    "ordinary member selection requires a shared class target",
+                )
+                .with_primary_label(
+                    dereference.operator_span,
+                    "this dereference does not select a class place",
+                ),
+            );
+            return None;
+        };
+        let span = dereference.span;
+        Some(ResolvedObjectReceiver::Dereference {
+            dereference: Box::new(dereference),
+            projections: Vec::new(),
+            class,
+            span,
+        })
     }
 
     pub(super) fn resolve_object_place(
@@ -345,40 +405,8 @@ impl CallableResolver<'_, '_> {
     }
 
     fn shared_expression_class(&self, expression: &ResolvedExpression) -> Option<ClassId> {
-        let kind = match expression {
-            ResolvedExpression::DirectCall(call) => {
-                self.environment
-                    .functions
-                    .get(call.function)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::MethodCall(call) => {
-                self.environment
-                    .classes
-                    .get(call.method.class())?
-                    .method(call.method)?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::InterfaceCall(call) => {
-                self.environment
-                    .interfaces
-                    .get(call.interface)?
-                    .requirements
-                    .get(call.requirement.index())?
-                    .return_type
-                    .kind
-            }
-            ResolvedExpression::Grouped(grouped) => {
-                return self.shared_expression_class(&grouped.expression)
-            }
-            _ => return None,
-        };
-        match kind {
-            ResolvedTypeKind::Shared(crate::resolve::ResolvedSharedTarget::Class(class)) => {
-                Some(class)
-            }
+        match self.resolved_shared_target(expression) {
+            Some(ResolvedSharedTarget::Class(class)) => Some(class),
             _ => None,
         }
     }

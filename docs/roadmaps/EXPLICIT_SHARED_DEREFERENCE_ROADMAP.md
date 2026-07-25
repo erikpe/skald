@@ -1,6 +1,6 @@
 # Explicit Shared Dereference Roadmap
 
-Status: in progress; SD0 is complete and SD1 is next.
+Status: in progress; SD1 is complete and SD2 is next.
 
 This roadmap makes the source boundary between a `shared T` owner handle and
 the object behind that handle explicit. Prefix `*owner` selects a temporary
@@ -134,7 +134,7 @@ invoke `Leaf` copy assignment on either allocation.
 ## Progress
 
 - [x] SD0 — Centralize the shared handle-to-place semantic boundary
-- [ ] SD1 — Add explicit dereference syntax and direct object access
+- [x] SD1 — Add explicit dereference syntax and direct object access
 - [ ] SD2 — Integrate dereference with every object-place consumer
 - [ ] SD3 — Require explicit dereference and publish the completed profile
 
@@ -193,37 +193,37 @@ source-to-native behavior remain unchanged.
 method, interface, and type-test consumers before changing the remaining
 object-source contexts.
 
-- [ ] Extend unary parsing with prefix `*` and postfix parsing with `->member`,
+- [x] Extend unary parsing with prefix `*` and postfix parsing with `->member`,
       reusing the existing `Star` and `Arrow` tokens while preserving exact
       operator/member spans, nesting-budget accounting, deterministic
       recovery, and source-shaped AST dumps.
-- [ ] Preserve `.` versus `->` in source AST. Normalize `->member` to one
+- [x] Preserve `.` versus `->` in source AST. Normalize `->member` to one
       explicit dereference plus member selection only after the source-shaped
       boundary, without evaluating the receiver twice or inventing a source
       `*` span.
-- [ ] Add resolved explicit-dereference vocabulary carrying the resolved
+- [x] Add resolved explicit-dereference vocabulary carrying the resolved
       shared source and class/interface/`Obj` static target. Remove ad hoc
       call/allocation/cast shape inspection from direct receiver selection
       where the explicit node supplies that fact.
-- [ ] Accept `(*owner).field`, `owner->field`, class methods,
+- [x] Accept `(*owner).field`, `owner->field`, class methods,
       virtual/interface dispatch, inherited and inline-field projection,
       supported field mutation, nested `.`/`->` paths, produced receivers, and
       `*owner is T`.
-- [ ] Require each dereference operand to have a shared target and report a
+- [x] Require each dereference operand to have a shared target and report a
       focused diagnostic for primitives, inline objects, aliases, `unit`, and
       other non-handle expressions. Dereference never performs an inline copy
       or shared-owner transfer by itself.
-- [ ] Keep existing implicit shared member and type-test forms temporarily
+- [x] Keep existing implicit shared member and type-test forms temporarily
       executable during this staged task so unrelated source fixtures need not
       migrate before the complete consumer matrix exists.
-- [ ] Prove explicit stable, replaceable, nested, and produced receivers lower
+- [x] Prove explicit stable, replaceable, nested, and produced receivers lower
       to the same direct borrow or hidden-anchor lifetimes as their temporary
       implicit equivalents, including receiver-before-argument evaluation and
       result-before-anchor-release order.
-- [ ] Update the implemented grammar and focused living language/compiler
+- [x] Update the implemented grammar and focused living language/compiler
       documents for the newly accepted explicit direct-access forms while
       accurately retaining the temporary implicit compatibility boundary.
-- [ ] Add lexer/parser precedence, recovery, AST/resolved dump, resolution,
+- [x] Add lexer/parser precedence, recovery, AST/resolved dump, resolution,
       type-check, diagnostic, HIR/MIR, verifier, backend, and native coverage,
       including `value * *owner_field`, `make()->method()`, shared interface
       calls, and paths that cross multiple shared edges.

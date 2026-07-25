@@ -321,6 +321,12 @@ impl CallableChecker<'_, '_> {
         source_use: ViewSourceUse,
     ) -> Option<CheckedObjectViewSource> {
         match expression {
+            ResolvedExpression::Dereference(dereference)
+                if source_use == ViewSourceUse::TypeTest =>
+            {
+                self.check_explicit_shared_pointee(dereference, Vec::new(), dereference.span)
+                    .map(CheckedObjectViewSource::Shared)
+            }
             ResolvedExpression::Binding(binding) => {
                 let binding_type = self.binding_type(binding.binding);
                 if binding_type == Type::Obj {

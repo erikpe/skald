@@ -103,6 +103,17 @@ impl CallableChecker<'_, '_> {
         receiver: &ResolvedObjectReceiver,
         place_use: ObjectPlaceUse,
     ) -> Option<CheckedObjectReceiver> {
+        if let ResolvedObjectReceiver::Dereference {
+            dereference,
+            projections,
+            class,
+            span,
+        } = receiver
+        {
+            let pointee =
+                self.check_explicit_shared_pointee(dereference, projections.clone(), *span)?;
+            return Some(self.finish_shared_object_receiver(pointee, *class, *span));
+        }
         if let ResolvedObjectReceiver::SharedExpression {
             source,
             projections,

@@ -69,6 +69,19 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
             ResolvedExpression::Boolean(boolean) => self.check_boolean_expression(boolean),
             ResolvedExpression::Unary(unary) => self.check_unary_expression(unary),
+            ResolvedExpression::Dereference(dereference) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "a dereferenced shared owner must be consumed as an object place",
+                    )
+                    .with_primary_label(
+                        dereference.span,
+                        "use this place for member access or a type test",
+                    ),
+                );
+                None
+            }
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
             ResolvedExpression::TypeTest(test) => self.check_type_test(test),
             ResolvedExpression::ObjectCast(cast) => {

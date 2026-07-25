@@ -94,6 +94,14 @@ owning inline-copy consumers all use that operation. HIR therefore states the
 owner-versus-borrowed-place distinction directly; MIR lowering does not infer
 it from source expression shape or a consumer's expected type.
 
+Resolution represents an explicit `*owner` or the dereference implied by
+`owner->member` with one typed dereference node carrying its resolved shared
+target, owner source, operator provenance, and spans. Direct fields, class and
+interface receivers, inline projection, mutation, and type tests consume that
+node through the checked shared-pointee conversion above. The explicit syntax
+therefore changes no HIR ownership effect, MIR place, anchor state, backend
+layout, or runtime operation.
+
 HIR remains target-independent. It contains no header byte offset, reference
 count location, metadata slot, runtime symbol, register, or calling-convention
 classification.

@@ -107,6 +107,17 @@ impl CallableChecker<'_, '_> {
                 checked.consumer_access = required_access;
                 (access, HirInterfaceReceiver::Checked(Box::new(checked)))
             }
+            crate::resolve::ResolvedInterfaceReceiver::Dereference(dereference) => {
+                let target = HirViewTarget::Interface(call.interface);
+                let pointee = self.check_explicit_shared_pointee(
+                    dereference,
+                    Vec::new(),
+                    call.receiver_span,
+                )?;
+                let access = pointee.access();
+                let view = pointee.into_view(target, access);
+                (access, HirInterfaceReceiver::View(view))
+            }
             crate::resolve::ResolvedInterfaceReceiver::SharedExpression(source) => {
                 let target = HirViewTarget::Interface(call.interface);
                 let pointee = self.check_shared_pointee(source, Vec::new(), call.receiver_span)?;

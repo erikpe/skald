@@ -1,6 +1,62 @@
 use super::*;
 
 #[test]
+fn explicit_shared_dereference_supports_direct_access_and_type_tests() {
+    let output = type_check_source(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Child {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Root {\n",
+        "  value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  virtual fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "class Node extends Root implements Readable {\n",
+        "  inline_child: Child;\n",
+        "  next: shared Child;\n",
+        "  init(value: i64) {\n",
+        "    super(value);\n",
+        "    self.inline_child = Child(value + 1);\n",
+        "    self.next = new Child(value + 2);\n",
+        "  }\n",
+        "  override fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn make(value: i64) -> shared Node { return new Node(value); }\n",
+        "fn make_readable(value: i64) -> shared Readable { return new Node(value); }\n",
+        "fn main() -> i64 {\n",
+        "  var owner: shared Node = new Node(1);\n",
+        "  owner->value = 5;\n",
+        "  var direct: i64 = owner->read();\n",
+        "  var grouped: i64 = (*owner).read();\n",
+        "  var prefixed_field: i64 = (*owner).value;\n",
+        "  var inline_value: i64 = owner->inline_child.read();\n",
+        "  var nested: i64 = owner->next->read();\n",
+        "  var produced: i64 = make(6)->read();\n",
+        "  var dynamic: i64 = make_readable(7)->read();\n",
+        "  var matches: bool = *owner is Node;\n",
+        "  return direct + grouped + prefixed_field + inline_value",
+        " + nested + produced + dynamic;\n",
+        "}\n",
+    ));
+    assert_diagnostics(&output.diagnostics, &[]);
+    let hir = output
+        .hir
+        .expect("explicit direct shared-pointee uses must type check");
+    let hir_dump = dump_hir(&hir);
+    assert_eq!(hir_dump, dump_hir(&hir));
+    assert!(hir_dump.contains("SharedPointee"));
+    assert!(hir_dump.contains("AnchoredSharedPointee"));
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).expect("explicit direct shared-pointee uses must verify");
+    let mir_dump = dump_mir(&mir);
+    assert_eq!(mir_dump, dump_mir(&mir));
+    assert!(mir_dump.contains("shared-anchor"));
+}
+
+#[test]
 fn shared_pointee_boundary_preserves_view_targets_and_anchor_categories() {
     let output = type_check_source(concat!(
         "interface Readable { fn read() -> i64; }\n",

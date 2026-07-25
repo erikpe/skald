@@ -377,9 +377,23 @@ pub struct SelfExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MemberAccessExpr {
     pub receiver: Box<Expression>,
-    pub dot_span: Span,
+    pub operator: MemberAccessOperator,
     pub member: Name,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemberAccessOperator {
+    Dot { span: Span },
+    Arrow { span: Span },
+}
+
+impl MemberAccessOperator {
+    pub const fn span(self) -> Span {
+        match self {
+            Self::Dot { span } | Self::Arrow { span } => span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -406,6 +420,7 @@ pub struct BooleanExpr {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {
     Negate,
+    Dereference,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

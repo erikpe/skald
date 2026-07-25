@@ -357,7 +357,7 @@ fn shared_call_anchor_survives_later_argument_replacement_until_call_completion(
         "}\n",
         "fn main() -> i64 {\n",
         "  var holder: Holder = Holder();\n",
-        "  return holder.edge.read(replace(holder));\n",
+        "  return holder.edge->read(replace(holder));\n",
         "}\n",
     ));
     output.push_str(anchor_observer_stubs());

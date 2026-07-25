@@ -1,0 +1,70 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+interface Readable {
+    fn read() -> i64;
+}
+
+class Child {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Root {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    virtual fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Node extends Root implements Readable {
+    inline_child: Child;
+    next: shared Child;
+
+    init(value: i64) {
+        super(value);
+        self.inline_child = Child(value + 1);
+        self.next = new Child(value + 2);
+    }
+
+    override fn read() -> i64 {
+        return self.value;
+    }
+}
+
+fn make(value: i64) -> shared Node {
+    return new Node(value);
+}
+
+fn make_readable(value: i64) -> shared Readable {
+    return new Node(value);
+}
+
+fn main() -> i64 {
+    var owner: shared Node = new Node(1);
+    owner->value = 5;
+    ska_rt_println_i64(owner->read());
+    ska_rt_println_i64((*owner).read());
+    ska_rt_println_i64((*owner).value);
+    ska_rt_println_i64(owner->inline_child.read());
+    ska_rt_println_i64(owner->next->read());
+    ska_rt_println_i64(make(6)->read());
+    ska_rt_println_i64(make_readable(7)->read());
+    if (*owner is Node) {
+        ska_rt_println_i64(1);
+    } else {
+        ska_rt_println_i64(0);
+    }
+    return 0;
+}
