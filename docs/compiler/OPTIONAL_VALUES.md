@@ -455,7 +455,10 @@ accidentally.
 ## Exclusions
 
 This compiler contract does not design generalized shared boxes, nested
-optionals, optional arrays, optional function values, first-class references,
-optional casts, equality or operator lifting, chaining/coalescing/propagation,
-recoverable failures, concurrency or atomic guards, external optional ABI, or
-dynamic-type-preserving cloning.
+optionals, inline optional array payloads, optional function values,
+first-class references, optional casts, equality or operator lifting,
+chaining/coalescing/propagation, recoverable failures, concurrency or atomic
+guards, external optional ABI, or dynamic-type-preserving cloning. The frozen
+[array compiler contract](ARRAYS.md) separately extends optional shared-owner
+targets to exact arrays and permits already-supported optional non-array
+element types; those forms remain unimplemented.

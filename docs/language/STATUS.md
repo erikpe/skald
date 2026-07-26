@@ -74,7 +74,7 @@ guarantees.
 
 | Area | Maturity | Current direction or unresolved boundary |
 |---|---|---|
-| Arrays | **Open question** | Type and construction forms, size model, element lifetime, mutation, indexing, slicing, bounds failure, borrowing, and iteration are unspecified. |
+| [Arrays](ARRAYS.md) | **Frozen design** | Built-in invariant fixed-size inline and shared arrays, deep named copies, produced-backing adoption, default construction, jagged nesting, optional shared array owners, signed negative indices, copied slices, checked in-place slice assignment, deterministic element lifetime, and backing anchors are settled but not accepted by the compiler. Rich element initialization, inline optional array payloads, slice views, resizing, iteration, and external ABI remain deferred. |
 | Strings | **Exploratory direction** | An immutable language-facing string value is intended; its type/literal forms, encoding, byte semantics, ownership, storage, and library contract are open. |
 | [Recoverable and checked exceptions](ERRORS.md#recoverable-and-checked-exceptions) | **Exploratory direction** | Deterministic cleanup is a constraint, but syntax, exception values and sets, handlers, failed-construction behavior, and propagation remain open. |
 | [Multiple files and modules](MODULES_AND_INTEROP.md#future-modules-and-broader-interoperation) | **Open question** | Imports, exports, visibility, source-to-module mapping, separate compilation, packages, and cross-module linkage are unspecified. |

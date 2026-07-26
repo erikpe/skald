@@ -178,10 +178,12 @@ supported inline optional containers. Optionals have no truthiness and never
 implicitly convert to their payload; optional references, aliases to optional
 shared owners, and external optional signatures remain rejected.
 
-Arrays are an open design area. Element lifetime, size and mutability, storage,
-construction, indexing, slicing, bounds failure, borrowing, and iteration must
-be designed together. No legacy bracket form or structural protocol is a
-current contract.
+Arrays have a [frozen but unimplemented design](ARRAYS.md). The built-in
+invariant `T[]` and `shared T[]` families distinguish deep-copying inline
+values from shared allocations, use `u64` lengths and signed negative-capable
+indices, copy slice reads, and preserve deterministic element lifetime. The
+implemented grammar still accepts no bracket form, and no structural indexing
+or iteration protocol is implied.
 
 An immutable language-facing string value remains an exploratory direction,
 but its type name, literal syntax and encoding, byte/text semantics, copying,

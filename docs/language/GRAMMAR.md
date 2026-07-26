@@ -93,7 +93,9 @@ The complete punctuation and operator token set is:
 ```
 
 There are no string, character, comparison, division, or bracket tokens in the
-implemented grammar.
+implemented grammar. The frozen but unimplemented
+[array contract](ARRAYS.md) reserves bracket-based type, index, slice, and
+shared-projection forms for a later grammar extension.
 
 ## Literals
 

@@ -416,10 +416,13 @@ This profile does not include:
 - custom allocators;
 - shared values in external signatures or other public object ABI;
 - atomic reference counts, concurrency, or thread-safety guarantees;
-- arrays or shared array storage;
+- arrays or shared array storage in the current implementation;
 - static or global shared storage;
 - recoverable allocation failure; or
 - exceptional cleanup or failed-construction unwinding.
 
-These exclusions bound the current implementation. They do not reserve syntax or
-freeze the eventual designs of the omitted features.
+These exclusions bound the current implementation. The not-yet-implemented
+[array contract](ARRAYS.md) now freezes exact non-polymorphic `shared T[]` and
+`shared? T[]` ownership by extending these owner rules to array allocations;
+it does not change the implemented class/interface/`Obj` boundary above.
+Other omissions do not reserve syntax or freeze their eventual designs.

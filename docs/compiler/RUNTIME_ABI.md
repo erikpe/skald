@@ -157,6 +157,14 @@ public ABI for:
 Future language designs may require some of these responsibilities, but they
 do not exist merely because a runtime library is present.
 
+The frozen but unimplemented
+[array compiler contract](ARRAYS.md#internal-abi-and-runtime-boundary) requires
+generated code to keep array length, element lifecycle, indexing, slicing,
+backing anchors, shared counts, and finalization compiler-owned while reusing
+the existing checked byte allocation and deallocation symbols. It therefore
+adds no public C symbol or ABI-version change. This is a design boundary, not
+a claim that current generated code supports arrays.
+
 Shared ownership uses this minimal boundary as defined in the
 [Shared-Ownership Compiler and Runtime Contract](SHARED_OWNERSHIP.md#minimal-c-runtime-abi).
 Reference counting, metadata, anchors, and finalizer selection remain

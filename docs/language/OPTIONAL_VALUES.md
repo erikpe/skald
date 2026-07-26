@@ -437,7 +437,7 @@ lifetime contract is frozen.
 The frozen profile does not include:
 
 - generalized `shared T?` boxes or `shared? T?`;
-- optional arrays or default optional array elements;
+- inline optional array payloads;
 - nested optionals;
 - optional function values;
 - first-class or optional references;
@@ -451,3 +451,9 @@ The frozen profile does not include:
 
 These exclusions are not implied language behavior. Each requires a separate
 focused design before implementation.
+
+The frozen [array design](ARRAYS.md) separately permits existing optional
+non-array element types to default to `none` inside arrays and extends
+`shared?` to exact shared array targets. It continues to exclude inline
+optional array payloads; `shared? T[]` is optional shared ownership, not an
+inline optional array.

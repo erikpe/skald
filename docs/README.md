@@ -17,6 +17,9 @@ Use the authority closest to the behavior:
   [implemented grammar](language/GRAMMAR.md);
 - type, value, literal, and expression semantics belong in
   [types and values](language/TYPES_AND_VALUES.md);
+- the frozen source-visible contract for inline, shared, optional-shared,
+  nested, indexed, and sliced arrays belongs in
+  [arrays](language/ARRAYS.md);
 - the frozen source contract and current syntax/resolution boundary for
   explicit `T?` and `shared? T` values belong in
   [optional values](language/OPTIONAL_VALUES.md);
@@ -47,6 +50,9 @@ Use the authority closest to the behavior:
   policy belong in the [compiler architecture](compiler/README.md);
 - phase products, IR responsibilities, verification, dumps, and trust
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- the frozen array phase, lifecycle, backing, anchor, verification, and
+  runtime responsibility design belongs in
+  [the array compiler and runtime contract](compiler/ARRAYS.md);
 - the implemented optional HIR, checked views, verification, x86-64 layout,
   internal ABI, and explicit exclusions belong in
   [the optional-values compiler contract](compiler/OPTIONAL_VALUES.md);
