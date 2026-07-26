@@ -287,6 +287,18 @@ impl CallableResolver<'_, '_> {
 
         if let Some(identifier) = binding_identifier_through_groups(&assignment.place) {
             if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+                if matches!(binding.ty, ResolvedTypeKind::Array(_)) {
+                    let destination = self.resolve_expression(&assignment.place)?;
+                    let source = self.resolve_expression(&assignment.value)?;
+                    return Some(ResolvedStatement::ArrayAssignment(
+                        ResolvedArrayAssignment {
+                            destination,
+                            equal_span: assignment.equal_span,
+                            source,
+                            span: assignment.span,
+                        },
+                    ));
+                }
                 if let ResolvedTypeKind::Shared(target) = binding.ty {
                     let source = self.resolve_expression(&assignment.value)?;
                     return Some(ResolvedStatement::SharedAssignment(
@@ -315,6 +327,19 @@ impl CallableResolver<'_, '_> {
                     ));
                 }
             }
+        }
+
+        if is_array_projection_through_groups(&assignment.place) {
+            let destination = self.resolve_expression(&assignment.place)?;
+            let source = self.resolve_expression(&assignment.value)?;
+            return Some(ResolvedStatement::ArrayAssignment(
+                ResolvedArrayAssignment {
+                    destination,
+                    equal_span: assignment.equal_span,
+                    source,
+                    span: assignment.span,
+                },
+            ));
         }
 
         let destination = self.resolve_object_place(&assignment.place);
@@ -355,6 +380,16 @@ impl CallableResolver<'_, '_> {
         }
         scope.insert(name.to_owned(), symbol);
         true
+    }
+}
+
+fn is_array_projection_through_groups(expression: &syntax::Expression) -> bool {
+    match expression {
+        syntax::Expression::ArrayProjection(_) => true,
+        syntax::Expression::Grouped(grouped) => {
+            is_array_projection_through_groups(&grouped.expression)
+        }
+        _ => false,
     }
 }
 

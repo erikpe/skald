@@ -59,9 +59,12 @@ impl ClassCollectionState {
         &mut self,
         field: &syntax::FieldDecl,
         top_levels: &HashMap<String, TopLevelSymbol>,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
-        let Some(type_syntax) = resolve_type(&field.type_syntax, top_levels, diagnostics) else {
+        let Some(type_syntax) =
+            resolve_type(&field.type_syntax, top_levels, array_types, diagnostics)
+        else {
             return;
         };
         let field_id = FieldId::new(self.id, self.fields.len());
@@ -87,12 +90,19 @@ impl ClassCollectionState {
         member_index: usize,
         source: &syntax::InitializerDecl,
         top_levels: &HashMap<String, TopLevelSymbol>,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         let id = InitializerId::new(self.id, self.lifecycle.initializers.len());
         let declaration = ResolvedInitializerDeclaration {
             id,
-            parameters: resolve_parameters(id.into(), &source.parameters, top_levels, diagnostics),
+            parameters: resolve_parameters(
+                id.into(),
+                &source.parameters,
+                top_levels,
+                array_types,
+                diagnostics,
+            ),
             span: source.span,
         };
         if declaration.parameters.len() == source.parameters.len() {
@@ -128,6 +138,7 @@ impl ClassCollectionState {
         source: &syntax::CopyConstructorDecl,
         class_name: &str,
         top_levels: &HashMap<String, TopLevelSymbol>,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         if report_duplicate_lifecycle(
@@ -142,12 +153,15 @@ impl ClassCollectionState {
         self.symbols.copy_constructor_span = Some(source.introducer_span);
         let id = CopyConstructorId::new(self.id, 0);
         let Some(parameter) = resolve_copy_source_parameter(
-            id.into(),
-            self.id,
+            CopySourceContext {
+                callable: id.into(),
+                owner: self.id,
+                declaration_span: source.span,
+                operation: CopyLifecycleKind::Constructor,
+            },
             &source.parameters,
-            source.span,
-            CopyLifecycleKind::Constructor,
             top_levels,
+            array_types,
             diagnostics,
         ) else {
             self.lifecycle.copy_constructor_invalid = true;
@@ -168,6 +182,7 @@ impl ClassCollectionState {
         source: &syntax::CopyAssignmentDecl,
         class_name: &str,
         top_levels: &HashMap<String, TopLevelSymbol>,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         if report_duplicate_lifecycle(
@@ -182,12 +197,15 @@ impl ClassCollectionState {
         self.symbols.copy_assignment_span = Some(source.introducer_span);
         let id = CopyAssignmentId::new(self.id, 0);
         let Some(parameter) = resolve_copy_source_parameter(
-            id.into(),
-            self.id,
+            CopySourceContext {
+                callable: id.into(),
+                owner: self.id,
+                declaration_span: source.span,
+                operation: CopyLifecycleKind::Assignment,
+            },
             &source.parameters,
-            source.span,
-            CopyLifecycleKind::Assignment,
             top_levels,
+            array_types,
             diagnostics,
         ) else {
             self.lifecycle.copy_assignment_invalid = true;
@@ -231,6 +249,7 @@ impl ClassCollectionState {
         member_index: usize,
         method: &syntax::MethodDecl,
         top_levels: &HashMap<String, TopLevelSymbol>,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
         let id = MethodId::new(self.id, self.methods.len());
@@ -261,8 +280,19 @@ impl ClassCollectionState {
                 }
             },
             dispatch: ResolvedMethodDispatch::Direct,
-            parameters: resolve_parameters(id.into(), &method.parameters, top_levels, diagnostics),
-            return_type: resolve_result_type(&method.return_type, top_levels, diagnostics),
+            parameters: resolve_parameters(
+                id.into(),
+                &method.parameters,
+                top_levels,
+                array_types,
+                diagnostics,
+            ),
+            return_type: resolve_result_type(
+                &method.return_type,
+                top_levels,
+                array_types,
+                diagnostics,
+            ),
             span: method.span,
         });
         self.work.method_members.push(member_index);
@@ -320,6 +350,7 @@ pub(super) fn collect_class(
     ast_index: usize,
     class: &syntax::ClassDecl,
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
     let direct_base = resolve_direct_base(id, class, top_levels, diagnostics);
@@ -327,16 +358,21 @@ pub(super) fn collect_class(
     for (member_index, member) in class.members.iter().enumerate() {
         match member {
             syntax::ClassMember::Field(field) => {
-                state.collect_field(field, top_levels, diagnostics)
+                state.collect_field(field, top_levels, array_types, diagnostics)
             }
-            syntax::ClassMember::Initializer(initializer) => {
-                state.collect_initializer(member_index, initializer, top_levels, diagnostics)
-            }
+            syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
+                member_index,
+                initializer,
+                top_levels,
+                array_types,
+                diagnostics,
+            ),
             syntax::ClassMember::CopyConstructor(constructor) => state.collect_copy_constructor(
                 member_index,
                 constructor,
                 &class.name.text,
                 top_levels,
+                array_types,
                 diagnostics,
             ),
             syntax::ClassMember::CopyAssignment(assignment) => state.collect_copy_assignment(
@@ -344,13 +380,14 @@ pub(super) fn collect_class(
                 assignment,
                 &class.name.text,
                 top_levels,
+                array_types,
                 diagnostics,
             ),
             syntax::ClassMember::Destructor(destructor) => {
                 state.collect_destructor(member_index, destructor, &class.name.text, diagnostics)
             }
             syntax::ClassMember::Method(method) => {
-                state.collect_method(member_index, method, top_levels, diagnostics)
+                state.collect_method(member_index, method, top_levels, array_types, diagnostics)
             }
         }
     }
@@ -445,6 +482,14 @@ enum CopyLifecycleKind {
     Assignment,
 }
 
+#[derive(Clone, Copy)]
+struct CopySourceContext {
+    callable: CallableId,
+    owner: ClassId,
+    declaration_span: Span,
+    operation: CopyLifecycleKind,
+}
+
 impl CopyLifecycleKind {
     const fn description(self) -> &'static str {
         match self {
@@ -462,15 +507,13 @@ impl CopyLifecycleKind {
 }
 
 fn resolve_copy_source_parameter(
-    callable: CallableId,
-    owner: ClassId,
+    context: CopySourceContext,
     parameters: &[syntax::Parameter],
-    declaration_span: Span,
-    operation: CopyLifecycleKind,
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedParameter> {
-    let description = operation.description();
+    let description = context.operation.description();
     let [parameter] = parameters else {
         diagnostics.push(
             Diagnostic::error(
@@ -478,10 +521,10 @@ fn resolve_copy_source_parameter(
                 format!("{description} requires exactly one source parameter"),
             )
             .with_primary_label(
-                declaration_span,
+                context.declaration_span,
                 format!(
                     "use `{}(ref name: EnclosingClass) {{ ... }}`",
-                    operation.introducer()
+                    context.operation.introducer()
                 ),
             ),
         );
@@ -502,8 +545,8 @@ fn resolve_copy_source_parameter(
         return None;
     }
 
-    let ty = resolve_type(&parameter.type_syntax, top_levels, diagnostics)?;
-    if ty.kind != ResolvedTypeKind::Class(owner) {
+    let ty = resolve_type(&parameter.type_syntax, top_levels, array_types, diagnostics)?;
+    if ty.kind != ResolvedTypeKind::Class(context.owner) {
         diagnostics.push(
             Diagnostic::error(
                 INVALID_LIFECYCLE_SIGNATURE,
@@ -515,7 +558,7 @@ fn resolve_copy_source_parameter(
     }
 
     Some(ResolvedParameter {
-        id: ParameterId::new(callable, 0),
+        id: ParameterId::new(context.callable, 0),
         binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
         name: parameter.name.text.clone(),
         name_span: parameter.name.span,

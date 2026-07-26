@@ -100,6 +100,7 @@ macro_rules! interface_member_id {
 global_id!(FunctionId, "f");
 global_id!(ClassId, "c");
 global_id!(InterfaceId, "i");
+global_id!(ArrayTypeId, "a");
 global_id!(VirtualFamilyId, "vf");
 global_id!(VirtualSlotId, "vs");
 

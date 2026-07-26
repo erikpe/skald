@@ -124,9 +124,29 @@ impl CallableChecker<'_, '_> {
                 );
                 None
             }
+            ResolvedExpression::ArrayConstruction(construction) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        super::program::UNSUPPORTED_ARRAY_SEMANTICS,
+                        "array construction is not implemented yet",
+                    )
+                    .with_primary_label(construction.span, "array semantics are pending"),
+                );
+                None
+            }
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),
+            ResolvedExpression::ArrayProjection(projection) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        super::program::UNSUPPORTED_ARRAY_SEMANTICS,
+                        "array projection is not implemented yet",
+                    )
+                    .with_primary_label(projection.span, "array semantics are pending"),
+                );
+                None
+            }
             ResolvedExpression::MethodCall(call) => self.check_method_call(call),
             ResolvedExpression::InterfaceCall(call) => self.check_interface_call(call),
             ResolvedExpression::Construct(construction) => {

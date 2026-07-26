@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR1 is next.
+Status: in progress; AR2 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -72,7 +72,7 @@ Use the existing test ownership:
 ## Progress
 
 - [x] AR0 — Parse the complete array source surface
-- [ ] AR1 — Establish canonical recursive array identities
+- [x] AR1 — Establish canonical recursive array identities
 - [ ] AR2 — Type array storage, construction, and lifecycle capabilities
 - [ ] AR3 — Type array places, projections, assignment, slices, and aliases
 - [ ] AR4 — Establish verified target-independent array MIR
@@ -126,23 +126,23 @@ the deliberate post-syntax gate.
 **Purpose:** Give every later phase stable exact array identities without
 embedding recursive heap-owned type trees or re-resolving ownership grouping.
 
-- [ ] Add a dense `ArrayTypeId` and canonical interner/table keyed by exact
+- [x] Add a dense `ArrayTypeId` and canonical interner/table keyed by exact
       element type, with deterministic insertion and dump order.
-- [ ] Extend resolved types and exact shared targets with inline, shared, and
+- [x] Extend resolved types and exact shared targets with inline, shared, and
       optional-shared array cases while keeping phase type values cheap and
       stable.
-- [ ] Resolve recursive array types in locals, fields, parameters, results,
+- [x] Resolve recursive array types in locals, fields, parameters, results,
       constructors, and alias signatures, preserving exact source spans and
       outer-versus-element ownership.
-- [ ] Preserve every resolvable element identity for type checking, while
+- [x] Preserve every resolvable element identity for type checking, while
       syntactically unsupported inline optional-array spellings continue to
       fail in the parser; do not make resolution own semantic element
       eligibility.
-- [ ] Keep arrays out of hierarchy, interface, object-view, cast, and type-test
+- [x] Keep arrays out of hierarchy, interface, object-view, cast, and type-test
       tables; compatibility remains exact recursive identity.
-- [ ] Extend resolved dumps, public phase accessors, and independent-process
+- [x] Extend resolved dumps, public phase accessors, and independent-process
       determinism coverage for canonical nested identities.
-- [ ] Replace the temporary resolution gate with a structured type-checking
+- [x] Replace the temporary resolution gate with a structured type-checking
       gate.
 
 **Tests:** Resolution identity/interning tests; every ownership-grouping

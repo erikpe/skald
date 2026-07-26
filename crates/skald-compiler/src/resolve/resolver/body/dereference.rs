@@ -44,6 +44,7 @@ impl CallableResolver<'_, '_> {
                     .name
             ),
             ResolvedSharedTarget::Obj => "shared Obj".to_owned(),
+            ResolvedSharedTarget::Array(array) => format!("shared array {array}"),
         }
     }
 

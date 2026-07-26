@@ -62,6 +62,7 @@ pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
 pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
 pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
+pub const UNSUPPORTED_ARRAY_SEMANTICS: &str = "TYP035";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -78,6 +79,24 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
+    if !program.array_types.is_empty() {
+        for array in program.array_types.iter() {
+            diagnostics.push(
+                Diagnostic::error(
+                    UNSUPPORTED_ARRAY_SEMANTICS,
+                    "array semantics are not implemented yet",
+                )
+                .with_primary_label(
+                    array.element.span,
+                    format!("array type {} reaches the type-checking boundary", array.id),
+                ),
+            );
+        }
+        return TypeCheckOutput {
+            hir: None,
+            diagnostics,
+        };
+    }
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
@@ -386,6 +405,9 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
+        ResolvedTypeKind::Array(_) => {
+            unreachable!("array types are rejected by the type-checking array gate")
+        }
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }

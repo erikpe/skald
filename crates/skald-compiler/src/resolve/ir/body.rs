@@ -172,6 +172,7 @@ pub enum ResolvedStatement {
     ObjectAssignment(ResolvedObjectAssignment),
     SharedAssignment(ResolvedSharedAssignment),
     OptionalAssignment(ResolvedOptionalAssignment),
+    ArrayAssignment(ResolvedArrayAssignment),
 }
 
 impl ResolvedStatement {
@@ -187,8 +188,17 @@ impl ResolvedStatement {
             Self::ObjectAssignment(statement) => statement.span,
             Self::SharedAssignment(statement) => statement.span,
             Self::OptionalAssignment(statement) => statement.span,
+            Self::ArrayAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedArrayAssignment {
+    pub destination: ResolvedExpression,
+    pub equal_span: Span,
+    pub source: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

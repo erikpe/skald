@@ -14,8 +14,11 @@ use crate::{
 
 use super::ir::*;
 
+mod array_types;
 mod body;
 mod program;
+
+use array_types::ArrayTypeInterner;
 
 pub const DUPLICATE_TOP_LEVEL: &str = "RES001";
 pub const DUPLICATE_BINDING: &str = "RES002";
@@ -39,7 +42,6 @@ pub const INVALID_DEREFERENCE: &str = "RES019";
 pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
 pub const INVALID_OPTIONAL_TYPE: &str = "RES022";
-pub const UNSUPPORTED_ARRAY_SYNTAX: &str = "RES023";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -65,12 +67,9 @@ pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
 fn resolve_type(
     type_syntax: &syntax::TypeSyntax,
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
-    if type_contains_array(type_syntax) {
-        diagnostics.push(unsupported_array_diagnostic(type_syntax.span));
-        return None;
-    }
     let kind = match &type_syntax.kind {
         syntax::TypeKind::I64 => ResolvedTypeKind::I64,
         syntax::TypeKind::U64 => ResolvedTypeKind::U64,
@@ -81,51 +80,13 @@ fn resolve_type(
         syntax::TypeKind::Shared {
             shared_span: _,
             target,
-        } => {
-            let target = plain_shared_target(target, diagnostics)?;
-            let target_kind = if target.text == "Obj" {
-                ResolvedSharedTarget::Obj
-            } else {
-                match top_levels.get(&target.text) {
-                    Some(TopLevelSymbol {
-                        kind: TopLevelSymbolKind::Class(class),
-                        ..
-                    }) => ResolvedSharedTarget::Class(*class),
-                    Some(TopLevelSymbol {
-                        kind: TopLevelSymbolKind::Interface(interface),
-                        ..
-                    }) => ResolvedSharedTarget::Interface(*interface),
-                    Some(symbol) => {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                UNKNOWN_TYPE,
-                                format!("`{}` does not name a shared object type", target.text),
-                            )
-                            .with_primary_label(
-                                target.span,
-                                "expected a class, interface, or `Obj`",
-                            )
-                            .with_secondary_label(symbol.name_span, "function declared here"),
-                        );
-                        return None;
-                    }
-                    None => {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                UNKNOWN_TYPE,
-                                format!("unknown shared target `{}`", target.text),
-                            )
-                            .with_primary_label(
-                                target.span,
-                                "no class or interface with this name is declared",
-                            ),
-                        );
-                        return None;
-                    }
-                }
-            };
-            ResolvedTypeKind::Shared(target_kind)
-        }
+        } => ResolvedTypeKind::Shared(resolve_shared_target(
+            target,
+            top_levels,
+            array_types,
+            diagnostics,
+            false,
+        )?),
         syntax::TypeKind::Optional {
             payload,
             payload_span,
@@ -197,23 +158,23 @@ fn resolve_type(
             shared_span,
             question_span,
             target,
-        } => {
-            let target = plain_shared_target(target, diagnostics)?;
-            ResolvedTypeKind::OptionalShared {
-                target: resolve_optional_shared_target(target, top_levels, diagnostics)?,
-                shared_span: *shared_span,
-                question_span: *question_span,
-                target_span: target.span,
-            }
-        }
+        } => ResolvedTypeKind::OptionalShared {
+            target: resolve_shared_target(target, top_levels, array_types, diagnostics, true)?,
+            shared_span: *shared_span,
+            question_span: *question_span,
+            target_span: target.span,
+        },
         syntax::TypeKind::Grouped { inner, .. } => {
-            return resolve_type(inner, top_levels, diagnostics).map(|mut resolved| {
-                resolved.span = type_syntax.span;
-                resolved
-            });
+            return resolve_type(inner, top_levels, array_types, diagnostics).map(
+                |mut resolved| {
+                    resolved.span = type_syntax.span;
+                    resolved
+                },
+            );
         }
-        syntax::TypeKind::Array { .. } => {
-            unreachable!("array types are rejected at the resolution gate")
+        syntax::TypeKind::Array { element, .. } => {
+            let element = resolve_type(element, top_levels, array_types, diagnostics)?;
+            ResolvedTypeKind::Array(array_types.intern(element))
         }
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
         syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
@@ -251,46 +212,33 @@ fn resolve_type(
     })
 }
 
-fn unsupported_array_diagnostic(span: Span) -> Diagnostic {
-    Diagnostic::error(
-        UNSUPPORTED_ARRAY_SYNTAX,
-        "array semantics are not implemented yet",
-    )
-    .with_primary_label(
-        span,
-        "array syntax is accepted, but resolution support is pending",
-    )
-}
-
-fn type_contains_array(type_syntax: &syntax::TypeSyntax) -> bool {
-    match &type_syntax.kind {
-        syntax::TypeKind::Array { .. } => true,
-        syntax::TypeKind::Shared { target, .. }
-        | syntax::TypeKind::OptionalShared { target, .. } => type_contains_array(target),
-        syntax::TypeKind::Grouped { inner, .. } => type_contains_array(inner),
-        _ => false,
-    }
-}
-
-fn plain_shared_target<'a>(
-    target: &'a syntax::TypeSyntax,
-    diagnostics: &mut Diagnostics,
-) -> Option<&'a syntax::Name> {
-    if let syntax::TypeKind::Named(name) = &target.kind {
-        return Some(name);
-    }
-    diagnostics.push(
-        Diagnostic::error(UNKNOWN_TYPE, "shared ownership requires an object target")
-            .with_primary_label(target.span, "expected a class, interface, or `Obj`"),
-    );
-    None
-}
-
-fn resolve_optional_shared_target(
-    target: &syntax::Name,
+fn resolve_shared_target(
+    target: &syntax::TypeSyntax,
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
+    optional: bool,
 ) -> Option<ResolvedSharedTarget> {
+    if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
+        return resolve_shared_target(inner, top_levels, array_types, diagnostics, optional);
+    }
+    if matches!(target.kind, syntax::TypeKind::Array { .. }) {
+        let resolved = resolve_type(target, top_levels, array_types, diagnostics)?;
+        let ResolvedTypeKind::Array(array) = resolved.kind else {
+            unreachable!("an array target must resolve to an array identity")
+        };
+        return Some(ResolvedSharedTarget::Array(array));
+    }
+    let syntax::TypeKind::Named(target) = &target.kind else {
+        diagnostics.push(
+            Diagnostic::error(UNKNOWN_TYPE, "shared ownership requires an object target")
+                .with_primary_label(
+                    target.span,
+                    "expected a class, interface, `Obj`, or array type",
+                ),
+        );
+        return None;
+    };
     if target.text == "Obj" {
         return Some(ResolvedSharedTarget::Obj);
     }
@@ -318,7 +266,11 @@ fn resolve_optional_shared_target(
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
-                    format!("unknown optional shared target `{}`", target.text),
+                    if optional {
+                        format!("unknown optional shared target `{}`", target.text)
+                    } else {
+                        format!("unknown shared target `{}`", target.text)
+                    },
                 )
                 .with_primary_label(
                     target.span,

@@ -83,6 +83,9 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::OptionalAssignment(assignment) => {
                 self.check_optional_assignment(assignment)
             }
+            ResolvedStatement::ArrayAssignment(_) => {
+                panic!("array assignments are rejected by the type-checking array gate")
+            }
         }
     }
 

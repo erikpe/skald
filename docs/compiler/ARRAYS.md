@@ -1,11 +1,12 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; source syntax implemented**. This document is
+Status: **frozen design; source syntax and canonical resolution implemented**.
+This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). It does not claim that the
-current compiler resolves, types, or executes arrays; availability remains
-authoritative in the [status matrix](../language/STATUS.md).
+current compiler types or executes arrays; availability remains authoritative
+in the [status matrix](../language/STATUS.md).
 
 The design borrows Niflheim's useful recursive type syntax, invariant typing,
 fixed-size allocation, checked indexing, copied slices, and explicit array IR.

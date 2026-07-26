@@ -357,7 +357,7 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
 }
 
 #[test]
-fn parsed_arrays_stop_at_resolution_before_lowering() {
+fn resolved_arrays_stop_at_type_checking_before_lowering() {
     let result = compile_source_to_assembly(
         "arrays.ska",
         "fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }",
@@ -372,5 +372,5 @@ fn parsed_arrays_stop_at_resolution_before_lowering() {
     assert!(report
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == UNSUPPORTED_ARRAY_SYNTAX));
+        .all(|diagnostic| diagnostic.code == UNSUPPORTED_ARRAY_SEMANTICS));
 }

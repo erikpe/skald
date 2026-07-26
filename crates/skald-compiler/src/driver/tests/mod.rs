@@ -7,9 +7,9 @@ use std::{
 use crate::{
     backend::Target,
     diagnostics::render_diagnostics,
-    resolve::UNSUPPORTED_ARRAY_SYNTAX,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
     test_support::TemporaryDirectory,
+    typeck::UNSUPPORTED_ARRAY_SEMANTICS,
 };
 
 use super::*;

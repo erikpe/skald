@@ -1,7 +1,7 @@
 //! Program-wide declaration collection and deterministic identity assignment.
 
 use super::{
-    body::{resolve_callable_body, BaseInitializationPolicy, BodyResolutionEnvironment},
+    body::{resolve_callable_body, BodyResolutionEnvironment, CallableResolutionContext},
     *,
 };
 use crate::{
@@ -33,6 +33,7 @@ pub(super) struct ProgramResolver<'ast> {
     function_work: Vec<FunctionWorkItem>,
     class_work: Vec<(ClassId, usize)>,
     interface_work: Vec<(InterfaceId, usize)>,
+    array_types: ArrayTypeInterner,
     diagnostics: Diagnostics,
 }
 
@@ -44,6 +45,7 @@ impl<'ast> ProgramResolver<'ast> {
             function_work: Vec::new(),
             class_work: Vec::new(),
             interface_work: Vec::new(),
+            array_types: ArrayTypeInterner::default(),
             diagnostics: Diagnostics::new(),
         }
     }
@@ -56,6 +58,7 @@ impl<'ast> ProgramResolver<'ast> {
             self.ast,
             &self.interface_work,
             &self.top_levels,
+            &mut self.array_types,
             &mut self.diagnostics,
         ));
         let (class_declarations, class_symbols, class_work) = self.collect_class_declarations();
@@ -96,6 +99,7 @@ impl<'ast> ProgramResolver<'ast> {
                 &interfaces,
                 &hierarchy,
             ),
+            &mut self.array_types,
             &mut self.diagnostics,
         );
         let entry_function = self
@@ -109,6 +113,7 @@ impl<'ast> ProgramResolver<'ast> {
 
         ResolveOutput {
             program: ResolvedProgram {
+                array_types: self.array_types.finish(),
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 classes: class_declarations,
@@ -201,11 +206,13 @@ impl<'ast> ProgramResolver<'ast> {
                         item.id.into(),
                         &function.parameters,
                         &self.top_levels,
+                        &mut self.array_types,
                         &mut self.diagnostics,
                     ),
                     return_type: resolve_result_type(
                         &function.return_type,
                         &self.top_levels,
+                        &mut self.array_types,
                         &mut self.diagnostics,
                     ),
                     linkage: ResolvedFunctionLinkage::Internal,
@@ -220,11 +227,13 @@ impl<'ast> ProgramResolver<'ast> {
                             item.id.into(),
                             &function.parameters,
                             &self.top_levels,
+                            &mut self.array_types,
                             &mut self.diagnostics,
                         ),
                         return_type: resolve_result_type(
                             &function.return_type,
                             &self.top_levels,
+                            &mut self.array_types,
                             &mut self.diagnostics,
                         ),
                         linkage: ResolvedFunctionLinkage::External {
@@ -265,6 +274,7 @@ impl<'ast> ProgramResolver<'ast> {
                 ast_index,
                 class,
                 &self.top_levels,
+                &mut self.array_types,
                 &mut self.diagnostics,
             );
             declarations.push(declaration);
@@ -294,11 +304,9 @@ impl<'ast> ProgramResolver<'ast> {
                     return None;
                 };
                 let body = resolve_callable_body(
-                    item.id.into(),
-                    None,
+                    CallableResolutionContext::function(item.id.into()),
                     &declaration.parameters,
                     &function.body,
-                    BaseInitializationPolicy::Forbidden,
                     BodyResolutionEnvironment::new(
                         &self.top_levels,
                         functions,
@@ -306,6 +314,7 @@ impl<'ast> ProgramResolver<'ast> {
                         interfaces,
                         hierarchy,
                     ),
+                    &mut self.array_types,
                     &mut self.diagnostics,
                 );
                 Some(ResolvedFunctionDefinition {
@@ -323,6 +332,7 @@ fn resolve_parameters(
     callable: CallableId,
     parameters: &[syntax::Parameter],
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedParameter> {
     let mut names = HashMap::<String, Span>::new();
@@ -340,7 +350,8 @@ fn resolve_parameters(
             continue;
         }
         names.insert(parameter.name.text.clone(), parameter.name.span);
-        let Some(type_syntax) = resolve_type(&parameter.type_syntax, top_levels, diagnostics)
+        let Some(type_syntax) =
+            resolve_type(&parameter.type_syntax, top_levels, array_types, diagnostics)
         else {
             continue;
         };
@@ -373,9 +384,10 @@ const fn resolve_parameter_binding_mode(
 fn resolve_result_type(
     type_syntax: &syntax::TypeSyntax,
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedType {
-    resolve_type(type_syntax, top_levels, diagnostics).unwrap_or(ResolvedType {
+    resolve_type(type_syntax, top_levels, array_types, diagnostics).unwrap_or(ResolvedType {
         // Resolution diagnostics stop later phases. Retaining a payload-free
         // placeholder keeps declaration collection total and panic-free.
         kind: ResolvedTypeKind::Unit,

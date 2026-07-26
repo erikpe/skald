@@ -20,6 +20,15 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
             }
             None => dumper.output.push_str("Entry <none>\n"),
         }
+        if !program.array_types.is_empty() {
+            dumper.heading("ArrayTypes");
+            dumper.indented(|dumper| {
+                for array in program.array_types.iter() {
+                    dumper.line(&format!("ArrayType {}", array.id), array.element.span);
+                    dumper.indented(|dumper| dumper.type_syntax(&array.element));
+                }
+            });
+        }
         if !program.classes.is_empty() {
             dumper.heading("ClassDeclarations");
             dumper.indented(|dumper| {
@@ -366,6 +375,10 @@ impl ResolvedDumper {
                 self.line(&format!("Type Interface {interface}"), type_syntax.span);
                 return;
             }
+            ResolvedTypeKind::Array(array) => {
+                self.line(&format!("Type Array {array}"), type_syntax.span);
+                return;
+            }
             ResolvedTypeKind::Shared(target) => {
                 self.line(
                     &format!("Type Shared {}", render_shared_target(target)),
@@ -496,6 +509,16 @@ impl ResolvedDumper {
                     dumper.expression(&assignment.source);
                 });
             }
+            ResolvedStatement::ArrayAssignment(assignment) => {
+                self.line("ArrayAssignment", assignment.span);
+                self.indented(|dumper| {
+                    dumper.heading("Destination");
+                    dumper.indented(|dumper| dumper.expression(&assignment.destination));
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&assignment.source));
+                });
+            }
         }
     }
 
@@ -623,6 +646,35 @@ impl ResolvedDumper {
                     }
                 });
             }
+            ResolvedExpression::ArrayConstruction(construction) => {
+                self.line(
+                    &format!(
+                        "ArrayConstruction {} {}",
+                        if construction.new_span.is_some() {
+                            "shared"
+                        } else {
+                            "inline"
+                        },
+                        render_type_kind(construction.array_type.kind)
+                    ),
+                    construction.span,
+                );
+                self.indented(|dumper| match &construction.arguments {
+                    ResolvedArrayConstructionArguments::Empty { .. } => {
+                        dumper.heading("Empty");
+                    }
+                    ResolvedArrayConstructionArguments::Length { length, .. } => {
+                        dumper.heading("Length");
+                        dumper.indented(|dumper| dumper.expression(length));
+                    }
+                    ResolvedArrayConstructionArguments::Copy {
+                        copy_span, source, ..
+                    } => {
+                        dumper.line("Copy", *copy_span);
+                        dumper.indented(|dumper| dumper.expression(source));
+                    }
+                });
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.line(&format!("DirectCall {}", call.function), call.span);
                 self.indented(|dumper| {
@@ -638,6 +690,37 @@ impl ResolvedDumper {
             ResolvedExpression::FieldAccess(access) => {
                 self.line(&format!("FieldAccess {}", access.field), access.span);
                 self.indented(|dumper| dumper.object_receiver(&access.receiver));
+            }
+            ResolvedExpression::ArrayProjection(projection) => {
+                self.line(
+                    match projection.operator {
+                        ResolvedArrayProjectionOperator::Ordinary { .. } => "ArrayProjection",
+                        ResolvedArrayProjectionOperator::Shared { .. } => "SharedArrayProjection",
+                    },
+                    projection.span,
+                );
+                self.indented(|dumper| {
+                    dumper.expression(&projection.receiver);
+                    match &projection.bounds {
+                        ResolvedArrayProjectionBounds::Index(index) => {
+                            dumper.heading("Index");
+                            dumper.indented(|dumper| dumper.expression(index));
+                        }
+                        ResolvedArrayProjectionBounds::Slice { start, end, .. } => {
+                            dumper.heading("Slice");
+                            dumper.indented(|dumper| {
+                                if let Some(start) = start {
+                                    dumper.heading("Start");
+                                    dumper.indented(|dumper| dumper.expression(start));
+                                }
+                                if let Some(end) = end {
+                                    dumper.heading("End");
+                                    dumper.indented(|dumper| dumper.expression(end));
+                                }
+                            });
+                        }
+                    }
+                });
             }
             ResolvedExpression::MethodCall(call) => {
                 self.line(&format!("MethodCall {}", call.method), call.span);
@@ -835,6 +918,7 @@ fn render_type_kind(kind: ResolvedTypeKind) -> String {
         ResolvedTypeKind::Obj => "Obj".to_owned(),
         ResolvedTypeKind::Class(class) => format!("class {class}"),
         ResolvedTypeKind::Interface(interface) => format!("interface {interface}"),
+        ResolvedTypeKind::Array(array) => format!("array {array}"),
         ResolvedTypeKind::Shared(target) => format!("shared {}", render_shared_target(target)),
         ResolvedTypeKind::Optional { payload, .. } => {
             format!("{}?", render_optional_payload(payload))
@@ -861,5 +945,6 @@ fn render_shared_target(target: ResolvedSharedTarget) -> String {
         ResolvedSharedTarget::Obj => "Obj".to_owned(),
         ResolvedSharedTarget::Class(class) => format!("class {class}"),
         ResolvedSharedTarget::Interface(interface) => format!("interface {interface}"),
+        ResolvedSharedTarget::Array(array) => format!("array {array}"),
     }
 }

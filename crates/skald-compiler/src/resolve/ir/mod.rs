@@ -1,13 +1,15 @@
 //! Name-resolved, but not yet type-checked, program representation.
 
+mod array_types;
 mod body;
 mod declarations;
 mod expression;
 mod hierarchy;
 mod object_place;
 
+pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
 pub use body::{
-    ResolvedBaseInitialization, ResolvedBlock, ResolvedClassDefinition,
+    ResolvedArrayAssignment, ResolvedBaseInitialization, ResolvedBlock, ResolvedClassDefinition,
     ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
     ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
@@ -27,7 +29,9 @@ pub use declarations::{
     ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
-    ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedBinaryExpr, ResolvedBinaryOperator,
+    ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,
+    ResolvedArrayConstructionExpr, ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr,
+    ResolvedArrayProjectionOperator, ResolvedBinaryExpr, ResolvedBinaryOperator,
     ResolvedBindingExpr, ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode,
     ResolvedDereferenceExpr, ResolvedDereferenceOperator, ResolvedDirectCallExpr,
     ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,

@@ -8,6 +8,7 @@ use std::{
 
 use skald_compiler::{
     backend::{emit_assembly, Target},
+    diagnostics::render_diagnostics,
     hir::dump_hir,
     lexer::{dump_tokens, lex},
     mir::{dump_mir, lower_hir},
@@ -27,6 +28,8 @@ const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
 const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
+const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
+const ARRAY_TEST_NAME: &str = "array_resolution_products_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -65,6 +68,16 @@ fn optional_value_phase_products_are_deterministic_across_processes() {
         OPTIONAL_HELPER_OUTPUT,
         OPTIONAL_TEST_NAME,
         optional_phase_dump,
+    );
+}
+
+#[test]
+fn array_resolution_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "arrays",
+        ARRAY_HELPER_OUTPUT,
+        ARRAY_TEST_NAME,
+        array_resolution_dump,
     );
 }
 
@@ -143,6 +156,36 @@ fn optional_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/optional_shared_profile.ska"
     ))
+}
+
+fn array_resolution_dump() -> String {
+    let text = concat!(
+        "class Item { init() {} }\n",
+        "fn inspect(first: Item[][], second: Item[][], owner: shared Item[][], ",
+        "elements: (shared? Item)[]) -> Item[] { return first[1:]; }\n",
+        "fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }\n",
+    );
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add("determinism.ska", text);
+    let source = sources.get(source_id).unwrap();
+
+    let lexed = lex(source);
+    assert!(lexed.diagnostics.is_empty());
+    let parsed = parse(source, &lexed.tokens);
+    assert!(parsed.diagnostics.is_empty());
+    let resolved = resolve(&parsed.ast);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.has_errors());
+    assert!(checked.hir.is_none());
+
+    format!(
+        "TOKENS\n{}AST\n{}RESOLVED\n{}TYPECHECK\n{}",
+        dump_tokens(source, &lexed.tokens),
+        dump_ast(&parsed.ast),
+        dump_resolved(&resolved.program),
+        render_diagnostics(&sources, &checked.diagnostics),
+    )
 }
 
 fn complete_phase_dump(text: &str) -> String {

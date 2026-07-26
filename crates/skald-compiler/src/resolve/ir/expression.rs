@@ -24,9 +24,11 @@ pub enum ResolvedExpression {
     Unwrap(ResolvedUnwrapExpr),
     ObjectCast(ResolvedObjectCastExpr),
     Allocation(ResolvedAllocationExpr),
+    ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
     DirectCall(ResolvedDirectCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
+    ArrayProjection(Box<ResolvedArrayProjectionExpr>),
     MethodCall(ResolvedMethodCallExpr),
     InterfaceCall(ResolvedInterfaceCallExpr),
     Construct(ResolvedConstructExpr),
@@ -47,14 +49,73 @@ impl ResolvedExpression {
             Self::Unwrap(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
+            Self::ArrayConstruction(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
+            Self::ArrayProjection(expression) => expression.span,
             Self::MethodCall(expression) => expression.span,
             Self::InterfaceCall(expression) => expression.span,
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedArrayConstructionExpr {
+    pub new_span: Option<Span>,
+    pub array_type: super::ResolvedType,
+    pub arguments: ResolvedArrayConstructionArguments,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedArrayConstructionArguments {
+    Empty {
+        left_paren_span: Span,
+        right_paren_span: Span,
+    },
+    Length {
+        left_paren_span: Span,
+        length: Box<ResolvedExpression>,
+        right_paren_span: Span,
+    },
+    Copy {
+        left_paren_span: Span,
+        copy_span: Span,
+        source: Box<ResolvedExpression>,
+        right_paren_span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedArrayProjectionExpr {
+    pub receiver: Box<ResolvedExpression>,
+    pub operator: ResolvedArrayProjectionOperator,
+    pub bounds: ResolvedArrayProjectionBounds,
+    pub right_bracket_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedArrayProjectionOperator {
+    Ordinary {
+        left_bracket_span: Span,
+    },
+    Shared {
+        arrow_span: Span,
+        left_bracket_span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ResolvedArrayProjectionBounds {
+    Index(Box<ResolvedExpression>),
+    Slice {
+        start: Option<Box<ResolvedExpression>>,
+        colon_span: Span,
+        end: Option<Box<ResolvedExpression>>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

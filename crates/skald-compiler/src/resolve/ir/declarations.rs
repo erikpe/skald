@@ -10,6 +10,7 @@ use crate::{
     source::Span,
 };
 
+use super::array_types::ResolvedArrayTypeTable;
 use super::body::{
     ResolvedClassDefinitionTable, ResolvedFunctionDefinitionTable, ResolvedMemberDefinition,
 };
@@ -17,6 +18,7 @@ use super::hierarchy::ResolvedClassHierarchy;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
+    pub array_types: ResolvedArrayTypeTable,
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
     pub classes: ResolvedClassDeclarationTable,
@@ -482,6 +484,7 @@ pub enum ResolvedTypeKind {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Array(crate::identity::ArrayTypeId),
     Shared(ResolvedSharedTarget),
     Optional {
         payload: ResolvedOptionalPayload,
@@ -496,7 +499,7 @@ pub enum ResolvedTypeKind {
     },
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ResolvedOptionalPayload {
     I64,
     U64,
@@ -511,6 +514,7 @@ pub enum ResolvedSharedTarget {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Array(crate::identity::ArrayTypeId),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

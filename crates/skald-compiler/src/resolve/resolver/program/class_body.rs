@@ -1,7 +1,6 @@
 //! Resolution of accepted class callable bodies.
 
 use super::*;
-use crate::identity::CallableId;
 use crate::resolve::resolver::body::BaseInitializationPolicy;
 
 pub(super) fn resolve_class_bodies(
@@ -9,6 +8,7 @@ pub(super) fn resolve_class_bodies(
     work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     environment: BodyResolutionEnvironment<'_>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedClassDefinition> {
     let resolver = ClassBodyResolver {
@@ -17,7 +17,7 @@ pub(super) fn resolve_class_bodies(
         environment,
     };
     work.iter()
-        .map(|item| resolver.resolve_class(item, diagnostics))
+        .map(|item| resolver.resolve_class(item, array_types, diagnostics))
         .collect()
 }
 
@@ -31,6 +31,7 @@ impl ClassBodyResolver<'_> {
     fn resolve_class(
         &self,
         item: &ClassWorkItem,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) -> ResolvedClassDefinition {
         let declaration = self
@@ -54,15 +55,18 @@ impl ClassBodyResolver<'_> {
                     .initializer(work.id)
                     .expect("accepted initializer work must retain its declaration identity");
                 self.resolve_member(
-                    metadata.id.into(),
+                    CallableResolutionContext::member(
+                        metadata.id.into(),
+                        declaration
+                            .direct_base
+                            .map_or(BaseInitializationPolicy::Forbidden, |base| {
+                                BaseInitializationPolicy::Required { base: base.class }
+                            }),
+                    ),
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    declaration
-                        .direct_base
-                        .map_or(BaseInitializationPolicy::Forbidden, |base| {
-                            BaseInitializationPolicy::Required { base: base.class }
-                        }),
+                    array_types,
                     diagnostics,
                 )
             })
@@ -76,11 +80,14 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted copy constructor must have declaration metadata");
             self.resolve_member(
-                metadata.id.into(),
+                CallableResolutionContext::member(
+                    metadata.id.into(),
+                    BaseInitializationPolicy::Forbidden,
+                ),
                 &metadata.parameters,
                 &source.body,
                 source.span,
-                BaseInitializationPolicy::Forbidden,
+                array_types,
                 diagnostics,
             )
         });
@@ -93,11 +100,14 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted copy assignment must have declaration metadata");
             self.resolve_member(
-                metadata.id.into(),
+                CallableResolutionContext::member(
+                    metadata.id.into(),
+                    BaseInitializationPolicy::Forbidden,
+                ),
                 std::slice::from_ref(&metadata.parameter),
                 &source.body,
                 source.span,
-                BaseInitializationPolicy::Forbidden,
+                array_types,
                 diagnostics,
             )
         });
@@ -110,11 +120,14 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted destructor must have declaration metadata");
             self.resolve_member(
-                metadata.id.into(),
+                CallableResolutionContext::member(
+                    metadata.id.into(),
+                    BaseInitializationPolicy::Forbidden,
+                ),
                 &[],
                 &source.body,
                 source.span,
-                BaseInitializationPolicy::Forbidden,
+                array_types,
                 diagnostics,
             )
         });
@@ -128,11 +141,14 @@ impl ClassBodyResolver<'_> {
                 };
                 let metadata = &declaration.methods[method_index];
                 self.resolve_member(
-                    metadata.id.into(),
+                    CallableResolutionContext::member(
+                        metadata.id.into(),
+                        BaseInitializationPolicy::Forbidden,
+                    ),
                     &metadata.parameters,
                     &source.body,
                     source.span,
-                    BaseInitializationPolicy::Forbidden,
+                    array_types,
                     diagnostics,
                 )
             })
@@ -151,24 +167,20 @@ impl ClassBodyResolver<'_> {
 
     fn resolve_member(
         &self,
-        callable: CallableId,
+        context: CallableResolutionContext,
         parameters: &[ResolvedParameter],
         body: &syntax::Block,
         span: Span,
-        base_initialization: BaseInitializationPolicy,
+        array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) -> ResolvedMemberDefinition {
+        let callable = context.callable();
         let body = resolve_callable_body(
-            callable,
-            Some(
-                callable
-                    .class()
-                    .expect("class member callable must retain its owner"),
-            ),
+            context,
             parameters,
             body,
-            base_initialization,
             self.environment,
+            array_types,
             diagnostics,
         );
         ResolvedMemberDefinition {

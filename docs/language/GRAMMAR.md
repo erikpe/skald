@@ -457,9 +457,10 @@ to [Optional Values](OPTIONAL_VALUES.md).
 
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with
-deterministic AST dumps. Resolution deliberately reports `RES023` for these
-nodes until canonical array identities are implemented; no array form is
-typed, lowered, or executable yet. The frozen semantics belong to
+deterministic AST dumps. Resolution assigns deterministic canonical recursive
+array identities and retains structured construction, projection, and
+assignment nodes. Type checking deliberately reports `TYP035`; no array form
+reaches HIR, lowering, or execution yet. The frozen semantics belong to
 [Arrays](ARRAYS.md).
 
 Use the [language overview](README.md) for the broad model and the

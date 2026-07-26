@@ -7,6 +7,7 @@ pub(super) fn collect_interface_declarations(
     ast: &syntax::CompilationUnit,
     work: &[(InterfaceId, usize)],
     top_levels: &HashMap<String, TopLevelSymbol>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedInterfaceDeclaration> {
     work.iter()
@@ -29,8 +30,14 @@ pub(super) fn collect_interface_declarations(
                         .parameters
                         .iter()
                         .filter_map(|parameter| {
-                            resolve_type(&parameter.type_syntax, top_levels, diagnostics).map(
-                                |type_syntax| ResolvedInterfaceParameter {
+                            resolve_type(
+                                &parameter.type_syntax,
+                                top_levels,
+                                array_types,
+                                diagnostics,
+                            )
+                            .map(|type_syntax| {
+                                ResolvedInterfaceParameter {
                                     binding_mode: resolve_parameter_binding_mode(
                                         parameter.binding_mode,
                                     ),
@@ -38,13 +45,14 @@ pub(super) fn collect_interface_declarations(
                                     name_span: parameter.name.span,
                                     type_syntax,
                                     span: parameter.span,
-                                },
-                            )
+                                }
+                            })
                         })
                         .collect(),
                     return_type: resolve_result_type(
                         &requirement.return_type,
                         top_levels,
+                        array_types,
                         diagnostics,
                     ),
                     span: requirement.span,

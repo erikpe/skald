@@ -29,6 +29,9 @@ pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirShar
         ResolvedSharedTarget::Obj => HirSharedTarget::Obj,
         ResolvedSharedTarget::Class(class) => HirSharedTarget::Class(class),
         ResolvedSharedTarget::Interface(interface) => HirSharedTarget::Interface(interface),
+        ResolvedSharedTarget::Array(_) => {
+            panic!("array targets are rejected by the type-checking array gate")
+        }
     }
 }
 

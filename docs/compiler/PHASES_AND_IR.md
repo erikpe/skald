@@ -115,6 +115,16 @@ spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
 
+Recursive array types use dense `ArrayTypeId` values backed by one canonical
+resolved table in deterministic first-use order. Each entry records its exact
+resolved element type, so nested arrays and grouped element ownership remain
+name-independent without recursively embedding owned type trees in phase
+values. Ordinary and optional shared targets can name an exact array identity;
+arrays remain outside class hierarchy, interface conformance, `Obj`, casts,
+and type tests. Resolved construction, projection, and array-assignment nodes
+retain their source structure. Type checking currently reports `TYP035` and
+produces no HIR for a program containing arrays.
+
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,
 or an optional shared class/interface/`Obj` target. Resolved expressions retain

@@ -1,11 +1,13 @@
 # Arrays
 
-Status: **frozen design; syntax implemented, semantics not implemented**. This
+Status: **frozen design; syntax and resolution implemented, semantics not
+implemented**. This
 document is authoritative for the proposed source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
-by the compiler. Array forms currently stop at a deliberate resolution
-diagnostic; they are not yet typed or executable.
+by the compiler. Array forms receive canonical recursive identities during
+resolution and currently stop at a deliberate type-checking diagnostic; they
+are not yet represented in HIR or executable.
 
 Arrays are built-in, invariant, fixed-size sequences with an exact element
 type. They may be inline values or shared allocations, may contain every

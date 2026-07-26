@@ -46,23 +46,55 @@ impl<'program> BodyResolutionEnvironment<'program> {
 }
 
 pub(super) fn resolve_callable_body(
-    callable: CallableId,
-    receiver_class: Option<ClassId>,
+    context: CallableResolutionContext,
     parameters: &[ResolvedParameter],
     body: &syntax::Block,
-    base_initialization: BaseInitializationPolicy,
     environment: BodyResolutionEnvironment<'_>,
+    array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedCallableBody {
     CallableResolver::new(
-        callable,
-        receiver_class,
+        context.callable,
+        context.receiver_class,
         parameters,
-        base_initialization,
+        context.base_initialization,
         environment,
+        array_types,
         diagnostics,
     )
     .resolve(body)
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct CallableResolutionContext {
+    callable: CallableId,
+    receiver_class: Option<ClassId>,
+    base_initialization: BaseInitializationPolicy,
+}
+
+impl CallableResolutionContext {
+    pub(super) const fn callable(self) -> CallableId {
+        self.callable
+    }
+
+    pub(super) const fn function(callable: CallableId) -> Self {
+        Self {
+            callable,
+            receiver_class: None,
+            base_initialization: BaseInitializationPolicy::Forbidden,
+        }
+    }
+
+    pub(super) const fn member(
+        callable: CallableId,
+        base_initialization: BaseInitializationPolicy,
+    ) -> Self {
+        Self {
+            callable,
+            receiver_class: callable.class(),
+            base_initialization,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -78,24 +110,26 @@ struct BindingSymbol {
     name_span: Span,
 }
 
-struct CallableResolver<'program, 'diagnostics> {
+struct CallableResolver<'program, 'state> {
     callable: CallableId,
     receiver_class: Option<ClassId>,
     environment: BodyResolutionEnvironment<'program>,
-    diagnostics: &'diagnostics mut Diagnostics,
+    array_types: &'state mut ArrayTypeInterner,
+    diagnostics: &'state mut Diagnostics,
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
 }
 
-impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
+impl<'program, 'state> CallableResolver<'program, 'state> {
     fn new(
         callable: CallableId,
         receiver_class: Option<ClassId>,
         parameters: &[ResolvedParameter],
         base_initialization: BaseInitializationPolicy,
         environment: BodyResolutionEnvironment<'program>,
-        diagnostics: &'diagnostics mut Diagnostics,
+        array_types: &'state mut ArrayTypeInterner,
+        diagnostics: &'state mut Diagnostics,
     ) -> Self {
         let parameters = parameters
             .iter()
@@ -114,6 +148,7 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             callable,
             receiver_class,
             environment,
+            array_types,
             diagnostics,
             base_initialization,
             scopes: vec![parameters],
@@ -158,7 +193,12 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
     }
 
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
-        super::resolve_type(type_syntax, self.environment.top_levels, self.diagnostics)
+        super::resolve_type(
+            type_syntax,
+            self.environment.top_levels,
+            self.array_types,
+            self.diagnostics,
+        )
     }
 
     fn resolve_expression(
@@ -294,8 +334,44 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             }
             syntax::Expression::Allocation(allocation) => self.resolve_allocation(allocation),
             syntax::Expression::ArrayConstruction(construction) => {
-                self.report_unsupported_array(construction.span);
-                None
+                let array_type = self.resolve_type(&construction.array_type)?;
+                let arguments = match &construction.arguments {
+                    syntax::ArrayConstructionArguments::Empty {
+                        left_paren_span,
+                        right_paren_span,
+                    } => ResolvedArrayConstructionArguments::Empty {
+                        left_paren_span: *left_paren_span,
+                        right_paren_span: *right_paren_span,
+                    },
+                    syntax::ArrayConstructionArguments::Length {
+                        left_paren_span,
+                        length,
+                        right_paren_span,
+                    } => ResolvedArrayConstructionArguments::Length {
+                        left_paren_span: *left_paren_span,
+                        length: Box::new(self.resolve_expression(length)?),
+                        right_paren_span: *right_paren_span,
+                    },
+                    syntax::ArrayConstructionArguments::Copy {
+                        left_paren_span,
+                        copy_span,
+                        source,
+                        right_paren_span,
+                    } => ResolvedArrayConstructionArguments::Copy {
+                        left_paren_span: *left_paren_span,
+                        copy_span: *copy_span,
+                        source: Box::new(self.resolve_expression(source)?),
+                        right_paren_span: *right_paren_span,
+                    },
+                };
+                Some(ResolvedExpression::ArrayConstruction(Box::new(
+                    ResolvedArrayConstructionExpr {
+                        new_span: construction.new_span,
+                        array_type,
+                        arguments,
+                        span: construction.span,
+                    },
+                )))
             }
             syntax::Expression::Call(call) => self.resolve_call(call),
             syntax::Expression::Grouped(grouped) => {
@@ -308,14 +384,52 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             syntax::Expression::SelfValue(self_value) => self.resolve_self(self_value.span),
             syntax::Expression::MemberAccess(member) => self.resolve_field_access(member),
             syntax::Expression::ArrayProjection(projection) => {
-                self.report_unsupported_array(projection.span);
-                None
+                let receiver = Box::new(self.resolve_expression(&projection.receiver)?);
+                let operator = match projection.operator {
+                    syntax::ArrayProjectionOperator::Ordinary { left_bracket_span } => {
+                        ResolvedArrayProjectionOperator::Ordinary { left_bracket_span }
+                    }
+                    syntax::ArrayProjectionOperator::Shared {
+                        arrow_span,
+                        left_bracket_span,
+                    } => ResolvedArrayProjectionOperator::Shared {
+                        arrow_span,
+                        left_bracket_span,
+                    },
+                };
+                let bounds = match &projection.bounds {
+                    syntax::ArrayProjectionBounds::Index(index) => {
+                        ResolvedArrayProjectionBounds::Index(Box::new(
+                            self.resolve_expression(index)?,
+                        ))
+                    }
+                    syntax::ArrayProjectionBounds::Slice {
+                        start,
+                        colon_span,
+                        end,
+                    } => ResolvedArrayProjectionBounds::Slice {
+                        start: match start {
+                            Some(bound) => Some(Box::new(self.resolve_expression(bound)?)),
+                            None => None,
+                        },
+                        colon_span: *colon_span,
+                        end: match end {
+                            Some(bound) => Some(Box::new(self.resolve_expression(bound)?)),
+                            None => None,
+                        },
+                    },
+                };
+                Some(ResolvedExpression::ArrayProjection(Box::new(
+                    ResolvedArrayProjectionExpr {
+                        receiver,
+                        operator,
+                        bounds,
+                        right_bracket_span: projection.right_bracket_span,
+                        span: projection.span,
+                    },
+                )))
             }
         }
-    }
-
-    fn report_unsupported_array(&mut self, span: Span) {
-        self.diagnostics.push(unsupported_array_diagnostic(span));
     }
 
     fn resolve_identifier(

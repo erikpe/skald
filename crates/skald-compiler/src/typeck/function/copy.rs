@@ -402,7 +402,8 @@ impl CallableChecker<'_, '_> {
                 match dereference.target {
                     crate::resolve::ResolvedSharedTarget::Class(class) => Some(class),
                     crate::resolve::ResolvedSharedTarget::Interface(_)
-                    | crate::resolve::ResolvedSharedTarget::Obj => None,
+                    | crate::resolve::ResolvedSharedTarget::Obj
+                    | crate::resolve::ResolvedSharedTarget::Array(_) => None,
                 }
             }
             crate::resolve::ResolvedExpression::Grouped(grouped) => {

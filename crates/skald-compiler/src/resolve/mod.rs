@@ -9,7 +9,10 @@ mod resolver;
 
 pub use dump::dump_resolved;
 pub use ir::{
-    ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedBaseInitialization, ResolvedBinaryExpr,
+    ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayAssignment,
+    ResolvedArrayConstructionArguments, ResolvedArrayConstructionExpr,
+    ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr, ResolvedArrayProjectionOperator,
+    ResolvedArrayType, ResolvedArrayTypeTable, ResolvedBaseInitialization, ResolvedBinaryExpr,
     ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBlock, ResolvedBooleanExpr,
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedClassDefinition,
     ResolvedClassDefinitionTable, ResolvedClassHierarchy, ResolvedClassMember, ResolvedConditional,
@@ -40,7 +43,6 @@ pub use resolver::{
     INVALID_DEREFERENCE, INVALID_INTERFACE_CLAIM, INVALID_LIFECYCLE_SIGNATURE,
     INVALID_MEMBER_SELECTION, INVALID_OPTIONAL_TYPE, INVALID_OVERRIDE, INVALID_POINTEE_ASSIGNMENT,
     SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER, UNKNOWN_NAME, UNKNOWN_TYPE,
-    UNSUPPORTED_ARRAY_SYNTAX,
 };
 
 #[cfg(test)]
