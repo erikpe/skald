@@ -8,6 +8,15 @@ progress. Completed roadmaps and resolved discovery records move to
 
 No implementation roadmaps are currently in progress.
 
+## Planned
+
+- [Arrays implementation](ARRAYS_ROADMAP.md) — **planned**; implement the
+  frozen inline/shared array contract through verified MIR and x86-64 native
+  execution. AR0, complete array source parsing, is next. The completed
+  lifecycle, shared-ownership, explicit-dereference, and optional-value
+  profiles are prerequisites; the optional-verifier maintainability discovery
+  is related but not blocking.
+
 ## Pending discoveries
 
 - [Optional-values maintainability discoveries](OPTIONAL_VALUES_DISCOVERIES.md)
