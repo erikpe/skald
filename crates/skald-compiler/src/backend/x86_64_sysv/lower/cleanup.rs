@@ -30,8 +30,28 @@ impl InstructionSelector<'_, '_> {
 
         for step in steps {
             match step {
-                crate::mir::MirDestructionStep::ArrayField(_) => {
-                    unreachable!("array MIR is rejected by target legality")
+                crate::mir::MirDestructionStep::ArrayField(field) => {
+                    let array = match self
+                        .program
+                        .field(field)
+                        .ok_or_else(|| {
+                            self.cleanup_error(format!(
+                                "destruction plan for {class} names unknown field {field}"
+                            ))
+                        })?
+                        .ty
+                    {
+                        MirType::Array(array) => array,
+                        _ => {
+                            return Err(self.cleanup_error(format!(
+                                "destruction plan for {class} contains non-array field {field}"
+                            )))
+                        }
+                    };
+                    self.select_array_field_cleanup(
+                        &destination.clone().project_field(field),
+                        array,
+                    )?;
                 }
                 MirDestructionStep::Base(base) => {
                     self.select_destruction_plan(base, destination.clone().project_base(base))?;

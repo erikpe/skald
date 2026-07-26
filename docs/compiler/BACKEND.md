@@ -91,14 +91,15 @@ entering ordinary shared machinery.
 Inline optional-container aliases use that same container address without
 transferring ownership or scheduling callee cleanup.
 
-Verified primitive inline-array locals are executable for `i64`, `u64`, `u8`,
-`f64`, and `bool` elements. The target accepts empty/default-length
-construction, immutable length, checked positive and one-time
-negative-relative indexing, exact primitive loads/stores, normal cleanup, and
-the local anchors required by those operations. Invalid indices branch to the
-verified terminating failure edge before indexed address selection. Non-local
-ownership, copying, replacement, nontrivial elements, shared outer arrays,
-slices, and detachable backing aliases remain structured legality errors.
+Verified primitive inline arrays are executable for `i64`, `u64`, `u8`, `f64`,
+and `bool` elements. The target accepts empty/default-length construction,
+immutable length, checked positive and one-time negative-relative indexing,
+exact primitive loads/stores, named deep copy, produced-backing adoption,
+arbitrary-length whole replacement, class fields, internal value
+parameters/results, and normal cleanup. Invalid indices branch to the verified
+terminating failure edge before indexed address selection. Nontrivial or
+nested elements, shared outer arrays, slices, and array aliases remain
+structured legality errors.
 
 ## Data layout
 
@@ -124,8 +125,8 @@ count at offset zero, immutable eight-byte length at offset eight, and aligned
 elements beginning at offset sixteen. Eight-byte primitives have stride eight;
 `u8` and `bool` have stride one. Checked target layout computes header,
 alignment, stride, maximum element count, and total bytes before allocation.
-Private initialization and release helpers are emitted in canonical
-`ArrayTypeId` order.
+Private initialization, primitive-copy, whole-clone, and release helpers are
+emitted in canonical `ArrayTypeId` order.
 
 An inline root class lays out fields in declaration order. A derived class
 first embeds its complete direct-base layout at offset zero, then lays out its
@@ -215,11 +216,11 @@ compiler-private address conventions for inline objects:
   first address selects the static class subobject or complete-object identity;
   forwarding preserves the latter two components unchanged. Read-only and
   mutable access use the same representation;
-- an exact-class or primitive-optional value parameter is an address to
-  caller-created aggregate storage whose ownership transfer was already
-  selected in MIR; and
-- an exact-class or primitive-optional result uses a hidden destination address
-  before the receiver and explicit arguments.
+- an exact-class, primitive-optional, or primitive-array value parameter is an
+  address to caller-created aggregate storage whose ownership transfer was
+  already selected in MIR; and
+- an exact-class, primitive-optional, or primitive-array result uses a hidden
+  destination address before the receiver and explicit arguments.
 
 For an object-returning method, the hidden result destination precedes all
 three receiver components. Each object alias's complete-object and metadata
@@ -245,11 +246,11 @@ alignment. Inline object locals and temporaries receive their complete checked
 class layout. The complete frame is rounded to 16-byte alignment and uses
 `rbp`-relative addressing.
 
-Return destinations and owned class or primitive-optional parameters store an
-incoming pointer in a frame home. Receivers and aliases additionally store
-complete-object and metadata homes for forwarding. Projecting a MIR place
-loads the appropriate base when indirect, then accumulates checked target base
-and field offsets.
+Return destinations and owned class, primitive-optional, or primitive-array
+parameters store an incoming pointer in a frame home. Receivers and aliases
+additionally store complete-object and metadata homes for forwarding.
+Projecting a MIR place loads the appropriate base when indirect, then
+accumulates checked target base and field offsets.
 Byte fields use byte-width loads and stores; wider primitive and address
 values use their target-width operations.
 

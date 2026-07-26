@@ -158,9 +158,9 @@ particular NaN payload.
 No equality, ordering, logical, division, remainder, bitwise, shift, or
 exponentiation operator is implemented. In particular, even primitive equality
 is currently unavailable in source. Built-in array indexing and slicing are
-intrinsic operations rather than general operators; primitive inline local
-element reads and mutation currently execute on x86-64, while slices and later
-array ownership profiles remain target-legality errors.
+intrinsic operations rather than general operators; primitive inline element
+reads and mutation currently execute on x86-64, while slices and later element
+or ownership profiles remain target-legality errors.
 
 ## Conversions and future value families
 
@@ -185,9 +185,10 @@ Arrays have a [frozen design with partial native execution](ARRAYS.md). The
 built-in invariant `T[]` and `shared T[]` families distinguish deep-copying
 inline values from shared allocations, use `u64` lengths and signed
 negative-capable indices, copy slice reads, and preserve deterministic element
-lifetime. Primitive inline local construction, length, indexing, mutation, and
-cleanup execute on x86-64. No structural indexing or iteration protocol is
-implied.
+lifetime. Primitive inline construction, length, indexing, mutation, named
+deep copy, produced-backing adoption, arbitrary-length replacement, class
+fields, internal value parameters/results, and cleanup execute on x86-64. No
+structural indexing or iteration protocol is implied.
 
 An immutable language-facing string value remains an exploratory direction,
 but its type name, literal syntax and encoding, byte/text semantics, copying,

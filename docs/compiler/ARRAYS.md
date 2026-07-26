@@ -1,14 +1,16 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; primitive inline local construction, lifetime, length,
-and checked element access execute on x86-64**.
+Status: **frozen design; primitive inline array values execute across internal
+owning boundaries on x86-64**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler now lowers all
 typed array operations through verified, layout-independent MIR. The x86-64
-backend executes the initial primitive inline-local profile and structurally
-rejects later array operations at its legality boundary.
+backend executes primitive inline construction, access, deep copy,
+produced-backing adoption, replacement, class fields, and internal value
+boundaries. It structurally rejects later array operations at its legality
+boundary.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -48,12 +50,14 @@ checked projection, slice checks before writes, and exact terminating failure
 edges. No MIR operation contains a descriptor layout, element stride, header
 offset, target register, or runtime ABI fact.
 
-The current x86-64 profile executes empty and dynamically sized inline local
-arrays of `i64`, `u64`, `u8`, `f64`, and `bool`, their immutable `len()`, exact
-zero/false initialization, and normal cleanup. Non-local ownership, element
-projection, copying, replacement, nontrivial elements, shared outer arrays,
-slices, and aliases remain structured backend-unsupported operations. The
-type checker and MIR lowering do not use an array-wide unsupported diagnostic.
+The current x86-64 profile executes empty and dynamically sized inline arrays
+of `i64`, `u64`, `u8`, `f64`, and `bool`, their immutable `len()`, exact
+zero/false initialization, checked element access, deep copying of named
+values, adoption of produced backings, arbitrary-length whole replacement,
+class fields, internal value parameters and results, and normal cleanup.
+Nontrivial or nested elements, shared outer arrays, slices, and array aliases
+remain structured backend-unsupported operations. The type checker and MIR
+lowering do not use an array-wide unsupported diagnostic.
 
 ## Canonical type model
 
@@ -402,9 +406,12 @@ length multiplication, and total allocation size are checked before
 applies when stride and header cannot fit in `u64`. Allocation failure remains
 the runtime allocator's existing unsuccessful-termination contract.
 
-Generated initialization and release helpers have deterministic private
-symbols specialized by canonical `ArrayTypeId`. Construction writes each
-primitive zero/false element in increasing index order before publication.
+Generated initialization, primitive-copy, whole-clone, and release helpers
+have deterministic private symbols specialized by canonical `ArrayTypeId`.
+Construction writes each primitive zero/false element in increasing index
+order before publication. Named synthesized field copying uses the clone
+helper; explicit MIR copy loops use the primitive-copy helper. Produced
+adoption installs the existing descriptor without invoking either copy helper.
 Normal cleanup ends the descriptor's owner account and calls `ska_rt_free`
 exactly when the final account ends; the zero descriptor performs no runtime
 call. The count and header length retain the state required by future detached

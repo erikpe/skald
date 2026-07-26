@@ -104,11 +104,13 @@ fn intentional_driver_paths_compile() {
     let arrays = compile_source_to_assembly(
         "arrays-api.ska",
         concat!(
+            "fn duplicate(values: bool[]) -> bool[] { return values; }\n",
             "fn main() -> i64 {\n",
             "  var values: bool[] = bool[](3u);\n",
             "  var empty: u8[] = u8[]();\n",
             "  values[-1] = true;\n",
-            "  var selected: bool = values[2];\n",
+            "  var copied: bool[] = duplicate(values);\n",
+            "  var selected: bool = copied[2];\n",
             "  return 0;\n",
             "}\n",
         ),
@@ -116,6 +118,7 @@ fn intentional_driver_paths_compile() {
     )
     .unwrap();
     assert!(arrays.assembly.contains(".Lska_array_0_initialize_element"));
+    assert!(arrays.assembly.contains(".Lska_array_0_copy_element"));
     assert!(arrays.assembly.contains("[r11 + rcx*1 + 16]"));
     assert!(arrays.assembly.contains("call ska_rt_free"));
 }

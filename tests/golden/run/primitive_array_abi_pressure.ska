@@ -1,0 +1,42 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+fn eighth(
+    a: i64[],
+    b: i64[],
+    c: i64[],
+    d: i64[],
+    e: i64[],
+    f: i64[],
+    g: i64[],
+    h: i64[]
+) -> i64[] {
+    h[0] = 80;
+    return h;
+}
+
+fn recursive_copy(values: i64[], again: bool) -> i64[] {
+    if (again) {
+        return recursive_copy(values, false);
+    }
+    return values;
+}
+
+fn main() -> i64 {
+    var selected: i64[] = eighth(
+        i64[](1u),
+        i64[](1u),
+        i64[](1u),
+        i64[](1u),
+        i64[](1u),
+        i64[](1u),
+        i64[](1u),
+        i64[](1u)
+    );
+    ska_rt_println_i64(selected[0]);
+
+    var recursive: i64[] = recursive_copy(selected, true);
+    recursive[0] = 90;
+    ska_rt_println_i64(selected[0]);
+    ska_rt_println_i64(recursive[0]);
+    return 0;
+}

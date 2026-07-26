@@ -460,10 +460,13 @@ shapes, and explicit shared bracket projection cross the syntax boundary with
 deterministic AST dumps. Resolution assigns deterministic canonical recursive
 array identities, and type checking retains structured lifecycle,
 construction, projection, assignment, slice, and alias operations. These
-forms lower to verified target-independent MIR. The x86-64 backend rejects
-operations beyond primitive inline local construction, immutable length,
-checked element reads and mutation, and normal cleanup. The frozen semantics
-belong to [Arrays](ARRAYS.md).
+forms lower to verified target-independent MIR. The x86-64 backend executes
+primitive inline construction, immutable length, checked element reads and
+mutation, named deep copy, produced-backing adoption, arbitrary-length
+replacement, class fields, internal value parameters/results, and normal
+cleanup. Nontrivial or nested elements, shared outer arrays, slices, and array
+aliases remain target-legality errors. The frozen semantics belong to
+[Arrays](ARRAYS.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

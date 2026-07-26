@@ -1,6 +1,9 @@
 use crate::{
-    identity::{ClassId, FieldId, FunctionId},
-    mir::{verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess},
+    identity::{ArrayTypeId, ClassId, FieldId, FunctionId},
+    mir::{
+        verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess,
+        MirSynthesizedFieldCopy,
+    },
     test_support::lower_source_to_mir,
 };
 
@@ -86,6 +89,36 @@ fn rejects_synthesized_copy_metadata_with_the_wrong_owner() {
 
     assert!(messages(&program).iter().any(|message| message
         .contains("synthesized copy-assignment plan has the wrong owner or field count")));
+}
+
+#[test]
+fn verifies_array_field_copy_and_destruction_metadata() {
+    let program = lower_source_to_mir(concat!(
+        "class Holder { values: i64[]; init() { self.values = i64[](); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+
+    verify_mir(&program).expect("canonical array field lifecycle metadata must verify");
+}
+
+#[test]
+fn rejects_synthesized_array_field_copy_with_the_wrong_array() {
+    let mut program = lower_source_to_mir(concat!(
+        "class Holder { values: i64[]; init() { self.values = i64[](); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let class = &mut program.classes.entries_mut_for_test()[0];
+    let MirCopyCapability::Synthesized(copy) = &mut class.copy_constructor else {
+        panic!("expected synthesized copy constructor");
+    };
+    let MirSynthesizedFieldCopy::Array { array, .. } = &mut copy.fields[0] else {
+        panic!("expected synthesized array field copy");
+    };
+    *array = ArrayTypeId::new(7);
+
+    assert!(messages(&program)
+        .iter()
+        .any(|message| message.contains("synthesized copy-construction plan is invalid")));
 }
 
 #[test]

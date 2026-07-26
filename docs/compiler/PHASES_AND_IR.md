@@ -137,10 +137,12 @@ choosing a descriptor layout. Generated array loops, checked allocation,
 signed position normalization, projections, slice checks, publication,
 adoption, replacement, element lifecycle, cleanup, and anchors remain explicit
 through the verifier boundary. The x86-64 backend executes empty and
-dynamically sized primitive inline local construction, length, zero/false
+dynamically sized primitive inline construction, length, zero/false
 initialization, checked element reads and mutation with signed
-negative-relative indices, and normal cleanup. Its legality pass structurally
-rejects non-local ownership and the later array profiles before instruction
+negative-relative indices, named deep copy, produced-backing adoption,
+arbitrary-length replacement, class fields, internal value calls/results, and
+normal cleanup. Its legality pass structurally rejects nontrivial or nested
+elements, shared outer arrays, slices, and array aliases before instruction
 selection.
 
 Optional types use two flat, copyable resolved families rather than recursively

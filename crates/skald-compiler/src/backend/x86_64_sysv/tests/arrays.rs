@@ -14,8 +14,12 @@ fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
 
     assert_eq!(first, second);
     assert!(first.contains(".Lska_array_0_initialize_element:"));
+    assert!(first.contains(".Lska_array_0_copy_element:"));
+    assert!(first.contains(".Lska_array_0_clone:"));
     assert!(first.contains("mov qword ptr [rdi + rsi*8 + 16], rax"));
     assert!(first.contains(".Lska_array_1_initialize_element:"));
+    assert!(first.contains(".Lska_array_1_copy_element:"));
+    assert!(first.contains(".Lska_array_1_clone:"));
     assert!(first.contains("mov byte ptr [rdi + rsi*1 + 16], al"));
     assert!(first.contains(".Lska_array_0_release:"));
     assert!(first.contains("call ska_rt_abi_v5"));
@@ -175,13 +179,64 @@ fn invalid_element_boundaries_terminate_before_addressing() {
 }
 
 #[test]
-fn nonlocal_array_ownership_remains_a_structured_backend_error() {
-    let program = lower_text(concat!(
-        "fn make() -> i64[] { return i64[](1u); }\n",
-        "fn main() -> i64 { return 0; }\n",
-    ));
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(error.to_string().contains("not yet supported"), "{error}");
+fn primitive_array_ownership_crosses_calls_results_and_replacement_without_extra_adoption_copy() {
+    let source = concat!(
+        "extern fn validate_counts() -> i64;\n",
+        "fn consume(values: i64[]) -> unit { return; }\n",
+        "fn make() -> i64[] { return i64[](2u); }\n",
+        "fn exercise() -> unit {\n",
+        "  var source: i64[] = i64[](2u);\n",
+        "  var named: i64[] = source;\n",
+        "  var produced: i64[] = i64[](2u);\n",
+        "  named = source;\n",
+        "  produced = i64[](3u);\n",
+        "  consume(source);\n",
+        "  consume(i64[](1u));\n",
+        "  var result: i64[] = make();\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { exercise(); return validate_counts(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(&ownership_counter_probe(8));
+
+    let result = run_native_assembly_output(&output);
+    assert!(
+        result.status.success(),
+        "array ownership accounting failed with {:?}: {}\n{output}",
+        result.status,
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn deferred_array_profiles_remain_structured_backend_errors() {
+    for source in [
+        concat!(
+            "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
+            "fn main() -> i64 { return 0; }\n",
+        ),
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: i64[][] = i64[][](1u);\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: shared i64[] = new i64[](1u);\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+    ] {
+        let program = lower_text(source);
+        let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+        assert!(
+            error.to_string().contains("not yet supported")
+                || error.to_string().contains("outside the primitive inline"),
+            "{error}"
+        );
+    }
 }
 
 fn native_allocator() -> &'static str {
@@ -197,6 +252,48 @@ fn native_allocator() -> &'static str {
         "ska_rt_free:\n",
         "    jmp free@PLT\n",
         ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
+fn ownership_counter_probe(expected: u64) -> String {
+    format!(
+        concat!(
+            "\n.bss\n",
+            ".p2align 3\n",
+            ".Lownership_allocations: .quad 0\n",
+            ".Lownership_frees: .quad 0\n",
+            "\n.text\n",
+            ".globl ska_rt_alloc\n",
+            ".type ska_rt_alloc, @function\n",
+            "ska_rt_alloc:\n",
+            "    push rbp\n",
+            "    mov rbp, rsp\n",
+            "    add qword ptr [rip + .Lownership_allocations], 1\n",
+            "    call malloc@PLT\n",
+            "    leave\n",
+            "    ret\n",
+            ".size ska_rt_alloc, .-ska_rt_alloc\n",
+            ".globl ska_rt_free\n",
+            ".type ska_rt_free, @function\n",
+            "ska_rt_free:\n",
+            "    add qword ptr [rip + .Lownership_frees], 1\n",
+            "    jmp free@PLT\n",
+            ".size ska_rt_free, .-ska_rt_free\n",
+            ".globl validate_counts\n",
+            ".type validate_counts, @function\n",
+            "validate_counts:\n",
+            "    cmp qword ptr [rip + .Lownership_allocations], {expected}\n",
+            "    jne .Lownership_failure\n",
+            "    cmp qword ptr [rip + .Lownership_frees], {expected}\n",
+            "    jne .Lownership_failure\n",
+            "    mov rax, 0\n",
+            "    ret\n",
+            ".Lownership_failure:\n",
+            "    mov rax, 1\n",
+            "    ret\n",
+            ".size validate_counts, .-validate_counts\n",
+        ),
+        expected = expected,
     )
 }
 

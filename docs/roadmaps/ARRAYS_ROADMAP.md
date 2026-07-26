@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR7 is next.
+Status: in progress; AR8 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -78,7 +78,7 @@ Use the existing test ownership:
 - [x] AR4 — Establish verified target-independent array MIR
 - [x] AR5 — Execute primitive inline construction, lifetime, and length
 - [x] AR6 — Execute checked primitive indexing and mutation
-- [ ] AR7 — Carry inline array values across owning boundaries
+- [x] AR7 — Carry inline array values across owning boundaries
 - [ ] AR8 — Execute nontrivial and nested inline element lifecycle
 - [ ] AR9 — Execute shared and optional-shared outer arrays
 - [ ] AR10 — Execute shared and optional-shared element lifecycle
@@ -366,21 +366,21 @@ their later execution gates.
 **Purpose:** Complete the distinctive named-deep-copy and
 produced-backing-adoption semantics before adding nontrivial element effects.
 
-- [ ] Implement explicit `T[](copy source)` and implicit named deep copy into
+- [x] Implement explicit `T[](copy source)` and implicit named deep copy into
       distinct primitive backing.
-- [ ] Implement produced backing adoption in local/field initialization,
+- [x] Implement produced backing adoption in local/field initialization,
       whole assignment, arguments, results, and temporaries without an
       observable moved-from source or redundant element copy.
-- [ ] Implement whole inline assignment with arbitrary source length:
+- [x] Implement whole inline assignment with arbitrary source length:
       complete and secure the named copy or producer, install it, then end the
       old owner and backing.
-- [ ] Preserve direct and indirect self-assignment, including exact deep-copy
+- [x] Preserve direct and indirect self-assignment, including exact deep-copy
       behavior for named sources and no destination length restriction.
-- [ ] Extend fields, internal value parameters, results, calls, returns,
+- [x] Extend fields, internal value parameters, results, calls, returns,
       full-expression cleanup, and internal ABI lowering with exact
       named-copy/produced-transfer ownership.
-- [ ] Reject arrays in external signatures and alias-root whole replacement.
-- [ ] Verify one owner account per live inline value and exactly-once
+- [x] Reject arrays in external signatures and alias-root whole replacement.
+- [x] Verify one owner account per live inline value and exactly-once
       consumption of every produced backing.
 
 **Tests:** Local/field/parameter/result/assignment matrices; named copy
@@ -393,6 +393,20 @@ mutations; native ownership and cleanup goldens; `make check`;
 every internal owning boundary, named sources always remain independent,
 produced backings transfer exactly once, and normal cleanup loses or duplicates
 no backing.
+
+**Completion summary:** Primitive inline arrays now cross every internal owning
+boundary with the frozen value semantics. Explicit and implicit named copies
+create independent primitive backing; produced values transfer their completed
+backing without another allocation or element copy. Whole replacement accepts
+arbitrary lengths and installs the secured incoming descriptor before ending
+the old owner, preserving direct and projected self-assignment. Class fields,
+synthesized class lifecycle, shared-class finalization, value parameters,
+register/stack arguments, caller-owned results, recursion, temporaries, and
+normal cleanup all use the same verified ownership model. External array
+signatures and array aliases remain rejected at their existing structured
+boundaries. Native allocation/free accounting, self-assignment and independence
+goldens, ABI-pressure coverage, verifier mutations, the complete compiler and
+runtime suites, `make check`, and `make msrv-check` pass.
 
 ### AR8 — Execute nontrivial and nested inline element lifecycle
 

@@ -55,6 +55,14 @@ pub(super) fn array_initialize_element(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_initialize_element", array.index())
 }
 
+pub(super) fn array_copy_element(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_copy_element", array.index())
+}
+
+pub(super) fn array_clone(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_clone", array.index())
+}
+
 pub(super) fn array_release(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_release", array.index())
 }

@@ -121,7 +121,10 @@ impl FrameLayout {
                 )
                 | (
                     MirStorageKind::Parameter,
-                    MirType::Class(_) | MirType::OptionalPrimitive(_) | MirType::OptionalClass(_),
+                    MirType::Class(_)
+                    | MirType::OptionalPrimitive(_)
+                    | MirType::OptionalClass(_)
+                    | MirType::Array(_),
                 ) => (SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT),
                 (_, MirType::Class(_) | MirType::Unit) => {
                     let ty = data_layout.ty(storage.ty)?;
@@ -223,6 +226,7 @@ impl FrameLayout {
                         MirType::Class(_)
                             | MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
+                            | MirType::Array(_)
                     ) =>
             {
                 (

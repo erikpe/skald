@@ -82,8 +82,31 @@ fn select_plan(
         .ok_or_else(|| finalizer_error(format!("unknown finalizer class {class}")))?;
     for step in declaration.destruction.steps.iter().copied() {
         match step {
-            MirDestructionStep::ArrayField(_) => {
-                unreachable!("array MIR is rejected by target legality")
+            MirDestructionStep::ArrayField(field) => {
+                let field_declaration = program
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("unknown finalizer field {field}")))?;
+                let MirType::Array(array) = field_declaration.ty else {
+                    return Err(finalizer_error(format!(
+                        "finalizer for {class} contains non-array field {field}"
+                    )));
+                };
+                let field_offset = data_layout
+                    .field(field)
+                    .ok_or_else(|| finalizer_error(format!("field {field} has no target layout")))?
+                    .offset;
+                let field_offset = i32::try_from(field_offset)
+                    .ok()
+                    .and_then(|offset| complete_offset.checked_add(offset))
+                    .ok_or_else(|| {
+                        finalizer_error("finalizer array-field address exceeds target limits")
+                    })?;
+                load_complete_address(field_offset, Register::R11, output);
+                output.push(Instruction::Move {
+                    source: memory(Register::R11, 0),
+                    destination: Register::Rdi.into(),
+                });
+                output.push(Instruction::Call(symbol::array_release(array)));
             }
             MirDestructionStep::UserBody(destructor) => {
                 load_complete_address(complete_offset, Register::Rdi, output);

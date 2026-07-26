@@ -73,10 +73,12 @@ zero-niche optional owners, and exact virtual/interface signatures.
 
 The compiler implements the frozen recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
-The x86-64 target currently executes primitive inline local construction,
-length, checked element reads and mutation, and cleanup; later ownership and
-element profiles remain structured target-legality errors. The complete
-direction is owned by the [array compiler and runtime contract](ARRAYS.md).
+The x86-64 target currently executes primitive inline construction, length,
+checked element reads and mutation, named deep copy, produced-backing adoption,
+arbitrary-length replacement, class fields, internal value calls/results, and
+cleanup. Nontrivial or nested elements, shared outer arrays, slices, and array
+aliases remain structured target-legality errors. The complete direction is
+owned by the [array compiler and runtime contract](ARRAYS.md).
 
 ## Pipeline
 

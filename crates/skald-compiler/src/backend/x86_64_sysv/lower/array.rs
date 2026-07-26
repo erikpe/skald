@@ -30,6 +30,50 @@ pub(super) fn lower_helpers(
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
 
 impl InstructionSelector<'_, '_> {
+    pub(super) fn select_array_copy_construction(
+        &mut self,
+        destination: &MirPlace,
+        source: &MirPlace,
+        array: crate::identity::ArrayTypeId,
+    ) -> Result<(), BackendError> {
+        self.clone_array_preserving_destination(destination, source, array)?;
+        value::store_rax(value::memory(Register::Rdx, 0), self.output);
+        Ok(())
+    }
+
+    pub(super) fn select_array_copy_assignment(
+        &mut self,
+        destination: &MirPlace,
+        source: &MirPlace,
+        array: crate::identity::ArrayTypeId,
+    ) -> Result<(), BackendError> {
+        self.clone_array_preserving_destination(destination, source, array)?;
+        self.output.push(Instruction::Move {
+            source: value::memory(Register::Rdx, 0),
+            destination: Register::Rdi.into(),
+        });
+        value::store_rax(value::memory(Register::Rdx, 0), self.output);
+        self.output
+            .push(Instruction::Call(symbol::array_release(array)));
+        Ok(())
+    }
+
+    pub(super) fn select_array_field_cleanup(
+        &mut self,
+        owner: &MirPlace,
+        array: crate::identity::ArrayTypeId,
+    ) -> Result<(), BackendError> {
+        let (_, owner) = self.frame_place(owner)?;
+        value::load_rax(owner, self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdi.into(),
+        });
+        self.output
+            .push(Instruction::Call(symbol::array_release(array)));
+        Ok(())
+    }
+
     pub(super) fn select_array_instruction(
         &mut self,
         instruction: &MirArrayInstruction,
@@ -60,16 +104,36 @@ impl InstructionSelector<'_, '_> {
                 });
                 self.output
                     .push(Instruction::Call(symbol::array_initialize_element(array)));
+                self.advance_array_index(*index);
+                Ok(())
+            }
+            MirArrayInstruction::CopyNext {
+                backing,
+                source,
+                index,
+                operation: crate::mir::MirArrayCopyElement::Primitive,
+                ..
+            } => {
+                let array = self.array_for_storage(*backing)?;
+                let (_, source) = self.frame_place(source)?;
+                value::load_rax(value::frame_storage(self.frame, *backing), self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::Rdi.into(),
+                });
+                value::load_rax(source, self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::Rsi.into(),
+                });
                 value::load_rax(value::frame_storage(self.frame, *index), self.output);
-                self.output.push(Instruction::MoveImmediate64 {
-                    bits: 1,
-                    destination: Register::R11,
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::Rdx.into(),
                 });
-                self.output.push(Instruction::Add {
-                    source: Register::R11,
-                    destination: Register::Rax,
-                });
-                value::store_rax(value::frame_storage(self.frame, *index), self.output);
+                self.output
+                    .push(Instruction::Call(symbol::array_copy_element(array)));
+                self.advance_array_index(*index);
                 Ok(())
             }
             MirArrayInstruction::Publish {
@@ -87,10 +151,29 @@ impl InstructionSelector<'_, '_> {
                 source,
                 ..
             } => {
-                value::load_rax(value::frame_storage(self.frame, *source), self.output);
                 let (_, destination) = self.frame_place(destination)?;
+                value::load_rax(value::frame_storage(self.frame, *source), self.output);
                 value::store_rax(destination, self.output);
                 self.clear_storage(*source);
+                Ok(())
+            }
+            MirArrayInstruction::Replace {
+                destination,
+                source,
+                array,
+                ..
+            } => {
+                let (_, destination) = self.frame_place(destination)?;
+                value::load_rax(destination, self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::Rdi.into(),
+                });
+                value::load_rax(value::frame_storage(self.frame, *source), self.output);
+                value::store_rax(destination, self.output);
+                self.clear_storage(*source);
+                self.output
+                    .push(Instruction::Call(symbol::array_release(*array)));
                 Ok(())
             }
             MirArrayInstruction::Release { owner, array, .. } => {
@@ -321,13 +404,12 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         place: &MirPlace,
     ) -> Result<(FramePlace, Operand), BackendError> {
-        let [MirPlaceProjection::ArrayElement {
+        let Some(MirPlaceProjection::ArrayElement {
             array,
             normalized_index,
-        }] = place.projections.as_slice()
+        }) = place.projections.last()
         else {
-            return Err(self
-                .array_error("primitive array element place has unsupported nested projections"));
+            return Err(self.array_error("primitive array element place has no final projection"));
         };
         let declaration = self
             .program
@@ -342,10 +424,10 @@ impl InstructionSelector<'_, '_> {
         let displacement = i32::try_from(layout.element_offset())
             .map_err(|_| self.array_error(format!("array {array} offset cannot be encoded")))?;
 
-        value::load_rax(
-            value::frame_storage(self.frame, place.base.storage()),
-            self.output,
-        );
+        let mut owner = place.clone();
+        owner.projections.pop();
+        let (_, owner) = self.frame_place(&owner)?;
+        value::load_rax(owner, self.output);
         self.output.push(Instruction::Move {
             source: Register::Rax.into(),
             destination: Register::R11.into(),
@@ -420,6 +502,47 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         value::store_rax(value::frame_storage(self.frame, storage), self.output);
+    }
+
+    fn advance_array_index(&mut self, index: crate::mir::StorageId) {
+        value::load_rax(value::frame_storage(self.frame, index), self.output);
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::R11,
+        });
+        self.output.push(Instruction::Add {
+            source: Register::R11,
+            destination: Register::Rax,
+        });
+        value::store_rax(value::frame_storage(self.frame, index), self.output);
+    }
+
+    fn clone_array_preserving_destination(
+        &mut self,
+        destination: &MirPlace,
+        source: &MirPlace,
+        array: crate::identity::ArrayTypeId,
+    ) -> Result<(), BackendError> {
+        self.materialize_place_address(destination, Register::Rdx)?;
+        self.output.push(Instruction::ReserveStack(16));
+        self.output.push(Instruction::Move {
+            source: Register::Rdx.into(),
+            destination: value::memory(Register::Rsp, 0),
+        });
+        let (_, source) = self.frame_place(source)?;
+        value::load_rax(source, self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdi.into(),
+        });
+        self.output
+            .push(Instruction::Call(symbol::array_clone(array)));
+        self.output.push(Instruction::Move {
+            source: value::memory(Register::Rsp, 0),
+            destination: Register::Rdx.into(),
+        });
+        self.output.push(Instruction::ReleaseStack(16));
+        Ok(())
     }
 
     fn clear_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {

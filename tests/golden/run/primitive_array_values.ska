@@ -1,0 +1,87 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+
+fn mutate_first(values: i64[], replacement: i64) -> i64 {
+    values[0] = replacement;
+    return values[0];
+}
+
+fn copy_result(values: i64[]) -> i64[] {
+    return values;
+}
+
+fn produced_result(first: i64, length: u64) -> i64[] {
+    var values: i64[] = i64[](length);
+    values[0] = first;
+    return values;
+}
+
+class Holder {
+    values: i64[];
+
+    init(values: i64[]) {
+        self.values = values;
+    }
+
+    fn first() -> i64 {
+        return self.values[0];
+    }
+}
+
+fn main() -> i64 {
+    var source: i64[] = i64[](2u);
+    source[0] = 10;
+    source[1] = 20;
+
+    var named: i64[] = source;
+    var explicit: i64[] = i64[](copy source);
+    named[0] = 30;
+    explicit[1] = 40;
+    ska_rt_println_i64(source[0]);
+    ska_rt_println_i64(source[1]);
+    ska_rt_println_i64(named[0]);
+    ska_rt_println_i64(explicit[1]);
+
+    ska_rt_println_i64(mutate_first(source, 50));
+    ska_rt_println_i64(source[0]);
+    ska_rt_println_i64(mutate_first(i64[](2u), 60));
+
+    var returned_copy: i64[] = copy_result(source);
+    returned_copy[0] = 70;
+    ska_rt_println_i64(source[0]);
+    ska_rt_println_i64(returned_copy[0]);
+
+    var returned_produced: i64[] = produced_result(80, 3u);
+    ska_rt_println_u64(returned_produced.len());
+    ska_rt_println_i64(returned_produced[0]);
+
+    source = returned_produced;
+    ska_rt_println_u64(source.len());
+    returned_produced[0] = 90;
+    ska_rt_println_i64(source[0]);
+
+    source = i64[](1u);
+    source[0] = 100;
+    ska_rt_println_u64(source.len());
+    ska_rt_println_i64(source[0]);
+    source = source;
+    ska_rt_println_i64(source[0]);
+
+    var holder: Holder = Holder(source);
+    var holder_copy: Holder = holder;
+    holder_copy.values[0] = 110;
+    ska_rt_println_i64(holder.first());
+    ska_rt_println_i64(holder_copy.first());
+    holder_copy = holder;
+    holder.values[0] = 120;
+    ska_rt_println_i64(holder_copy.first());
+    holder.values = holder.values;
+    holder_copy = holder_copy;
+    ska_rt_println_i64(holder.first());
+    ska_rt_println_i64(holder_copy.first());
+
+    var shared_holder: shared Holder = new Holder(source);
+    shared_holder->values[0] = 130;
+    ska_rt_println_i64(shared_holder->first());
+    return 0;
+}

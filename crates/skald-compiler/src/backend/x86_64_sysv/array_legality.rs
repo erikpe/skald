@@ -4,9 +4,9 @@ use crate::{
     backend::{BackendError, Target},
     mir::{
         MirArrayAnchorKind, MirArrayDefaultElement, MirArrayFailure, MirArrayInstruction,
-        MirArrayOwnership, MirArrayPositionKind, MirDefinitionRef, MirInstruction, MirPlace,
-        MirPlaceBase, MirPlaceProjection, MirProgram, MirRvalueKind, MirStorageKind,
-        MirTerminationReason, MirTerminator, MirType,
+        MirArrayOwnership, MirArrayPositionKind, MirDefinitionRef, MirInstruction,
+        MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirRvalueKind,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType,
     },
 };
 
@@ -29,18 +29,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
             ));
         }
     }
-    for class in program.classes.iter() {
-        if class
-            .fields
-            .iter()
-            .any(|field| matches!(field.ty, MirType::Array(_)))
-        {
-            return Err(error(
-                None,
-                "inline array fields are not yet supported by the x86-64 backend",
-            ));
-        }
-    }
     for definition in program.executable_definitions() {
         check_definition(program, definition)?;
     }
@@ -54,15 +42,12 @@ fn check_definition(
     let signature = program
         .callable_signature(definition.callable())
         .expect("verified definition has a signature");
-    if matches!(signature.return_type, MirType::Array(_))
-        || signature
-            .parameters
-            .iter()
-            .any(|parameter| matches!(parameter.ty, MirType::Array(_)))
-    {
+    if signature.parameters.iter().any(|parameter| {
+        matches!(parameter.ty, MirType::Array(_)) && parameter.mode != MirParameterMode::Value
+    }) {
         return Err(error(
             Some(definition.callable()),
-            "array parameters and results are not yet supported by the x86-64 backend",
+            "array alias parameters are not yet supported by the x86-64 backend",
         ));
     }
 
@@ -71,6 +56,9 @@ fn check_definition(
             let supported = matches!(
                 storage.kind,
                 MirStorageKind::Local
+                    | MirStorageKind::Parameter
+                    | MirStorageKind::Return
+                    | MirStorageKind::Argument
                     | MirStorageKind::ArrayBacking
                     | MirStorageKind::ArrayProduced
                     | MirStorageKind::ArrayAnchor(
@@ -88,7 +76,7 @@ fn check_definition(
 
     for block in &definition.body().blocks {
         for instruction in &block.instructions {
-            check_instruction(definition, instruction)?;
+            check_instruction(program, definition, instruction)?;
         }
         check_terminator(definition, block.terminator.as_ref().unwrap())?;
     }
@@ -96,21 +84,22 @@ fn check_definition(
 }
 
 fn check_instruction(
+    program: &MirProgram,
     definition: MirDefinitionRef<'_>,
     instruction: &MirInstruction,
 ) -> Result<(), BackendError> {
     match instruction {
         MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
             MirRvalueKind::ArrayLength { source, .. } => {
-                require_local_array_place(definition, source)?;
+                require_inline_array_place(program, definition, source)?;
             }
             MirRvalueKind::Load(source) if has_array_element_projection(source) => {
-                require_local_primitive_element_place(definition, source)?;
+                require_primitive_element_place(program, definition, source)?;
             }
             _ => {}
         },
         MirInstruction::Store(store) if has_array_element_projection(&store.destination) => {
-            require_local_primitive_element_place(definition, &store.destination)?;
+            require_primitive_element_place(program, definition, &store.destination)?;
         }
         MirInstruction::Array(array) => match array {
             MirArrayInstruction::Allocate {
@@ -123,18 +112,28 @@ fn check_instruction(
                 ..
             }
             | MirArrayInstruction::Publish { .. } => {}
+            MirArrayInstruction::CopyNext {
+                source,
+                operation: crate::mir::MirArrayCopyElement::Primitive,
+                ..
+            } => {
+                require_inline_array_place(program, definition, source)?;
+            }
             MirArrayInstruction::Adopt { destination, .. } => {
-                require_local_array_place(definition, destination)?;
+                require_inline_array_place(program, definition, destination)?;
+            }
+            MirArrayInstruction::Replace { destination, .. } => {
+                require_inline_array_place(program, definition, destination)?;
             }
             MirArrayInstruction::Release { owner, .. } => {
-                require_local_array_place(definition, owner)?;
+                require_inline_array_place(program, definition, owner)?;
             }
             MirArrayInstruction::AnchorBegin {
                 owner,
                 kind: MirArrayAnchorKind::InlineOwner | MirArrayAnchorKind::InlineBacking,
                 ..
             } => {
-                require_local_array_place(definition, owner)?;
+                require_inline_array_place(program, definition, owner)?;
             }
             MirArrayInstruction::AnchorEnd { .. } => {}
             MirArrayInstruction::Normalize {
@@ -142,7 +141,7 @@ fn check_instruction(
                 kind: MirArrayPositionKind::Element,
                 ..
             } => {
-                require_local_array_place(definition, owner)?;
+                require_inline_array_place(program, definition, owner)?;
             }
             _ => {
                 return Err(error(
@@ -196,21 +195,23 @@ fn check_terminator(
     }
 }
 
-fn require_local_primitive_element_place(
+fn require_primitive_element_place(
+    program: &MirProgram,
     definition: MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> Result<(), BackendError> {
-    let [MirPlaceProjection::ArrayElement { .. }] = place.projections.as_slice() else {
+    let Some(MirPlaceProjection::ArrayElement { .. }) = place.projections.last() else {
         return Err(error(
             Some(definition.callable()),
-            "only direct primitive array element places are executable on x86-64",
+            "only primitive array element places are executable on x86-64",
         ));
     };
-    let owner = MirPlace {
+    let mut owner = MirPlace {
         base: place.base,
-        projections: Vec::new(),
+        projections: place.projections.clone(),
     };
-    require_local_array_place(definition, &owner)
+    owner.projections.pop();
+    require_inline_array_place(program, definition, &owner)
 }
 
 fn has_array_element_projection(place: &MirPlace) -> bool {
@@ -220,25 +221,61 @@ fn has_array_element_projection(place: &MirPlace) -> bool {
         .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
 }
 
-fn require_local_array_place(
+fn require_inline_array_place(
+    program: &MirProgram,
     definition: MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> Result<(), BackendError> {
     let storage = definition
         .storage(place.base.storage())
         .expect("verified array place has declared storage");
-    if place.projections.is_empty()
+    let direct_owner = place.projections.is_empty()
         && matches!(place.base, MirPlaceBase::Storage(_))
-        && storage.kind == MirStorageKind::Local
-        && matches!(storage.ty, MirType::Array(_))
-    {
+        && matches!(
+            storage.kind,
+            MirStorageKind::Local
+                | MirStorageKind::Parameter
+                | MirStorageKind::Return
+                | MirStorageKind::Argument
+                | MirStorageKind::ArrayProduced
+        )
+        && matches!(storage.ty, MirType::Array(_));
+    let field_owner = !place.projections.is_empty()
+        && !matches!(
+            storage.ty,
+            MirType::Array(_) | MirType::Shared(crate::mir::MirSharedTarget::Array(_))
+        )
+        && projected_type(program, storage.ty, place) // verified projections
+            .is_some_and(|ty| matches!(ty, MirType::Array(_)));
+    if direct_owner || field_owner {
         Ok(())
     } else {
         Err(error(
             Some(definition.callable()),
-            "only direct local inline-array places are executable on x86-64",
+            "array place is outside the primitive inline owning-boundary profile",
         ))
     }
+}
+
+fn projected_type(program: &MirProgram, mut ty: MirType, place: &MirPlace) -> Option<MirType> {
+    if matches!(
+        place.base,
+        MirPlaceBase::SharedPointee(_) | MirPlaceBase::SharedAllocationPayload(_)
+    ) {
+        let MirType::Shared(target) = ty else {
+            return None;
+        };
+        ty = target.ty();
+    }
+    for projection in &place.projections {
+        ty = match *projection {
+            MirPlaceProjection::Base(base) => MirType::Class(base),
+            MirPlaceProjection::Field(field) => program.field(field)?.ty,
+            MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
+            MirPlaceProjection::ArrayElement { array, .. } => program.array_type(array)?.element,
+        };
+    }
+    Some(ty)
 }
 
 fn error(

@@ -333,6 +333,7 @@ impl<'mir> Verifier<'mir> {
                         MirType::OptionalClass(_) => {
                             Some(MirDestructionStep::OptionalClassField(field.id))
                         }
+                        MirType::Array(_) => Some(MirDestructionStep::ArrayField(field.id)),
                         _ => None,
                     }),
             );
@@ -564,6 +565,13 @@ impl<'mir> Verifier<'mir> {
                         target: step_target,
                     },
                 ) => *id == field.id && target == *step_target,
+                (
+                    MirType::Array(array),
+                    MirSynthesizedFieldCopy::Array {
+                        field: id,
+                        array: step_array,
+                    },
+                ) => *id == field.id && array == *step_array,
                 _ => false,
             };
             if !valid {
@@ -640,6 +648,13 @@ impl<'mir> Verifier<'mir> {
                         target: step_target,
                     },
                 ) => *id == field.id && target == *step_target,
+                (
+                    MirType::Array(array),
+                    MirSynthesizedFieldCopy::Array {
+                        field: id,
+                        array: step_array,
+                    },
+                ) => *id == field.id && array == *step_array,
                 _ => false,
             };
             if !valid {

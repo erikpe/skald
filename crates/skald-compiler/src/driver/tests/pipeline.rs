@@ -360,11 +360,20 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
 fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
     let artifact = compile_source_to_assembly(
         "arrays.ska",
-        "fn main() -> i64 { var values: i64[] = i64[](4u); values[-1] = 7; return values[3]; }",
+        concat!(
+            "fn duplicate(values: i64[]) -> i64[] { return values; }\n",
+            "fn main() -> i64 {\n",
+            "  var values: i64[] = i64[](4u);\n",
+            "  values[-1] = 7;\n",
+            "  var copied: i64[] = duplicate(values);\n",
+            "  return copied[3];\n",
+            "}\n",
+        ),
         Target::X86_64SysV,
     )
     .expect("primitive inline local arrays must lower through x86-64");
     assert!(artifact.assembly.contains("call ska_rt_alloc"));
     assert!(artifact.assembly.contains("call ska_rt_free"));
+    assert!(artifact.assembly.contains(".Lska_array_0_copy_element"));
     assert!(artifact.assembly.contains("[r11 + rcx*8 + 16]"));
 }
