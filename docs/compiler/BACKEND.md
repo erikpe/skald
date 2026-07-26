@@ -73,7 +73,7 @@ inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering
 input.
 
-Inline optional owning values follow the frozen layout in
+Inline optional owning values follow the implemented layout in
 [Optional Values](OPTIONAL_VALUES.md#initial-x86-64-inline-layout): an
 eight-byte state word precedes the payload at its required alignment. The
 backend writes a present payload before publishing state, branches before

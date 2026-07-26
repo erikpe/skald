@@ -1,0 +1,44 @@
+interface Readable {
+    fn read() -> i64;
+}
+
+class ReadableValue implements Readable {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn read() -> i64 {
+        return self.marker;
+    }
+}
+
+class Holder {
+    value: shared? Readable;
+
+    init(value: shared? Readable) {
+        self.value = value;
+    }
+
+    mut fn replace(value: shared? Readable) -> unit {
+        self.value = value;
+    }
+}
+
+fn forward(value: shared? Readable) -> shared? Readable {
+    return value;
+}
+
+fn main() -> i64 {
+    var concrete: shared? ReadableValue = new ReadableValue(42);
+    var readable: shared? Readable = concrete;
+    var object: shared? Obj = readable;
+    var recovered: shared ReadableValue = (shared ReadableValue) object!;
+    var holder: Holder = Holder(forward(recovered));
+    holder.replace(readable);
+    concrete = none;
+    readable = none;
+    object = none;
+    return holder.value!->read();
+}

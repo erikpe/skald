@@ -168,14 +168,15 @@ conversion, is not frozen. Object casts are defined separately in
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.
 
-Optional values have a [frozen contract](OPTIONAL_VALUES.md) for representing
-absence without making every value nullable. Primitive and exact-class `T?`
-owning locals, fields, and internal parameters/results are implemented with
-`none`, exact-value injection, optional copy and assignment, initializer
-ranking, presence tests, conditional class lifecycle, and checked class payload
-places. Primitive and class postfix `!` are implemented. Optionals have no
-truthiness and never implicitly convert to their payload. Optional-container
-aliases and `shared? T` remain staged exclusions at type checking.
+Optional values have an [implemented contract](OPTIONAL_VALUES.md) for
+representing absence without making every value nullable. Primitive and
+exact-class `T?` and optional shared-owner `shared? T` values cross owning
+locals, fields, and internal parameters/results with `none`, exact-value
+injection, optional copy and assignment, initializer ranking, presence tests,
+conditional lifecycle, and checked access. Alias parameters may designate
+supported inline optional containers. Optionals have no truthiness and never
+implicitly convert to their payload; optional references, aliases to optional
+shared owners, and external optional signatures remain rejected.
 
 Arrays are an open design area. Element lifetime, size and mutability, storage,
 construction, indexing, slicing, bounds failure, borrowing, and iteration must

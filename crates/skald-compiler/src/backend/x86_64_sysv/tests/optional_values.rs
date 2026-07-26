@@ -222,6 +222,72 @@ fn checked_class_payload_views_execute_mutation_and_overlap() {
 }
 
 #[test]
+fn saturated_optional_guard_state_terminates_on_checked_view_begin() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+        class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+        fn main() -> i64 {\n\
+            var holder: Holder = Holder(Item(42));\n\
+            return holder.item!.value;\n\
+        }\n";
+    let output = assembly(source);
+    let begin_view = concat!(
+        "call .Lska_class_1_init_0\n",
+        "    mov rax, qword ptr [rbp - 16]"
+    );
+    assert_eq!(
+        output.matches(begin_view).count(),
+        1,
+        "fixture must identify the checked container state load\n{output}"
+    );
+    let saturated = output.replacen(
+        begin_view,
+        concat!(
+            "call .Lska_class_1_init_0\n",
+            "    mov rax, -1\n",
+            "    mov qword ptr [rbp - 16], rax\n",
+            "    mov rax, qword ptr [rbp - 16]"
+        ),
+        1,
+    );
+
+    assert!(!run_native_assembly(&saturated).success(), "{saturated}");
+}
+
+#[test]
+fn dynamically_pinned_optional_state_terminates_before_container_destruction() {
+    let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
+        class Holder { item: Item?; init(item: Item?) { self.item = item; } }\n\
+        fn main() -> i64 {\n\
+            var holder: Holder = Holder(Item(42));\n\
+            return 42;\n\
+        }\n";
+    let output = assembly(source);
+    let initialized = concat!(
+        "call .Lska_class_1_init_0\n",
+        "    mov rax, 42\n",
+        "    mov qword ptr [rbp - 48], rax"
+    );
+    assert_eq!(
+        output.matches(initialized).count(),
+        1,
+        "fixture must identify the container state before cleanup\n{output}"
+    );
+    let pinned = output.replacen(
+        initialized,
+        concat!(
+            "call .Lska_class_1_init_0\n",
+            "    mov rax, 2\n",
+            "    mov qword ptr [rbp - 16], rax\n",
+            "    mov rax, 42\n",
+            "    mov qword ptr [rbp - 48], rax"
+        ),
+        1,
+    );
+
+    assert!(!run_native_assembly(&pinned).success(), "{pinned}");
+}
+
+#[test]
 fn checked_class_payload_view_terminates_before_later_argument_can_clear_it() {
     let source = "class Item { value: i64; init(value: i64) { self.value = value; } }\n\
     class Holder {\n\

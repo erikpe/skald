@@ -7,7 +7,7 @@ boundaries, and aliases to supported inline optional containers. The
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
 
-This document freezes Skald's source-level optional-value contract. Primitive
+This document defines Skald's source-level optional-value contract. Primitive
 `i64?`, `u64?`, `u8?`, `f64?`, and `bool?` values and exact inline class `T?`
 values now execute end to end in
 owning locals, fields, internal value parameters/results, methods, interfaces,
@@ -76,7 +76,7 @@ partially destroyed value of type `T`. When an optional is absent, there is no
 
 ## Type forms
 
-The frozen profile separates optional inline payloads from optional shared
+The implemented profile separates optional inline payloads from optional shared
 ownership:
 
 | Type | Meaning | Frozen profile |
@@ -123,8 +123,8 @@ var shared_owner: shared? Item = none;
 ```
 
 The expected type may come from a local or field initialization, assignment,
-argument, return, or initializer candidate. The current executable slice
-supplies all of those boundaries for primitive optionals. `none` used without
+argument, return, or initializer candidate. The implemented profile supplies
+all of those boundaries for every supported optional. `none` used without
 one unambiguous optional expectation is invalid. It does not have a universal
 runtime type.
 

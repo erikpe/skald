@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP7 is complete and OP8 is next.
+Status: complete and archived.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -188,7 +188,7 @@ documents remain historical and are not migration targets.
 - [x] OP5 — Enforce checked payload views and dynamic presence guards
 - [x] OP6 — Implement optional shared owners
 - [x] OP7 — Complete alias, overload, conversion, and polymorphism integration
-- [ ] OP8 — Harden diagnostics, documentation, and end-to-end behavior
+- [x] OP8 — Harden diagnostics, documentation, and end-to-end behavior
 
 ## PR-sized implementation sequence
 
@@ -531,35 +531,37 @@ diagnostics.
 profile, remove rollout wording, and leave living documentation describing
 only current behavior and explicit future exclusions.
 
-- [ ] Add end-to-end golden programs covering every primitive, inline class,
+- [x] Add end-to-end golden programs covering every primitive, inline class,
       optional shared target, storage position, presence transition, checked
       access consumer, lifecycle effect, owner transfer, call boundary,
       polymorphic view, and normal cleanup order.
-- [ ] Add compile-failure goldens for every unsupported optional type,
+- [x] Add compile-failure goldens for every unsupported optional type,
       declaration, conversion, implicit access, boxing form, external
       signature, containment cycle, and malformed punctuation chain.
-- [ ] Add native failure goldens for absent unwrap, pinned clearing,
-      replacement/destruction, and guard overflow, requiring non-success
-      without promising an exact signal, status, or diagnostic string.
-- [ ] Run deterministic robustness coverage across the lexer, parser,
+- [x] Add native failure goldens for source-reachable absent unwrap, pinned
+      clearing, and replacement, plus backend-native pinned-destruction and
+      guard-overflow tests for states valid source cannot manufacture. Require
+      non-success without promising an exact signal, status, or diagnostic
+      string.
+- [x] Run deterministic robustness coverage across the lexer, parser,
       resolver, type checker, HIR/MIR dumps, verifier, and backend legality for
       malformed and deeply nested optional syntax and mutated optional MIR.
-- [ ] Audit responsibilities and size of the new optional modules and split
+- [x] Audit responsibilities and size of the new optional modules and split
       cohesive owners behind facades where needed; do not leave optional logic
       scattered as repeated matches across unrelated phases.
-- [ ] Audit every non-archived documentation file. Promote optional values to
+- [x] Audit every non-archived documentation file. Promote optional values to
       **implemented contract** in the status matrix; make the focused optional
       documents authoritative; update overview, grammar, types, functions,
       classes, aliases, shared ownership, casts, polymorphism, errors,
       interoperation, compiler architecture, phases/IR, backend, runtime ABI,
       debugging, and testing links and wording.
-- [ ] Remove roadmap task codes and rollout terminology from living code,
+- [x] Remove roadmap task codes and rollout terminology from living code,
       tests, dumps, diagnostics, and non-roadmap documentation. Preserve only
       semantic optional vocabulary outside roadmap/archive files.
-- [ ] Confirm the C runtime symbol set and ABI version remain unchanged, or,
+- [x] Confirm the C runtime symbol set and ABI version remain unchanged, or,
       if implementation evidence required a new runtime boundary, document and
       test one coordinated ABI version bump rather than an undocumented helper.
-- [ ] Run the complete repository and supported-toolchain gates from an
+- [x] Run the complete repository and supported-toolchain gates from an
       artifact-free snapshot and verify final link, status, and diff hygiene.
 
 **Tests:** Focused optional suites; `make robustness-long`; `make check`;

@@ -1,14 +1,15 @@
 # Optional-Values Compiler Contract
 
-Status: frozen compiler design with primitive, exact inline-class, and optional
-shared-owner locals, fields, and internal callable boundaries implemented
-through HIR, MIR verification, x86-64 lowering, and native execution.
+Status: authoritative implemented compiler contract for primitive and exact
+inline-class optionals, optional shared owners, and supported inline
+optional-container aliases through HIR, MIR verification, x86-64 lowering,
+and native execution.
 The [language optional-value contract](../language/OPTIONAL_VALUES.md) defines
 source meaning, the [status matrix](../language/STATUS.md) defines compiler
 availability, and the [implemented grammar](../language/GRAMMAR.md) remains
 authoritative for source currently accepted by the compiler.
 
-This document freezes phase ownership, target-independent invariants, the
+This document defines phase ownership, target-independent invariants, the
 initial x86-64 representation and internal ABI direction, failure lowering,
 and test obligations for explicit optionals. AST and resolved IR contain all
 supported source-shaped forms and flat identities. Primitive and exact-class
@@ -144,9 +145,9 @@ names:
 The backend executes those operations. It does not synthesize them from loads,
 stores, or cleanup lists.
 
-Primitive local MIR currently represents absent/present initialization,
-optional copy and assignment, presence tests, and unwrap as a success/failure
-terminator. Its failure successor is an explicit empty block ending in
+Primitive optional MIR represents absent/present initialization, optional copy
+and assignment, presence tests, and unwrap as a success/failure terminator. Its
+failure successor is an explicit empty block ending in
 `OptionalAccessFailure`. Definite-initialization verification intersects
 initialized wrapper storage at CFG joins and deliberately does not treat
 dynamic presence as a static fact.

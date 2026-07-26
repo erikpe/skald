@@ -1,0 +1,22 @@
+interface Readable {
+    fn read() -> i64;
+}
+
+class Value {
+    init() {}
+}
+
+fn excluded(
+    no_unit: unit?,
+    no_interface: Readable?,
+    no_object: Obj?,
+    no_nested: i64??,
+    no_boxed_payload: shared Value?,
+    no_optional_boxed_payload: shared? Value?
+) -> unit {}
+
+fn optional_reference(ref? value: i64) -> unit {}
+
+fn main() -> i64 {
+    return 0;
+}

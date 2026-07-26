@@ -146,12 +146,18 @@ fn malformed_shared_and_allocation_forms_recover_to_later_statements() {
 fn shared_types_do_not_change_alias_parameter_grammar() {
     let (_, output) = parse_text(concat!(
         "fn broken(ref value: shared Widget) -> i64 { return 1; }\n",
+        "fn optional(ref value: shared? Widget) -> i64 { return 2; }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
 
     assert!(output.has_errors());
     assert_eq!(output.ast.declarations.len(), 1);
     assert_eq!(function(&output.ast, 0).name.text, "main");
+    assert_eq!(output.diagnostics.len(), 2);
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| { diagnostic.message == "aliases to shared owners are not supported" }));
 }
 
 #[test]

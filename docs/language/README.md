@@ -87,7 +87,7 @@ crosses one shared edge, and general object-place consumers require `*owner`.
 Primitive, exact-class inline, and shared-owner optional values execute across
 owning local, field, and internal callable boundaries, including dynamically
 guarded checked class payload views and secured ordinary owners from
-`shared? T` unwrap. The broader source contract is frozen as described
+`shared? T` unwrap. The implemented source contract is described
 in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
@@ -118,8 +118,8 @@ makes a result source-observable.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, and operator availability.
-- [Optional values](OPTIONAL_VALUES.md) freezes the explicit `T?` and
-  `shared? T` source contract and specifies implemented presence, checked
+- [Optional values](OPTIONAL_VALUES.md) defines the explicit `T?` and
+  `shared? T` source contract, including presence, checked
   access, lifecycle, failure, and the remaining aliasing exclusions.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, and evaluation order.

@@ -6,21 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Explicit Optional Values](OPTIONAL_VALUES_ROADMAP.md) — **in progress**. Adds
-  inline `T?`, optional shared owners spelled `shared? T`, explicit `none`,
-  non-failing presence tests, checked postfix unwrap, conditional lifecycle,
-  and dynamically guarded inline payload views while preserving every
-  non-optional validity guarantee. OP0 froze the focused language and compiler
-  contracts in living documentation, OP1 added syntax and resolved type
-  identities, and OP2 executes primitive optional locals and checked
-  inspection. OP3 carries primitive optionals through stored and callable
-  boundaries. OP4 added inline-class optional lifecycle, and OP5 added bounded
-  checked payload views with dynamic presence guards, OP6 added optional shared
-  owners with a verified one-word zero niche, and OP7 completed alias,
-  overload, conversion, and polymorphism integration; OP8 is next. The roadmap
-  depends on the
-  completed inline-object, alias, shared-ownership, polymorphism, object-cast,
-  and constructor profiles.
+No implementation roadmaps are currently in progress.
+
+## Pending discoveries
+
+- [Optional-values maintainability discoveries](OPTIONAL_VALUES_DISCOVERIES.md)
+  — split the large optional MIR verifier into private structural,
+  initialized-storage, and guard-analysis owners without changing semantics or
+  diagnostics.
 
 ## Implementation baseline
 

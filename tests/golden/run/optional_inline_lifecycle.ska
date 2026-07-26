@@ -1,0 +1,37 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Value {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+class Holder {
+    value: Value?;
+
+    init(value: Value?) {
+        self.value = value;
+    }
+}
+
+fn forward(value: Value?) -> Value? {
+    return value;
+}
+
+fn main() -> i64 {
+    var first: Value? = Value(42);
+    var second: Value? = first;
+    first = none;
+    first = forward(Value(42));
+    var holder: Holder = Holder(first);
+    if (holder.value is some) {
+        return holder.value!.marker;
+    }
+    return 0;
+}

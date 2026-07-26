@@ -1,0 +1,24 @@
+error[TYP005]: local initializer has type `i64?` but `i64` is required
+ --> tests/golden/compile_fail/optional_conversion_exclusions.ska:3:29
+   |
+3 |     var plain_number: i64 = optional_number;
+   |                             ^^^^^^^^^^^^^^^ type mismatch
+
+error[TYP005]: primitive optional local initializer requires `bool?`
+ --> tests/golden/compile_fail/optional_conversion_exclusions.ska:4:33
+   |
+4 |     var wrong_optional: bool? = optional_number;
+   |                                 ^^^^^^^^^^^^^^^ source has type `i64?`
+
+error[TYP005]: binary arithmetic requires operands of the same numeric type
+ --> tests/golden/compile_fail/optional_conversion_exclusions.ska:5:28
+   |
+5 |     return optional_number + plain_number;
+   |                            ^ operator cannot be applied to these operand types
+   |
+5 |     return optional_number + plain_number;
+   |            --------------- left operand has type `i64?`
+   |
+5 |     return optional_number + plain_number;
+   |                              ------------ right operand has type `i64`
+  = note: numeric operand types are `i64`, `u64`, `u8`, or `f64`

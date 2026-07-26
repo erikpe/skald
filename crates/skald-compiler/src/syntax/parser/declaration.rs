@@ -290,14 +290,31 @@ impl Parser<'_> {
         message: impl Into<String>,
     ) -> Option<TypeSyntax> {
         let token = self.peek();
+        if context == TypeContext::AliasParameter
+            && self.at_contextual("shared")
+            && self.at_any_ahead(1, &[TokenKind::Identifier, TokenKind::Question])
+        {
+            let shared = self.advance();
+            self.consume(TokenKind::Question);
+            let target = self.parse_name("a class, interface, or `Obj` after `shared`")?;
+            let end = self
+                .consume(TokenKind::Question)
+                .map_or(target.span, |question| question.span);
+            self.report(
+                INVALID_OPTIONAL_TYPE,
+                "aliases to shared owners are not supported",
+                self.cover(shared.span, end),
+                "pass the shared owner by value; aliases may designate inline optional containers",
+            );
+            return None;
+        }
         if context.accepts_shared()
             && self.at_contextual("shared")
             && self.at_any_ahead(1, &[TokenKind::Identifier, TokenKind::Question])
         {
             let shared = self.advance();
             if let Some(question) = self.consume(TokenKind::Question) {
-                let target =
-                    self.parse_name("expected a class, interface, or `Obj` after `shared?`")?;
+                let target = self.parse_name("a class, interface, or `Obj` after `shared?`")?;
                 if self.at(TokenKind::Question) {
                     self.reject_optional_suffix(
                         "optional shared boxes are not supported",
@@ -314,7 +331,7 @@ impl Parser<'_> {
                     },
                 });
             }
-            let target = self.parse_name("expected a class, interface, or `Obj` after `shared`")?;
+            let target = self.parse_name("a class, interface, or `Obj` after `shared`")?;
             if self.at(TokenKind::Question) {
                 self.reject_optional_suffix(
                     "shared boxes containing optional payloads are not supported",

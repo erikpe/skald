@@ -136,7 +136,7 @@ The [testing guide](TESTING.md) explains where the resulting regression belongs.
 
 ## Optional-value frontend inspection
 
-Inspect optional frontend behavior at the narrowest owner defined by the frozen
+Inspect optional frontend behavior at the narrowest owner defined by the
 [compiler contract](../compiler/OPTIONAL_VALUES.md#dumps-and-diagnostics):
 
 - token and AST dumps currently expose `?`, `!`, reserved `none`, contextual

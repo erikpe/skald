@@ -62,7 +62,7 @@ by [Debugging the Compiler](../development/DEBUGGING.md). Contributor
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
-The frozen optional representation, IR, verification, x86-64 layout,
+The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
 resolved identities, primitive and exact-class optional locals, fields,

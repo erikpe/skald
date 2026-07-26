@@ -1,0 +1,11 @@
+class Recursive {
+    next: Recursive?;
+
+    init(next: Recursive?) {
+        self.next = next;
+    }
+}
+
+fn main() -> i64 {
+    return 0;
+}

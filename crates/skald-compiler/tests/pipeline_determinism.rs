@@ -25,6 +25,8 @@ const POLYMORPHISM_TEST_NAME: &str =
     "polymorphism_phase_products_are_deterministic_across_processes";
 const SHARED_HELPER_OUTPUT: &str = "SKALD_SHARED_DETERMINISM_OUTPUT";
 const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministic_across_processes";
+const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
+const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -53,6 +55,16 @@ fn shared_ownership_phase_products_are_deterministic_across_processes() {
         SHARED_HELPER_OUTPUT,
         SHARED_TEST_NAME,
         shared_ownership_phase_dump,
+    );
+}
+
+#[test]
+fn optional_value_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "optional-values",
+        OPTIONAL_HELPER_OUTPUT,
+        OPTIONAL_TEST_NAME,
+        optional_phase_dump,
     );
 }
 
@@ -124,6 +136,12 @@ fn polymorphism_phase_dump() -> String {
 fn shared_ownership_phase_dump() -> String {
     complete_phase_dump(include_str!(
         "../../../tests/golden/run/shared_copy_allocation.ska"
+    ))
+}
+
+fn optional_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/optional_shared_profile.ska"
     ))
 }
 

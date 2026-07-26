@@ -6,9 +6,11 @@ this file defines discovery and expectation formats.
 
 The runner recursively discovers two case families:
 
-- `run/**/*.ska` requires a same-named `.exit` sidecar containing a Linux
-  process status in `0..=255`. An optional `.stdout` sidecar contains exact
-  expected stdout bytes; absence means empty stdout.
+- `run/**/*.ska` requires a same-named `.exit` sidecar containing either an
+  exact process status in `0..=255` or `failure` when the contract promises
+  only unsuccessful termination. `failure` accepts a nonzero status or signal
+  without freezing platform trap details. An optional `.stdout` sidecar
+  contains exact expected stdout bytes; absence means empty stdout.
 - `compile_fail/**/*.ska` requires a same-named `.stderr` sidecar containing
   exact rendered diagnostics.
 

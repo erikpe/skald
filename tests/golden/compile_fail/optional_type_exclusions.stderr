@@ -1,0 +1,35 @@
+error[PAR010]: `unit?` is not a valid optional type
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:10:18
+    |
+10 |     no_unit: unit?,
+    |                  ^ `unit` has no value payload to make optional
+
+error[PAR010]: `Obj?` is not a valid inline optional type
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:12:19
+    |
+12 |     no_object: Obj?,
+    |                   ^ use `shared? Obj` for an optional owning object view
+
+error[PAR010]: nested optional types are not supported
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:13:20
+    |
+13 |     no_nested: i64??,
+    |                    ^ use exactly one `?` marker
+
+error[PAR010]: shared boxes containing optional payloads are not supported
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:14:35
+    |
+14 |     no_boxed_payload: shared Value?,
+    |                                   ^ `shared T?` is reserved for a future boxed-optional design
+
+error[PAR010]: optional shared boxes are not supported
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:15:45
+    |
+15 |     no_optional_boxed_payload: shared? Value?
+    |                                             ^ `shared? T?` is reserved for a future boxed-optional design
+
+error[PAR010]: optional references are not supported
+ --> tests/golden/compile_fail/optional_type_exclusions.ska:18:26
+    |
+18 | fn optional_reference(ref? value: i64) -> unit {}
+    |                          ^ place `?` on the designated value type, not on `ref`

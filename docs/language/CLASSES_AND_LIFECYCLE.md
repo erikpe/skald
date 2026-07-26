@@ -606,7 +606,7 @@ follow the ordinary target layout, copy lifecycle, and derived-to-base
 destruction plan. Ordinary direct and base-initializer overloads,
 the distinct `copy` declaration, and target-directed `T(copy source)`
 construction execute.
-The frozen [optional-values contract](OPTIONAL_VALUES.md) uses explicit `T?`
+The implemented [optional-values contract](OPTIONAL_VALUES.md) uses explicit `T?`
 rather than nullable plain class values. Primitive optional fields use inline
 state plus payload storage and participate in the class lifecycle described
 above. Exact-class `T?` reserves inline payload storage and applies the existing

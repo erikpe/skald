@@ -409,7 +409,7 @@ with explicit nodes and flat resolved target identities. Primitive and
 exact-class inline optionals cross explicit HIR, MIR, verification, x86-64
 layout, and execution, including bounded checked class payload views. Optional
 shared owners and aliases to supported inline optional containers cross the
-same explicit phase boundary. The semantics and exact implemented slice belong
+same explicit phase boundary. The complete implemented semantics belong
 to [Optional Values](OPTIONAL_VALUES.md).
 
 Use the [language overview](README.md) for the broad model and the

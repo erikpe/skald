@@ -40,6 +40,7 @@ Archived plans:
 - [Shared ownership and heap allocation](SHARED_OWNERSHIP_ROADMAP.md)
 - [Explicit shared dereference](EXPLICIT_SHARED_DEREFERENCE_ROADMAP.md)
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
+- [Explicit optional values](OPTIONAL_VALUES_ROADMAP.md)
 
 Supporting records for the documentation overhaul:
 

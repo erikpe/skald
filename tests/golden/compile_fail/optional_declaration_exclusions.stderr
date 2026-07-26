@@ -1,0 +1,17 @@
+error[PAR010]: aliases to shared owners are not supported
+ --> tests/golden/compile_fail/optional_declaration_exclusions.ska:5:28
+   |
+5 | fn alias_shared(ref value: shared? Value) -> unit {}
+   |                            ^^^^^^^^^^^^^ pass the shared owner by value; aliases may designate inline optional containers
+
+error[PAR002]: expected `=` before the local initializer
+ --> tests/golden/compile_fail/optional_declaration_exclusions.ska:8:28
+   |
+8 |     var uninitialized: i64?;
+   |                            ^ found SEMICOLON
+
+error[PAR004]: expected an expression
+ --> tests/golden/compile_fail/optional_declaration_exclusions.ska:8:28
+   |
+8 |     var uninitialized: i64?;
+   |                            ^ expected an identifier, literal, `none`, `self`, unary `-`, or `(`

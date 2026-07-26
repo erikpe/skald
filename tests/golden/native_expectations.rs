@@ -4,35 +4,32 @@ use std::{fs, io::ErrorKind, path::Path};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NativeExpectations {
-    exit_code: i32,
+    exit_status: ExpectedExitStatus,
     stdout: Vec<u8>,
 }
 
 impl NativeExpectations {
-    pub const fn exit_code(&self) -> i32 {
-        self.exit_code
-    }
-
     pub fn stdout(&self) -> &[u8] {
         &self.stdout
     }
 }
 
-/// Loads the required `.exit` sidecar and optional exact `.stdout` sidecar for
-/// a native golden source. A missing stdout sidecar means empty stdout.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExpectedExitStatus {
+    Code(i32),
+    Failure,
+}
+
+/// Loads the required `.exit` sidecar and optional exact `.stdout` sidecar.
+///
+/// An exit sidecar contains either one exact status in `0..=255` or `failure`
+/// when the contract promises only unsuccessful termination. A missing stdout
+/// sidecar means empty stdout.
 pub fn load_native_expectations(source: &Path) -> Result<NativeExpectations, String> {
     let exit_path = source.with_extension("exit");
     let exit_text = fs::read_to_string(&exit_path)
         .map_err(|error| format!("could not read {}: {error}", exit_path.display()))?;
-    let exit_code = exit_text
-        .trim()
-        .parse::<i32>()
-        .map_err(|error| format!("invalid expected exit status: {error}"))?;
-    if !(0..=255).contains(&exit_code) {
-        return Err(format!(
-            "expected exit status {exit_code} is outside 0..=255"
-        ));
-    }
+    let exit_status = parse_exit_status(exit_text.trim())?;
 
     let stdout_path = source.with_extension("stdout");
     let stdout = match fs::read(&stdout_path) {
@@ -43,7 +40,24 @@ pub fn load_native_expectations(source: &Path) -> Result<NativeExpectations, Str
         }
     };
 
-    Ok(NativeExpectations { exit_code, stdout })
+    Ok(NativeExpectations {
+        exit_status,
+        stdout,
+    })
+}
+
+fn parse_exit_status(text: &str) -> Result<ExpectedExitStatus, String> {
+    if text == "failure" {
+        return Ok(ExpectedExitStatus::Failure);
+    }
+
+    let code = text
+        .parse::<i32>()
+        .map_err(|error| format!("invalid expected exit status: {error}"))?;
+    if !(0..=255).contains(&code) {
+        return Err(format!("expected exit status {code} is outside 0..=255"));
+    }
+    Ok(ExpectedExitStatus::Code(code))
 }
 
 /// Checks all process-level expectations so one failed case reports every
@@ -56,12 +70,17 @@ pub fn verify_native_execution(
 ) -> Result<(), String> {
     let mut mismatches = Vec::new();
 
-    match actual_exit_code {
-        Some(actual) if actual != expected.exit_code() => mismatches.push(format!(
-            "exit status mismatch: expected {}, found {actual}",
-            expected.exit_code()
-        )),
-        None => mismatches.push("generated executable terminated by signal".to_owned()),
+    match (expected.exit_status, actual_exit_code) {
+        (ExpectedExitStatus::Code(expected), Some(actual)) if actual != expected => mismatches
+            .push(format!(
+                "exit status mismatch: expected {expected}, found {actual}"
+            )),
+        (ExpectedExitStatus::Code(_), None) => {
+            mismatches.push("generated executable terminated by signal".to_owned());
+        }
+        (ExpectedExitStatus::Failure, Some(0)) => {
+            mismatches.push("expected unsuccessful termination, found exit status 0".to_owned());
+        }
         _ => {}
     }
 

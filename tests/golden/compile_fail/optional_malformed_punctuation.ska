@@ -1,0 +1,12 @@
+class Value {
+    init() {}
+}
+
+fn main() -> i64 {
+    var repeated: i64?? = none;
+    var boxed: shared?? Value = none;
+    var value: i64? = 1;
+    var optional_value: Value? = none;
+    var cast: Value? = (Value?) optional_value;
+    return value!?;
+}

@@ -157,7 +157,7 @@ and more reusable than constructing the case in Rust.
 
 ## Optional-value coverage
 
-The frozen
+The implemented
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md#test-obligations)
 requires coverage at every owning layer. Current lexer and parser tests own
 tokens, contextual words, spans, precedence, bounded nesting, reserved forms,
@@ -177,3 +177,8 @@ destinations, register/stack pressure, traps, and native execution.
 Optional-owner coverage includes shared class/interface/`Obj` up-views,
 zero-niche realization, secured-owner unwrap, and virtual/interface dispatch
 while preserving the inline optional and checked-view matrix.
+Native golden `.exit` sidecars use `failure` when the contract requires only
+unsuccessful termination; exact trap signals and shell-normalized statuses are
+not portable language observations. Optional full-phase determinism and the
+MIR mutation corpus cover dumps, verification, and backend rejection, while
+the extended robustness suite mutates optional punctuation deterministically.

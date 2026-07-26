@@ -1,0 +1,6 @@
+fn main() -> i64 {
+    var optional_number: i64? = 1;
+    var plain_number: i64 = optional_number;
+    var wrong_optional: bool? = optional_number;
+    return optional_number + plain_number;
+}

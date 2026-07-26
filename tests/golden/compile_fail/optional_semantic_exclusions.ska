@@ -1,0 +1,31 @@
+interface Readable {
+    fn read() -> i64;
+}
+
+class Value {
+    init() {}
+
+    fn read() -> i64 {
+        return 1;
+    }
+}
+
+class Recursive {
+    next: Recursive?;
+
+    init(next: Recursive?) {
+        self.next = next;
+    }
+}
+
+fn main() -> i64 {
+    var interface_value: Readable? = none;
+    var optional_number: i64? = 1;
+    var plain_number: i64 = optional_number;
+    var wrong_optional: bool? = optional_number;
+    var optional_value: Value? = Value();
+    var optional_owner: shared? Value = new Value();
+    var member: i64 = optional_value.read();
+    var shared_member: i64 = optional_owner->read();
+    return optional_number + plain_number + member + shared_member;
+}

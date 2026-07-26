@@ -61,7 +61,33 @@ fn mutation_corpus() -> Vec<Mutation> {
         mutate_interface_requirement(),
         mutate_type_operation_target(),
         mutate_cast_failure_edge(),
+        mutate_optional_failure_edge(),
     ]
+}
+
+fn mutate_optional_failure_edge() -> Mutation {
+    let mut program =
+        valid_program("fn main() -> i64 { var value: i64? = none; return value!; }\n");
+    let definition = entry_definition(&mut program);
+    let failure_target = definition
+        .body
+        .blocks
+        .iter()
+        .find_map(|block| match block.terminator {
+            Some(MirTerminator::OptionalUnwrap { failure_target, .. }) => Some(failure_target),
+            _ => None,
+        })
+        .expect("optional fixture must contain checked unwrap");
+    let span = definition.span;
+    definition.body.blocks[failure_target.index()].terminator = Some(MirTerminator::Terminate {
+        reason: MirTerminationReason::ObjectCastFailure,
+        span,
+    });
+    Mutation {
+        name: "optional unwrap failure edge",
+        expected_message: "optional unwrap failure edge",
+        program,
+    }
 }
 
 fn mutate_cast_failure_edge() -> Mutation {

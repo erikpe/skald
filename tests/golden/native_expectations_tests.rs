@@ -19,10 +19,22 @@ fn missing_stdout_sidecar_means_empty_output() {
 
     let expected = load_native_expectations(&source).unwrap();
 
-    assert_eq!(expected.exit_code(), 7);
     assert_eq!(expected.stdout(), b"");
     assert!(verify_native_execution(&expected, Some(7), b"", b"").is_ok());
     assert!(verify_native_execution(&expected, Some(7), b"unexpected", b"").is_err());
+}
+
+#[test]
+fn failure_accepts_a_nonzero_status_or_signal_without_freezing_either() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"failure\n", None);
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert!(verify_native_execution(&expected, Some(1), b"", b"").is_ok());
+    assert!(verify_native_execution(&expected, None, b"", b"").is_ok());
+
+    let error = verify_native_execution(&expected, Some(0), b"", b"").unwrap_err();
+    assert!(error.contains("expected unsuccessful termination, found exit status 0"));
 }
 
 #[test]
