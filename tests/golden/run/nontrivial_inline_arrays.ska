@@ -1,0 +1,49 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    copy(ref other: Trace) {
+        self.value = other.value + 10;
+    }
+
+    assign(ref other: Trace) {
+        ska_rt_println_i64(other.value + 200);
+        self.value = other.value;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value + 1000);
+    }
+}
+
+fn main() -> i64 {
+    var source: Trace[] = Trace[](3u);
+    source[0].value = 1;
+    source[1].value = 2;
+    source[2].value = 3;
+
+    var copied: Trace[] = source;
+    copied[1] = source[0];
+
+    var optional: Trace?[] = Trace?[](2u);
+    optional[0] = Trace();
+    var optional_copy: Trace?[] = optional;
+
+    var nested: Trace[][] = Trace[][](2u);
+    nested[0] = source;
+    var nested_copy: Trace[][] = nested;
+
+    var primitive_optional: i64?[] = i64?[](2u);
+    primitive_optional[0] = 40;
+    var primitive_optional_copy: i64?[] = primitive_optional;
+    if (primitive_optional_copy[0] is some) {
+        ska_rt_println_i64(primitive_optional_copy[0]!);
+    }
+
+    return 0;
+}

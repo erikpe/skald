@@ -3,8 +3,10 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirArrayFailure, MirArrayInstruction, MirArrayPositionKind, MirPlace, MirPlaceProjection,
-        MirTerminationReason, MirTerminator, MirType,
+        MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure,
+        MirArrayInstruction, MirArrayPositionKind, MirClassOptionalCleanup,
+        MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize, MirOptionalSource,
+        MirPlace, MirPlaceProjection, MirTerminationReason, MirTerminator, MirType,
     },
 };
 
@@ -19,12 +21,15 @@ use super::{
 };
 
 mod helpers;
+mod lifecycle;
 
 pub(super) fn lower_helpers(
     program: &crate::mir::MirProgram,
     data_layout: &super::super::layout::DataLayout,
 ) -> Result<Vec<super::super::machine::AssemblyFunction>, BackendError> {
-    helpers::lower_all(program, data_layout)
+    let mut functions = helpers::lower_all(program, data_layout)?;
+    functions.extend(lifecycle::lower_class_copy_helpers(program, data_layout)?);
+    Ok(functions)
 }
 
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
@@ -88,22 +93,76 @@ impl InstructionSelector<'_, '_> {
             MirArrayInstruction::InitializeNext {
                 backing,
                 index,
-                operation: crate::mir::MirArrayDefaultElement::Primitive,
-                ..
+                operation,
+                span,
             } => {
                 let array = self.array_for_storage(*backing)?;
-                value::load_rax(value::frame_storage(self.frame, *backing), self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::Rdi.into(),
-                });
-                value::load_rax(value::frame_storage(self.frame, *index), self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::Rsi.into(),
-                });
-                self.output
-                    .push(Instruction::Call(symbol::array_initialize_element(array)));
+                let destination = array_element_place(MirPlace::base(*backing), array, *index);
+                match *operation {
+                    MirArrayDefaultElement::Primitive => {
+                        value::load_rax(value::frame_storage(self.frame, *backing), self.output);
+                        self.output.push(Instruction::Move {
+                            source: Register::Rax.into(),
+                            destination: Register::Rdi.into(),
+                        });
+                        value::load_rax(value::frame_storage(self.frame, *index), self.output);
+                        self.output.push(Instruction::Move {
+                            source: Register::Rax.into(),
+                            destination: Register::Rsi.into(),
+                        });
+                        self.output
+                            .push(Instruction::Call(symbol::array_initialize_element(array)));
+                    }
+                    MirArrayDefaultElement::OptionalAbsent => {
+                        match self
+                            .program
+                            .array_type(array)
+                            .expect("verified array declaration exists")
+                            .element
+                        {
+                            MirType::OptionalPrimitive(_) => {
+                                self.select_optional_write(
+                                    &destination,
+                                    &MirOptionalSource::Absent,
+                                )?;
+                            }
+                            MirType::OptionalClass(class) => {
+                                self.select_class_optional_initialize(
+                                    &MirClassOptionalInitialize {
+                                        destination,
+                                        source: MirClassOptionalSource::Absent,
+                                        class,
+                                        copy_constructor: None,
+                                        span: *span,
+                                    },
+                                )?;
+                            }
+                            _ => unreachable!(
+                                "verified absent default requires an inline optional element"
+                            ),
+                        }
+                    }
+                    MirArrayDefaultElement::Class {
+                        class: _,
+                        initializer,
+                    } => {
+                        self.select_initialize(&MirInitialize {
+                            destination,
+                            target: initializer,
+                            arguments: Vec::new(),
+                            span: *span,
+                        })?;
+                    }
+                    MirArrayDefaultElement::ArrayEmpty(_) => {
+                        self.clear_place(&destination)?;
+                    }
+                    MirArrayDefaultElement::SharedClass { .. }
+                    | MirArrayDefaultElement::SharedArrayEmpty(_) => {
+                        return Err(self.array_error(
+                            "shared-owner array elements escaped the target legality boundary",
+                        ));
+                    }
+                }
                 self.advance_array_index(*index);
                 Ok(())
             }
@@ -111,28 +170,43 @@ impl InstructionSelector<'_, '_> {
                 backing,
                 source,
                 index,
-                operation: crate::mir::MirArrayCopyElement::Primitive,
-                ..
+                operation,
+                span,
             } => {
                 let array = self.array_for_storage(*backing)?;
-                let (_, source) = self.frame_place(source)?;
-                value::load_rax(value::frame_storage(self.frame, *backing), self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::Rdi.into(),
-                });
-                value::load_rax(source, self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::Rsi.into(),
-                });
-                value::load_rax(value::frame_storage(self.frame, *index), self.output);
-                self.output.push(Instruction::Move {
-                    source: Register::Rax.into(),
-                    destination: Register::Rdx.into(),
-                });
-                self.output
-                    .push(Instruction::Call(symbol::array_copy_element(array)));
+                let destination = array_element_place(MirPlace::base(*backing), array, *index);
+                let source = array_element_place(source.clone(), array, *index);
+                match *operation {
+                    MirArrayCopyElement::Primitive => {
+                        self.call_array_copy_element(*backing, &source, *index, array)?;
+                    }
+                    MirArrayCopyElement::OptionalPrimitive => {
+                        self.select_optional_write(&destination, &MirOptionalSource::Copy(source))?;
+                    }
+                    MirArrayCopyElement::Class {
+                        class: _,
+                        operation,
+                    } => {
+                        self.select_construction_operation(operation, destination, source)?;
+                    }
+                    MirArrayCopyElement::OptionalClass { class, operation } => {
+                        self.select_class_optional_initialize(&MirClassOptionalInitialize {
+                            destination,
+                            source: MirClassOptionalSource::Copy(source),
+                            class,
+                            copy_constructor: Some(operation),
+                            span: *span,
+                        })?;
+                    }
+                    MirArrayCopyElement::Array(inner) => {
+                        self.select_array_copy_construction(&destination, &source, inner)?;
+                    }
+                    MirArrayCopyElement::Shared(_) | MirArrayCopyElement::OptionalShared(_) => {
+                        return Err(self.array_error(
+                            "shared-owner array elements escaped the target legality boundary",
+                        ));
+                    }
+                }
                 self.advance_array_index(*index);
                 Ok(())
             }
@@ -186,6 +260,38 @@ impl InstructionSelector<'_, '_> {
                 self.output
                     .push(Instruction::Call(symbol::array_release(*array)));
                 self.clear_place(owner)
+            }
+            MirArrayInstruction::DestroyNext {
+                owner,
+                index,
+                operation,
+                span,
+            } => {
+                let array = array_for_place(self.program, self.function, owner)?;
+                let element = array_element_place(owner.clone(), array, *index);
+                match *operation {
+                    MirArrayDestroyElement::Trivial => {}
+                    MirArrayDestroyElement::Class(class) => {
+                        self.select_destruction_plan(class, element)?;
+                    }
+                    MirArrayDestroyElement::OptionalClass(class) => {
+                        self.select_class_optional_cleanup(&MirClassOptionalCleanup {
+                            destination: element,
+                            class,
+                            span: *span,
+                        })?;
+                    }
+                    MirArrayDestroyElement::Array(inner) => {
+                        self.select_array_field_cleanup(&element, inner)?;
+                    }
+                    MirArrayDestroyElement::Shared(_)
+                    | MirArrayDestroyElement::OptionalShared(_) => {
+                        return Err(self.array_error(
+                            "shared-owner array elements escaped the target legality boundary",
+                        ));
+                    }
+                }
+                Ok(())
             }
             MirArrayInstruction::AnchorBegin { anchor, owner, .. } => {
                 let (_, owner) = self.frame_place(owner)?;
@@ -404,12 +510,19 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         place: &MirPlace,
     ) -> Result<(FramePlace, Operand), BackendError> {
-        let Some(MirPlaceProjection::ArrayElement {
-            array,
-            normalized_index,
-        }) = place.projections.last()
+        let Some((
+            element_index,
+            MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            },
+        )) = place
+            .projections
+            .iter()
+            .enumerate()
+            .rfind(|(_, projection)| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
         else {
-            return Err(self.array_error("primitive array element place has no final projection"));
+            return Err(self.array_error("array element place has no element projection"));
         };
         let declaration = self
             .program
@@ -419,27 +532,102 @@ impl InstructionSelector<'_, '_> {
             .data_layout
             .array(*array)
             .ok_or_else(|| self.array_error(format!("array {array} has no target layout")))?;
-        let scale = u8::try_from(layout.stride())
-            .map_err(|_| self.array_error(format!("array {array} stride cannot be encoded")))?;
         let displacement = i32::try_from(layout.element_offset())
             .map_err(|_| self.array_error(format!("array {array} offset cannot be encoded")))?;
 
         let mut owner = place.clone();
-        owner.projections.pop();
+        owner.projections.truncate(element_index);
         let (_, owner) = self.frame_place(&owner)?;
         value::load_rax(owner, self.output);
-        self.output.push(Instruction::Move {
-            source: Register::Rax.into(),
-            destination: Register::R11.into(),
-        });
-        self.output.push(Instruction::Move {
-            source: value::frame_storage(self.frame, *normalized_index),
-            destination: Register::Rcx.into(),
-        });
-        Ok((
-            FramePlace::array_element(declaration.element),
-            value::indexed_memory(Register::R11, Register::Rcx, scale, displacement),
-        ))
+        let base = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
+            self.output.push(Instruction::Move {
+                source: Register::Rax.into(),
+                destination: Register::R11.into(),
+            });
+            self.output.push(Instruction::Move {
+                source: value::frame_storage(self.frame, *normalized_index),
+                destination: Register::R10.into(),
+            });
+            None
+        } else {
+            self.output.push(Instruction::Move {
+                source: Register::Rax.into(),
+                destination: Register::R11.into(),
+            });
+            self.output.push(Instruction::Move {
+                source: value::frame_storage(self.frame, *normalized_index),
+                destination: Register::Rax.into(),
+            });
+            self.output.push(Instruction::MoveImmediate64 {
+                bits: u64::try_from(layout.stride()).expect("array stride fits u64"),
+                destination: Register::R10,
+            });
+            self.output.push(Instruction::Multiply {
+                source: Register::R10,
+                destination: Register::Rax,
+            });
+            self.output.push(Instruction::Add {
+                source: Register::Rax,
+                destination: Register::R11,
+            });
+            Some(Register::R11)
+        };
+        let mut ty = declaration.element;
+        let mut displacement = displacement;
+        for projection in &place.projections[element_index + 1..] {
+            match *projection {
+                MirPlaceProjection::Base(base) => {
+                    let offset = self
+                        .data_layout
+                        .class(match ty {
+                            MirType::Class(class) => class,
+                            _ => {
+                                return Err(self
+                                    .array_error("array element base projection is not a class"))
+                            }
+                        })
+                        .and_then(|layout| layout.base())
+                        .filter(|layout| layout.class == base)
+                        .ok_or_else(|| {
+                            self.array_error("array element base projection has no target layout")
+                        })?
+                        .offset;
+                    displacement =
+                        checked_array_displacement(displacement, offset, self.function.callable())?;
+                    ty = MirType::Class(base);
+                }
+                MirPlaceProjection::Field(field) => {
+                    let offset = self
+                        .data_layout
+                        .field(field)
+                        .ok_or_else(|| self.array_error(format!("field {field} has no layout")))?
+                        .offset;
+                    displacement =
+                        checked_array_displacement(displacement, offset, self.function.callable())?;
+                    ty = self.program.field(field).expect("verified field exists").ty;
+                }
+                MirPlaceProjection::OptionalPayload(class) => {
+                    let offset = self.data_layout.optional_class(class)?.payload_offset();
+                    displacement =
+                        checked_array_displacement(displacement, offset, self.function.callable())?;
+                    ty = MirType::Class(class);
+                }
+                MirPlaceProjection::ArrayElement { .. } => {
+                    unreachable!("the final array projection was selected")
+                }
+            }
+        }
+        let operand = if let Some(base) = base {
+            value::memory(base, displacement)
+        } else {
+            value::indexed_memory(
+                Register::R11,
+                Register::R10,
+                u8::try_from(layout.stride()).expect("encodable array stride"),
+                displacement,
+            )
+        };
+        Ok((FramePlace::array_element(ty), operand))
     }
 
     fn select_array_element_normalize(
@@ -517,6 +705,36 @@ impl InstructionSelector<'_, '_> {
         value::store_rax(value::frame_storage(self.frame, index), self.output);
     }
 
+    fn call_array_copy_element(
+        &mut self,
+        backing: crate::mir::StorageId,
+        source: &MirPlace,
+        index: crate::mir::StorageId,
+        array: crate::identity::ArrayTypeId,
+    ) -> Result<(), BackendError> {
+        let mut source_owner = source.clone();
+        source_owner.projections.pop();
+        let (_, source_owner) = self.frame_place(&source_owner)?;
+        value::load_rax(value::frame_storage(self.frame, backing), self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdi.into(),
+        });
+        value::load_rax(source_owner, self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rsi.into(),
+        });
+        value::load_rax(value::frame_storage(self.frame, index), self.output);
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rdx.into(),
+        });
+        self.output
+            .push(Instruction::Call(symbol::array_copy_element(array)));
+        Ok(())
+    }
+
     fn clone_array_preserving_destination(
         &mut self,
         destination: &MirPlace,
@@ -589,4 +807,64 @@ impl InstructionSelector<'_, '_> {
     fn array_error(&self, message: impl Into<String>) -> BackendError {
         BackendError::new(Target::X86_64SysV, Some(self.function.callable()), message)
     }
+}
+
+fn array_element_place(
+    owner: MirPlace,
+    array: crate::identity::ArrayTypeId,
+    index: crate::mir::StorageId,
+) -> MirPlace {
+    owner.project_array_element(array, index)
+}
+
+fn array_for_place(
+    program: &crate::mir::MirProgram,
+    function: crate::mir::MirDefinitionRef<'_>,
+    place: &MirPlace,
+) -> Result<crate::identity::ArrayTypeId, BackendError> {
+    let mut ty = function
+        .storage(place.base.storage())
+        .expect("verified array place has storage")
+        .ty;
+    for projection in &place.projections {
+        ty = match *projection {
+            MirPlaceProjection::Base(class) | MirPlaceProjection::OptionalPayload(class) => {
+                MirType::Class(class)
+            }
+            MirPlaceProjection::Field(field) => {
+                program.field(field).expect("verified field exists").ty
+            }
+            MirPlaceProjection::ArrayElement { array, .. } => {
+                program
+                    .array_type(array)
+                    .expect("verified array exists")
+                    .element
+            }
+        };
+    }
+    match ty {
+        MirType::Array(array) => Ok(array),
+        _ => Err(BackendError::new(
+            Target::X86_64SysV,
+            Some(function.callable()),
+            "array destruction owner is not an inline array",
+        )),
+    }
+}
+
+fn checked_array_displacement(
+    displacement: i32,
+    offset: usize,
+    callable: crate::identity::CallableId,
+) -> Result<i32, BackendError> {
+    i32::try_from(offset)
+        .ok()
+        .and_then(|offset| displacement.checked_add(offset))
+        .ok_or_else(|| {
+            BackendError::new(
+                Target::X86_64SysV,
+                Some(callable),
+                "array element projection exceeds x86-64 displacement limits",
+            )
+        })
 }

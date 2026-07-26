@@ -1,4 +1,4 @@
-//! Legality boundary for the first executable primitive inline-array profile.
+//! Legality boundary for executable inline arrays without shared-owner elements.
 
 use crate::{
     backend::{BackendError, Target},
@@ -18,12 +18,20 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
     for array in program.array_types.iter() {
         if !matches!(
             array.element,
-            MirType::I64 | MirType::U64 | MirType::U8 | MirType::F64 | MirType::Bool
+            MirType::I64
+                | MirType::U64
+                | MirType::U8
+                | MirType::F64
+                | MirType::Bool
+                | MirType::OptionalPrimitive(_)
+                | MirType::Class(_)
+                | MirType::OptionalClass(_)
+                | MirType::Array(_)
         ) {
             return Err(error(
                 None,
                 format!(
-                    "array {} has a non-primitive element type not yet supported by x86-64",
+                    "array {} has a shared-owner element type not yet supported by x86-64",
                     array.id
                 ),
             ));
@@ -68,7 +76,7 @@ fn check_definition(
             if !supported {
                 return Err(error(
                     Some(definition.callable()),
-                    "only local primitive inline-array storage is executable on x86-64",
+                    "array storage is outside the non-shared inline-array execution profile",
                 ));
             }
         }
@@ -94,12 +102,12 @@ fn check_instruction(
                 require_inline_array_place(program, definition, source)?;
             }
             MirRvalueKind::Load(source) if has_array_element_projection(source) => {
-                require_primitive_element_place(program, definition, source)?;
+                require_inline_element_place(program, definition, source)?;
             }
             _ => {}
         },
         MirInstruction::Store(store) if has_array_element_projection(&store.destination) => {
-            require_primitive_element_place(program, definition, &store.destination)?;
+            require_inline_element_place(program, definition, &store.destination)?;
         }
         MirInstruction::Array(array) => match array {
             MirArrayInstruction::Allocate {
@@ -107,14 +115,23 @@ fn check_instruction(
                 failure: MirArrayFailure::AllocationSize,
                 ..
             }
-            | MirArrayInstruction::InitializeNext {
-                operation: MirArrayDefaultElement::Primitive,
-                ..
-            }
             | MirArrayInstruction::Publish { .. } => {}
+            MirArrayInstruction::InitializeNext {
+                operation:
+                    MirArrayDefaultElement::Primitive
+                    | MirArrayDefaultElement::OptionalAbsent
+                    | MirArrayDefaultElement::Class { .. }
+                    | MirArrayDefaultElement::ArrayEmpty(_),
+                ..
+            } => {}
             MirArrayInstruction::CopyNext {
                 source,
-                operation: crate::mir::MirArrayCopyElement::Primitive,
+                operation:
+                    crate::mir::MirArrayCopyElement::Primitive
+                    | crate::mir::MirArrayCopyElement::OptionalPrimitive
+                    | crate::mir::MirArrayCopyElement::Class { .. }
+                    | crate::mir::MirArrayCopyElement::OptionalClass { .. }
+                    | crate::mir::MirArrayCopyElement::Array(_),
                 ..
             } => {
                 require_inline_array_place(program, definition, source)?;
@@ -126,6 +143,17 @@ fn check_instruction(
                 require_inline_array_place(program, definition, destination)?;
             }
             MirArrayInstruction::Release { owner, .. } => {
+                require_inline_array_place(program, definition, owner)?;
+            }
+            MirArrayInstruction::DestroyNext {
+                owner,
+                operation:
+                    crate::mir::MirArrayDestroyElement::Trivial
+                    | crate::mir::MirArrayDestroyElement::Class(_)
+                    | crate::mir::MirArrayDestroyElement::OptionalClass(_)
+                    | crate::mir::MirArrayDestroyElement::Array(_),
+                ..
+            } => {
                 require_inline_array_place(program, definition, owner)?;
             }
             MirArrayInstruction::AnchorBegin {
@@ -146,7 +174,7 @@ fn check_instruction(
             _ => {
                 return Err(error(
                     Some(definition.callable()),
-                    "verified array operation is outside the primitive inline-array execution profile",
+                    "verified array operation is outside the non-shared inline-array execution profile",
                 ));
             }
         },
@@ -190,27 +218,31 @@ fn check_terminator(
     } else {
         Err(error(
             Some(definition.callable()),
-            "verified array control flow is outside the primitive inline-array execution profile",
+            "verified array control flow is outside the non-shared inline-array execution profile",
         ))
     }
 }
 
-fn require_primitive_element_place(
+fn require_inline_element_place(
     program: &MirProgram,
     definition: MirDefinitionRef<'_>,
     place: &MirPlace,
 ) -> Result<(), BackendError> {
-    let Some(MirPlaceProjection::ArrayElement { .. }) = place.projections.last() else {
+    let Some(element_index) = place
+        .projections
+        .iter()
+        .rposition(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+    else {
         return Err(error(
             Some(definition.callable()),
-            "only primitive array element places are executable on x86-64",
+            "only inline array element places are executable on x86-64",
         ));
     };
     let mut owner = MirPlace {
         base: place.base,
         projections: place.projections.clone(),
     };
-    owner.projections.pop();
+    owner.projections.truncate(element_index);
     require_inline_array_place(program, definition, &owner)
 }
 
@@ -240,19 +272,20 @@ fn require_inline_array_place(
                 | MirStorageKind::ArrayProduced
         )
         && matches!(storage.ty, MirType::Array(_));
-    let field_owner = !place.projections.is_empty()
+    let projected_owner = !place.projections.is_empty()
         && !matches!(
             storage.ty,
-            MirType::Array(_) | MirType::Shared(crate::mir::MirSharedTarget::Array(_))
+            MirType::Shared(crate::mir::MirSharedTarget::Array(_))
+                | MirType::OptionalShared(crate::mir::MirSharedTarget::Array(_))
         )
         && projected_type(program, storage.ty, place) // verified projections
             .is_some_and(|ty| matches!(ty, MirType::Array(_)));
-    if direct_owner || field_owner {
+    if direct_owner || projected_owner {
         Ok(())
     } else {
         Err(error(
             Some(definition.callable()),
-            "array place is outside the primitive inline owning-boundary profile",
+            "array place is outside the non-shared inline owning-boundary profile",
         ))
     }
 }

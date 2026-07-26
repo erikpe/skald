@@ -3,7 +3,7 @@
 use crate::{
     backend::BackendError,
     identity::{ClassId, InterfaceRequirementId, VirtualSlotId},
-    mir::{MirObjectOrigin, MirPlace, MirType, StorageId},
+    mir::{MirObjectOrigin, MirPlace, MirPlaceProjection, MirType, StorageId},
 };
 
 use super::{
@@ -41,29 +41,7 @@ impl InstructionSelector<'_, '_> {
         let origin_locations = locations
             .origin()
             .expect("alias layout carries object-origin locations");
-        if let Some(field_index) = place
-            .projections
-            .iter()
-            .rposition(|projection| matches!(projection, crate::mir::MirPlaceProjection::Field(_)))
-        {
-            let mut complete = place.clone();
-            complete.projections.truncate(field_index + 1);
-            let dynamic_class = match complete.projections[field_index] {
-                crate::mir::MirPlaceProjection::Field(field) => {
-                    let MirType::Class(class) = self
-                        .program
-                        .field(field)
-                        .expect("verified field projection names a declared field")
-                        .ty
-                    else {
-                        unreachable!("an object alias field source has class type")
-                    };
-                    class
-                }
-                crate::mir::MirPlaceProjection::Base(_) => unreachable!(),
-                crate::mir::MirPlaceProjection::OptionalPayload(_) => unreachable!(),
-                crate::mir::MirPlaceProjection::ArrayElement { .. } => unreachable!(),
-            };
+        if let Some((complete, dynamic_class)) = self.projected_exact_object(place) {
             return self.select_object_origin(
                 ObjectOriginOperand::Exact {
                     complete: &complete,
@@ -94,6 +72,36 @@ impl InstructionSelector<'_, '_> {
             },
             origin_locations,
         )
+    }
+
+    fn projected_exact_object(&self, place: &MirPlace) -> Option<(MirPlace, ClassId)> {
+        let mut exact = None;
+
+        for (index, projection) in place.projections.iter().enumerate() {
+            let establishes_complete_object = !matches!(projection, MirPlaceProjection::Base(_));
+            let ty = match *projection {
+                MirPlaceProjection::Base(base) => MirType::Class(base),
+                MirPlaceProjection::Field(field) => {
+                    self.program
+                        .field(field)
+                        .expect("verified field projection names a declared field")
+                        .ty
+                }
+                MirPlaceProjection::OptionalPayload(class) => MirType::Class(class),
+                MirPlaceProjection::ArrayElement { array, .. } => {
+                    self.program
+                        .array_type(array)
+                        .expect("verified array projection names a declared array type")
+                        .element
+                }
+            };
+            if let (true, MirType::Class(class)) = (establishes_complete_object, ty) {
+                let mut complete = place.clone();
+                complete.projections.truncate(index + 1);
+                exact = Some((complete, class));
+            }
+        }
+        exact
     }
 
     pub(super) fn select_place_address(

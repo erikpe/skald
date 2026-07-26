@@ -51,6 +51,10 @@ pub(super) fn complete_finalizer(class: ClassId) -> String {
     format!(".Lska_class_{}_finalize_complete", class.index())
 }
 
+pub(super) fn class_copy_helper(class: ClassId) -> String {
+    format!(".Lska_class_{}_copy_complete", class.index())
+}
+
 pub(super) fn array_initialize_element(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_initialize_element", array.index())
 }
@@ -61,6 +65,10 @@ pub(super) fn array_copy_element(array: ArrayTypeId) -> String {
 
 pub(super) fn array_clone(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_clone", array.index())
+}
+
+pub(super) fn array_destroy_element(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_destroy_element", array.index())
 }
 
 pub(super) fn array_release(array: ArrayTypeId) -> String {

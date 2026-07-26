@@ -91,15 +91,16 @@ entering ordinary shared machinery.
 Inline optional-container aliases use that same container address without
 transferring ownership or scheduling callee cleanup.
 
-Verified primitive inline arrays are executable for `i64`, `u64`, `u8`, `f64`,
-and `bool` elements. The target accepts empty/default-length construction,
+Verified non-shared inline arrays are executable for primitive,
+primitive-optional, exact-class, exact-class-optional, and recursively nested
+inline elements. The target accepts empty/default-length construction,
 immutable length, checked positive and one-time negative-relative indexing,
-exact primitive loads/stores, named deep copy, produced-backing adoption,
-arbitrary-length whole replacement, class fields, internal value
-parameters/results, and normal cleanup. Invalid indices branch to the verified
-terminating failure edge before indexed address selection. Nontrivial or
-nested elements, shared outer arrays, slices, and array aliases remain
-structured legality errors.
+named deep copy, produced-backing adoption, arbitrary-length whole
+replacement, class fields, internal value parameters/results, conditional
+optional lifecycle, and decreasing-index recursive cleanup. Invalid indices
+branch to the verified terminating failure edge before indexed address
+selection. Shared outer arrays, shared-owner elements, slices, and array
+aliases remain structured legality errors.
 
 ## Data layout
 
@@ -115,18 +116,20 @@ The x86-64 target layout is:
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
 | `shared? T` | 8 | 8 |
-| primitive inline `T[]` descriptor | 8 | 8 |
+| inline `T[]` descriptor | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
 
-A primitive inline array uses zero as its allocation-free empty descriptor.
+An inline array uses zero as its allocation-free empty descriptor.
 A nonzero descriptor points to one allocation with an eight-byte owner/anchor
 count at offset zero, immutable eight-byte length at offset eight, and aligned
 elements beginning at offset sixteen. Eight-byte primitives have stride eight;
 `u8` and `bool` have stride one. Checked target layout computes header,
 alignment, stride, maximum element count, and total bytes before allocation.
-Private initialization, primitive-copy, whole-clone, and release helpers are
-emitted in canonical `ArrayTypeId` order.
+Primitive and optional element layouts, complete exact-class layouts, and
+nested descriptor layouts determine the stride. Private initialization,
+copy-element, whole-clone, destroy-element, and release helpers are emitted in
+canonical `ArrayTypeId` order.
 
 An inline root class lays out fields in declaration order. A derived class
 first embeds its complete direct-base layout at offset zero, then lays out its

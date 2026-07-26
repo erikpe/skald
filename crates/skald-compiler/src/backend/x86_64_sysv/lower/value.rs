@@ -38,10 +38,12 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         place: &MirPlace,
     ) -> Result<(FramePlace, Operand), BackendError> {
-        if matches!(
-            place.projections.last(),
-            Some(crate::mir::MirPlaceProjection::ArrayElement { .. })
-        ) {
+        if place.projections.iter().any(|projection| {
+            matches!(
+                projection,
+                crate::mir::MirPlaceProjection::ArrayElement { .. }
+            )
+        }) {
             return self.select_array_element_place(place);
         }
         let layout = self
@@ -67,6 +69,19 @@ impl InstructionSelector<'_, '_> {
         place: &MirPlace,
         destination: Register,
     ) -> Result<(), BackendError> {
+        if place.projections.iter().any(|projection| {
+            matches!(
+                projection,
+                crate::mir::MirPlaceProjection::ArrayElement { .. }
+            )
+        }) {
+            let (_, operand) = self.frame_place(place)?;
+            self.output.push(Instruction::LoadEffectiveAddress {
+                source: operand,
+                destination,
+            });
+            return Ok(());
+        }
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place)?;

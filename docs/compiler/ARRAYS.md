@@ -1,16 +1,16 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; primitive inline array values execute across internal
+Status: **frozen design; non-shared inline array values execute across internal
 owning boundaries on x86-64**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler now lowers all
 typed array operations through verified, layout-independent MIR. The x86-64
-backend executes primitive inline construction, access, deep copy,
-produced-backing adoption, replacement, class fields, and internal value
-boundaries. It structurally rejects later array operations at its legality
-boundary.
+backend executes primitive, optional, exact-class, and recursively nested
+inline construction, access, lifecycle, deep copy, produced-backing adoption,
+replacement, class fields, and internal value boundaries. It structurally
+rejects later array operations at its legality boundary.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -50,12 +50,15 @@ checked projection, slice checks before writes, and exact terminating failure
 edges. No MIR operation contains a descriptor layout, element stride, header
 offset, target register, or runtime ABI fact.
 
-The current x86-64 profile executes empty and dynamically sized inline arrays
-of `i64`, `u64`, `u8`, `f64`, and `bool`, their immutable `len()`, exact
-zero/false initialization, checked element access, deep copying of named
-values, adoption of produced backings, arbitrary-length whole replacement,
-class fields, internal value parameters and results, and normal cleanup.
-Nontrivial or nested elements, shared outer arrays, slices, and array aliases
+The current x86-64 profile executes empty and dynamically sized non-shared
+inline arrays containing primitives, primitive optionals, exact classes,
+exact-class optionals, and recursively nested inline arrays. It implements
+immutable `len()`, checked element access, increasing-index default and copy
+construction, whole replacement, produced-backing adoption, conditional
+optional lifecycle, deep jagged copying, and decreasing-index recursive
+destruction. Class fields, synthesized class lifecycle, internal value
+parameters and results, and recursive class/array graphs use the same owner
+model. Shared outer arrays, shared-owner elements, slices, and array aliases
 remain structured backend-unsupported operations. The type checker and MIR
 lowering do not use an array-wide unsupported diagnostic.
 
@@ -387,7 +390,7 @@ Default non-optional shared construction additionally performs one pointee
 allocation per element, while default optional shared construction performs
 none.
 
-### Initial x86-64 primitive inline layout
+### Initial x86-64 inline layout
 
 An executable inline descriptor is one aligned eight-byte backing pointer.
 Zero is the complete allocation-free empty representation and implies length
@@ -397,34 +400,40 @@ zero. A nonzero descriptor points to one allocation:
 |---:|---:|---|
 | 0 | 8 | inline-owner plus backing-anchor account count |
 | 8 | 8 | immutable `u64` element length |
-| 16 | varies | first element, aligned for its exact primitive type |
+| 16 | varies | first element, aligned for its exact element type |
 
-Primitive element stride is its target size: eight bytes for `i64`, `u64`, and
-`f64`, and one byte for `u8` and `bool`. Header, element alignment, stride,
-length multiplication, and total allocation size are checked before
-`ska_rt_alloc`. Length never exceeds `i64::MAX`; a stricter arithmetic ceiling
-applies when stride and header cannot fit in `u64`. Allocation failure remains
-the runtime allocator's existing unsuccessful-termination contract.
+Element stride is the aligned target size of the exact element: one or eight
+bytes for primitives, the complete optional or class layout for those values,
+and one descriptor word for a nested inline array. An array field inside a
+class is always one descriptor word, so a recursive `Node`/`Node[]` edge does
+not recursively expand layout. Header, element alignment, stride, length
+multiplication, and total allocation size are checked before `ska_rt_alloc`.
+Length never exceeds `i64::MAX`; a stricter arithmetic ceiling applies when
+stride and header cannot fit in `u64`. Allocation failure remains the runtime
+allocator's existing unsuccessful-termination contract.
 
-Generated initialization, primitive-copy, whole-clone, and release helpers
-have deterministic private symbols specialized by canonical `ArrayTypeId`.
-Construction writes each primitive zero/false element in increasing index
-order before publication. Named synthesized field copying uses the clone
-helper; explicit MIR copy loops use the primitive-copy helper. Produced
-adoption installs the existing descriptor without invoking either copy helper.
-Normal cleanup ends the descriptor's owner account and calls `ska_rt_free`
-exactly when the final account ends; the zero descriptor performs no runtime
-call. The count and header length retain the state required by future detached
-backing anchors without making empty arrays allocate.
+Generated initialization, copy-element, whole-clone, destroy-element, release,
+and exact-class copy wrappers have deterministic private symbols specialized
+by canonical identities. Construction and copying visit increasing indices;
+release destroys decreasing indices before freeing the backing. Exact-class
+operations invoke the selected user or synthesized lifecycle, optionals branch
+on presence, and nested arrays recursively clone or release their descriptors.
+Named synthesized field copying uses the clone helper. Produced adoption
+installs the existing descriptor without invoking a copy helper. The zero
+descriptor performs no runtime call. The count and header length retain the
+state required by future detached backing anchors without making empty arrays
+allocate.
 
-Primitive local element access evaluates the descriptor and exact-`i64` index
-once. A negative index adds the `u64` length once using wrapping machine
-arithmetic; the following unsigned comparison rejects both an excessive
-negative magnitude, including `i64::MIN`, and every position at or beyond the
-length. Only the successful control-flow edge may form
-`backing + element_offset + normalized_index * stride`. Loads and stores use
-the exact primitive width and alignment. The checked-position MIR and its
-reason-specific terminating edge remain layout-independent.
+Local element access evaluates the descriptor and exact-`i64` index once. A
+negative index adds the `u64` length once using wrapping machine arithmetic;
+the following unsigned comparison rejects both an excessive negative
+magnitude, including `i64::MIN`, and every position at or beyond the length.
+Only the successful control-flow edge may form
+`backing + element_offset + normalized_index * stride`. Primitive loads and
+stores use their exact width; class, optional, nested, and subsequent field
+projections reuse the aligned element address and selected lifecycle
+operation. The checked-position MIR and its reason-specific terminating edge
+remain layout-independent.
 
 ## MIR verification
 

@@ -1,4 +1,4 @@
-//! Deterministic primitive array helpers specialized by canonical array ID.
+//! Deterministic inline-array helpers specialized by canonical array ID.
 
 use crate::{
     backend::{BackendError, Target},
@@ -7,7 +7,7 @@ use crate::{
 
 use super::super::super::{
     layout::{DataLayout, ARRAY_LENGTH_OFFSET, ARRAY_OWNER_COUNT_OFFSET},
-    machine::{AssemblyFunction, ByteRegister, Instruction, Label, Register},
+    machine::{AssemblyFunction, ByteRegister, Instruction, Label, Operand, Register},
     symbol,
 };
 use super::super::value;
@@ -25,7 +25,8 @@ pub(super) fn lower_all(
             [
                 lower_initializer(array.id, array.element, data_layout),
                 lower_copier(array.id, array.element, data_layout),
-                lower_clone(array.id, array.element, data_layout),
+                lower_clone(array.id, data_layout),
+                lower_destroyer(program, array.id, array.element, data_layout),
                 lower_release(array.id),
             ]
         })
@@ -44,13 +45,6 @@ fn lower_initializer(
             format!("array {array} has no helper layout"),
         )
     })?;
-    let scale = u8::try_from(layout.stride()).map_err(|_| {
-        BackendError::new(
-            Target::X86_64SysV,
-            None,
-            format!("array {array} stride cannot be encoded"),
-        )
-    })?;
     let displacement = i32::try_from(layout.element_offset()).map_err(|_| {
         BackendError::new(
             Target::X86_64SysV,
@@ -58,7 +52,22 @@ fn lower_initializer(
             format!("array {array} element offset cannot be encoded"),
         )
     })?;
-    let destination = value::indexed_memory(Register::Rdi, Register::Rsi, scale, displacement);
+    let (destination, mut address_setup) = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
+        (
+            value::indexed_memory(
+                Register::Rdi,
+                Register::Rsi,
+                u8::try_from(layout.stride()).expect("encodable array stride"),
+                displacement,
+            ),
+            Vec::new(),
+        )
+    } else {
+        (
+            value::memory(Register::Rdi, 0),
+            materialize_destroy_element_address(layout.stride(), displacement),
+        )
+    };
     let mut instructions = vec![Instruction::MoveImmediate64 {
         bits: 0,
         destination: Register::Rax,
@@ -72,16 +81,16 @@ fn lower_initializer(
         value::store_rax(destination, &mut instructions);
     }
     instructions.push(Instruction::Return);
+    address_setup.extend(instructions);
     Ok(AssemblyFunction {
         symbol: symbol::array_initialize_element(array),
         exported: false,
-        instructions,
+        instructions: address_setup,
     })
 }
 
 fn lower_clone(
     array: crate::identity::ArrayTypeId,
-    element: MirType,
     data_layout: &DataLayout,
 ) -> Result<AssemblyFunction, BackendError> {
     let layout = data_layout.array(array).ok_or_else(|| {
@@ -89,20 +98,6 @@ fn lower_clone(
             Target::X86_64SysV,
             None,
             format!("array {array} has no clone layout"),
-        )
-    })?;
-    let scale = u8::try_from(layout.stride()).map_err(|_| {
-        BackendError::new(
-            Target::X86_64SysV,
-            None,
-            format!("array {array} stride cannot be encoded"),
-        )
-    })?;
-    let displacement = i32::try_from(layout.element_offset()).map_err(|_| {
-        BackendError::new(
-            Target::X86_64SysV,
-            None,
-            format!("array {array} element offset cannot be encoded"),
         )
     })?;
     let stem = format!(".Lska_array_{}_clone", array.index());
@@ -113,9 +108,7 @@ fn lower_clone(
     let source_home = value::memory(Register::Rbp, -8);
     let length_home = value::memory(Register::Rbp, -16);
     let destination_home = value::memory(Register::Rbp, -24);
-    let source_element = value::indexed_memory(Register::Rsi, Register::Rcx, scale, displacement);
-    let destination_element =
-        value::indexed_memory(Register::Rdi, Register::Rcx, scale, displacement);
+    let index_home = value::memory(Register::Rbp, -32);
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
         Instruction::Move {
@@ -206,26 +199,20 @@ fn lower_clone(
             source: destination_home,
             destination: Register::Rdi.into(),
         },
+        Instruction::Move {
+            source: Register::Rcx.into(),
+            destination: Register::Rdx.into(),
+        },
+        Instruction::Move {
+            source: Register::Rcx.into(),
+            destination: index_home,
+        },
+        Instruction::Call(symbol::array_copy_element(array)),
+        Instruction::Move {
+            source: index_home,
+            destination: Register::Rcx.into(),
+        },
     ];
-    if matches!(element, MirType::U8 | MirType::Bool) {
-        instructions.push(Instruction::LoadZeroExtendByte {
-            source: source_element,
-            destination: Register::Rax,
-        });
-        instructions.push(Instruction::MoveByte {
-            source: ByteRegister::Al,
-            destination: destination_element,
-        });
-    } else {
-        instructions.push(Instruction::Move {
-            source: source_element,
-            destination: Register::Rax.into(),
-        });
-        instructions.push(Instruction::Move {
-            source: Register::Rax.into(),
-            destination: destination_element,
-        });
-    }
     instructions.extend([
         Instruction::MoveImmediate64 {
             bits: 1,
@@ -270,13 +257,6 @@ fn lower_copier(
             format!("array {array} has no helper layout"),
         )
     })?;
-    let scale = u8::try_from(layout.stride()).map_err(|_| {
-        BackendError::new(
-            Target::X86_64SysV,
-            None,
-            format!("array {array} stride cannot be encoded"),
-        )
-    })?;
     let displacement = i32::try_from(layout.element_offset()).map_err(|_| {
         BackendError::new(
             Target::X86_64SysV,
@@ -284,40 +264,364 @@ fn lower_copier(
             format!("array {array} element offset cannot be encoded"),
         )
     })?;
-    let source = value::indexed_memory(Register::Rsi, Register::Rdx, scale, displacement);
-    let destination = value::indexed_memory(Register::Rdi, Register::Rdx, scale, displacement);
-    let mut instructions = Vec::new();
-    if matches!(element, MirType::U8 | MirType::Bool) {
-        instructions.push(Instruction::LoadZeroExtendByte {
-            source,
-            destination: Register::Rax,
-        });
-        instructions.push(Instruction::MoveByte {
-            source: ByteRegister::Al,
-            destination,
-        });
+    let (source, destination, mut address_setup) = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
+        let scale = u8::try_from(layout.stride()).expect("encodable array stride");
+        (
+            value::indexed_memory(Register::Rsi, Register::Rdx, scale, displacement),
+            value::indexed_memory(Register::Rdi, Register::Rdx, scale, displacement),
+            Vec::new(),
+        )
     } else {
-        value::load_rax(source, &mut instructions);
-        value::store_rax(destination, &mut instructions);
+        (
+            value::memory(Register::Rsi, 0),
+            value::memory(Register::Rdi, 0),
+            materialize_helper_element_addresses(layout.stride(), displacement),
+        )
+    };
+    let mut instructions = match element {
+        MirType::U8 | MirType::Bool => vec![
+            Instruction::LoadZeroExtendByte {
+                source,
+                destination: Register::Rax,
+            },
+            Instruction::MoveByte {
+                source: ByteRegister::Al,
+                destination,
+            },
+        ],
+        MirType::I64 | MirType::U64 | MirType::F64 => {
+            let mut instructions = Vec::new();
+            value::load_rax(source, &mut instructions);
+            value::store_rax(destination, &mut instructions);
+            instructions
+        }
+        MirType::OptionalPrimitive(payload) => {
+            let optional = data_layout.optional(payload)?;
+            let payload_offset = i32::try_from(optional.payload_offset())
+                .map_err(|_| helper_error("optional payload offset exceeds x86-64"))?;
+            let stem = format!(".Lska_array_{}_copy_optional", array.index());
+            let present = Label::new(format!("{stem}_present"));
+            let complete = Label::new(format!("{stem}_complete"));
+            let mut instructions = vec![
+                Instruction::Move {
+                    source,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfNotZero(present.clone()),
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Jump(complete.clone()),
+                Instruction::Label(present),
+            ];
+            let source_payload = offset_operand(source, payload_offset)?;
+            let destination_payload = offset_operand(destination, payload_offset)?;
+            if matches!(
+                payload,
+                crate::mir::MirPrimitiveType::U8 | crate::mir::MirPrimitiveType::Bool
+            ) {
+                instructions.push(Instruction::LoadZeroExtendByte {
+                    source: source_payload,
+                    destination: Register::Rax,
+                });
+                instructions.push(Instruction::MoveByte {
+                    source: ByteRegister::Al,
+                    destination: destination_payload,
+                });
+            } else {
+                value::load_rax(source_payload, &mut instructions);
+                value::store_rax(destination_payload, &mut instructions);
+            }
+            instructions.extend([
+                Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                },
+                Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination,
+                },
+                Instruction::Label(complete),
+            ]);
+            instructions
+        }
+        MirType::Class(class) => vec![
+            Instruction::LoadEffectiveAddress {
+                source: destination,
+                destination: Register::Rdi,
+            },
+            Instruction::LoadEffectiveAddress {
+                source,
+                destination: Register::Rsi,
+            },
+            Instruction::Call(symbol::class_copy_helper(class)),
+        ],
+        MirType::OptionalClass(class) => {
+            lower_optional_class_copier(array, class, source, destination, data_layout)?
+        }
+        MirType::Array(inner) => lower_nested_array_copier(array, inner, source, destination),
+        MirType::Shared(_)
+        | MirType::OptionalShared(_)
+        | MirType::Interface(_)
+        | MirType::Obj
+        | MirType::Unit => {
+            return Err(helper_error(format!(
+                "array {array} has an unsupported copy element {element}"
+            )));
+        }
+    };
+    let calls = instructions
+        .iter()
+        .any(|instruction| matches!(instruction, Instruction::Call(_)));
+    if calls {
+        instructions.insert(0, Instruction::Push(Register::Rbp));
+        instructions.insert(
+            1,
+            Instruction::Move {
+                source: Register::Rsp.into(),
+                destination: Register::Rbp.into(),
+            },
+        );
+        instructions.extend([Instruction::Leave, Instruction::Return]);
+    } else {
+        instructions.push(Instruction::Return);
     }
-    instructions.push(Instruction::Return);
+    address_setup.extend(instructions);
     Ok(AssemblyFunction {
         symbol: symbol::array_copy_element(array),
         exported: false,
-        instructions,
+        instructions: address_setup,
+    })
+}
+
+fn lower_optional_class_copier(
+    array: crate::identity::ArrayTypeId,
+    class: crate::identity::ClassId,
+    source: Operand,
+    destination: Operand,
+    data_layout: &DataLayout,
+) -> Result<Vec<Instruction>, BackendError> {
+    let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+        .map_err(|_| helper_error("optional class payload offset exceeds x86-64"))?;
+    let source_payload = offset_operand(source, payload_offset)?;
+    let destination_payload = offset_operand(destination, payload_offset)?;
+    let stem = format!(".Lska_array_{}_copy_optional_class", array.index());
+    let present = Label::new(format!("{stem}_present"));
+    let complete = Label::new(format!("{stem}_complete"));
+    Ok(vec![
+        Instruction::Move {
+            source,
+            destination: Register::Rax.into(),
+        },
+        Instruction::Test(Register::Rax),
+        Instruction::JumpIfNotZero(present.clone()),
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination,
+        },
+        Instruction::Jump(complete.clone()),
+        Instruction::Label(present),
+        Instruction::ReserveStack(16),
+        Instruction::LoadEffectiveAddress {
+            source: destination,
+            destination: Register::R11,
+        },
+        Instruction::Move {
+            source: Register::R11.into(),
+            destination: value::memory(Register::Rsp, 0),
+        },
+        Instruction::LoadEffectiveAddress {
+            source: destination_payload,
+            destination: Register::Rdi,
+        },
+        Instruction::LoadEffectiveAddress {
+            source: source_payload,
+            destination: Register::Rsi,
+        },
+        Instruction::Call(symbol::class_copy_helper(class)),
+        Instruction::Move {
+            source: value::memory(Register::Rsp, 0),
+            destination: Register::R11.into(),
+        },
+        Instruction::ReleaseStack(16),
+        Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::Rax,
+        },
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: value::memory(Register::R11, 0),
+        },
+        Instruction::Label(complete),
+    ])
+}
+
+fn lower_nested_array_copier(
+    _array: crate::identity::ArrayTypeId,
+    inner: crate::identity::ArrayTypeId,
+    source: Operand,
+    destination: Operand,
+) -> Vec<Instruction> {
+    vec![
+        Instruction::ReserveStack(16),
+        Instruction::LoadEffectiveAddress {
+            source: destination,
+            destination: Register::R11,
+        },
+        Instruction::Move {
+            source: Register::R11.into(),
+            destination: value::memory(Register::Rsp, 0),
+        },
+        Instruction::Move {
+            source,
+            destination: Register::Rdi.into(),
+        },
+        Instruction::Call(symbol::array_clone(inner)),
+        Instruction::Move {
+            source: value::memory(Register::Rsp, 0),
+            destination: Register::R11.into(),
+        },
+        Instruction::ReleaseStack(16),
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: value::memory(Register::R11, 0),
+        },
+    ]
+}
+
+fn lower_destroyer(
+    _program: &MirProgram,
+    array: crate::identity::ArrayTypeId,
+    element: MirType,
+    data_layout: &DataLayout,
+) -> Result<AssemblyFunction, BackendError> {
+    let layout = data_layout
+        .array(array)
+        .ok_or_else(|| helper_error(format!("array {array} has no destroy layout")))?;
+    let displacement = i32::try_from(layout.element_offset())
+        .map_err(|_| helper_error(format!("array {array} element offset cannot be encoded")))?;
+    let (element_address, mut address_setup) = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
+        (
+            value::indexed_memory(
+                Register::Rdi,
+                Register::Rsi,
+                u8::try_from(layout.stride()).expect("encodable array stride"),
+                displacement,
+            ),
+            Vec::new(),
+        )
+    } else {
+        (
+            value::memory(Register::Rdi, 0),
+            materialize_destroy_element_address(layout.stride(), displacement),
+        )
+    };
+    let mut instructions = match element {
+        MirType::I64
+        | MirType::U64
+        | MirType::U8
+        | MirType::F64
+        | MirType::Bool
+        | MirType::OptionalPrimitive(_) => Vec::new(),
+        MirType::Class(class) => vec![
+            Instruction::LoadEffectiveAddress {
+                source: element_address,
+                destination: Register::Rdi,
+            },
+            Instruction::Call(symbol::complete_finalizer(class)),
+        ],
+        MirType::OptionalClass(class) => {
+            let payload_offset = i32::try_from(data_layout.optional_class(class)?.payload_offset())
+                .map_err(|_| helper_error("optional class payload offset exceeds x86-64"))?;
+            let present = Label::new(format!(
+                ".Lska_array_{}_destroy_optional_present",
+                array.index()
+            ));
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_optional_complete",
+                array.index()
+            ));
+            vec![
+                Instruction::Move {
+                    source: element_address,
+                    destination: Register::Rax.into(),
+                },
+                Instruction::Test(Register::Rax),
+                Instruction::JumpIfNotZero(present.clone()),
+                Instruction::Jump(complete.clone()),
+                Instruction::Label(present),
+                Instruction::LoadEffectiveAddress {
+                    source: offset_operand(element_address, payload_offset)?,
+                    destination: Register::Rdi,
+                },
+                Instruction::Call(symbol::complete_finalizer(class)),
+                Instruction::Label(complete),
+            ]
+        }
+        MirType::Array(inner) => vec![
+            Instruction::Move {
+                source: element_address,
+                destination: Register::Rdi.into(),
+            },
+            Instruction::Call(symbol::array_release(inner)),
+        ],
+        MirType::Shared(_)
+        | MirType::OptionalShared(_)
+        | MirType::Interface(_)
+        | MirType::Obj
+        | MirType::Unit => {
+            return Err(helper_error(format!(
+                "array {array} has unsupported destruction element {element}"
+            )));
+        }
+    };
+    let calls = instructions
+        .iter()
+        .any(|instruction| matches!(instruction, Instruction::Call(_)));
+    if calls {
+        instructions.insert(0, Instruction::Push(Register::Rbp));
+        instructions.insert(
+            1,
+            Instruction::Move {
+                source: Register::Rsp.into(),
+                destination: Register::Rbp.into(),
+            },
+        );
+        instructions.extend([Instruction::Leave, Instruction::Return]);
+    } else {
+        instructions.push(Instruction::Return);
+    }
+    address_setup.extend(instructions);
+    Ok(AssemblyFunction {
+        symbol: symbol::array_destroy_element(array),
+        exported: false,
+        instructions: address_setup,
     })
 }
 
 fn lower_release(array: crate::identity::ArrayTypeId) -> Result<AssemblyFunction, BackendError> {
-    let complete = Label::new(format!(".Lska_array_{}_release_complete", array.index()));
+    let stem = format!(".Lska_array_{}_release", array.index());
+    let destroy_header = Label::new(format!("{stem}_destroy_header"));
+    let destroy_body = Label::new(format!("{stem}_destroy_body"));
+    let free = Label::new(format!("{stem}_free"));
+    let complete = Label::new(format!("{stem}_complete"));
+    let backing_home = value::memory(Register::Rbp, -8);
+    let index_home = value::memory(Register::Rbp, -16);
     let instructions = vec![
         Instruction::Push(Register::Rbp),
         Instruction::Move {
             source: Register::Rsp.into(),
             destination: Register::Rbp.into(),
         },
+        Instruction::ReserveStack(16),
         Instruction::Test(Register::Rdi),
         Instruction::JumpIfEqual(complete.clone()),
+        Instruction::Move {
+            source: Register::Rdi.into(),
+            destination: backing_home,
+        },
         Instruction::Move {
             source: value::memory(Register::Rdi, ARRAY_OWNER_COUNT_OFFSET),
             destination: Register::Rax.into(),
@@ -336,6 +640,50 @@ fn lower_release(array: crate::identity::ArrayTypeId) -> Result<AssemblyFunction
         },
         Instruction::Test(Register::Rax),
         Instruction::JumpIfNotZero(complete.clone()),
+        Instruction::Move {
+            source: value::memory(Register::Rdi, ARRAY_LENGTH_OFFSET),
+            destination: Register::Rax.into(),
+        },
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: index_home,
+        },
+        Instruction::Label(destroy_header.clone()),
+        Instruction::Move {
+            source: index_home,
+            destination: Register::Rax.into(),
+        },
+        Instruction::Test(Register::Rax),
+        Instruction::JumpIfNotZero(destroy_body.clone()),
+        Instruction::Jump(free.clone()),
+        Instruction::Label(destroy_body),
+        Instruction::MoveImmediate64 {
+            bits: 1,
+            destination: Register::R11,
+        },
+        Instruction::Subtract {
+            source: Register::R11,
+            destination: Register::Rax,
+        },
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: index_home,
+        },
+        Instruction::Move {
+            source: backing_home,
+            destination: Register::Rdi.into(),
+        },
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::Rsi.into(),
+        },
+        Instruction::Call(symbol::array_destroy_element(array)),
+        Instruction::Jump(destroy_header),
+        Instruction::Label(free),
+        Instruction::Move {
+            source: backing_home,
+            destination: Register::Rdi.into(),
+        },
         Instruction::Call(RUNTIME_FREE.to_owned()),
         Instruction::Label(complete),
         Instruction::Leave,
@@ -346,4 +694,106 @@ fn lower_release(array: crate::identity::ArrayTypeId) -> Result<AssemblyFunction
         exported: false,
         instructions,
     })
+}
+
+fn materialize_helper_element_addresses(stride: usize, displacement: i32) -> Vec<Instruction> {
+    let stride = u64::try_from(stride).expect("array stride fits u64");
+    vec![
+        Instruction::Move {
+            source: Register::Rdx.into(),
+            destination: Register::Rax.into(),
+        },
+        Instruction::MoveImmediate64 {
+            bits: stride,
+            destination: Register::R11,
+        },
+        Instruction::Multiply {
+            source: Register::R11,
+            destination: Register::Rax,
+        },
+        Instruction::Add {
+            source: Register::Rax,
+            destination: Register::Rdi,
+        },
+        Instruction::LoadEffectiveAddress {
+            source: value::memory(Register::Rdi, displacement),
+            destination: Register::Rdi,
+        },
+        Instruction::Move {
+            source: Register::Rdx.into(),
+            destination: Register::Rax.into(),
+        },
+        Instruction::MoveImmediate64 {
+            bits: stride,
+            destination: Register::R11,
+        },
+        Instruction::Multiply {
+            source: Register::R11,
+            destination: Register::Rax,
+        },
+        Instruction::Add {
+            source: Register::Rax,
+            destination: Register::Rsi,
+        },
+        Instruction::LoadEffectiveAddress {
+            source: value::memory(Register::Rsi, displacement),
+            destination: Register::Rsi,
+        },
+    ]
+}
+
+fn materialize_destroy_element_address(stride: usize, displacement: i32) -> Vec<Instruction> {
+    vec![
+        Instruction::Move {
+            source: Register::Rsi.into(),
+            destination: Register::Rax.into(),
+        },
+        Instruction::MoveImmediate64 {
+            bits: u64::try_from(stride).expect("array stride fits u64"),
+            destination: Register::R11,
+        },
+        Instruction::Multiply {
+            source: Register::R11,
+            destination: Register::Rax,
+        },
+        Instruction::Add {
+            source: Register::Rax,
+            destination: Register::Rdi,
+        },
+        Instruction::LoadEffectiveAddress {
+            source: value::memory(Register::Rdi, displacement),
+            destination: Register::Rdi,
+        },
+    ]
+}
+
+fn offset_operand(operand: Operand, offset: i32) -> Result<Operand, BackendError> {
+    match operand {
+        Operand::Memory { base, displacement } => Ok(Operand::Memory {
+            base,
+            displacement: displacement
+                .checked_add(offset)
+                .ok_or_else(|| helper_error("array helper displacement exceeds x86-64"))?,
+        }),
+        Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => Ok(Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement: displacement
+                .checked_add(offset)
+                .ok_or_else(|| helper_error("array helper displacement exceeds x86-64"))?,
+        }),
+        Operand::Register(_) => Err(helper_error(
+            "array helper cannot offset a register operand",
+        )),
+    }
+}
+
+fn helper_error(message: impl Into<String>) -> BackendError {
+    BackendError::new(Target::X86_64SysV, None, message)
 }

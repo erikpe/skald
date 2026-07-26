@@ -158,9 +158,10 @@ particular NaN payload.
 No equality, ordering, logical, division, remainder, bitwise, shift, or
 exponentiation operator is implemented. In particular, even primitive equality
 is currently unavailable in source. Built-in array indexing and slicing are
-intrinsic operations rather than general operators; primitive inline element
-reads and mutation currently execute on x86-64, while slices and later element
-or ownership profiles remain target-legality errors.
+intrinsic operations rather than general operators; non-shared inline element
+access currently executes for primitives, optionals, exact classes, and nested
+arrays on x86-64, while slices and shared ownership profiles remain
+target-legality errors.
 
 ## Conversions and future value families
 

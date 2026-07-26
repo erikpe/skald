@@ -42,6 +42,25 @@ fn array_mir_dump_is_deterministic_and_target_independent() {
 }
 
 #[test]
+fn class_array_elements_participate_in_copy_assignment() {
+    let program = lower_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var source: Item[] = Item[](1u);\n",
+        "  var destination: Item[] = Item[](1u);\n",
+        "  source[0].value = 7;\n",
+        "  destination[0] = source[0];\n",
+        "  return destination[0].value;\n",
+        "}\n",
+    ));
+
+    verify_mir(&program).expect("checked array elements must have dynamic object liveness");
+}
+
+#[test]
 fn verifier_rejects_array_table_type_storage_prefix_and_publication_mutations() {
     let errors = error_after(|program| {
         program.array_types.entries_mut_for_test()[0].id = crate::identity::ArrayTypeId::new(7);

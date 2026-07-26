@@ -1,6 +1,6 @@
 # Arrays
 
-Status: **frozen design; primitive inline array values execute across internal
+Status: **frozen design; non-shared inline array values execute across internal
 owning boundaries on x86-64**. This
 document is authoritative for the proposed source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
@@ -8,12 +8,14 @@ document is authoritative for the proposed source-visible array contract. The
 by the compiler. Array forms receive canonical recursive identities during
 resolution and exact lifecycle, place, slice, alias, and transfer plans in HIR
 and verified MIR. The current native profile executes empty or dynamically
-sized primitive inline arrays, immutable `len()`, zero/false initialization,
-checked positive and negative-relative element reads and mutation, named deep
-copy, produced-backing adoption, arbitrary-length replacement, class fields,
-internal value parameters/results, checked allocation, and normal cleanup.
-Nontrivial or nested elements, shared outer arrays, slices, and array aliases
-remain structured backend errors.
+sized non-shared inline arrays of primitives, optionals, exact classes, and
+recursively nested inline arrays. It includes immutable `len()`, checked
+positive and negative-relative element access, named deep copy,
+produced-backing adoption, arbitrary-length replacement, conditional optional
+lifecycle, class fields, internal value parameters/results, checked
+allocation, and deterministic reverse destruction. Shared outer arrays,
+shared-owner elements, slices, and array aliases remain structured backend
+errors.
 
 Arrays are built-in, invariant, fixed-size sequences with an exact element
 type. They may be inline values or shared allocations, may contain every

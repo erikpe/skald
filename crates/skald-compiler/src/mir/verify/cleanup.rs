@@ -784,6 +784,18 @@ impl CleanupLivenessAnalysis<'_, '_> {
     }
 
     fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
+        if place
+            .projections
+            .iter()
+            .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+        {
+            // Array construction and initialized-prefix state are verified by
+            // the dedicated array ownership analysis. Every element reached
+            // through a checked position belongs to an already initialized
+            // array; dynamic element positions cannot be represented in this
+            // static set of object places.
+            return true;
+        }
         state.live.iter().any(|live| is_ancestor(live, place))
     }
 

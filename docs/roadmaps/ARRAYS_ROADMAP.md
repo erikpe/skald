@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR8 is next.
+Status: in progress; AR9 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -79,7 +79,7 @@ Use the existing test ownership:
 - [x] AR5 — Execute primitive inline construction, lifetime, and length
 - [x] AR6 — Execute checked primitive indexing and mutation
 - [x] AR7 — Carry inline array values across owning boundaries
-- [ ] AR8 — Execute nontrivial and nested inline element lifecycle
+- [x] AR8 — Execute nontrivial and nested inline element lifecycle
 - [ ] AR9 — Execute shared and optional-shared outer arrays
 - [ ] AR10 — Execute shared and optional-shared element lifecycle
 - [ ] AR11 — Execute copied slices and checked slice assignment
@@ -413,24 +413,24 @@ runtime suites, `make check`, and `make msrv-check` pass.
 **Purpose:** Extend the proven inline owner model to every deterministic
 non-shared element lifecycle and recursive jagged arrays.
 
-- [ ] Generate increasing-index default and copy construction,
+- [x] Generate increasing-index default and copy construction,
       increasing-index copy assignment, and decreasing-index destruction from
       the exact element lifecycle plan.
-- [ ] Execute exact-class zero-argument initialization, user/synthesized copy
+- [x] Execute exact-class zero-argument initialization, user/synthesized copy
       construction and assignment, destructor effects, and unavailable
       capability diagnostics.
-- [ ] Execute primitive and exact-class optional elements with absent default,
+- [x] Execute primitive and exact-class optional elements with absent default,
       conditional copy/assignment/destruction, and no implicit inline optional
       array payload.
-- [ ] Execute nested inline arrays recursively: empty inner default, deep named
+- [x] Execute nested inline arrays recursively: empty inner default, deep named
       copy, produced adoption, whole inner assignment, and decreasing recursive
       cleanup.
-- [ ] Integrate array fields into class synthesized lifecycle and verify that
+- [x] Integrate array fields into class synthesized lifecycle and verify that
       array edges break finite layout containment while capability fixed
       points remain deterministic.
-- [ ] Track and publish exact initialized prefixes without exposing partial or
+- [x] Track and publish exact initialized prefixes without exposing partial or
       optional element states.
-- [ ] Preserve lifecycle-visible operation count and order in dumps, assembly,
+- [x] Preserve lifecycle-visible operation count and order in dumps, assembly,
       and native execution.
 
 **Tests:** User-effecting class lifecycle arrays; synthesized operations;
@@ -443,6 +443,20 @@ destruction goldens; `make check`; `make msrv-check`.
 category, nested arrays are independent jagged values, recursive type analysis
 terminates, and each visible lifecycle operation occurs exactly in the frozen
 order.
+
+**Completion summary:** The x86-64 target now lays out and executes every
+non-shared inline element category: primitives, primitive optionals, exact
+classes, exact-class optionals, and recursively nested inline arrays.
+Construction and copy loops advance increasing initialized prefixes; release
+destroys decreasing indices through generated exact lifecycle helpers.
+User-selected and synthesized class operations, optional presence, array
+fields, produced inner adoption, deep jagged copying, and recursive
+`Node[]`-style graphs preserve the verified MIR lifecycle plan without
+expanding array backing into finite class layout. Array element addressing
+supports arbitrary aligned strides and uses dedicated caller-saved scratch
+state so object alias ABI arguments remain intact. Focused verifier, layout,
+assembly, native, and reverse-destruction golden coverage passes, as do
+`make check` and `make msrv-check`.
 
 ### AR9 — Execute shared and optional-shared outer arrays
 

@@ -375,5 +375,5 @@ fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
     assert!(artifact.assembly.contains("call ska_rt_alloc"));
     assert!(artifact.assembly.contains("call ska_rt_free"));
     assert!(artifact.assembly.contains(".Lska_array_0_copy_element"));
-    assert!(artifact.assembly.contains("[r11 + rcx*8 + 16]"));
+    assert!(artifact.assembly.contains("[r11 + r10*8 + 16]"));
 }

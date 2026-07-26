@@ -691,18 +691,23 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn stabilize_optional_operand(&mut self, operand: Operand) -> Operand {
-        let Operand::Memory {
-            base: Register::R11,
-            displacement,
-        } = operand
-        else {
-            return operand;
-        };
-        self.output.push(Instruction::Move {
-            source: Register::R11.into(),
-            destination: Register::Rcx.into(),
-        });
-        value::memory(Register::Rcx, displacement)
+        match operand {
+            Operand::Memory {
+                base: Register::R11,
+                ..
+            }
+            | Operand::IndexedMemory {
+                base: Register::R11,
+                ..
+            } => {
+                self.output.push(Instruction::LoadEffectiveAddress {
+                    source: operand,
+                    destination: Register::Rdx,
+                });
+                value::memory(Register::Rdx, 0)
+            }
+            _ => operand,
+        }
     }
 
     fn next_optional_label(&mut self, suffix: &str) -> Label {
@@ -723,17 +728,36 @@ fn offset_operand(
     offset: i32,
     callable: crate::identity::CallableId,
 ) -> Result<Operand, BackendError> {
-    let Operand::Memory { base, displacement } = operand else {
-        unreachable!("optional places lower to memory operands");
+    let displacement = match operand {
+        Operand::Memory { base, displacement } => {
+            return displacement
+                .checked_add(offset)
+                .map(|displacement| value::memory(base, displacement))
+                .ok_or_else(|| {
+                    BackendError::new(
+                        crate::backend::Target::X86_64SysV,
+                        Some(callable),
+                        "optional payload displacement exceeds x86-64 limits",
+                    )
+                });
+        }
+        Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => displacement
+            .checked_add(offset)
+            .map(|displacement| value::indexed_memory(base, index, scale, displacement)),
+        Operand::Register(_) => None,
     };
-    let displacement = displacement.checked_add(offset).ok_or_else(|| {
+    displacement.ok_or_else(|| {
         BackendError::new(
             crate::backend::Target::X86_64SysV,
             Some(callable),
             "optional payload displacement exceeds x86-64 limits",
         )
-    })?;
-    Ok(value::memory(base, displacement))
+    })
 }
 
 fn optional_label(result: ValueId, suffix: &str) -> Label {

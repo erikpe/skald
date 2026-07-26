@@ -263,27 +263,33 @@ impl<'mir> LayoutBuilder<'mir> {
         for class in self.program.classes.iter() {
             self.compute_class(class.id)?;
         }
+        let arrays = self
+            .program
+            .array_types
+            .iter()
+            .map(|array| {
+                self.element(array.element)
+                    .and_then(|element| {
+                        array_layout(element).ok_or_else(|| {
+                            layout_error(format!("array {} exceeds x86-64 layout limits", array.id))
+                        })
+                    })
+                    .map_err(|error| {
+                        BackendError::new(
+                            Target::X86_64SysV,
+                            error.callable(),
+                            format!("array {} has no x86-64 element layout: {}", array.id, error),
+                        )
+                    })
+            })
+            .collect::<Result<_, _>>()?;
         Ok(DataLayout {
             classes: self
                 .layouts
                 .into_iter()
                 .map(|layout| layout.expect("every declared class was laid out"))
                 .collect(),
-            arrays: self
-                .program
-                .array_types
-                .iter()
-                .map(|array| {
-                    primitive_layout(array.element)
-                        .and_then(array_layout)
-                        .ok_or_else(|| {
-                            layout_error(format!(
-                                "array {} has no primitive x86-64 element layout",
-                                array.id
-                            ))
-                        })
-                })
-                .collect::<Result<_, _>>()?,
+            arrays,
         })
     }
 
@@ -350,15 +356,38 @@ impl<'mir> LayoutBuilder<'mir> {
             MirType::Array(array) => self
                 .program
                 .array_type(array)
-                .and_then(|array| primitive_layout(array.element))
-                .and_then(array_layout)
-                .map(ArrayLayout::descriptor)
-                .ok_or_else(|| layout_error(format!("array {array} has no target layout"))),
+                .map(|_| TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT))
+                .ok_or_else(|| layout_error(format!("array {array} is not declared"))),
             _ => primitive_layout(ty).ok_or_else(|| match ty {
                 MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
                 MirType::Unit => layout_error("field type `unit` has no target layout"),
                 _ => unreachable!("every payload primitive has a target layout"),
             }),
+        }
+    }
+
+    fn element(&self, ty: MirType) -> Result<TypeLayout, BackendError> {
+        match ty {
+            MirType::Class(class) => self
+                .layouts
+                .get(class.index())
+                .and_then(Option::as_ref)
+                .map(ClassLayout::ty)
+                .ok_or_else(|| layout_error(format!("class {class} has no target layout"))),
+            MirType::OptionalClass(class) => {
+                optional_layout_for(self.element(MirType::Class(class))?).map(OptionalLayout::ty)
+            }
+            MirType::Array(array) => self
+                .program
+                .array_type(array)
+                .map(|_| TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT))
+                .ok_or_else(|| layout_error(format!("array {array} is not declared"))),
+            MirType::OptionalPrimitive(payload) => optional_layout(payload).map(OptionalLayout::ty),
+            MirType::Shared(_) | MirType::OptionalShared(_) => {
+                Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
+            }
+            primitive => primitive_layout(primitive)
+                .ok_or_else(|| layout_error(format!("type {primitive:?} has no array layout"))),
         }
     }
 }

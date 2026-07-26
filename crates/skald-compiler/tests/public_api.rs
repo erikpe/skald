@@ -119,6 +119,6 @@ fn intentional_driver_paths_compile() {
     .unwrap();
     assert!(arrays.assembly.contains(".Lska_array_0_initialize_element"));
     assert!(arrays.assembly.contains(".Lska_array_0_copy_element"));
-    assert!(arrays.assembly.contains("[r11 + rcx*1 + 16]"));
+    assert!(arrays.assembly.contains("[r11 + r10*1 + 16]"));
     assert!(arrays.assembly.contains("call ska_rt_free"));
 }

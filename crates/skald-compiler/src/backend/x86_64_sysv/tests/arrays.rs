@@ -1,6 +1,47 @@
 use super::*;
 
 #[test]
+fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
+    let program = lower_text(concat!(
+        "class Item { value: i64; init() { self.value = 0; } }\n",
+        "class Node { children: Node[]; init() { self.children = Node[](); } }\n",
+        "fn main() -> i64 {\n",
+        "  var items: Item[] = Item[]();\n",
+        "  var optional: Item?[] = Item?[]();\n",
+        "  var nested: i64[][] = i64[][]();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let layouts = super::super::layout::DataLayout::compute(&program).unwrap();
+
+    let array = |element| {
+        program
+            .array_types
+            .iter()
+            .find(|array| array.element == element)
+            .expect("source declares the requested array")
+            .id
+    };
+    let item = layouts
+        .array(array(MirType::Class(ClassId::new(0))))
+        .unwrap();
+    let optional = layouts
+        .array(array(MirType::OptionalClass(ClassId::new(0))))
+        .unwrap();
+    let primitive = array(MirType::I64);
+    let nested = layouts.array(array(MirType::Array(primitive))).unwrap();
+    let node = layouts.class(ClassId::new(1)).unwrap();
+
+    assert_eq!(
+        item.stride(),
+        layouts.class(ClassId::new(0)).unwrap().ty().size()
+    );
+    assert!(optional.stride() > item.stride());
+    assert_eq!(nested.stride(), 8);
+    assert_eq!(node.ty().size(), 8);
+}
+
+#[test]
 fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
     let source = concat!(
         "fn main() -> i64 {\n",
@@ -118,10 +159,10 @@ fn primitive_element_access_uses_checked_specialized_addressing() {
     assert_eq!(output.matches("call index_once").count(), 1);
     assert!(output.contains("jns "));
     assert!(output.contains("mov r11, 0xffffffffffffffff"));
-    assert!(output.contains("mov qword ptr [r11 + rcx*8 + 16], rax"));
-    assert!(output.contains("mov byte ptr [r11 + rcx*1 + 16], al"));
-    assert!(output.contains("movsd qword ptr [r11 + rcx*8 + 16], xmm14"));
-    assert!(output.contains("movsd xmm14, qword ptr [r11 + rcx*8 + 16]"));
+    assert!(output.contains("mov qword ptr [r11 + r10*8 + 16], rax"));
+    assert!(output.contains("mov byte ptr [r11 + r10*1 + 16], al"));
+    assert!(output.contains("movsd qword ptr [r11 + r10*8 + 16], xmm14"));
+    assert!(output.contains("movsd xmm14, qword ptr [r11 + r10*8 + 16]"));
 }
 
 #[test]
@@ -210,17 +251,42 @@ fn primitive_array_ownership_crosses_calls_results_and_replacement_without_extra
 }
 
 #[test]
+fn nontrivial_and_nested_inline_array_lifecycle_reaches_native_lowering() {
+    let source = concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 1; }\n",
+        "}\n",
+        "class Node {\n",
+        "  children: Node[];\n",
+        "  init() { self.children = Node[](); }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var items: Item[] = Item[](2u);\n",
+        "  var optional: Item?[] = Item?[](2u);\n",
+        "  optional[0] = Item();\n",
+        "  var nested: i64[][] = i64[][](2u);\n",
+        "  nested[0] = i64[](3u);\n",
+        "  var nodes: Node[] = Node[](1u);\n",
+        "  var copied: Node[] = nodes;\n",
+        "  return items[0].value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+
+    assert!(output.contains(".Lska_class_0_copy_complete:"));
+    assert!(output.contains(".Lska_array_0_destroy_element:"));
+    assert!(output.contains(".Lska_array_3_clone:"));
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(1));
+}
+
+#[test]
 fn deferred_array_profiles_remain_structured_backend_errors() {
     for source in [
         concat!(
             "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
             "fn main() -> i64 { return 0; }\n",
-        ),
-        concat!(
-            "fn main() -> i64 {\n",
-            "  var values: i64[][] = i64[][](1u);\n",
-            "  return 0;\n",
-            "}\n",
         ),
         concat!(
             "fn main() -> i64 {\n",
@@ -233,7 +299,9 @@ fn deferred_array_profiles_remain_structured_backend_errors() {
         let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
         assert!(
             error.to_string().contains("not yet supported")
-                || error.to_string().contains("outside the primitive inline"),
+                || error
+                    .to_string()
+                    .contains("outside the non-shared inline-array"),
             "{error}"
         );
     }
