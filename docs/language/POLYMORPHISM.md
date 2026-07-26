@@ -439,8 +439,9 @@ This profile excludes:
 - local/general reference values and stored cast views;
 - external polymorphic/object ABI and cross-module metadata coalescing;
 - arrays, closures, generics, statics/globals, and reflection;
-- optional-container aliases. Primitive, exact-class, and optional shared-owner
-  parameters/results are implemented as exact virtual and interface signature
+- aliases to optional shared owners. Primitive, exact-class, and optional
+  shared-owner parameters/results, plus aliases to supported inline optional
+  containers, are implemented as exact virtual and interface signature
   components; checked optional class payload views and secured optional-owner
   unwrap support the existing direct, virtual, interface, cast, and type-test
   consumers;

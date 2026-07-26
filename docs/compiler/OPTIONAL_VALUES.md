@@ -16,8 +16,8 @@ optionals continue through explicit typed HIR and MIR places, calls, and
 lifecycle and checked-view operations; optional shared owners likewise
 continue through explicit owner operations; the verifier proves their storage,
 aggregate-boundary, conditional ownership, guard, anchor, and failure-edge
-invariants, and the x86-64 backend executes them. Optional-container aliases
-still stop at `TYP035`.
+invariants, and the x86-64 backend executes them. Supported inline optional
+containers also pass through non-owning alias places with explicit access.
 
 ## Phase ownership
 
@@ -59,9 +59,11 @@ shared T    ordinary non-null shared owner
 shared? T   optional shared owner
 ```
 
-`shared T?`, `shared? T?`, nested optionality, optional aliases, and invalid
-payload families reach one focused diagnostic boundary and never become an
-executable HIR type.
+`shared T?`, `shared? T?`, nested optionality, aliases to optional shared
+owners, and invalid payload families reach focused diagnostic boundaries and
+never become executable HIR types. Alias binding mode may designate an
+existing primitive or exact-class inline optional place; it does not add a
+reference or optional-reference type identity.
 
 ## Source-shaped IR
 
@@ -357,6 +359,12 @@ documentation changes.
 integer-class argument word and one direct result word in `rax`. A present
 owner is copied or transferred under the existing shared call rules; absence
 transfers zero without retain or release.
+
+An alias to inline `T?` passes one integer-class address to the existing
+container storage. Unlike an object-view alias, it carries no complete-object
+or dynamic-metadata components. The callee treats that address as indirect
+initialized optional storage and never owns or cleans it. The caller keeps the
+container alive for the complete call.
 
 These are compiler-private conventions. External declarations reject all
 optional parameters and results.

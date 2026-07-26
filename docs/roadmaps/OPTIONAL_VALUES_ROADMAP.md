@@ -1,6 +1,6 @@
 # Explicit Optional Values Roadmap
 
-Status: in progress; OP6 is complete and OP7 is next.
+Status: in progress; OP7 is complete and OP8 is next.
 
 This roadmap adds explicit optional values without weakening Skald's central
 guarantee that every ordinary inline value, alias, and shared owner is present
@@ -187,7 +187,7 @@ documents remain historical and are not migration targets.
 - [x] OP4 — Implement inline-class optional lifecycle
 - [x] OP5 — Enforce checked payload views and dynamic presence guards
 - [x] OP6 — Implement optional shared owners
-- [ ] OP7 — Complete alias, overload, conversion, and polymorphism integration
+- [x] OP7 — Complete alias, overload, conversion, and polymorphism integration
 - [ ] OP8 — Harden diagnostics, documentation, and end-to-end behavior
 
 ## PR-sized implementation sequence
@@ -488,30 +488,30 @@ verified ownership account, and `shared T` remains unchanged and non-null.
 **Purpose:** Close cross-feature semantic gaps after both inline and shared
 optional payload families have executable ownership and checked-access rules.
 
-- [ ] Permit `ref value: T?` and `mut ref value: T?` for supported inline
+- [x] Permit `ref value: T?` and `mut ref value: T?` for supported inline
       optional containers, preserving read-only/mutable access, non-exclusivity,
       call-scoped lifetime, and the prohibition on optional references.
-- [ ] Allow read-only aliases to test and checked-access payloads; allow mutable
+- [x] Allow read-only aliases to test and checked-access payloads; allow mutable
       aliases additionally to set, clear, or replace an unpinned container.
       Apply dynamic presence guards to unwrapped payload aliases.
-- [ ] Complete optional compatibility at locals, fields, arguments, returns,
+- [x] Complete optional compatibility at locals, fields, arguments, returns,
       assignments, initializer candidates, overrides, interface requirements,
       checked object-place consumers, and shared up-views without implicit
       unwrapping.
-- [ ] Freeze and implement overload ranking for exact payloads, optional
+- [x] Freeze and implement overload ranking for exact payloads, optional
       injection, `none`, compatible shared targets, and otherwise ambiguous
       optional candidates; preserve source-ordered diagnostics.
-- [ ] Ensure `is some`/`is none` remains distinct from object type tests and
+- [x] Ensure `is some`/`is none` remains distinct from object type tests and
       that postfix unwrap composes with existing plain/shared casts only after
       producing the checked payload or secured owner.
-- [ ] Diagnose optional values used through truthiness, raw `.`, raw `->`, raw
+- [x] Diagnose optional values used through truthiness, raw `.`, raw `->`, raw
       `*`, arithmetic, implicit casts, unsupported extern boundaries, `ref?`,
       `shared T?`, `shared? T?`, and nested optional shapes with focused
       alternatives where one exists.
-- [ ] Complete syntax/resolved/HIR/MIR dump coverage and deterministic naming
+- [x] Complete syntax/resolved/HIR/MIR dump coverage and deterministic naming
       for hidden optional destinations, temporaries, views, guards, and
       optional shared-owner storage.
-- [ ] Update all affected language and compiler documents for the completed
+- [x] Update all affected language and compiler documents for the completed
       declaration, overload, alias, conversion, and polymorphism matrices.
 
 **Tests:** Complete type/access/overload matrices, alias overlap, optional

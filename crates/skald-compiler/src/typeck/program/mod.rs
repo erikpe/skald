@@ -18,7 +18,6 @@ use crate::{
 
 use super::{
     capabilities::CopyCapabilities, containment::validate_containment, function::CallableChecker,
-    optional_gate::reject_unsupported_optionals,
 };
 
 mod class;
@@ -63,7 +62,6 @@ pub const AMBIGUOUS_INITIALIZER: &str = "TYP031";
 pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
 pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
-pub const OPTIONAL_VALUES_NOT_IMPLEMENTED: &str = "TYP035";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -80,12 +78,6 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if reject_unsupported_optionals(program, &mut diagnostics) {
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
@@ -201,19 +193,26 @@ fn validate_parameters(
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. }
-                if !matches!(ty, Type::Class(_) | Type::Obj | Type::Interface(_)) =>
+                if !matches!(
+                    ty,
+                    Type::Class(_)
+                        | Type::Obj
+                        | Type::Interface(_)
+                        | Type::OptionalPrimitive(_)
+                        | Type::OptionalClass(_)
+                ) =>
             {
                 diagnostics.push(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a class, interface, or `Obj`",
+                            "{owner} alias parameter `{}` must name a class, interface, `Obj`, or supported inline optional",
                             parameter.name
                         ),
                     )
                     .with_primary_label(
                         parameter.type_syntax.span,
-                        "primitive and `unit` aliases are unavailable",
+                        "plain primitive, shared-owner, and `unit` aliases are unavailable",
                     ),
                 );
                 valid = false;

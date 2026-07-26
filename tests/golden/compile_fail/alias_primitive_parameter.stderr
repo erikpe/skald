@@ -1,5 +1,5 @@
-error[PAR002]: expected a class name as the alias parameter type
+error[TYP019]: function alias parameter `value` must name a class, interface, `Obj`, or supported inline optional
  --> tests/golden/compile_fail/alias_primitive_parameter.ska:1:23
    |
 1 | fn inspect(ref value: i64) -> unit {}
-   |                       ^^^ alias parameters must name an inline class type
+   |                       ^^^ plain primitive, shared-owner, and `unit` aliases are unavailable

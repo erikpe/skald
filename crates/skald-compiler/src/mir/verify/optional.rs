@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashSet, VecDeque};
 
 use super::{
     super::model::{
-        MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
+        MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirInstruction, MirOptionalSharedSource,
         MirOptionalSource, MirPlace, MirPrimitiveType, MirProgram, MirRvalueKind, MirSharedTarget,
         MirStorageKind, MirTerminationReason, MirTerminator, MirType, OptionalGuardId, StorageId,
         ValueId,
@@ -285,6 +285,14 @@ impl Verifier<'_> {
         source: &MirOptionalSource,
         defined: &HashSet<ValueId>,
     ) {
+        let checked = self.verify_place(function, block, destination);
+        if checked.is_some_and(|place| place.access != MirAliasAccess::Mutable) {
+            self.block_error(
+                function.callable(),
+                block.id,
+                "optional assignment destination requires mutable access",
+            );
+        }
         let payload = self.verify_optional_place(function, block, destination);
         self.verify_optional_source(function, block, source, payload, defined);
     }
@@ -1086,7 +1094,16 @@ fn initialized_at_entry(function: MirDefinitionRef<'_>) -> HashSet<MirPlace> {
                 )
             })
         })
-        .map(|storage| MirPlace::base(*storage))
+        .map(|storage| {
+            if function
+                .storage(*storage)
+                .is_some_and(|storage| matches!(storage.kind, MirStorageKind::AliasParameter(_)))
+            {
+                MirPlace::alias_parameter(*storage)
+            } else {
+                MirPlace::base(*storage)
+            }
+        })
         .collect::<HashSet<_>>();
 
     if matches!(

@@ -149,6 +149,16 @@ const fn parameter_class(parameter: MirParameter) -> Option<ScalarClass> {
     }
 }
 
+const fn alias_carries_object_origin(parameter: MirParameter) -> bool {
+    matches!(
+        parameter.mode,
+        MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
+    ) && matches!(
+        parameter.ty,
+        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+    )
+}
+
 impl ArgumentLocation {
     pub(super) fn incoming(self) -> Option<Self> {
         match self {
@@ -209,14 +219,13 @@ impl CallLayout {
 
         for &parameter in parameters {
             let value = classifier.classify(parameter_class(parameter)?)?;
-            let origin = match parameter.mode {
-                MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias => {
-                    Some(ObjectOriginLocations {
-                        complete: classifier.classify(ScalarClass::Integer)?,
-                        metadata: classifier.classify(ScalarClass::Integer)?,
-                    })
-                }
-                MirParameterMode::Value => None,
+            let origin = if alias_carries_object_origin(parameter) {
+                Some(ObjectOriginLocations {
+                    complete: classifier.classify(ScalarClass::Integer)?,
+                    metadata: classifier.classify(ScalarClass::Integer)?,
+                })
+            } else {
+                None
             };
             locations.push(ParameterLocations { value, origin });
         }
@@ -490,6 +499,29 @@ mod tests {
                 metadata: ArgumentLocation::IntegerRegister(Register::Rdx),
             })
         );
+    }
+
+    #[test]
+    fn optional_container_aliases_carry_only_the_container_address() {
+        let layout = CallLayout::classify(&[
+            MirParameter::read_only_alias(MirType::OptionalPrimitive(
+                crate::mir::MirPrimitiveType::I64,
+            )),
+            MirParameter::mutable_alias(MirType::OptionalClass(crate::identity::ClassId::new(0))),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            layout.locations(),
+            [
+                ArgumentLocation::IntegerRegister(Register::Rdi),
+                ArgumentLocation::IntegerRegister(Register::Rsi),
+            ]
+        );
+        assert!(layout
+            .parameter_locations()
+            .iter()
+            .all(|location| location.origin().is_none()));
     }
 
     #[test]

@@ -20,6 +20,7 @@ struct ArgumentAnalysis {
     ty: Type,
     absent: bool,
     object: Option<ObjectArgument>,
+    optional_place_access: Option<HirAccess>,
 }
 
 #[derive(Clone, Copy)]
@@ -159,6 +160,7 @@ impl CallableChecker<'_, '_> {
                 ty: Type::Unit,
                 absent: true,
                 object: None,
+                optional_place_access: None,
             };
         }
         let ty = self.static_expression_type(expression);
@@ -169,6 +171,25 @@ impl CallableChecker<'_, '_> {
             ty,
             absent: false,
             object,
+            optional_place_access: matches!(
+                ty,
+                Type::OptionalPrimitive(_) | Type::OptionalClass(_)
+            )
+            .then(|| self.static_place_access(expression))
+            .flatten(),
+        }
+    }
+
+    fn static_place_access(&self, expression: &ResolvedExpression) -> Option<HirAccess> {
+        match expression {
+            ResolvedExpression::Binding(binding) => {
+                Some(self.static_binding_access(binding.binding))
+            }
+            ResolvedExpression::Grouped(grouped) => self.static_place_access(&grouped.expression),
+            ResolvedExpression::FieldAccess(access) => {
+                Some(self.static_receiver_access(&access.receiver))
+            }
+            _ => None,
         }
     }
 
@@ -370,16 +391,25 @@ impl CallableChecker<'_, '_> {
             },
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
+                let required = match parameter.binding_mode {
+                    ResolvedParameterBindingMode::ReadOnlyAlias { .. } => HirAccess::ReadOnly,
+                    ResolvedParameterBindingMode::MutableAlias { .. } => HirAccess::Mutable,
+                    ResolvedParameterBindingMode::Value => unreachable!(),
+                };
+                if matches!(
+                    expected,
+                    Type::OptionalPrimitive(_) | Type::OptionalClass(_)
+                ) {
+                    return argument.ty == expected
+                        && argument
+                            .optional_place_access
+                            .is_some_and(|access| access.permits(required));
+                }
                 let Some(object) = argument
                     .object
                     .filter(|object| object.source.can_bind_alias())
                 else {
                     return false;
-                };
-                let required = match parameter.binding_mode {
-                    ResolvedParameterBindingMode::ReadOnlyAlias { .. } => HirAccess::ReadOnly,
-                    ResolvedParameterBindingMode::MutableAlias { .. } => HirAccess::Mutable,
-                    ResolvedParameterBindingMode::Value => unreachable!(),
                 };
                 object.access.permits(required)
                     && self.parameter_type_accepts(argument.ty, expected)

@@ -52,7 +52,7 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
         .storage[0]
         .ty = MirType::I64;
     assert!(messages(&primitive_alias).iter().any(|message| {
-        message.contains("alias parameter 0 must have class, interface, or `Obj` type")
+        message.contains("alias parameter 0 must have object-view or inline-optional type")
     }));
 
     let (mut unlisted, ids) = alias_mir();

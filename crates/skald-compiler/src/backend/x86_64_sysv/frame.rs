@@ -131,10 +131,12 @@ impl FrameLayout {
             storage_offsets.push(allocator.allocate(size, alignment)?);
             let carries_origin = matches!(
                 storage.kind,
-                MirStorageKind::Receiver
-                    | MirStorageKind::AliasParameter(_)
-                    | MirStorageKind::CheckedView(_)
-            );
+                MirStorageKind::Receiver | MirStorageKind::CheckedView(_)
+            ) || matches!(storage.kind, MirStorageKind::AliasParameter(_))
+                && matches!(
+                    storage.ty,
+                    MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                );
             object_origins.push(if carries_origin {
                 Some(ObjectOriginHomes {
                     complete: allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?,

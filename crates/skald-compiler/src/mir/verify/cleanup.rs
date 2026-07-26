@@ -722,6 +722,17 @@ impl CleanupLivenessAnalysis<'_, '_> {
             // duplicate it.
             return;
         }
+        if place
+            .projections
+            .iter()
+            .any(|projection| matches!(projection, MirPlaceProjection::OptionalPayload(_)))
+        {
+            // Optional-payload liveness is established by BeginOptionalView
+            // and checked, including balanced nested guards, by the dedicated
+            // optional verifier. It is dynamic presence rather than ordinary
+            // statically initialized object storage.
+            return;
+        }
         if !self.place_is_live(state, place) {
             self.block_error(block.id, format!("{kind} is not live"));
         }

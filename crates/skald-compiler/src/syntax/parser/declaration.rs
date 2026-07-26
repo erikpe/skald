@@ -28,7 +28,7 @@ impl TypeContext {
     }
 
     const fn accepts_primitive(self) -> bool {
-        !matches!(self, Self::AliasParameter)
+        true
     }
 
     const fn accepts_shared(self) -> bool {
@@ -45,7 +45,10 @@ impl TypeContext {
                 "value parameters must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
             ),
-            Self::AliasParameter => "alias parameters must name an inline class type".to_owned(),
+            Self::AliasParameter => {
+                "alias parameters must name an object view or supported inline optional type"
+                    .to_owned()
+            }
             Self::LocalValue => format!(
                 "locals must have type {}, a named class type, or a shared object type",
                 format_type_list(STORED_TYPE_NAMES)
@@ -183,7 +186,7 @@ impl Parser<'_> {
         let type_syntax = self.parse_type(
             type_context,
             if type_context == TypeContext::AliasParameter {
-                "expected a class name as the alias parameter type".to_owned()
+                "expected an object view or inline optional alias parameter type".to_owned()
             } else {
                 format!(
                     "expected the parameter type {}, a named class type, or a shared object type",

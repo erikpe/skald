@@ -20,6 +20,18 @@ use super::{
 };
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn inline_optional_alias_place(
+        &mut self,
+        expression: &ResolvedExpression,
+    ) -> Option<crate::hir::HirOptionalAliasPlace> {
+        self.optional_place(expression)
+            .map(crate::hir::HirOptionalAliasPlace::Primitive)
+            .or_else(|| {
+                self.class_optional_place(expression)
+                    .map(crate::hir::HirOptionalAliasPlace::Class)
+            })
+    }
+
     pub(super) fn check_optional_shared_initialize(
         &mut self,
         target: HirSharedTarget,

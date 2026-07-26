@@ -1,0 +1,17 @@
+class Value {
+    init() {}
+}
+
+fn replace(ref value: Value?) -> unit {
+    value = none;
+}
+
+fn require_mutable(mut ref value: Value?) -> unit {}
+
+fn misuse(ref value: Value?) -> unit {
+    require_mutable(value);
+}
+
+fn main() -> i64 {
+    return 0;
+}

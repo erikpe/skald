@@ -224,6 +224,13 @@ impl CallableChecker<'_, '_> {
         expression: &ResolvedExpression,
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
+        let expected = lower_type(parameter.type_syntax());
+        if matches!(
+            expected,
+            Type::OptionalPrimitive(_) | Type::OptionalClass(_)
+        ) {
+            return self.check_optional_alias_argument(expression, expected, parameter);
+        }
         if let ResolvedExpression::ObjectCast(cast) = expression {
             return self.check_cast_alias_argument(cast, parameter);
         }
@@ -253,6 +260,89 @@ impl CallableChecker<'_, '_> {
             required,
             parameter,
         )
+    }
+
+    fn check_optional_alias_argument(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected: Type,
+        parameter: &impl CallParameter,
+    ) -> Option<HirCallArgument> {
+        let place = self.inline_optional_alias_place(expression);
+        let Some(place) = place else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_ALIAS_ARGUMENT,
+                    "optional alias argument must designate an existing optional container",
+                )
+                .with_primary_label(
+                    expression.span(),
+                    "pass an optional local, parameter, field, or grouping",
+                )
+                .with_secondary_label(parameter.span(), "optional alias declared here"),
+            );
+            return None;
+        };
+        let actual = match &place {
+            crate::hir::HirOptionalAliasPlace::Primitive(place) => {
+                Type::OptionalPrimitive(place.payload)
+            }
+            crate::hir::HirOptionalAliasPlace::Class(place) => Type::OptionalClass(place.class),
+        };
+        if actual != expected {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    format!(
+                        "optional alias argument has type `{}`, but `{}` is required",
+                        actual.name(),
+                        expected.name()
+                    ),
+                )
+                .with_primary_label(place.span(), "this optional container has a different type")
+                .with_secondary_label(
+                    parameter.type_syntax().span,
+                    "alias parameter type declared here",
+                ),
+            );
+            return None;
+        }
+        let required = lower_parameter_mode(parameter.binding_mode())
+            .required_access()
+            .expect("alias parameter mode must require place access");
+        let access = match &place {
+            crate::hir::HirOptionalAliasPlace::Primitive(place) => {
+                self.optional_storage_access(&place.storage, place.span)?
+            }
+            crate::hir::HirOptionalAliasPlace::Class(place) => {
+                self.optional_storage_access(&place.storage, place.span)?
+            }
+        };
+        if !access.permits(required) {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INSUFFICIENT_ALIAS_ACCESS,
+                    "read-only optional access cannot satisfy a mutable alias parameter",
+                )
+                .with_primary_label(place.span(), "this container provides read-only access")
+                .with_secondary_label(parameter.span(), "mutable alias declared here"),
+            );
+            return None;
+        }
+        Some(HirCallArgument::OptionalPlace(place))
+    }
+
+    fn optional_storage_access(
+        &mut self,
+        storage: &crate::hir::HirOptionalStorage,
+        span: Span,
+    ) -> Option<HirAccess> {
+        match storage {
+            crate::hir::HirOptionalStorage::Binding(binding) => {
+                self.binding_access(*binding, false, span)
+            }
+            crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access),
+        }
     }
 
     fn check_cast_alias_argument(

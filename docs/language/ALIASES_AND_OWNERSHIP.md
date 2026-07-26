@@ -1,6 +1,7 @@
 # Skald Aliases and Ownership
 
-Status: authoritative for executable class and `Obj` aliases. Interface views
+Status: authoritative for executable class, `Obj`, and inline
+optional-container aliases. Interface views
 follow the same source rules and lower through verified MIR; their backend
 execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
 call borrows and their hidden owner anchors are implemented as specified by
@@ -16,8 +17,9 @@ defines object places, copying, and owning-object lifetime.
 
 ## Binding modes
 
-An alias parameter is a non-owning name for an existing class object place or
-one of its static views. Its binding mode is separate from the static target:
+An alias parameter is a non-owning name for an existing class object place,
+one of its static views, or a supported inline optional container. Its binding
+mode is separate from the static target:
 
 ```ska
 fn inspect(ref value: Item) -> i64 {
@@ -40,12 +42,12 @@ the same read-only source-binding semantics as part of their more specialized
 External declarations may parse alias syntax for recovery, but such signatures
 are semantically invalid.
 
-The implemented designated type may be one concrete class, one interface, or
-`Obj`. Primitive, `unit`, array, and function alias parameter types are
-unsupported. The frozen optional contract permits the future container
-borrows `ref value: T?` and `mut ref value: T?`; these aliases designate an
-always-present optional wrapper, not an optional reference, and are not yet
-implemented. A shared-backed source is explicitly dereferenced, as in
+The implemented designated type may be one concrete class, one interface,
+`Obj`, or one supported primitive/exact-class inline optional container.
+Plain primitive, `unit`, shared-owner, array, and function alias parameter
+types are unsupported. The container borrows `ref value: T?` and
+`mut ref value: T?` designate an always-present optional wrapper, not an
+optional reference. A shared-backed source is explicitly dereferenced, as in
 `inspect(*owner)`, and borrows the allocated class/interface/`Obj` pointee
 rather than treating `shared T` as the alias's designated type. `Obj` is a
 universal non-owning target with no members or inline storage. Interfaces
@@ -71,6 +73,12 @@ Any number of exact-class field projections may follow a supported root.
 Grouping around a root or projection preserves the same place. This includes
 inline subobjects reached through owning values, receivers, and existing
 aliases.
+
+For an inline optional parameter, the argument may likewise be an exact
+optional local, value parameter, forwarded optional alias, or optional field
+reached through a supported mutable/read-only object path. `none`, an ordinary
+payload, a produced optional result, and an unwrapped payload are values rather
+than existing optional-container places and cannot bind the alias.
 
 A concrete class source may convert to the same class, any ancestor class, or
 `Obj`. These conversions retain the original complete object and do not slice.
@@ -115,6 +123,12 @@ still cannot be rebound or used as a whole-object replacement destination.
 That prohibition applies to the alias root and to every class subobject
 projected from it. Supported field mutation and method calls do not rebind the
 alias or end the object's lifetime.
+
+For an optional-container alias, read-only access permits presence tests,
+copying the optional into an owning boundary, and checked payload consumers.
+Mutable access additionally permits whole-container assignment from `none`, a
+compatible payload, or an exact optional source. Replacing a class optional
+still performs the dynamic presence-guard check before changing its payload.
 
 ## Forwarding, copying, and calls
 
@@ -217,13 +231,15 @@ sources, lexical lifetime, initialization, control-flow joins, interaction
 with relocation, and any anchoring requirement are not frozen. The current
 parameter restrictions do not implicitly specify that larger feature.
 
-Optional owning values, including `shared? T`, execute, but optional-container
-alias semantics do not. Their
-[frozen contract](OPTIONAL_VALUES.md#aliases)
-reserves aliases to optional containers and bounds a checked `value!` payload
-view to one complete immediate consumer under a dynamic presence guard. It
-does not introduce `ref?`, stored payload aliases, or optional reference
-values. Array elements remain an open alias-source design area. Implemented
+Optional owning values, including `shared? T`, and aliases to supported inline
+optional containers execute. Their
+[contract](OPTIONAL_VALUES.md#aliases)
+bounds a checked `value!` payload view to one complete immediate consumer
+under a dynamic presence guard. Read-only aliases may inspect and unwrap;
+mutable aliases may additionally set, clear, or replace an unguarded
+container. This does not introduce `ref?`, aliases to `shared? T`, stored
+payload aliases, or optional reference values. Array elements remain an open
+alias-source design area. Implemented
 polymorphic alias conversions and checked casts are defined by
 [polymorphism](POLYMORPHISM.md) and
 [object casts](OBJECT_CASTS.md). Checked places exist only for one consuming

@@ -5,6 +5,15 @@ use crate::identity::BindingId;
 use crate::object_path::ObjectProjection;
 
 impl BodyLowerer<'_> {
+    pub(super) fn lower_binding_place(&self, binding: BindingId) -> MirPlace {
+        let storage = self.storage_for_binding(binding);
+        match self.storage[storage.index()].kind {
+            MirStorageKind::AliasParameter(_) => MirPlace::alias_parameter(storage),
+            MirStorageKind::CheckedView(_) => MirPlace::checked_view(storage),
+            _ => MirPlace::base(storage),
+        }
+    }
+
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
         let receiver = match (
             &place.checked_cast,

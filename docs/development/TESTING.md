@@ -165,14 +165,15 @@ and recovery. Current resolution tests own flat target identities and
 source-shaped expression nodes. Inline-optional type-check and HIR tests own
 expected-type-directed `none`, exact injection, initializer ranking, fields,
 calls/results, exact signatures, copy, assignment, presence, unwrap,
-truthiness rejection, external rejection, checked class payload consumers, and
-the remaining `TYP035` boundaries. MIR tests own initialized places, explicit
+truthiness rejection, external rejection, checked class payload consumers,
+inline optional-container alias access/forwarding, and reserved-form
+boundaries. MIR tests own initialized places, explicit
 operations, CFG joins, aggregate calls, synthesized field lifecycle, checked
 view/anchor order, and exact failure edges; verifier mutations break one
 invariant at a time, including missing, mismatched, leaked, and reordered
 guards. Backend tests own layout, instruction selection, guard counts, hidden
 destinations, register/stack pressure, traps, and native execution.
 
-Future optional-owner coverage must add shared class/interface/`Obj` owners,
-zero-niche realization, and secured-owner unwrap while preserving the existing
-inline optional and checked-view matrix.
+Optional-owner coverage includes shared class/interface/`Obj` up-views,
+zero-niche realization, secured-owner unwrap, and virtual/interface dispatch
+while preserving the inline optional and checked-view matrix.

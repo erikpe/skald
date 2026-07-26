@@ -152,5 +152,6 @@ Inspect optional frontend behavior at the narrowest owner defined by the frozen
   exact non-returning failure reasons;
 - assembly uses the documented state/payload offsets, recursive field layout,
   hidden destination ABI, inline guard counts, and trap-only failures; and
-- `TYP035` remains the expected boundary for optional-container aliases and
-  optional shared owners.
+- optional-container alias dumps use indirect optional places without object
+  origin metadata; reserved boxed/nested optional forms and aliases to
+  optional shared owners remain frontend diagnostics.

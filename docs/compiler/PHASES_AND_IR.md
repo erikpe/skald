@@ -52,8 +52,10 @@ aggregates, explicit unwrap success/failure control flow, begin/end guard
 operations, and guarded-mutation checks. Verification proves compatible
 operations, definite wrapper initialization, balanced compatible guards,
 anchor ordering, isolation of the zero niche from ordinary owners, and
-identical initialized optional state across CFG joins. `TYP035` remains the
-boundary for optional-container aliases and reserved optional shapes.
+identical initialized optional state across CFG joins. Inline optional
+container aliases use ordinary indirect MIR places plus exact optional types;
+reserved boxed, nested, and optional-reference shapes remain diagnosed before
+HIR.
 
 ## Sources and diagnostics
 

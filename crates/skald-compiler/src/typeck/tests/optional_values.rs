@@ -52,18 +52,65 @@ fn optionals_have_no_truthiness_or_implicit_unwrap() {
 }
 
 #[test]
-fn optional_container_aliases_remain_at_the_focused_gate() {
+fn optional_container_aliases_preserve_type_and_access() {
+    let output = check_text(
+        "class Item {\n\
+           value: i64;\n\
+           init(value: i64) { self.value = value; }\n\
+           fn read() -> i64 { return self.value; }\n\
+         }\n\
+         fn inspect(ref value: i64?) -> i64 {\n\
+           if (value is some) { return value!; }\n\
+           return 0;\n\
+         }\n\
+         fn inspect_item(ref value: Item?) -> i64 {\n\
+           if (value is some) { return value!.read(); }\n\
+           return 0;\n\
+         }\n\
+         fn clear(mut ref value: i64?) -> unit { value = none; }\n\
+         fn main() -> i64 {\n\
+           var number: i64? = 7;\n\
+           var item: Item? = Item(4);\n\
+           var result: i64 = inspect(number) + inspect_item(item);\n\
+           clear(number);\n\
+           return result;\n\
+         }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("OptionalPlaceArgument i64?"));
+    assert!(dump.contains("OptionalPlaceArgument class"));
+}
+
+#[test]
+fn optional_aliases_reject_replacement_without_mutable_exact_place_access() {
     let output = check_text(
         "class Item { init() {} }\n\
-         fn inspect(ref value: Item?) -> unit {}\n\
+         fn clear_read_only(ref value: Item?) -> unit { value = none; }\n\
+         fn take(mut ref value: Item?) -> unit {}\n\
+         fn misuse(ref value: Item?, other: i64?, plain: Item) -> unit {\n\
+           take(value);\n\
+           take(other);\n\
+           take(plain);\n\
+         }\n\
          fn main() -> i64 { return 0; }\n",
     );
 
     assert!(output.hir.is_none());
-    assert_eq!(output.diagnostics.len(), 1, "{:?}", output.diagnostics);
+    let codes: Vec<_> = output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.code)
+        .collect();
     assert_eq!(
-        output.diagnostics.iter().next().unwrap().code,
-        OPTIONAL_VALUES_NOT_IMPLEMENTED
+        codes,
+        [
+            READ_ONLY_RECEIVER,
+            INSUFFICIENT_ALIAS_ACCESS,
+            TYPE_MISMATCH,
+            INVALID_ALIAS_ARGUMENT,
+        ]
     );
 }
 
@@ -130,6 +177,28 @@ fn none_keeps_distinct_optional_initializer_candidates_ambiguous() {
 }
 
 #[test]
+fn optional_shared_overloads_rank_compatible_targets_by_specificity() {
+    let output = check_text(
+        "class Base { init() {} }\n\
+         class Derived extends Base { init() { super(); } }\n\
+         class Pick {\n\
+           chosen: i64;\n\
+           init(value: shared? Base) { self.chosen = 1; }\n\
+           init(value: shared? Derived) { self.chosen = 2; }\n\
+         }\n\
+         fn main() -> i64 {\n\
+           var owner: shared? Derived = new Derived();\n\
+           var pick: Pick = Pick(owner);\n\
+           return pick.chosen;\n\
+         }\n",
+    );
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("Initializer c2:init1"));
+}
+
+#[test]
 fn external_optional_parameters_and_results_are_rejected_by_the_external_contract() {
     for source in [
         "extern fn inspect(value: i64?) -> unit; fn main() -> i64 { return 0; }",
@@ -141,10 +210,6 @@ fn external_optional_parameters_and_results_are_rejected_by_the_external_contrac
             .diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == INVALID_EXTERNAL_DECLARATION));
-        assert!(!output
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == OPTIONAL_VALUES_NOT_IMPLEMENTED));
     }
 }
 

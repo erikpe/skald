@@ -22,10 +22,7 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
             arguments,
             ..
         } => {
-            receiver
-                .checked_cast
-                .as_deref()
-                .is_some_and(checked_view_contains_runtime_cast)
+            method_receiver_contains_runtime_cast(receiver)
                 || arguments.iter().any(call_argument_contains_runtime_cast)
         }
         HirExpressionKind::InterfaceCall {
@@ -36,10 +33,20 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
             interface_receiver_contains_runtime_cast(receiver)
                 || arguments.iter().any(call_argument_contains_runtime_cast)
         }
-        HirExpressionKind::FieldRead(place) => place
-            .checked_cast
-            .as_deref()
-            .is_some_and(checked_view_contains_runtime_cast),
+        HirExpressionKind::FieldRead(place) => {
+            place
+                .checked_cast
+                .as_deref()
+                .is_some_and(checked_view_contains_runtime_cast)
+                || place
+                    .shared_view
+                    .as_deref()
+                    .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+                || place
+                    .optional_view
+                    .as_deref()
+                    .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+        }
         HirExpressionKind::TypeTest(test) => view_source_contains_runtime_cast(&test.source.source),
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
@@ -61,7 +68,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
         HirCallArgument::CheckedView(view) => checked_view_contains_runtime_cast(view),
         HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
         HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
-        HirCallArgument::Place(_) => false,
+        HirCallArgument::Place(_) | HirCallArgument::OptionalPlace(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
                 shared_allocation_contains_runtime_cast(allocation)
@@ -143,10 +150,9 @@ fn producer_contains_runtime_cast(producer: &HirObjectProducer) -> bool {
         HirObjectProducer::Call(call) => {
             let receiver_has_cast = match &call.target {
                 HirObjectCallTarget::Direct(_) => false,
-                HirObjectCallTarget::Method { receiver, .. } => receiver
-                    .checked_cast
-                    .as_deref()
-                    .is_some_and(checked_view_contains_runtime_cast),
+                HirObjectCallTarget::Method { receiver, .. } => {
+                    method_receiver_contains_runtime_cast(receiver)
+                }
                 HirObjectCallTarget::Interface { receiver, .. } => {
                     interface_receiver_contains_runtime_cast(receiver)
                 }
@@ -158,6 +164,21 @@ fn producer_contains_runtime_cast(producer: &HirObjectProducer) -> bool {
                     .any(call_argument_contains_runtime_cast)
         }
     }
+}
+
+fn method_receiver_contains_runtime_cast(receiver: &crate::hir::HirMethodReceiver) -> bool {
+    receiver
+        .checked_cast
+        .as_deref()
+        .is_some_and(checked_view_contains_runtime_cast)
+        || receiver
+            .shared_view
+            .as_deref()
+            .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+        || receiver
+            .optional_view
+            .as_deref()
+            .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
 }
 
 fn interface_receiver_contains_runtime_cast(receiver: &HirInterfaceReceiver) -> bool {

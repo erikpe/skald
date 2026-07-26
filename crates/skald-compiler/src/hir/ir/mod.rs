@@ -44,8 +44,8 @@ pub use object::{
 };
 pub use optional::{
     HirCheckedOptionalView, HirClassOptionalAssignment, HirClassOptionalInitialize,
-    HirClassOptionalPlace, HirClassOptionalSource, HirOptionalAssignment, HirOptionalOperand,
-    HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
+    HirClassOptionalPlace, HirClassOptionalSource, HirOptionalAliasPlace, HirOptionalAssignment,
+    HirOptionalOperand, HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
     HirOptionalSharedPlace, HirOptionalSharedSource, HirOptionalSource, HirOptionalStorage,
     HirOptionalWriteKind, HirPresenceTestKind, HirPrimitiveType,
 };

@@ -12,7 +12,8 @@ The [optional-values compiler contract](OPTIONAL_VALUES.md) separately owns
 optional layout, ABI, guard, and trap realization. Verified primitive and
 exact-class optional local, field, parameter, result, and temporary MIR is
 legal backend input, including checked class payload views and optional shared
-owners.
+owners. Inline optional-container aliases are indirect optional places with
+one address component and no object-origin metadata.
 
 ## Backend interface and target registry
 
@@ -87,6 +88,8 @@ integer-class word: zero is absent and a nonzero word is the existing canonical
 shared handle. Calls pass it in registers or stack slots and return it in
 `rax`; generated conditional retain/release paths branch around zero before
 entering ordinary shared machinery.
+Inline optional-container aliases use that same container address without
+transferring ownership or scheduling callee cleanup.
 
 ## Data layout
 

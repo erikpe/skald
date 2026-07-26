@@ -406,8 +406,8 @@ ownership design.
 
 This profile does not include:
 
-- the not-yet-executable `shared? T` optional-owner form;
 - generalized `shared T?` or `shared? T?` boxes;
+- aliases whose designated container type is `shared? T`;
 - weak ownership;
 - explicit early release or user-visible reference counts;
 - raw pointers or unsafe handle construction;

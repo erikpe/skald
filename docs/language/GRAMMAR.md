@@ -159,8 +159,9 @@ Parameter and argument lists do not accept trailing commas. Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
 named types are legal. Alias targets retain their separate grammar and do not
-accept `shared T`; `identifier?` preserves the planned optional-container alias
-shape. Resolution rejects interface payloads for inline optionals. `Obj` is
+accept `shared T`; primitive and named inline `T?` forms may designate
+supported optional containers. Resolution rejects interface payloads for
+inline optionals. `Obj` is
 legal as the target of `shared Obj` and `shared? Obj`, but not as `Obj?`.
 `unit` is syntactically restricted to result positions and `unit?` is rejected.
 Nested optionals, optional references, `shared T?`, and `shared? T?` are
@@ -407,9 +408,9 @@ Optional type and expression shapes cross lexing, parsing, and name resolution
 with explicit nodes and flat resolved target identities. Primitive and
 exact-class inline optionals cross explicit HIR, MIR, verification, x86-64
 layout, and execution, including bounded checked class payload views. Optional
-shared owners and optional-container aliases retain the focused `TYP035`
-boundary. The semantics and exact implemented slice belong to
-[Optional Values](OPTIONAL_VALUES.md).
+shared owners and aliases to supported inline optional containers cross the
+same explicit phase boundary. The semantics and exact implemented slice belong
+to [Optional Values](OPTIONAL_VALUES.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

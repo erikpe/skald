@@ -3,7 +3,7 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        BlockFlow, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
+        BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
         HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
         HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
         HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, Type,
@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     is_call_through_groups, lower_type, require_type, CallableChecker, INVALID_CALL_STATEMENT,
-    INVALID_INITIALIZER_BODY, INVALID_RETURN,
+    INVALID_INITIALIZER_BODY, INVALID_RETURN, READ_ONLY_RECEIVER,
 };
 
 impl CallableChecker<'_, '_> {
@@ -106,6 +106,22 @@ impl CallableChecker<'_, '_> {
         &mut self,
         assignment: &crate::resolve::ResolvedOptionalAssignment,
     ) -> CheckedStatement {
+        let mutable = self
+            .binding_access(assignment.destination, false, assignment.span)
+            .is_some_and(|access| access == HirAccess::Mutable);
+        if !mutable {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    READ_ONLY_RECEIVER,
+                    "cannot replace a read-only optional container",
+                )
+                .with_primary_label(
+                    assignment.span,
+                    "optional assignment requires mutable access",
+                ),
+            );
+            return CheckedStatement::falls_through(None);
+        }
         match self.binding_type(assignment.destination) {
             Type::OptionalPrimitive(payload) => {
                 let source = self.check_optional_source(

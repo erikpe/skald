@@ -65,11 +65,11 @@ prerequisites and validation are defined by the
 The frozen optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
-resolved identities are implemented; primitive and exact-class optional
-locals, fields, lifecycle, and internal callable boundaries also execute
-through typed HIR and verified MIR, including bounded checked class payload
-views and dynamic presence guards. Current phase and backend descriptions
-remain authoritative while optional shared owners are still planned.
+resolved identities, primitive and exact-class optional locals, fields,
+lifecycle, internal callable boundaries, optional shared owners, and inline
+optional-container aliases execute through typed HIR and verified MIR. This
+includes bounded checked class payload views, dynamic presence guards,
+zero-niche optional owners, and exact virtual/interface signatures.
 
 ## Pipeline
 

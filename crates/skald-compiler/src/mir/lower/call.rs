@@ -344,6 +344,17 @@ impl BodyLowerer<'_> {
                     self.lower_optional_shared_initialize(storage, value);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
+                HirCallArgument::OptionalPlace(place) => {
+                    let place = match place {
+                        crate::hir::HirOptionalAliasPlace::Primitive(place) => {
+                            self.lower_optional_place(place)
+                        }
+                        crate::hir::HirOptionalAliasPlace::Class(place) => {
+                            self.lower_class_optional_place(place)
+                        }
+                    };
+                    LoweredArgument::Ready(MirArgument::Place(place))
+                }
                 HirCallArgument::Place(place) => {
                     LoweredArgument::Ready(MirArgument::Place(self.lower_object_place(place)))
                 }

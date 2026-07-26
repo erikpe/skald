@@ -1,0 +1,38 @@
+class Value {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    fn read() -> i64 {
+        return self.marker;
+    }
+}
+
+fn read(ref value: i64?) -> i64 {
+    if (value is some) {
+        return value!;
+    }
+    return 0;
+}
+
+fn clear(mut ref value: i64?) -> unit {
+    value = none;
+}
+
+fn replace(mut ref value: Value?) -> unit {
+    value = Value(35);
+}
+
+fn main() -> i64 {
+    var number: i64? = 7;
+    var value: Value? = none;
+    replace(value);
+    var result: i64 = read(number) + value!.read();
+    clear(number);
+    if (number is none) {
+        return result;
+    }
+    return 0;
+}

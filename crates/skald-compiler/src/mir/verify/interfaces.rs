@@ -102,11 +102,15 @@ impl Verifier<'_> {
                 MirParameterMode::ReadOnlyAlias | MirParameterMode::MutableAlias
                     if !matches!(
                         parameter.ty,
-                        MirType::Class(_) | MirType::Interface(_) | MirType::Obj
+                        MirType::Class(_)
+                            | MirType::Interface(_)
+                            | MirType::Obj
+                            | MirType::OptionalPrimitive(_)
+                            | MirType::OptionalClass(_)
                     ) =>
                 {
                     self.program_error(format!(
-                        "{owner} alias parameter {index} must have class, interface, or `Obj` type"
+                        "{owner} alias parameter {index} must have object-view or inline-optional type"
                     ));
                 }
                 _ => {}

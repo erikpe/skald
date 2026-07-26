@@ -112,11 +112,7 @@ fn malformed_alias_modifiers_report_focused_errors_and_recover() {
         ("ref : Thing", "expected a parameter name"),
         (
             "ref value: )",
-            "expected a class name as the alias parameter type",
-        ),
-        (
-            "ref value: i64",
-            "expected a class name as the alias parameter type",
+            "expected an object view or inline optional alias parameter type",
         ),
     ];
 

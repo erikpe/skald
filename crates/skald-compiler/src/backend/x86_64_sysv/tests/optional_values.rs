@@ -402,6 +402,110 @@ fn class_optional_parameters_and_results_execute_under_stack_pressure() {
     assert_eq!(run_native_assembly(&output).code(), Some(42));
 }
 
+#[test]
+fn optional_container_aliases_execute_forward_mutate_and_stack_pressure() {
+    let source = "class Value {\n\
+          marker: i64;\n\
+          init(marker: i64) { self.marker = marker; }\n\
+          fn read() -> i64 { return self.marker; }\n\
+        }\n\
+        class Holder {\n\
+          value: i64?;\n\
+          init(value: i64?) { self.value = value; }\n\
+        }\n\
+        fn read(ref value: i64?) -> i64 {\n\
+          if (value is some) { return value!; }\n\
+          return 0;\n\
+        }\n\
+        fn forward(ref value: i64?) -> i64 { return read(value); }\n\
+        fn clear(mut ref value: i64?) -> unit { value = none; }\n\
+        fn replace(mut ref value: Value?) -> unit { value = Value(9); }\n\
+        fn pressure(ref a: i64?, ref b: i64?, ref c: i64?, ref d: i64?,\n\
+                    ref e: i64?, ref f: i64?, ref g: i64?) -> i64 {\n\
+          return read(a) + read(b) + read(c) + read(d) + read(e) + read(f) + read(g);\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var a: i64? = 1;\n\
+          var b: i64? = 2;\n\
+          var c: i64? = 3;\n\
+          var d: i64? = 4;\n\
+          var e: i64? = 5;\n\
+          var f: i64? = 6;\n\
+          var g: i64? = 7;\n\
+          var item: Value? = none;\n\
+          var holder: Holder = Holder(7);\n\
+          replace(item);\n\
+          var first: i64 = pressure(a, b, c, d, e, f, g);\n\
+          var second: i64 = forward(g);\n\
+          var third: i64 = item!.read();\n\
+          var fourth: i64 = forward(holder.value);\n\
+          var result: i64 = first + second + third + fourth;\n\
+          clear(g);\n\
+          clear(holder.value);\n\
+          if (g is none) {\n\
+            if (holder.value is none) { return result - 9; }\n\
+          }\n\
+          return 0;\n\
+        }\n";
+    let mir = lower_text(source);
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("ref i64?"));
+    assert!(dump.contains("mut ref class"));
+    assert!(dump.contains("indirect("));
+
+    let output = assembly(source);
+    assert!(output.contains("mov qword ptr [rsp]"));
+    assert_eq!(run_native_assembly(&output).code(), Some(42), "{output}");
+}
+
+#[test]
+fn optional_container_alias_cannot_clear_a_checked_payload() {
+    let source = "class Value { init() {} }\n\
+        fn consume(ref value: Value, ignored: i64) -> i64 { return ignored; }\n\
+        fn clear(mut ref value: Value?) -> i64 { value = none; return 0; }\n\
+        fn main() -> i64 {\n\
+          var value: Value? = Value();\n\
+          return consume(value!, clear(value));\n\
+        }\n";
+    let output = assembly(source);
+
+    let status = run_native_assembly(&output);
+    assert!(!status.success(), "{output}");
+    assert_ne!(status.code(), Some(0), "{output}");
+}
+
+#[test]
+fn optional_alias_signatures_execute_through_virtual_and_interface_dispatch() {
+    let source = "interface Reader { fn read(ref value: i64?) -> i64; }\n\
+        class Base {\n\
+          init() {}\n\
+          virtual fn read(ref value: i64?) -> i64 {\n\
+            if (value is some) { return value!; }\n\
+            return 0;\n\
+          }\n\
+        }\n\
+        class Derived extends Base implements Reader {\n\
+          init() { super(); }\n\
+          override fn read(ref value: i64?) -> i64 {\n\
+            if (value is some) { return value!; }\n\
+            return 0;\n\
+          }\n\
+        }\n\
+        fn through_interface(ref source: Reader, ref value: i64?) -> i64 {\n\
+          return source.read(value);\n\
+        }\n\
+        fn through_virtual(ref source: Base, ref value: i64?) -> i64 {\n\
+          return source.read(value);\n\
+        }\n\
+        fn main() -> i64 {\n\
+          var source: Derived = Derived();\n\
+          var value: i64? = 21;\n\
+          return through_interface(source, value) + through_virtual(source, value);\n\
+        }\n";
+
+    assert_eq!(run_native_assembly(&assembly(source)).code(), Some(42));
+}
+
 fn optional_ownership_stubs() -> &'static str {
     concat!(
         "\n.text\n",

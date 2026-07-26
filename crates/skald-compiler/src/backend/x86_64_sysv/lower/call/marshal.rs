@@ -315,7 +315,14 @@ impl InstructionSelector<'_, '_> {
             }
             (MirArgument::Place(place), MirParameterMode::ReadOnlyAlias)
             | (MirArgument::Place(place), MirParameterMode::MutableAlias) => {
-                self.select_inferred_alias(place, locations)?;
+                if matches!(
+                    parameter.ty,
+                    MirType::OptionalPrimitive(_) | MirType::OptionalClass(_)
+                ) {
+                    self.select_place_address(place, locations.value())?;
+                } else {
+                    self.select_inferred_alias(place, locations)?;
+                }
             }
             (
                 MirArgument::View(crate::mir::MirObjectView { source, origin, .. }),

@@ -179,6 +179,16 @@ impl Verifier<'_> {
                     &assignment.source,
                     assignment.class,
                 );
+                if self
+                    .verify_place(function, block, &assignment.destination)
+                    .is_some_and(|place| place.access != crate::mir::MirAliasAccess::Mutable)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "class optional assignment destination requires mutable access",
+                    );
+                }
                 let declaration = self.program.class(assignment.class);
                 let expected_constructor =
                     declaration.and_then(|class| class.copy_constructor.selected());

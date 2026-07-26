@@ -866,6 +866,18 @@ impl HirDumper {
         }
     }
 
+    fn class_optional_place(&mut self, place: &crate::hir::HirClassOptionalPlace) {
+        match &place.storage {
+            crate::hir::HirOptionalStorage::Binding(binding) => {
+                self.line(&format!("ClassOptionalPlace {binding}"), place.span);
+            }
+            crate::hir::HirOptionalStorage::Field(field) => {
+                self.line("ClassOptionalFieldPlace", place.span);
+                self.indented(|dumper| dumper.field_place(field));
+            }
+        }
+    }
+
     fn construction(&mut self, construction: &HirConstruction) {
         match &construction.mode {
             HirConstructionMode::Initialize {
@@ -960,6 +972,22 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.optional_shared_source(&value.source));
             }
+            HirCallArgument::OptionalPlace(place) => match place {
+                crate::hir::HirOptionalAliasPlace::Primitive(place) => {
+                    self.line(
+                        &format!("OptionalPlaceArgument {}?", place.payload.name()),
+                        place.span,
+                    );
+                    self.indented(|dumper| dumper.optional_place(place));
+                }
+                crate::hir::HirOptionalAliasPlace::Class(place) => {
+                    self.line(
+                        &format!("OptionalPlaceArgument class {}?", place.class),
+                        place.span,
+                    );
+                    self.indented(|dumper| dumper.class_optional_place(place));
+                }
+            },
             HirCallArgument::Place(place) => {
                 self.line("PlaceArgument", place.span());
                 self.indented(|dumper| dumper.object_place(place));

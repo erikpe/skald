@@ -1,8 +1,8 @@
 # Optional Values
 
-Status: frozen language design with primitive, exact inline-class, and optional
-shared-owner values implemented across owning locals, fields, and internal
-callable boundaries. The
+Status: implemented language contract for primitive, exact inline-class, and
+optional shared-owner values across owning locals, fields, internal callable
+boundaries, and aliases to supported inline optional containers. The
 [status matrix](STATUS.md) is authoritative for availability, and
 the [implemented grammar](GRAMMAR.md) remains the exact syntax currently
 accepted by the compiler.
@@ -14,8 +14,9 @@ owning locals, fields, internal value parameters/results, methods, interfaces,
 virtual overrides, and initializer overloads. Inline class payload access
 through postfix `!` executes as a bounded checked view. Optional shared owners
 execute through the same internal owning positions and secure a normal
-non-null owner on unwrap. Aliases to optional containers remain at the focused
-`TYP035` type-checking boundary until OP7.
+non-null owner on unwrap. Read-only and mutable aliases may designate
+supported inline optional containers without creating optional reference
+values.
 Compiler representation, verification, and ABI direction are defined in the
 [optional-values compiler contract](../compiler/OPTIONAL_VALUES.md).
 

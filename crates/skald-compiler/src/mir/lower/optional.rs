@@ -186,14 +186,12 @@ impl BodyLowerer<'_> {
         }
     }
 
-    fn lower_class_optional_place(
+    pub(super) fn lower_class_optional_place(
         &mut self,
         place: &HirClassOptionalPlace,
     ) -> crate::mir::MirPlace {
         match &place.storage {
-            HirOptionalStorage::Binding(binding) => {
-                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
-            }
+            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
         }
     }
@@ -333,9 +331,7 @@ impl BodyLowerer<'_> {
         place: &HirOptionalPlace,
     ) -> crate::mir::MirPlace {
         match &place.storage {
-            HirOptionalStorage::Binding(binding) => {
-                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
-            }
+            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
         }
     }
@@ -423,9 +419,7 @@ impl BodyLowerer<'_> {
         place: &crate::hir::HirOptionalSharedPlace,
     ) -> crate::mir::MirPlace {
         match &place.storage {
-            HirOptionalStorage::Binding(binding) => {
-                crate::mir::MirPlace::base(self.storage_for_binding(*binding))
-            }
+            HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
         }
     }

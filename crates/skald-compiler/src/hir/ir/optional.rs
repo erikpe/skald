@@ -68,6 +68,25 @@ pub struct HirOptionalSharedPlace {
     pub span: Span,
 }
 
+/// A supported inline optional container passed through an alias parameter.
+///
+/// This is a place category, not a reference type: the binding mode carries
+/// the borrow and the variant retains the exact optional container type.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HirOptionalAliasPlace {
+    Primitive(HirOptionalPlace),
+    Class(HirClassOptionalPlace),
+}
+
+impl HirOptionalAliasPlace {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Primitive(place) => place.span,
+            Self::Class(place) => place.span,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirOptionalSharedSource {
     Absent { span: Span },
