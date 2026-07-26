@@ -60,3 +60,7 @@ Resolved object-cast follow-ups:
 Resolved shared-ownership follow-ups:
 
 - [shared-ownership maintainability discoveries](SHARED_OWNERSHIP_DISCOVERIES.md)
+
+Resolved optional-values follow-ups:
+
+- [optional-values maintainability discoveries](OPTIONAL_VALUES_DISCOVERIES.md)

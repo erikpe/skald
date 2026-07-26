@@ -1,15 +1,13 @@
-# Optional-Values Maintainability Discoveries
+# Resolved Optional-Values Maintainability Discoveries
 
-Status: actionable follow-up after completion of the optional-values roadmap.
+Status: resolved.
 
-The optional implementation is centralized behind the existing syntax,
-type-checking, HIR, MIR, verifier, and backend facades. The focused audit found
-one larger internal reorganization worth scheduling separately rather than
-mixing a high-churn mechanical move into feature hardening.
+The optional implementation remains centralized behind the existing syntax,
+type-checking, HIR, MIR, verifier, and backend facades. This resolved follow-up
+improved internal verifier ownership without changing optional semantics,
+diagnostics, MIR public paths, or verifier invocation order.
 
 ## Split optional MIR verification by analysis responsibility
-
-**Priority:** Medium.
 
 **Evidence:** `crates/skald-compiler/src/mir/verify/optional.rs` is about 1,400
 lines and owns three independently understandable responsibilities:
@@ -26,3 +24,10 @@ analysis, and guard analysis into private responsibility-named submodules.
 Preserve verifier invocation order, diagnostic order and wording, MIR public
 paths, and the existing focused mutation corpus. Do not combine this move with
 semantic changes to optional state or guards.
+
+**Resolution:** The private optional verifier now uses a five-line
+`optional/mod.rs` facade with responsibility-focused `structural`,
+`initialization`, and `guards` submodules. Existing `Verifier` entry points
+remain crate-private, their invocation order is unchanged, and the structural
+mutation corpus plus focused initialization and guard tests continue to pass
+without diagnostic changes.

@@ -14,10 +14,7 @@ No implementation roadmaps are currently planned.
 
 ## Pending discoveries
 
-- [Optional-values maintainability discoveries](OPTIONAL_VALUES_DISCOVERIES.md)
-  — split the large optional MIR verifier into private structural,
-  initialized-storage, and guard-analysis owners without changing semantics or
-  diagnostics.
+No maintainability discoveries are currently pending.
 
 ## Implementation baseline
 
