@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR9 is next.
+Status: in progress; AR10 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -80,7 +80,7 @@ Use the existing test ownership:
 - [x] AR6 — Execute checked primitive indexing and mutation
 - [x] AR7 — Carry inline array values across owning boundaries
 - [x] AR8 — Execute nontrivial and nested inline element lifecycle
-- [ ] AR9 — Execute shared and optional-shared outer arrays
+- [x] AR9 — Execute shared and optional-shared outer arrays
 - [ ] AR10 — Execute shared and optional-shared element lifecycle
 - [ ] AR11 — Execute copied slices and checked slice assignment
 - [ ] AR12 — Execute array aliases and detached-backing anchors
@@ -464,24 +464,24 @@ assembly, native, and reverse-destruction golden coverage passes, as do
 primitive, optional-inline, exact-class, and nested-inline element categories
 after inline backing and nontrivial finalization are established.
 
-- [ ] Extend shared and optional-shared targets, owner storage, calls, fields,
+- [x] Extend shared and optional-shared targets, owner storage, calls, fields,
       results, and verifier accounting to exact `ArrayTypeId` targets without
       entering class/interface polymorphism.
-- [ ] Implement one contiguous x86-64 shared array allocation containing
+- [x] Implement one contiguous x86-64 shared array allocation containing
       strong count, exact finalizer/type metadata, immutable length, padding,
       and aligned element payload; shared empty arrays still allocate a
       distinct non-null header.
-- [ ] Execute `new T[]()`, `new T[](length)`, and
+- [x] Execute `new T[]()`, `new T[](length)`, and
       `new T[](copy source)` with publication only after complete element
       initialization or copying.
-- [ ] Reuse ordinary named-owner copy, produced adoption, secure assignment,
+- [x] Reuse ordinary named-owner copy, produced adoption, secure assignment,
       optional zero niche, parameters/results, fields, and last-owner release.
-- [ ] Generate exact decreasing-index array finalizers and free the one outer
+- [x] Generate exact decreasing-index array finalizers and free the one outer
       allocation after its final element is destroyed.
-- [ ] Execute `*owner`, `owner->len()`, `owner->[index]`, and optional
+- [x] Execute `*owner`, `owner->len()`, `owner->[index]`, and optional
       `owner!` composition with one owner evaluation and existing
       stable/copied/adopted anchor classification.
-- [ ] Ensure mutation is visible through every owner, owner reassignment leaves
+- [x] Ensure mutation is visible through every owner, owner reassignment leaves
       other owners on the old allocation, and whole-pointee assignment remains
       rejected.
 

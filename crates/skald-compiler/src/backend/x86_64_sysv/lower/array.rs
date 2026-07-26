@@ -4,7 +4,7 @@ use crate::{
     backend::{BackendError, Target},
     mir::{
         MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure,
-        MirArrayInstruction, MirArrayPositionKind, MirClassOptionalCleanup,
+        MirArrayInstruction, MirArrayOwnership, MirArrayPositionKind, MirClassOptionalCleanup,
         MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize, MirOptionalSource,
         MirPlace, MirPlaceProjection, MirTerminationReason, MirTerminator, MirType,
     },
@@ -13,8 +13,11 @@ use crate::{
 use super::{
     super::{
         frame::FramePlace,
-        layout::{ARRAY_LENGTH_OFFSET, ARRAY_OWNER_COUNT_OFFSET},
-        machine::{Instruction, Label, Operand, Register},
+        layout::{
+            ARRAY_LENGTH_OFFSET, ARRAY_OWNER_COUNT_OFFSET, SHARED_ARRAY_LENGTH_OFFSET,
+            SHARED_DYNAMIC_METADATA_OFFSET,
+        },
+        machine::{ByteRegister, Instruction, Label, Operand, Register},
         symbol,
     },
     block_label, value, InstructionSelector,
@@ -88,8 +91,9 @@ impl InstructionSelector<'_, '_> {
                 backing,
                 array,
                 length,
+                ownership,
                 ..
-            } => self.select_array_allocate(*backing, *array, *length),
+            } => self.select_array_allocate(*backing, *array, *length, *ownership),
             MirArrayInstruction::InitializeNext {
                 backing,
                 index,
@@ -100,18 +104,7 @@ impl InstructionSelector<'_, '_> {
                 let destination = array_element_place(MirPlace::base(*backing), array, *index);
                 match *operation {
                     MirArrayDefaultElement::Primitive => {
-                        value::load_rax(value::frame_storage(self.frame, *backing), self.output);
-                        self.output.push(Instruction::Move {
-                            source: Register::Rax.into(),
-                            destination: Register::Rdi.into(),
-                        });
-                        value::load_rax(value::frame_storage(self.frame, *index), self.output);
-                        self.output.push(Instruction::Move {
-                            source: Register::Rax.into(),
-                            destination: Register::Rsi.into(),
-                        });
-                        self.output
-                            .push(Instruction::Call(symbol::array_initialize_element(array)));
+                        self.clear_place(&destination)?;
                     }
                     MirArrayDefaultElement::OptionalAbsent => {
                         match self
@@ -178,7 +171,7 @@ impl InstructionSelector<'_, '_> {
                 let source = array_element_place(source.clone(), array, *index);
                 match *operation {
                     MirArrayCopyElement::Primitive => {
-                        self.call_array_copy_element(*backing, &source, *index, array)?;
+                        self.copy_array_primitive(&destination, &source)?;
                     }
                     MirArrayCopyElement::OptionalPrimitive => {
                         self.select_optional_write(&destination, &MirOptionalSource::Copy(source))?;
@@ -217,6 +210,40 @@ impl InstructionSelector<'_, '_> {
             } => {
                 value::load_rax(value::frame_storage(self.frame, *backing), self.output);
                 value::store_rax(value::frame_storage(self.frame, *destination), self.output);
+                self.clear_storage(*backing);
+                Ok(())
+            }
+            MirArrayInstruction::PublishShared {
+                backing,
+                destination,
+                array,
+                ..
+            } => {
+                value::load_rax(value::frame_storage(self.frame, *backing), self.output);
+                self.output.push(Instruction::Move {
+                    source: Register::Rax.into(),
+                    destination: Register::R11.into(),
+                });
+                self.output.push(Instruction::LoadSymbolAddress {
+                    symbol: symbol::shared_array_metadata(*array),
+                    destination: Register::Rax,
+                });
+                value::store_rax(
+                    value::memory(Register::R11, SHARED_DYNAMIC_METADATA_OFFSET),
+                    self.output,
+                );
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                });
+                value::store_rax(
+                    value::memory(Register::R11, ARRAY_OWNER_COUNT_OFFSET),
+                    self.output,
+                );
+                self.output.push(Instruction::Move {
+                    source: Register::R11.into(),
+                    destination: value::frame_storage(self.frame, *destination),
+                });
                 self.clear_storage(*backing);
                 Ok(())
             }
@@ -294,8 +321,7 @@ impl InstructionSelector<'_, '_> {
                 Ok(())
             }
             MirArrayInstruction::AnchorBegin { anchor, owner, .. } => {
-                let (_, owner) = self.frame_place(owner)?;
-                value::load_rax(owner, self.output);
+                self.load_array_owner(owner)?;
                 value::store_rax(value::frame_storage(self.frame, *anchor), self.output);
                 Ok(())
             }
@@ -320,14 +346,20 @@ impl InstructionSelector<'_, '_> {
         source: &MirPlace,
         result: crate::mir::ValueId,
     ) -> Result<(), BackendError> {
-        let (_, source) = self.frame_place(source)?;
+        let shared = self.load_array_owner(source)?;
         let empty = self.array_label(result.index(), "length_empty");
         let complete = self.array_label(result.index(), "length_complete");
-        value::load_rax(source, self.output);
         self.output.push(Instruction::Test(Register::Rax));
         self.output.push(Instruction::JumpIfEqual(empty.clone()));
         value::load_rax(
-            value::memory(Register::Rax, ARRAY_LENGTH_OFFSET),
+            value::memory(
+                Register::Rax,
+                if shared {
+                    SHARED_ARRAY_LENGTH_OFFSET
+                } else {
+                    ARRAY_LENGTH_OFFSET
+                },
+            ),
             self.output,
         );
         self.output.push(Instruction::Jump(complete.clone()));
@@ -421,6 +453,7 @@ impl InstructionSelector<'_, '_> {
         backing: crate::mir::StorageId,
         array: crate::identity::ArrayTypeId,
         length: crate::mir::ValueId,
+        ownership: MirArrayOwnership,
     ) -> Result<(), BackendError> {
         let layout = self
             .data_layout
@@ -432,7 +465,10 @@ impl InstructionSelector<'_, '_> {
 
         value::load_rax(value::frame_value(self.frame, length), self.output);
         self.output.push(Instruction::MoveImmediate64 {
-            bits: layout.maximum_length(),
+            bits: match ownership {
+                MirArrayOwnership::Inline => layout.maximum_length(),
+                MirArrayOwnership::Shared => layout.shared_maximum_length(),
+            },
             destination: Register::R11,
         });
         self.output.push(Instruction::Compare {
@@ -440,8 +476,10 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         self.output.push(Instruction::JumpIfAbove(failure.clone()));
-        self.output.push(Instruction::Test(Register::Rax));
-        self.output.push(Instruction::JumpIfEqual(empty.clone()));
+        if ownership == MirArrayOwnership::Inline {
+            self.output.push(Instruction::Test(Register::Rax));
+            self.output.push(Instruction::JumpIfEqual(empty.clone()));
+        }
         self.output.push(Instruction::MoveImmediate64 {
             bits: u64::try_from(layout.stride()).expect("array stride fits u64"),
             destination: Register::R11,
@@ -451,7 +489,11 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         self.output.push(Instruction::MoveImmediate64 {
-            bits: u64::try_from(layout.element_offset()).expect("array offset fits u64"),
+            bits: u64::try_from(match ownership {
+                MirArrayOwnership::Inline => layout.element_offset(),
+                MirArrayOwnership::Shared => layout.shared_element_offset(),
+            })
+            .expect("array offset fits u64"),
             destination: Register::R11,
         });
         self.output.push(Instruction::Add {
@@ -469,19 +511,30 @@ impl InstructionSelector<'_, '_> {
             source: Register::Rax.into(),
             destination: Register::Rdx.into(),
         });
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: 1,
-            destination: Register::Rax,
-        });
-        value::store_rax(
-            value::memory(Register::Rdx, ARRAY_OWNER_COUNT_OFFSET),
-            self.output,
-        );
-        value::load_rax(value::frame_value(self.frame, length), self.output);
-        value::store_rax(
-            value::memory(Register::Rdx, ARRAY_LENGTH_OFFSET),
-            self.output,
-        );
+        match ownership {
+            MirArrayOwnership::Inline => {
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: 1,
+                    destination: Register::Rax,
+                });
+                value::store_rax(
+                    value::memory(Register::Rdx, ARRAY_OWNER_COUNT_OFFSET),
+                    self.output,
+                );
+                value::load_rax(value::frame_value(self.frame, length), self.output);
+                value::store_rax(
+                    value::memory(Register::Rdx, ARRAY_LENGTH_OFFSET),
+                    self.output,
+                );
+            }
+            MirArrayOwnership::Shared => {
+                value::load_rax(value::frame_value(self.frame, length), self.output);
+                value::store_rax(
+                    value::memory(Register::Rdx, SHARED_ARRAY_LENGTH_OFFSET),
+                    self.output,
+                );
+            }
+        }
         self.output.push(Instruction::MoveImmediate64 {
             bits: 1,
             destination: Register::R11,
@@ -532,13 +585,15 @@ impl InstructionSelector<'_, '_> {
             .data_layout
             .array(*array)
             .ok_or_else(|| self.array_error(format!("array {array} has no target layout")))?;
-        let displacement = i32::try_from(layout.element_offset())
-            .map_err(|_| self.array_error(format!("array {array} offset cannot be encoded")))?;
-
         let mut owner = place.clone();
         owner.projections.truncate(element_index);
-        let (_, owner) = self.frame_place(&owner)?;
-        value::load_rax(owner, self.output);
+        let shared = self.load_array_owner(&owner)?;
+        let displacement = i32::try_from(if shared {
+            layout.shared_element_offset()
+        } else {
+            layout.element_offset()
+        })
+        .map_err(|_| self.array_error(format!("array {array} offset cannot be encoded")))?;
         let base = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
             self.output.push(Instruction::Move {
                 source: Register::Rax.into(),
@@ -636,17 +691,23 @@ impl InstructionSelector<'_, '_> {
         owner: &MirPlace,
         index: crate::mir::ValueId,
     ) -> Result<(), BackendError> {
-        let (_, owner) = self.frame_place(owner)?;
+        let shared = self.load_array_owner(owner)?;
         let empty = self.next_array_label("normalize_empty");
         let length_ready = self.next_array_label("normalize_length_ready");
         let valid = self.next_array_label("normalize_valid");
         let complete = self.next_array_label("normalize_complete");
 
-        value::load_rax(owner, self.output);
         self.output.push(Instruction::Test(Register::Rax));
         self.output.push(Instruction::JumpIfEqual(empty.clone()));
         self.output.push(Instruction::Move {
-            source: value::memory(Register::Rax, ARRAY_LENGTH_OFFSET),
+            source: value::memory(
+                Register::Rax,
+                if shared {
+                    SHARED_ARRAY_LENGTH_OFFSET
+                } else {
+                    ARRAY_LENGTH_OFFSET
+                },
+            ),
             destination: Register::Rdx.into(),
         });
         self.output.push(Instruction::Jump(length_ready.clone()));
@@ -705,34 +766,70 @@ impl InstructionSelector<'_, '_> {
         value::store_rax(value::frame_storage(self.frame, index), self.output);
     }
 
-    fn call_array_copy_element(
+    fn copy_array_primitive(
         &mut self,
-        backing: crate::mir::StorageId,
+        destination: &MirPlace,
         source: &MirPlace,
-        index: crate::mir::StorageId,
-        array: crate::identity::ArrayTypeId,
     ) -> Result<(), BackendError> {
-        let mut source_owner = source.clone();
-        source_owner.projections.pop();
-        let (_, source_owner) = self.frame_place(&source_owner)?;
-        value::load_rax(value::frame_storage(self.frame, backing), self.output);
-        self.output.push(Instruction::Move {
-            source: Register::Rax.into(),
-            destination: Register::Rdi.into(),
-        });
-        value::load_rax(source_owner, self.output);
-        self.output.push(Instruction::Move {
-            source: Register::Rax.into(),
-            destination: Register::Rsi.into(),
-        });
-        value::load_rax(value::frame_storage(self.frame, index), self.output);
-        self.output.push(Instruction::Move {
-            source: Register::Rax.into(),
-            destination: Register::Rdx.into(),
-        });
-        self.output
-            .push(Instruction::Call(symbol::array_copy_element(array)));
+        let (source_layout, source) = self.frame_place(source)?;
+        if source_layout.uses_byte_access() {
+            self.output.push(Instruction::LoadZeroExtendByte {
+                source,
+                destination: Register::Rax,
+            });
+        } else {
+            value::load_rax(source, self.output);
+        }
+        self.output.push(Instruction::ReserveStack(16));
+        value::store_rax(value::memory(Register::Rsp, 0), self.output);
+        let (destination_layout, destination) = self.frame_place(destination)?;
+        value::load_rax(value::memory(Register::Rsp, 0), self.output);
+        self.output.push(Instruction::ReleaseStack(16));
+        if destination_layout.uses_byte_access() {
+            self.output.push(Instruction::MoveByte {
+                source: ByteRegister::Al,
+                destination,
+            });
+        } else {
+            value::store_rax(destination, self.output);
+        }
         Ok(())
+    }
+
+    /// Loads an executable array backing into `rax` and reports whether its
+    /// outer allocation uses the shared header. Nested array elements remain
+    /// inline descriptors even when their containing outer array is shared.
+    fn load_array_owner(&mut self, owner: &MirPlace) -> Result<bool, BackendError> {
+        let shared = owner.projections.is_empty()
+            && (matches!(owner.base, crate::mir::MirPlaceBase::SharedPointee(_))
+                || matches!(owner.base, crate::mir::MirPlaceBase::Storage(storage)
+                    if self.array_backing_ownership(storage) == Some(MirArrayOwnership::Shared)));
+        if shared {
+            value::load_rax(
+                value::frame_storage(self.frame, owner.base.storage()),
+                self.output,
+            );
+        } else {
+            let (_, operand) = self.frame_place(owner)?;
+            value::load_rax(operand, self.output);
+        }
+        Ok(shared)
+    }
+
+    fn array_backing_ownership(&self, backing: crate::mir::StorageId) -> Option<MirArrayOwnership> {
+        self.function.body().blocks.iter().find_map(|block| {
+            block
+                .instructions
+                .iter()
+                .find_map(|instruction| match instruction {
+                    crate::mir::MirInstruction::Array(MirArrayInstruction::Allocate {
+                        backing: candidate,
+                        ownership,
+                        ..
+                    }) if *candidate == backing => Some(*ownership),
+                    _ => None,
+                })
+        })
     }
 
     fn clone_array_preserving_destination(
@@ -764,12 +861,19 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn clear_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
-        let (_, destination) = self.frame_place(place)?;
+        let (layout, destination) = self.frame_place(place)?;
         self.output.push(Instruction::MoveImmediate64 {
             bits: 0,
             destination: Register::Rax,
         });
-        value::store_rax(destination, self.output);
+        if layout.uses_byte_access() {
+            self.output.push(Instruction::MoveByte {
+                source: ByteRegister::Al,
+                destination,
+            });
+        } else {
+            value::store_rax(destination, self.output);
+        }
         Ok(())
     }
 

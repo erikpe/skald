@@ -77,7 +77,7 @@ impl CallableChecker<'_, '_> {
             ResolvedArrayConstructionArguments::Copy {
                 copy_span, source, ..
             } => {
-                let source = self.check_array_source(source, array)?;
+                let source = self.check_array_copy_source(source, array)?;
                 let Some(element) = lifecycle.copy else {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -163,9 +163,48 @@ impl CallableChecker<'_, '_> {
             return None;
         }
         let provenance = array_provenance(&checked);
+        let receiver = crate::hir::HirArrayReceiver {
+            source: crate::hir::HirArrayReceiverSource::Inline(Box::new(checked)),
+            array: expected,
+            access: crate::hir::HirAccess::ReadOnly,
+            ownership: crate::hir::HirArrayReceiverOwnership::Inline,
+            anchor: match provenance {
+                HirArrayProvenance::Named => crate::hir::HirArrayAnchor::InlineOwner,
+                HirArrayProvenance::Produced => crate::hir::HirArrayAnchor::InlineBacking,
+            },
+            span: expression.span(),
+        };
         Some(HirArraySource {
-            span: checked.span,
-            expression: Box::new(checked),
+            span: expression.span(),
+            receiver,
+            provenance,
+            array: expected,
+        })
+    }
+
+    fn check_array_copy_source(
+        &mut self,
+        expression: &ResolvedExpression,
+        expected: crate::identity::ArrayTypeId,
+    ) -> Option<HirArraySource> {
+        let receiver =
+            self.check_array_receiver(expression, super::place::ArrayReceiverSyntax::Ordinary)?;
+        if !require_type(
+            Type::Array(receiver.array),
+            Type::Array(expected),
+            expression.span(),
+            "array source",
+            self.diagnostics,
+        ) {
+            return None;
+        }
+        let provenance = match &receiver.source {
+            crate::hir::HirArrayReceiverSource::Inline(expression) => array_provenance(expression),
+            crate::hir::HirArrayReceiverSource::Shared(_) => HirArrayProvenance::Named,
+        };
+        Some(HirArraySource {
+            span: expression.span(),
+            receiver,
             provenance,
             array: expected,
         })

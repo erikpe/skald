@@ -142,7 +142,7 @@ pub enum HirArrayConstructionMode {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirArraySource {
-    pub expression: Box<HirExpression>,
+    pub receiver: HirArrayReceiver,
     pub provenance: HirArrayProvenance,
     pub array: ArrayTypeId,
     pub span: Span,

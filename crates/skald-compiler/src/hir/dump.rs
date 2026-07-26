@@ -1044,7 +1044,7 @@ impl HirDumper {
             &format!("ArraySource {provenance} {}", source.array),
             source.span,
         );
-        self.indented(|dumper| dumper.expression(&source.expression));
+        self.indented(|dumper| dumper.array_receiver(&source.receiver));
     }
 
     fn array_initialize(&mut self, value: &HirArrayInitialize) {

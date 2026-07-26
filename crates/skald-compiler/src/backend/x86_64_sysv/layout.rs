@@ -22,6 +22,8 @@ pub(super) const ARRAY_DESCRIPTOR_ALIGNMENT: usize = 8;
 pub(super) const ARRAY_OWNER_COUNT_OFFSET: i32 = 0;
 pub(super) const ARRAY_LENGTH_OFFSET: i32 = 8;
 const ARRAY_HEADER_SIZE: usize = 16;
+pub(super) const SHARED_ARRAY_LENGTH_OFFSET: i32 = 16;
+const SHARED_ARRAY_HEADER_SIZE: usize = 24;
 const MAX_ARRAY_LENGTH: u64 = i64::MAX as u64;
 const OPTIONAL_STATE_SIZE: usize = 8;
 const OPTIONAL_STATE_ALIGNMENT: usize = 8;
@@ -102,8 +104,10 @@ impl ClassLayout {
 pub(super) struct ArrayLayout {
     element: TypeLayout,
     element_offset: usize,
+    shared_element_offset: usize,
     stride: usize,
     maximum_length: u64,
+    shared_maximum_length: u64,
 }
 
 impl ArrayLayout {
@@ -119,8 +123,16 @@ impl ArrayLayout {
         self.stride
     }
 
+    pub(super) const fn shared_element_offset(self) -> usize {
+        self.shared_element_offset
+    }
+
     pub(super) const fn maximum_length(self) -> u64 {
         self.maximum_length
+    }
+
+    pub(super) const fn shared_maximum_length(self) -> u64 {
+        self.shared_maximum_length
     }
 
     #[cfg(test)]
@@ -394,14 +406,20 @@ impl<'mir> LayoutBuilder<'mir> {
 
 fn array_layout(element: TypeLayout) -> Option<ArrayLayout> {
     let element_offset = abi::align_up(ARRAY_HEADER_SIZE, element.alignment())?;
+    let shared_element_offset = abi::align_up(SHARED_ARRAY_HEADER_SIZE, element.alignment())?;
     let stride = abi::align_up(element.size(), element.alignment())?;
     let arithmetic_limit =
         u64::MAX.checked_sub(u64::try_from(element_offset).ok()?)? / u64::try_from(stride).ok()?;
+    let shared_arithmetic_limit = u64::MAX
+        .checked_sub(u64::try_from(shared_element_offset).ok()?)?
+        / u64::try_from(stride).ok()?;
     Some(ArrayLayout {
         element,
         element_offset,
+        shared_element_offset,
         stride,
         maximum_length: MAX_ARRAY_LENGTH.min(arithmetic_limit),
+        shared_maximum_length: MAX_ARRAY_LENGTH.min(shared_arithmetic_limit),
     })
 }
 

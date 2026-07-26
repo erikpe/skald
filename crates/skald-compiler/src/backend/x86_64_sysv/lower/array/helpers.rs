@@ -28,9 +28,100 @@ pub(super) fn lower_all(
                 lower_clone(array.id, data_layout),
                 lower_destroyer(program, array.id, array.element, data_layout),
                 lower_release(array.id),
+                lower_shared_finalizer(array.id, data_layout),
             ]
         })
         .collect()
+}
+
+fn lower_shared_finalizer(
+    array: crate::identity::ArrayTypeId,
+    data_layout: &DataLayout,
+) -> Result<AssemblyFunction, BackendError> {
+    let layout = data_layout
+        .array(array)
+        .ok_or_else(|| helper_error(format!("array {array} has no shared finalizer layout")))?;
+    // Generic shared release passes the payload address (immediately after the
+    // count and metadata words). The existing exact element destroyer accepts
+    // an inline backing address, so derive an address that gives it the same
+    // element position without duplicating lifecycle lowering.
+    let adjustment = i64::try_from(layout.shared_element_offset())
+        .ok()
+        .and_then(|shared| {
+            let payload = i64::try_from(super::super::super::layout::SHARED_HEADER_SIZE).ok()?;
+            let inline = i64::try_from(layout.element_offset()).ok()?;
+            shared.checked_sub(payload)?.checked_sub(inline)
+        })
+        .and_then(|offset| i32::try_from(offset).ok())
+        .ok_or_else(|| helper_error("shared array finalizer offset cannot be encoded"))?;
+    let stem = format!(".Lska_array_{}_finalize_shared", array.index());
+    let header = Label::new(format!("{stem}_header"));
+    let body = Label::new(format!("{stem}_body"));
+    let complete = Label::new(format!("{stem}_complete"));
+    let payload_home = value::memory(Register::Rbp, -8);
+    let index_home = value::memory(Register::Rbp, -16);
+    Ok(AssemblyFunction {
+        symbol: symbol::shared_array_finalizer(array),
+        exported: false,
+        instructions: vec![
+            Instruction::Push(Register::Rbp),
+            Instruction::Move {
+                source: Register::Rsp.into(),
+                destination: Register::Rbp.into(),
+            },
+            Instruction::ReserveStack(16),
+            Instruction::Move {
+                source: Register::Rdi.into(),
+                destination: payload_home,
+            },
+            Instruction::Move {
+                source: value::memory(Register::Rdi, 0),
+                destination: Register::Rax.into(),
+            },
+            Instruction::Move {
+                source: Register::Rax.into(),
+                destination: index_home,
+            },
+            Instruction::Label(header.clone()),
+            Instruction::Move {
+                source: index_home,
+                destination: Register::Rax.into(),
+            },
+            Instruction::Test(Register::Rax),
+            Instruction::JumpIfEqual(complete.clone()),
+            Instruction::MoveImmediate64 {
+                bits: 1,
+                destination: Register::R11,
+            },
+            Instruction::Subtract {
+                source: Register::R11,
+                destination: Register::Rax,
+            },
+            Instruction::Move {
+                source: Register::Rax.into(),
+                destination: index_home,
+            },
+            Instruction::Jump(body.clone()),
+            Instruction::Label(body),
+            Instruction::Move {
+                source: payload_home,
+                destination: Register::Rax.into(),
+            },
+            Instruction::LoadEffectiveAddress {
+                source: value::memory(Register::Rax, adjustment),
+                destination: Register::Rdi,
+            },
+            Instruction::Move {
+                source: index_home,
+                destination: Register::Rsi.into(),
+            },
+            Instruction::Call(symbol::array_destroy_element(array)),
+            Instruction::Jump(header),
+            Instruction::Label(complete),
+            Instruction::Leave,
+            Instruction::Return,
+        ],
+    })
 }
 
 fn lower_initializer(

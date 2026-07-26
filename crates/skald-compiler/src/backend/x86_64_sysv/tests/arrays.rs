@@ -38,6 +38,8 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
     );
     assert!(optional.stride() > item.stride());
     assert_eq!(nested.stride(), 8);
+    assert_eq!(item.shared_element_offset(), 24);
+    assert_eq!(nested.shared_element_offset(), 24);
     assert_eq!(node.ty().size(), 8);
 }
 
@@ -283,28 +285,106 @@ fn nontrivial_and_nested_inline_array_lifecycle_reaches_native_lowering() {
 
 #[test]
 fn deferred_array_profiles_remain_structured_backend_errors() {
-    for source in [
-        concat!(
-            "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
-            "fn main() -> i64 { return 0; }\n",
-        ),
-        concat!(
-            "fn main() -> i64 {\n",
-            "  var values: shared i64[] = new i64[](1u);\n",
-            "  return 0;\n",
-            "}\n",
-        ),
-    ] {
-        let program = lower_text(source);
-        let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-        assert!(
-            error.to_string().contains("not yet supported")
-                || error
-                    .to_string()
-                    .contains("outside the non-shared inline-array"),
-            "{error}"
+    let source = concat!(
+        "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    );
+    let program = lower_text(source);
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert!(
+        error.to_string().contains("not yet supported")
+            || error
+                .to_string()
+                .contains("outside the executable inline/shared"),
+        "{error}"
+    );
+}
+
+#[test]
+fn shared_array_owners_share_one_non_null_backing_across_calls_and_optionals() {
+    let source = concat!(
+        "class Holder {\n",
+        "  values: shared i64[];\n",
+        "  init(values: shared i64[]) { self.values = values; }\n",
+        "}\n",
+        "fn mutate(values: shared i64[]) -> shared i64[] {\n",
+        "  values->[0] = 40;\n",
+        "  return values;\n",
+        "}\n",
+        "fn from_holder(holder: Holder) -> shared i64[] { return holder.values; }\n",
+        "fn main() -> i64 {\n",
+        "  var empty: shared i64[] = new i64[]();\n",
+        "  var original: shared i64[] = new i64[](2u);\n",
+        "  var alias: shared i64[] = original;\n",
+        "  var returned: shared i64[] = mutate(alias);\n",
+        "  alias = new i64[](1u);\n",
+        "  alias->[0] = 9;\n",
+        "  original = original;\n",
+        "  var holder: Holder = Holder(returned);\n",
+        "  var maybe: shared? i64[] = from_holder(holder);\n",
+        "  maybe!->[1] = 2;\n",
+        "  var clone: shared i64[] = new i64[](copy *original);\n",
+        "  clone->[0] = 1;\n",
+        "  return original->[0] + (*original)[1];\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+
+    assert!(output.contains(".Lska_array_0_shared_metadata:"));
+    assert!(output.contains(".Lska_array_0_finalize_shared:"));
+    assert!(output.contains("mov qword ptr [rdx + 16], rax"));
+    output.push_str(native_allocator());
+    assert_eq!(run_native_assembly(&output).code(), Some(42));
+}
+
+#[test]
+fn empty_and_nonempty_shared_arrays_each_use_one_outer_allocation() {
+    for construction in ["new i64[]()", "new i64[](3u)"] {
+        let source = format!(
+            concat!(
+                "extern fn validate_counts() -> i64;\n",
+                "fn build() -> unit {{\n",
+                "  var absent: shared? i64[] = none;\n",
+                "  var values: shared i64[] = {construction};\n",
+                "  return;\n",
+                "}}\n",
+                "fn main() -> i64 {{ build(); return validate_counts(); }}\n",
+            ),
+            construction = construction,
+        );
+        let mut output = assembly(&source);
+        output.push_str(&ownership_counter_probe(1));
+        assert_eq!(
+            run_native_assembly(&output).code(),
+            Some(0),
+            "{construction}"
         );
     }
+}
+
+#[test]
+fn shared_array_last_owner_finalizes_exact_class_elements_in_reverse_order() {
+    let source = concat!(
+        "extern fn observe(value: i64) -> unit;\n",
+        "extern fn validate() -> i64;\n",
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  destroy { observe(self.value); }\n",
+        "}\n",
+        "fn build() -> unit {\n",
+        "  var values: shared Item[] = new Item[](3u);\n",
+        "  values->[0].value = 1;\n",
+        "  values->[1].value = 2;\n",
+        "  values->[2].value = 3;\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(shared_array_trace_probe());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0));
 }
 
 fn native_allocator() -> &'static str {
@@ -362,6 +442,56 @@ fn ownership_counter_probe(expected: u64) -> String {
             ".size validate_counts, .-validate_counts\n",
         ),
         expected = expected,
+    )
+}
+
+fn shared_array_trace_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lshared_trace: .quad 0\n",
+        ".Lshared_allocations: .quad 0\n",
+        ".Lshared_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    imul rax, qword ptr [rip + .Lshared_trace], 10\n",
+        "    add rax, rdi\n",
+        "    mov qword ptr [rip + .Lshared_trace], rax\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    push rbp\n",
+        "    mov rbp, rsp\n",
+        "    add qword ptr [rip + .Lshared_allocations], 1\n",
+        "    call malloc@PLT\n",
+        "    leave\n",
+        "    ret\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lshared_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl validate\n",
+        ".type validate, @function\n",
+        "validate:\n",
+        "    cmp qword ptr [rip + .Lshared_trace], 321\n",
+        "    jne .Lshared_failure\n",
+        "    cmp qword ptr [rip + .Lshared_allocations], 1\n",
+        "    jne .Lshared_failure\n",
+        "    cmp qword ptr [rip + .Lshared_frees], 1\n",
+        "    jne .Lshared_failure\n",
+        "    mov rax, 0\n",
+        "    ret\n",
+        ".Lshared_failure:\n",
+        "    mov rax, 1\n",
+        "    ret\n",
+        ".size validate, .-validate\n",
     )
 }
 

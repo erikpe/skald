@@ -59,9 +59,12 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
         HirExpressionKind::ArrayConstruction(construction) => {
             array_construction_contains_runtime_cast(construction)
         }
+        // Checked array access lowers through explicit MIR control-flow
+        // blocks. Treat it like a runtime cast here so earlier scalar values
+        // are spilled before a later operand changes the current block.
         HirExpressionKind::ArrayLength(_)
         | HirExpressionKind::ArrayElement(_)
-        | HirExpressionKind::ArraySlice(_) => false,
+        | HirExpressionKind::ArraySlice(_) => true,
     }
 }
 
@@ -92,7 +95,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
             }
             HirSharedSource::Place(_) => false,
         },
-        HirCallArgument::Array(value) => expression_contains_runtime_cast(&value.source.expression),
+        HirCallArgument::Array(value) => array_source_contains_runtime_cast(&value.source),
         HirCallArgument::ArrayAlias(_) => false,
     }
 }
@@ -126,7 +129,18 @@ fn array_construction_contains_runtime_cast(
             expression_contains_runtime_cast(length)
         }
         crate::hir::HirArrayConstructionMode::Copy { source, .. } => {
-            expression_contains_runtime_cast(&source.expression)
+            array_source_contains_runtime_cast(source)
+        }
+    }
+}
+
+fn array_source_contains_runtime_cast(source: &crate::hir::HirArraySource) -> bool {
+    match &source.receiver.source {
+        crate::hir::HirArrayReceiverSource::Inline(expression) => {
+            expression_contains_runtime_cast(expression)
+        }
+        crate::hir::HirArrayReceiverSource::Shared(source) => {
+            shared_source_contains_runtime_cast(source)
         }
     }
 }

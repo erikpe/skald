@@ -1,16 +1,17 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; non-shared inline array values execute across internal
-owning boundaries on x86-64**.
+Status: **frozen design; inline arrays and shared outer arrays execute across
+internal owning boundaries on x86-64**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler now lowers all
 typed array operations through verified, layout-independent MIR. The x86-64
 backend executes primitive, optional, exact-class, and recursively nested
-inline construction, access, lifecycle, deep copy, produced-backing adoption,
-replacement, class fields, and internal value boundaries. It structurally
-rejects later array operations at its legality boundary.
+inline and shared-outer construction, access, lifecycle, deep copy,
+produced-backing adoption, replacement, class fields, shared/optional-shared
+owner boundaries, and internal value boundaries. It structurally rejects
+later array operations at its legality boundary.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -50,17 +51,17 @@ checked projection, slice checks before writes, and exact terminating failure
 edges. No MIR operation contains a descriptor layout, element stride, header
 offset, target register, or runtime ABI fact.
 
-The current x86-64 profile executes empty and dynamically sized non-shared
-inline arrays containing primitives, primitive optionals, exact classes,
+The current x86-64 profile executes empty and dynamically sized inline or
+shared-outer arrays containing primitives, primitive optionals, exact classes,
 exact-class optionals, and recursively nested inline arrays. It implements
 immutable `len()`, checked element access, increasing-index default and copy
 construction, whole replacement, produced-backing adoption, conditional
 optional lifecycle, deep jagged copying, and decreasing-index recursive
 destruction. Class fields, synthesized class lifecycle, internal value
-parameters and results, and recursive class/array graphs use the same owner
-model. Shared outer arrays, shared-owner elements, slices, and array aliases
-remain structured backend-unsupported operations. The type checker and MIR
-lowering do not use an array-wide unsupported diagnostic.
+parameters and results, shared and optional-shared array owners, and recursive
+class/array graphs use the same owner model. Shared-owner elements, slices,
+and array aliases remain structured backend-unsupported operations. The type
+checker and MIR lowering do not use an array-wide unsupported diagnostic.
 
 ## Canonical type model
 
@@ -423,6 +424,25 @@ installs the existing descriptor without invoking a copy helper. The zero
 descriptor performs no runtime call. The count and header length retain the
 state required by future detached backing anchors without making empty arrays
 allocate.
+
+### Initial x86-64 shared-outer layout
+
+A `shared T[]` or present `shared? T[]` owner is one non-null handle word.
+Every construction allocates one contiguous exact array block, including a
+zero-length construction:
+
+| Offset | Width | Meaning |
+|---:|---:|---|
+| 0 | 8 | strong owner count |
+| 8 | 8 | exact array metadata/finalizer table pointer |
+| 16 | 8 | immutable `u64` element length |
+| 24 | varies | first element, aligned for its exact element type |
+
+Count and metadata are published only after the increasing initialized prefix
+is complete. The metadata selects an exact `ArrayTypeId` finalizer; last-owner
+release destroys elements in decreasing index order and then the generic
+shared release path frees the same outer block. Zero remains reserved for
+optional absence and is never an ordinary shared array value.
 
 Local element access evaluates the descriptor and exact-`i64` index once. A
 negative index adds the `u64` length once using wrapping machine arithmetic;

@@ -173,7 +173,9 @@ impl CallableChecker<'_, '_> {
                 self.finish_shared_array_receiver(source, expression.span())
             }
             ArrayReceiverSyntax::Ordinary => {
-                if let ResolvedExpression::Dereference(dereference) = expression {
+                if let ResolvedExpression::Dereference(dereference) =
+                    expression_through_groups(expression)
+                {
                     let source = self.check_shared_source(&dereference.source, false)?;
                     return self.finish_shared_array_receiver(source, expression.span());
                 }
@@ -299,6 +301,13 @@ impl CallableChecker<'_, '_> {
     ) -> Option<HirArraySource> {
         self.check_array_source(expression, array)
     }
+}
+
+fn expression_through_groups(mut expression: &ResolvedExpression) -> &ResolvedExpression {
+    while let ResolvedExpression::Grouped(grouped) = expression {
+        expression = &grouped.expression;
+    }
+    expression
 }
 
 #[derive(Clone, Copy)]

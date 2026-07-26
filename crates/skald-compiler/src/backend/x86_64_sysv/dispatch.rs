@@ -106,21 +106,29 @@ impl DispatchMetadata {
     }
 
     pub(super) fn assembly_tables(&self, program: &MirProgram) -> Vec<AssemblyDispatchTable> {
-        self.tables
+        let class_tables = self.tables.iter().enumerate().map(|(index, entries)| {
+            let class = ClassId::new(index);
+            AssemblyDispatchTable {
+                symbol: symbol::dispatch_table(class),
+                entries: entries
+                    .iter()
+                    .map(|method| method.map(|method| callable(program, method.into())))
+                    .chain(std::iter::once(Some(symbol::complete_finalizer(class))))
+                    .collect(),
+            }
+        });
+        let array_tables = program
+            .array_types
             .iter()
-            .enumerate()
-            .map(|(index, entries)| {
-                let class = ClassId::new(index);
-                AssemblyDispatchTable {
-                    symbol: symbol::dispatch_table(class),
-                    entries: entries
-                        .iter()
-                        .map(|method| method.map(|method| callable(program, method.into())))
-                        .chain(std::iter::once(Some(symbol::complete_finalizer(class))))
-                        .collect(),
-                }
-            })
-            .collect()
+            .map(|array| AssemblyDispatchTable {
+                symbol: symbol::shared_array_metadata(array.id),
+                entries: std::iter::repeat_n(None, self.finalizer_displacement as usize / 8)
+                    .chain(std::iter::once(Some(symbol::shared_array_finalizer(
+                        array.id,
+                    ))))
+                    .collect(),
+            });
+        class_tables.chain(array_tables).collect()
     }
 }
 

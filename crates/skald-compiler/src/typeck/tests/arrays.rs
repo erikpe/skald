@@ -342,9 +342,10 @@ fn array_hir_dump_is_exact_and_identity_based() {
             "        LocalDeclaration f0:l0 @19..47\n",
             "          ArrayInitialization adopt @39..46\n",
             "            ArraySource produced a0 @39..46\n",
-            "              ArrayConstruction : array a0 @39..46\n",
-            "                ArrayAllocation inline a0 @39..46\n",
-            "                  Empty\n",
+            "              ArrayReceiver a0 Inline access=ReadOnly anchor=InlineBacking @39..46\n",
+            "                ArrayConstruction : array a0 @39..46\n",
+            "                  ArrayAllocation inline a0 @39..46\n",
+            "                    Empty\n",
             "        Return @48..57\n",
             "          Integer 0 : i64 @55..56\n",
         )

@@ -101,11 +101,11 @@ impl BodyLowerer<'_> {
         let (destination, start, end) = self.lower_array_slice_bounds(&assignment.destination);
         let (source, temporary) = match assignment.source.provenance {
             crate::hir::HirArrayProvenance::Named => (
-                self.lower_array_expression_place(&assignment.source.expression),
+                self.lower_array_receiver_place(&assignment.source.receiver),
                 None,
             ),
             crate::hir::HirArrayProvenance::Produced => {
-                let storage = self.lower_array_produced_expression(&assignment.source.expression);
+                let storage = self.lower_produced_array_source(&assignment.source);
                 (MirPlace::base(storage), Some(storage))
             }
         };
@@ -158,9 +158,7 @@ impl BodyLowerer<'_> {
                 lower_array_copy_element(operation),
                 initialization.span,
             ),
-            HirArrayTransfer::Adopt => {
-                self.lower_array_produced_expression(&initialization.source.expression)
-            }
+            HirArrayTransfer::Adopt => self.lower_produced_array_source(&initialization.source),
         };
         self.consume_array_temporary(produced);
         self.emit(MirInstruction::Array(if replace {
@@ -322,6 +320,13 @@ impl BodyLowerer<'_> {
         }
     }
 
+    fn lower_produced_array_source(&mut self, source: &HirArraySource) -> StorageId {
+        let crate::hir::HirArrayReceiverSource::Inline(expression) = &source.receiver.source else {
+            unreachable!("shared array sources are named owner-backed receivers")
+        };
+        self.lower_array_produced_expression(expression)
+    }
+
     fn lower_array_construction(&mut self, construction: &HirArrayConstruction) -> StorageId {
         if construction.ownership != crate::hir::HirArrayOwnership::Inline {
             invalid_array_hir();
@@ -381,7 +386,7 @@ impl BodyLowerer<'_> {
                 None,
             ),
             HirArrayConstructionMode::Copy { source, element } => {
-                let source_place = self.lower_array_expression_place(&source.expression);
+                let source_place = self.lower_array_receiver_place(&source.receiver);
                 let length = self.assign(
                     MirRvalueKind::ArrayLength {
                         source: source_place.clone(),
@@ -420,7 +425,7 @@ impl BodyLowerer<'_> {
         span: crate::source::Span,
     ) -> StorageId {
         let array = source.array;
-        let source = self.lower_array_expression_place(&source.expression);
+        let source = self.lower_array_receiver_place(&source.receiver);
         let length = self.assign(
             MirRvalueKind::ArrayLength {
                 source: source.clone(),

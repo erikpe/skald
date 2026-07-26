@@ -75,6 +75,14 @@ pub(super) fn array_release(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_release", array.index())
 }
 
+pub(super) fn shared_array_metadata(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_shared_metadata", array.index())
+}
+
+pub(super) fn shared_array_finalizer(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_finalize_shared", array.index())
+}
+
 pub(super) fn local_label_stem(callable: CallableId) -> String {
     match callable {
         CallableId::Function(function) => format!("fn_{}", function.index()),
