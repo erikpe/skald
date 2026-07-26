@@ -25,6 +25,7 @@ fn return_value(function: &FunctionDecl) -> &Expression {
 }
 
 mod alias_parameters;
+mod arrays;
 mod conditionals;
 mod declarations;
 mod dumps;

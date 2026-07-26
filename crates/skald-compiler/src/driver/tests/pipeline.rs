@@ -355,3 +355,22 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
         EXCESSIVE_NESTING
     );
 }
+
+#[test]
+fn parsed_arrays_stop_at_resolution_before_lowering() {
+    let result = compile_source_to_assembly(
+        "arrays.ska",
+        "fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }",
+        Target::X86_64SysV,
+    );
+    let CompilationError::Diagnostics(report) =
+        result.expect_err("arrays must stop at the deliberate semantic gate")
+    else {
+        panic!("expected source diagnostics");
+    };
+
+    assert!(report
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == UNSUPPORTED_ARRAY_SYNTAX));
+}

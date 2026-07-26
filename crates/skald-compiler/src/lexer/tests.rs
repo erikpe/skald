@@ -123,6 +123,41 @@ fn optional_punctuation_preserves_utf8_boundaries_during_recovery() {
 }
 
 #[test]
+fn brackets_are_independent_punctuation_tokens() {
+    let (sources, source_id, output) = lex_text("T[][4:-1]");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::Identifier,
+            TokenKind::LeftBracket,
+            TokenKind::RightBracket,
+            TokenKind::LeftBracket,
+            I64_LITERAL,
+            TokenKind::Colon,
+            TokenKind::Minus,
+            I64_LITERAL,
+            TokenKind::RightBracket,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["T", "[", "]", "[", "4", ":", "-", "1", "]", ""]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
 fn recognizes_extern_as_a_keyword() {
     let (_, _, output) = lex_text("extern external");
 

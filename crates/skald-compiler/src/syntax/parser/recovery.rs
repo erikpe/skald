@@ -72,6 +72,12 @@ impl Parser<'_> {
                 TokenKind::Elif,
                 TokenKind::Else,
                 TokenKind::Identifier,
+                TokenKind::I64,
+                TokenKind::U64,
+                TokenKind::U8,
+                TokenKind::F64,
+                TokenKind::Bool,
+                TokenKind::Unit,
                 TokenKind::SelfValue,
                 TokenKind::NumericLiteral(NumericLiteralKind::I64),
                 TokenKind::NumericLiteral(NumericLiteralKind::U64),
@@ -97,6 +103,8 @@ impl Parser<'_> {
         while !self.at_any(&[
             TokenKind::Comma,
             TokenKind::RightParen,
+            TokenKind::Colon,
+            TokenKind::RightBracket,
             TokenKind::Semicolon,
             TokenKind::RightBrace,
             TokenKind::Eof,
@@ -117,6 +125,12 @@ impl Parser<'_> {
         matches!(
             kind,
             TokenKind::Identifier
+                | TokenKind::I64
+                | TokenKind::U64
+                | TokenKind::U8
+                | TokenKind::F64
+                | TokenKind::Bool
+                | TokenKind::Unit
                 | TokenKind::SelfValue
                 | TokenKind::NumericLiteral(NumericLiteralKind::I64)
                 | TokenKind::NumericLiteral(NumericLiteralKind::U64)

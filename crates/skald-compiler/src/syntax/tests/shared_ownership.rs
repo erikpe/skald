@@ -16,6 +16,9 @@ fn shared_target(type_syntax: &TypeSyntax) -> (&crate::source::Span, &Name) {
     else {
         panic!("expected shared type syntax");
     };
+    let TypeKind::Named(target) = &target.kind else {
+        panic!("expected a named shared target");
+    };
     (shared_span, target)
 }
 

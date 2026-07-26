@@ -332,6 +332,14 @@ impl Parser<'_> {
         let value = value?;
         let end_span = semicolon.map_or_else(|| value.span(), |token| token.span);
 
+        if matches!(expression, Expression::ArrayProjection(_)) {
+            return Some(Statement::ObjectAssignment(ObjectAssignmentStatement {
+                span: self.cover(expression.span(), end_span),
+                place: expression,
+                equal_span: equal.span,
+                value,
+            }));
+        }
         let Expression::MemberAccess(place) = expression else {
             if is_receiver_place(&expression) {
                 return Some(Statement::ObjectAssignment(ObjectAssignmentStatement {
@@ -345,7 +353,7 @@ impl Parser<'_> {
                 EXPECTED_STATEMENT,
                 "only an object or field place may be assigned",
                 equal.span,
-                "primitive local and expression assignment is not supported",
+                "primitive local and other expression assignment is not supported",
             );
             return None;
         };
@@ -373,6 +381,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         Expression::Identifier(_) | Expression::SelfValue(_) => true,
         Expression::Grouped(grouped) => is_receiver_place(&grouped.expression),
         Expression::MemberAccess(member) => is_receiver_place(&member.receiver),
+        Expression::ArrayProjection(projection) => is_receiver_place(&projection.receiver),
         Expression::Unary(unary) if unary.operator == UnaryOperator::Dereference => true,
         Expression::NumericLiteral(_)
         | Expression::Absent(_)
@@ -382,6 +391,7 @@ fn is_receiver_place(expression: &Expression) -> bool {
         | Expression::TypeTest(_)
         | Expression::PresenceTest(_)
         | Expression::Allocation(_)
+        | Expression::ArrayConstruction(_)
         | Expression::Call(_) => false,
         Expression::ObjectCast(_) | Expression::Unwrap(_) => true,
     }

@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: planned; AR0 is next.
+Status: in progress; AR1 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -71,7 +71,7 @@ Use the existing test ownership:
 
 ## Progress
 
-- [ ] AR0 — Parse the complete array source surface
+- [x] AR0 — Parse the complete array source surface
 - [ ] AR1 — Establish canonical recursive array identities
 - [ ] AR2 — Type array storage, construction, and lifecycle capabilities
 - [ ] AR3 — Type array places, projections, assignment, slices, and aliases
@@ -93,22 +93,22 @@ Use the existing test ownership:
 **Purpose:** Establish lossless source shape and recovery before later phases
 depend on array syntax or ownership grouping.
 
-- [ ] Add `[` and `]` tokens, punctuation dumps, lexical coverage, and
+- [x] Add `[` and `]` tokens, punctuation dumps, lexical coverage, and
       malformed-bracket recovery without changing existing token boundaries.
-- [ ] Extend type syntax with recursive postfix `[]` and grouping that
+- [x] Extend type syntax with recursive postfix `[]` and grouping that
       distinguishes `shared T[]`, `(shared T)[]`, `shared? T[]`, and nested
       combinations under the ordinary nesting budget.
-- [ ] Add empty, default-length, and dedicated `copy` array construction
+- [x] Add empty, default-length, and dedicated `copy` array construction
       syntax for inline and `new` forms without treating `copy` as an ordinary
       argument.
-- [ ] Parse element indexing and all four slice-bound shapes as postfix
+- [x] Parse element indexing and all four slice-bound shapes as postfix
       operations, preserving bracket and colon spans.
-- [ ] Parse `owner->[index]` and `owner->[start:end]` distinctly from ordinary
+- [x] Parse `owner->[index]` and `owner->[start:end]` distinctly from ordinary
       `owner[index]`, `owner->member`, and explicit `(*owner)[...]`.
-- [ ] Add a structured later-phase unsupported diagnostic so the complete
+- [x] Add a structured later-phase unsupported diagnostic so the complete
       compiler rejects parsed arrays without a panic until resolution support
       lands.
-- [ ] Update the implemented grammar and status boundary to describe accepted
+- [x] Update the implemented grammar and status boundary to describe accepted
       syntax without claiming typed or executable arrays.
 
 **Tests:** Lexer punctuation and malformed-token tests; syntax AST/dump,

@@ -293,6 +293,10 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
                 }
             }
             syntax::Expression::Allocation(allocation) => self.resolve_allocation(allocation),
+            syntax::Expression::ArrayConstruction(construction) => {
+                self.report_unsupported_array(construction.span);
+                None
+            }
             syntax::Expression::Call(call) => self.resolve_call(call),
             syntax::Expression::Grouped(grouped) => {
                 let expression = self.resolve_expression(&grouped.expression)?;
@@ -303,7 +307,15 @@ impl<'program, 'diagnostics> CallableResolver<'program, 'diagnostics> {
             }
             syntax::Expression::SelfValue(self_value) => self.resolve_self(self_value.span),
             syntax::Expression::MemberAccess(member) => self.resolve_field_access(member),
+            syntax::Expression::ArrayProjection(projection) => {
+                self.report_unsupported_array(projection.span);
+                None
+            }
         }
+    }
+
+    fn report_unsupported_array(&mut self, span: Span) {
+        self.diagnostics.push(unsupported_array_diagnostic(span));
     }
 
     fn resolve_identifier(

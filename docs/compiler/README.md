@@ -71,12 +71,13 @@ optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
-The frozen but unimplemented recursive type identity, HIR/MIR operation,
-backing ownership, produced adoption, element lifecycle, anchor, verification,
-target-layout, and minimal-runtime direction for arrays is owned by the
-[array compiler and runtime contract](ARRAYS.md). Implemented phases must
-continue to reject arrays structurally until their complete array boundary is
-present.
+The parser implements the frozen recursive array source surface, while the
+unimplemented canonical identity, HIR/MIR operation, backing ownership,
+produced adoption, element lifecycle, anchor, verification, target-layout, and
+minimal-runtime direction is owned by the
+[array compiler and runtime contract](ARRAYS.md). Resolution rejects every
+array syntax node with one structured unsupported-feature boundary until
+canonical array identities are present.
 
 ## Pipeline
 

@@ -206,7 +206,7 @@ pub enum TypeKind {
     Named(Name),
     Shared {
         shared_span: Span,
-        target: Name,
+        target: Box<TypeSyntax>,
     },
     Optional {
         payload: OptionalPayloadKind,
@@ -216,7 +216,17 @@ pub enum TypeKind {
     OptionalShared {
         shared_span: Span,
         question_span: Span,
-        target: Name,
+        target: Box<TypeSyntax>,
+    },
+    Grouped {
+        left_paren_span: Span,
+        inner: Box<TypeSyntax>,
+        right_paren_span: Span,
+    },
+    Array {
+        element: Box<TypeSyntax>,
+        left_bracket_span: Span,
+        right_bracket_span: Span,
     },
 }
 
@@ -339,11 +349,13 @@ pub enum Expression {
     PresenceTest(PresenceTestExpr),
     Unwrap(UnwrapExpr),
     ObjectCast(ObjectCastExpr),
-    Allocation(AllocationExpr),
+    Allocation(Box<AllocationExpr>),
+    ArrayConstruction(Box<ArrayConstructionExpr>),
     Call(CallExpr),
     Grouped(GroupedExpr),
     SelfValue(SelfExpr),
     MemberAccess(MemberAccessExpr),
+    ArrayProjection(Box<ArrayProjectionExpr>),
 }
 
 impl Expression {
@@ -360,10 +372,12 @@ impl Expression {
             Self::Unwrap(expression) => expression.span,
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
+            Self::ArrayConstruction(expression) => expression.span,
             Self::Call(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::SelfValue(expression) => expression.span,
             Self::MemberAccess(expression) => expression.span,
+            Self::ArrayProjection(expression) => expression.span,
         }
     }
 }
@@ -404,6 +418,33 @@ pub struct AllocationExpr {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArrayConstructionExpr {
+    pub new_span: Option<Span>,
+    pub array_type: TypeSyntax,
+    pub arguments: ArrayConstructionArguments,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ArrayConstructionArguments {
+    Empty {
+        left_paren_span: Span,
+        right_paren_span: Span,
+    },
+    Length {
+        left_paren_span: Span,
+        length: Box<Expression>,
+        right_paren_span: Span,
+    },
+    Copy {
+        left_paren_span: Span,
+        copy_span: Span,
+        source: Box<Expression>,
+        right_paren_span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ObjectCastExpr {
     pub target: Name,
     pub target_mode: ObjectCastTargetMode,
@@ -436,6 +477,36 @@ pub struct MemberAccessExpr {
     pub operator: MemberAccessOperator,
     pub member: Name,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArrayProjectionExpr {
+    pub receiver: Box<Expression>,
+    pub operator: ArrayProjectionOperator,
+    pub bounds: ArrayProjectionBounds,
+    pub right_bracket_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ArrayProjectionOperator {
+    Ordinary {
+        left_bracket_span: Span,
+    },
+    Shared {
+        arrow_span: Span,
+        left_bracket_span: Span,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ArrayProjectionBounds {
+    Index(Box<Expression>),
+    Slice {
+        start: Option<Box<Expression>>,
+        colon_span: Span,
+        end: Option<Box<Expression>>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -131,3 +131,20 @@ fn class_and_method_bodies_share_the_syntax_nesting_budget() {
     };
     assert_eq!(function.name.text, "recovered");
 }
+
+#[test]
+fn recursive_array_types_use_the_common_nesting_budget() {
+    let allowed = format!("i64{}", "[]".repeat(MAX_SYNTAX_NESTING - 1));
+    let output = parse_text(format!(
+        "fn allowed(value: {allowed}) -> i64 {{ return 0; }}"
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+
+    let excessive = format!("i64{}", "[]".repeat(MAX_SYNTAX_NESTING));
+    let output = parse_text(format!(
+        "fn excessive(value: {excessive}) -> i64 {{ return 0; }} \
+         fn recovered() -> i64 {{ return 0; }}"
+    ));
+    assert_single_nesting_error(&output);
+    assert_eq!(output.ast.declarations.len(), 1);
+}

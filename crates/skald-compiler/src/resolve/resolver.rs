@@ -39,6 +39,7 @@ pub const INVALID_DEREFERENCE: &str = "RES019";
 pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
 pub const INVALID_OPTIONAL_TYPE: &str = "RES022";
+pub const UNSUPPORTED_ARRAY_SYNTAX: &str = "RES023";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -66,6 +67,10 @@ fn resolve_type(
     top_levels: &HashMap<String, TopLevelSymbol>,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
+    if type_contains_array(type_syntax) {
+        diagnostics.push(unsupported_array_diagnostic(type_syntax.span));
+        return None;
+    }
     let kind = match &type_syntax.kind {
         syntax::TypeKind::I64 => ResolvedTypeKind::I64,
         syntax::TypeKind::U64 => ResolvedTypeKind::U64,
@@ -77,6 +82,7 @@ fn resolve_type(
             shared_span: _,
             target,
         } => {
+            let target = plain_shared_target(target, diagnostics)?;
             let target_kind = if target.text == "Obj" {
                 ResolvedSharedTarget::Obj
             } else {
@@ -191,12 +197,24 @@ fn resolve_type(
             shared_span,
             question_span,
             target,
-        } => ResolvedTypeKind::OptionalShared {
-            target: resolve_optional_shared_target(target, top_levels, diagnostics)?,
-            shared_span: *shared_span,
-            question_span: *question_span,
-            target_span: target.span,
-        },
+        } => {
+            let target = plain_shared_target(target, diagnostics)?;
+            ResolvedTypeKind::OptionalShared {
+                target: resolve_optional_shared_target(target, top_levels, diagnostics)?,
+                shared_span: *shared_span,
+                question_span: *question_span,
+                target_span: target.span,
+            }
+        }
+        syntax::TypeKind::Grouped { inner, .. } => {
+            return resolve_type(inner, top_levels, diagnostics).map(|mut resolved| {
+                resolved.span = type_syntax.span;
+                resolved
+            });
+        }
+        syntax::TypeKind::Array { .. } => {
+            unreachable!("array types are rejected at the resolution gate")
+        }
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
         syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
             Some(TopLevelSymbol {
@@ -231,6 +249,41 @@ fn resolve_type(
         kind,
         span: type_syntax.span,
     })
+}
+
+fn unsupported_array_diagnostic(span: Span) -> Diagnostic {
+    Diagnostic::error(
+        UNSUPPORTED_ARRAY_SYNTAX,
+        "array semantics are not implemented yet",
+    )
+    .with_primary_label(
+        span,
+        "array syntax is accepted, but resolution support is pending",
+    )
+}
+
+fn type_contains_array(type_syntax: &syntax::TypeSyntax) -> bool {
+    match &type_syntax.kind {
+        syntax::TypeKind::Array { .. } => true,
+        syntax::TypeKind::Shared { target, .. }
+        | syntax::TypeKind::OptionalShared { target, .. } => type_contains_array(target),
+        syntax::TypeKind::Grouped { inner, .. } => type_contains_array(inner),
+        _ => false,
+    }
+}
+
+fn plain_shared_target<'a>(
+    target: &'a syntax::TypeSyntax,
+    diagnostics: &mut Diagnostics,
+) -> Option<&'a syntax::Name> {
+    if let syntax::TypeKind::Named(name) = &target.kind {
+        return Some(name);
+    }
+    diagnostics.push(
+        Diagnostic::error(UNKNOWN_TYPE, "shared ownership requires an object target")
+            .with_primary_label(target.span, "expected a class, interface, or `Obj`"),
+    );
+    None
 }
 
 fn resolve_optional_shared_target(

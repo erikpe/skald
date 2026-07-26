@@ -80,22 +80,20 @@ identifier elsewhere except that it cannot name a top-level declaration.
 `implements`, `interface`, and `is` are likewise contextual in the exact forms
 below. `some` is contextual only after `is`; `none` is reserved by the lexer
 and forms either an absent expression or the target of a presence test.
-`shared` is contextual before an object target in stored and result types and
-inside a cast target. `new` is contextual before a class name and allocation
-argument list. Both remain ordinary identifiers elsewhere.
+`shared` is contextual before an object or array target in stored and result
+types and inside a cast target. `new` is contextual before a class allocation
+or an array construction. Both remain ordinary identifiers elsewhere.
 
 ## Punctuation
 
 The complete punctuation and operator token set is:
 
 ```text
-( ) { } , : ; . -> + - * = ? !
+( ) { } [ ] , : ; . -> + - * = ? !
 ```
 
-There are no string, character, comparison, division, or bracket tokens in the
-implemented grammar. The frozen but unimplemented
-[array contract](ARRAYS.md) reserves bracket-based type, index, slice, and
-shared-projection forms for a later grammar extension.
+There are no string, character, comparison, or division tokens in the
+implemented grammar.
 
 ## Literals
 
@@ -152,8 +150,13 @@ shared-target                 = identifier | "Obj"
 shared-type                   = "shared" shared-target
 inline-optional-type          = (primitive-type | named-type) "?"
 optional-shared-type          = "shared" "?" shared-target
+type-primary                  = primitive-type | named-type | "unit"
+                              | "(" storage-type ")"
+postfix-array-type            = type-primary ["?"] "[" "]" {"[" "]"}
+array-storage-type            = ["shared" ["?"]] postfix-array-type
 storage-type                  = primitive-type | named-type | shared-type
                               | inline-optional-type | optional-shared-type
+                              | array-storage-type
 result-type                   = storage-type | "unit"
 ```
 
@@ -168,6 +171,15 @@ legal as the target of `shared Obj` and `shared? Obj`, but not as `Obj?`.
 `unit` is syntactically restricted to result positions and `unit?` is rejected.
 Nested optionals, optional references, `shared T?`, and `shared? T?` are
 diagnosed with recovery rather than entering the AST.
+Postfix `[]` binds inside a leading `shared` or `shared?`, so `shared T[]`
+means a shared array owner. Grouping moves ownership into the element:
+`(shared T)[]` is an inline array of shared owners. The rule composes
+recursively. Type grouping is accepted only when followed by at least one
+`[]`; it exists to preserve ownership grouping rather than as a general
+redundant-parenthesis form. `?` may precede an array suffix to form optional
+elements, but it may not follow an array suffix. `unit[]` is parsed so later
+semantic analysis can report element ineligibility; bare `unit` remains
+restricted to result positions.
 Compilation-unit, namespace, entry-point, and external-signature semantics are
 defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 
@@ -226,6 +238,9 @@ Construction has two syntactically distinct argument modes:
 
 ```text
 copy-construction-arguments  = "(" "copy" expression ")"
+array-construction-arguments = "(" ")"
+                             | "(" expression ")"
+                             | "(" "copy" expression ")"
 ```
 
 `Class(copy source)` uses `copy-construction-arguments`;
@@ -283,7 +298,8 @@ An assignment whose ungrouped outer shape ends in `.member` is retained as a
 field-assignment-shaped statement. Other place roots and explicitly grouped
 complete places are retained as object-assignment-shaped statements. This is
 source classification only; grouping does not determine the place's type or
-mutability.
+mutability. An index or slice projection is likewise retained as an
+assignment-shaped statement for later semantic classification.
 
 `elif` is its own keyword and continuation form. `else if` and standalone
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
@@ -316,13 +332,21 @@ object-cast-target
 postfix-expression
                  = primary-expression
                    {unwrap-suffix | member-suffix
-                    | dereference-member-suffix | call-suffix}
+                    | dereference-member-suffix | call-suffix
+                    | index-or-slice-suffix | shared-index-or-slice-suffix}
 unwrap-suffix    = "!"
 member-suffix    = "." identifier
 dereference-member-suffix
                  = "->" identifier
 call-suffix      = "(" [argument-list] ")"
                  | copy-construction-arguments
+index-or-slice-suffix
+                 = "[" index-or-slice-bounds "]"
+shared-index-or-slice-suffix
+                 = "->" "[" index-or-slice-bounds "]"
+index-or-slice-bounds
+                 = expression
+                 | [expression] ":" [expression]
 argument-list    = expression {"," expression}
 
 primary-expression
@@ -331,6 +355,7 @@ primary-expression
                  | literal
                  | "self"
                  | allocation-expression
+                 | array-construction-expression
                  | "(" expression ")"
 
 allocation-expression
@@ -338,11 +363,23 @@ allocation-expression
 allocation-arguments
                  = "(" [argument-list] ")"
                  | copy-construction-arguments
+array-construction-expression
+                 = array-inline-type array-construction-arguments
+                 | "new" array-inline-type array-construction-arguments
+array-inline-type
+                 = postfix-array-type
 ```
+
+Leading outer `shared` or `shared?` belongs in a storage type, while `new`
+selects shared construction.
+The contextual `copy` form is a dedicated array construction mode and accepts
+exactly one source. The ordinary nonempty form accepts exactly one length
+expression.
 
 From tightest to loosest binding, precedence is:
 
-1. postfix unwrap, member access, dereferencing member access, and calls;
+1. postfix unwrap, member access, dereferencing member access, calls, indexing,
+   and slicing;
 2. unary `-`, unary `*`, and object casts;
 3. binary `*`;
 4. binary `+` and `-`;
@@ -355,8 +392,11 @@ source-shaped syntax tree. `*owner.field` therefore means `*(owner.field)`;
 use `(*owner).field` or `owner->field` to select a member from `owner`'s
 pointee. Binary multiplication remains distinct by operator position, as in
 `value * *owner`. Allocation and `none` are primary expressions. Calls,
-postfix `!`, `.`, and `->` may participate in the same postfix chain; type
-checking rejects chains that are not meaningful for the operand type.
+postfix `!`, `.`, `->`, indexing, and slicing may participate in the same
+postfix chain; type checking rejects chains that are not meaningful for the
+operand type. `owner->[index]` and `owner->[start:end]` preserve a distinct
+shared-projection operator from ordinary `owner[index]` and explicit
+`(*owner)[index]`.
 These spellings are semantically distinct: `.` remains within an already
 selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
@@ -383,7 +423,8 @@ never accepted merely because recovery reaches later source.
 The current compiler limits simultaneously active recursive syntax constructs
 to 128 levels. Class bodies, function and class-member bodies, nested blocks,
 grouped expressions, unary expressions, nested calls, and postfix chains share
-this budget.
+this budget. Recursive array type grouping and postfix array dimensions use
+the same budget.
 Exceeding it reports `PAR005`, omits the affected declaration from the partial
 syntax tree, and resumes at a later top-level declaration when possible.
 
@@ -413,6 +454,13 @@ layout, and execution, including bounded checked class payload views. Optional
 shared owners and aliases to supported inline optional containers cross the
 same explicit phase boundary. The complete implemented semantics belong
 to [Optional Values](OPTIONAL_VALUES.md).
+
+Array tokens, recursive type grouping, construction modes, index and slice
+shapes, and explicit shared bracket projection cross the syntax boundary with
+deterministic AST dumps. Resolution deliberately reports `RES023` for these
+nodes until canonical array identities are implemented; no array form is
+typed, lowered, or executable yet. The frozen semantics belong to
+[Arrays](ARRAYS.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

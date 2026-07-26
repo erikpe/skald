@@ -8,6 +8,7 @@ use crate::{
 
 use super::ast::*;
 
+mod array;
 mod class;
 mod declaration;
 mod expression;

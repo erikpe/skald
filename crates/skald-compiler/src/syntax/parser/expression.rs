@@ -193,6 +193,7 @@ impl Parser<'_> {
 
         while self.at_any(&[
             TokenKind::LeftParen,
+            TokenKind::LeftBracket,
             TokenKind::Dot,
             TokenKind::Arrow,
             TokenKind::Bang,
@@ -216,6 +217,13 @@ impl Parser<'_> {
                     bang_span: bang.span,
                     span,
                 });
+            } else if self.at(TokenKind::LeftBracket)
+                || (self.at(TokenKind::Arrow) && self.peek_ahead(1).kind == TokenKind::LeftBracket)
+            {
+                let start_span = self.peek().span;
+                expression = self.with_syntax_nesting(start_span, move |parser| {
+                    parser.finish_array_projection(expression)
+                })?;
             } else {
                 expression = self.finish_member_access(expression)?;
             }
@@ -372,6 +380,12 @@ impl Parser<'_> {
     }
 
     fn parse_primary(&mut self) -> Option<Expression> {
+        if self.starts_array_construction(false) {
+            return self.parse_array_construction(false);
+        }
+        if self.at_contextual("new") && self.starts_array_construction(true) {
+            return self.parse_array_construction(true);
+        }
         if self.at_contextual("new")
             && self.peek_ahead(1).kind == TokenKind::Identifier
             && self.peek_ahead(2).kind == TokenKind::LeftParen
@@ -457,11 +471,11 @@ impl Parser<'_> {
         let left_paren = self.peek().span;
         let (arguments, end_span) =
             self.with_syntax_nesting(left_paren, |parser| parser.parse_construction_arguments())?;
-        Some(Expression::Allocation(AllocationExpr {
+        Some(Expression::Allocation(Box::new(AllocationExpr {
             new_span: new_token.span,
             span: self.cover(new_token.span, end_span),
             target,
             arguments,
-        }))
+        })))
     }
 }

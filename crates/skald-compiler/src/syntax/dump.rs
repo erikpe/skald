@@ -214,7 +214,12 @@ impl AstDumper {
             TypeKind::Shared { target, .. } => {
                 self.line("Type Shared", type_syntax.span);
                 self.indented(|dumper| {
-                    dumper.named("Target", &target.text, target.span);
+                    if let TypeKind::Named(target) = &target.kind {
+                        dumper.named("Target", &target.text, target.span);
+                    } else {
+                        dumper.heading("Target");
+                        dumper.indented(|dumper| dumper.type_syntax(target));
+                    }
                 });
                 return;
             }
@@ -247,14 +252,49 @@ impl AstDumper {
                 question_span,
                 target,
             } => {
-                self.line(
-                    &format!("Type OptionalShared shared? {}", target.text),
-                    type_syntax.span,
-                );
+                let heading = match &target.kind {
+                    TypeKind::Named(target) => {
+                        format!("Type OptionalShared shared? {}", target.text)
+                    }
+                    _ => "Type OptionalShared".to_owned(),
+                };
+                self.line(&heading, type_syntax.span);
                 self.indented(|dumper| {
                     dumper.line("Shared", *shared_span);
                     dumper.line("Question", *question_span);
-                    dumper.named("Target", &target.text, target.span);
+                    if let TypeKind::Named(target) = &target.kind {
+                        dumper.named("Target", &target.text, target.span);
+                    } else {
+                        dumper.heading("Target");
+                        dumper.indented(|dumper| dumper.type_syntax(target));
+                    }
+                });
+                return;
+            }
+            TypeKind::Grouped {
+                left_paren_span,
+                inner,
+                right_paren_span,
+            } => {
+                self.line("Type Grouped", type_syntax.span);
+                self.indented(|dumper| {
+                    dumper.line("LeftParen", *left_paren_span);
+                    dumper.type_syntax(inner);
+                    dumper.line("RightParen", *right_paren_span);
+                });
+                return;
+            }
+            TypeKind::Array {
+                element,
+                left_bracket_span,
+                right_bracket_span,
+            } => {
+                self.line("Type Array", type_syntax.span);
+                self.indented(|dumper| {
+                    dumper.heading("Element");
+                    dumper.indented(|dumper| dumper.type_syntax(element));
+                    dumper.line("LeftBracket", *left_bracket_span);
+                    dumper.line("RightBracket", *right_bracket_span);
                 });
                 return;
             }
@@ -465,6 +505,51 @@ impl AstDumper {
                     }
                 });
             }
+            Expression::ArrayConstruction(construction) => {
+                self.line(
+                    if construction.new_span.is_some() {
+                        "ArrayConstruction Shared"
+                    } else {
+                        "ArrayConstruction Inline"
+                    },
+                    construction.span,
+                );
+                self.indented(|dumper| {
+                    if let Some(new_span) = construction.new_span {
+                        dumper.line("New", new_span);
+                    }
+                    dumper.type_syntax(&construction.array_type);
+                    match &construction.arguments {
+                        ArrayConstructionArguments::Empty {
+                            left_paren_span,
+                            right_paren_span,
+                        } => {
+                            dumper.line("Arguments Empty", *left_paren_span);
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                        ArrayConstructionArguments::Length {
+                            left_paren_span,
+                            length,
+                            right_paren_span,
+                        } => {
+                            dumper.line("Arguments Length", *left_paren_span);
+                            dumper.indented(|dumper| dumper.expression(length));
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                        ArrayConstructionArguments::Copy {
+                            left_paren_span,
+                            copy_span,
+                            source,
+                            right_paren_span,
+                        } => {
+                            dumper.line("Arguments Copy", *left_paren_span);
+                            dumper.line("Copy", *copy_span);
+                            dumper.indented(|dumper| dumper.expression(source));
+                            dumper.line("RightParen", *right_paren_span);
+                        }
+                    }
+                });
+            }
             Expression::Call(call) => {
                 self.line("Call", call.span);
                 self.indented(|dumper| {
@@ -493,7 +578,53 @@ impl AstDumper {
             }
             Expression::SelfValue(self_value) => self.line("Self", self_value.span),
             Expression::MemberAccess(member) => self.member_access(member),
+            Expression::ArrayProjection(projection) => self.array_projection(projection),
         }
+    }
+
+    fn array_projection(&mut self, projection: &ArrayProjectionExpr) {
+        self.line("ArrayProjection", projection.span);
+        self.indented(|dumper| {
+            dumper.heading("Receiver");
+            dumper.indented(|dumper| dumper.expression(&projection.receiver));
+            match projection.operator {
+                ArrayProjectionOperator::Ordinary { left_bracket_span } => {
+                    dumper.line("LeftBracket", left_bracket_span);
+                }
+                ArrayProjectionOperator::Shared {
+                    arrow_span,
+                    left_bracket_span,
+                } => {
+                    dumper.line("SharedArrow", arrow_span);
+                    dumper.line("LeftBracket", left_bracket_span);
+                }
+            }
+            match &projection.bounds {
+                ArrayProjectionBounds::Index(index) => {
+                    dumper.heading("Index");
+                    dumper.indented(|dumper| dumper.expression(index));
+                }
+                ArrayProjectionBounds::Slice {
+                    start,
+                    colon_span,
+                    end,
+                } => {
+                    dumper.heading("Slice");
+                    dumper.indented(|dumper| {
+                        if let Some(start) = start {
+                            dumper.heading("Start");
+                            dumper.indented(|dumper| dumper.expression(start));
+                        }
+                        dumper.line("Colon", *colon_span);
+                        if let Some(end) = end {
+                            dumper.heading("End");
+                            dumper.indented(|dumper| dumper.expression(end));
+                        }
+                    });
+                }
+            }
+            dumper.line("RightBracket", projection.right_bracket_span);
+        });
     }
 
     fn member_access(&mut self, member: &MemberAccessExpr) {

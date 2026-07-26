@@ -11,16 +11,17 @@ mod dump;
 mod parser;
 
 pub use ast::{
-    AbsentExpr, AllocationExpr, BaseInitializationStatement, BinaryExpr, BinaryOperator, Block,
-    BooleanExpr, CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm,
-    ConditionalStatement, CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression,
-    ExpressionStatement, ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl,
-    GroupedExpr, IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr,
-    MemberAccessOperator, MethodDecl, MethodModifier, Name, NumericLiteralExpr,
-    ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode, OptionalPayloadKind,
-    Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind, ReturnStatement, SelfExpr,
-    Statement, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator,
-    UnwrapExpr,
+    AbsentExpr, AllocationExpr, ArrayConstructionArguments, ArrayConstructionExpr,
+    ArrayProjectionBounds, ArrayProjectionExpr, ArrayProjectionOperator,
+    BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, CallArguments,
+    CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm, ConditionalStatement,
+    CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement,
+    ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
+    IdentifierExpr, InitializerDecl, LocalDecl, MemberAccessExpr, MemberAccessOperator, MethodDecl,
+    MethodModifier, Name, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
+    ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr,
+    PresenceTestKind, ReturnStatement, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
+    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr,
 };
 pub use dump::dump_ast;
 pub use parser::{
