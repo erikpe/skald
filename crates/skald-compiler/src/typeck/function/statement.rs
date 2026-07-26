@@ -235,6 +235,9 @@ impl CallableChecker<'_, '_> {
             Type::Class(class) => {
                 self.check_object_local_initializer(local.local, class, &local.initializer)
             }
+            Type::Array(array) => self
+                .check_array_initialize(array, &local.initializer, "array local initializer")
+                .map(HirLocalInitializer::Array),
             Type::Shared(target) => self
                 .check_shared_transfer(&local.initializer, target, "shared local initializer")
                 .map(HirLocalInitializer::Shared),
@@ -406,6 +409,21 @@ impl CallableChecker<'_, '_> {
                     value: Some(HirReturnValue::Object(object_return)),
                     span: statement.span,
                 }))
+            }
+            (Type::Array(array), Some(value)) => self
+                .check_array_initialize(array, value, "array return")
+                .map(|value| {
+                    HirStatement::Return(HirReturn {
+                        value: Some(HirReturnValue::Array(value)),
+                        span: statement.span,
+                    })
+                }),
+            (Type::Array(_), None) => {
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_RETURN, "array return requires a value")
+                        .with_primary_label(statement.span, "expected `return array_value;`"),
+                );
+                None
             }
             (Type::Shared(target), Some(value)) => self
                 .check_shared_transfer(value, target, "shared return")

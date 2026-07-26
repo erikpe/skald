@@ -141,6 +141,7 @@ fn lower_class_declaration(
             Type::Shared(_) => Some(HirDestructionStep::SharedField(field.id)),
             Type::OptionalShared(_) => Some(HirDestructionStep::OptionalSharedField(field.id)),
             Type::OptionalClass(_) => Some(HirDestructionStep::OptionalClassField(field.id)),
+            Type::Array(_) => Some(HirDestructionStep::ArrayField(field.id)),
             _ => None,
         })
         .collect::<Vec<_>>();

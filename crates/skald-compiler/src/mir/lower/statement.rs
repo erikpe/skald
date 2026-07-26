@@ -61,6 +61,7 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
+            HirStatement::ArrayFieldInitialize(_) => array_lowering_gate(),
         }
     }
 
@@ -134,6 +135,7 @@ impl BodyLowerer<'_> {
                     .register_optional_shared(storage, super::lower_shared_target(value.target));
                 self.finish_full_expression(local.span);
             }
+            crate::hir::HirLocalInitializer::Array(_) => array_lowering_gate(),
         }
     }
 
@@ -221,6 +223,7 @@ impl BodyLowerer<'_> {
                 });
                 return;
             }
+            Some(crate::hir::HirReturnValue::Array(_)) => array_lowering_gate(),
             None => None,
         };
         let cleanups = self.cleanup.for_all_scopes(statement.span);

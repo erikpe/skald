@@ -1,7 +1,7 @@
 //! Target-independent shared-owner types, sources, and consuming operations.
 
 use crate::{
-    identity::{BindingId, ClassId, InitializerId, InterfaceId},
+    identity::{ArrayTypeId, BindingId, ClassId, InitializerId, InterfaceId},
     source::Span,
 };
 
@@ -15,6 +15,7 @@ pub enum HirSharedTarget {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Array(ArrayTypeId),
 }
 
 /// A named owner whose value use must create another strong owner.
@@ -53,6 +54,7 @@ pub enum HirSharedProducer {
     Call(Box<HirExpression>),
     Cast(Box<HirSharedCast>),
     OptionalUnwrap(super::HirOptionalOperand),
+    ArrayAllocation(Box<super::HirArrayConstruction>),
 }
 
 impl HirSharedProducer {
@@ -65,6 +67,7 @@ impl HirSharedProducer {
             },
             Self::Cast(cast) => cast.target,
             Self::OptionalUnwrap(operand) => operand.shared_target(),
+            Self::ArrayAllocation(allocation) => HirSharedTarget::Array(allocation.array),
         }
     }
 
@@ -74,6 +77,7 @@ impl HirSharedProducer {
             Self::Call(call) => call.span,
             Self::Cast(cast) => cast.span,
             Self::OptionalUnwrap(operand) => operand.span(),
+            Self::ArrayAllocation(allocation) => allocation.span,
         }
     }
 }
@@ -133,9 +137,11 @@ impl HirSharedSource {
             Self::Produced(HirSharedProducer::Allocation(allocation)) => Some(allocation.class),
             Self::Produced(HirSharedProducer::Cast(cast)) => cast.exact_dynamic_class,
             Self::Place(_)
-            | Self::Produced(HirSharedProducer::Call(_) | HirSharedProducer::OptionalUnwrap(_)) => {
-                None
-            }
+            | Self::Produced(
+                HirSharedProducer::Call(_)
+                | HirSharedProducer::OptionalUnwrap(_)
+                | HirSharedProducer::ArrayAllocation(_),
+            ) => None,
         }
     }
 }

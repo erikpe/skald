@@ -80,6 +80,7 @@ impl BodyLowerer<'_> {
             HirExpressionKind::Unwrap(source) => {
                 Some(self.lower_optional_unwrap(expression, source))
             }
+            HirExpressionKind::ArrayConstruction(_) => array_lowering_gate(),
         }
     }
 

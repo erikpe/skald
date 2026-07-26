@@ -5,6 +5,7 @@ use std::borrow::Cow;
 use crate::identity::{ClassId, InterfaceId};
 pub use crate::object_path::ObjectProjection;
 
+mod array;
 mod body;
 mod declarations;
 mod expression;
@@ -12,6 +13,12 @@ mod object;
 mod optional;
 mod shared;
 
+pub use array::{
+    HirArrayAssignElement, HirArrayConstruction, HirArrayConstructionMode, HirArrayCopyElement,
+    HirArrayDefaultElement, HirArrayDestroyElement, HirArrayFieldInitialize, HirArrayInitialize,
+    HirArrayLifecycle, HirArrayOwnership, HirArrayProvenance, HirArraySource, HirArrayTransfer,
+    HirArrayType, HirArrayTypeTable,
+};
 pub use body::{
     BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
     HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
@@ -66,6 +73,7 @@ pub enum Type {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Array(crate::identity::ArrayTypeId),
     Shared(HirSharedTarget),
     OptionalShared(HirSharedTarget),
     OptionalPrimitive(HirPrimitiveType),
@@ -84,10 +92,12 @@ impl Type {
             Self::Obj => Cow::Borrowed("Obj"),
             Self::Class(class) => Cow::Owned(format!("class {class}")),
             Self::Interface(interface) => Cow::Owned(format!("interface {interface}")),
+            Self::Array(array) => Cow::Owned(format!("array {array}")),
             Self::Shared(target) => Cow::Owned(match target {
                 HirSharedTarget::Obj => "shared Obj".to_owned(),
                 HirSharedTarget::Class(class) => format!("shared class {class}"),
                 HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
+                HirSharedTarget::Array(array) => format!("shared array {array}"),
             }),
             Self::OptionalShared(target) => Cow::Owned(match target {
                 HirSharedTarget::Obj => "shared? Obj".to_owned(),
@@ -95,6 +105,7 @@ impl Type {
                 HirSharedTarget::Interface(interface) => {
                     format!("shared? interface {interface}")
                 }
+                HirSharedTarget::Array(array) => format!("shared? array {array}"),
             }),
             Self::OptionalPrimitive(payload) => Cow::Owned(format!("{}?", payload.name())),
             Self::OptionalClass(class) => Cow::Owned(format!("class {class}?")),
@@ -113,6 +124,7 @@ impl Type {
             | Self::Unit
             | Self::Class(_)
             | Self::Interface(_)
+            | Self::Array(_)
             | Self::Shared(_)
             | Self::OptionalShared(_)
             | Self::OptionalPrimitive(_)

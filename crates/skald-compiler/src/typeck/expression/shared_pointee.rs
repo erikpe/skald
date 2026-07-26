@@ -207,6 +207,9 @@ pub(super) const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget
         HirSharedTarget::Obj => HirViewTarget::Obj,
         HirSharedTarget::Class(class) => HirViewTarget::Class(class),
         HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
+        HirSharedTarget::Array(_) => {
+            panic!("array pointees do not enter object-view conversion")
+        }
     }
 }
 

@@ -1,0 +1,346 @@
+use super::*;
+use crate::{
+    hir::{
+        dump_hir, HirArrayCopyElement, HirArrayDestroyElement, HirCopyCapability, HirSharedTarget,
+        Type,
+    },
+    identity::ClassId,
+    resolve::ResolvedCopyOperation,
+    typeck::{
+        capabilities::CopyCapabilities, ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE,
+        INVALID_ARRAY_ELEMENT, INVALID_EXTERNAL_DECLARATION, INVALID_INTERFACE_REQUIREMENT,
+        TYPE_MISMATCH,
+    },
+};
+
+#[test]
+fn records_exact_lifecycle_plans_for_supported_element_categories() {
+    let output = check_text(concat!(
+        "class Item { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var primitive: i64[] = i64[](2u);\n",
+        "  var optional: i64?[] = i64?[](2u);\n",
+        "  var object: Item[] = Item[](2u);\n",
+        "  var nested: i64[][] = i64[][](2u);\n",
+        "  var owners: (shared Item)[] = (shared Item)[](2u);\n",
+        "  var maybe_owners: (shared? Item)[] = (shared? Item)[](2u);\n",
+        "  var shared_array: shared i64[] = new i64[](2u);\n",
+        "  var maybe_array: shared? i64[] = new i64[](2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(
+        output.diagnostics.is_empty(),
+        "supported arrays must type-check: {:?}",
+        output.diagnostics
+    );
+    let hir = output.hir.unwrap();
+    let dump = dump_hir(&hir);
+
+    assert!(dump.contains("Default primitive-zero"));
+    assert!(dump.contains("Default optional-absent"));
+    assert!(dump.contains("Default class c0 via c0:init0"));
+    assert!(dump.contains("Default empty-array a0"));
+    assert!(dump.contains("Default shared-class c0 via c0:init0"));
+    assert!(dump.contains("Destruction shared? class c0"));
+    assert!(dump.contains("ArrayAllocation shared a0"));
+    assert_eq!(dump, dump_hir(&hir));
+}
+
+#[test]
+fn distinguishes_named_deep_copy_from_produced_backing_adoption() {
+    let output = check_text(concat!(
+        "fn pass(value: i64[]) -> unit { return; }\n",
+        "fn make() -> i64[] { return i64[](3u); }\n",
+        "fn main() -> i64 {\n",
+        "  var source: i64[] = i64[](3u);\n",
+        "  var named: i64[] = source;\n",
+        "  var produced: i64[] = i64[](copy source);\n",
+        "  pass(source);\n",
+        "  pass(make());\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+
+    assert!(dump.contains("ArrayInitialization deep-copy primitive"));
+    assert!(dump.contains("ArrayInitialization adopt"));
+    assert!(dump.contains("ArraySource named a0"));
+    assert!(dump.contains("ArraySource produced a0"));
+    assert!(dump.contains("ArrayArgument"));
+}
+
+#[test]
+fn recursive_class_array_edges_terminate_and_remain_copyable() {
+    let resolved = resolve_text(concat!(
+        "class Node {\n",
+        "  children: Node[];\n",
+        "  init() { self.children = Node[](); }\n",
+        "}\n",
+        "fn main() -> i64 { var nodes: Node[] = Node[](2u); return 0; }\n",
+    ));
+    let capabilities = CopyCapabilities::compute(&resolved);
+
+    assert!(matches!(
+        capabilities.constructor(ClassId::new(0)),
+        HirCopyCapability::Synthesized(_)
+    ));
+    assert!(matches!(
+        capabilities
+            .array(crate::identity::ArrayTypeId::new(0))
+            .lifecycle
+            .copy,
+        Some(HirArrayCopyElement::Class { .. })
+    ));
+}
+
+#[test]
+fn unavailable_class_operations_propagate_through_nested_array_capabilities() {
+    let mut resolved = resolve_text(concat!(
+        "class Item { init() {} }\n",
+        "class Box { values: Item[][]; init() { self.values = Item[][](); } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    resolved.classes.entries_mut_for_test()[0].copy_constructor =
+        ResolvedCopyOperation::Unavailable;
+    resolved.classes.entries_mut_for_test()[0].copy_assignment = ResolvedCopyOperation::Unavailable;
+    let capabilities = CopyCapabilities::compute(&resolved);
+
+    assert_eq!(
+        capabilities.constructor(ClassId::new(1)),
+        &HirCopyCapability::Unavailable
+    );
+    assert_eq!(
+        capabilities.assignment(ClassId::new(1)),
+        &HirCopyCapability::Unavailable
+    );
+    assert!(capabilities
+        .array(crate::identity::ArrayTypeId::new(0))
+        .lifecycle
+        .copy
+        .is_none());
+    assert!(capabilities
+        .array(crate::identity::ArrayTypeId::new(1))
+        .lifecycle
+        .copy
+        .is_none());
+    assert!(capabilities
+        .array(crate::identity::ArrayTypeId::new(1))
+        .lifecycle
+        .assignment
+        .is_none());
+}
+
+#[test]
+fn empty_arrays_do_not_require_default_or_copy_capabilities() {
+    let output = check_text(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 { var values: Item[] = Item[](); return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let array = hir.array_types.iter().next().unwrap();
+
+    assert_eq!(array.lifecycle.default, None);
+    assert_eq!(
+        array.lifecycle.destruction,
+        HirArrayDestroyElement::Class(ClassId::new(0))
+    );
+}
+
+#[test]
+fn rejects_unavailable_defaults_lengths_and_ownership_conversions() {
+    let unavailable = check_text(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 { var values: Item[] = Item[](2u); return 0; }\n",
+    ));
+    assert!(unavailable
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_CAPABILITY_UNAVAILABLE));
+
+    let wrong_length = check_text("fn main() -> i64 { var values: i64[] = i64[](2); return 0; }");
+    assert!(wrong_length
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let too_large = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](9223372036854775808u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(too_large
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_LENGTH_OUT_OF_RANGE));
+
+    let conversion = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var inline: i64[] = new i64[](2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(conversion
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let abstract_shared = check_text(concat!(
+        "interface Item {}\n",
+        "fn main() -> i64 {\n",
+        "  var values: (shared Item)[] = (shared Item)[](2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(abstract_shared
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_CAPABILITY_UNAVAILABLE));
+}
+
+#[test]
+fn rejects_non_storable_elements_and_array_contract_boundaries() {
+    for element in ["unit", "Obj", "Readable"] {
+        let declaration = if element == "Readable" {
+            "interface Readable { fn read() -> i64; }\n"
+        } else {
+            ""
+        };
+        let source = format!(
+            "{declaration}fn main() -> i64 {{ var values: {element}[] = {element}[](); return 0; }}"
+        );
+        let output = check_text(&source);
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == INVALID_ARRAY_ELEMENT),
+            "expected invalid element diagnostic for {element}: {:?}",
+            output.diagnostics
+        );
+    }
+
+    let external = check_text(concat!(
+        "extern fn consume(values: i64[]) -> i64;\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert_eq!(
+        external
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == INVALID_EXTERNAL_DECLARATION)
+            .count(),
+        1
+    );
+
+    let interface = check_text(concat!(
+        "interface Source { fn values() -> i64[]; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(interface
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == INVALID_INTERFACE_REQUIREMENT));
+}
+
+#[test]
+fn declarations_and_shared_targets_retain_exact_array_identity() {
+    let output = check_text(concat!(
+        "class Holder { values: i64[]; init() { self.values = i64[](); } }\n",
+        "fn consume(values: i64[], owner: shared i64[], maybe: shared? i64[]) -> i64 {\n",
+        "  return 0;\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let consume = hir
+        .declarations
+        .iter()
+        .find(|item| item.name == "consume")
+        .unwrap();
+
+    assert_eq!(
+        consume.parameters[0].ty,
+        Type::Array(crate::identity::ArrayTypeId::new(0))
+    );
+    assert_eq!(
+        consume.parameters[1].ty,
+        Type::Shared(HirSharedTarget::Array(crate::identity::ArrayTypeId::new(0)))
+    );
+    assert_eq!(
+        consume.parameters[2].ty,
+        Type::OptionalShared(HirSharedTarget::Array(crate::identity::ArrayTypeId::new(0)))
+    );
+}
+
+#[test]
+fn exact_array_identity_participates_in_overload_selection_and_invariance() {
+    let selected = check_text(concat!(
+        "class Pick {\n",
+        "  init(values: i64[]) {}\n",
+        "  init(values: u64[]) {}\n",
+        "}\n",
+        "fn main() -> i64 { var pick: Pick = Pick(i64[]()); return 0; }\n",
+    ));
+    assert!(
+        selected.diagnostics.is_empty(),
+        "{:?}",
+        selected.diagnostics
+    );
+    assert!(dump_hir(&selected.hir.unwrap()).contains("Construct c0 via c0:init0"));
+
+    let mismatch = check_text(concat!(
+        "fn consume(values: i64[]) -> unit { return; }\n",
+        "fn main() -> i64 { consume(u64[]()); return 0; }\n",
+    ));
+    assert!(mismatch
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+}
+
+#[test]
+#[should_panic(expected = "typed arrays must stop at the deliberate HIR-to-MIR lowering gate")]
+fn direct_mir_lowering_cannot_bypass_the_array_gate() {
+    let output = check_text("fn main() -> i64 { var values: i64[] = i64[](); return 0; }");
+    crate::mir::lower_hir(&output.hir.unwrap());
+}
+
+#[test]
+fn array_hir_dump_is_exact_and_identity_based() {
+    let output = check_text("fn main() -> i64 { var values: i64[] = i64[](); return 0; }");
+    assert_eq!(
+        dump_hir(&output.hir.unwrap()),
+        concat!(
+            "HirProgram @0..59\n",
+            "  Entry f0\n",
+            "  ArrayTypes\n",
+            "    ArrayType a0 element i64\n",
+            "      Default primitive-zero\n",
+            "      Copy primitive\n",
+            "      Assignment primitive\n",
+            "      Destruction trivial\n",
+            "  Declarations\n",
+            "    Declaration f0 \"main\" internal @0..59\n",
+            "      Parameters\n",
+            "      ReturnType i64\n",
+            "  Definitions\n",
+            "    Definition f0 @0..59\n",
+            "      Locals\n",
+            "        Local f0:l0 \"values\" : array a0 @19..47\n",
+            "      Block @17..59\n",
+            "        LocalDeclaration f0:l0 @19..47\n",
+            "          ArrayInitialization adopt @39..46\n",
+            "            ArraySource produced a0 @39..46\n",
+            "              ArrayConstruction : array a0 @39..46\n",
+            "                ArrayAllocation inline a0 @39..46\n",
+            "                  Empty\n",
+            "        Return @48..57\n",
+            "          Integer 0 : i64 @55..56\n",
+        )
+    );
+}

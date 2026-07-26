@@ -56,6 +56,9 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
         | HirExpressionKind::Boolean(_)
         | HirExpressionKind::PresenceTest { .. } => false,
         HirExpressionKind::Unwrap(_) => true,
+        HirExpressionKind::ArrayConstruction(construction) => {
+            array_construction_contains_runtime_cast(construction)
+        }
     }
 }
 
@@ -81,8 +84,12 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
                     || shared_source_contains_runtime_cast(&cast.source)
             }
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
+            HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
+                array_construction_contains_runtime_cast(construction)
+            }
             HirSharedSource::Place(_) => false,
         },
+        HirCallArgument::Array(value) => expression_contains_runtime_cast(&value.source.expression),
     }
 }
 
@@ -100,6 +107,23 @@ fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
                 || shared_source_contains_runtime_cast(&cast.source)
         }
         HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
+        HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
+            array_construction_contains_runtime_cast(construction)
+        }
+    }
+}
+
+fn array_construction_contains_runtime_cast(
+    construction: &crate::hir::HirArrayConstruction,
+) -> bool {
+    match &construction.mode {
+        crate::hir::HirArrayConstructionMode::Empty => false,
+        crate::hir::HirArrayConstructionMode::DefaultLength { length, .. } => {
+            expression_contains_runtime_cast(length)
+        }
+        crate::hir::HirArrayConstructionMode::Copy { source, .. } => {
+            expression_contains_runtime_cast(&source.expression)
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 //! Type checking and construction of typed HIR.
 
+mod arrays;
 mod capabilities;
 mod containment;
 mod expression;
@@ -9,6 +10,7 @@ mod optional;
 mod program;
 mod shared;
 
+pub use arrays::{ARRAY_CAPABILITY_UNAVAILABLE, ARRAY_LENGTH_OUT_OF_RANGE, INVALID_ARRAY_ELEMENT};
 pub use containment::RECURSIVE_INLINE_CONTAINMENT;
 pub use program::{
     type_check, TypeCheckOutput, AMBIGUOUS_INITIALIZER, COPY_OPERATION_UNAVAILABLE,

@@ -396,6 +396,7 @@ impl BodyLowerer<'_> {
                     self.lower_shared_transfer(storage, transfer);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
+                HirCallArgument::Array(_) => array_lowering_gate(),
             };
             lowered.push(argument);
         }

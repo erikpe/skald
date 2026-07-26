@@ -12,17 +12,48 @@ use crate::{
 pub(super) struct CopyCapabilities {
     constructors: CapabilitySet<CopyConstructorId>,
     assignments: CapabilitySet<CopyAssignmentId>,
+    array_types: crate::hir::HirArrayTypeTable,
 }
 
 impl CopyCapabilities {
     pub(super) fn compute(program: &ResolvedProgram) -> Self {
-        let constructors = CapabilitySet::compute(program, |class| class.copy_constructor, None);
-        let assignments =
+        let mut constructors =
+            CapabilitySet::compute(program, |class| class.copy_constructor, None);
+        let provisional_assignments =
             CapabilitySet::compute(program, |class| class.copy_assignment, Some(&constructors));
-        Self {
+        loop {
+            let provisional = Self {
+                constructors: constructors.clone(),
+                assignments: provisional_assignments.clone(),
+                array_types: crate::hir::HirArrayTypeTable::default(),
+            };
+            let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
+            if !constructors.invalidate_array_dependencies(&arrays, ArrayOperation::Copy) {
+                break;
+            }
+        }
+
+        let mut assignments =
+            CapabilitySet::compute(program, |class| class.copy_assignment, Some(&constructors));
+        loop {
+            let provisional = Self {
+                constructors: constructors.clone(),
+                assignments: assignments.clone(),
+                array_types: crate::hir::HirArrayTypeTable::default(),
+            };
+            let arrays = crate::typeck::arrays::lower_array_types(program, &provisional);
+            if !assignments.invalidate_array_dependencies(&arrays, ArrayOperation::Assignment) {
+                break;
+            }
+        }
+
+        let mut capabilities = Self {
             constructors,
             assignments,
-        }
+            array_types: crate::hir::HirArrayTypeTable::default(),
+        };
+        capabilities.array_types = crate::typeck::arrays::lower_array_types(program, &capabilities);
+        capabilities
     }
 
     pub(super) fn constructor(&self, class: ClassId) -> &HirCopyCapability<CopyConstructorId> {
@@ -31,6 +62,16 @@ impl CopyCapabilities {
 
     pub(super) fn assignment(&self, class: ClassId) -> &HirCopyCapability<CopyAssignmentId> {
         self.assignments.capability(class)
+    }
+
+    pub(super) fn array(&self, array: crate::identity::ArrayTypeId) -> &crate::hir::HirArrayType {
+        self.array_types
+            .get(array)
+            .expect("resolved array identity must have typed lifecycle metadata")
+    }
+
+    pub(super) fn array_types(&self) -> crate::hir::HirArrayTypeTable {
+        self.array_types.clone()
     }
 
     pub(super) fn constructor_failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
@@ -55,6 +96,12 @@ struct CapabilitySet<I> {
 pub(super) enum CopyPathElement {
     Base(ClassId),
     Field(FieldId),
+}
+
+#[derive(Clone, Copy)]
+enum ArrayOperation {
+    Copy,
+    Assignment,
 }
 
 impl<I: Copy> CapabilitySet<I> {
@@ -94,6 +141,39 @@ impl<I: Copy> CapabilitySet<I> {
 
     fn failure(&self, class: ClassId) -> Option<&[CopyPathElement]> {
         self.failure_paths[class.index()].as_deref()
+    }
+
+    fn invalidate_array_dependencies(
+        &mut self,
+        arrays: &crate::hir::HirArrayTypeTable,
+        operation: ArrayOperation,
+    ) -> bool {
+        let mut changed = false;
+        for (index, capability) in self.capabilities.iter_mut().enumerate() {
+            let HirCopyCapability::Synthesized(copy) = capability else {
+                continue;
+            };
+            let unavailable = copy.fields.iter().find_map(|field| {
+                let HirSynthesizedFieldCopy::Array { field, array } = field else {
+                    return None;
+                };
+                let lifecycle = &arrays
+                    .get(*array)
+                    .expect("array dependency must have lifecycle metadata")
+                    .lifecycle;
+                let available = match operation {
+                    ArrayOperation::Copy => lifecycle.copy.is_some(),
+                    ArrayOperation::Assignment => lifecycle.assignment.is_some(),
+                };
+                (!available).then_some(*field)
+            });
+            if let Some(field) = unavailable {
+                *capability = HirCopyCapability::Unavailable;
+                self.failure_paths[index] = Some(vec![CopyPathElement::Field(field)]);
+                changed = true;
+            }
+        }
+        changed
     }
 }
 
@@ -254,6 +334,12 @@ fn compute_class<I: Copy>(
                         fields.push(HirSynthesizedFieldCopy::OptionalPrimitive {
                             field: field.id,
                             payload,
+                        });
+                    }
+                    ResolvedTypeKind::Array(array) => {
+                        fields.push(HirSynthesizedFieldCopy::Array {
+                            field: field.id,
+                            array,
                         });
                     }
                     _ => fields.push(HirSynthesizedFieldCopy::Primitive { field: field.id }),

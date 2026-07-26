@@ -79,24 +79,7 @@ impl TypeCheckOutput {
 
 pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     let mut diagnostics = Diagnostics::new();
-    if !program.array_types.is_empty() {
-        for array in program.array_types.iter() {
-            diagnostics.push(
-                Diagnostic::error(
-                    UNSUPPORTED_ARRAY_SEMANTICS,
-                    "array semantics are not implemented yet",
-                )
-                .with_primary_label(
-                    array.element.span,
-                    format!("array type {} reaches the type-checking boundary", array.id),
-                ),
-            );
-        }
-        return TypeCheckOutput {
-            hir: None,
-            diagnostics,
-        };
-    }
+    super::arrays::validate_array_types(program, &mut diagnostics);
     check_internal_function_parameters(program, &mut diagnostics);
     check_external_declarations(program, &mut diagnostics);
     let entry_function = check_entry_point(program, &mut diagnostics);
@@ -133,6 +116,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         None
     } else {
         Some(HirProgram {
+            array_types: copy_capabilities.array_types(),
             classes: HirClassDeclarationTable::new(classes),
             interfaces: HirInterfaceDeclarationTable::new(interface_analysis.declarations),
             virtual_families: HirVirtualFamilyTable::new(
@@ -217,6 +201,7 @@ fn validate_parameters(
                     Type::Class(_)
                         | Type::Obj
                         | Type::Interface(_)
+                        | Type::Array(_)
                         | Type::OptionalPrimitive(_)
                         | Type::OptionalClass(_)
                 ) =>
@@ -225,7 +210,7 @@ fn validate_parameters(
                     Diagnostic::error(
                         INVALID_ALIAS_PARAMETER,
                         format!(
-                            "{owner} alias parameter `{}` must name a class, interface, `Obj`, or supported inline optional",
+                            "{owner} alias parameter `{}` must name a class, array, interface, `Obj`, or supported inline optional",
                             parameter.name
                         ),
                     )
@@ -342,6 +327,14 @@ fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diag
             );
             continue;
         }
+        if declaration.parameters.iter().any(|parameter| {
+            crate::typeck::arrays::resolved_type_contains_array(parameter.type_syntax.kind)
+        }) || crate::typeck::arrays::resolved_type_contains_array(declaration.return_type.kind)
+        {
+            // Array validation emits the more precise external-ABI diagnostic
+            // at each offending type rather than duplicating this generic one.
+            continue;
+        }
         let has_valid_parameters = declaration.parameters.iter().all(|parameter| {
             matches!(
                 lower_type(&parameter.type_syntax),
@@ -405,9 +398,7 @@ pub(super) fn lower_type(type_syntax: &ResolvedType) -> Type {
         ResolvedTypeKind::Obj => Type::Obj,
         ResolvedTypeKind::Class(class) => Type::Class(class),
         ResolvedTypeKind::Interface(interface) => Type::Interface(interface),
-        ResolvedTypeKind::Array(_) => {
-            unreachable!("array types are rejected by the type-checking array gate")
-        }
+        ResolvedTypeKind::Array(array) => Type::Array(array),
         ResolvedTypeKind::Shared(target) => {
             Type::Shared(crate::typeck::shared::lower_shared_target(target))
         }

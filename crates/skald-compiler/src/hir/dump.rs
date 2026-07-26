@@ -15,6 +15,14 @@ pub fn dump_hir(program: &HirProgram) -> String {
     dumper.indented(|dumper| {
         dumper.write_indentation();
         let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
+        if !program.array_types.is_empty() {
+            dumper.heading("ArrayTypes");
+            dumper.indented(|dumper| {
+                for array in program.array_types.iter() {
+                    dumper.array_type(array);
+                }
+            });
+        }
         if !program.classes.is_empty() {
             dumper.heading("Classes");
             dumper.indented(|dumper| {
@@ -71,6 +79,44 @@ struct HirDumper {
 }
 
 impl HirDumper {
+    fn array_type(&mut self, array: &HirArrayType) {
+        self.raw_line(&format!(
+            "ArrayType {} element {}",
+            array.id,
+            array.element.name()
+        ));
+        self.indented(|dumper| {
+            dumper.raw_line(&format!(
+                "Default {}",
+                array
+                    .lifecycle
+                    .default
+                    .map(array_default_name)
+                    .unwrap_or_else(|| "unavailable".to_owned())
+            ));
+            dumper.raw_line(&format!(
+                "Copy {}",
+                array
+                    .lifecycle
+                    .copy
+                    .map(array_copy_name)
+                    .unwrap_or_else(|| "unavailable".to_owned())
+            ));
+            dumper.raw_line(&format!(
+                "Assignment {}",
+                array
+                    .lifecycle
+                    .assignment
+                    .map(array_assignment_name)
+                    .unwrap_or_else(|| "unavailable".to_owned())
+            ));
+            dumper.raw_line(&format!(
+                "Destruction {}",
+                array_destruction_name(array.lifecycle.destruction)
+            ));
+        });
+    }
+
     fn interface_declaration(&mut self, interface: &HirInterfaceDeclaration) {
         self.write_indentation();
         let _ = write!(self.output, "Interface {} ", interface.id);
@@ -200,6 +246,9 @@ impl HirDumper {
                             }
                             HirDestructionStep::OptionalClassField(field) => {
                                 dumper.raw_line(&format!("OptionalClassField {field}"));
+                            }
+                            HirDestructionStep::ArrayField(field) => {
+                                dumper.raw_line(&format!("ArrayField {field}"));
                             }
                             HirDestructionStep::Base(base) => {
                                 dumper.raw_line(&format!("Base {base}"));
@@ -338,6 +387,9 @@ impl HirDumper {
                                 };
                                 dumper.raw_line(&format!("Class {field} using {selected}"));
                             }
+                            HirSynthesizedFieldCopy::Array { field, array } => {
+                                dumper.raw_line(&format!("Array {field} : {array}"));
+                            }
                         }
                     }
                 });
@@ -463,6 +515,7 @@ impl HirDumper {
                     HirLocalInitializer::OptionalShared(value) => {
                         dumper.optional_shared_value(value)
                     }
+                    HirLocalInitializer::Array(value) => dumper.array_initialize(value),
                 });
             }
             HirStatement::Return(statement) => {
@@ -508,6 +561,7 @@ impl HirDumper {
                         HirReturnValue::OptionalShared(value) => {
                             dumper.optional_shared_value(value)
                         }
+                        HirReturnValue::Array(value) => dumper.array_initialize(value),
                     });
                 }
             }
@@ -612,6 +666,13 @@ impl HirDumper {
                 self.indented(|dumper| {
                     dumper.optional_shared_place(&assignment.destination);
                     dumper.optional_shared_source(&assignment.source);
+                });
+            }
+            HirStatement::ArrayFieldInitialize(statement) => {
+                self.line("ArrayFieldInitialization", statement.span);
+                self.indented(|dumper| {
+                    dumper.field_place(&statement.place);
+                    dumper.array_initialize(&statement.value);
                 });
             }
         }
@@ -778,7 +839,56 @@ impl HirDumper {
                 self.typed_line("OptionalUnwrap", expression);
                 self.indented(|dumper| dumper.optional_operand(source));
             }
+            HirExpressionKind::ArrayConstruction(construction) => {
+                self.typed_line("ArrayConstruction", expression);
+                self.indented(|dumper| dumper.array_construction(construction));
+            }
         }
+    }
+
+    fn array_construction(&mut self, construction: &HirArrayConstruction) {
+        let ownership = match construction.ownership {
+            HirArrayOwnership::Inline => "inline",
+            HirArrayOwnership::Shared => "shared",
+        };
+        self.line(
+            &format!("ArrayAllocation {ownership} {}", construction.array),
+            construction.span,
+        );
+        self.indented(|dumper| match &construction.mode {
+            HirArrayConstructionMode::Empty => dumper.raw_line("Empty"),
+            HirArrayConstructionMode::DefaultLength { length, element } => {
+                dumper.raw_line(&format!("DefaultElements {}", array_default_name(*element)));
+                dumper.indented(|dumper| dumper.expression(length));
+            }
+            HirArrayConstructionMode::Copy { source, element } => {
+                dumper.raw_line(&format!("CopyElements {}", array_copy_name(*element)));
+                dumper.indented(|dumper| dumper.array_source(source));
+            }
+        });
+    }
+
+    fn array_source(&mut self, source: &HirArraySource) {
+        let provenance = match source.provenance {
+            HirArrayProvenance::Named => "named",
+            HirArrayProvenance::Produced => "produced",
+        };
+        self.line(
+            &format!("ArraySource {provenance} {}", source.array),
+            source.span,
+        );
+        self.indented(|dumper| dumper.expression(&source.expression));
+    }
+
+    fn array_initialize(&mut self, value: &HirArrayInitialize) {
+        let operation = match value.operation {
+            HirArrayTransfer::DeepCopy(element) => {
+                format!("deep-copy {}", array_copy_name(element))
+            }
+            HirArrayTransfer::Adopt => "adopt".to_owned(),
+        };
+        self.line(&format!("ArrayInitialization {operation}"), value.span);
+        self.indented(|dumper| dumper.array_source(&value.source));
     }
 
     fn optional_source(&mut self, source: &crate::hir::HirOptionalSource) {
@@ -1013,6 +1123,10 @@ impl HirDumper {
                 self.line("SharedArgument", value.span);
                 self.indented(|dumper| dumper.shared_transfer(value));
             }
+            HirCallArgument::Array(value) => {
+                self.line("ArrayArgument", value.span);
+                self.indented(|dumper| dumper.array_initialize(value));
+            }
         }
     }
 
@@ -1105,6 +1219,9 @@ impl HirDumper {
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
                 self.line("OptionalSharedUnwrap", operand.span());
                 self.indented(|dumper| dumper.optional_operand(operand));
+            }
+            HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
+                self.array_construction(construction);
             }
         }
     }
@@ -1458,11 +1575,85 @@ fn shared_target_name(target: HirSharedTarget) -> String {
         HirSharedTarget::Class(class) => format!("shared class {class}"),
         HirSharedTarget::Interface(interface) => format!("shared interface {interface}"),
         HirSharedTarget::Obj => "shared Obj".to_owned(),
+        HirSharedTarget::Array(array) => format!("shared array {array}"),
     }
 }
 
 fn optional_shared_target_name(target: HirSharedTarget) -> String {
     shared_target_name(target).replacen("shared ", "shared? ", 1)
+}
+
+fn array_default_name(element: HirArrayDefaultElement) -> String {
+    match element {
+        HirArrayDefaultElement::Primitive => "primitive-zero".to_owned(),
+        HirArrayDefaultElement::OptionalAbsent => "optional-absent".to_owned(),
+        HirArrayDefaultElement::Class { class, initializer } => {
+            format!("class {class} via {initializer}")
+        }
+        HirArrayDefaultElement::ArrayEmpty(array) => format!("empty-array {array}"),
+        HirArrayDefaultElement::SharedClass { class, initializer } => {
+            format!("shared-class {class} via {initializer}")
+        }
+        HirArrayDefaultElement::SharedArrayEmpty(array) => {
+            format!("shared-empty-array {array}")
+        }
+    }
+}
+
+fn array_copy_name(element: HirArrayCopyElement) -> String {
+    match element {
+        HirArrayCopyElement::Primitive => "primitive".to_owned(),
+        HirArrayCopyElement::OptionalPrimitive => "optional-primitive".to_owned(),
+        HirArrayCopyElement::Class { class, operation } => {
+            format!("class {class} via {}", selected_operation_name(operation))
+        }
+        HirArrayCopyElement::OptionalClass { class, operation } => {
+            format!(
+                "optional-class {class} via {}",
+                selected_operation_name(operation)
+            )
+        }
+        HirArrayCopyElement::Array(array) => format!("array {array}"),
+        HirArrayCopyElement::Shared(target) => shared_target_name(target),
+        HirArrayCopyElement::OptionalShared(target) => optional_shared_target_name(target),
+    }
+}
+
+fn array_assignment_name(element: HirArrayAssignElement) -> String {
+    match element {
+        HirArrayAssignElement::Primitive => "primitive".to_owned(),
+        HirArrayAssignElement::OptionalPrimitive => "optional-primitive".to_owned(),
+        HirArrayAssignElement::Class { class, operation } => {
+            format!("class {class} via {}", selected_operation_name(operation))
+        }
+        HirArrayAssignElement::OptionalClass { class, operation } => {
+            format!(
+                "optional-class {class} via {}",
+                selected_operation_name(operation)
+            )
+        }
+        HirArrayAssignElement::Array(array) => format!("array {array}"),
+        HirArrayAssignElement::Shared(target) => shared_target_name(target),
+        HirArrayAssignElement::OptionalShared(target) => optional_shared_target_name(target),
+    }
+}
+
+fn selected_operation_name<I: Display>(operation: HirSelectedCopyOperation<I>) -> String {
+    match operation {
+        HirSelectedCopyOperation::User(id) => format!("user {id}"),
+        HirSelectedCopyOperation::Synthesized(class) => format!("synthesized {class}"),
+    }
+}
+
+fn array_destruction_name(element: HirArrayDestroyElement) -> String {
+    match element {
+        HirArrayDestroyElement::Trivial => "trivial".to_owned(),
+        HirArrayDestroyElement::Class(class) => format!("class {class}"),
+        HirArrayDestroyElement::OptionalClass(class) => format!("optional-class {class}"),
+        HirArrayDestroyElement::Array(array) => format!("array {array}"),
+        HirArrayDestroyElement::Shared(target) => shared_target_name(target),
+        HirArrayDestroyElement::OptionalShared(target) => optional_shared_target_name(target),
+    }
 }
 
 const fn parameter_mode_name(mode: HirParameterMode) -> &'static str {

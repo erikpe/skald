@@ -122,8 +122,17 @@ name-independent without recursively embedding owned type trees in phase
 values. Ordinary and optional shared targets can name an exact array identity;
 arrays remain outside class hierarchy, interface conformance, `Obj`, casts,
 and type tests. Resolved construction, projection, and array-assignment nodes
-retain their source structure. Type checking currently reports `TYP035` and
-produces no HIR for a program containing arrays.
+retain their source structure.
+
+Type checking lowers array declarations, owning locals/fields/signatures,
+inline and shared construction, exact element lifecycle capabilities, and
+named-copy versus produced-adoption provenance into deterministic HIR.
+Recursive class/array capability analysis terminates at a fixed point, while
+array backing remains excluded from finite inline-containment edges. Array
+projection, replacement, slicing, and alias operations still report `TYP035`.
+Valid construction-only array HIR stops at a deliberate `TYP035` HIR-to-MIR
+driver gate, and MIR lowering independently asserts that no array table is
+present.
 
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,

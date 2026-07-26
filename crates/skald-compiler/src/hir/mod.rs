@@ -8,9 +8,12 @@ mod ir;
 
 pub use dump::dump_hir;
 pub use ir::{
-    BlockFlow, HirAccess, HirBaseCopy, HirBaseInitialization, HirBinaryOperation, HirBlock,
-    HirCallArgument, HirCallStatement, HirCallableSignature, HirCheckedObjectView,
-    HirCheckedObjectViewKind, HirCheckedOptionalView, HirClassDeclaration,
+    BlockFlow, HirAccess, HirArrayAssignElement, HirArrayConstruction, HirArrayConstructionMode,
+    HirArrayCopyElement, HirArrayDefaultElement, HirArrayDestroyElement, HirArrayFieldInitialize,
+    HirArrayInitialize, HirArrayLifecycle, HirArrayOwnership, HirArrayProvenance, HirArraySource,
+    HirArrayTransfer, HirArrayType, HirArrayTypeTable, HirBaseCopy, HirBaseInitialization,
+    HirBinaryOperation, HirBlock, HirCallArgument, HirCallStatement, HirCallableSignature,
+    HirCheckedObjectView, HirCheckedObjectViewKind, HirCheckedOptionalView, HirClassDeclaration,
     HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
     HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
     HirClassOptionalSource, HirConditional, HirConditionalArm, HirConstruction,

@@ -6,7 +6,7 @@ use crate::{
     literal::NumericLiteralKind,
     resolve::{
         ResolvedExpression, ResolvedInitializerDeclaration, ResolvedObjectReceiver,
-        ResolvedParameter, ResolvedParameterBindingMode,
+        ResolvedParameter, ResolvedParameterBindingMode, ResolvedTypeKind,
     },
     source::Span,
     typeck::{
@@ -221,9 +221,7 @@ impl CallableChecker<'_, '_> {
                 crate::resolve::ResolvedSharedTarget::Interface(interface) => {
                     Type::Interface(interface)
                 }
-                crate::resolve::ResolvedSharedTarget::Array(_) => {
-                    panic!("array targets are rejected by the type-checking array gate")
-                }
+                crate::resolve::ResolvedSharedTarget::Array(array) => Type::Array(array),
             },
             ResolvedExpression::Binary(binary) => self.static_expression_type(&binary.left),
             ResolvedExpression::ObjectCast(cast) => lower_type(&cast.target),
@@ -256,9 +254,17 @@ impl CallableChecker<'_, '_> {
                 Type::Shared(crate::hir::HirSharedTarget::Class(allocation.class))
             }
             ResolvedExpression::Construct(construction) => Type::Class(construction.class),
-            ResolvedExpression::ArrayConstruction(_) | ResolvedExpression::ArrayProjection(_) => {
-                panic!("array expressions are rejected by the type-checking array gate")
+            ResolvedExpression::ArrayConstruction(construction) => {
+                let ResolvedTypeKind::Array(array) = construction.array_type.kind else {
+                    unreachable!("resolved array construction must retain its exact identity")
+                };
+                if construction.new_span.is_some() {
+                    Type::Shared(crate::hir::HirSharedTarget::Array(array))
+                } else {
+                    Type::Array(array)
+                }
             }
+            ResolvedExpression::ArrayProjection(_) => Type::Unit,
         }
     }
 

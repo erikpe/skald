@@ -15,8 +15,9 @@ use super::{
         HirObjectInitialization, HirObjectReturn,
     },
     shared::{HirSharedAssignment, HirSharedFieldWrite, HirSharedTransfer},
-    HirClassOptionalAssignment, HirClassOptionalInitialize, HirOptionalAssignment,
-    HirOptionalSharedAssignment, HirOptionalSharedInitialize, HirOptionalSource,
+    HirArrayInitialize, HirClassOptionalAssignment, HirClassOptionalInitialize,
+    HirOptionalAssignment, HirOptionalSharedAssignment, HirOptionalSharedInitialize,
+    HirOptionalSource,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -205,6 +206,7 @@ pub enum HirStatement {
     OptionalAssignment(HirOptionalAssignment),
     ClassOptionalAssignment(HirClassOptionalAssignment),
     OptionalSharedAssignment(HirOptionalSharedAssignment),
+    ArrayFieldInitialize(super::HirArrayFieldInitialize),
 }
 
 impl HirStatement {
@@ -226,6 +228,7 @@ impl HirStatement {
             Self::OptionalAssignment(statement) => statement.span,
             Self::ClassOptionalAssignment(statement) => statement.span,
             Self::OptionalSharedAssignment(statement) => statement.span,
+            Self::ArrayFieldInitialize(statement) => statement.span,
         }
     }
 }
@@ -246,6 +249,7 @@ pub enum HirLocalInitializer {
     Optional(HirOptionalSource),
     ClassOptional(HirClassOptionalInitialize),
     OptionalShared(HirOptionalSharedInitialize),
+    Array(HirArrayInitialize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -262,6 +266,7 @@ pub enum HirReturnValue {
     Object(HirObjectReturn),
     Shared(HirSharedTransfer),
     OptionalShared(HirOptionalSharedInitialize),
+    Array(HirArrayInitialize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

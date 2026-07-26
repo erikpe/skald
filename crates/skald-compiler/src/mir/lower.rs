@@ -27,6 +27,10 @@ use cleanup::CleanupPlanner;
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
+    assert!(
+        hir.array_types.is_empty(),
+        "typed arrays must stop at the deliberate HIR-to-MIR lowering gate"
+    );
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -34,6 +38,10 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
         panic!("HIR lowering produced invalid MIR:\n{errors}");
     }
     mir
+}
+
+fn array_lowering_gate() -> ! {
+    unreachable!("typed arrays cannot reach MIR before array lowering is implemented")
 }
 
 fn lower_selected_copy_operation<I>(
@@ -334,6 +342,7 @@ fn lower_type(ty: Type) -> MirType {
             crate::hir::HirSharedTarget::Interface(interface) => {
                 MirSharedTarget::Interface(interface)
             }
+            crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
         }),
         Type::OptionalShared(target) => MirType::OptionalShared(match target {
             crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
@@ -341,18 +350,21 @@ fn lower_type(ty: Type) -> MirType {
             crate::hir::HirSharedTarget::Interface(interface) => {
                 MirSharedTarget::Interface(interface)
             }
+            crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
         }),
         Type::OptionalPrimitive(payload) => {
             MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
         }
         Type::OptionalClass(class) => MirType::OptionalClass(class),
+        Type::Array(_) => array_lowering_gate(),
     }
 }
 
-const fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
+fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
     match target {
         crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
         crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         crate::hir::HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
+        crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
     }
 }

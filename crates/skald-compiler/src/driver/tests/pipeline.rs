@@ -357,10 +357,10 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
 }
 
 #[test]
-fn resolved_arrays_stop_at_type_checking_before_lowering() {
+fn typed_arrays_stop_at_the_deliberate_hir_to_mir_gate() {
     let result = compile_source_to_assembly(
         "arrays.ska",
-        "fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }",
+        "fn main() -> i64 { var values: i64[] = i64[](4u); return 0; }",
         Target::X86_64SysV,
     );
     let CompilationError::Diagnostics(report) =

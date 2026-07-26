@@ -309,6 +309,11 @@ impl CallableChecker<'_, '_> {
                         operation,
                     }));
                 }
+                if let Type::Array(array) = parameter_type {
+                    return self
+                        .check_array_initialize(array, source, "array value argument")
+                        .map(HirCallArgument::Array);
+                }
                 if let Type::OptionalPrimitive(payload) = parameter_type {
                     return self
                         .check_optional_source(source, payload, "primitive optional argument")
@@ -340,6 +345,16 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
+                if matches!(lower_type(parameter.type_syntax()), Type::Array(_)) {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS,
+                            "array alias arguments are not implemented yet",
+                        )
+                        .with_primary_label(source.span(), "array aliasing is typed separately"),
+                    );
+                    return None;
+                }
                 self.check_alias_argument(source, parameter)
             }
         }

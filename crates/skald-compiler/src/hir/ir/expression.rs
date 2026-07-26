@@ -63,6 +63,7 @@ pub enum HirExpressionKind {
     },
     Unwrap(HirOptionalOperand),
     Grouped(Box<HirExpression>),
+    ArrayConstruction(Box<super::HirArrayConstruction>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -127,6 +128,7 @@ pub enum HirCallArgument {
     CheckedView(Box<HirCheckedObjectView>),
     Copy(HirCopyArgument),
     Shared(HirSharedTransfer),
+    Array(super::HirArrayInitialize),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -149,6 +151,7 @@ impl HirCallArgument {
             Self::CheckedView(view) => view.span,
             Self::Copy(copy) => copy.span,
             Self::Shared(value) => value.span,
+            Self::Array(value) => value.span,
         }
     }
 }

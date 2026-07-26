@@ -93,6 +93,9 @@ impl BodyLowerer<'_> {
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
                 self.lower_optional_shared_unwrap(operand, destination);
             }
+            HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(_)) => {
+                array_lowering_gate()
+            }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
                 let source = self.lower_field_place(place);
                 self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {
@@ -310,10 +313,11 @@ impl BodyLowerer<'_> {
     }
 }
 
-const fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
+fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
     match target {
         HirSharedTarget::Obj => MirSharedTarget::Obj,
         HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
+        HirSharedTarget::Array(_) => array_lowering_gate(),
     }
 }

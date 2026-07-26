@@ -122,6 +122,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 HirDestructionStep::OptionalClassField(field) => {
                     MirDestructionStep::OptionalClassField(field)
                 }
+                HirDestructionStep::ArrayField(_) => array_lowering_gate(),
                 HirDestructionStep::Base(base) => MirDestructionStep::Base(base),
             })
             .collect(),
@@ -279,6 +280,7 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                                 operation: lower_selected_copy_operation(operation),
                             }
                         }
+                        HirSynthesizedFieldCopy::Array { .. } => array_lowering_gate(),
                     })
                     .collect(),
             })

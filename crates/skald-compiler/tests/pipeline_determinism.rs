@@ -8,7 +8,6 @@ use std::{
 
 use skald_compiler::{
     backend::{emit_assembly, Target},
-    diagnostics::render_diagnostics,
     hir::dump_hir,
     lexer::{dump_tokens, lex},
     mir::{dump_mir, lower_hir},
@@ -162,8 +161,8 @@ fn array_resolution_dump() -> String {
     let text = concat!(
         "class Item { init() {} }\n",
         "fn inspect(first: Item[][], second: Item[][], owner: shared Item[][], ",
-        "elements: (shared? Item)[]) -> Item[] { return first[1:]; }\n",
-        "fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }\n",
+        "elements: (shared? Item)[]) -> Item[][] { return first; }\n",
+        "fn main() -> i64 { var values: i64[] = i64[](4u); return 0; }\n",
     );
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("determinism.ska", text);
@@ -176,15 +175,15 @@ fn array_resolution_dump() -> String {
     let resolved = resolve(&parsed.ast);
     assert!(resolved.diagnostics.is_empty());
     let checked = type_check(&resolved.program);
-    assert!(checked.has_errors());
-    assert!(checked.hir.is_none());
+    assert!(checked.diagnostics.is_empty());
+    let hir = checked.hir.expect("typed arrays must produce HIR");
 
     format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}TYPECHECK\n{}",
+        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
         dump_tokens(source, &lexed.tokens),
         dump_ast(&parsed.ast),
         dump_resolved(&resolved.program),
-        render_diagnostics(&sources, &checked.diagnostics),
+        dump_hir(&hir),
     )
 }
 

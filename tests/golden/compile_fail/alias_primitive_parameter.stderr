@@ -1,4 +1,4 @@
-error[TYP019]: function alias parameter `value` must name a class, interface, `Obj`, or supported inline optional
+error[TYP019]: function alias parameter `value` must name a class, array, interface, `Obj`, or supported inline optional
  --> tests/golden/compile_fail/alias_primitive_parameter.ska:1:23
    |
 1 | fn inspect(ref value: i64) -> unit {}

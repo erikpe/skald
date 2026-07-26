@@ -93,6 +93,10 @@ pub enum HirSynthesizedFieldCopy<I> {
         field: FieldId,
         operation: HirSelectedCopyOperation<I>,
     },
+    Array {
+        field: FieldId,
+        array: crate::identity::ArrayTypeId,
+    },
 }
 
 impl<I> HirSynthesizedFieldCopy<I> {
@@ -103,7 +107,8 @@ impl<I> HirSynthesizedFieldCopy<I> {
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }
             | Self::OptionalShared { field, .. }
-            | Self::Class { field, .. } => *field,
+            | Self::Class { field, .. }
+            | Self::Array { field, .. } => *field,
         }
     }
 }

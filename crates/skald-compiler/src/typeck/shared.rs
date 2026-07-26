@@ -29,9 +29,7 @@ pub(super) const fn lower_shared_target(target: ResolvedSharedTarget) -> HirShar
         ResolvedSharedTarget::Obj => HirSharedTarget::Obj,
         ResolvedSharedTarget::Class(class) => HirSharedTarget::Class(class),
         ResolvedSharedTarget::Interface(interface) => HirSharedTarget::Interface(interface),
-        ResolvedSharedTarget::Array(_) => {
-            panic!("array targets are rejected by the type-checking array gate")
-        }
+        ResolvedSharedTarget::Array(array) => HirSharedTarget::Array(array),
     }
 }
 
@@ -41,21 +39,26 @@ pub(super) fn target_accepts(
     actual: HirSharedTarget,
 ) -> bool {
     match expected {
-        HirSharedTarget::Obj => true,
+        HirSharedTarget::Obj => !matches!(actual, HirSharedTarget::Array(_)),
         HirSharedTarget::Class(expected) => match actual {
             HirSharedTarget::Class(actual) => program
                 .hierarchy
                 .is_subtype(actual, expected)
                 .unwrap_or(false),
-            HirSharedTarget::Obj | HirSharedTarget::Interface(_) => false,
+            HirSharedTarget::Obj | HirSharedTarget::Interface(_) | HirSharedTarget::Array(_) => {
+                false
+            }
         },
         HirSharedTarget::Interface(expected) => match actual {
             HirSharedTarget::Class(actual) => {
                 class_provides_view(program, actual, HirViewTarget::Interface(expected))
             }
             HirSharedTarget::Interface(actual) => actual == expected,
-            HirSharedTarget::Obj => false,
+            HirSharedTarget::Obj | HirSharedTarget::Array(_) => false,
         },
+        HirSharedTarget::Array(expected) => {
+            matches!(actual, HirSharedTarget::Array(actual) if actual == expected)
+        }
     }
 }
 
@@ -132,6 +135,19 @@ impl CallableChecker<'_, '_> {
                 .check_shared_allocation(allocation)
                 .map(HirSharedProducer::Allocation)
                 .map(HirSharedSource::Produced),
+            ResolvedExpression::ArrayConstruction(construction) => {
+                let checked = self.check_array_construction(construction)?;
+                let HirExpressionKind::ArrayConstruction(construction) = checked.kind else {
+                    unreachable!("checked array construction must retain its typed node")
+                };
+                if construction.ownership != crate::hir::HirArrayOwnership::Shared {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                }
+                Some(HirSharedSource::Produced(
+                    HirSharedProducer::ArrayAllocation(construction),
+                ))
+            }
             ResolvedExpression::DirectCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => {
@@ -350,6 +366,7 @@ impl CallableChecker<'_, '_> {
                 .interface(interface)
                 .map(|interface| interface.name.clone())
                 .unwrap_or_else(|| interface.to_string()),
+            HirSharedTarget::Array(array) => format!("array {array}"),
         };
         format!("shared {name}")
     }
@@ -515,5 +532,8 @@ const fn shared_target_view(target: HirSharedTarget) -> HirViewTarget {
         HirSharedTarget::Obj => HirViewTarget::Obj,
         HirSharedTarget::Class(class) => HirViewTarget::Class(class),
         HirSharedTarget::Interface(interface) => HirViewTarget::Interface(interface),
+        HirSharedTarget::Array(_) => {
+            panic!("array pointee views are typed by the array projection checker")
+        }
     }
 }

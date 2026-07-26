@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR2 is next.
+Status: in progress; AR3 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -73,7 +73,7 @@ Use the existing test ownership:
 
 - [x] AR0 — Parse the complete array source surface
 - [x] AR1 — Establish canonical recursive array identities
-- [ ] AR2 — Type array storage, construction, and lifecycle capabilities
+- [x] AR2 — Type array storage, construction, and lifecycle capabilities
 - [ ] AR3 — Type array places, projections, assignment, slices, and aliases
 - [ ] AR4 — Establish verified target-independent array MIR
 - [ ] AR5 — Execute primitive inline construction, lifetime, and length
@@ -161,29 +161,29 @@ or names to recover array meaning.
 **Purpose:** Freeze all type-directed ownership and lifecycle choices in HIR
 before executable places and backend layout are introduced.
 
-- [ ] Extend HIR types, declarations, locals, fields, callable signatures, and
+- [x] Extend HIR types, declarations, locals, fields, callable signatures, and
       shared targets with exact canonical array identities.
-- [ ] Enforce recursive invariance and element eligibility in every internal
+- [x] Enforce recursive invariance and element eligibility in every internal
       owning position while continuing to reject all external array
       signatures and static storage.
-- [ ] Reject `unit`, bare interface/`Obj`, alias, function, and every other
+- [x] Reject `unit`, bare interface/`Obj`, alias, function, and every other
       non-owning or non-storable element category with type-checker-owned
       diagnostics.
-- [ ] Implement a terminating fixed-point lifecycle capability analysis for
+- [x] Implement a terminating fixed-point lifecycle capability analysis for
       recursive class/array graphs and exclude array edges from finite inline
       containment rejection.
-- [ ] Select empty, default-length, and explicit-copy construction with exact
+- [x] Select empty, default-length, and explicit-copy construction with exact
       element default/copy/destruction plans and `u64` length requirements.
-- [ ] Implement default capability for primitive, optional, exact-class,
+- [x] Implement default capability for primitive, optional, exact-class,
       inline-array, concrete shared-class, and exact shared-array elements;
       reject shared interface/`Obj` targets and unavailable zero-argument
       initializers.
-- [ ] Record named deep-copy versus produced-backing provenance and inline
+- [x] Record named deep-copy versus produced-backing provenance and inline
       versus shared allocation separately in HIR.
-- [ ] Diagnose length bounds known statically, unavailable construction
+- [x] Diagnose length bounds known statically, unavailable construction
       capabilities, illegal ownership combinations, and unsupported implicit
       inline/shared conversions.
-- [ ] Extend HIR dumps and keep MIR lowering behind a deliberate array gate.
+- [x] Extend HIR dumps and keep MIR lowering behind a deliberate array gate.
 
 **Tests:** Type/capability matrices; recursive class/array containment and
 fixed-point tests; constructor mode and overload-selection tests; primitive,

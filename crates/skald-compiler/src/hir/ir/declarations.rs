@@ -18,6 +18,7 @@ use super::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
+    pub array_types: super::HirArrayTypeTable,
     pub classes: HirClassDeclarationTable,
     pub interfaces: HirInterfaceDeclarationTable,
     pub virtual_families: HirVirtualFamilyTable,
@@ -278,6 +279,7 @@ pub enum HirDestructionStep {
     SharedField(FieldId),
     OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
+    ArrayField(FieldId),
     Base(ClassId),
 }
 

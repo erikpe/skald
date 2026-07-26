@@ -29,6 +29,28 @@ impl CallableChecker<'_, '_> {
         }
 
         let hir = match (target.ty, body_kind) {
+            (Type::Array(array), MemberBodyKind::OrdinaryInitializer) => self
+                .check_array_initialize(array, &assignment.value, "array field initializer")
+                .map(|value| {
+                    HirStatement::ArrayFieldInitialize(crate::hir::HirArrayFieldInitialize {
+                        place: target.place.clone(),
+                        value,
+                        span: assignment.span,
+                    })
+                }),
+            (Type::Array(_), _) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS,
+                        "array field replacement is not implemented yet",
+                    )
+                    .with_primary_label(
+                        assignment.span,
+                        "only initial array field construction is typed at this boundary",
+                    ),
+                );
+                None
+            }
             (Type::Class(class), MemberBodyKind::OrdinaryInitializer) => self
                 .check_field_initialization(target.place.clone(), class, &target.name, assignment),
             (Type::Class(class), MemberBodyKind::CopyConstructor) => self

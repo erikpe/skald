@@ -125,14 +125,7 @@ impl CallableChecker<'_, '_> {
                 None
             }
             ResolvedExpression::ArrayConstruction(construction) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        super::program::UNSUPPORTED_ARRAY_SEMANTICS,
-                        "array construction is not implemented yet",
-                    )
-                    .with_primary_label(construction.span, "array semantics are pending"),
-                );
-                None
+                self.check_array_construction(construction)
             }
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
