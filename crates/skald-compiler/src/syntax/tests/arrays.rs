@@ -176,3 +176,45 @@ fn inline_optional_array_payloads_remain_syntax_errors() {
     assert_eq!(output.ast.declarations.len(), 1);
     assert_eq!(function(&output.ast, 0).name.text, "main");
 }
+
+#[test]
+fn malformed_array_grouping_recovers_without_changing_later_declarations() {
+    for malformed in [
+        "fn broken(value: (shared Item[]) -> i64 { return 0; }",
+        "fn broken(value: shared ((Item[])[]) -> i64 { return 0; }",
+        "fn broken() -> i64 { var value: i64[] = (i64[])(2u); return 0; }",
+    ] {
+        let source = format!("{malformed}\nfn main() -> i64 {{ return 0; }}\n");
+        let (_, output) = parse_text(&source);
+
+        assert!(output.has_errors(), "{malformed} unexpectedly parsed");
+        assert!(
+            output.ast.declarations.iter().any(|declaration| matches!(
+                declaration,
+                TopLevelDeclaration::Function(function) if function.name.text == "main"
+            )),
+            "parser did not recover after {malformed}: {:?}",
+            output.diagnostics
+        );
+    }
+}
+
+#[test]
+fn deferred_array_syntax_remains_rejected() {
+    for body in [
+        "var values: i64[] = i64[](1u, 2u);",
+        "var values: i64[] = [1, 2];",
+        "var values: i64[] = i64[](4u); var part: i64[] = values[0:4:2];",
+        "var values: i64[] = i64[](1u); var same: bool = values == values;",
+        "var values: i64[] = i64[](1u); var cast: i64[] = (i64[]) values;",
+        "var values: i64[] = i64[](1u); var matches: bool = values is i64[];",
+        "var values: i64[] = i64[](1u); for (value in values) { return value; }",
+        "var values: i64[] = i64[](1u); try { return values[0]; }",
+        "static values: i64[] = i64[]();",
+        "var values: atomic i64[] = i64[]();",
+    ] {
+        let source = format!("fn main() -> i64 {{ {body} return 0; }}");
+        let (_, output) = parse_text(&source);
+        assert!(output.has_errors(), "{body} unexpectedly entered the AST");
+    }
+}

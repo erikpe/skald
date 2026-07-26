@@ -185,14 +185,15 @@ supported inline optional containers. Optionals have no truthiness and never
 implicitly convert to their payload; optional references, aliases to optional
 shared owners, and external optional signatures remain rejected.
 
-Arrays have a [frozen design with partial native execution](ARRAYS.md). The
+Arrays have an [implemented contract](ARRAYS.md). The
 built-in invariant `T[]` and `shared T[]` families distinguish deep-copying
 inline values from shared allocations, use `u64` lengths and signed
 negative-capable indices, copy slice reads, and preserve deterministic element
-lifetime. Primitive inline construction, length, indexing, mutation, named
-deep copy, produced-backing adoption, arbitrary-length replacement, class
-fields, internal value parameters/results, and cleanup execute on x86-64. No
-structural indexing or iteration protocol is implied.
+lifetime. Inline and shared-outer arrays support every documented owning
+element category, construction, length, indexing, mutation, named deep copy,
+produced-backing adoption, arbitrary-length inline replacement, copied slices,
+call-scoped aliases, class fields, internal parameters/results, and cleanup on
+x86-64. No structural indexing or iteration protocol is implied.
 
 An immutable language-facing string value remains an exploratory direction,
 but its type name, literal syntax and encoding, byte/text semantics, copying,

@@ -1,0 +1,7 @@
+fn excluded(values: i64[]?) -> unit {
+    return;
+}
+
+fn main() -> i64 {
+    return 0;
+}

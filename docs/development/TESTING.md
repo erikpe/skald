@@ -128,12 +128,23 @@ checked casts, type tests, inline copies, non-shared `*`, and unsupported
 whole-pointee assignment. Diagnostics for member selection recommend `->`;
 general object-place diagnostics recommend `*`.
 
+Array coverage is distributed by the operation owner. Syntax, resolution, and
+type-check tests cover recursive grouping, exact identity, capabilities,
+access, diagnostics, and deferred forms. MIR mutation tests break structural,
+storage, ownership, projection, slice-order, and anchor invariants one at a
+time. Backend tests own checked byte arithmetic, layout, helper labels,
+internal ABI pressure, every terminating failure family, and native lifecycle.
+Golden cases own complete successful and unsuccessful process observations.
+Because array failures promise only non-return, `.exit` sidecars use
+`failure`; tests must not depend on a particular signal or numeric status.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
-products for representative object-lifetime, polymorphism, and shared-ownership
-programs from two independent test processes. The golden runner invokes `skac`
+products for representative object-lifetime, polymorphism, shared-ownership,
+optional-value, and array programs from two independent test processes. The
+golden runner invokes `skac`
 twice for every successful assembly and every compile failure, comparing
 assembly or diagnostic bytes. It also executes every native case twice and
 compares status, stdout, and stderr before evaluating the checked-in

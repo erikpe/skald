@@ -28,7 +28,7 @@ const SHARED_TEST_NAME: &str = "shared_ownership_phase_products_are_deterministi
 const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
 const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
-const ARRAY_TEST_NAME: &str = "array_resolution_products_are_deterministic_across_processes";
+const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
 
 #[test]
 fn object_lifetime_phase_products_are_deterministic_across_processes() {
@@ -71,12 +71,12 @@ fn optional_value_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn array_resolution_products_are_deterministic_across_processes() {
+fn array_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "arrays",
         ARRAY_HELPER_OUTPUT,
         ARRAY_TEST_NAME,
-        array_resolution_dump,
+        array_phase_dump,
     );
 }
 
@@ -157,34 +157,8 @@ fn optional_phase_dump() -> String {
     ))
 }
 
-fn array_resolution_dump() -> String {
-    let text = concat!(
-        "class Item { init() {} }\n",
-        "fn inspect(first: Item[][], second: Item[][], owner: shared Item[][], ",
-        "elements: (shared? Item)[]) -> Item[][] { return first; }\n",
-        "fn main() -> i64 { var values: i64[] = i64[](4u); return 0; }\n",
-    );
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("determinism.ska", text);
-    let source = sources.get(source_id).unwrap();
-
-    let lexed = lex(source);
-    assert!(lexed.diagnostics.is_empty());
-    let parsed = parse(source, &lexed.tokens);
-    assert!(parsed.diagnostics.is_empty());
-    let resolved = resolve(&parsed.ast);
-    assert!(resolved.diagnostics.is_empty());
-    let checked = type_check(&resolved.program);
-    assert!(checked.diagnostics.is_empty());
-    let hir = checked.hir.expect("typed arrays must produce HIR");
-
-    format!(
-        "TOKENS\n{}AST\n{}RESOLVED\n{}HIR\n{}",
-        dump_tokens(source, &lexed.tokens),
-        dump_ast(&parsed.ast),
-        dump_resolved(&resolved.program),
-        dump_hir(&hir),
-    )
+fn array_phase_dump() -> String {
+    complete_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
 }
 
 fn complete_phase_dump(text: &str) -> String {

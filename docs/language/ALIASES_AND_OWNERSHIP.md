@@ -239,11 +239,10 @@ bounds a checked `value!` payload view to one complete immediate consumer
 under a dynamic presence guard. Read-only aliases may inspect and unwrap;
 mutable aliases may additionally set, clear, or replace an unguarded
 container. This does not introduce `ref?`, aliases to `shared? T`, stored
-payload aliases, or optional reference values. The frozen
-[array design](ARRAYS.md#aliases-mutation-and-backing-anchors) makes whole
-array places and exact-class or nested-array elements future call-scoped alias
-sources and requires hidden backing anchors across replacement; none of those
-forms is implemented yet. Implemented
+payload aliases, or optional reference values. The implemented
+[array contract](ARRAYS.md#aliases-mutation-and-backing-anchors) admits whole
+array places and exact-class or nested-array elements as call-scoped alias
+sources and uses hidden backing anchors across replacement. Implemented
 polymorphic alias conversions and checked casts are defined by
 [polymorphism](POLYMORPHISM.md) and
 [object casts](OBJECT_CASTS.md). Checked places exist only for one consuming

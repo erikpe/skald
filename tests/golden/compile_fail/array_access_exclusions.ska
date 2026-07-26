@@ -1,0 +1,13 @@
+fn replace(mut ref values: i64[]) -> unit {
+    values = i64[]();
+    return;
+}
+
+fn main() -> i64 {
+    var owner: shared i64[] = new i64[](1u);
+    var raw: i64 = owner[0];
+    var maybe: shared? i64[] = new i64[](1u);
+    var optional: i64 = maybe->[0];
+    var values: i64[] = i64[](1u);
+    return values[0u];
+}

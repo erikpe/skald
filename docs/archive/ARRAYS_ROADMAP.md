@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR13 is next.
+Status: complete.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -84,7 +84,7 @@ Use the existing test ownership:
 - [x] AR10 — Execute shared and optional-shared element lifecycle
 - [x] AR11 — Execute copied slices and checked slice assignment
 - [x] AR12 — Execute array aliases and detached-backing anchors
-- [ ] AR13 — Harden and publish the complete array profile
+- [x] AR13 — Harden and publish the complete array profile
 
 ## PR-sized implementation sequence
 
@@ -608,30 +608,30 @@ semantics are preserved.
 from frozen design to an implemented contract without absorbing deferred
 collection work.
 
-- [ ] Complete syntax/type/ownership/access/capability/operation diagnostic
+- [x] Complete syntax/type/ownership/access/capability/operation diagnostic
       matrices, including malformed grouping, optional-array payloads,
       interface/`Obj` defaults, raw shared access, wrong index/bound types,
       root rebinding, and whole shared-pointee assignment.
-- [ ] Add native failure coverage for every bounds, slice, count, size, and
+- [x] Add native failure coverage for every bounds, slice, count, size, and
       allocation failure; use only the contractually promised unsuccessful
       process result.
-- [ ] Extend hostile frontend, nesting-budget, malformed-MIR mutation,
+- [x] Extend hostile frontend, nesting-budget, malformed-MIR mutation,
       independent-process determinism, internal ABI pressure, and generated
       helper collision coverage.
-- [ ] Audit array modules by responsibility and keep syntax, identity,
+- [x] Audit array modules by responsibility and keep syntax, identity,
       capability, HIR, MIR, verification, and backend implementations behind
       their established facades; split cohesive owners where required.
-- [ ] Audit all non-archived documentation, update grammar/compiler/runtime/
+- [x] Audit all non-archived documentation, update grammar/compiler/runtime/
       debugging/testing guidance, and promote arrays to **implemented
       contract** only after source-to-native support is complete.
-- [ ] Prove every deferred extension remains rejected: inline optional arrays,
+- [x] Prove every deferred extension remains rejected: inline optional arrays,
       rich initialization, resize/capacity, slice views, strides, equality,
       casts/tests, structural protocols, iteration, static/external arrays,
       exceptions, concurrency, and atomic ownership.
-- [ ] Remove temporary gates, stale “future array” prose, rollout vocabulary,
+- [x] Remove temporary gates, stale “future array” prose, rollout vocabulary,
       and roadmap task codes from living code, tests, dumps, diagnostics, and
       general documentation.
-- [ ] Resolve or record lower-priority implementation discoveries in a
+- [x] Resolve or record lower-priority implementation discoveries in a
       separately indexed array discoveries document without expanding this
       roadmap's frozen scope.
 
@@ -645,6 +645,21 @@ x86-64 with deterministic diagnostics and dumps, all exclusions remain
 rejected, documentation describes current behavior without rollout language,
 the full repository gates pass from an artifact-free snapshot, and no
 high-priority array implementation discovery remains unresolved.
+
+**Completion summary:** The complete array profile is published as an
+implemented contract. Diagnostic and exclusion matrices cover malformed
+grouping, optional-array payloads, exact capability failures, explicit shared
+access, index/bound typing, alias roots, whole-pointee assignment, structural
+lookalikes, dynamic-buffer members, and deferred syntax. Native tests exercise
+bounds, slice, count, size, and allocation failures using only unsuccessful
+termination; robustness now includes array punctuation and nesting, and
+cross-process determinism reaches assembly. Phase, verifier, and backend array
+owners remain behind cohesive facades; the MIR control-effect analysis was
+renamed to reflect checked arrays as well as runtime casts. Living language,
+compiler, runtime, debugging, and testing documentation is current. Focused
+tests, `make check`, `make msrv-check`, `make robustness-long`, documentation
+validation, and an artifact-free full `make check` pass. The audit found no
+remaining actionable array implementation discovery.
 
 ## Ordering and dependencies
 

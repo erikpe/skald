@@ -315,7 +315,7 @@ impl FrameLayout {
                     ty = MirType::Class(class);
                 }
                 MirPlaceProjection::ArrayElement { .. } => {
-                    unreachable!("array MIR is rejected by target legality")
+                    unreachable!("array element addresses are selected by array lowering")
                 }
             }
         }

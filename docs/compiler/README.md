@@ -71,9 +71,9 @@ optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
-The compiler implements the frozen recursive array source surface, canonical
+The compiler implements the recursive array source surface, canonical
 exact identities, typed HIR operations, and verified target-independent MIR.
-The x86-64 target currently executes inline and shared-outer arrays containing
+The x86-64 target executes inline and shared-outer arrays containing
 primitives, optionals, exact classes, recursively nested inline arrays, and
 ordinary or optional shared owners of exact classes and arrays. Construction,
 length, checked element access, named deep copy, produced-backing adoption,
@@ -82,7 +82,7 @@ secure shared-element replacement, and deterministic element cleanup execute.
 Copied slices and checked equal-length slice assignment execute with
 negative-relative bounds and overlapping-write snapshot semantics. Call-scoped
 whole-array and exact element aliases execute with detached-backing and
-shared-owner anchors. The complete direction is owned by the
+shared-owner anchors. The implemented contract is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
 ## Pipeline

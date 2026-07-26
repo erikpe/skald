@@ -1,4 +1,4 @@
-//! Discovery of runtime-cast control-flow edges nested in HIR expressions.
+//! Discovery of block-changing control-flow effects nested in HIR expressions.
 
 use crate::hir::{
     HirCallArgument, HirCheckedObjectView, HirCheckedObjectViewKind, HirExpression,
@@ -6,49 +6,51 @@ use crate::hir::{
     HirObjectSource, HirSharedAllocationMode, HirSharedProducer, HirSharedSource, HirViewSource,
 };
 
-pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bool {
+pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> bool {
     match &expression.kind {
         HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
-            expression_contains_runtime_cast(operand)
+            expression_contains_control_effect(operand)
         }
         HirExpressionKind::Binary { left, right, .. } => {
-            expression_contains_runtime_cast(left) || expression_contains_runtime_cast(right)
+            expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
         HirExpressionKind::DirectCall { arguments, .. } => {
-            arguments.iter().any(call_argument_contains_runtime_cast)
+            arguments.iter().any(call_argument_contains_control_effect)
         }
         HirExpressionKind::MethodCall {
             receiver,
             arguments,
             ..
         } => {
-            method_receiver_contains_runtime_cast(receiver)
-                || arguments.iter().any(call_argument_contains_runtime_cast)
+            method_receiver_contains_control_effect(receiver)
+                || arguments.iter().any(call_argument_contains_control_effect)
         }
         HirExpressionKind::InterfaceCall {
             receiver,
             arguments,
             ..
         } => {
-            interface_receiver_contains_runtime_cast(receiver)
-                || arguments.iter().any(call_argument_contains_runtime_cast)
+            interface_receiver_contains_control_effect(receiver)
+                || arguments.iter().any(call_argument_contains_control_effect)
         }
         HirExpressionKind::FieldRead(place) => {
             place
                 .checked_cast
                 .as_deref()
-                .is_some_and(checked_view_contains_runtime_cast)
+                .is_some_and(checked_view_contains_control_effect)
                 || place
                     .shared_view
                     .as_deref()
-                    .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+                    .is_some_and(|view| view_source_contains_control_effect(&view.source))
                 || place
                     .optional_view
                     .as_deref()
-                    .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+                    .is_some_and(|view| view_source_contains_control_effect(&view.source))
                 || place.array_element.is_some()
         }
-        HirExpressionKind::TypeTest(test) => view_source_contains_runtime_cast(&test.source.source),
+        HirExpressionKind::TypeTest(test) => {
+            view_source_contains_control_effect(&test.source.source)
+        }
         HirExpressionKind::Binding(_)
         | HirExpressionKind::I64(_)
         | HirExpressionKind::U64(_)
@@ -58,45 +60,45 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
         | HirExpressionKind::PresenceTest { .. } => false,
         HirExpressionKind::Unwrap(_) => true,
         HirExpressionKind::ArrayConstruction(construction) => {
-            array_construction_contains_runtime_cast(construction)
+            array_construction_contains_control_effect(construction)
         }
         // Checked array access lowers through explicit MIR control-flow
-        // blocks. Treat it like a runtime cast here so earlier scalar values
-        // are spilled before a later operand changes the current block.
+        // blocks, so earlier scalar values must be spilled before a later
+        // operand changes the current block.
         HirExpressionKind::ArrayLength(_)
         | HirExpressionKind::ArrayElement(_)
         | HirExpressionKind::ArraySlice(_) => true,
     }
 }
 
-pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) -> bool {
+pub(super) fn call_argument_contains_control_effect(argument: &HirCallArgument) -> bool {
     match argument {
-        HirCallArgument::Value(expression) => expression_contains_runtime_cast(expression),
+        HirCallArgument::Value(expression) => expression_contains_control_effect(expression),
         HirCallArgument::Optional { .. } => true,
         HirCallArgument::ClassOptional(_) => true,
         HirCallArgument::OptionalShared(_) => true,
-        HirCallArgument::CheckedView(view) => checked_view_contains_runtime_cast(view),
-        HirCallArgument::View(view) => view_source_contains_runtime_cast(&view.source),
-        HirCallArgument::Copy(copy) => object_source_contains_runtime_cast(&copy.source),
+        HirCallArgument::CheckedView(view) => checked_view_contains_control_effect(view),
+        HirCallArgument::View(view) => view_source_contains_control_effect(&view.source),
+        HirCallArgument::Copy(copy) => object_source_contains_control_effect(&copy.source),
         HirCallArgument::Place(_) | HirCallArgument::OptionalPlace(_) => false,
         HirCallArgument::Shared(transfer) => match &transfer.source {
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-                shared_allocation_contains_runtime_cast(allocation)
+                shared_allocation_contains_control_effect(allocation)
             }
             HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
-                expression_contains_runtime_cast(call)
+                expression_contains_control_effect(call)
             }
             HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
                 cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
-                    || shared_source_contains_runtime_cast(&cast.source)
+                    || shared_source_contains_control_effect(&cast.source)
             }
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
             HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
-                array_construction_contains_runtime_cast(construction)
+                array_construction_contains_control_effect(construction)
             }
             HirSharedSource::Place(_) => false,
         },
-        HirCallArgument::Array(value) => array_source_contains_runtime_cast(&value.source),
+        HirCallArgument::Array(value) => array_source_contains_control_effect(&value.source),
         HirCallArgument::ArrayAlias(alias) => match &alias.source {
             crate::hir::HirArrayAliasSource::Whole(receiver) => {
                 array_receiver_contains_control_effect(receiver)
@@ -106,138 +108,142 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
     }
 }
 
-fn shared_source_contains_runtime_cast(source: &HirSharedSource) -> bool {
+fn shared_source_contains_control_effect(source: &HirSharedSource) -> bool {
     match source {
         HirSharedSource::Place(_) => false,
         HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
-            shared_allocation_contains_runtime_cast(allocation)
+            shared_allocation_contains_control_effect(allocation)
         }
         HirSharedSource::Produced(HirSharedProducer::Call(call)) => {
-            expression_contains_runtime_cast(call)
+            expression_contains_control_effect(call)
         }
         HirSharedSource::Produced(HirSharedProducer::Cast(cast)) => {
             cast.kind == crate::hir::HirSharedCastKind::RuntimeTerminate
-                || shared_source_contains_runtime_cast(&cast.source)
+                || shared_source_contains_control_effect(&cast.source)
         }
         HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(_)) => true,
         HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
-            array_construction_contains_runtime_cast(construction)
+            array_construction_contains_control_effect(construction)
         }
     }
 }
 
-fn array_construction_contains_runtime_cast(
+fn array_construction_contains_control_effect(
     construction: &crate::hir::HirArrayConstruction,
 ) -> bool {
     match &construction.mode {
         crate::hir::HirArrayConstructionMode::Empty => false,
         crate::hir::HirArrayConstructionMode::DefaultLength { length, .. } => {
-            expression_contains_runtime_cast(length)
+            expression_contains_control_effect(length)
         }
         crate::hir::HirArrayConstructionMode::Copy { source, .. } => {
-            array_source_contains_runtime_cast(source)
+            array_source_contains_control_effect(source)
         }
     }
 }
 
-fn array_source_contains_runtime_cast(source: &crate::hir::HirArraySource) -> bool {
+fn array_source_contains_control_effect(source: &crate::hir::HirArraySource) -> bool {
     array_receiver_contains_control_effect(&source.receiver)
 }
 
 fn array_receiver_contains_control_effect(receiver: &crate::hir::HirArrayReceiver) -> bool {
     match &receiver.source {
         crate::hir::HirArrayReceiverSource::Inline(expression) => {
-            expression_contains_runtime_cast(expression)
+            expression_contains_control_effect(expression)
         }
         crate::hir::HirArrayReceiverSource::Shared(source) => {
-            shared_source_contains_runtime_cast(source)
+            shared_source_contains_control_effect(source)
         }
     }
 }
 
-fn shared_allocation_contains_runtime_cast(allocation: &crate::hir::HirSharedAllocation) -> bool {
+fn shared_allocation_contains_control_effect(allocation: &crate::hir::HirSharedAllocation) -> bool {
     match &allocation.mode {
         HirSharedAllocationMode::Initialize { arguments, .. } => {
-            arguments.iter().any(call_argument_contains_runtime_cast)
+            arguments.iter().any(call_argument_contains_control_effect)
         }
-        HirSharedAllocationMode::Copy { source, .. } => object_source_contains_runtime_cast(source),
+        HirSharedAllocationMode::Copy { source, .. } => {
+            object_source_contains_control_effect(source)
+        }
     }
 }
 
-fn object_source_contains_runtime_cast(source: &HirObjectSource) -> bool {
+fn object_source_contains_control_effect(source: &HirObjectSource) -> bool {
     match source {
         HirObjectSource::Place(_) => false,
         HirObjectSource::ArrayElement(_) => false,
-        HirObjectSource::Produced(producer) => producer_contains_runtime_cast(producer),
-        HirObjectSource::Checked(view) => checked_view_contains_runtime_cast(view),
-        HirObjectSource::Slice(slice) => object_source_contains_runtime_cast(&slice.source),
+        HirObjectSource::Produced(producer) => producer_contains_control_effect(producer),
+        HirObjectSource::Checked(view) => checked_view_contains_control_effect(view),
+        HirObjectSource::Slice(slice) => object_source_contains_control_effect(&slice.source),
     }
 }
 
-fn checked_view_contains_runtime_cast(view: &HirCheckedObjectView) -> bool {
+fn checked_view_contains_control_effect(view: &HirCheckedObjectView) -> bool {
     view.kind == HirCheckedObjectViewKind::RuntimeTerminate
-        || view_source_contains_runtime_cast(&view.view.source)
+        || view_source_contains_control_effect(&view.view.source)
 }
 
-fn view_source_contains_runtime_cast(source: &HirViewSource) -> bool {
+fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
     match source {
-        HirViewSource::Produced(producer) => producer_contains_runtime_cast(producer),
+        HirViewSource::Produced(producer) => producer_contains_control_effect(producer),
         HirViewSource::Place(_)
         | HirViewSource::Forwarded { .. }
         | HirViewSource::Shared { .. } => false,
-        HirViewSource::AnchoredShared { source, .. } => shared_source_contains_runtime_cast(source),
+        HirViewSource::AnchoredShared { source, .. } => {
+            shared_source_contains_control_effect(source)
+        }
         HirViewSource::OptionalPayload { .. } => true,
     }
 }
 
-fn producer_contains_runtime_cast(producer: &HirObjectProducer) -> bool {
+fn producer_contains_control_effect(producer: &HirObjectProducer) -> bool {
     match producer {
         HirObjectProducer::Construct(construction) => match &construction.mode {
             crate::hir::HirConstructionMode::Initialize { arguments, .. } => {
-                arguments.iter().any(call_argument_contains_runtime_cast)
+                arguments.iter().any(call_argument_contains_control_effect)
             }
             crate::hir::HirConstructionMode::Copy { source, .. } => {
-                object_source_contains_runtime_cast(source)
+                object_source_contains_control_effect(source)
             }
         },
         HirObjectProducer::Call(call) => {
             let receiver_has_cast = match &call.target {
                 HirObjectCallTarget::Direct(_) => false,
                 HirObjectCallTarget::Method { receiver, .. } => {
-                    method_receiver_contains_runtime_cast(receiver)
+                    method_receiver_contains_control_effect(receiver)
                 }
                 HirObjectCallTarget::Interface { receiver, .. } => {
-                    interface_receiver_contains_runtime_cast(receiver)
+                    interface_receiver_contains_control_effect(receiver)
                 }
             };
             receiver_has_cast
                 || call
                     .arguments
                     .iter()
-                    .any(call_argument_contains_runtime_cast)
+                    .any(call_argument_contains_control_effect)
         }
     }
 }
 
-fn method_receiver_contains_runtime_cast(receiver: &crate::hir::HirMethodReceiver) -> bool {
+fn method_receiver_contains_control_effect(receiver: &crate::hir::HirMethodReceiver) -> bool {
     receiver
         .checked_cast
         .as_deref()
-        .is_some_and(checked_view_contains_runtime_cast)
+        .is_some_and(checked_view_contains_control_effect)
         || receiver
             .shared_view
             .as_deref()
-            .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+            .is_some_and(|view| view_source_contains_control_effect(&view.source))
         || receiver
             .optional_view
             .as_deref()
-            .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+            .is_some_and(|view| view_source_contains_control_effect(&view.source))
         || receiver.array_element.is_some()
 }
 
-fn interface_receiver_contains_runtime_cast(receiver: &HirInterfaceReceiver) -> bool {
+fn interface_receiver_contains_control_effect(receiver: &HirInterfaceReceiver) -> bool {
     match receiver {
-        HirInterfaceReceiver::View(view) => view_source_contains_runtime_cast(&view.source),
-        HirInterfaceReceiver::Checked(view) => checked_view_contains_runtime_cast(view),
+        HirInterfaceReceiver::View(view) => view_source_contains_control_effect(&view.source),
+        HirInterfaceReceiver::Checked(view) => checked_view_contains_control_effect(view),
     }
 }

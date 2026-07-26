@@ -535,6 +535,53 @@ fn rejects_wrong_index_bound_access_and_alias_root_rebinding() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_ARGUMENT));
+
+    let slice_view = check_text(concat!(
+        "fn read(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](1u);\n",
+        "  var length: u64 = read(values[:]);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(slice_view
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_ARGUMENT));
+
+    let structural_index = check_text(concat!(
+        "class Sequence { init() {} fn len() -> u64 { return 1u; } }\n",
+        "fn main() -> i64 {\n",
+        "  var values: Sequence = Sequence();\n",
+        "  return values[0];\n",
+        "}\n",
+    ));
+    assert!(structural_index
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_OBJECT_CONTEXT));
+
+    let raw_shared = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: shared i64[] = new i64[](1u);\n",
+        "  return values[0];\n",
+        "}\n",
+    ));
+    assert!(raw_shared
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::IMPLICIT_SHARED_DEREFERENCE));
+
+    let optional_without_unwrap = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: shared? i64[] = new i64[](1u);\n",
+        "  return values->[0];\n",
+        "}\n",
+    ));
+    assert!(optional_without_unwrap
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_SHARED_CONVERSION));
 }
 
 #[test]

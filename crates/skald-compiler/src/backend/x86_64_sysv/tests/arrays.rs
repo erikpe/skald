@@ -95,6 +95,18 @@ fn primitive_inline_array_helpers_are_deterministic_and_layout_specialized() {
     assert!(first.contains("call ska_rt_alloc"));
     assert!(first.contains("call ska_rt_free"));
     assert!(!first.contains("ska_rt_array"));
+
+    let mut labels = std::collections::HashSet::new();
+    for label in first
+        .lines()
+        .filter_map(|line| line.trim().strip_suffix(':'))
+        .filter(|label| label.starts_with(".Lska_array_"))
+    {
+        assert!(
+            labels.insert(label),
+            "generated array helper label `{label}` collided"
+        );
+    }
 }
 
 #[test]
@@ -163,6 +175,54 @@ fn dynamic_length_overflow_terminates_before_allocation() {
     ));
 
     assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
+fn array_owner_count_overflow_terminates_natively() {
+    for (source, failure_label) in [
+        (
+            concat!(
+                "fn main() -> i64 {\n",
+                "  var first: shared i64[] = new i64[](1u);\n",
+                "  var second: shared i64[] = first;\n",
+                "  return second->[0];\n",
+                "}\n",
+            ),
+            "ownership_retain_invalid",
+        ),
+        (
+            concat!(
+                "class Item { value: i64; init() { self.value = 0; } }\n",
+                "fn observe(ref item: Item) -> i64 { return item.value; }\n",
+                "fn main() -> i64 {\n",
+                "  var items: Item[] = Item[](1u);\n",
+                "  return observe(items[0]);\n",
+                "}\n",
+            ),
+            "anchor_retain_failure",
+        ),
+    ] {
+        let mut output = assembly(source);
+        let mut failures = output.match_indices(failure_label).map(|(index, _)| index);
+        let first_failure = failures
+            .next()
+            .expect("the checked retain must expose its failure edge");
+        let failure = failures.next().unwrap_or(first_failure);
+        let count_load = "    mov rcx, qword ptr [rax]\n";
+        let load = output[..failure]
+            .rfind(count_load)
+            .expect("the checked retain must load its owner count");
+        output.replace_range(
+            load..load + count_load.len(),
+            "    mov rcx, 0xffffffffffffffff\n",
+        );
+        output.push_str(native_allocator());
+
+        assert!(
+            !run_native_assembly(&output).success(),
+            "{failure_label} unexpectedly returned normally"
+        );
+    }
 }
 
 #[test]

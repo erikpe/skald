@@ -1,13 +1,12 @@
 # Arrays
 
-Status: **frozen design; inline arrays and shared outer arrays execute across
-internal owning boundaries on x86-64**. This
-document is authoritative for the proposed source-visible array contract. The
+Status: **implemented contract on x86-64**. This document is authoritative for
+the source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
 by the compiler. Array forms receive canonical recursive identities during
 resolution and exact lifecycle, place, slice, alias, and transfer plans in HIR
-and verified MIR. The current native profile executes empty or dynamically
+and verified MIR. The x86-64 target executes empty or dynamically
 sized inline and shared-outer arrays of primitives, optionals, exact classes,
 and recursively nested inline arrays. It includes immutable `len()`, checked
 positive and negative-relative element access, named deep copy, explicit
@@ -84,13 +83,13 @@ Legal element types are:
 
 `unit`, bare interface and `Obj` views, aliases, and function types are not
 array element types. Inline optional arrays are deliberately not part of the
-initial design: no source form makes an array type itself an inline optional
+contract: no source form makes an array type itself an inline optional
 payload. This does not prevent `shared? T[]`, whose absence belongs to the
 shared owner rather than to an inline optional array payload.
 
 ## Construction and default initialization
 
-The frozen construction forms are:
+The implemented construction forms are:
 
 ```ska
 T[]()
@@ -184,7 +183,7 @@ copy. The source must designate an exact `T[]` array place or value; array
 copying has no inheritance or dynamic-check relation.
 
 No fill-value, per-index generator, array literal, or multi-dimensional shape
-constructor is frozen. Nonempty construction in the initial profile therefore
+constructor is implemented. Nonempty construction therefore
 requires a default-initializable element type or an exact copy source.
 
 ## Inline array value semantics
@@ -581,7 +580,7 @@ array ownership combinations are compile-time errors.
 
 ## Deferred extensions
 
-The following are intentionally outside the frozen initial array profile:
+The following are intentionally outside the implemented array profile:
 
 - inline optional array payloads and their eventual source spelling;
 - fill-value, per-index generator, array literal, and rectangular-shape
@@ -599,6 +598,6 @@ The following are intentionally outside the frozen initial array profile:
   and
 - concurrency, atomic shared counts, or synchronization guarantees.
 
-These exclusions do not weaken the frozen value, ownership, indexing, slicing,
-lifetime, and failure rules above. Their syntax and semantics require focused
-design before implementation.
+These exclusions do not weaken the implemented value, ownership, indexing,
+slicing, lifetime, and failure rules above. Their syntax and semantics require
+focused design before implementation.

@@ -1,0 +1,5 @@
+fn main() -> i64 {
+    var owner: shared i64[] = new i64[](1u);
+    *owner = i64[](2u);
+    return 0;
+}

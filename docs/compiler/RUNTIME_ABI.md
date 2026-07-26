@@ -157,13 +157,13 @@ public ABI for:
 Future language designs may require some of these responsibilities, but they
 do not exist merely because a runtime library is present.
 
-The partially executable
+The implemented
 [array compiler contract](ARRAYS.md#internal-abi-and-runtime-boundary) requires
 generated code to keep array length, element lifecycle, indexing, slicing,
 backing anchors, shared counts, and finalization compiler-owned while reusing
 the existing checked byte allocation and deallocation symbols. It therefore
-adds no public C symbol or ABI-version change. Primitive inline local
-construction and cleanup now exercise this boundary directly: nonempty arrays
+adds no public C symbol or ABI-version change. Array construction and cleanup
+exercise this boundary directly: nonempty inline arrays
 use `ska_rt_alloc` and `ska_rt_free`, while empty arrays call neither. The
 runtime remains unaware of descriptors, headers, lengths, element types, and
 generated helper identities.

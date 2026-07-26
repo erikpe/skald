@@ -1,18 +1,16 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; inline arrays and shared outer arrays execute across
-internal owning boundaries on x86-64**.
-This document is
-authoritative for the proposed compiler representation, lowering,
+Status: **implemented contract on x86-64**.
+This document is authoritative for the compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
-[array language contract](../language/ARRAYS.md). The compiler now lowers all
+[array language contract](../language/ARRAYS.md). The compiler lowers all
 typed array operations through verified, layout-independent MIR. The x86-64
 backend executes primitive, optional, exact-class, and recursively nested
 inline and shared-outer construction, access, lifecycle, deep copy,
 produced-backing adoption, replacement, class fields, shared/optional-shared
 owner boundaries, internal value boundaries, ordinary or optional shared-owner
-element lifecycle, copied slices, and checked equal-length slice assignment.
-It structurally rejects later array operations at its legality boundary.
+element lifecycle, copied slices, checked equal-length slice assignment, and
+call-scoped whole-array and exact-element aliases.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -122,7 +120,7 @@ and select no target initializer or allocation.
 
 ## Syntax and resolution
 
-The planned lexer adds `[` and `]` punctuation without changing the meaning of
+The lexer recognizes `[` and `]` punctuation without changing the meaning of
 existing tokens. Syntax retains:
 
 - postfix array type suffixes and grouping;
@@ -206,8 +204,8 @@ slice reads carry their element copy plan, and destinations carry distinct
 whole-replacement, element-write, or equal-length slice-write plans. Receiver,
 bound, and source evaluation order, terminating failure reasons, access, and
 the required inline/shared/optional anchor category are all explicit. Every
-typed operation crosses the verified MIR boundary; target legality decides
-whether the current native execution profile supports it.
+typed operation crosses the verified MIR boundary before x86-64 instruction
+selection.
 
 ## MIR storage and operations
 
@@ -392,7 +390,7 @@ or bulk operations. Class, nested-array, shared-owner, and optional elements
 require exact typed operations; no erased runtime element-kind switch may
 replace those semantics.
 
-On the initial x86-64 target, both an ordinary shared-owner element and an
+On x86-64, both an ordinary shared-owner element and an
 optional shared-owner element occupy one eight-byte slot. The optional form
 uses zero for absence and needs no separate tag. A present slot points to its
 independently allocated pointee; that pointee's header and payload are not part
@@ -402,7 +400,7 @@ Default non-optional shared construction additionally performs one pointee
 allocation per element, while default optional shared construction performs
 none.
 
-### Initial x86-64 inline layout
+### x86-64 inline layout
 
 An executable inline descriptor is one aligned eight-byte backing pointer.
 Zero is the complete allocation-free empty representation and implies length
@@ -550,7 +548,7 @@ The compiler and generated code own array headers, length, checked index
 normalization, element operations, backing anchors, strong counts, slice
 loops, finalizers, and cleanup. The C runtime must not learn array type
 identities, element kinds, reference scanning, lifecycle callbacks, bounds,
-or slice semantics. The frozen design therefore requires no new public C
+or slice semantics. The implemented design therefore requires no new public C
 symbol or runtime ABI version change. An implementation that later needs a
 new public symbol must revise this contract and the versioned runtime boundary
 before relying on it.
@@ -565,7 +563,7 @@ unwrap, invalid alias rebinding, and unsupported whole shared-pointee
 assignment. A non-defaultable shared element diagnostic must distinguish a
 concrete class without an applicable zero-argument initializer from an
 interface or `Obj` target with no exact allocation class. Runtime failures
-remain reason-distinct in MIR even when the initial native target uses the
+remain reason-distinct in MIR even when the x86-64 target uses the
 same unsuccessful process boundary.
 
 Deterministic syntax, resolved, HIR, and MIR dumps must expose recursive array
@@ -599,14 +597,12 @@ Focused implementation tests must cover:
 - deterministic diagnostics and phase dumps; and
 - source-to-native success, compile-failure, and runtime-failure goldens.
 
-## Deferred implementation choices and extensions
+## Private implementation choices and deferred extensions
 
-The frozen contract intentionally leaves these non-semantic implementation
-choices to the eventual roadmap and implementation:
+The implemented contract leaves these non-semantic implementation choices
+private:
 
-- exact descriptor/header field order, widths beyond required value ranges,
-  padding, and whether header and data share one allocation;
-- generated helper naming, granularity, visibility, and inlining thresholds;
+- generated helper granularity, visibility, and inlining thresholds;
 - which trivial operations use loops, `memcpy`, or `memmove`;
 - exact diagnostic codes and dump field spelling; and
 - optimization of empty arrays, bounds checks, copies, and slice temporaries.
@@ -616,4 +612,4 @@ The compiler design also excludes the language extensions listed in
 array payloads, richer element initialization, slice views, resizing,
 iteration protocols, external ABI, recoverable failures, and concurrency.
 Those require explicit language and compiler contract revisions rather than
-being inferred from the initial representation.
+being inferred from the current representation.

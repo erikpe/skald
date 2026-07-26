@@ -76,6 +76,17 @@ anchor. A produced allocation may appear as an `exact` shared origin and fold
 the target selection to a static binding even when an intervening shared view
 has a broader static target.
 
+For arrays, first distinguish the source-visible owner from its selected
+backing. HIR records inline versus shared ownership, exact `ArrayTypeId`,
+named-copy versus produced-adoption provenance, checked bounds, and anchor
+kind. MIR then makes allocation, initialized prefixes, publication, loops,
+projection checks, replacement, slice checks, and release explicit. A whole
+inline alias follows the descriptor and observes replacement; an element or
+nested-array alias follows a hidden backing anchor and keeps the old backing
+live. Shared array access should show a stable, copied, adopted, or secured
+owner anchor before the checked projection. MIR contains no header offsets or
+strides; those first appear in x86-64 layout and instruction selection.
+
 MIR verification runs at three boundaries:
 
 1. immediately after HIR lowering in debug builds;

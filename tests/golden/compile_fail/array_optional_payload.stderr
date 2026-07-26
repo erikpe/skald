@@ -1,0 +1,5 @@
+error[PAR010]: inline optional array payloads are not supported
+ --> tests/golden/compile_fail/array_optional_payload.ska:1:26
+   |
+1 | fn excluded(values: i64[]?) -> unit {
+   |                          ^ use `shared? T[]` for an optional shared array owner

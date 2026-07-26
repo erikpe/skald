@@ -144,7 +144,8 @@ checked element access with signed negative-relative indices, named deep copy,
 produced-backing adoption, arbitrary-length replacement, class fields,
 internal owning calls/results, exact shared defaults, secure shared-element
 replacement, and deterministic element cleanup. Its legality pass
-structurally rejects slices and array aliases before instruction selection.
+accepts the complete verified array operation profile before instruction
+selection.
 
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,

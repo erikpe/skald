@@ -30,6 +30,7 @@ fn arbitrary_bytes_and_utf8_never_panic_in_the_frontend() {
     exercise_generated_utf8(cases);
     exercise_class_header_mutations();
     exercise_optional_syntax_mutations();
+    exercise_array_syntax_mutations();
 }
 
 fn exercise_class_header_mutations() {
@@ -63,6 +64,22 @@ fn exercise_optional_syntax_mutations() {
     }
 }
 
+fn exercise_array_syntax_mutations() {
+    const SEED: &str =
+        "fn main() -> i64 { var values: (shared? i64[])[] = (shared? i64[])[](2u); return values[0:1].len(); }";
+
+    for index in 0..SEED.len() {
+        let mut deletion = SEED.to_owned();
+        deletion.remove(index);
+        assert_frontend_does_not_panic(&format!("array-delete-{index}"), &deletion);
+    }
+    for index in 0..=SEED.len() {
+        let mut insertion = SEED.to_owned();
+        insertion.insert(index, if index % 2 == 0 { '[' } else { ']' });
+        assert_frontend_does_not_panic(&format!("array-insert-{index}"), &insertion);
+    }
+}
+
 #[test]
 fn hostile_inputs_terminate_at_the_existing_syntax_resource_limit() {
     let excessive_groups = format!(
@@ -75,10 +92,15 @@ fn hostile_inputs_terminate_at_the_existing_syntax_resource_limit() {
         "{".repeat(MAX_SYNTAX_NESTING + 32),
         "}".repeat(MAX_SYNTAX_NESTING + 32),
     );
+    let excessive_array_type = format!(
+        "fn main() -> i64 {{ var values: i64{} = i64[](); return 0; }}",
+        "[]".repeat(MAX_SYNTAX_NESTING + 32),
+    );
 
     for (name, text) in [
         ("excessive-groups", excessive_groups),
         ("excessive-blocks", excessive_blocks),
+        ("excessive-array-type", excessive_array_type),
         (
             "retained-malformed-source",
             include_str!("../../../tests/compiler/robustness/frontend/malformed.ska").to_owned(),

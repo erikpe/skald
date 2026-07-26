@@ -342,7 +342,7 @@ impl BodyLowerer<'_> {
         for (index, argument) in arguments.iter().enumerate() {
             let later_branch = arguments[index + 1..]
                 .iter()
-                .any(super::control_effect::call_argument_contains_runtime_cast);
+                .any(super::control_effect::call_argument_contains_control_effect);
             let argument = match argument {
                 HirCallArgument::Value(expression) => {
                     let value = self

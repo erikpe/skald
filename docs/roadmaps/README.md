@@ -6,14 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Arrays implementation](ARRAYS_ROADMAP.md) — **in progress**; implement the
-  frozen inline/shared array contract through verified MIR and x86-64 native
-  execution. Final hardening and publication are next; array aliases,
-  detached-backing anchors, copied slices, checked slice assignment, shared
-  and optional-shared outer arrays, and element ownership already execute. The
-  completed lifecycle, shared-ownership, explicit-dereference, and
-  optional-value profiles are prerequisites; the optional-verifier
-  maintainability discovery is related but not blocking.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

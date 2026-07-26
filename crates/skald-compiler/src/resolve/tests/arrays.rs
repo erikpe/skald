@@ -215,3 +215,21 @@ fn resolved_array_projection_crosses_into_typed_hir() {
         .expect("valid array projection must produce HIR");
     assert!(crate::hir::dump_hir(&hir).contains("ArrayElementPlace : i64"));
 }
+
+#[test]
+fn dynamic_buffer_members_are_not_array_intrinsics() {
+    let output = resolve_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](1u);\n",
+        "  values.resize(2u);\n",
+        "  var capacity: u64 = values.capacity();\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+
+    assert!(output.has_errors());
+    assert!(output
+        .diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.code == INVALID_MEMBER_SELECTION));
+}

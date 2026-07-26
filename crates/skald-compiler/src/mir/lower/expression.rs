@@ -137,7 +137,7 @@ impl BodyLowerer<'_> {
         let left = self
             .lower_expression(left)
             .expect("typed binary operand must produce a value");
-        let spilled_left = super::control_effect::expression_contains_runtime_cast(right)
+        let spilled_left = super::control_effect::expression_contains_control_effect(right)
             .then(|| self.spill_scalar(left, lower_type(left_ty(operation)), expression.span));
         let right = self
             .lower_expression(right)
