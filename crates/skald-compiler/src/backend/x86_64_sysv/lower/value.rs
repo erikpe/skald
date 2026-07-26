@@ -38,6 +38,12 @@ impl InstructionSelector<'_, '_> {
         &mut self,
         place: &MirPlace,
     ) -> Result<(FramePlace, Operand), BackendError> {
+        if matches!(
+            place.projections.last(),
+            Some(crate::mir::MirPlaceProjection::ArrayElement { .. })
+        ) {
+            return self.select_array_element_place(place);
+        }
         let layout = self
             .frame
             .place(self.program, self.function, self.data_layout, place)?;
@@ -185,9 +191,17 @@ pub(super) fn float_memory(base: Register, displacement: i32) -> FloatOperand {
 pub(super) fn float_operand(operand: Operand) -> FloatOperand {
     match operand {
         Operand::Memory { base, displacement } => float_memory(base, displacement),
-        Operand::IndexedMemory { .. } => {
-            unreachable!("indexed floating places use dedicated array helpers")
-        }
+        Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => FloatOperand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        },
         Operand::Register(_) => unreachable!("floating values use XMM registers"),
     }
 }

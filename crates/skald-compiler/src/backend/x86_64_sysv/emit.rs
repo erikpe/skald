@@ -163,6 +163,7 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::Jump(label) => write!(output, "jmp {}", label.name()).unwrap(),
         Instruction::JumpIfNotZero(label) => write!(output, "jne {}", label.name()).unwrap(),
         Instruction::JumpIfEqual(label) => write!(output, "je {}", label.name()).unwrap(),
+        Instruction::JumpIfNotSign(label) => write!(output, "jns {}", label.name()).unwrap(),
         Instruction::JumpIfBelow(label) => write!(output, "jb {}", label.name()).unwrap(),
         Instruction::JumpIfAbove(label) => write!(output, "ja {}", label.name()).unwrap(),
         Instruction::Trap => output.push_str("ud2"),
@@ -192,6 +193,12 @@ fn display_float_operand(operand: FloatOperand) -> String {
         FloatOperand::Memory { base, displacement } => {
             display_memory(base, displacement, Some(MemorySize::Qword))
         }
+        FloatOperand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => display_indexed_memory(base, index, scale, displacement, Some(MemorySize::Qword)),
     }
 }
 

@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR6 is next.
+Status: in progress; AR7 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -77,7 +77,7 @@ Use the existing test ownership:
 - [x] AR3 — Type array places, projections, assignment, slices, and aliases
 - [x] AR4 — Establish verified target-independent array MIR
 - [x] AR5 — Execute primitive inline construction, lifetime, and length
-- [ ] AR6 — Execute checked primitive indexing and mutation
+- [x] AR6 — Execute checked primitive indexing and mutation
 - [ ] AR7 — Carry inline array values across owning boundaries
 - [ ] AR8 — Execute nontrivial and nested inline element lifecycle
 - [ ] AR9 — Execute shared and optional-shared outer arrays
@@ -327,17 +327,17 @@ driver, public API, and golden coverage passes together with `make check` and
 **Purpose:** Make fixed-size primitive backing useful while proving the signed
 normalization and checked-place model independently of copying and calls.
 
-- [ ] Lower `array[index]` reads and writes through one evaluated receiver and
+- [x] Lower `array[index]` reads and writes through one evaluated receiver and
       one evaluated exact-`i64` index.
-- [ ] Implement one-time negative-relative-to-end normalization without
+- [x] Implement one-time negative-relative-to-end normalization without
       negating or overflowing the minimum `i64`.
-- [ ] Check normalized indices before address calculation and emit one
+- [x] Check normalized indices before address calculation and emit one
       unrecoverable failure edge for out-of-range access.
-- [ ] Execute exact primitive load/store with verified access and alignment;
+- [x] Execute exact primitive load/store with verified access and alignment;
       reject mutation through read-only roots.
-- [ ] Preserve zero-length, `-1`, `-length`, `length`, and minimum-`i64`
+- [x] Preserve zero-length, `-1`, `-length`, `length`, and minimum-`i64`
       behavior exactly across all primitive element types.
-- [ ] Extend backend legality, dumps, diagnostics, and native failure
+- [x] Extend backend legality, dumps, diagnostics, and native failure
       observation for checked primitive element places.
 
 **Tests:** Focused normalization and address tests; every positive/negative
@@ -348,6 +348,18 @@ single-evaluation fixtures; native get/set and bounds-failure goldens;
 **Exit criteria:** Every primitive element access is normalized and checked
 before memory access, mutable stores update only the selected slot, and invalid
 indices cannot reach address calculation or return normally.
+
+**Completion summary:** Primitive inline local element reads and mutation now
+execute through the verified normalized-position projection. The x86-64
+selector evaluates each local descriptor and exact-`i64` index once, translates
+negative indices without negation, uses an internal invalid-position sentinel
+for the reason-specific failure branch, and forms the stride-specialized
+address only in the successful block. Exact integer, byte, boolean, and
+floating loads and stores preserve adjacent elements. Focused assembly and
+native boundary tests, positive/negative/minimum/empty failure goldens, the
+complete compiler and runtime suites, `make check`, and `make msrv-check`
+pass. Non-local array ownership and detachable backing aliases remain behind
+their later execution gates.
 
 ### AR7 — Carry inline array values across owning boundaries
 

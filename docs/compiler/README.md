@@ -71,12 +71,12 @@ optional-container aliases execute through typed HIR and verified MIR. This
 includes bounded checked class payload views, dynamic presence guards,
 zero-niche optional owners, and exact virtual/interface signatures.
 
-The parser and resolver implement the frozen recursive array source surface and
-canonical exact array identities. The remaining HIR/MIR operation, backing
-ownership, produced adoption, element lifecycle, anchor, verification,
-target-layout, and minimal-runtime direction is owned by the
-[array compiler and runtime contract](ARRAYS.md). Resolved array programs stop
-at one structured type-checking boundary until typed array operations land.
+The compiler implements the frozen recursive array source surface, canonical
+exact identities, typed HIR operations, and verified target-independent MIR.
+The x86-64 target currently executes primitive inline local construction,
+length, checked element reads and mutation, and cleanup; later ownership and
+element profiles remain structured target-legality errors. The complete
+direction is owned by the [array compiler and runtime contract](ARRAYS.md).
 
 ## Pipeline
 

@@ -4,8 +4,9 @@ use crate::{
     backend::{BackendError, Target},
     mir::{
         MirArrayAnchorKind, MirArrayDefaultElement, MirArrayFailure, MirArrayInstruction,
-        MirArrayOwnership, MirDefinitionRef, MirInstruction, MirPlace, MirPlaceBase, MirProgram,
-        MirRvalueKind, MirStorageKind, MirTerminationReason, MirTerminator, MirType,
+        MirArrayOwnership, MirArrayPositionKind, MirDefinitionRef, MirInstruction, MirPlace,
+        MirPlaceBase, MirPlaceProjection, MirProgram, MirRvalueKind, MirStorageKind,
+        MirTerminationReason, MirTerminator, MirType,
     },
 };
 
@@ -72,7 +73,9 @@ fn check_definition(
                 MirStorageKind::Local
                     | MirStorageKind::ArrayBacking
                     | MirStorageKind::ArrayProduced
-                    | MirStorageKind::ArrayAnchor(MirArrayAnchorKind::InlineOwner)
+                    | MirStorageKind::ArrayAnchor(
+                        MirArrayAnchorKind::InlineOwner | MirArrayAnchorKind::InlineBacking
+                    )
             );
             if !supported {
                 return Err(error(
@@ -97,10 +100,17 @@ fn check_instruction(
     instruction: &MirInstruction,
 ) -> Result<(), BackendError> {
     match instruction {
-        MirInstruction::Assign(assignment) => {
-            if let MirRvalueKind::ArrayLength { source, .. } = &assignment.rvalue.kind {
+        MirInstruction::Assign(assignment) => match &assignment.rvalue.kind {
+            MirRvalueKind::ArrayLength { source, .. } => {
                 require_local_array_place(definition, source)?;
             }
+            MirRvalueKind::Load(source) if has_array_element_projection(source) => {
+                require_local_primitive_element_place(definition, source)?;
+            }
+            _ => {}
+        },
+        MirInstruction::Store(store) if has_array_element_projection(&store.destination) => {
+            require_local_primitive_element_place(definition, &store.destination)?;
         }
         MirInstruction::Array(array) => match array {
             MirArrayInstruction::Allocate {
@@ -121,12 +131,19 @@ fn check_instruction(
             }
             MirArrayInstruction::AnchorBegin {
                 owner,
-                kind: MirArrayAnchorKind::InlineOwner,
+                kind: MirArrayAnchorKind::InlineOwner | MirArrayAnchorKind::InlineBacking,
                 ..
             } => {
                 require_local_array_place(definition, owner)?;
             }
             MirArrayInstruction::AnchorEnd { .. } => {}
+            MirArrayInstruction::Normalize {
+                owner,
+                kind: MirArrayPositionKind::Element,
+                ..
+            } => {
+                require_local_array_place(definition, owner)?;
+            }
             _ => {
                 return Err(error(
                     Some(definition.callable()),
@@ -148,17 +165,22 @@ fn check_terminator(
             failure: MirArrayFailure::AllocationSize,
             ..
         }
+        | MirTerminator::ArrayPositionCheck {
+            kind: MirArrayPositionKind::Element,
+            ..
+        }
         | MirTerminator::ArrayLoop { .. }
         | MirTerminator::Terminate {
-            reason: MirTerminationReason::ArrayAllocationFailure,
+            reason:
+                MirTerminationReason::ArrayAllocationFailure
+                | MirTerminationReason::ArrayIndexOutOfBounds,
             ..
         } => true,
         MirTerminator::ArrayOperationCheck { .. }
         | MirTerminator::ArrayPositionCheck { .. }
         | MirTerminator::Terminate {
             reason:
-                MirTerminationReason::ArrayIndexOutOfBounds
-                | MirTerminationReason::ArrayInvalidSliceBounds
+                MirTerminationReason::ArrayInvalidSliceBounds
                 | MirTerminationReason::ArraySliceLengthMismatch,
             ..
         } => false,
@@ -172,6 +194,30 @@ fn check_terminator(
             "verified array control flow is outside the primitive inline-array execution profile",
         ))
     }
+}
+
+fn require_local_primitive_element_place(
+    definition: MirDefinitionRef<'_>,
+    place: &MirPlace,
+) -> Result<(), BackendError> {
+    let [MirPlaceProjection::ArrayElement { .. }] = place.projections.as_slice() else {
+        return Err(error(
+            Some(definition.callable()),
+            "only direct primitive array element places are executable on x86-64",
+        ));
+    };
+    let owner = MirPlace {
+        base: place.base,
+        projections: Vec::new(),
+    };
+    require_local_array_place(definition, &owner)
+}
+
+fn has_array_element_projection(place: &MirPlace) -> bool {
+    place
+        .projections
+        .iter()
+        .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
 }
 
 fn require_local_array_place(

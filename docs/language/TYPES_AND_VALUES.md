@@ -155,9 +155,12 @@ environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
-No equality, ordering, logical, division, remainder, bitwise, shift,
-exponentiation, indexing, or slicing operator is implemented. In particular,
-even primitive equality is currently unavailable in source.
+No equality, ordering, logical, division, remainder, bitwise, shift, or
+exponentiation operator is implemented. In particular, even primitive equality
+is currently unavailable in source. Built-in array indexing and slicing are
+intrinsic operations rather than general operators; primitive inline local
+element reads and mutation currently execute on x86-64, while slices and later
+array ownership profiles remain target-legality errors.
 
 ## Conversions and future value families
 
@@ -178,12 +181,13 @@ supported inline optional containers. Optionals have no truthiness and never
 implicitly convert to their payload; optional references, aliases to optional
 shared owners, and external optional signatures remain rejected.
 
-Arrays have a [frozen but unimplemented design](ARRAYS.md). The built-in
-invariant `T[]` and `shared T[]` families distinguish deep-copying inline
-values from shared allocations, use `u64` lengths and signed negative-capable
-indices, copy slice reads, and preserve deterministic element lifetime. The
-implemented grammar still accepts no bracket form, and no structural indexing
-or iteration protocol is implied.
+Arrays have a [frozen design with partial native execution](ARRAYS.md). The
+built-in invariant `T[]` and `shared T[]` families distinguish deep-copying
+inline values from shared allocations, use `u64` lengths and signed
+negative-capable indices, copy slice reads, and preserve deterministic element
+lifetime. Primitive inline local construction, length, indexing, mutation, and
+cleanup execute on x86-64. No structural indexing or iteration protocol is
+implied.
 
 An immutable language-facing string value remains an exploratory direction,
 but its type name, literal syntax and encoding, byte/text semantics, copying,

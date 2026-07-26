@@ -1,0 +1,29 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+fn main() -> i64 {
+    var signed: i64[] = i64[](3u);
+    var unsigned: u64[] = u64[](3u);
+    var bytes: u8[] = u8[](3u);
+    var floats: f64[] = f64[](3u);
+    var flags: bool[] = bool[](3u);
+
+    signed[0] = 10;
+    signed[-1] = -20;
+    unsigned[-2] = 30u;
+    bytes[1] = 40u8;
+    floats[-3] = 1.5;
+    flags[-1] = true;
+
+    ska_rt_println_i64(signed[-3]);
+    ska_rt_println_i64(signed[1]);
+    ska_rt_println_i64(signed[2]);
+    ska_rt_println_u64(unsigned[1]);
+    ska_rt_println_u8(bytes[-2]);
+    ska_rt_println_f64_bits(floats[0]);
+    ska_rt_println_bool(flags[2]);
+    return 0;
+}

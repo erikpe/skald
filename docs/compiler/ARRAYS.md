@@ -1,7 +1,7 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; primitive inline construction, lifetime, and length
-execute on x86-64**.
+Status: **frozen design; primitive inline local construction, lifetime, length,
+and checked element access execute on x86-64**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
@@ -409,6 +409,15 @@ Normal cleanup ends the descriptor's owner account and calls `ska_rt_free`
 exactly when the final account ends; the zero descriptor performs no runtime
 call. The count and header length retain the state required by future detached
 backing anchors without making empty arrays allocate.
+
+Primitive local element access evaluates the descriptor and exact-`i64` index
+once. A negative index adds the `u64` length once using wrapping machine
+arithmetic; the following unsigned comparison rejects both an excessive
+negative magnitude, including `i64::MIN`, and every position at or beyond the
+length. Only the successful control-flow edge may form
+`backing + element_offset + normalized_index * stride`. Loads and stores use
+the exact primitive width and alignment. The checked-position MIR and its
+reason-specific terminating edge remain layout-independent.
 
 ## MIR verification
 

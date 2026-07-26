@@ -93,29 +93,111 @@ fn dynamic_length_overflow_terminates_before_allocation() {
 }
 
 #[test]
-fn indexing_and_nonlocal_array_ownership_remain_structured_backend_errors() {
-    for source in [
-        concat!(
-            "fn main() -> i64 {\n",
-            "  var values: i64[] = i64[](1u);\n",
-            "  return values[0];\n",
-            "}\n",
-        ),
-        concat!(
-            "fn make() -> i64[] { return i64[](1u); }\n",
-            "fn main() -> i64 { return 0; }\n",
-        ),
-    ] {
-        let program = lower_text(source);
-        let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-        assert!(
-            error.to_string().contains("not yet supported")
-                || error
-                    .to_string()
-                    .contains("outside the primitive inline-array"),
-            "{error}"
+fn primitive_element_access_uses_checked_specialized_addressing() {
+    let source = concat!(
+        "extern fn index_once() -> i64;\n",
+        "fn main() -> i64 {\n",
+        "  var wide: i64[] = i64[](2u);\n",
+        "  var bytes: u8[] = u8[](2u);\n",
+        "  var flags: bool[] = bool[](2u);\n",
+        "  var floats: f64[] = f64[](2u);\n",
+        "  wide[index_once()] = 7;\n",
+        "  bytes[0] = 8u8;\n",
+        "  flags[-1] = true;\n",
+        "  floats[0] = 1.5;\n",
+        "  var observed: f64 = floats[0];\n",
+        "  return wide[-1];\n",
+        "}\n",
+    );
+    let output = assembly(source);
+
+    assert_eq!(output.matches("call index_once").count(), 1);
+    assert!(output.contains("jns "));
+    assert!(output.contains("mov r11, 0xffffffffffffffff"));
+    assert!(output.contains("mov qword ptr [r11 + rcx*8 + 16], rax"));
+    assert!(output.contains("mov byte ptr [r11 + rcx*1 + 16], al"));
+    assert!(output.contains("movsd qword ptr [r11 + rcx*8 + 16], xmm14"));
+    assert!(output.contains("movsd xmm14, qword ptr [r11 + rcx*8 + 16]"));
+}
+
+#[test]
+fn positive_and_negative_element_boundaries_execute_natively() {
+    for (index, expected) in [("-3", 12), ("0", 12), ("-1", 14), ("2", 14)] {
+        let source = format!(
+            concat!(
+                "fn main() -> i64 {{\n",
+                "  var values: i64[] = i64[](3u);\n",
+                "  values[-3] = 11;\n",
+                "  values[0] = 12;\n",
+                "  values[-1] = 13;\n",
+                "  values[2] = 14;\n",
+                "  return values[{index}];\n",
+                "}}\n",
+            ),
+            index = index,
+        );
+        let mut output = assembly(&source);
+        output.push_str(native_allocator());
+        assert_eq!(
+            run_native_assembly(&output).code(),
+            Some(expected),
+            "index {index} selected the wrong element"
         );
     }
+}
+
+#[test]
+fn invalid_element_boundaries_terminate_before_addressing() {
+    for (length, index) in [
+        ("0u", "0"),
+        ("0u", "-1"),
+        ("3u", "-4"),
+        ("3u", "3"),
+        ("3u", "-9223372036854775808"),
+    ] {
+        let source = format!(
+            concat!(
+                "fn main() -> i64 {{\n",
+                "  var values: i64[] = i64[]({length});\n",
+                "  return values[{index}];\n",
+                "}}\n",
+            ),
+            length = length,
+            index = index,
+        );
+        let mut output = assembly(&source);
+        output.push_str(native_allocator());
+        assert!(
+            !run_native_assembly(&output).success(),
+            "i64[{length}][{index}] unexpectedly succeeded"
+        );
+    }
+}
+
+#[test]
+fn nonlocal_array_ownership_remains_a_structured_backend_error() {
+    let program = lower_text(concat!(
+        "fn make() -> i64[] { return i64[](1u); }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert!(error.to_string().contains("not yet supported"), "{error}");
+}
+
+fn native_allocator() -> &'static str {
+    concat!(
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
 }
 
 fn array_runtime_probe(length: u64, byte_elements: bool) -> String {

@@ -93,10 +93,12 @@ transferring ownership or scheduling callee cleanup.
 
 Verified primitive inline-array locals are executable for `i64`, `u64`, `u8`,
 `f64`, and `bool` elements. The target accepts empty/default-length
-construction, immutable length, normal cleanup, and inline-owner anchors.
-Array indexing, non-local ownership, copying, replacement, nontrivial
-elements, shared outer arrays, slices, and backing aliases remain structured
-legality errors.
+construction, immutable length, checked positive and one-time
+negative-relative indexing, exact primitive loads/stores, normal cleanup, and
+the local anchors required by those operations. Invalid indices branch to the
+verified terminating failure edge before indexed address selection. Non-local
+ownership, copying, replacement, nontrivial elements, shared outer arrays,
+slices, and detachable backing aliases remain structured legality errors.
 
 ## Data layout
 

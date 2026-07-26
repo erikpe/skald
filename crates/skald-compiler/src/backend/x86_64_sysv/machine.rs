@@ -94,7 +94,16 @@ pub(super) enum Operand {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FloatOperand {
     Register(XmmRegister),
-    Memory { base: Register, displacement: i32 },
+    Memory {
+        base: Register,
+        displacement: i32,
+    },
+    IndexedMemory {
+        base: Register,
+        index: Register,
+        scale: u8,
+        displacement: i32,
+    },
 }
 
 impl From<XmmRegister> for FloatOperand {
@@ -203,6 +212,7 @@ pub(super) enum Instruction {
     Jump(Label),
     JumpIfNotZero(Label),
     JumpIfEqual(Label),
+    JumpIfNotSign(Label),
     JumpIfBelow(Label),
     JumpIfAbove(Label),
     Trap,

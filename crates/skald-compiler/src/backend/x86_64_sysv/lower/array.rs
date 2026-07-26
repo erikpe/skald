@@ -3,15 +3,16 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirArrayFailure, MirArrayInstruction, MirPlace, MirTerminationReason, MirTerminator,
-        MirType,
+        MirArrayFailure, MirArrayInstruction, MirArrayPositionKind, MirPlace, MirPlaceProjection,
+        MirTerminationReason, MirTerminator, MirType,
     },
 };
 
 use super::{
     super::{
+        frame::FramePlace,
         layout::{ARRAY_LENGTH_OFFSET, ARRAY_OWNER_COUNT_OFFSET},
-        machine::{Instruction, Label, Register},
+        machine::{Instruction, Label, Operand, Register},
         symbol,
     },
     block_label, value, InstructionSelector,
@@ -113,6 +114,13 @@ impl InstructionSelector<'_, '_> {
                 self.clear_storage(*anchor);
                 Ok(())
             }
+            MirArrayInstruction::Normalize {
+                destination,
+                owner,
+                index,
+                kind: MirArrayPositionKind::Element,
+                ..
+            } => self.select_array_element_normalize(*destination, owner, *index),
             _ => Err(self
                 .array_error("array instruction escaped the primitive inline legality boundary")),
         }
@@ -184,8 +192,32 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::Jump(block_label(*complete_target)));
                 Ok(true)
             }
+            MirTerminator::ArrayPositionCheck {
+                position,
+                kind: MirArrayPositionKind::Element,
+                success_target,
+                failure_target,
+                ..
+            } => {
+                value::load_rax(value::frame_storage(self.frame, *position), self.output);
+                self.output.push(Instruction::MoveImmediate64 {
+                    bits: u64::MAX,
+                    destination: Register::R11,
+                });
+                self.output.push(Instruction::Compare {
+                    source: Register::R11,
+                    destination: Register::Rax,
+                });
+                self.output
+                    .push(Instruction::JumpIfNotZero(block_label(*success_target)));
+                self.output
+                    .push(Instruction::Jump(block_label(*failure_target)));
+                Ok(true)
+            }
             MirTerminator::Terminate {
-                reason: MirTerminationReason::ArrayAllocationFailure,
+                reason:
+                    MirTerminationReason::ArrayAllocationFailure
+                    | MirTerminationReason::ArrayIndexOutOfBounds,
                 ..
             } => {
                 self.output.push(Instruction::Trap);
@@ -282,6 +314,103 @@ impl InstructionSelector<'_, '_> {
             destination: Register::R11,
         });
         self.output.push(Instruction::Label(complete));
+        Ok(())
+    }
+
+    pub(super) fn select_array_element_place(
+        &mut self,
+        place: &MirPlace,
+    ) -> Result<(FramePlace, Operand), BackendError> {
+        let [MirPlaceProjection::ArrayElement {
+            array,
+            normalized_index,
+        }] = place.projections.as_slice()
+        else {
+            return Err(self
+                .array_error("primitive array element place has unsupported nested projections"));
+        };
+        let declaration = self
+            .program
+            .array_type(*array)
+            .ok_or_else(|| self.array_error(format!("array {array} is not declared")))?;
+        let layout = self
+            .data_layout
+            .array(*array)
+            .ok_or_else(|| self.array_error(format!("array {array} has no target layout")))?;
+        let scale = u8::try_from(layout.stride())
+            .map_err(|_| self.array_error(format!("array {array} stride cannot be encoded")))?;
+        let displacement = i32::try_from(layout.element_offset())
+            .map_err(|_| self.array_error(format!("array {array} offset cannot be encoded")))?;
+
+        value::load_rax(
+            value::frame_storage(self.frame, place.base.storage()),
+            self.output,
+        );
+        self.output.push(Instruction::Move {
+            source: Register::Rax.into(),
+            destination: Register::R11.into(),
+        });
+        self.output.push(Instruction::Move {
+            source: value::frame_storage(self.frame, *normalized_index),
+            destination: Register::Rcx.into(),
+        });
+        Ok((
+            FramePlace::array_element(declaration.element),
+            value::indexed_memory(Register::R11, Register::Rcx, scale, displacement),
+        ))
+    }
+
+    fn select_array_element_normalize(
+        &mut self,
+        destination: crate::mir::StorageId,
+        owner: &MirPlace,
+        index: crate::mir::ValueId,
+    ) -> Result<(), BackendError> {
+        let (_, owner) = self.frame_place(owner)?;
+        let empty = self.next_array_label("normalize_empty");
+        let length_ready = self.next_array_label("normalize_length_ready");
+        let valid = self.next_array_label("normalize_valid");
+        let complete = self.next_array_label("normalize_complete");
+
+        value::load_rax(owner, self.output);
+        self.output.push(Instruction::Test(Register::Rax));
+        self.output.push(Instruction::JumpIfEqual(empty.clone()));
+        self.output.push(Instruction::Move {
+            source: value::memory(Register::Rax, ARRAY_LENGTH_OFFSET),
+            destination: Register::Rdx.into(),
+        });
+        self.output.push(Instruction::Jump(length_ready.clone()));
+        self.output.push(Instruction::Label(empty));
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: 0,
+            destination: Register::Rdx,
+        });
+
+        self.output.push(Instruction::Label(length_ready));
+        value::load_rax(value::frame_value(self.frame, index), self.output);
+        self.output.push(Instruction::Test(Register::Rax));
+        let compare = self.next_array_label("normalize_compare");
+        self.output
+            .push(Instruction::JumpIfNotSign(compare.clone()));
+        self.output.push(Instruction::Add {
+            source: Register::Rdx,
+            destination: Register::Rax,
+        });
+
+        self.output.push(Instruction::Label(compare));
+        self.output.push(Instruction::Compare {
+            source: Register::Rdx,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::JumpIfBelow(valid.clone()));
+        self.output.push(Instruction::MoveImmediate64 {
+            bits: u64::MAX,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::Jump(complete.clone()));
+        self.output.push(Instruction::Label(valid));
+        self.output.push(Instruction::Label(complete));
+        value::store_rax(value::frame_storage(self.frame, destination), self.output);
         Ok(())
     }
 

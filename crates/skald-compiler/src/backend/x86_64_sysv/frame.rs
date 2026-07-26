@@ -48,6 +48,15 @@ impl FramePlaceBase {
 }
 
 impl FramePlace {
+    pub(super) const fn array_element(ty: MirType) -> Self {
+        Self {
+            base: FramePlaceBase::Direct,
+            displacement: 0,
+            ty,
+            byte_access: matches!(ty, MirType::U8 | MirType::Bool),
+        }
+    }
+
     pub(super) const fn displacement(self) -> i32 {
         self.displacement
     }
