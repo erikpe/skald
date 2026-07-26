@@ -344,3 +344,143 @@ fn array_hir_dump_is_exact_and_identity_based() {
         )
     );
 }
+
+#[test]
+fn types_length_indices_slices_and_distinct_assignment_kinds() {
+    let output = check_text(concat!(
+        "fn length_after_updates() -> u64 {\n",
+        "  var a: i64[] = i64[](10u);\n",
+        "  var b: i64[] = i64[](20u);\n",
+        "  a[-1] = 7;\n",
+        "  b[5:15] = a;\n",
+        "  b[10:15] = a[2:7];\n",
+        "  a = b;\n",
+        "  return a.len();\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("ArrayLength : u64"));
+    assert!(dump.contains("normalization=SignedFromEndOnce"));
+    assert!(dump.contains("failure=SliceLengthMismatchTerminate"));
+    assert!(dump.contains("CopiedArraySlice : array a0"));
+    assert!(dump.contains("ArrayReplacement DestinationThenSourceThenReplace"));
+}
+
+#[test]
+fn types_shared_and_optional_shared_projection_with_owner_anchors() {
+    let output = check_text(concat!(
+        "fn shared_length() -> u64 {\n",
+        "  var owner: shared i64[] = new i64[](4u);\n",
+        "  var maybe: shared? i64[] = new i64[](4u);\n",
+        "  owner->[-1] = 3;\n",
+        "  maybe!->[0] = owner->[0];\n",
+        "  return maybe!->len();\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("anchor=StableSharedOwner"));
+    assert!(dump.contains("anchor=SecuredOptionalSharedOwner"));
+    assert!(dump.contains("ExplicitSharedPointee"));
+}
+
+#[test]
+fn array_aliases_propagate_access_and_admit_exact_elements() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn read(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn clear(mut ref values: i64[]) -> unit { values[:] = i64[](); return; }\n",
+        "fn touch(mut ref item: Item) -> unit { item.value = 1; return; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](2u);\n",
+        "  var items: Item[] = Item[](1u);\n",
+        "  touch(items[0]);\n",
+        "  clear(values);\n",
+        "  var length: u64 = read(values);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("ArrayAliasArgument : class c0 access=Mutable"));
+    assert!(dump.contains("ArrayAliasArgument : array a0 access=Mutable"));
+    assert!(dump.contains("ArrayAliasArgument : array a0 access=ReadOnly"));
+    assert!(dump.contains("anchor=InlineBacking"));
+}
+
+#[test]
+fn rejects_wrong_index_bound_access_and_alias_root_rebinding() {
+    let wrong_index = check_text("fn main() -> i64 { var a: i64[] = i64[](1u); return a[0u]; }");
+    assert!(wrong_index
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let wrong_bound = check_text(
+        "fn main() -> i64 { var a: i64[] = i64[](1u); var b: i64[] = a[0u:]; return 0; }",
+    );
+    assert!(wrong_bound
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == TYPE_MISMATCH));
+
+    let read_only = check_text(concat!(
+        "fn mutate(ref values: i64[]) -> unit { values[0] = 1; return; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(read_only
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::READ_ONLY_RECEIVER));
+
+    let rebind = check_text(concat!(
+        "fn replace(mut ref values: i64[]) -> unit { values = i64[](); return; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(rebind
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::typeck::INVALID_ALIAS_ARGUMENT));
+}
+
+#[test]
+fn types_nested_shared_edges_and_optional_element_lifecycle() {
+    let output = check_text(concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  fn read() -> i64 { return self.value; }\n",
+        "}\n",
+        "fn inspect() -> i64 {\n",
+        "  var nested: i64[][] = i64[][](2u);\n",
+        "  nested[0] = i64[](3u);\n",
+        "  var owners: (shared i64[])[] = (shared i64[])[](2u);\n",
+        "  owners[0]->[-1] = 4;\n",
+        "  var maybe_owners: (shared? i64[])[] = (shared? i64[])[](2u);\n",
+        "  maybe_owners[0] = new i64[](1u);\n",
+        "  maybe_owners[0]!->[0] = owners[0]->[0];\n",
+        "  var optional_items: Item?[] = Item?[](1u);\n",
+        "  optional_items[0] = Item();\n",
+        "  var items: Item[] = Item[](1u);\n",
+        "  items[0].value = 7;\n",
+        "  var read_back: i64 = items[0].value;\n",
+        "  var called: i64 = items[0].read();\n",
+        "  return nested[0][0];\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let dump = dump_hir(&output.hir.unwrap());
+    assert!(dump.contains("Assignment array a0"));
+    assert!(dump.contains("SharedArrayElement"));
+    assert!(dump.contains("OptionalSharedArrayElementPlace"));
+    assert!(dump.contains("construct-via"));
+    assert!(dump.contains("assign-via"));
+}

@@ -131,6 +131,22 @@ impl CallableChecker<'_, '_> {
                     span: checked.span,
                 }))
             }
+            ResolvedExpression::ArrayProjection(_) => {
+                let checked = self.check_expression(expression)?;
+                let Type::Shared(target) = checked.ty else {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = checked.kind else {
+                    self.report_non_shared_source(expression, cast_source);
+                    return None;
+                };
+                Some(HirSharedSource::Place(HirSharedPlace::ArrayElement {
+                    place,
+                    target,
+                    span: checked.span,
+                }))
+            }
             ResolvedExpression::Allocation(allocation) => self
                 .check_shared_allocation(allocation)
                 .map(HirSharedProducer::Allocation)

@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::BodyLowerer;
+use super::{array_lowering_gate, BodyLowerer};
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_class_optional_initialize(
@@ -193,6 +193,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
+            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
         }
     }
 
@@ -333,6 +334,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
+            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
         }
     }
 
@@ -421,6 +423,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
+            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
         }
     }
 

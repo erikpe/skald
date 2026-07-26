@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR3 is next.
+Status: in progress; AR4 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -74,7 +74,7 @@ Use the existing test ownership:
 - [x] AR0 — Parse the complete array source surface
 - [x] AR1 — Establish canonical recursive array identities
 - [x] AR2 — Type array storage, construction, and lifecycle capabilities
-- [ ] AR3 — Type array places, projections, assignment, slices, and aliases
+- [x] AR3 — Type array places, projections, assignment, slices, and aliases
 - [ ] AR4 — Establish verified target-independent array MIR
 - [ ] AR5 — Execute primitive inline construction, lifetime, and length
 - [ ] AR6 — Execute checked primitive indexing and mutation
@@ -201,28 +201,28 @@ backend phase needs to select semantic operations.
 **Purpose:** Complete the source-visible array operation model in typed HIR so
 lowering can consume checked operations rather than bracket syntax.
 
-- [ ] Add intrinsic immutable `len()`, element places, copied slice results,
+- [x] Add intrinsic immutable `len()`, element places, copied slice results,
       slice destinations, and whole-array assignment without desugaring to
       structural method names.
-- [ ] Require exact `i64` element indices and supplied slice bounds, preserve
+- [x] Require exact `i64` element indices and supplied slice bounds, preserve
       omitted bounds, and classify every runtime normalization or failure
       operation explicitly.
-- [ ] Normalize `->member` and `->[...]` to one evaluated shared owner plus one
+- [x] Normalize `->member` and `->[...]` to one evaluated shared owner plus one
       checked array-pointee projection, reusing explicit `*owner` provenance.
-- [ ] Require optional shared array unwrap before projection and retain the
+- [x] Require optional shared array unwrap before projection and retain the
       secured ordinary owner through the complete immediate operation.
-- [ ] Select primitive store, class copy assignment, nested whole-array
+- [x] Select primitive store, class copy assignment, nested whole-array
       assignment, and secure shared-owner replacement for element writes.
-- [ ] Type whole replacement independently from equal-length slice assignment;
+- [x] Type whole replacement independently from equal-length slice assignment;
       whole inline assignment may change length, while shared whole-pointee
       assignment is rejected.
-- [ ] Type copied half-open slices, omitted and negative bounds, exact
+- [x] Type copied half-open slices, omitted and negative bounds, exact
       equal-length slice assignment, and right-side slice temporary
       materialization.
-- [ ] Admit `ref T[]`, `mut ref T[]`, and exact-class or nested-array element
+- [x] Admit `ref T[]`, `mut ref T[]`, and exact-class or nested-array element
       alias sources with access propagation, while rejecting alias-root
       rebinding and optional reference types.
-- [ ] Record receiver/bound/right-side evaluation order, access, source
+- [x] Record receiver/bound/right-side evaluation order, access, source
       provenance, and required inline/shared/optional anchor category in HIR
       dumps.
 
@@ -235,6 +235,14 @@ whole-versus-slice assignment; HIR dump determinism; `make check`;
 **Exit criteria:** Every frozen array expression and destination is one fully
 typed HIR operation with exact access, lifecycle, failure, evaluation, and
 anchor requirements, and all deferred collection behavior remains rejected.
+
+**Completion summary:** Typed HIR now represents intrinsic length, checked
+indices and slices, whole/element/slice destinations, class and nested element
+places, shared and optional-shared pointee projections, lifecycle-selected
+writes, aliases, evaluation order, runtime failure reasons, provenance, and
+anchor categories explicitly. Focused array matrices, the complete compiler
+suite, `make check`, and `make msrv-check` pass; array-bearing programs still
+stop at the deliberate HIR-to-MIR boundary owned by the next task.
 
 ### AR4 — Establish verified target-independent array MIR
 

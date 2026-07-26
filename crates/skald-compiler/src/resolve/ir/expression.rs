@@ -25,6 +25,7 @@ pub enum ResolvedExpression {
     ObjectCast(ResolvedObjectCastExpr),
     Allocation(ResolvedAllocationExpr),
     ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
+    ArrayLength(Box<ResolvedArrayLengthExpr>),
     DirectCall(ResolvedDirectCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
@@ -50,6 +51,7 @@ impl ResolvedExpression {
             Self::ObjectCast(expression) => expression.span,
             Self::Allocation(expression) => expression.span,
             Self::ArrayConstruction(expression) => expression.span,
+            Self::ArrayLength(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
@@ -59,6 +61,21 @@ impl ResolvedExpression {
             Self::Construct(expression) => expression.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedArrayLengthExpr {
+    pub receiver: Box<ResolvedExpression>,
+    pub operator: ResolvedArrayLengthOperator,
+    pub member_span: Span,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedArrayLengthOperator {
+    Ordinary { dot_span: Span },
+    Shared { arrow_span: Span },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

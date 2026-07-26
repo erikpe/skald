@@ -169,6 +169,15 @@ object member access does. Lower phases see one checked array-pointee place
 with stable or anchored owner provenance; they do not implement a second arrow
 indexing pipeline.
 
+The typed frontend materializes these operations directly. Supplied indices
+and bounds are checked as exact `i64`, omitted bounds remain absent in HIR,
+slice reads carry their element copy plan, and destinations carry distinct
+whole-replacement, element-write, or equal-length slice-write plans. Receiver,
+bound, and source evaluation order, terminating failure reasons, access, and
+the required inline/shared/optional anchor category are all explicit. Until
+the verified array MIR vocabulary exists, every program containing an array
+type still stops at the deliberate HIR-to-MIR boundary.
+
 ## MIR storage and operations
 
 MIR remains target-independent and must not contain target byte offsets or a

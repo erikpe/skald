@@ -59,6 +59,9 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
         HirExpressionKind::ArrayConstruction(construction) => {
             array_construction_contains_runtime_cast(construction)
         }
+        HirExpressionKind::ArrayLength(_)
+        | HirExpressionKind::ArrayElement(_)
+        | HirExpressionKind::ArraySlice(_) => false,
     }
 }
 
@@ -90,6 +93,7 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
             HirSharedSource::Place(_) => false,
         },
         HirCallArgument::Array(value) => expression_contains_runtime_cast(&value.source.expression),
+        HirCallArgument::ArrayAlias(_) => false,
     }
 }
 
@@ -139,6 +143,7 @@ fn shared_allocation_contains_runtime_cast(allocation: &crate::hir::HirSharedAll
 fn object_source_contains_runtime_cast(source: &HirObjectSource) -> bool {
     match source {
         HirObjectSource::Place(_) => false,
+        HirObjectSource::ArrayElement(_) => false,
         HirObjectSource::Produced(producer) => producer_contains_runtime_cast(producer),
         HirObjectSource::Checked(view) => checked_view_contains_runtime_cast(view),
         HirObjectSource::Slice(slice) => object_source_contains_runtime_cast(&slice.source),

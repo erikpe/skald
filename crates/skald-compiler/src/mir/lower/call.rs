@@ -396,7 +396,7 @@ impl BodyLowerer<'_> {
                     self.lower_shared_transfer(storage, transfer);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
-                HirCallArgument::Array(_) => array_lowering_gate(),
+                HirCallArgument::Array(_) | HirCallArgument::ArrayAlias(_) => array_lowering_gate(),
             };
             lowered.push(argument);
         }
@@ -486,6 +486,9 @@ impl BodyLowerer<'_> {
         &mut self,
         receiver: &HirMethodReceiver,
     ) -> MirMethodReceiver {
+        if receiver.array_element.is_some() {
+            array_lowering_gate();
+        }
         if let Some(cast) = &receiver.checked_cast {
             let view = self.lower_checked_object_view(cast);
             return MirMethodReceiver {

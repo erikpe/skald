@@ -41,6 +41,9 @@ impl CallableResolver<'_, '_> {
     }
 
     pub(super) fn resolve_call(&mut self, call: &syntax::CallExpr) -> Option<ResolvedExpression> {
+        if let Some(length) = self.resolve_array_length_call(call) {
+            return length;
+        }
         let copy_mode = matches!(call.arguments, syntax::CallArguments::Copy { .. });
         let target = self.resolve_call_target(&call.callee, copy_mode)?;
         if let syntax::CallArguments::Copy { copy_span, source } = &call.arguments {
@@ -132,6 +135,158 @@ impl CallableResolver<'_, '_> {
                 span: call.span,
             }),
         })
+    }
+
+    fn resolve_array_length_call(
+        &mut self,
+        call: &syntax::CallExpr,
+    ) -> Option<Option<ResolvedExpression>> {
+        let syntax::Expression::MemberAccess(member) = &*call.callee else {
+            return None;
+        };
+        if member.member.text != "len" {
+            return None;
+        }
+        let receiver = self.resolve_expression(&member.receiver)?;
+        let receiver_type = self.resolved_expression_type(&receiver);
+        let operator = match (member.operator, receiver_type) {
+            (syntax::MemberAccessOperator::Dot { span }, Some(ResolvedTypeKind::Array(_))) => {
+                ResolvedArrayLengthOperator::Ordinary { dot_span: span }
+            }
+            (
+                syntax::MemberAccessOperator::Arrow { span },
+                Some(ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(_))),
+            ) => ResolvedArrayLengthOperator::Shared { arrow_span: span },
+            _ => return None,
+        };
+        let syntax::CallArguments::Ordinary(syntax_arguments) = &call.arguments else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    INVALID_CONSTRUCTION_TARGET,
+                    "array `len()` does not support `copy` arguments",
+                )
+                .with_primary_label(call.span, "call `len()` without arguments"),
+            );
+            return Some(None);
+        };
+        let mut arguments = Vec::with_capacity(syntax_arguments.len());
+        for argument in syntax_arguments {
+            arguments.push(self.resolve_expression(argument)?);
+        }
+        Some(Some(ResolvedExpression::ArrayLength(Box::new(
+            ResolvedArrayLengthExpr {
+                receiver: Box::new(receiver),
+                operator,
+                member_span: member.member.span,
+                arguments,
+                span: call.span,
+            },
+        ))))
+    }
+
+    pub(super) fn resolved_expression_type(
+        &self,
+        expression: &ResolvedExpression,
+    ) -> Option<ResolvedTypeKind> {
+        match expression {
+            ResolvedExpression::Binding(binding) => self
+                .scopes
+                .iter()
+                .rev()
+                .flat_map(|scope| scope.values())
+                .find(|symbol| symbol.id == binding.binding)
+                .map(|symbol| symbol.ty),
+            ResolvedExpression::Dereference(dereference) => Some(match dereference.target {
+                ResolvedSharedTarget::Obj => ResolvedTypeKind::Obj,
+                ResolvedSharedTarget::Class(class) => ResolvedTypeKind::Class(class),
+                ResolvedSharedTarget::Interface(interface) => {
+                    ResolvedTypeKind::Interface(interface)
+                }
+                ResolvedSharedTarget::Array(array) => ResolvedTypeKind::Array(array),
+            }),
+            ResolvedExpression::Unwrap(unwrap) => {
+                match self.resolved_expression_type(&unwrap.source)? {
+                    ResolvedTypeKind::Optional { payload, .. } => Some(match payload {
+                        ResolvedOptionalPayload::I64 => ResolvedTypeKind::I64,
+                        ResolvedOptionalPayload::U64 => ResolvedTypeKind::U64,
+                        ResolvedOptionalPayload::U8 => ResolvedTypeKind::U8,
+                        ResolvedOptionalPayload::F64 => ResolvedTypeKind::F64,
+                        ResolvedOptionalPayload::Bool => ResolvedTypeKind::Bool,
+                        ResolvedOptionalPayload::Class(class) => ResolvedTypeKind::Class(class),
+                    }),
+                    ResolvedTypeKind::OptionalShared { target, .. } => {
+                        Some(ResolvedTypeKind::Shared(target))
+                    }
+                    _ => None,
+                }
+            }
+            ResolvedExpression::Grouped(grouped) => {
+                self.resolved_expression_type(&grouped.expression)
+            }
+            ResolvedExpression::ArrayConstruction(construction) => {
+                let ResolvedTypeKind::Array(array) = construction.array_type.kind else {
+                    return None;
+                };
+                Some(if construction.new_span.is_some() {
+                    ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array))
+                } else {
+                    ResolvedTypeKind::Array(array)
+                })
+            }
+            ResolvedExpression::ArrayProjection(projection) => {
+                let receiver = self.resolved_expression_type(&projection.receiver)?;
+                let array = match (projection.operator, receiver) {
+                    (
+                        ResolvedArrayProjectionOperator::Ordinary { .. },
+                        ResolvedTypeKind::Array(array),
+                    )
+                    | (
+                        ResolvedArrayProjectionOperator::Shared { .. },
+                        ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array)),
+                    ) => array,
+                    _ => return None,
+                };
+                match projection.bounds {
+                    ResolvedArrayProjectionBounds::Index(_) => {
+                        self.array_types.get(array).map(|entry| entry.element.kind)
+                    }
+                    ResolvedArrayProjectionBounds::Slice { .. } => {
+                        Some(ResolvedTypeKind::Array(array))
+                    }
+                }
+            }
+            ResolvedExpression::ArrayLength(_) => Some(ResolvedTypeKind::U64),
+            ResolvedExpression::FieldAccess(access) => self
+                .environment
+                .classes
+                .get(access.field.class())
+                .and_then(|class| class.field(access.field))
+                .map(|field| field.type_syntax.kind),
+            ResolvedExpression::DirectCall(call) => self
+                .environment
+                .functions
+                .get(call.function)
+                .map(|declaration| declaration.return_type.kind),
+            ResolvedExpression::MethodCall(call) => self
+                .environment
+                .classes
+                .get(call.method.class())
+                .and_then(|class| class.method(call.method))
+                .map(|method| method.return_type.kind),
+            ResolvedExpression::InterfaceCall(call) => self
+                .environment
+                .interfaces
+                .get(call.interface)
+                .and_then(|interface| interface.requirements.get(call.requirement.index()))
+                .map(|requirement| requirement.return_type.kind),
+            ResolvedExpression::Allocation(allocation) => Some(ResolvedTypeKind::Shared(
+                ResolvedSharedTarget::Class(allocation.class),
+            )),
+            ResolvedExpression::Construct(construction) => {
+                Some(ResolvedTypeKind::Class(construction.class))
+            }
+            _ => None,
+        }
     }
 
     fn resolve_call_target(

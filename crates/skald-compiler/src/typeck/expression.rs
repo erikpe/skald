@@ -127,18 +127,12 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::ArrayConstruction(construction) => {
                 self.check_array_construction(construction)
             }
+            ResolvedExpression::ArrayLength(length) => self.check_array_length(length),
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),
             ResolvedExpression::ArrayProjection(projection) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        super::program::UNSUPPORTED_ARRAY_SEMANTICS,
-                        "array projection is not implemented yet",
-                    )
-                    .with_primary_label(projection.span, "array semantics are pending"),
-                );
-                None
+                self.check_array_projection(projection)
             }
             ResolvedExpression::MethodCall(call) => self.check_method_call(call),
             ResolvedExpression::InterfaceCall(call) => self.check_interface_call(call),

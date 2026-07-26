@@ -675,6 +675,45 @@ impl HirDumper {
                     dumper.array_initialize(&statement.value);
                 });
             }
+            HirStatement::ArrayAssignment(statement) => {
+                self.line(
+                    &format!("ArrayReplacement {:?}", statement.evaluation),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.array_place(&statement.destination);
+                    dumper.array_initialize(&statement.value);
+                });
+            }
+            HirStatement::ArrayElementAssignment(statement) => {
+                self.line(
+                    &format!(
+                        "ArrayElementAssignment {} {:?}",
+                        array_assignment_name(statement.operation),
+                        statement.evaluation
+                    ),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.array_element(&statement.destination);
+                    dumper.array_element_value(&statement.value);
+                });
+            }
+            HirStatement::ArraySliceAssignment(statement) => {
+                self.line(
+                    &format!(
+                        "ArraySliceAssignment {} failure={:?} {:?}",
+                        array_assignment_name(statement.operation),
+                        statement.failure,
+                        statement.evaluation
+                    ),
+                    statement.span,
+                );
+                self.indented(|dumper| {
+                    dumper.array_slice(&statement.destination);
+                    dumper.array_source(&statement.source);
+                });
+            }
         }
     }
 
@@ -843,6 +882,134 @@ impl HirDumper {
                 self.typed_line("ArrayConstruction", expression);
                 self.indented(|dumper| dumper.array_construction(construction));
             }
+            HirExpressionKind::ArrayLength(length) => {
+                self.typed_line("ArrayLength", expression);
+                self.indented(|dumper| dumper.array_receiver(&length.receiver));
+            }
+            HirExpressionKind::ArrayElement(place) => {
+                self.typed_line("ArrayElement", expression);
+                self.indented(|dumper| dumper.array_element(place));
+            }
+            HirExpressionKind::ArraySlice(slice) => {
+                self.typed_line("CopiedArraySlice", expression);
+                self.indented(|dumper| dumper.array_slice(slice));
+            }
+        }
+    }
+
+    fn array_receiver(&mut self, receiver: &crate::hir::HirArrayReceiver) {
+        self.line(
+            &format!(
+                "ArrayReceiver {} {:?} access={:?} anchor={:?}",
+                receiver.array, receiver.ownership, receiver.access, receiver.anchor
+            ),
+            receiver.span,
+        );
+        self.indented(|dumper| match &receiver.source {
+            crate::hir::HirArrayReceiverSource::Inline(expression) => dumper.expression(expression),
+            crate::hir::HirArrayReceiverSource::Shared(source) => dumper.shared_source(source),
+        });
+    }
+
+    fn array_element(&mut self, place: &crate::hir::HirArrayElementPlace) {
+        self.line(
+            &format!(
+                "ArrayElementPlace : {} {:?}",
+                place.element.name(),
+                place.evaluation
+            ),
+            place.span,
+        );
+        self.indented(|dumper| {
+            dumper.array_receiver(&place.receiver);
+            dumper.line(
+                &format!(
+                    "Index normalization={:?} failure={:?}",
+                    place.index.normalization, place.index.failure
+                ),
+                place.index.span,
+            );
+            dumper.indented(|dumper| dumper.expression(&place.index.value));
+        });
+    }
+
+    fn array_slice(&mut self, slice: &crate::hir::HirArraySlice) {
+        self.line(
+            &format!(
+                "ArraySlice {} copy={} normalization={:?} failure={:?} {:?}",
+                slice.array,
+                slice
+                    .element_copy
+                    .map(array_copy_name)
+                    .unwrap_or_else(|| "destination-only".to_owned()),
+                slice.bounds.normalization,
+                slice.bounds.failure,
+                slice.evaluation
+            ),
+            slice.span,
+        );
+        self.indented(|dumper| {
+            dumper.array_receiver(&slice.receiver);
+            if let Some(start) = &slice.bounds.start {
+                dumper.heading("Start");
+                dumper.indented(|dumper| dumper.expression(start));
+            } else {
+                dumper.raw_line("Start omitted");
+            }
+            if let Some(end) = &slice.bounds.end {
+                dumper.heading("End");
+                dumper.indented(|dumper| dumper.expression(end));
+            } else {
+                dumper.raw_line("End omitted");
+            }
+        });
+    }
+
+    fn array_place(&mut self, place: &crate::hir::HirArrayPlace) {
+        match place {
+            crate::hir::HirArrayPlace::Binding {
+                binding,
+                array,
+                access,
+                span,
+            } => self.line(
+                &format!("ArrayPlace binding {binding} {array} access={access:?}"),
+                *span,
+            ),
+            crate::hir::HirArrayPlace::Field {
+                place,
+                array,
+                access,
+                span,
+            } => {
+                self.line(
+                    &format!("ArrayPlace field {array} access={access:?}"),
+                    *span,
+                );
+                self.indented(|dumper| dumper.field_place(place));
+            }
+            crate::hir::HirArrayPlace::Element(place) => self.array_element(place),
+        }
+    }
+
+    fn array_element_value(&mut self, value: &crate::hir::HirArrayElementValue) {
+        match value {
+            crate::hir::HirArrayElementValue::Value(value) => self.expression(value),
+            crate::hir::HirArrayElementValue::Array(value) => self.array_initialize(value),
+            crate::hir::HirArrayElementValue::Shared(value) => self.shared_transfer(value),
+            crate::hir::HirArrayElementValue::OptionalShared(value) => {
+                self.optional_shared_value(value)
+            }
+            crate::hir::HirArrayElementValue::Optional { source, .. } => {
+                self.optional_source(source)
+            }
+            crate::hir::HirArrayElementValue::ClassOptional(value) => {
+                self.class_optional_value(value)
+            }
+            crate::hir::HirArrayElementValue::Object { source, operation } => {
+                self.object_source(source);
+                self.selected_copy_operation(*operation);
+            }
         }
     }
 
@@ -973,6 +1140,10 @@ impl HirDumper {
                 self.line("OptionalFieldPlace", place.span);
                 self.indented(|dumper| dumper.field_place(field));
             }
+            crate::hir::HirOptionalStorage::ArrayElement(element) => {
+                self.line("OptionalArrayElementPlace", place.span);
+                self.indented(|dumper| dumper.array_element(element));
+            }
         }
     }
 
@@ -984,6 +1155,10 @@ impl HirDumper {
             crate::hir::HirOptionalStorage::Field(field) => {
                 self.line("ClassOptionalFieldPlace", place.span);
                 self.indented(|dumper| dumper.field_place(field));
+            }
+            crate::hir::HirOptionalStorage::ArrayElement(element) => {
+                self.line("ClassOptionalArrayElementPlace", place.span);
+                self.indented(|dumper| dumper.array_element(element));
             }
         }
     }
@@ -1127,6 +1302,22 @@ impl HirDumper {
                 self.line("ArrayArgument", value.span);
                 self.indented(|dumper| dumper.array_initialize(value));
             }
+            HirCallArgument::ArrayAlias(value) => {
+                self.line(
+                    &format!(
+                        "ArrayAliasArgument : {} access={:?}",
+                        value.target.name(),
+                        value.access
+                    ),
+                    value.span,
+                );
+                self.indented(|dumper| match &value.source {
+                    crate::hir::HirArrayAliasSource::Whole(receiver) => {
+                        dumper.array_receiver(receiver)
+                    }
+                    crate::hir::HirArrayAliasSource::Element(place) => dumper.array_element(place),
+                });
+            }
         }
     }
 
@@ -1169,6 +1360,17 @@ impl HirDumper {
                     *span,
                 );
                 self.indented(|dumper| dumper.object_place(&place.receiver));
+            }
+            HirSharedSource::Place(HirSharedPlace::ArrayElement {
+                place,
+                target,
+                span,
+            }) => {
+                self.line(
+                    &format!("SharedArrayElement : {}", shared_target_name(*target)),
+                    *span,
+                );
+                self.indented(|dumper| dumper.array_element(place));
             }
             HirSharedSource::Produced(HirSharedProducer::Allocation(allocation)) => {
                 match &allocation.mode {
@@ -1276,6 +1478,16 @@ impl HirDumper {
                 );
                 self.indented(|dumper| dumper.field_place(field));
             }
+            crate::hir::HirOptionalStorage::ArrayElement(element) => {
+                self.line(
+                    &format!(
+                        "OptionalSharedArrayElementPlace : {}",
+                        optional_shared_target_name(place.target)
+                    ),
+                    place.span,
+                );
+                self.indented(|dumper| dumper.array_element(element));
+            }
         }
     }
 
@@ -1371,6 +1583,7 @@ impl HirDumper {
     fn object_source(&mut self, source: &crate::hir::HirObjectSource) {
         match source {
             crate::hir::HirObjectSource::Place(place) => self.object_place(place),
+            crate::hir::HirObjectSource::ArrayElement(place) => self.array_element(place),
             crate::hir::HirObjectSource::Produced(producer) => {
                 self.line("MaterializedSource", producer.span());
                 self.indented(|dumper| dumper.object_producer(producer));
@@ -1418,7 +1631,10 @@ impl HirDumper {
     fn field_place(&mut self, place: &HirFieldPlace) {
         self.line(&format!("FieldPlace {}", place.field), place.span);
         self.indented(|dumper| {
-            if let Some(view) = &place.shared_view {
+            if let Some(element) = &place.array_element {
+                dumper.array_element(element);
+                dumper.object_place(&place.receiver);
+            } else if let Some(view) = &place.shared_view {
                 dumper.object_view("SharedFieldReceiver", view);
             } else if let Some(view) = &place.optional_view {
                 dumper.object_view("OptionalFieldReceiver", view);
@@ -1446,7 +1662,11 @@ impl HirDumper {
     fn method_receiver(&mut self, receiver: &HirMethodReceiver) {
         self.heading("Receiver");
         self.indented(|dumper| {
-            if let Some(view) = &receiver.shared_view {
+            if let Some(element) = &receiver.array_element {
+                dumper.array_element(element);
+                dumper.object_place(&receiver.place);
+                dumper.object_origin(&receiver.origin);
+            } else if let Some(view) = &receiver.shared_view {
                 dumper.object_view("SharedMethodReceiver", view);
             } else if let Some(view) = &receiver.optional_view {
                 dumper.object_view("OptionalMethodReceiver", view);
@@ -1626,10 +1846,15 @@ fn array_assignment_name(element: HirArrayAssignElement) -> String {
         HirArrayAssignElement::Class { class, operation } => {
             format!("class {class} via {}", selected_operation_name(operation))
         }
-        HirArrayAssignElement::OptionalClass { class, operation } => {
+        HirArrayAssignElement::OptionalClass {
+            class,
+            copy_constructor,
+            copy_assignment,
+        } => {
             format!(
-                "optional-class {class} via {}",
-                selected_operation_name(operation)
+                "optional-class {class} construct-via {} assign-via {}",
+                selected_operation_name(copy_constructor),
+                selected_operation_name(copy_assignment)
             )
         }
         HirArrayAssignElement::Array(array) => format!("array {array}"),

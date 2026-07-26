@@ -226,6 +226,7 @@ impl CallableChecker<'_, '_> {
                     checked_cast: receiver.checked_cast,
                     shared_view: receiver.shared_view,
                     optional_view: receiver.optional_view,
+                    array_element: receiver.array_element,
                 },
                 target,
                 arguments,
@@ -345,16 +346,6 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedParameterBindingMode::ReadOnlyAlias { .. }
             | ResolvedParameterBindingMode::MutableAlias { .. } => {
-                if matches!(lower_type(parameter.type_syntax()), Type::Array(_)) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS,
-                            "array alias arguments are not implemented yet",
-                        )
-                        .with_primary_label(source.span(), "array aliasing is typed separately"),
-                    );
-                    return None;
-                }
                 self.check_alias_argument(source, parameter)
             }
         }

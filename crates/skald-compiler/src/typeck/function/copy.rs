@@ -154,6 +154,34 @@ impl CallableChecker<'_, '_> {
         context: &'static str,
     ) -> Option<HirObjectSource> {
         match expression {
+            crate::resolve::ResolvedExpression::ArrayProjection(_) => {
+                let checked = self.check_expression(expression)?;
+                let Type::Class(_) = checked.ty else {
+                    let _ = require_type(
+                        checked.ty,
+                        Type::Class(class),
+                        checked.span,
+                        context,
+                        self.diagnostics,
+                    );
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = checked.kind else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_OBJECT_CONTEXT,
+                            "a copied array object source must be one indexed element",
+                        )
+                        .with_primary_label(checked.span, "slices are array values, not objects"),
+                    );
+                    return None;
+                };
+                return self.convert_object_source(
+                    HirObjectSource::ArrayElement(place),
+                    class,
+                    context,
+                );
+            }
             crate::resolve::ResolvedExpression::Dereference(_) => {
                 let checked = self.check_copy_construction_view(
                     expression,

@@ -78,6 +78,34 @@ impl CallableResolver<'_, '_> {
                 self.resolve_object_receiver(&grouped.expression)?
                     .with_span(grouped.span),
             ),
+            syntax::Expression::ArrayProjection(_) => {
+                let resolved = self.resolve_expression(expression)?;
+                let ResolvedExpression::ArrayProjection(projection) = resolved else {
+                    unreachable!("array projection syntax must retain its resolved node")
+                };
+                let Some(ResolvedTypeKind::Class(class)) = self.resolved_expression_type(
+                    &ResolvedExpression::ArrayProjection(projection.clone()),
+                ) else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_MEMBER_SELECTION,
+                            "member selection requires an exact-class array element",
+                        )
+                        .with_primary_label(
+                            projection.span,
+                            "this projected element is not an inline class",
+                        ),
+                    );
+                    return None;
+                };
+                let span = projection.span;
+                Some(ResolvedObjectReceiver::ArrayElement {
+                    projection,
+                    projections: Vec::new(),
+                    class,
+                    span,
+                })
+            }
             syntax::Expression::Allocation(_) => {
                 let source = self.resolve_expression(expression)?;
                 let ResolvedExpression::Allocation(allocation) = &source else {

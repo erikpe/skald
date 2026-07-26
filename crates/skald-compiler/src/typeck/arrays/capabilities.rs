@@ -152,9 +152,16 @@ fn assignment_element(
             payload: ResolvedOptionalPayload::Class(class),
             ..
         } => capabilities
-            .assignment(class)
+            .constructor(class)
             .selected()
-            .map(|operation| HirArrayAssignElement::OptionalClass { class, operation }),
+            .zip(capabilities.assignment(class).selected())
+            .map(
+                |(copy_constructor, copy_assignment)| HirArrayAssignElement::OptionalClass {
+                    class,
+                    copy_constructor,
+                    copy_assignment,
+                },
+            ),
         ResolvedTypeKind::Array(array) => arrays
             .get(array.index())
             .expect("nested array identities must precede their containing identity")

@@ -203,15 +203,15 @@ fn canonical_entries_retain_the_first_exact_element_source_span() {
 }
 
 #[test]
-fn arrays_fail_at_the_structured_type_checking_gate() {
+fn resolved_array_projection_crosses_into_typed_hir() {
     let resolved =
         resolve_text("fn main() -> i64 { var values: i64[] = i64[](4u); return values[-1]; }");
     assert!(!resolved.has_errors(), "{:?}", resolved.diagnostics);
 
     let checked = crate::typeck::type_check(&resolved.program);
-    assert!(checked.hir.is_none());
-    assert!(checked
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS));
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked
+        .hir
+        .expect("valid array projection must produce HIR");
+    assert!(crate::hir::dump_hir(&hir).contains("ArrayElementPlace : i64"));
 }

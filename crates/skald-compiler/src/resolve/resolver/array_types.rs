@@ -87,4 +87,8 @@ impl ArrayTypeInterner {
     pub(super) fn finish(self) -> ResolvedArrayTypeTable {
         ResolvedArrayTypeTable::new(self.entries)
     }
+
+    pub(super) fn get(&self, id: ArrayTypeId) -> Option<&ResolvedArrayType> {
+        self.entries.get(id.index()).filter(|entry| entry.id == id)
+    }
 }

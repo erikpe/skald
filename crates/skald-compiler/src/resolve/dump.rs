@@ -675,6 +675,25 @@ impl ResolvedDumper {
                     }
                 });
             }
+            ResolvedExpression::ArrayLength(length) => {
+                self.line(
+                    match length.operator {
+                        crate::resolve::ResolvedArrayLengthOperator::Ordinary { .. } => {
+                            "ArrayLength"
+                        }
+                        crate::resolve::ResolvedArrayLengthOperator::Shared { .. } => {
+                            "SharedArrayLength"
+                        }
+                    },
+                    length.span,
+                );
+                self.indented(|dumper| {
+                    dumper.expression(&length.receiver);
+                    for argument in &length.arguments {
+                        dumper.expression(argument);
+                    }
+                });
+            }
             ResolvedExpression::DirectCall(call) => {
                 self.line(&format!("DirectCall {}", call.function), call.span);
                 self.indented(|dumper| {
@@ -849,6 +868,27 @@ impl ResolvedDumper {
                 self.indented(|dumper| {
                     dumper.heading("Optional");
                     dumper.indented(|dumper| dumper.expression(&unwrap.source));
+                    for projection in projections {
+                        match projection {
+                            crate::object_path::ObjectProjection::Base(base) => {
+                                dumper.heading(&format!("BaseProjection {base}"));
+                            }
+                            crate::object_path::ObjectProjection::Field(field) => {
+                                dumper.heading(&format!("FieldProjection {field}"));
+                            }
+                        }
+                    }
+                });
+            }
+            ResolvedObjectReceiver::ArrayElement {
+                projection,
+                projections,
+                class,
+                span,
+            } => {
+                self.line(&format!("ArrayElementReceiver class {class}"), *span);
+                self.indented(|dumper| {
+                    dumper.expression(&ResolvedExpression::ArrayProjection(projection.clone()));
                     for projection in projections {
                         match projection {
                             crate::object_path::ObjectProjection::Base(base) => {

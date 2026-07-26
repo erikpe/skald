@@ -225,6 +225,11 @@ impl CallableChecker<'_, '_> {
         parameter: &impl CallParameter,
     ) -> Option<HirCallArgument> {
         let expected = lower_type(parameter.type_syntax());
+        if matches!(expected, Type::Array(_))
+            || matches!(expression, ResolvedExpression::ArrayProjection(_))
+        {
+            return self.check_array_alias_argument(expression, parameter);
+        }
         if matches!(
             expected,
             Type::OptionalPrimitive(_) | Type::OptionalClass(_)
@@ -342,6 +347,7 @@ impl CallableChecker<'_, '_> {
                 self.binding_access(*binding, false, span)
             }
             crate::hir::HirOptionalStorage::Field(field) => Some(field.receiver.access),
+            crate::hir::HirOptionalStorage::ArrayElement(place) => Some(place.receiver.access),
         }
     }
 

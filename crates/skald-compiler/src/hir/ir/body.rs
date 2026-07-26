@@ -207,6 +207,9 @@ pub enum HirStatement {
     ClassOptionalAssignment(HirClassOptionalAssignment),
     OptionalSharedAssignment(HirOptionalSharedAssignment),
     ArrayFieldInitialize(super::HirArrayFieldInitialize),
+    ArrayAssignment(super::HirArrayAssignment),
+    ArrayElementAssignment(Box<super::HirArrayElementAssignment>),
+    ArraySliceAssignment(super::HirArraySliceAssignment),
 }
 
 impl HirStatement {
@@ -229,6 +232,9 @@ impl HirStatement {
             Self::ClassOptionalAssignment(statement) => statement.span,
             Self::OptionalSharedAssignment(statement) => statement.span,
             Self::ArrayFieldInitialize(statement) => statement.span,
+            Self::ArrayAssignment(statement) => statement.span,
+            Self::ArrayElementAssignment(statement) => statement.span,
+            Self::ArraySliceAssignment(statement) => statement.span,
         }
     }
 }

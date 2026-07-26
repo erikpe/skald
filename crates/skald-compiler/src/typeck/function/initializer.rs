@@ -38,19 +38,22 @@ impl CallableChecker<'_, '_> {
                         span: assignment.span,
                     })
                 }),
-            (Type::Array(_), _) => {
-                self.diagnostics.push(
-                    Diagnostic::error(
-                        crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS,
-                        "array field replacement is not implemented yet",
-                    )
-                    .with_primary_label(
-                        assignment.span,
-                        "only initial array field construction is typed at this boundary",
-                    ),
-                );
-                None
-            }
+            (Type::Array(array), _) => self
+                .check_array_initialize(array, &assignment.value, "array field replacement")
+                .map(|value| {
+                    HirStatement::ArrayAssignment(crate::hir::HirArrayAssignment {
+                        destination: crate::hir::HirArrayPlace::Field {
+                            access: target.place.receiver.access,
+                            place: target.place.clone(),
+                            array,
+                            span: assignment.span,
+                        },
+                        value,
+                        evaluation:
+                            crate::hir::HirArrayEvaluationOrder::DestinationThenSourceThenReplace,
+                        span: assignment.span,
+                    })
+                }),
             (Type::Class(class), MemberBodyKind::OrdinaryInitializer) => self
                 .check_field_initialization(target.place.clone(), class, &target.name, assignment),
             (Type::Class(class), MemberBodyKind::CopyConstructor) => self

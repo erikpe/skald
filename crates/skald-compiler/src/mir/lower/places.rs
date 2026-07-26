@@ -15,6 +15,9 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
+        if place.array_element.is_some() {
+            array_lowering_gate();
+        }
         let receiver = match (
             &place.checked_cast,
             &place.shared_view,

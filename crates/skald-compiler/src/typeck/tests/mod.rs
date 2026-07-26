@@ -67,7 +67,10 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         | HirExpressionKind::U8(_)
         | HirExpressionKind::F64Bits(_)
         | HirExpressionKind::Boolean(_) => {}
-        HirExpressionKind::ArrayConstruction(_) => {
+        HirExpressionKind::ArrayConstruction(_)
+        | HirExpressionKind::ArrayLength(_)
+        | HirExpressionKind::ArrayElement(_)
+        | HirExpressionKind::ArraySlice(_) => {
             panic!("scalar typing helper does not accept array expressions")
         }
     }
@@ -103,6 +106,7 @@ fn assert_call_argument_is_fully_typed(argument: &crate::hir::HirCallArgument) {
         crate::hir::HirCallArgument::OptionalShared(_) => {}
         crate::hir::HirCallArgument::OptionalPlace(_) => {}
         crate::hir::HirCallArgument::Array(_) => {}
+        crate::hir::HirCallArgument::ArrayAlias(_) => {}
     }
 }
 

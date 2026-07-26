@@ -30,11 +30,12 @@ pub use declarations::{
 };
 pub use expression::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,
-    ResolvedArrayConstructionExpr, ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr,
-    ResolvedArrayProjectionOperator, ResolvedBinaryExpr, ResolvedBinaryOperator,
-    ResolvedBindingExpr, ResolvedBooleanExpr, ResolvedConstructExpr, ResolvedConstructionMode,
-    ResolvedDereferenceExpr, ResolvedDereferenceOperator, ResolvedDirectCallExpr,
-    ResolvedExpression, ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
+    ResolvedArrayConstructionExpr, ResolvedArrayLengthExpr, ResolvedArrayLengthOperator,
+    ResolvedArrayProjectionBounds, ResolvedArrayProjectionExpr, ResolvedArrayProjectionOperator,
+    ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
+    ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDereferenceExpr,
+    ResolvedDereferenceOperator, ResolvedDirectCallExpr, ResolvedExpression,
+    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
     ResolvedPresenceTestKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,

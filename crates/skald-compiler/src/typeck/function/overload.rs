@@ -189,6 +189,9 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::FieldAccess(access) => {
                 Some(self.static_receiver_access(&access.receiver))
             }
+            ResolvedExpression::ArrayProjection(projection) => {
+                self.static_place_access(&projection.receiver)
+            }
             _ => None,
         }
     }
@@ -264,7 +267,29 @@ impl CallableChecker<'_, '_> {
                     Type::Array(array)
                 }
             }
-            ResolvedExpression::ArrayProjection(_) => Type::Unit,
+            ResolvedExpression::ArrayLength(_) => Type::U64,
+            ResolvedExpression::ArrayProjection(projection) => {
+                let receiver = self.static_expression_type(&projection.receiver);
+                let array = match (projection.operator, receiver) {
+                    (
+                        crate::resolve::ResolvedArrayProjectionOperator::Ordinary { .. },
+                        Type::Array(array),
+                    )
+                    | (
+                        crate::resolve::ResolvedArrayProjectionOperator::Shared { .. },
+                        Type::Shared(crate::hir::HirSharedTarget::Array(array)),
+                    ) => array,
+                    _ => return Type::Unit,
+                };
+                match projection.bounds {
+                    crate::resolve::ResolvedArrayProjectionBounds::Index(_) => {
+                        self.copy_capabilities.array(array).element
+                    }
+                    crate::resolve::ResolvedArrayProjectionBounds::Slice { .. } => {
+                        Type::Array(array)
+                    }
+                }
+            }
         }
     }
 
@@ -283,6 +308,23 @@ impl CallableChecker<'_, '_> {
                     ObjectArgumentSource::ExistingPlace
                 },
             }),
+            ResolvedExpression::ArrayProjection(projection)
+                if matches!(
+                    projection.bounds,
+                    crate::resolve::ResolvedArrayProjectionBounds::Index(_)
+                ) =>
+            {
+                matches!(
+                    self.static_expression_type(expression),
+                    Type::Class(_) | Type::Array(_)
+                )
+                .then(|| ObjectArgument {
+                    access: self
+                        .static_place_access(&projection.receiver)
+                        .unwrap_or(HirAccess::Mutable),
+                    source: ObjectArgumentSource::ExistingPlace,
+                })
+            }
             ResolvedExpression::ObjectCast(cast) => Some(ObjectArgument {
                 access: self.static_cast_access(&cast.source),
                 source: ObjectArgumentSource::CheckedPlace,
@@ -308,6 +350,9 @@ impl CallableChecker<'_, '_> {
             ResolvedObjectReceiver::OptionalPayload { unwrap, .. } => {
                 self.static_cast_access(&unwrap.source)
             }
+            ResolvedObjectReceiver::ArrayElement { projection, .. } => self
+                .static_place_access(&projection.receiver)
+                .unwrap_or(HirAccess::Mutable),
         }
     }
 

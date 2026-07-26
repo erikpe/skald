@@ -14,10 +14,15 @@ mod optional;
 mod shared;
 
 pub use array::{
-    HirArrayAssignElement, HirArrayConstruction, HirArrayConstructionMode, HirArrayCopyElement,
-    HirArrayDefaultElement, HirArrayDestroyElement, HirArrayFieldInitialize, HirArrayInitialize,
-    HirArrayLifecycle, HirArrayOwnership, HirArrayProvenance, HirArraySource, HirArrayTransfer,
-    HirArrayType, HirArrayTypeTable,
+    HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor, HirArrayAssignElement,
+    HirArrayAssignment, HirArrayConstruction, HirArrayConstructionMode, HirArrayCopyElement,
+    HirArrayDefaultElement, HirArrayDestroyElement, HirArrayElementAssignment,
+    HirArrayElementPlace, HirArrayElementValue, HirArrayEvaluationOrder, HirArrayFieldInitialize,
+    HirArrayIndex, HirArrayIndexNormalization, HirArrayInitialize, HirArrayLength,
+    HirArrayLifecycle, HirArrayOwnership, HirArrayPlace, HirArrayProvenance, HirArrayReceiver,
+    HirArrayReceiverOwnership, HirArrayReceiverSource, HirArrayRuntimeFailure, HirArraySlice,
+    HirArraySliceAssignment, HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirArrayType,
+    HirArrayTypeTable,
 };
 pub use body::{
     BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,

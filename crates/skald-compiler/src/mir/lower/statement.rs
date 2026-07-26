@@ -61,7 +61,10 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
-            HirStatement::ArrayFieldInitialize(_) => array_lowering_gate(),
+            HirStatement::ArrayFieldInitialize(_)
+            | HirStatement::ArrayAssignment(_)
+            | HirStatement::ArrayElementAssignment(_)
+            | HirStatement::ArraySliceAssignment(_) => array_lowering_gate(),
         }
     }
 

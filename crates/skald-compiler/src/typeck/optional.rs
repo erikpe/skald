@@ -24,6 +24,9 @@ impl CallableChecker<'_, '_> {
         &mut self,
         expression: &ResolvedExpression,
     ) -> Option<crate::hir::HirOptionalAliasPlace> {
+        if matches!(expression, ResolvedExpression::ArrayProjection(_)) {
+            return None;
+        }
         self.optional_place(expression)
             .map(crate::hir::HirOptionalAliasPlace::Primitive)
             .or_else(|| {
@@ -150,6 +153,20 @@ impl CallableChecker<'_, '_> {
                 };
                 Some(HirOptionalSharedPlace {
                     storage: HirOptionalStorage::Field(place),
+                    target,
+                    span: expression.span,
+                })
+            }
+            ResolvedExpression::ArrayProjection(_) => {
+                let expression = self.check_expression(expression)?;
+                let Type::OptionalShared(target) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = expression.kind else {
+                    return None;
+                };
+                Some(HirOptionalSharedPlace {
+                    storage: HirOptionalStorage::ArrayElement(place),
                     target,
                     span: expression.span,
                 })
@@ -327,6 +344,20 @@ impl CallableChecker<'_, '_> {
                     span: expression.span,
                 })
             }
+            ResolvedExpression::ArrayProjection(_) => {
+                let expression = self.check_expression(expression)?;
+                let Type::OptionalClass(class) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = expression.kind else {
+                    return None;
+                };
+                Some(HirClassOptionalPlace {
+                    storage: HirOptionalStorage::ArrayElement(place),
+                    class,
+                    span: expression.span,
+                })
+            }
             _ => None,
         }
     }
@@ -432,6 +463,7 @@ impl CallableChecker<'_, '_> {
                     self.binding_access(*binding, false, unwrap.span)?
                 }
                 HirOptionalStorage::Field(field) => field.receiver.access,
+                HirOptionalStorage::ArrayElement(place) => place.receiver.access,
             },
             HirOptionalOperand::ClassProduced(_) => crate::hir::HirAccess::Mutable,
             HirOptionalOperand::Place(_)
@@ -538,6 +570,20 @@ impl CallableChecker<'_, '_> {
                 };
                 Some(HirOptionalPlace {
                     storage: HirOptionalStorage::Field(place),
+                    payload,
+                    span: expression.span,
+                })
+            }
+            ResolvedExpression::ArrayProjection(_) => {
+                let expression = self.check_expression(expression)?;
+                let Type::OptionalPrimitive(payload) = expression.ty else {
+                    return None;
+                };
+                let HirExpressionKind::ArrayElement(place) = expression.kind else {
+                    return None;
+                };
+                Some(HirOptionalPlace {
+                    storage: HirOptionalStorage::ArrayElement(place),
                     payload,
                     span: expression.span,
                 })

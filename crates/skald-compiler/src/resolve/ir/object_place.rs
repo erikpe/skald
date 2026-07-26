@@ -6,7 +6,10 @@ use crate::{
     source::Span,
 };
 
-use super::{ResolvedDereferenceExpr, ResolvedObjectCastExpr, ResolvedUnwrapExpr};
+use super::{
+    ResolvedArrayProjectionExpr, ResolvedDereferenceExpr, ResolvedObjectCastExpr,
+    ResolvedUnwrapExpr,
+};
 
 pub type ResolvedObjectPlace = ObjectPath;
 
@@ -29,6 +32,12 @@ pub enum ResolvedObjectReceiver {
     },
     OptionalPayload {
         unwrap: Box<ResolvedUnwrapExpr>,
+        projections: Vec<ObjectProjection>,
+        class: ClassId,
+        span: Span,
+    },
+    ArrayElement {
+        projection: Box<ResolvedArrayProjectionExpr>,
         projections: Vec<ObjectProjection>,
         class: ClassId,
         span: Span,
@@ -66,6 +75,7 @@ impl ResolvedObjectReceiver {
             Self::CastRelative { class, .. } => *class,
             Self::Dereference { class, .. } => *class,
             Self::OptionalPayload { class, .. } => *class,
+            Self::ArrayElement { class, .. } => *class,
         }
     }
 
@@ -75,24 +85,27 @@ impl ResolvedObjectReceiver {
             Self::CastRelative { span, .. } => *span,
             Self::Dereference { span, .. } => *span,
             Self::OptionalPayload { span, .. } => *span,
+            Self::ArrayElement { span, .. } => *span,
         }
     }
 
     pub const fn binding_path(&self) -> Option<&ResolvedObjectPlace> {
         match self {
             Self::BindingPath(path) => Some(path),
-            Self::CastRelative { .. } | Self::Dereference { .. } | Self::OptionalPayload { .. } => {
-                None
-            }
+            Self::CastRelative { .. }
+            | Self::Dereference { .. }
+            | Self::OptionalPayload { .. }
+            | Self::ArrayElement { .. } => None,
         }
     }
 
     pub const fn root(&self) -> Option<BindingId> {
         match self {
             Self::BindingPath(path) => Some(path.root),
-            Self::CastRelative { .. } | Self::Dereference { .. } | Self::OptionalPayload { .. } => {
-                None
-            }
+            Self::CastRelative { .. }
+            | Self::Dereference { .. }
+            | Self::OptionalPayload { .. }
+            | Self::ArrayElement { .. } => None,
         }
     }
 
@@ -102,6 +115,7 @@ impl ResolvedObjectReceiver {
             Self::CastRelative { projections, .. } => projections,
             Self::Dereference { projections, .. } => projections,
             Self::OptionalPayload { projections, .. } => projections,
+            Self::ArrayElement { projections, .. } => projections,
         }
     }
 
@@ -109,7 +123,9 @@ impl ResolvedObjectReceiver {
         match self {
             Self::BindingPath(_) => None,
             Self::CastRelative { cast, .. } => Some(cast),
-            Self::Dereference { .. } | Self::OptionalPayload { .. } => None,
+            Self::Dereference { .. } | Self::OptionalPayload { .. } | Self::ArrayElement { .. } => {
+                None
+            }
         }
     }
 
@@ -145,6 +161,17 @@ impl ResolvedObjectReceiver {
                 ..
             } => Self::OptionalPayload {
                 unwrap,
+                projections,
+                class,
+                span,
+            },
+            Self::ArrayElement {
+                projection,
+                projections,
+                class,
+                ..
+            } => Self::ArrayElement {
+                projection,
                 projections,
                 class,
                 span,
@@ -189,6 +216,19 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Base(base));
                 Self::OptionalPayload {
                     unwrap,
+                    projections,
+                    class: base,
+                    span,
+                }
+            }
+            Self::ArrayElement {
+                projection,
+                mut projections,
+                ..
+            } => {
+                projections.push(ObjectProjection::Base(base));
+                Self::ArrayElement {
+                    projection,
                     projections,
                     class: base,
                     span,
@@ -252,6 +292,21 @@ impl ResolvedObjectReceiver {
                 projections.push(ObjectProjection::Field(field));
                 Self::OptionalPayload {
                     unwrap,
+                    projections,
+                    class,
+                    span,
+                }
+            }
+            Self::ArrayElement {
+                projection,
+                mut projections,
+                class: receiver_class,
+                ..
+            } => {
+                assert_eq!(field.class(), receiver_class);
+                projections.push(ObjectProjection::Field(field));
+                Self::ArrayElement {
+                    projection,
                     projections,
                     class,
                     span,

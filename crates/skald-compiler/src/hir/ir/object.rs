@@ -183,6 +183,7 @@ pub struct HirCopyConstruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirObjectSource {
     Place(HirObjectPlace),
+    ArrayElement(Box<super::HirArrayElementPlace>),
     Produced(HirObjectProducer),
     /// A checked, full-expression-bounded class place consumed by an owning
     /// copy operation after its static or runtime selection succeeds.
@@ -194,6 +195,10 @@ impl HirObjectSource {
     pub const fn class(&self) -> ClassId {
         match self {
             Self::Place(place) => place.class(),
+            Self::ArrayElement(place) => match place.element {
+                super::Type::Class(class) => class,
+                _ => panic!("object array-element source must have a class type"),
+            },
             Self::Produced(producer) => producer.class(),
             Self::Checked(view) => match view.class {
                 Some(class) => class,
@@ -206,6 +211,7 @@ impl HirObjectSource {
     pub const fn span(&self) -> Span {
         match self {
             Self::Place(place) => place.span(),
+            Self::ArrayElement(place) => place.span,
             Self::Produced(producer) => producer.span(),
             Self::Checked(view) => view.span,
             Self::Slice(slice) => slice.span,
@@ -389,6 +395,8 @@ pub struct HirMethodReceiver {
     pub shared_view: Option<Box<HirObjectView>>,
     /// Present when receiver evaluation unwraps an inline-class optional.
     pub optional_view: Option<Box<HirObjectView>>,
+    /// Present when the receiver is rooted in one checked array element.
+    pub array_element: Option<Box<super::HirArrayElementPlace>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -472,6 +480,7 @@ pub struct HirFieldPlace {
     pub checked_cast: Option<Box<HirCheckedObjectView>>,
     pub shared_view: Option<Box<HirObjectView>>,
     pub optional_view: Option<Box<HirObjectView>>,
+    pub array_element: Option<Box<super::HirArrayElementPlace>>,
     pub field: FieldId,
     pub span: Span,
 }

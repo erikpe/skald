@@ -31,18 +31,27 @@ pub enum HirSharedPlace {
         target: HirSharedTarget,
         span: Span,
     },
+    ArrayElement {
+        place: Box<super::HirArrayElementPlace>,
+        target: HirSharedTarget,
+        span: Span,
+    },
 }
 
 impl HirSharedPlace {
     pub fn target(&self) -> HirSharedTarget {
         match self {
-            Self::Binding { target, .. } | Self::Field { target, .. } => *target,
+            Self::Binding { target, .. }
+            | Self::Field { target, .. }
+            | Self::ArrayElement { target, .. } => *target,
         }
     }
 
     pub const fn span(&self) -> Span {
         match self {
-            Self::Binding { span, .. } | Self::Field { span, .. } => *span,
+            Self::Binding { span, .. }
+            | Self::Field { span, .. }
+            | Self::ArrayElement { span, .. } => *span,
         }
     }
 }

@@ -64,6 +64,9 @@ pub enum HirExpressionKind {
     Unwrap(HirOptionalOperand),
     Grouped(Box<HirExpression>),
     ArrayConstruction(Box<super::HirArrayConstruction>),
+    ArrayLength(Box<super::HirArrayLength>),
+    ArrayElement(Box<super::HirArrayElementPlace>),
+    ArraySlice(Box<super::HirArraySlice>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -129,6 +132,7 @@ pub enum HirCallArgument {
     Copy(HirCopyArgument),
     Shared(HirSharedTransfer),
     Array(super::HirArrayInitialize),
+    ArrayAlias(super::HirArrayAliasArgument),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -152,6 +156,7 @@ impl HirCallArgument {
             Self::Copy(copy) => copy.span,
             Self::Shared(value) => value.span,
             Self::Array(value) => value.span,
+            Self::ArrayAlias(value) => value.span,
         }
     }
 }

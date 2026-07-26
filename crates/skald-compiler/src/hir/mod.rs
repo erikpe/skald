@@ -8,12 +8,17 @@ mod ir;
 
 pub use dump::dump_hir;
 pub use ir::{
-    BlockFlow, HirAccess, HirArrayAssignElement, HirArrayConstruction, HirArrayConstructionMode,
-    HirArrayCopyElement, HirArrayDefaultElement, HirArrayDestroyElement, HirArrayFieldInitialize,
-    HirArrayInitialize, HirArrayLifecycle, HirArrayOwnership, HirArrayProvenance, HirArraySource,
-    HirArrayTransfer, HirArrayType, HirArrayTypeTable, HirBaseCopy, HirBaseInitialization,
-    HirBinaryOperation, HirBlock, HirCallArgument, HirCallStatement, HirCallableSignature,
-    HirCheckedObjectView, HirCheckedObjectViewKind, HirCheckedOptionalView, HirClassDeclaration,
+    BlockFlow, HirAccess, HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor,
+    HirArrayAssignElement, HirArrayAssignment, HirArrayConstruction, HirArrayConstructionMode,
+    HirArrayCopyElement, HirArrayDefaultElement, HirArrayDestroyElement, HirArrayElementAssignment,
+    HirArrayElementPlace, HirArrayElementValue, HirArrayEvaluationOrder, HirArrayFieldInitialize,
+    HirArrayIndex, HirArrayIndexNormalization, HirArrayInitialize, HirArrayLength,
+    HirArrayLifecycle, HirArrayOwnership, HirArrayPlace, HirArrayProvenance, HirArrayReceiver,
+    HirArrayReceiverOwnership, HirArrayReceiverSource, HirArrayRuntimeFailure, HirArraySlice,
+    HirArraySliceAssignment, HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirArrayType,
+    HirArrayTypeTable, HirBaseCopy, HirBaseInitialization, HirBinaryOperation, HirBlock,
+    HirCallArgument, HirCallStatement, HirCallableSignature, HirCheckedObjectView,
+    HirCheckedObjectViewKind, HirCheckedOptionalView, HirClassDeclaration,
     HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,
     HirClassOptionalAssignment, HirClassOptionalInitialize, HirClassOptionalPlace,
     HirClassOptionalSource, HirConditional, HirConditionalArm, HirConstruction,
