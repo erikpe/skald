@@ -42,6 +42,7 @@ pub(super) fn lower(
         })
         .collect::<Result<Vec<_>, _>>()?;
     functions.extend(array::lower_helpers(program, data_layout)?);
+    functions.extend(ownership::lower_helpers(program, dispatch));
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
     let entry = program
         .declarations

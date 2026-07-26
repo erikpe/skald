@@ -1,0 +1,37 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: i64;
+
+    init() {
+        self.value = 1;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value);
+    }
+}
+
+fn main() -> i64 {
+    var values: (shared Trace)[] = (shared Trace)[](2u);
+    var optional: (shared? Trace)[] = (shared? Trace)[](2u);
+    var copied: (shared Trace)[] = values;
+    var replacement: shared Trace = new Trace();
+    var shared_values: shared (shared Trace)[] = new (shared Trace)[](1u);
+    var shared_optional: shared (shared? Trace)[] = new (shared? Trace)[](1u);
+
+    replacement->value = 9;
+    values[0] = replacement;
+    values[0] = values[0];
+    optional[0] = replacement;
+    optional[0] = optional[0];
+    optional[0] = none;
+
+    var value_zero: shared Trace = values[0];
+    var copied_zero: shared Trace = copied[0];
+    var shared_zero: shared Trace = shared_values->[0];
+    ska_rt_println_i64(value_zero->value);
+    ska_rt_println_i64(copied_zero->value);
+    ska_rt_println_i64(shared_zero->value);
+    return 0;
+}

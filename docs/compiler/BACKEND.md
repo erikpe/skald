@@ -91,16 +91,17 @@ entering ordinary shared machinery.
 Inline optional-container aliases use that same container address without
 transferring ownership or scheduling callee cleanup.
 
-Verified non-shared inline arrays are executable for primitive,
-primitive-optional, exact-class, exact-class-optional, and recursively nested
-inline elements. The target accepts empty/default-length construction,
+Verified inline and shared-outer arrays are executable for primitive,
+primitive-optional, exact-class, exact-class-optional, recursively nested
+inline, and ordinary or optional shared-owner elements. The target accepts
+empty/default-length construction,
 immutable length, checked positive and one-time negative-relative indexing,
 named deep copy, produced-backing adoption, arbitrary-length whole
 replacement, class fields, internal value parameters/results, conditional
-optional lifecycle, and decreasing-index recursive cleanup. Invalid indices
-branch to the verified terminating failure edge before indexed address
-selection. Shared outer arrays, shared-owner elements, slices, and array
-aliases remain structured legality errors.
+optional lifecycle, exact per-element shared defaults, secure shared-owner
+replacement, and decreasing-index recursive cleanup. Invalid indices branch
+to the verified terminating failure edge before indexed address selection.
+Slices and array aliases remain structured legality errors.
 
 ## Data layout
 

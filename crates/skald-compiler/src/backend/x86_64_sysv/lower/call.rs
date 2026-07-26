@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::super::machine::Instruction;
+use super::super::machine::{Instruction, Operand};
 use super::{
     object_abi::{ObjectOriginOperand, ReceiverOperand},
     FrameLayout, InstructionSelector,
@@ -78,6 +78,27 @@ impl InstructionSelector<'_, '_> {
         self.finish_call(
             &layout,
             target.direct_callable(),
+            signature.return_type,
+            None,
+            None,
+        );
+        Ok(())
+    }
+
+    pub(super) fn select_shared_initialize_at_handle(
+        &mut self,
+        target: crate::identity::InitializerId,
+        handle: Operand,
+    ) -> Result<(), BackendError> {
+        let call_target = CallTarget::direct(target.into());
+        let signature = call_target.signature(self.program);
+        debug_assert!(signature.parameters.is_empty());
+        let layout =
+            self.marshal_shared_initializer_handle_inputs(signature, handle, target.class(), &[])?;
+        call_target.select(self, None)?;
+        self.finish_call(
+            &layout,
+            call_target.direct_callable(),
             signature.return_type,
             None,
             None,

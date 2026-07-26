@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR10 is next.
+Status: in progress; AR11 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -81,7 +81,7 @@ Use the existing test ownership:
 - [x] AR7 — Carry inline array values across owning boundaries
 - [x] AR8 — Execute nontrivial and nested inline element lifecycle
 - [x] AR9 — Execute shared and optional-shared outer arrays
-- [ ] AR10 — Execute shared and optional-shared element lifecycle
+- [x] AR10 — Execute shared and optional-shared element lifecycle
 - [ ] AR11 — Execute copied slices and checked slice assignment
 - [ ] AR12 — Execute array aliases and detached-backing anchors
 - [ ] AR13 — Harden and publish the complete array profile
@@ -501,21 +501,21 @@ finalizes and frees exactly once.
 **Purpose:** Complete orthogonal outer-storage and element-ownership
 combinations using the existing one-word handle machinery.
 
-- [ ] Lay out ordinary and optional shared element slots as one eight-byte word
+- [x] Lay out ordinary and optional shared element slots as one eight-byte word
       on x86-64, with zero as absence only for the optional form.
-- [ ] Default-initialize `shared C` elements by selecting exact concrete
+- [x] Default-initialize `shared C` elements by selecting exact concrete
       zero-argument `C()`, allocating one distinct `C`, publishing its owner,
       and adopting it into each increasing-index slot.
-- [ ] Default-initialize exact `shared T[]` elements as distinct empty shared
+- [x] Default-initialize exact `shared T[]` elements as distinct empty shared
       arrays; keep shared interface/`Obj` targets non-defaultable.
-- [ ] Default-initialize `shared? C` and `shared? T[]` elements as absent
+- [x] Default-initialize `shared? C` and `shared? T[]` elements as absent
       without pointee allocation or ordinary owner operations.
-- [ ] Implement element copy construction, secure-before-release assignment,
+- [x] Implement element copy construction, secure-before-release assignment,
       conditional optional operations, and decreasing-index release for inline
       and shared outer arrays.
-- [ ] Compose nested inline/shared/optional ownership edges without confusing
+- [x] Compose nested inline/shared/optional ownership edges without confusing
       outer array ownership with element owner accounts.
-- [ ] Verify each default non-optional slot adopts exactly one published owner
+- [x] Verify each default non-optional slot adopts exactly one published owner
       and every copied/present slot contributes exactly one strong count.
 
 **Tests:** All four inline/shared outer and ordinary/optional shared element

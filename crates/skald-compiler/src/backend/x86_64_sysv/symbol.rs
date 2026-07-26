@@ -83,6 +83,14 @@ pub(super) fn shared_array_finalizer(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_finalize_shared", array.index())
 }
 
+pub(super) fn shared_handle_retain() -> String {
+    ".Lska_shared_handle_retain".to_owned()
+}
+
+pub(super) fn shared_handle_release() -> String {
+    ".Lska_shared_handle_release".to_owned()
+}
+
 pub(super) fn local_label_stem(callable: CallableId) -> String {
     match callable {
         CallableId::Function(function) => format!("fn_{}", function.index()),

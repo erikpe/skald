@@ -3,10 +3,12 @@
 use crate::{
     backend::{BackendError, Target},
     mir::{
-        MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement, MirArrayFailure,
-        MirArrayInstruction, MirArrayOwnership, MirArrayPositionKind, MirClassOptionalCleanup,
-        MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize, MirOptionalSource,
-        MirPlace, MirPlaceProjection, MirTerminationReason, MirTerminator, MirType,
+        MirArrayAssignElement, MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement,
+        MirArrayFailure, MirArrayInstruction, MirArrayOwnership, MirArrayPositionKind,
+        MirClassOptionalCleanup, MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize,
+        MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
+        MirOptionalSource, MirPlace, MirPlaceProjection, MirTerminationReason, MirTerminator,
+        MirType,
     },
 };
 
@@ -25,6 +27,7 @@ use super::{
 
 mod helpers;
 mod lifecycle;
+mod shared_elements;
 
 pub(super) fn lower_helpers(
     program: &crate::mir::MirProgram,
@@ -130,9 +133,19 @@ impl InstructionSelector<'_, '_> {
                                     },
                                 )?;
                             }
-                            _ => unreachable!(
-                                "verified absent default requires an inline optional element"
-                            ),
+                            MirType::OptionalShared(target) => {
+                                self.select_optional_shared_initialize(
+                                    &MirOptionalSharedInitialize {
+                                        destination,
+                                        source: MirOptionalSharedSource::Absent,
+                                        target,
+                                        span: *span,
+                                    },
+                                )?;
+                            }
+                            _ => {
+                                unreachable!("verified absent default requires an optional element")
+                            }
                         }
                     }
                     MirArrayDefaultElement::Class {
@@ -149,11 +162,11 @@ impl InstructionSelector<'_, '_> {
                     MirArrayDefaultElement::ArrayEmpty(_) => {
                         self.clear_place(&destination)?;
                     }
-                    MirArrayDefaultElement::SharedClass { .. }
-                    | MirArrayDefaultElement::SharedArrayEmpty(_) => {
-                        return Err(self.array_error(
-                            "shared-owner array elements escaped the target legality boundary",
-                        ));
+                    MirArrayDefaultElement::SharedClass { class, initializer } => {
+                        self.select_default_shared_class_element(&destination, class, initializer)?;
+                    }
+                    MirArrayDefaultElement::SharedArrayEmpty(inner) => {
+                        self.select_default_shared_array_element(&destination, inner)?;
                     }
                 }
                 self.advance_array_index(*index);
@@ -194,10 +207,16 @@ impl InstructionSelector<'_, '_> {
                     MirArrayCopyElement::Array(inner) => {
                         self.select_array_copy_construction(&destination, &source, inner)?;
                     }
-                    MirArrayCopyElement::Shared(_) | MirArrayCopyElement::OptionalShared(_) => {
-                        return Err(self.array_error(
-                            "shared-owner array elements escaped the target legality boundary",
-                        ));
+                    MirArrayCopyElement::Shared(_) => {
+                        self.select_shared_field_construction(&destination, &source)?;
+                    }
+                    MirArrayCopyElement::OptionalShared(target) => {
+                        self.select_optional_shared_initialize(&MirOptionalSharedInitialize {
+                            destination,
+                            source: MirOptionalSharedSource::Copy(source),
+                            target,
+                            span: *span,
+                        })?;
                     }
                 }
                 self.advance_array_index(*index);
@@ -277,6 +296,12 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::Call(symbol::array_release(*array)));
                 Ok(())
             }
+            MirArrayInstruction::ElementAssign {
+                destination,
+                source,
+                operation: MirArrayAssignElement::Shared(_),
+                ..
+            } => self.select_shared_field_assignment(destination, source),
             MirArrayInstruction::Release { owner, array, .. } => {
                 let (_, source) = self.frame_place(owner)?;
                 value::load_rax(source, self.output);
@@ -311,11 +336,15 @@ impl InstructionSelector<'_, '_> {
                     MirArrayDestroyElement::Array(inner) => {
                         self.select_array_field_cleanup(&element, inner)?;
                     }
-                    MirArrayDestroyElement::Shared(_)
-                    | MirArrayDestroyElement::OptionalShared(_) => {
-                        return Err(self.array_error(
-                            "shared-owner array elements escaped the target legality boundary",
-                        ));
+                    MirArrayDestroyElement::Shared(_) => {
+                        self.release_shared_place(&element, "array_element_release")?;
+                    }
+                    MirArrayDestroyElement::OptionalShared(target) => {
+                        self.select_optional_shared_cleanup(&MirOptionalSharedCleanup {
+                            destination: element,
+                            target,
+                            span: *span,
+                        })?;
                     }
                 }
                 Ok(())

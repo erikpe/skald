@@ -137,13 +137,14 @@ choosing a descriptor layout. Generated array loops, checked allocation,
 signed position normalization, projections, slice checks, publication,
 adoption, replacement, element lifecycle, cleanup, and anchors remain explicit
 through the verifier boundary. The x86-64 backend executes empty and
-dynamically sized primitive, optional, exact-class, and recursively nested
-non-shared inline construction, length, checked element access with signed
-negative-relative indices, named deep copy, produced-backing adoption,
-arbitrary-length replacement, class fields, internal value calls/results, and
-deterministic element cleanup. Its legality pass structurally rejects shared
-outer arrays, shared-owner elements, slices, and array aliases before
-instruction selection.
+dynamically sized inline and shared-outer arrays containing primitives,
+optionals, exact classes, recursively nested inline arrays, and ordinary or
+optional shared owners of exact classes and arrays. This includes length,
+checked element access with signed negative-relative indices, named deep copy,
+produced-backing adoption, arbitrary-length replacement, class fields,
+internal owning calls/results, exact shared defaults, secure shared-element
+replacement, and deterministic element cleanup. Its legality pass
+structurally rejects slices and array aliases before instruction selection.
 
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,

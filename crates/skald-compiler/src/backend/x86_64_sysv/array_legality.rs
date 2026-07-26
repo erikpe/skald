@@ -27,11 +27,13 @@ pub(super) fn check(program: &MirProgram) -> Result<(), BackendError> {
                 | MirType::Class(_)
                 | MirType::OptionalClass(_)
                 | MirType::Array(_)
+                | MirType::Shared(_)
+                | MirType::OptionalShared(_)
         ) {
             return Err(error(
                 None,
                 format!(
-                    "array {} has a shared-owner element type not yet supported by x86-64",
+                    "array {} has an element type not supported by x86-64",
                     array.id
                 ),
             ));
@@ -120,7 +122,9 @@ fn check_instruction(
                     MirArrayDefaultElement::Primitive
                     | MirArrayDefaultElement::OptionalAbsent
                     | MirArrayDefaultElement::Class { .. }
-                    | MirArrayDefaultElement::ArrayEmpty(_),
+                    | MirArrayDefaultElement::ArrayEmpty(_)
+                    | MirArrayDefaultElement::SharedClass { .. }
+                    | MirArrayDefaultElement::SharedArrayEmpty(_),
                 ..
             } => {}
             MirArrayInstruction::CopyNext {
@@ -130,10 +134,19 @@ fn check_instruction(
                     | crate::mir::MirArrayCopyElement::OptionalPrimitive
                     | crate::mir::MirArrayCopyElement::Class { .. }
                     | crate::mir::MirArrayCopyElement::OptionalClass { .. }
-                    | crate::mir::MirArrayCopyElement::Array(_),
+                    | crate::mir::MirArrayCopyElement::Array(_)
+                    | crate::mir::MirArrayCopyElement::Shared(_)
+                    | crate::mir::MirArrayCopyElement::OptionalShared(_),
                 ..
             } => {
                 require_executable_array_place(program, definition, source)?;
+            }
+            MirArrayInstruction::ElementAssign {
+                destination,
+                operation: crate::mir::MirArrayAssignElement::Shared(_),
+                ..
+            } => {
+                require_executable_element_place(program, definition, destination)?;
             }
             MirArrayInstruction::Adopt { destination, .. } => {
                 require_executable_array_place(program, definition, destination)?;
@@ -150,7 +163,9 @@ fn check_instruction(
                     crate::mir::MirArrayDestroyElement::Trivial
                     | crate::mir::MirArrayDestroyElement::Class(_)
                     | crate::mir::MirArrayDestroyElement::OptionalClass(_)
-                    | crate::mir::MirArrayDestroyElement::Array(_),
+                    | crate::mir::MirArrayDestroyElement::Array(_)
+                    | crate::mir::MirArrayDestroyElement::Shared(_)
+                    | crate::mir::MirArrayDestroyElement::OptionalShared(_),
                 ..
             } => {
                 require_executable_array_place(program, definition, owner)?;

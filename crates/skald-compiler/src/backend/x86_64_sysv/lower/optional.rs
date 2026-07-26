@@ -119,7 +119,15 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn store_optional_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        self.output.push(Instruction::ReserveStack(
+            OPTIONAL_SHARED_PRESERVED_HANDLE_SIZE,
+        ));
+        value::store_rax(value::memory(Register::Rsp, 0), self.output);
         self.materialize_place_address(place, Register::Rdx)?;
+        value::load_rax(value::memory(Register::Rsp, 0), self.output);
+        self.output.push(Instruction::ReleaseStack(
+            OPTIONAL_SHARED_PRESERVED_HANDLE_SIZE,
+        ));
         value::store_rax(value::memory(Register::Rdx, 0), self.output);
         Ok(())
     }

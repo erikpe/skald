@@ -1,0 +1,34 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Node {
+    value: i64;
+    edges: (shared? Node)[];
+
+    init(value: i64) {
+        self.value = value;
+        self.edges = (shared? Node)[](1u);
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value);
+    }
+}
+
+fn acyclic() -> unit {
+    var node: shared Node = new Node(10);
+    return;
+}
+
+fn cyclic() -> unit {
+    var first: shared Node = new Node(1);
+    var second: shared Node = new Node(2);
+    first->edges[0] = second;
+    second->edges[0] = first;
+    return;
+}
+
+fn main() -> i64 {
+    acyclic();
+    cyclic();
+    return 0;
+}

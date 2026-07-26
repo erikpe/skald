@@ -9,6 +9,10 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
         "  var items: Item[] = Item[]();\n",
         "  var optional: Item?[] = Item?[]();\n",
         "  var nested: i64[][] = i64[][]();\n",
+        "  var owners: (shared Item)[] = (shared Item)[]();\n",
+        "  var maybe_owners: (shared? Item)[] = (shared? Item)[]();\n",
+        "  var array_owners: (shared i64[])[] = (shared i64[])[]();\n",
+        "  var maybe_array_owners: (shared? i64[])[] = (shared? i64[])[]();\n",
         "  return 0;\n",
         "}\n",
     ));
@@ -30,6 +34,24 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
         .unwrap();
     let primitive = array(MirType::I64);
     let nested = layouts.array(array(MirType::Array(primitive))).unwrap();
+    let shared = layouts
+        .array(array(MirType::Shared(MirSharedTarget::Class(
+            ClassId::new(0),
+        ))))
+        .unwrap();
+    let optional_shared = layouts
+        .array(array(MirType::OptionalShared(MirSharedTarget::Class(
+            ClassId::new(0),
+        ))))
+        .unwrap();
+    let shared_array = layouts
+        .array(array(MirType::Shared(MirSharedTarget::Array(primitive))))
+        .unwrap();
+    let optional_shared_array = layouts
+        .array(array(MirType::OptionalShared(MirSharedTarget::Array(
+            primitive,
+        ))))
+        .unwrap();
     let node = layouts.class(ClassId::new(1)).unwrap();
 
     assert_eq!(
@@ -38,6 +60,10 @@ fn nontrivial_nested_and_recursive_array_layouts_are_finite_and_aligned() {
     );
     assert!(optional.stride() > item.stride());
     assert_eq!(nested.stride(), 8);
+    assert_eq!(shared.stride(), 8);
+    assert_eq!(optional_shared.stride(), 8);
+    assert_eq!(shared_array.stride(), 8);
+    assert_eq!(optional_shared_array.stride(), 8);
     assert_eq!(item.shared_element_offset(), 24);
     assert_eq!(nested.shared_element_offset(), 24);
     assert_eq!(node.ty().size(), 8);
@@ -387,6 +413,131 @@ fn shared_array_last_owner_finalizes_exact_class_elements_in_reverse_order() {
     assert_eq!(run_native_assembly(&output).code(), Some(0));
 }
 
+#[test]
+fn shared_owner_elements_execute_in_inline_and_shared_outer_arrays() {
+    let source = concat!(
+        "class Item {\n",
+        "  marker: i64;\n",
+        "  init() { self.marker = 1; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var owners: (shared Item)[] = (shared Item)[](2u);\n",
+        "  var maybe: (shared? Item)[] = (shared? Item)[](2u);\n",
+        "  var shared_owners: shared (shared Item)[] = new (shared Item)[](2u);\n",
+        "  var shared_maybe: shared (shared? Item)[] = new (shared? Item)[](2u);\n",
+        "  var copied: (shared Item)[] = owners;\n",
+        "  var shared_copy: shared (shared Item)[] = new (shared Item)[](copy *shared_owners);\n",
+        "  var replacement: shared Item = new Item();\n",
+        "  owners[0] = replacement;\n",
+        "  owners[0] = owners[0];\n",
+        "  maybe[0] = replacement;\n",
+        "  maybe[0] = maybe[0];\n",
+        "  maybe[0] = none;\n",
+        "  var owner_zero: shared Item = owners[0];\n",
+        "  var copied_zero: shared Item = copied[0];\n",
+        "  var shared_zero: shared Item = shared_owners->[0];\n",
+        "  copied_zero->marker = 7;\n",
+        "  return owner_zero->marker + copied_zero->marker + shared_zero->marker;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(9));
+}
+
+#[test]
+fn shared_element_defaults_copy_and_optional_absence_have_exact_allocation_counts() {
+    let source = concat!(
+        "extern fn validate_counts() -> i64;\n",
+        "class Item { marker: i64; init() { self.marker = 1; } }\n",
+        "fn build() -> unit {\n",
+        "  var inline: (shared Item)[] = (shared Item)[](3u);\n",
+        "  var inline_optional: (shared? Item)[] = (shared? Item)[](3u);\n",
+        "  var outer: shared (shared Item)[] = new (shared Item)[](2u);\n",
+        "  var outer_optional: shared (shared? Item)[] = new (shared? Item)[](2u);\n",
+        "  var inline_copy: (shared Item)[] = inline;\n",
+        "  var outer_copy: shared (shared Item)[] = new (shared Item)[](copy *outer);\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate_counts(); }\n",
+    );
+    let mut output = assembly(source);
+    // Four outer backings, five default Item pointees, and two copied
+    // backings. Optional shared defaults contribute no pointee allocations.
+    output.push_str(&ownership_counter_probe(11));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0));
+}
+
+#[test]
+fn shared_element_default_construction_and_release_follow_index_order() {
+    for (ty, construction) in [
+        ("(shared Item)[]", "(shared Item)[](3u)"),
+        ("shared (shared Item)[]", "new (shared Item)[](3u)"),
+    ] {
+        let source = format!(
+            concat!(
+                "extern fn next_marker() -> i64;\n",
+                "extern fn observe(value: i64) -> unit;\n",
+                "extern fn validate() -> i64;\n",
+                "class Item {{\n",
+                "  marker: i64;\n",
+                "  init() {{ self.marker = next_marker(); }}\n",
+                "  destroy {{ observe(self.marker); }}\n",
+                "}}\n",
+                "fn build() -> unit {{\n",
+                "  var values: {ty} = {construction};\n",
+                "  return;\n",
+                "}}\n",
+                "fn main() -> i64 {{ build(); return validate(); }}\n",
+            ),
+            ty = ty,
+            construction = construction,
+        );
+        let mut output = assembly(&source);
+        output.push_str(shared_element_trace_probe());
+
+        assert_eq!(
+            run_native_assembly(&output).code(),
+            Some(0),
+            "{construction}"
+        );
+    }
+}
+
+#[test]
+fn nested_shared_array_elements_keep_outer_and_inner_ownership_independent() {
+    for construction in [
+        concat!(
+            "var rows: (shared i64[])[] = (shared i64[])[](2u);\n",
+            "  var copied: (shared i64[])[] = rows;\n",
+        ),
+        concat!(
+            "var rows: shared (shared i64[])[] = new (shared i64[])[](2u);\n",
+            "  var copied: shared (shared i64[])[] = new (shared i64[])[](copy *rows);\n",
+        ),
+    ] {
+        let source = format!(
+            concat!(
+                "extern fn validate_counts() -> i64;\n",
+                "fn build() -> unit {{\n",
+                "  {construction}",
+                "  return;\n",
+                "}}\n",
+                "fn main() -> i64 {{ build(); return validate_counts(); }}\n",
+            ),
+            construction = construction,
+        );
+        let mut output = assembly(&source);
+        // One original outer backing, two distinct empty shared inner arrays,
+        // and one copied outer backing. Copying retains inner owners.
+        output.push_str(&ownership_counter_probe(4));
+
+        assert_eq!(run_native_assembly(&output).code(), Some(0));
+    }
+}
+
 fn native_allocator() -> &'static str {
     concat!(
         "\n.text\n",
@@ -400,6 +551,66 @@ fn native_allocator() -> &'static str {
         "ska_rt_free:\n",
         "    jmp free@PLT\n",
         ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
+fn shared_element_trace_probe() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lshared_element_next: .quad 0\n",
+        ".Lshared_element_trace: .quad 0\n",
+        ".Lshared_element_allocations: .quad 0\n",
+        ".Lshared_element_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl next_marker\n",
+        ".type next_marker, @function\n",
+        "next_marker:\n",
+        "    add qword ptr [rip + .Lshared_element_next], 1\n",
+        "    mov rax, qword ptr [rip + .Lshared_element_next]\n",
+        "    ret\n",
+        ".size next_marker, .-next_marker\n",
+        ".globl observe\n",
+        ".type observe, @function\n",
+        "observe:\n",
+        "    imul rax, qword ptr [rip + .Lshared_element_trace], 10\n",
+        "    add rax, rdi\n",
+        "    mov qword ptr [rip + .Lshared_element_trace], rax\n",
+        "    ret\n",
+        ".size observe, .-observe\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    push rbp\n",
+        "    mov rbp, rsp\n",
+        "    add qword ptr [rip + .Lshared_element_allocations], 1\n",
+        "    call malloc@PLT\n",
+        "    leave\n",
+        "    ret\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    add qword ptr [rip + .Lshared_element_frees], 1\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl validate\n",
+        ".type validate, @function\n",
+        "validate:\n",
+        "    cmp qword ptr [rip + .Lshared_element_next], 3\n",
+        "    jne .Lshared_element_failure\n",
+        "    cmp qword ptr [rip + .Lshared_element_trace], 321\n",
+        "    jne .Lshared_element_failure\n",
+        "    cmp qword ptr [rip + .Lshared_element_allocations], 4\n",
+        "    jne .Lshared_element_failure\n",
+        "    cmp qword ptr [rip + .Lshared_element_frees], 4\n",
+        "    jne .Lshared_element_failure\n",
+        "    mov rax, 0\n",
+        "    ret\n",
+        ".Lshared_element_failure:\n",
+        "    mov rax, 1\n",
+        "    ret\n",
+        ".size validate, .-validate\n",
     )
 }
 

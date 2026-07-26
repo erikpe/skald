@@ -178,6 +178,21 @@ impl InstructionSelector<'_, '_> {
         dynamic_class: ClassId,
         arguments: &[MirArgument],
     ) -> Result<CallLayout, BackendError> {
+        self.marshal_shared_initializer_handle_inputs(
+            signature,
+            value::frame_storage(self.frame, allocation),
+            dynamic_class,
+            arguments,
+        )
+    }
+
+    pub(super) fn marshal_shared_initializer_handle_inputs(
+        &mut self,
+        signature: MirCallableSignature<'_>,
+        handle: Operand,
+        dynamic_class: ClassId,
+        arguments: &[MirArgument],
+    ) -> Result<CallLayout, BackendError> {
         let layout = classify_call(signature.parameters, true, false).ok_or_else(|| {
             argument_area_error(
                 self.function,
@@ -191,8 +206,8 @@ impl InstructionSelector<'_, '_> {
         let receiver = layout
             .receiver_locations()
             .expect("shared initializer layout has a receiver");
-        self.select_shared_payload_address(allocation, receiver.address());
-        self.select_shared_payload_address(allocation, receiver.complete());
+        self.select_shared_payload_address(handle, receiver.address());
+        self.select_shared_payload_address(handle, receiver.complete());
         self.select_metadata_symbol(dynamic_class, receiver.metadata());
         for ((argument, parameter), location) in arguments
             .iter()
@@ -204,7 +219,7 @@ impl InstructionSelector<'_, '_> {
         Ok(layout)
     }
 
-    fn select_shared_payload_address(&mut self, allocation: StorageId, location: ArgumentLocation) {
+    fn select_shared_payload_address(&mut self, handle: Operand, location: ArgumentLocation) {
         let destination = match location {
             ArgumentLocation::IntegerRegister(register) => register,
             ArgumentLocation::Stack(_) => Register::Rax,
@@ -213,7 +228,7 @@ impl InstructionSelector<'_, '_> {
             }
         };
         self.output.push(Instruction::Move {
-            source: value::frame_storage(self.frame, allocation),
+            source: handle,
             destination: destination.into(),
         });
         self.output.push(Instruction::LoadEffectiveAddress {

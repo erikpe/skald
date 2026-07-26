@@ -23,8 +23,16 @@ use super::{
 };
 
 mod count;
+mod helpers;
 
 pub(super) use count::{emit_release_loaded_handle, emit_retain_loaded_handle};
+
+pub(super) fn lower_helpers(
+    program: &crate::mir::MirProgram,
+    dispatch: &super::super::dispatch::DispatchMetadata,
+) -> Vec<super::super::machine::AssemblyFunction> {
+    helpers::lower_all(program, dispatch)
+}
 
 const STRONG_COUNT_OFFSET: i32 = 0;
 const RUNTIME_ALLOC: &str = "ska_rt_alloc";
@@ -282,8 +290,14 @@ impl InstructionSelector<'_, '_> {
         Ok(())
     }
 
-    fn store_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+    pub(super) fn store_shared_place(&mut self, place: &MirPlace) -> Result<(), BackendError> {
+        self.output
+            .push(Instruction::ReserveStack(PRESERVED_HANDLE_STACK_SIZE));
+        value::store_rax(value::memory(Register::Rsp, 0), self.output);
         self.materialize_place_address(place, Register::Rdx)?;
+        value::load_rax(value::memory(Register::Rsp, 0), self.output);
+        self.output
+            .push(Instruction::ReleaseStack(PRESERVED_HANDLE_STACK_SIZE));
         value::store_rax(value::memory(Register::Rdx, 0), self.output);
         Ok(())
     }

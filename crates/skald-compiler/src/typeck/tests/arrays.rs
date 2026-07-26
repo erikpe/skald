@@ -199,6 +199,29 @@ fn rejects_unavailable_defaults_lengths_and_ownership_conversions() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == ARRAY_CAPABILITY_UNAVAILABLE));
+
+    let object_shared = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var values: (shared Obj)[] = (shared Obj)[](2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(object_shared
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_CAPABILITY_UNAVAILABLE));
+
+    let missing_shared_default = check_text(concat!(
+        "class Item { init(value: i64) {} }\n",
+        "fn main() -> i64 {\n",
+        "  var values: (shared Item)[] = (shared Item)[](2u);\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(missing_shared_default
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == ARRAY_CAPABILITY_UNAVAILABLE));
 }
 
 #[test]

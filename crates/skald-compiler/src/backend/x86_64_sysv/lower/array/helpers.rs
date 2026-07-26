@@ -453,11 +453,9 @@ fn lower_copier(
             lower_optional_class_copier(array, class, source, destination, data_layout)?
         }
         MirType::Array(inner) => lower_nested_array_copier(array, inner, source, destination),
-        MirType::Shared(_)
-        | MirType::OptionalShared(_)
-        | MirType::Interface(_)
-        | MirType::Obj
-        | MirType::Unit => {
+        MirType::Shared(_) => lower_shared_copier(array, source, destination, false),
+        MirType::OptionalShared(_) => lower_shared_copier(array, source, destination, true),
+        MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has an unsupported copy element {element}"
             )));
@@ -582,6 +580,73 @@ fn lower_nested_array_copier(
     ]
 }
 
+fn lower_shared_copier(
+    array: crate::identity::ArrayTypeId,
+    source: Operand,
+    destination: Operand,
+    optional: bool,
+) -> Vec<Instruction> {
+    let absent = Label::new(format!(".Lska_array_{}_copy_shared_absent", array.index()));
+    let complete = Label::new(format!(
+        ".Lska_array_{}_copy_shared_complete",
+        array.index()
+    ));
+    let mut instructions = vec![
+        Instruction::ReserveStack(16),
+        Instruction::LoadEffectiveAddress {
+            source: destination,
+            destination: Register::R11,
+        },
+        Instruction::Move {
+            source: Register::R11.into(),
+            destination: value::memory(Register::Rsp, 0),
+        },
+        Instruction::Move {
+            source,
+            destination: Register::Rdi.into(),
+        },
+    ];
+    if optional {
+        instructions.extend([
+            Instruction::Test(Register::Rdi),
+            Instruction::JumpIfEqual(absent.clone()),
+        ]);
+    }
+    instructions.extend([
+        Instruction::Call(symbol::shared_handle_retain()),
+        Instruction::Move {
+            source: value::memory(Register::Rsp, 0),
+            destination: Register::R11.into(),
+        },
+        Instruction::ReleaseStack(16),
+        Instruction::Move {
+            source: Register::Rax.into(),
+            destination: value::memory(Register::R11, 0),
+        },
+    ]);
+    if optional {
+        instructions.extend([
+            Instruction::Jump(complete.clone()),
+            Instruction::Label(absent),
+            Instruction::Move {
+                source: value::memory(Register::Rsp, 0),
+                destination: Register::R11.into(),
+            },
+            Instruction::ReleaseStack(16),
+            Instruction::MoveImmediate64 {
+                bits: 0,
+                destination: Register::Rax,
+            },
+            Instruction::Move {
+                source: Register::Rax.into(),
+                destination: value::memory(Register::R11, 0),
+            },
+            Instruction::Label(complete),
+        ]);
+    }
+    instructions
+}
+
 fn lower_destroyer(
     _program: &MirProgram,
     array: crate::identity::ArrayTypeId,
@@ -658,11 +723,30 @@ fn lower_destroyer(
             },
             Instruction::Call(symbol::array_release(inner)),
         ],
-        MirType::Shared(_)
-        | MirType::OptionalShared(_)
-        | MirType::Interface(_)
-        | MirType::Obj
-        | MirType::Unit => {
+        MirType::Shared(_) => vec![
+            Instruction::Move {
+                source: element_address,
+                destination: Register::Rdi.into(),
+            },
+            Instruction::Call(symbol::shared_handle_release()),
+        ],
+        MirType::OptionalShared(_) => {
+            let complete = Label::new(format!(
+                ".Lska_array_{}_destroy_optional_shared_complete",
+                array.index()
+            ));
+            vec![
+                Instruction::Move {
+                    source: element_address,
+                    destination: Register::Rdi.into(),
+                },
+                Instruction::Test(Register::Rdi),
+                Instruction::JumpIfEqual(complete.clone()),
+                Instruction::Call(symbol::shared_handle_release()),
+                Instruction::Label(complete),
+            ]
+        }
+        MirType::Interface(_) | MirType::Obj | MirType::Unit => {
             return Err(helper_error(format!(
                 "array {array} has unsupported destruction element {element}"
             )));
