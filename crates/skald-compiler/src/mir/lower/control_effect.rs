@@ -46,6 +46,7 @@ pub(super) fn expression_contains_runtime_cast(expression: &HirExpression) -> bo
                     .optional_view
                     .as_deref()
                     .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+                || place.array_element.is_some()
         }
         HirExpressionKind::TypeTest(test) => view_source_contains_runtime_cast(&test.source.source),
         HirExpressionKind::Binding(_)
@@ -222,6 +223,7 @@ fn method_receiver_contains_runtime_cast(receiver: &crate::hir::HirMethodReceive
             .optional_view
             .as_deref()
             .is_some_and(|view| view_source_contains_runtime_cast(&view.source))
+        || receiver.array_element.is_some()
 }
 
 fn interface_receiver_contains_runtime_cast(receiver: &HirInterfaceReceiver) -> bool {

@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR11 is next.
+Status: in progress; AR12 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -82,7 +82,7 @@ Use the existing test ownership:
 - [x] AR8 — Execute nontrivial and nested inline element lifecycle
 - [x] AR9 — Execute shared and optional-shared outer arrays
 - [x] AR10 — Execute shared and optional-shared element lifecycle
-- [ ] AR11 — Execute copied slices and checked slice assignment
+- [x] AR11 — Execute copied slices and checked slice assignment
 - [ ] AR12 — Execute array aliases and detached-backing anchors
 - [ ] AR13 — Harden and publish the complete array profile
 
@@ -535,24 +535,24 @@ independent.
 **Purpose:** Add the frozen bulk-copy surface only after every element
 construction and assignment category executes independently.
 
-- [ ] Implement half-open slice normalization for present or omitted `i64`
+- [x] Implement half-open slice normalization for present or omitted `i64`
       bounds, including negative-relative-to-end positions, empty ranges, and
       start-not-after-end validation.
-- [ ] Execute slice reads as new inline arrays with increasing-index element
+- [x] Execute slice reads as new inline arrays with increasing-index element
       copy construction, including reads from inline, shared, and
       optional-shared receivers.
-- [ ] Execute slice assignment only after destination bounds, source
+- [x] Execute slice assignment only after destination bounds, source
       completion/bounds, and exact length equality succeed; perform no earlier
       destination write.
-- [ ] Materialize right-side slice temporaries before writes so overlapping
+- [x] Materialize right-side slice temporaries before writes so overlapping
       ranges have snapshot semantics and lifecycle-visible
       copy/assignment/destruction order.
-- [ ] Apply primitive store, class copy assignment, nested whole-array
+- [x] Apply primitive store, class copy assignment, nested whole-array
       assignment, and secure shared-owner assignment in increasing destination
       order.
-- [ ] Distinguish whole replacement from `destination[:] = source` in HIR,
+- [x] Distinguish whole replacement from `destination[:] = source` in HIR,
       MIR, verifier state, backend lowering, diagnostics, and native behavior.
-- [ ] Add only semantics-preserving trivial bulk operations; do not require
+- [x] Add only semantics-preserving trivial bulk operations; do not require
       slice fusion or a non-copying view.
 
 **Tests:** Every omitted/positive/negative/empty/reversed bound; minimum `i64`;

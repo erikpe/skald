@@ -10,9 +10,9 @@ typed array operations through verified, layout-independent MIR. The x86-64
 backend executes primitive, optional, exact-class, and recursively nested
 inline and shared-outer construction, access, lifecycle, deep copy,
 produced-backing adoption, replacement, class fields, shared/optional-shared
-owner boundaries, internal value boundaries, and ordinary or optional
-shared-owner element lifecycle. It structurally rejects later array operations
-at its legality boundary.
+owner boundaries, internal value boundaries, ordinary or optional shared-owner
+element lifecycle, copied slices, and checked equal-length slice assignment.
+It structurally rejects later array operations at its legality boundary.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -63,9 +63,13 @@ destruction. Class fields, synthesized class lifecycle, internal value
 parameters and results, shared and optional-shared array owners, and recursive
 class/array graphs use the same owner model. Shared elements use exact
 per-slot default allocation, one-word retain/release operations, zero-niche
-optional absence, and secure-before-release assignment. Slices and array
-aliases remain structured backend-unsupported operations. The type checker
-and MIR lowering do not use an array-wide unsupported diagnostic.
+optional absence, and secure-before-release assignment. Slice reads allocate
+distinct inline backing and copy-construct in increasing order; slice writes
+validate both ranges and equal lengths before assigning in increasing order.
+Right-side slice temporaries are fully materialized before writes, which gives
+overlapping assignments snapshot semantics. Array aliases remain structured
+backend-unsupported operations. The type checker and MIR lowering do not use
+an array-wide unsupported diagnostic.
 
 ## Canonical type model
 

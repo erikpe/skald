@@ -358,7 +358,7 @@ fn lower_copier(
     let (source, destination, mut address_setup) = if matches!(layout.stride(), 1 | 2 | 4 | 8) {
         let scale = u8::try_from(layout.stride()).expect("encodable array stride");
         (
-            value::indexed_memory(Register::Rsi, Register::Rdx, scale, displacement),
+            value::indexed_memory(Register::Rsi, Register::Rcx, scale, displacement),
             value::indexed_memory(Register::Rdi, Register::Rdx, scale, displacement),
             Vec::new(),
         )
@@ -895,7 +895,7 @@ fn materialize_helper_element_addresses(stride: usize, displacement: i32) -> Vec
             destination: Register::Rdi,
         },
         Instruction::Move {
-            source: Register::Rdx.into(),
+            source: Register::Rcx.into(),
             destination: Register::Rax.into(),
         },
         Instruction::MoveImmediate64 {

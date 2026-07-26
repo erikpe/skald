@@ -71,6 +71,7 @@ fn check_definition(
                     | MirStorageKind::Argument
                     | MirStorageKind::ArrayBacking
                     | MirStorageKind::ArrayProduced
+                    | MirStorageKind::ArraySlice
                     | MirStorageKind::ArrayAnchor(_)
             );
             if !supported {
@@ -186,15 +187,33 @@ fn check_instruction(
             MirArrayInstruction::AnchorEnd { .. } => {}
             MirArrayInstruction::Normalize {
                 owner,
-                kind: MirArrayPositionKind::Element,
+                kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
                 ..
             } => {
                 require_executable_array_place(program, definition, owner)?;
             }
+            MirArrayInstruction::Boundary { owner, .. } => {
+                require_executable_array_place(program, definition, owner)?;
+            }
+            MirArrayInstruction::SliceBoundsCheck { .. } => {}
+            MirArrayInstruction::SliceLengthCheck { source, .. } => {
+                require_executable_array_place(program, definition, source)?;
+            }
+            MirArrayInstruction::SliceCopy { source, .. } => {
+                require_executable_array_place(program, definition, source)?;
+            }
+            MirArrayInstruction::SliceAssignNext {
+                destination,
+                source,
+                ..
+            } => {
+                require_executable_array_place(program, definition, destination)?;
+                require_executable_array_place(program, definition, source)?;
+            }
             _ => {
                 return Err(error(
                     Some(definition.callable()),
-                    "verified array operation is outside the non-shared inline-array execution profile",
+                    "verified array operation is outside the executable array profile",
                 ));
             }
         },
@@ -209,28 +228,25 @@ fn check_terminator(
 ) -> Result<(), BackendError> {
     let supported = match terminator {
         MirTerminator::ArrayOperationCheck {
-            failure: MirArrayFailure::AllocationSize,
+            failure:
+                MirArrayFailure::AllocationSize
+                | MirArrayFailure::InvalidSliceBounds
+                | MirArrayFailure::SliceLengthMismatch,
             ..
         }
         | MirTerminator::ArrayPositionCheck {
-            kind: MirArrayPositionKind::Element,
+            kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
             ..
         }
         | MirTerminator::ArrayLoop { .. }
         | MirTerminator::Terminate {
             reason:
                 MirTerminationReason::ArrayAllocationFailure
-                | MirTerminationReason::ArrayIndexOutOfBounds,
-            ..
-        } => true,
-        MirTerminator::ArrayOperationCheck { .. }
-        | MirTerminator::ArrayPositionCheck { .. }
-        | MirTerminator::Terminate {
-            reason:
-                MirTerminationReason::ArrayInvalidSliceBounds
+                | MirTerminationReason::ArrayIndexOutOfBounds
+                | MirTerminationReason::ArrayInvalidSliceBounds
                 | MirTerminationReason::ArraySliceLengthMismatch,
             ..
-        } => false,
+        } => true,
         _ => true,
     };
     if supported {
@@ -238,7 +254,7 @@ fn check_terminator(
     } else {
         Err(error(
             Some(definition.callable()),
-            "verified array control flow is outside the non-shared inline-array execution profile",
+            "verified array control flow is outside the executable array profile",
         ))
     }
 }
@@ -290,6 +306,7 @@ fn require_executable_array_place(
                 | MirStorageKind::Return
                 | MirStorageKind::Argument
                 | MirStorageKind::ArrayProduced
+                | MirStorageKind::ArraySlice
         )
         && matches!(storage.ty, MirType::Array(_));
     let projected_owner = (!place.projections.is_empty()

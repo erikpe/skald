@@ -28,6 +28,7 @@ use super::{
 mod helpers;
 mod lifecycle;
 mod shared_elements;
+mod slices;
 
 pub(super) fn lower_helpers(
     program: &crate::mir::MirProgram,
@@ -365,8 +366,55 @@ impl InstructionSelector<'_, '_> {
                 kind: MirArrayPositionKind::Element,
                 ..
             } => self.select_array_element_normalize(*destination, owner, *index),
-            _ => Err(self
-                .array_error("array instruction escaped the primitive inline legality boundary")),
+            MirArrayInstruction::Normalize {
+                destination,
+                owner,
+                index,
+                kind: MirArrayPositionKind::SliceBound,
+                ..
+            } => self.select_array_slice_normalize(*destination, owner, *index),
+            MirArrayInstruction::Boundary {
+                destination,
+                owner,
+                boundary,
+                ..
+            } => self.select_array_slice_boundary(*destination, owner, *boundary),
+            MirArrayInstruction::SliceBoundsCheck { start, end, .. } => {
+                self.select_array_slice_bounds_check(*start, *end);
+                Ok(())
+            }
+            MirArrayInstruction::SliceLengthCheck {
+                destination_start,
+                destination_end,
+                source,
+                ..
+            } => self.select_array_slice_length_check(*destination_start, *destination_end, source),
+            MirArrayInstruction::SliceCopy {
+                destination,
+                source,
+                start,
+                end,
+                array,
+                ..
+            } => self.select_array_slice_copy(*destination, source, *start, *end, *array),
+            MirArrayInstruction::SliceAssignNext {
+                destination,
+                source,
+                destination_index,
+                source_index,
+                operation,
+                span,
+            } => self.select_array_slice_assign(
+                destination,
+                source,
+                *destination_index,
+                *source_index,
+                *operation,
+                *span,
+            ),
+            _ => {
+                Err(self.array_error("array instruction escaped the executable legality boundary"))
+            }
         }
     }
 
@@ -375,29 +423,7 @@ impl InstructionSelector<'_, '_> {
         source: &MirPlace,
         result: crate::mir::ValueId,
     ) -> Result<(), BackendError> {
-        let shared = self.load_array_owner(source)?;
-        let empty = self.array_label(result.index(), "length_empty");
-        let complete = self.array_label(result.index(), "length_complete");
-        self.output.push(Instruction::Test(Register::Rax));
-        self.output.push(Instruction::JumpIfEqual(empty.clone()));
-        value::load_rax(
-            value::memory(
-                Register::Rax,
-                if shared {
-                    SHARED_ARRAY_LENGTH_OFFSET
-                } else {
-                    ARRAY_LENGTH_OFFSET
-                },
-            ),
-            self.output,
-        );
-        self.output.push(Instruction::Jump(complete.clone()));
-        self.output.push(Instruction::Label(empty));
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: 0,
-            destination: Register::Rax,
-        });
-        self.output.push(Instruction::Label(complete));
+        self.load_array_length(source)?;
         value::store_rax(value::frame_value(self.frame, result), self.output);
         Ok(())
     }
@@ -408,7 +434,10 @@ impl InstructionSelector<'_, '_> {
     ) -> Result<bool, BackendError> {
         match terminator {
             MirTerminator::ArrayOperationCheck {
-                failure: MirArrayFailure::AllocationSize,
+                failure:
+                    MirArrayFailure::AllocationSize
+                    | MirArrayFailure::InvalidSliceBounds
+                    | MirArrayFailure::SliceLengthMismatch,
                 success_target,
                 failure_target,
                 ..
@@ -444,7 +473,7 @@ impl InstructionSelector<'_, '_> {
             }
             MirTerminator::ArrayPositionCheck {
                 position,
-                kind: MirArrayPositionKind::Element,
+                kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
                 success_target,
                 failure_target,
                 ..
@@ -467,7 +496,9 @@ impl InstructionSelector<'_, '_> {
             MirTerminator::Terminate {
                 reason:
                     MirTerminationReason::ArrayAllocationFailure
-                    | MirTerminationReason::ArrayIndexOutOfBounds,
+                    | MirTerminationReason::ArrayIndexOutOfBounds
+                    | MirTerminationReason::ArrayInvalidSliceBounds
+                    | MirTerminationReason::ArraySliceLengthMismatch,
                 ..
             } => {
                 self.output.push(Instruction::Trap);

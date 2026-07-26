@@ -13,11 +13,14 @@ and recursively nested inline arrays. It includes immutable `len()`, checked
 positive and negative-relative element access, named deep copy, explicit
 shared-copy construction, produced-backing adoption, arbitrary-length inline
 replacement, conditional optional lifecycle, class fields, internal value and
-shared-owner parameters/results, checked allocation, and deterministic reverse
-destruction. Ordinary and optional shared-owner elements execute with
+shared-owner parameters/results, checked allocation, copied slices, checked
+equal-length slice assignment, and deterministic reverse destruction.
+Ordinary and optional shared-owner elements execute with
 one-word slots, exact per-element default allocation, conditional ownership,
 secure replacement, shallow owner copying, and nested shared-array edges.
-Slices and array aliases remain structured backend errors.
+Slice bounds support omitted endpoints and signed negative-relative positions;
+slice reads own distinct backing and overlapping writes have snapshot
+semantics. Array aliases remain structured backend errors.
 
 Arrays are built-in, invariant, fixed-size sequences with an exact element
 type. They may be inline values or shared allocations, may contain every

@@ -1,0 +1,49 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    copy(ref other: Trace) {
+        self.value = other.value + 10;
+    }
+
+    assign(ref other: Trace) {
+        self.value = other.value + 100;
+        ska_rt_println_i64(self.value + 2000);
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value + 3000);
+    }
+}
+
+fn main() -> i64 {
+    var source: Trace[] = Trace[](3u);
+    source[0].value = 1;
+    source[1].value = 2;
+    source[2].value = 3;
+
+    var snapshot: Trace[] = source[:];
+    var destination: Trace[] = Trace[](3u);
+    destination[:] = snapshot;
+
+    var values: i64[] = i64[](5u);
+    values[0] = 1;
+    values[1] = 2;
+    values[2] = 3;
+    values[3] = 4;
+    values[4] = 5;
+    values[1:4] = values[0:3];
+
+    ska_rt_println_i64(destination[0].value);
+    ska_rt_println_i64(destination[1].value);
+    ska_rt_println_i64(destination[2].value);
+    ska_rt_println_i64(values[1]);
+    ska_rt_println_i64(values[2]);
+    ska_rt_println_i64(values[3]);
+    return 0;
+}

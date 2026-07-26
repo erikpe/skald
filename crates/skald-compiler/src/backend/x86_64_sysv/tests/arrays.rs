@@ -310,7 +310,7 @@ fn nontrivial_and_nested_inline_array_lifecycle_reaches_native_lowering() {
 }
 
 #[test]
-fn deferred_array_profiles_remain_structured_backend_errors() {
+fn deferred_array_aliases_remain_structured_backend_errors() {
     let source = concat!(
         "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
         "fn main() -> i64 { return 0; }\n",
@@ -447,6 +447,180 @@ fn shared_owner_elements_execute_in_inline_and_shared_outer_arrays() {
 }
 
 #[test]
+fn copied_slices_and_checked_slice_assignment_execute_with_snapshot_semantics() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](5u);\n",
+        "  values[0] = 1;\n",
+        "  values[1] = 2;\n",
+        "  values[2] = 3;\n",
+        "  values[3] = 4;\n",
+        "  values[4] = 5;\n",
+        "  var middle: i64[] = values[1:-1];\n",
+        "  values[1:4] = values[0:3];\n",
+        "  var full: i64[] = i64[](5u);\n",
+        "  full[:] = values;\n",
+        "  return middle[0] + middle[-1] + values[1] + values[3] + full[4];\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(15));
+}
+
+#[test]
+fn full_slice_assignment_preserves_backing_while_whole_assignment_replaces_it() {
+    let source = concat!(
+        "extern fn validate_counts() -> i64;\n",
+        "fn build() -> unit {\n",
+        "  var destination: i64[] = i64[](2u);\n",
+        "  var source: i64[] = i64[](2u);\n",
+        "  destination[:] = source;\n",
+        "  destination = source;\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 { build(); return validate_counts(); }\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(&ownership_counter_probe(3));
+
+    assert!(run_native_assembly(&output).success());
+}
+
+#[test]
+fn slices_read_inline_shared_and_optional_shared_receivers_at_every_bound_shape() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var shared_values: shared i64[] = new i64[](4u);\n",
+        "  shared_values->[0] = 10;\n",
+        "  shared_values->[1] = 20;\n",
+        "  shared_values->[2] = 30;\n",
+        "  shared_values->[3] = 40;\n",
+        "  var optional_values: shared? i64[] = shared_values;\n",
+        "  var leading: i64[] = shared_values->[:2];\n",
+        "  var trailing: i64[] = optional_values!->[-2:];\n",
+        "  var empty_left: i64[] = leading[:0];\n",
+        "  var empty_right: i64[] = trailing[2:];\n",
+        "  return leading[1] + trailing[0];\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(50));
+}
+
+#[test]
+fn slice_lifecycle_uses_class_nested_and_shared_element_operations() {
+    let source = concat!(
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  copy(ref other: Item) { self.value = other.value + 10; }\n",
+        "  assign(ref other: Item) { self.value = other.value + 100; }\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var items: Item[] = Item[](3u);\n",
+        "  items[0].value = 1;\n",
+        "  items[1].value = 2;\n",
+        "  items[2].value = 3;\n",
+        "  var assigned: Item[] = Item[](3u);\n",
+        "  assigned[:] = items[:];\n",
+        "  var rows: i64[][] = i64[][](1u);\n",
+        "  rows[0] = i64[](1u);\n",
+        "  rows[0][0] = 7;\n",
+        "  var copied_rows: i64[][] = rows[:];\n",
+        "  var owners: (shared Item)[] = (shared Item)[](1u);\n",
+        "  var owner: shared Item = owners[0];\n",
+        "  owner->value = 9;\n",
+        "  var copied_owners: (shared Item)[] = owners[:];\n",
+        "  var copied_owner: shared Item = copied_owners[0];\n",
+        "  return assigned[0].value + assigned[1].value + assigned[2].value\n",
+        "    + copied_rows[0][0] + copied_owner->value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(96));
+}
+
+#[test]
+fn slice_lifecycle_conditionally_assigns_optional_element_categories() {
+    let source = concat!(
+        "class Item { value: i64; init() { self.value = 6; } }\n",
+        "fn main() -> i64 {\n",
+        "  var primitive: i64?[] = i64?[](1u);\n",
+        "  primitive[0] = 5;\n",
+        "  var primitive_copy: i64?[] = primitive[:];\n",
+        "  var primitive_destination: i64?[] = i64?[](1u);\n",
+        "  primitive_destination[:] = primitive_copy;\n",
+        "  var inline: Item?[] = Item?[](1u);\n",
+        "  inline[0] = Item();\n",
+        "  var inline_copy: Item?[] = inline[:];\n",
+        "  var inline_destination: Item?[] = Item?[](1u);\n",
+        "  inline_destination[:] = inline_copy;\n",
+        "  var owner: shared Item = new Item();\n",
+        "  var optional_owner: (shared? Item)[] = (shared? Item)[](1u);\n",
+        "  optional_owner[0] = owner;\n",
+        "  var owner_copy: (shared? Item)[] = optional_owner[:];\n",
+        "  var owner_destination: (shared? Item)[] = (shared? Item)[](1u);\n",
+        "  owner_destination[:] = owner_copy;\n",
+        "  var inline_value: Item? = inline_destination[0];\n",
+        "  var copied_owner: shared? Item = owner_destination[0];\n",
+        "  return primitive_destination[0]! + inline_value!.value\n",
+        "    + copied_owner!->value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(17));
+}
+
+#[test]
+fn invalid_slice_bounds_and_length_mismatch_terminate_before_writes() {
+    for body in [
+        "var copied: i64[] = values[2:1];",
+        "var copied: i64[] = values[-4:];",
+        "var copied: i64[] = values[-9223372036854775808:];",
+        concat!("var source: i64[] = i64[](2u);\n", "  values[:] = source;",),
+    ] {
+        let source = format!(
+            concat!(
+                "fn main() -> i64 {{\n",
+                "  var values: i64[] = i64[](3u);\n",
+                "  values[0] = 7;\n",
+                "  {body}\n",
+                "  return values[0];\n",
+                "}}\n",
+            ),
+            body = body,
+        );
+        let mut output = assembly(&source);
+        output.push_str(native_allocator());
+
+        assert!(!run_native_assembly(&output).success(), "{body}");
+    }
+}
+
+#[test]
+fn copied_slice_allocation_failure_terminates_without_publishing_a_result() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](2u);\n",
+        "  var copied: i64[] = values[:];\n",
+        "  return copied[0];\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(second_allocation_traps());
+
+    assert!(!run_native_assembly(&output).success());
+}
+
+#[test]
 fn shared_element_defaults_copy_and_optional_absence_have_exact_allocation_counts() {
     let source = concat!(
         "extern fn validate_counts() -> i64;\n",
@@ -545,6 +719,30 @@ fn native_allocator() -> &'static str {
         ".type ska_rt_alloc, @function\n",
         "ska_rt_alloc:\n",
         "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+    )
+}
+
+fn second_allocation_traps() -> &'static str {
+    concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lslice_allocation_count: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    add qword ptr [rip + .Lslice_allocation_count], 1\n",
+        "    cmp qword ptr [rip + .Lslice_allocation_count], 2\n",
+        "    je .Lslice_allocation_failure\n",
+        "    jmp malloc@PLT\n",
+        ".Lslice_allocation_failure:\n",
+        "    ud2\n",
         ".size ska_rt_alloc, .-ska_rt_alloc\n",
         ".globl ska_rt_free\n",
         ".type ska_rt_free, @function\n",

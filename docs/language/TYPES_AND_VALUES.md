@@ -160,8 +160,10 @@ exponentiation operator is implemented. In particular, even primitive equality
 is currently unavailable in source. Built-in array indexing and slicing are
 intrinsic operations rather than general operators; non-shared inline element
 access currently executes for primitives, optionals, exact classes, and nested
-arrays on x86-64, while slices and shared ownership profiles remain
-target-legality errors.
+arrays on x86-64. The same element categories execute in shared outer arrays,
+and copied slices plus checked equal-length slice assignment execute for
+inline, shared, and optional-shared receivers. Array aliases remain a
+target-legality error.
 
 ## Conversions and future value families
 

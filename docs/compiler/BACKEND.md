@@ -101,7 +101,9 @@ replacement, class fields, internal value parameters/results, conditional
 optional lifecycle, exact per-element shared defaults, secure shared-owner
 replacement, and decreasing-index recursive cleanup. Invalid indices branch
 to the verified terminating failure edge before indexed address selection.
-Slices and array aliases remain structured legality errors.
+Copied slices and checked equal-length slice assignment execute after verified
+bounds and length failure edges; right-side slice temporaries provide snapshot
+semantics for overlap. Array aliases remain structured legality errors.
 
 ## Data layout
 
