@@ -34,6 +34,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .map(|definition| lower_member_definition(hir, definition))
         .collect();
     MirProgram {
+        array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
         classes: MirClassDeclarationTable::new(classes),
         interfaces: MirInterfaceDeclarationTable::new(
             hir.interfaces
@@ -82,6 +83,80 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
     }
 }
 
+fn lower_array_type(array: &crate::hir::HirArrayType) -> MirArrayType {
+    use crate::hir::{
+        HirArrayAssignElement as A, HirArrayCopyElement as C, HirArrayDefaultElement as D,
+        HirArrayDestroyElement as X,
+    };
+    MirArrayType {
+        id: array.id,
+        element: lower_type(array.element),
+        lifecycle: MirArrayLifecycle {
+            default: array.lifecycle.default.map(|operation| match operation {
+                D::Primitive => MirArrayDefaultElement::Primitive,
+                D::OptionalAbsent => MirArrayDefaultElement::OptionalAbsent,
+                D::Class { class, initializer } => {
+                    MirArrayDefaultElement::Class { class, initializer }
+                }
+                D::ArrayEmpty(array) => MirArrayDefaultElement::ArrayEmpty(array),
+                D::SharedClass { class, initializer } => {
+                    MirArrayDefaultElement::SharedClass { class, initializer }
+                }
+                D::SharedArrayEmpty(array) => MirArrayDefaultElement::SharedArrayEmpty(array),
+            }),
+            copy: array.lifecycle.copy.map(|operation| match operation {
+                C::Primitive => MirArrayCopyElement::Primitive,
+                C::OptionalPrimitive => MirArrayCopyElement::OptionalPrimitive,
+                C::Class { class, operation } => MirArrayCopyElement::Class {
+                    class,
+                    operation: lower_selected_copy_operation(operation),
+                },
+                C::OptionalClass { class, operation } => MirArrayCopyElement::OptionalClass {
+                    class,
+                    operation: lower_selected_copy_operation(operation),
+                },
+                C::Array(array) => MirArrayCopyElement::Array(array),
+                C::Shared(target) => MirArrayCopyElement::Shared(lower_shared_target(target)),
+                C::OptionalShared(target) => {
+                    MirArrayCopyElement::OptionalShared(lower_shared_target(target))
+                }
+            }),
+            assignment: array.lifecycle.assignment.map(|operation| match operation {
+                A::Primitive => MirArrayAssignElement::Primitive,
+                A::OptionalPrimitive => MirArrayAssignElement::OptionalPrimitive,
+                A::Class { class, operation } => MirArrayAssignElement::Class {
+                    class,
+                    operation: lower_selected_copy_operation(operation),
+                },
+                A::OptionalClass {
+                    class,
+                    copy_constructor,
+                    copy_assignment,
+                } => MirArrayAssignElement::OptionalClass {
+                    class,
+                    copy_constructor: lower_selected_copy_operation(copy_constructor),
+                    copy_assignment: lower_selected_copy_operation(copy_assignment),
+                },
+                A::Array(array) => MirArrayAssignElement::Array(array),
+                A::Shared(target) => MirArrayAssignElement::Shared(lower_shared_target(target)),
+                A::OptionalShared(target) => {
+                    MirArrayAssignElement::OptionalShared(lower_shared_target(target))
+                }
+            }),
+            destruction: match array.lifecycle.destruction {
+                X::Trivial => MirArrayDestroyElement::Trivial,
+                X::Class(class) => MirArrayDestroyElement::Class(class),
+                X::OptionalClass(class) => MirArrayDestroyElement::OptionalClass(class),
+                X::Array(array) => MirArrayDestroyElement::Array(array),
+                X::Shared(target) => MirArrayDestroyElement::Shared(lower_shared_target(target)),
+                X::OptionalShared(target) => {
+                    MirArrayDestroyElement::OptionalShared(lower_shared_target(target))
+                }
+            },
+        },
+    }
+}
+
 fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
     let fields: Vec<_> = class
         .fields
@@ -122,7 +197,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
                 HirDestructionStep::OptionalClassField(field) => {
                     MirDestructionStep::OptionalClassField(field)
                 }
-                HirDestructionStep::ArrayField(_) => array_lowering_gate(),
+                HirDestructionStep::ArrayField(field) => MirDestructionStep::ArrayField(field),
                 HirDestructionStep::Base(base) => MirDestructionStep::Base(base),
             })
             .collect(),
@@ -280,7 +355,9 @@ fn lower_copy_capability<I: Copy>(capability: &HirCopyCapability<I>) -> MirCopyC
                                 operation: lower_selected_copy_operation(operation),
                             }
                         }
-                        HirSynthesizedFieldCopy::Array { .. } => array_lowering_gate(),
+                        HirSynthesizedFieldCopy::Array { field, array } => {
+                            MirSynthesizedFieldCopy::Array { field, array }
+                        }
                     })
                     .collect(),
             })

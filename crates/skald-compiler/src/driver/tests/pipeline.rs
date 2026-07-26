@@ -357,20 +357,18 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
 }
 
 #[test]
-fn typed_arrays_stop_at_the_deliberate_hir_to_mir_gate() {
+fn verified_arrays_stop_at_the_structured_backend_legality_gate() {
     let result = compile_source_to_assembly(
         "arrays.ska",
         "fn main() -> i64 { var values: i64[] = i64[](4u); return 0; }",
         Target::X86_64SysV,
     );
-    let CompilationError::Diagnostics(report) =
-        result.expect_err("arrays must stop at the deliberate semantic gate")
+    let CompilationError::Backend(error) =
+        result.expect_err("arrays must stop at target legality before instruction selection")
     else {
-        panic!("expected source diagnostics");
+        panic!("expected backend legality error");
     };
-
-    assert!(report
-        .diagnostics
-        .iter()
-        .all(|diagnostic| diagnostic.code == UNSUPPORTED_ARRAY_SEMANTICS));
+    assert!(error
+        .to_string()
+        .contains("verified array MIR is not yet supported"));
 }

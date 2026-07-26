@@ -35,8 +35,11 @@ impl<'mir> Verifier<'mir> {
                     self.program.conformance(actual, expected).is_some()
                 }
                 MirSharedTarget::Interface(actual) => actual == expected,
-                MirSharedTarget::Obj => false,
+                MirSharedTarget::Obj | MirSharedTarget::Array(_) => false,
             },
+            MirSharedTarget::Array(expected) => {
+                matches!(actual, MirSharedTarget::Array(actual) if actual == expected)
+            }
         }
     }
 
@@ -49,6 +52,7 @@ impl<'mir> Verifier<'mir> {
             MirSharedTarget::Obj => true,
             MirSharedTarget::Class(class) => self.program.class(class).is_some(),
             MirSharedTarget::Interface(interface) => self.program.interface(interface).is_some(),
+            MirSharedTarget::Array(array) => self.program.array_type(array).is_some(),
         };
         if !declared {
             self.function_error(callable, format!("shared target {target} is not declared"));
@@ -207,6 +211,7 @@ impl<'mir> Verifier<'mir> {
                     destination.kind,
                     MirStorageKind::Local
                         | MirStorageKind::Temporary
+                        | MirStorageKind::SharedAnchor
                         | MirStorageKind::Argument
                         | MirStorageKind::Return
                 )
@@ -288,7 +293,10 @@ impl<'mir> Verifier<'mir> {
                     )
                     && matches!(
                         copy.source.projections.last(),
-                        Some(MirPlaceProjection::Field(_))
+                        Some(
+                            MirPlaceProjection::Field(_)
+                                | MirPlaceProjection::ArrayElement { .. }
+                        )
                     )
         ) {
             self.block_error(
@@ -582,5 +590,6 @@ const fn shared_view_target(target: MirSharedTarget) -> MirViewTarget {
         MirSharedTarget::Obj => MirViewTarget::Obj,
         MirSharedTarget::Class(class) => MirViewTarget::Class(class),
         MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
+        MirSharedTarget::Array(_) => panic!(),
     }
 }

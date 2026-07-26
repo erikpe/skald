@@ -18,6 +18,13 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    if !program.array_types.is_empty() {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "verified array MIR is not yet supported by the x86-64 backend",
+        ));
+    }
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
@@ -118,6 +125,9 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::ClassOptionalPublish(_)
                     | MirInstruction::ClassOptionalCleanup(_)
                     | MirInstruction::EndOptionalView(_) => {}
+                    MirInstruction::Array(_) => {
+                        unreachable!("array-bearing programs are rejected before target layout")
+                    }
                 }
             }
         }

@@ -82,6 +82,9 @@ fn select_plan(
         .ok_or_else(|| finalizer_error(format!("unknown finalizer class {class}")))?;
     for step in declaration.destruction.steps.iter().copied() {
         match step {
+            MirDestructionStep::ArrayField(_) => {
+                unreachable!("array MIR is rejected by target legality")
+            }
             MirDestructionStep::UserBody(destructor) => {
                 load_complete_address(complete_offset, Register::Rdi, output);
                 load_complete_address(complete_offset, Register::Rsi, output);

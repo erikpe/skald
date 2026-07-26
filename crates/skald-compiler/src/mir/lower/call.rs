@@ -152,6 +152,58 @@ impl BodyLowerer<'_> {
         self.full_expression_has_shared_effect = true;
     }
 
+    pub(super) fn lower_array_call(&mut self, expression: &HirExpression, destination: StorageId) {
+        let optional_mark = self.optional_view_mark();
+        let (target, receiver, arguments) = match &expression.kind {
+            crate::hir::HirExpressionKind::DirectCall {
+                function,
+                arguments,
+            } => (
+                MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::MethodCall {
+                receiver,
+                target,
+                arguments,
+            } => (
+                MirCallTarget::Method(lower_method_target(*target)),
+                Some(self.lower_method_receiver(receiver).into()),
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::InterfaceCall {
+                receiver,
+                target,
+                arguments,
+            } => {
+                let receiver = match receiver {
+                    HirInterfaceReceiver::View(view) => self.lower_object_view(view),
+                    HirInterfaceReceiver::Checked(view) => self.lower_checked_object_view(view),
+                };
+                (
+                    MirCallTarget::Interface(MirInterfaceCallTarget {
+                        interface: target.interface,
+                        requirement: target.requirement,
+                    }),
+                    Some(receiver.into()),
+                    self.lower_call_arguments(arguments),
+                )
+            }
+            _ => unreachable!("array call producer must contain a call expression"),
+        };
+        self.emit(MirInstruction::Call(MirCall {
+            target,
+            receiver,
+            arguments,
+            result: None,
+            shared_result: None,
+            destination: Some(MirPlace::base(destination)),
+            span: expression.span,
+        }));
+        self.end_optional_views_from(optional_mark, expression.span);
+    }
+
     pub(super) fn lower_optional_call(
         &mut self,
         expression: &HirExpression,
@@ -396,7 +448,27 @@ impl BodyLowerer<'_> {
                     self.lower_shared_transfer(storage, transfer);
                     LoweredArgument::Ready(MirArgument::SharedOwner(storage))
                 }
-                HirCallArgument::Array(_) | HirCallArgument::ArrayAlias(_) => array_lowering_gate(),
+                HirCallArgument::Array(initialization) => {
+                    let storage = self.new_array_storage(
+                        initialization.source.array,
+                        MirStorageKind::Argument,
+                        "argument",
+                        initialization.span,
+                    );
+                    self.lower_array_initialize(MirPlace::base(storage), initialization, false);
+                    LoweredArgument::Ready(MirArgument::OwnedPlace(MirPlace::base(storage)))
+                }
+                HirCallArgument::ArrayAlias(alias) => {
+                    let place = match &alias.source {
+                        crate::hir::HirArrayAliasSource::Whole(receiver) => {
+                            self.lower_array_receiver_place(receiver)
+                        }
+                        crate::hir::HirArrayAliasSource::Element(element) => {
+                            self.lower_array_element_place(element)
+                        }
+                    };
+                    LoweredArgument::Ready(MirArgument::Place(place))
+                }
             };
             lowered.push(argument);
         }
@@ -486,8 +558,12 @@ impl BodyLowerer<'_> {
         &mut self,
         receiver: &HirMethodReceiver,
     ) -> MirMethodReceiver {
-        if receiver.array_element.is_some() {
-            array_lowering_gate();
+        if let Some(element) = &receiver.array_element {
+            let place = self.lower_array_element_place(element);
+            let Type::Class(dynamic_class) = element.element else {
+                unreachable!("object method array receiver must have exact class type")
+            };
+            return MirMethodReceiver::exact(place, dynamic_class);
         }
         if let Some(cast) = &receiver.checked_cast {
             let view = self.lower_checked_object_view(cast);

@@ -58,6 +58,7 @@ impl Verifier<'_> {
                     if matches!(
                         parameter.ty,
                         MirType::Class(_)
+                            | MirType::Array(_)
                             | MirType::OptionalPrimitive(_)
                             | MirType::OptionalClass(_)
                     ) =>

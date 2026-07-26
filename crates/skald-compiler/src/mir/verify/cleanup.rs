@@ -147,7 +147,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::SharedAnchor
                 | MirStorageKind::ScalarSpill
                 | MirStorageKind::OptionalUnwrap
-                | MirStorageKind::SharedAllocation => continue,
+                | MirStorageKind::SharedAllocation
+                | MirStorageKind::ArrayBacking
+                | MirStorageKind::ArrayProduced
+                | MirStorageKind::ArraySlice
+                | MirStorageKind::ArrayPosition
+                | MirStorageKind::ArrayAnchor(_) => continue,
             };
             initial.live.insert(place);
         }
@@ -253,6 +258,27 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 }) => {
                     self.merge_state(*success_target, &state, &mut incoming, &mut pending);
                     self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::ArrayPositionCheck {
+                    success_target,
+                    failure_target,
+                    ..
+                })
+                | Some(MirTerminator::ArrayOperationCheck {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::ArrayLoop {
+                    body_target,
+                    complete_target,
+                    ..
+                }) => {
+                    self.merge_state(*body_target, &state, &mut incoming, &mut pending);
+                    self.merge_state(*complete_target, &state, &mut incoming, &mut pending);
                 }
                 Some(MirTerminator::Return { .. })
                 | Some(MirTerminator::ReturnShared { .. })
@@ -716,6 +742,13 @@ impl CleanupLivenessAnalysis<'_, '_> {
         place: &MirPlace,
         kind: &str,
     ) {
+        if place
+            .projections
+            .iter()
+            .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+        {
+            return;
+        }
         if matches!(place.base, MirPlaceBase::SharedPointee(_)) {
             // Shared-owner liveness is path-sensitive in the ownership
             // verifier; inline-object cleanup state deliberately does not
@@ -795,6 +828,12 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         return None;
                     }
                     ty = MirType::Class(class);
+                }
+                MirPlaceProjection::ArrayElement { array, .. } => {
+                    if ty != MirType::Array(array) {
+                        return None;
+                    }
+                    ty = self.program.array_type(array)?.element;
                 }
             }
         }

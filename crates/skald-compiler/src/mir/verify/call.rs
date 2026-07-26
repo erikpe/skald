@@ -522,6 +522,37 @@ impl<'mir> Verifier<'mir> {
             .and_then(|place| self.verify_place(function, block, place));
 
         match (return_type, result_ty, destination) {
+            (MirType::Array(_), Some(_), _) => self.block_error(
+                function.callable(),
+                block.id,
+                "array-returning call must not have a scalar result",
+            ),
+            (MirType::Array(array), None, destination) => {
+                let complete_destination = call.destination.as_ref().is_some_and(|place| {
+                    place.projections.is_empty()
+                        && matches!(place.base, MirPlaceBase::Storage(_))
+                        && function
+                            .storage(place.base.storage())
+                            .is_some_and(|storage| {
+                                matches!(
+                                    storage.kind,
+                                    MirStorageKind::Local
+                                        | MirStorageKind::ArrayProduced
+                                        | MirStorageKind::Argument
+                                        | MirStorageKind::Return
+                                )
+                            })
+                });
+                if destination.map(|place| place.ty) != Some(MirType::Array(array))
+                    || !complete_destination
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array-returning call requires a complete matching caller destination",
+                    );
+                }
+            }
             (MirType::Unit, Some(_), _) => self.block_error(
                 function.callable(),
                 block.id,

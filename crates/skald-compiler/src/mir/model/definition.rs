@@ -312,6 +312,16 @@ pub enum MirStorageKind {
     /// Compiler-owned unpublished storage for one heap allocation under
     /// construction. This is not a strong owner and cannot be source-named.
     SharedAllocation,
+    /// Target-independent unpublished array storage under construction.
+    ArrayBacking,
+    /// A completed compiler-owned descriptor consumed exactly once.
+    ArrayProduced,
+    /// A completed copied-slice descriptor consumed or cleaned exactly once.
+    ArraySlice,
+    /// A checked normalized element or slice position (`u64`).
+    ArrayPosition,
+    /// A hidden dependency retaining an array backing or shared owner.
+    ArrayAnchor(super::array::MirArrayAnchorKind),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

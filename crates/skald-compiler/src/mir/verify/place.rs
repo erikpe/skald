@@ -204,6 +204,40 @@ impl Verifier<'_> {
                     }
                     ty = MirType::Class(class);
                 }
+                MirPlaceProjection::ArrayElement {
+                    array,
+                    normalized_index,
+                } => {
+                    if ty != MirType::Array(array) {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("array element projection {array} has incompatible base {ty}"),
+                        );
+                        return None;
+                    }
+                    if function
+                        .storage(normalized_index)
+                        .map(|storage| (storage.kind, storage.ty))
+                        != Some((MirStorageKind::ArrayPosition, MirType::U64))
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "array element projection requires normalized `u64` position storage",
+                        );
+                        return None;
+                    }
+                    let Some(declaration) = self.program.array_type(array) else {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("array element projection names undeclared type {array}"),
+                        );
+                        return None;
+                    };
+                    ty = declaration.element;
+                }
             }
         }
         Some(VerifiedPlace { ty, access })

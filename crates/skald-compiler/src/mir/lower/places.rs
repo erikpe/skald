@@ -15,8 +15,10 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_field_place(&mut self, place: &crate::hir::HirFieldPlace) -> MirPlace {
-        if place.array_element.is_some() {
-            array_lowering_gate();
+        if let Some(element) = &place.array_element {
+            return self
+                .lower_array_element_place(element)
+                .project_field(place.field);
         }
         let receiver = match (
             &place.checked_cast,
@@ -50,7 +52,12 @@ impl BodyLowerer<'_> {
                 | MirStorageKind::SharedAnchor
                 | MirStorageKind::ScalarSpill
                 | MirStorageKind::OptionalUnwrap
-                | MirStorageKind::SharedAllocation => {
+                | MirStorageKind::SharedAllocation
+                | MirStorageKind::ArrayBacking
+                | MirStorageKind::ArrayProduced
+                | MirStorageKind::ArraySlice
+                | MirStorageKind::ArrayPosition
+                | MirStorageKind::ArrayAnchor(_) => {
                     unreachable!("HIR object paths cannot use compiler-owned storage")
                 }
             }

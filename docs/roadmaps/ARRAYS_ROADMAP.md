@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR4 is next.
+Status: in progress; AR5 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -75,7 +75,7 @@ Use the existing test ownership:
 - [x] AR1 — Establish canonical recursive array identities
 - [x] AR2 — Type array storage, construction, and lifecycle capabilities
 - [x] AR3 — Type array places, projections, assignment, slices, and aliases
-- [ ] AR4 — Establish verified target-independent array MIR
+- [x] AR4 — Establish verified target-independent array MIR
 - [ ] AR5 — Execute primitive inline construction, lifetime, and length
 - [ ] AR6 — Execute checked primitive indexing and mutation
 - [ ] AR7 — Carry inline array values across owning boundaries
@@ -249,26 +249,26 @@ stop at the deliberate HIR-to-MIR boundary owned by the next task.
 **Purpose:** Create the executable ownership and trust boundary before any
 backend relies on descriptor or allocation layout.
 
-- [ ] Add canonical array declarations/types, owning descriptor and produced
+- [x] Add canonical array declarations/types, owning descriptor and produced
       temporary storage roles, unpublished backing storage, shared owners,
       slice temporaries, and inline/shared anchor storage to MIR.
-- [ ] Add target-independent operations for checked allocation arithmetic,
+- [x] Add target-independent operations for checked allocation arithmetic,
       construction prefixes, publication, deep copy, produced adoption,
       whole replacement, element operations, destruction, and owner release.
-- [ ] Add signed index/slice normalization, checked projection, bounds and
+- [x] Add signed index/slice normalization, checked projection, bounds and
       length-mismatch failure, copied-slice, and slice-assignment vocabulary.
-- [ ] Represent generated array loops with explicit basic blocks and storage;
+- [x] Represent generated array loops with explicit basic blocks and storage;
       do not depend on source loop syntax or an optimization pass.
-- [ ] Lower array declarations and supported HIR operations to explicit MIR
+- [x] Lower array declarations and supported HIR operations to explicit MIR
       while retaining a structured backend-unsupported result.
-- [ ] Extend verification with array table/type integrity, initialized-prefix
+- [x] Extend verification with array table/type integrity, initialized-prefix
       state, named-copy/produced-consumption accounting, exact element
       capability, owner joins, anchor dependencies, checked projections,
       no-write-before-slice-checks, and terminating failure edges.
-- [ ] Split array structural, initialized-storage, ownership, projection, and
+- [x] Split array structural, initialized-storage, ownership, projection, and
       anchor verification behind the MIR verifier facade rather than adding
       unrelated logic to the existing optional verifier hotspot.
-- [ ] Add deterministic MIR dumps, smallest-valid fixtures, and test-only
+- [x] Add deterministic MIR dumps, smallest-valid fixtures, and test-only
       mutation hooks for every invariant.
 
 **Tests:** MIR lowering/dump tests for every operation family; verifier tests

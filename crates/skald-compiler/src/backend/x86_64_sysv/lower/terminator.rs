@@ -52,6 +52,9 @@ pub(super) fn select(
         | MirTerminator::OptionalSharedUnwrap { .. }
         | MirTerminator::BeginOptionalView { .. }
         | MirTerminator::CheckOptionalMutation { .. }
+        | MirTerminator::ArrayPositionCheck { .. }
+        | MirTerminator::ArrayOperationCheck { .. }
+        | MirTerminator::ArrayLoop { .. }
         | MirTerminator::Terminate { .. } => {
             unreachable!("type-operation terminators use their dedicated selector")
         }

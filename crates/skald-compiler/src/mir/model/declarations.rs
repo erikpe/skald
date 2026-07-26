@@ -13,6 +13,7 @@ use crate::{
 };
 
 use super::{
+    array::{MirArrayType, MirArrayTypeTable},
     definition::{
         MirDefinitionRef, MirFunctionDefinitionTable, MirMemberDefinition, MirMemberDefinitionTable,
     },
@@ -23,6 +24,7 @@ use super::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
+    pub array_types: MirArrayTypeTable,
     pub classes: MirClassDeclarationTable,
     pub interfaces: MirInterfaceDeclarationTable,
     pub virtual_families: MirVirtualFamilyTable,
@@ -34,6 +36,10 @@ pub struct MirProgram {
 }
 
 impl MirProgram {
+    pub fn array_type(&self, id: crate::identity::ArrayTypeId) -> Option<&MirArrayType> {
+        self.array_types.get(id)
+    }
+
     pub fn class(&self, id: ClassId) -> Option<&MirClassDeclaration> {
         self.classes.get(id)
     }
@@ -450,6 +456,10 @@ pub enum MirSynthesizedFieldCopy<I> {
         field: FieldId,
         operation: MirSelectedCopyOperation<I>,
     },
+    Array {
+        field: FieldId,
+        array: crate::identity::ArrayTypeId,
+    },
 }
 
 impl<I> MirSynthesizedFieldCopy<I> {
@@ -460,7 +470,8 @@ impl<I> MirSynthesizedFieldCopy<I> {
             | Self::OptionalClass { field, .. }
             | Self::Shared { field }
             | Self::OptionalShared { field, .. }
-            | Self::Class { field, .. } => *field,
+            | Self::Class { field, .. }
+            | Self::Array { field, .. } => *field,
         }
     }
 }
@@ -525,6 +536,7 @@ pub enum MirDestructionStep {
     SharedField(FieldId),
     OptionalSharedField(FieldId),
     OptionalClassField(FieldId),
+    ArrayField(FieldId),
     Base(ClassId),
 }
 

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::Diagnostics,
     lexer::lex,
     mir::lower_hir,
     passes::run_mir_pipeline,
@@ -73,19 +73,6 @@ pub fn compile_source_to_assembly(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
-    if !hir.array_types.is_empty() {
-        diagnostics.push(
-            Diagnostic::error(
-                crate::typeck::UNSUPPORTED_ARRAY_SEMANTICS,
-                "array execution is not implemented yet",
-            )
-            .with_primary_label(
-                hir.span,
-                "typed array semantics stop at the deliberate HIR-to-MIR boundary",
-            ),
-        );
-        return Err(diagnostic_failure(sources, diagnostics));
-    }
     let mir = lower_hir(&hir);
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;

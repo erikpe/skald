@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use super::{array_lowering_gate, BodyLowerer};
+use super::BodyLowerer;
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_class_optional_initialize(
@@ -168,7 +168,7 @@ impl BodyLowerer<'_> {
         self.emit(MirInstruction::ClassOptionalCleanup(cleanup));
     }
 
-    fn lower_class_optional_source(
+    pub(super) fn lower_class_optional_source(
         &mut self,
         source: &HirClassOptionalSource,
     ) -> MirClassOptionalSource {
@@ -193,7 +193,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
+            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
     }
 
@@ -334,7 +334,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
+            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
     }
 
@@ -383,7 +383,7 @@ impl BodyLowerer<'_> {
         }
     }
 
-    fn lower_optional_shared_source(
+    pub(super) fn lower_optional_shared_source(
         &mut self,
         source: &crate::hir::HirOptionalSharedSource,
     ) -> crate::mir::MirOptionalSharedSource {
@@ -423,7 +423,7 @@ impl BodyLowerer<'_> {
         match &place.storage {
             HirOptionalStorage::Binding(binding) => self.lower_binding_place(*binding),
             HirOptionalStorage::Field(field) => self.lower_field_place(field),
-            HirOptionalStorage::ArrayElement(_) => array_lowering_gate(),
+            HirOptionalStorage::ArrayElement(element) => self.lower_array_element_place(element),
         }
     }
 

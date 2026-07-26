@@ -12,6 +12,21 @@ pub fn dump_mir(program: &MirProgram) -> String {
     write_span(&mut output, program.span);
     output.push('\n');
     let _ = writeln!(output, "  Entry {}", program.entry_function);
+    if !program.array_types.is_empty() {
+        output.push_str("  ArrayTypes\n");
+        for array in program.array_types.iter() {
+            let _ = writeln!(
+                output,
+                "    Array {} element {} default {:?} copy {:?} assign {:?} destroy {:?}",
+                array.id,
+                array.element,
+                array.lifecycle.default,
+                array.lifecycle.copy,
+                array.lifecycle.assignment,
+                array.lifecycle.destruction
+            );
+        }
+    }
     if !program.virtual_families.is_empty() {
         output.push_str("  VirtualFamilies\n");
         for family in program.virtual_families.iter() {
@@ -129,6 +144,9 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
                 MirDestructionStep::OptionalClassField(field) => {
                     let _ = writeln!(output, "        OptionalClassField {field}");
                 }
+                MirDestructionStep::ArrayField(field) => {
+                    let _ = writeln!(output, "        ArrayField {field}");
+                }
                 MirDestructionStep::Base(base) => {
                     let _ = writeln!(output, "        Base {base}");
                 }
@@ -194,6 +212,9 @@ fn dump_copy_capability<I: Copy + std::fmt::Display>(
                         let _ = write!(output, "          Class {field} via ");
                         dump_copy_operation(output, *operation);
                         output.push('\n');
+                    }
+                    MirSynthesizedFieldCopy::Array { field, array } => {
+                        let _ = writeln!(output, "          Array {field} : {array}");
                     }
                 }
             }
@@ -296,6 +317,11 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::ScalarSpill => "scalar-spill",
             MirStorageKind::OptionalUnwrap => "optional-unwrap",
             MirStorageKind::SharedAllocation => "shared-allocation",
+            MirStorageKind::ArrayBacking => "array-backing",
+            MirStorageKind::ArrayProduced => "array-produced",
+            MirStorageKind::ArraySlice => "array-slice",
+            MirStorageKind::ArrayPosition => "array-position",
+            MirStorageKind::ArrayAnchor(_) => "array-anchor",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
         match storage.source {
@@ -311,6 +337,11 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::ScalarSpill => output.push_str("<scalar-spill> "),
                 MirStorageKind::OptionalUnwrap => output.push_str("<optional-unwrap> "),
                 MirStorageKind::SharedAllocation => output.push_str("<shared-allocation> "),
+                MirStorageKind::ArrayBacking => output.push_str("<array-backing> "),
+                MirStorageKind::ArrayProduced => output.push_str("<array-produced> "),
+                MirStorageKind::ArraySlice => output.push_str("<array-slice> "),
+                MirStorageKind::ArrayPosition => output.push_str("<array-position> "),
+                MirStorageKind::ArrayAnchor(_) => output.push_str("<array-anchor> "),
                 _ => unreachable!("verified language storage has a source binding"),
             },
         }
@@ -611,6 +642,7 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, " : class {}", end.class);
                 write_span(output, end.span);
             }
+            MirInstruction::Array(instruction) => dump_array_instruction(output, instruction),
         }
         output.push('\n');
     }
@@ -735,12 +767,55 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             );
             write_span(output, *span);
         }
+        Some(MirTerminator::ArrayPositionCheck {
+            position,
+            kind,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "array-position-check {position} {kind:?} -> {success_target} else {failure_target}"
+            );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::ArrayOperationCheck {
+            failure,
+            success_target,
+            failure_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "array-operation-check {failure:?} -> {success_target} else {failure_target}"
+            );
+            write_span(output, *span);
+        }
+        Some(MirTerminator::ArrayLoop {
+            backing,
+            index,
+            length,
+            body_target,
+            complete_target,
+            span,
+        }) => {
+            let _ = write!(
+                output,
+                "array-loop {backing}[{index}] < {length} -> {body_target} else {complete_target}"
+            );
+            write_span(output, *span);
+        }
         Some(MirTerminator::Terminate { reason, span }) => {
             let reason = match reason {
                 MirTerminationReason::ObjectCastFailure => "object-cast-failure",
                 MirTerminationReason::OptionalAccessFailure => "optional-access-failure",
                 MirTerminationReason::OptionalGuardOverflow => "optional-guard-overflow",
                 MirTerminationReason::OptionalPinnedMutation => "optional-pinned-mutation",
+                MirTerminationReason::ArrayAllocationFailure => "array-allocation-failure",
+                MirTerminationReason::ArrayIndexOutOfBounds => "array-index-out-of-bounds",
+                MirTerminationReason::ArrayInvalidSliceBounds => "array-invalid-slice-bounds",
+                MirTerminationReason::ArraySliceLengthMismatch => "array-slice-length-mismatch",
             };
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
@@ -888,6 +963,11 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             let _ = write!(output, "optional-presence {kind} ");
             dump_place(output, source);
         }
+        MirRvalueKind::ArrayLength { source, array } => {
+            output.push_str("array-len ");
+            dump_place(output, source);
+            let _ = write!(output, " as {array}");
+        }
     }
     let _ = write!(output, " : {}", rvalue.ty);
 }
@@ -950,6 +1030,89 @@ fn dump_place(output: &mut String, place: &MirPlace) {
             MirPlaceProjection::OptionalPayload(class) => {
                 let _ = write!(output, ".optional-payload({class})");
             }
+            MirPlaceProjection::ArrayElement {
+                array,
+                normalized_index,
+            } => {
+                let _ = write!(output, "[{normalized_index}] as {array}");
+            }
+        }
+    }
+}
+
+fn dump_array_instruction(output: &mut String, instruction: &MirArrayInstruction) {
+    match instruction {
+        MirArrayInstruction::Allocate {
+            backing,
+            array,
+            length,
+            ownership,
+            failure,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-allocate {backing} {array} length {length} {ownership:?} failure {failure:?}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::InitializeNext {
+            backing,
+            index,
+            operation,
+            span,
+        } => {
+            let _ = write!(
+                output,
+                "array-initialize-next {backing}[{index}] via {operation:?}"
+            );
+            write_span(output, *span);
+        }
+        MirArrayInstruction::CopyNext {
+            backing,
+            source,
+            index,
+            operation,
+            span,
+        } => {
+            let _ = write!(output, "array-copy-next {backing}[{index}] from ");
+            dump_place(output, source);
+            let _ = write!(output, " via {operation:?}");
+            write_span(output, *span);
+        }
+        MirArrayInstruction::Publish {
+            backing,
+            destination,
+            span,
+        } => {
+            let _ = write!(output, "array-publish {backing} into {destination}");
+            write_span(output, *span);
+        }
+        MirArrayInstruction::Adopt {
+            destination,
+            source,
+            array,
+            span,
+        }
+        | MirArrayInstruction::Replace {
+            destination,
+            source,
+            array,
+            span,
+        } => {
+            let verb = if matches!(instruction, MirArrayInstruction::Adopt { .. }) {
+                "array-adopt"
+            } else {
+                "array-replace"
+            };
+            output.push_str(verb);
+            output.push(' ');
+            dump_place(output, destination);
+            let _ = write!(output, " from {source} as {array}");
+            write_span(output, *span);
+        }
+        other => {
+            let _ = write!(output, "array-op {other:?}");
         }
     }
 }

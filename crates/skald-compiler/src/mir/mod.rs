@@ -16,12 +16,15 @@ pub(crate) mod test_fixtures;
 pub use dump::dump_mir;
 pub use lower::lower_hir;
 pub use model::{
-    BlockId, MirAliasAccess, MirArgument, MirAssignment, MirBaseCopy, MirBasicBlock,
-    MirBinaryOperation, MirBody, MirCall, MirCallReceiver, MirCallTarget, MirCallableSignature,
-    MirCheckedViewBinding, MirCheckedViewEnd, MirClassDeclaration, MirClassDeclarationTable,
-    MirClassOptionalAssign, MirClassOptionalCleanup, MirClassOptionalInitialize,
-    MirClassOptionalPublish, MirClassOptionalSource, MirCleanup, MirCopyAssignment,
-    MirCopyAssignmentDeclaration, MirCopyCapability, MirCopyConstruction,
+    BlockId, MirAliasAccess, MirArgument, MirArrayAnchorKind, MirArrayAssignElement,
+    MirArrayBoundary, MirArrayCopyElement, MirArrayDefaultElement, MirArrayDestroyElement,
+    MirArrayFailure, MirArrayInstruction, MirArrayLifecycle, MirArrayOwnership,
+    MirArrayPositionKind, MirArrayType, MirArrayTypeTable, MirAssignment, MirBaseCopy,
+    MirBasicBlock, MirBinaryOperation, MirBody, MirCall, MirCallReceiver, MirCallTarget,
+    MirCallableSignature, MirCheckedViewBinding, MirCheckedViewEnd, MirClassDeclaration,
+    MirClassDeclarationTable, MirClassOptionalAssign, MirClassOptionalCleanup,
+    MirClassOptionalInitialize, MirClassOptionalPublish, MirClassOptionalSource, MirCleanup,
+    MirCopyAssignment, MirCopyAssignmentDeclaration, MirCopyCapability, MirCopyConstruction,
     MirCopyConstructorDeclaration, MirDefinitionRef, MirDestructionPlan, MirDestructionStep,
     MirDestructorDeclaration, MirDirectBase, MirEndFullExpression, MirFieldDeclaration,
     MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionDefinition,

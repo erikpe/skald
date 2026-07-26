@@ -80,10 +80,27 @@ impl BodyLowerer<'_> {
             HirExpressionKind::Unwrap(source) => {
                 Some(self.lower_optional_unwrap(expression, source))
             }
+            HirExpressionKind::ArrayLength(length) => Some(self.lower_array_length(length)),
+            HirExpressionKind::ArrayElement(element)
+                if matches!(
+                    expression.ty,
+                    crate::hir::Type::I64
+                        | crate::hir::Type::U64
+                        | crate::hir::Type::U8
+                        | crate::hir::Type::F64
+                        | crate::hir::Type::Bool
+                ) =>
+            {
+                let place = self.lower_array_element_place(element);
+                Some(self.assign(
+                    MirRvalueKind::Load(place),
+                    lower_type(expression.ty),
+                    expression.span,
+                ))
+            }
             HirExpressionKind::ArrayConstruction(_)
-            | HirExpressionKind::ArrayLength(_)
             | HirExpressionKind::ArrayElement(_)
-            | HirExpressionKind::ArraySlice(_) => array_lowering_gate(),
+            | HirExpressionKind::ArraySlice(_) => None,
         }
     }
 

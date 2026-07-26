@@ -125,14 +125,19 @@ and type tests. Resolved construction, projection, and array-assignment nodes
 retain their source structure.
 
 Type checking lowers array declarations, owning locals/fields/signatures,
-inline and shared construction, exact element lifecycle capabilities, and
-named-copy versus produced-adoption provenance into deterministic HIR.
-Recursive class/array capability analysis terminates at a fixed point, while
-array backing remains excluded from finite inline-containment edges. Array
-projection, replacement, slicing, and alias operations still report `TYP035`.
-Valid construction-only array HIR stops at a deliberate `TYP035` HIR-to-MIR
-driver gate, and MIR lowering independently asserts that no array table is
-present.
+inline and shared construction, exact element lifecycle capabilities,
+projection, replacement, slices, aliases, and named-copy versus
+produced-adoption provenance into deterministic HIR. Recursive class/array
+capability analysis terminates at a fixed point, while array backing remains
+excluded from finite inline-containment edges.
+
+All supported array HIR lowers to verified target-independent MIR. Canonical
+array declarations and explicit storage roles describe ownership without
+choosing a descriptor layout. Generated array loops, checked allocation,
+signed position normalization, projections, slice checks, publication,
+adoption, replacement, element lifecycle, cleanup, and anchors remain explicit
+through the verifier boundary. The x86-64 backend currently rejects verified
+array MIR structurally; it does not attempt target layout or execution yet.
 
 Optional types use two flat, copyable resolved families rather than recursively
 wrapping the general type enum: an inline primitive/exact-class payload target,

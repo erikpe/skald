@@ -80,6 +80,9 @@ impl InstructionSelector<'_, '_> {
             MirRvalueKind::OptionalPresence { .. } => {
                 unreachable!("optional presence tests are selected before ordinary rvalues")
             }
+            MirRvalueKind::ArrayLength { .. } => {
+                unreachable!("array MIR is rejected by target legality")
+            }
         }
         Ok(())
     }

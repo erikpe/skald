@@ -140,6 +140,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     );
 
     MirProgram {
+        array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),
@@ -270,6 +271,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     );
 
     MirProgram {
+        array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),
         virtual_families: MirVirtualFamilyTable::default(),

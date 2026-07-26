@@ -234,6 +234,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_class_optional_cleanup(cleanup)?
             }
             MirInstruction::EndOptionalView(end) => self.select_optional_view_end(end)?,
+            MirInstruction::Array(_) => {
+                unreachable!("array MIR is rejected by target legality")
+            }
         }
         Ok(())
     }

@@ -15,6 +15,7 @@ pub enum MirSharedTarget {
     Obj,
     Class(ClassId),
     Interface(InterfaceId),
+    Array(crate::identity::ArrayTypeId),
 }
 
 impl MirSharedTarget {
@@ -23,6 +24,7 @@ impl MirSharedTarget {
             Self::Obj => super::value::MirType::Obj,
             Self::Class(class) => super::value::MirType::Class(class),
             Self::Interface(interface) => super::value::MirType::Interface(interface),
+            Self::Array(array) => super::value::MirType::Array(array),
         }
     }
 }
@@ -33,6 +35,7 @@ impl fmt::Display for MirSharedTarget {
             Self::Obj => formatter.write_str("Obj"),
             Self::Class(class) => write!(formatter, "class {class}"),
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
+            Self::Array(array) => write!(formatter, "array {array}"),
         }
     }
 }

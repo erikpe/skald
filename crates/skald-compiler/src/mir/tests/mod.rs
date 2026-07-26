@@ -15,6 +15,7 @@ use crate::{
 mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
+mod arrays;
 mod copy;
 mod interface_dispatch;
 mod interface_fixtures;

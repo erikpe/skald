@@ -6,8 +6,9 @@ use crate::identity::BindingId;
 
 use super::{
     super::model::{
-        BlockId, MirAliasAccess, MirBasicBlock, MirDefinitionRef, MirParameter, MirParameterMode,
-        MirStorageKind, MirTerminator, MirType, ValueId,
+        BlockId, MirAliasAccess, MirArrayFailure, MirArrayInstruction, MirBasicBlock,
+        MirDefinitionRef, MirInstruction, MirParameter, MirParameterMode, MirStorageKind,
+        MirTerminationReason, MirTerminator, MirType, ValueId,
     },
     context::Verifier,
 };
@@ -67,6 +68,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_shared_ownership(function);
         self.verify_optional_initialization(function);
         self.verify_optional_guards(function);
+        self.verify_array_ownership(function);
 
         for value in function.values() {
             if !defined_values.contains(&value.id) {
@@ -131,6 +133,11 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::ScalarSpill, None)
                     | (MirStorageKind::OptionalUnwrap, None)
                     | (MirStorageKind::SharedAllocation, None)
+                    | (MirStorageKind::ArrayBacking, None)
+                    | (MirStorageKind::ArrayProduced, None)
+                    | (MirStorageKind::ArraySlice, None)
+                    | (MirStorageKind::ArrayPosition, None)
+                    | (MirStorageKind::ArrayAnchor(_), None)
             );
             if !source_matches_kind {
                 self.function_error(
@@ -173,6 +180,7 @@ impl<'mir> Verifier<'mir> {
             ) && !matches!(
                 storage.ty,
                 MirType::Class(_)
+                    | MirType::Array(_)
                     | MirType::Shared(_)
                     | MirType::OptionalShared(_)
                     | MirType::OptionalPrimitive(_)
@@ -195,6 +203,25 @@ impl<'mir> Verifier<'mir> {
                         "shared allocation storage {} must have exact class type",
                         storage.id
                     ),
+                );
+            }
+            if matches!(
+                storage.kind,
+                MirStorageKind::ArrayBacking
+                    | MirStorageKind::ArrayProduced
+                    | MirStorageKind::ArraySlice
+                    | MirStorageKind::ArrayAnchor(_)
+            ) && !matches!(storage.ty, MirType::Array(_))
+            {
+                self.function_error(
+                    function.callable(),
+                    format!("array storage {} must have exact array type", storage.id),
+                );
+            }
+            if storage.kind == MirStorageKind::ArrayPosition && storage.ty != MirType::U64 {
+                self.function_error(
+                    function.callable(),
+                    format!("array position storage {} must be `u64`", storage.id),
                 );
             }
             if matches!(storage.ty, MirType::Shared(_) | MirType::OptionalShared(_))
@@ -235,6 +262,14 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
+            if let MirType::Array(array) = storage.ty {
+                if self.program.array_type(array).is_none() {
+                    self.function_error(
+                        function.callable(),
+                        format!("storage {} has undeclared array type {array}", storage.id),
+                    );
+                }
+            }
             if let MirType::Shared(target) | MirType::OptionalShared(target) = storage.ty {
                 self.verify_shared_target_declared(function.callable(), target);
             }
@@ -248,6 +283,19 @@ impl<'mir> Verifier<'mir> {
             .filter(|storage| storage.kind == MirStorageKind::Return)
             .collect();
         match return_type {
+            MirType::Array(array) => {
+                let valid = function.return_storage().is_some_and(|return_storage| {
+                    slots.len() == 1
+                        && slots[0].id == return_storage
+                        && slots[0].ty == MirType::Array(array)
+                });
+                if !valid {
+                    self.function_error(
+                        function.callable(),
+                        "array-returning definition must identify exactly one matching return storage slot",
+                    );
+                }
+            }
             MirType::Class(class) => {
                 let Some(return_storage) = function.return_storage() else {
                     self.function_error(
@@ -511,6 +559,7 @@ impl<'mir> Verifier<'mir> {
                             return_type,
                             MirType::Unit
                                 | MirType::Class(_)
+                                | MirType::Array(_)
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
@@ -535,6 +584,7 @@ impl<'mir> Verifier<'mir> {
                     && !matches!(
                         return_type,
                         MirType::Class(_)
+                            | MirType::Array(_)
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::Shared(_)
@@ -677,6 +727,181 @@ impl<'mir> Verifier<'mir> {
                 *success_target,
                 *failure_target,
             ),
+            Some(MirTerminator::ArrayPositionCheck {
+                position,
+                kind,
+                success_target,
+                failure_target,
+                ..
+            }) => {
+                if function
+                    .storage(*position)
+                    .map(|storage| (storage.kind, storage.ty))
+                    != Some((MirStorageKind::ArrayPosition, MirType::U64))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array position check requires `u64` array-position storage",
+                    );
+                }
+                self.verify_block_target(function, block, *success_target);
+                self.verify_block_target(function, block, *failure_target);
+                let expected = match kind {
+                    crate::mir::MirArrayPositionKind::Element => {
+                        crate::mir::MirTerminationReason::ArrayIndexOutOfBounds
+                    }
+                    crate::mir::MirArrayPositionKind::SliceBound => {
+                        crate::mir::MirTerminationReason::ArrayInvalidSliceBounds
+                    }
+                };
+                if !matches!(
+                    function.block(*failure_target).and_then(|block| block.terminator.as_ref()),
+                    Some(MirTerminator::Terminate { reason, .. }) if *reason == expected
+                ) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array position failure edge must terminate with the matching reason",
+                    );
+                }
+            }
+            Some(MirTerminator::ArrayOperationCheck {
+                failure,
+                success_target,
+                failure_target,
+                ..
+            }) => {
+                self.verify_block_target(function, block, *success_target);
+                self.verify_block_target(function, block, *failure_target);
+                let operation_matches = match (failure, block.instructions.last()) {
+                    (
+                        MirArrayFailure::AllocationSize,
+                        Some(MirInstruction::Array(MirArrayInstruction::Allocate {
+                            failure: operation_failure,
+                            ..
+                        })),
+                    ) => operation_failure == failure,
+                    (
+                        MirArrayFailure::InvalidSliceBounds,
+                        Some(MirInstruction::Array(MirArrayInstruction::SliceBoundsCheck {
+                            ..
+                        })),
+                    )
+                    | (
+                        MirArrayFailure::SliceLengthMismatch,
+                        Some(MirInstruction::Array(MirArrayInstruction::SliceLengthCheck {
+                            ..
+                        })),
+                    ) => true,
+                    _ => false,
+                };
+                if !operation_matches {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array operation check must immediately follow its matching checked operation",
+                    );
+                }
+                let expected = match failure {
+                    MirArrayFailure::AllocationSize => MirTerminationReason::ArrayAllocationFailure,
+                    MirArrayFailure::IndexOutOfBounds => {
+                        MirTerminationReason::ArrayIndexOutOfBounds
+                    }
+                    MirArrayFailure::InvalidSliceBounds => {
+                        MirTerminationReason::ArrayInvalidSliceBounds
+                    }
+                    MirArrayFailure::SliceLengthMismatch => {
+                        MirTerminationReason::ArraySliceLengthMismatch
+                    }
+                };
+                if !matches!(
+                    function.block(*failure_target).and_then(|block| block.terminator.as_ref()),
+                    Some(MirTerminator::Terminate { reason, .. }) if *reason == expected
+                ) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array operation failure edge must terminate with the matching reason",
+                    );
+                }
+            }
+            Some(MirTerminator::ArrayLoop {
+                backing,
+                index,
+                length,
+                body_target,
+                complete_target,
+                ..
+            }) => {
+                if function.storage(*backing).map(|storage| storage.kind)
+                    != Some(MirStorageKind::ArrayBacking)
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array loop requires unpublished backing storage",
+                    );
+                }
+                if function
+                    .storage(*index)
+                    .map(|storage| (storage.kind, storage.ty))
+                    != Some((MirStorageKind::ArrayPosition, MirType::U64))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array loop index storage must be `u64`",
+                    );
+                }
+                if function.storage(*length).map(|storage| storage.ty) != Some(MirType::U64) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array loop length storage must be `u64`",
+                    );
+                }
+                self.verify_block_target(function, block, *body_target);
+                self.verify_block_target(function, block, *complete_target);
+                let valid_body = function.block(*body_target).is_some_and(|body| {
+                    (body.instructions.is_empty()
+                        || body.instructions.iter().any(|instruction| {
+                        matches!(
+                            instruction,
+                            crate::mir::MirInstruction::Array(
+                                crate::mir::MirArrayInstruction::InitializeNext { index: body_index, .. }
+                                    | crate::mir::MirArrayInstruction::CopyNext { index: body_index, .. }
+                            ) if body_index == index
+                        )
+                    }))
+                    && body.instructions.iter().all(|instruction| {
+                        !matches!(
+                            instruction,
+                            crate::mir::MirInstruction::Array(
+                                crate::mir::MirArrayInstruction::InitializeNext {
+                                    backing: body_backing,
+                                    ..
+                                }
+                                | crate::mir::MirArrayInstruction::CopyNext {
+                                    backing: body_backing,
+                                    ..
+                                }
+                            ) if body_backing != backing
+                        )
+                    })
+                    && matches!(
+                        body.terminator,
+                        Some(MirTerminator::Goto { target, .. }) if target == block.id
+                    )
+                });
+                if !valid_body {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array loop body must advance its prefix and return to the loop header",
+                    );
+                }
+            }
             Some(MirTerminator::Terminate { .. }) => {}
             None => self.block_error(function.callable(), block.id, "block has no terminator"),
         }

@@ -19,6 +19,7 @@ use super::{
 
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
+        self.verify_array_declarations();
         self.verify_classes();
         self.verify_virtual_families();
         self.verify_interfaces();
@@ -103,6 +104,7 @@ impl<'mir> Verifier<'mir> {
                         || matches!(
                             parameter.ty,
                             MirType::Class(_)
+                                | MirType::Array(_)
                                 | MirType::Interface(_)
                                 | MirType::Obj
                                 | MirType::Shared(_)
@@ -118,6 +120,7 @@ impl<'mir> Verifier<'mir> {
                 if matches!(
                     declaration.return_type,
                     MirType::Class(_)
+                        | MirType::Array(_)
                         | MirType::Interface(_)
                         | MirType::Obj
                         | MirType::Shared(_)
@@ -665,6 +668,7 @@ impl<'mir> Verifier<'mir> {
                     if !matches!(
                         parameter.ty,
                         MirType::Class(_)
+                            | MirType::Array(_)
                             | MirType::Interface(_)
                             | MirType::Obj
                             | MirType::OptionalPrimitive(_)
@@ -688,6 +692,13 @@ impl<'mir> Verifier<'mir> {
                 if self.program.interface(interface).is_none() {
                     self.program_error(format!(
                         "{owner} parameter {index} has undeclared interface type {interface}"
+                    ));
+                }
+            }
+            if let MirType::Array(array) = parameter.ty {
+                if self.program.array_type(array).is_none() {
+                    self.program_error(format!(
+                        "{owner} parameter {index} has undeclared array type {array}"
                     ));
                 }
             }

@@ -93,8 +93,8 @@ impl BodyLowerer<'_> {
             HirSharedSource::Produced(HirSharedProducer::OptionalUnwrap(operand)) => {
                 self.lower_optional_shared_unwrap(operand, destination);
             }
-            HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(_)) => {
-                array_lowering_gate()
+            HirSharedSource::Produced(HirSharedProducer::ArrayAllocation(construction)) => {
+                self.lower_shared_array_construction(destination, construction)
             }
             HirSharedSource::Place(HirSharedPlace::Field { place, .. }) => {
                 let source = self.lower_field_place(place);
@@ -104,7 +104,14 @@ impl BodyLowerer<'_> {
                     span,
                 }));
             }
-            HirSharedSource::Place(HirSharedPlace::ArrayElement { .. }) => array_lowering_gate(),
+            HirSharedSource::Place(HirSharedPlace::ArrayElement { place, .. }) => {
+                let source = self.lower_array_element_place(place);
+                self.emit(MirInstruction::SharedFieldCopy(MirSharedFieldCopy {
+                    destination,
+                    source,
+                    span,
+                }));
+            }
         }
     }
 
@@ -126,7 +133,13 @@ impl BodyLowerer<'_> {
                 },
                 MirSharedCastTransfer::Copy,
             ),
-            HirSharedSource::Place(HirSharedPlace::ArrayElement { .. }) => array_lowering_gate(),
+            HirSharedSource::Place(HirSharedPlace::ArrayElement { place, target, .. }) => (
+                MirSharedCastSource::Field {
+                    place: self.lower_array_element_place(place),
+                    target: lower_shared_target(*target),
+                },
+                MirSharedCastTransfer::Copy,
+            ),
             produced @ HirSharedSource::Produced(_) => {
                 let temporary = self.new_shared_temporary(produced.target(), produced.span());
                 self.lower_shared_source(temporary, produced, produced.span());
@@ -320,6 +333,6 @@ fn lower_shared_target(target: HirSharedTarget) -> MirSharedTarget {
         HirSharedTarget::Obj => MirSharedTarget::Obj,
         HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
-        HirSharedTarget::Array(_) => array_lowering_gate(),
+        HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
     }
 }

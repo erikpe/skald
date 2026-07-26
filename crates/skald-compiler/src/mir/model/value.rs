@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    identity::{ClassId, FieldId, InterfaceId},
+    identity::{ArrayTypeId, ClassId, FieldId, InterfaceId},
     source::Span,
 };
 
@@ -16,6 +16,7 @@ pub enum MirType {
     U8,
     F64,
     Bool,
+    Array(ArrayTypeId),
     Class(ClassId),
     /// A non-owning interface-view target. It is valid only for alias storage
     /// and never materializes as a scalar or inline object.
@@ -36,6 +37,7 @@ impl MirType {
         !matches!(
             self,
             Self::Class(_)
+                | Self::Array(_)
                 | Self::Interface(_)
                 | Self::Obj
                 | Self::Shared(_)
@@ -55,6 +57,7 @@ impl fmt::Display for MirType {
             Self::U8 => formatter.write_str("u8"),
             Self::F64 => formatter.write_str("f64"),
             Self::Bool => formatter.write_str("bool"),
+            Self::Array(array) => write!(formatter, "array {array}"),
             Self::Class(class) => write!(formatter, "class {class}"),
             Self::Interface(interface) => write!(formatter, "interface {interface}"),
             Self::Obj => formatter.write_str("Obj"),
@@ -131,6 +134,18 @@ impl MirPlace {
             .push(MirPlaceProjection::OptionalPayload(class));
         self
     }
+
+    pub fn project_array_element(
+        mut self,
+        array: ArrayTypeId,
+        normalized_index: StorageId,
+    ) -> Self {
+        self.projections.push(MirPlaceProjection::ArrayElement {
+            array,
+            normalized_index,
+        });
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -169,6 +184,10 @@ pub enum MirPlaceProjection {
     Field(FieldId),
     /// Selects the reserved payload bytes of an inline-class optional.
     OptionalPayload(ClassId),
+    ArrayElement {
+        array: ArrayTypeId,
+        normalized_index: StorageId,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -203,6 +222,10 @@ pub enum MirRvalueKind {
     OptionalPresence {
         source: MirPlace,
         kind: super::optional::MirPresenceTestKind,
+    },
+    ArrayLength {
+        source: MirPlace,
+        array: ArrayTypeId,
     },
 }
 

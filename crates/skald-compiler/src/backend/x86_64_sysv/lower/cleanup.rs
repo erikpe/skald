@@ -30,6 +30,9 @@ impl InstructionSelector<'_, '_> {
 
         for step in steps {
             match step {
+                crate::mir::MirDestructionStep::ArrayField(_) => {
+                    unreachable!("array MIR is rejected by target legality")
+                }
                 MirDestructionStep::Base(base) => {
                     self.select_destruction_plan(base, destination.clone().project_base(base))?;
                 }

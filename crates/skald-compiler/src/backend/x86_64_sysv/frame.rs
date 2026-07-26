@@ -299,6 +299,9 @@ impl FrameLayout {
                         .ok_or_else(|| place_address_error(function.callable()))?;
                     ty = MirType::Class(class);
                 }
+                MirPlaceProjection::ArrayElement { .. } => {
+                    unreachable!("array MIR is rejected by target legality")
+                }
             }
         }
         Ok(FramePlace {

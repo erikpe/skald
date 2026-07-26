@@ -243,6 +243,9 @@ impl Verifier<'_> {
             MirInstruction::EndOptionalView(end) => {
                 self.verify_optional_view_end(function, block, end)
             }
+            MirInstruction::Array(instruction) => {
+                self.verify_array_instruction(function, block, instruction, defined_in_block)
+            }
         }
     }
 
@@ -602,6 +605,26 @@ impl Verifier<'_> {
             }
             MirRvalueKind::OptionalPresence { source, .. } => {
                 self.verify_optional_presence(function, block, source, rvalue.ty)
+            }
+            MirRvalueKind::ArrayLength { source, array } => {
+                if rvalue.ty != MirType::U64 {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array length result must be `u64`",
+                    );
+                }
+                if self
+                    .verify_place(function, block, source)
+                    .map(|place| place.ty)
+                    != Some(MirType::Array(*array))
+                {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "array length source has the wrong exact array type",
+                    );
+                }
             }
         }
     }

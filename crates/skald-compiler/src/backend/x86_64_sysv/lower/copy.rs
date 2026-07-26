@@ -99,6 +99,9 @@ impl InstructionSelector<'_, '_> {
                 }
                 for field in fields {
                     match field {
+                        MirSynthesizedFieldCopy::Array { .. } => {
+                            unreachable!("array MIR is rejected by target legality")
+                        }
                         MirSynthesizedFieldCopy::Primitive { field } => {
                             self.select_primitive_copy(
                                 destination.clone().project_field(field),
@@ -218,6 +221,9 @@ impl InstructionSelector<'_, '_> {
                 }
                 for field in fields {
                     match field {
+                        MirSynthesizedFieldCopy::Array { .. } => {
+                            unreachable!("array MIR is rejected by target legality")
+                        }
                         MirSynthesizedFieldCopy::Primitive { field } => {
                             self.select_primitive_copy(
                                 destination.clone().project_field(field),
@@ -359,6 +365,7 @@ impl InstructionSelector<'_, '_> {
                 value::store_rax(destination, self.output);
             }
             MirType::Class(_)
+            | MirType::Array(_)
             | MirType::Interface(_)
             | MirType::Obj
             | MirType::Shared(_)

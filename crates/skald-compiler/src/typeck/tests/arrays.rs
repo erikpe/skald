@@ -62,7 +62,7 @@ fn distinguishes_named_deep_copy_from_produced_backing_adoption() {
         "}\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let dump = dump_hir(&output.hir.unwrap());
+    let dump = dump_hir(output.hir.as_ref().unwrap());
 
     assert!(dump.contains("ArrayInitialization deep-copy primitive"));
     assert!(dump.contains("ArrayInitialization adopt"));
@@ -304,10 +304,16 @@ fn exact_array_identity_participates_in_overload_selection_and_invariance() {
 }
 
 #[test]
-#[should_panic(expected = "typed arrays must stop at the deliberate HIR-to-MIR lowering gate")]
-fn direct_mir_lowering_cannot_bypass_the_array_gate() {
+fn typed_arrays_lower_to_verified_target_independent_mir() {
     let output = check_text("fn main() -> i64 { var values: i64[] = i64[](); return 0; }");
-    crate::mir::lower_hir(&output.hir.unwrap());
+    let mir = crate::mir::lower_hir(output.hir.as_ref().unwrap());
+    crate::mir::verify_mir(&mir).expect("array MIR must verify before target lowering");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("ArrayTypes"));
+    assert!(dump.contains("array-allocate"));
+    assert!(dump.contains("array-loop"));
+    assert!(dump.contains("array-publish"));
+    assert!(dump.contains("array-adopt"));
 }
 
 #[test]
@@ -360,12 +366,41 @@ fn types_length_indices_slices_and_distinct_assignment_kinds() {
         "fn main() -> i64 { return 0; }\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let dump = dump_hir(&output.hir.unwrap());
+    let dump = dump_hir(output.hir.as_ref().unwrap());
     assert!(dump.contains("ArrayLength : u64"));
     assert!(dump.contains("normalization=SignedFromEndOnce"));
     assert!(dump.contains("failure=SliceLengthMismatchTerminate"));
     assert!(dump.contains("CopiedArraySlice : array a0"));
     assert!(dump.contains("ArrayReplacement DestinationThenSourceThenReplace"));
+}
+
+#[test]
+fn array_operation_families_lower_to_explicit_verified_mir() {
+    let output = check_text(concat!(
+        "fn update() -> u64 {\n",
+        "  var a: i64[] = i64[](10u);\n",
+        "  var b: i64[] = i64[](20u);\n",
+        "  a[-1] = 7;\n",
+        "  b[5:15] = a;\n",
+        "  b[10:15] = a[2:7];\n",
+        "  a = b;\n",
+        "  return a.len();\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let mir = crate::mir::lower_hir(output.hir.as_ref().unwrap());
+    crate::mir::verify_mir(&mir).expect("all array operation families must verify");
+    let dump = crate::mir::dump_mir(&mir);
+    for operation in [
+        "array-loop",
+        "array-position-check",
+        "array-slice",
+        "array-replace",
+        "array-len",
+    ] {
+        assert!(dump.contains(operation), "missing {operation}:\n{dump}");
+    }
 }
 
 #[test]
@@ -381,10 +416,17 @@ fn types_shared_and_optional_shared_projection_with_owner_anchors() {
         "fn main() -> i64 { return 0; }\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let dump = dump_hir(&output.hir.unwrap());
+    let hir = output.hir.as_ref().unwrap();
+    let dump = dump_hir(hir);
     assert!(dump.contains("anchor=StableSharedOwner"));
     assert!(dump.contains("anchor=SecuredOptionalSharedOwner"));
     assert!(dump.contains("ExplicitSharedPointee"));
+
+    let mir = crate::mir::lower_hir(hir);
+    crate::mir::verify_mir(&mir).expect("shared array owners and projections must verify");
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert!(mir_dump.contains("PublishShared"));
+    assert!(mir_dump.contains("shared-anchor"));
 }
 
 #[test]
@@ -413,6 +455,27 @@ fn array_aliases_propagate_access_and_admit_exact_elements() {
     assert!(dump.contains("ArrayAliasArgument : array a0 access=Mutable"));
     assert!(dump.contains("ArrayAliasArgument : array a0 access=ReadOnly"));
     assert!(dump.contains("anchor=InlineBacking"));
+}
+
+#[test]
+fn array_values_and_aliases_lower_across_internal_calls_and_results() {
+    let output = check_text(concat!(
+        "fn duplicate(values: i64[]) -> i64[] { return values; }\n",
+        "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn exercise() -> u64 {\n",
+        "  var source: i64[] = i64[](3u);\n",
+        "  var copied: i64[] = duplicate(source);\n",
+        "  return length(copied);\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let mir = crate::mir::lower_hir(&output.hir.unwrap());
+    crate::mir::verify_mir(&mir).expect("array calls, results, and aliases must verify");
+    let dump = crate::mir::dump_mir(&mir);
+    assert!(dump.contains("array-return"));
+    assert!(dump.contains("owned("));
+    assert!(dump.contains("ref-parameter"));
 }
 
 #[test]
@@ -477,10 +540,14 @@ fn types_nested_shared_edges_and_optional_element_lifecycle() {
         "fn main() -> i64 { return 0; }\n",
     ));
     assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
-    let dump = dump_hir(&output.hir.unwrap());
+    let hir = output.hir.as_ref().unwrap();
+    let dump = dump_hir(hir);
     assert!(dump.contains("Assignment array a0"));
     assert!(dump.contains("SharedArrayElement"));
     assert!(dump.contains("OptionalSharedArrayElementPlace"));
     assert!(dump.contains("construct-via"));
     assert!(dump.contains("assign-via"));
+
+    let mir = crate::mir::lower_hir(hir);
+    crate::mir::verify_mir(&mir).expect("nested and nontrivial array element MIR must verify");
 }

@@ -9,7 +9,6 @@ use crate::{
     diagnostics::render_diagnostics,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
     test_support::TemporaryDirectory,
-    typeck::UNSUPPORTED_ARRAY_SEMANTICS,
 };
 
 use super::*;

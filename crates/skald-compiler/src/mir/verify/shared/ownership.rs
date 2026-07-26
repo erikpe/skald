@@ -6,10 +6,10 @@ use crate::identity::CallableId;
 
 use super::super::{
     super::model::{
-        BlockId, MirArgument, MirBasicBlock, MirCallReceiver, MirCheckedViewBinding,
-        MirDefinitionRef, MirInstruction, MirObjectOrigin, MirPlace, MirPlaceBase, MirRvalueKind,
-        MirSharedAllocationMode, MirSharedCast, MirSharedCastSource, MirSharedCastTransfer,
-        MirStorageKind, MirTerminator, MirType, StorageId,
+        BlockId, MirArgument, MirArrayInstruction, MirBasicBlock, MirCallReceiver,
+        MirCheckedViewBinding, MirDefinitionRef, MirInstruction, MirObjectOrigin, MirPlace,
+        MirPlaceBase, MirRvalueKind, MirSharedAllocationMode, MirSharedCast, MirSharedCastSource,
+        MirSharedCastTransfer, MirStorageKind, MirTerminator, MirType, StorageId,
     },
     context::Verifier,
 };
@@ -170,6 +170,27 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 }) => {
                     self.merge(*success_target, &state, &mut incoming, &mut pending);
                     self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::ArrayPositionCheck {
+                    success_target,
+                    failure_target,
+                    ..
+                })
+                | Some(MirTerminator::ArrayOperationCheck {
+                    success_target,
+                    failure_target,
+                    ..
+                }) => {
+                    self.merge(*success_target, &state, &mut incoming, &mut pending);
+                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                }
+                Some(MirTerminator::ArrayLoop {
+                    body_target,
+                    complete_target,
+                    ..
+                }) => {
+                    self.merge(*body_target, &state, &mut incoming, &mut pending);
+                    self.merge(*complete_target, &state, &mut incoming, &mut pending);
                 }
                 Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
                 Some(MirTerminator::ReturnShared { owner, .. }) => {
@@ -432,6 +453,15 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 | MirInstruction::ClassOptionalPublish(_)
                 | MirInstruction::ClassOptionalCleanup(_)
                 | MirInstruction::EndOptionalView(_) => {}
+                MirInstruction::Array(MirArrayInstruction::PublishShared {
+                    destination, ..
+                }) => {
+                    if !state.live_owners.insert(*destination) {
+                        self.error(block.id, "shared array owner is published more than once");
+                    }
+                    state.owner_origins.insert(*destination, *destination);
+                }
+                MirInstruction::Array(_) => {}
                 MirInstruction::BindCheckedView(binding) => {
                     self.require_live_pointee(block.id, state, &binding.view.source);
                     self.require_live_shared_origin(block.id, state, &binding.view.origin);

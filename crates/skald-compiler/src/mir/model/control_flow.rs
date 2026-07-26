@@ -88,6 +88,32 @@ pub enum MirTerminator {
         failure_target: BlockId,
         span: Span,
     },
+    ArrayPositionCheck {
+        position: super::ids::StorageId,
+        kind: super::array::MirArrayPositionKind,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
+    /// Branches on the checked result produced by the final array operation
+    /// in this block. The failure successor must terminate with the exact
+    /// language-defined reason corresponding to `failure`.
+    ArrayOperationCheck {
+        failure: super::array::MirArrayFailure,
+        success_target: BlockId,
+        failure_target: BlockId,
+        span: Span,
+    },
+    /// Generated counted loop used for array construction, copying,
+    /// assignment, and destruction.
+    ArrayLoop {
+        backing: super::ids::StorageId,
+        index: super::ids::StorageId,
+        length: super::ids::StorageId,
+        body_target: BlockId,
+        complete_target: BlockId,
+        span: Span,
+    },
     /// An explicit language-defined abnormal exit.
     Terminate {
         reason: MirTerminationReason,
@@ -101,6 +127,10 @@ pub enum MirTerminationReason {
     OptionalAccessFailure,
     OptionalGuardOverflow,
     OptionalPinnedMutation,
+    ArrayAllocationFailure,
+    ArrayIndexOutOfBounds,
+    ArrayInvalidSliceBounds,
+    ArraySliceLengthMismatch,
 }
 
 impl MirTerminator {
@@ -117,6 +147,9 @@ impl MirTerminator {
             | Self::OptionalSharedUnwrap { span, .. }
             | Self::BeginOptionalView { span, .. }
             | Self::CheckOptionalMutation { span, .. }
+            | Self::ArrayPositionCheck { span, .. }
+            | Self::ArrayOperationCheck { span, .. }
+            | Self::ArrayLoop { span, .. }
             | Self::Terminate { span, .. } => *span,
         }
     }
@@ -169,6 +202,21 @@ impl MirTerminator {
                 failure_target,
                 ..
             } => [Some(*success_target), Some(*failure_target), None],
+            Self::ArrayPositionCheck {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::ArrayOperationCheck {
+                success_target,
+                failure_target,
+                ..
+            } => [Some(*success_target), Some(*failure_target), None],
+            Self::ArrayLoop {
+                body_target,
+                complete_target,
+                ..
+            } => [Some(*body_target), Some(*complete_target), None],
             Self::Terminate { .. } => [None, None, None],
         };
         targets.into_iter().flatten()

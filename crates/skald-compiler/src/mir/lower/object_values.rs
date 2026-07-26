@@ -110,7 +110,7 @@ impl BodyLowerer<'_> {
     pub(super) fn lower_object_source(&mut self, source: &HirObjectSource) -> MirPlace {
         match source {
             HirObjectSource::Place(place) => self.lower_object_place(place),
-            HirObjectSource::ArrayElement(_) => array_lowering_gate(),
+            HirObjectSource::ArrayElement(element) => self.lower_array_element_place(element),
             HirObjectSource::Produced(producer) => {
                 let storage = self.new_object_storage(
                     MirStorageKind::Temporary,

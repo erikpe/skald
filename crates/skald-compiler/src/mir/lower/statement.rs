@@ -61,10 +61,24 @@ impl BodyLowerer<'_> {
                 self.lower_optional_shared_assignment(assignment);
                 self.finish_full_expression(assignment.span);
             }
-            HirStatement::ArrayFieldInitialize(_)
-            | HirStatement::ArrayAssignment(_)
-            | HirStatement::ArrayElementAssignment(_)
-            | HirStatement::ArraySliceAssignment(_) => array_lowering_gate(),
+            HirStatement::ArrayFieldInitialize(initialize) => {
+                let destination = self.lower_field_place(&initialize.place);
+                self.lower_array_initialize(destination, &initialize.value, false);
+                self.finish_full_expression(initialize.span);
+            }
+            HirStatement::ArrayAssignment(assignment) => {
+                let destination = self.lower_array_place(&assignment.destination);
+                self.lower_array_initialize(destination, &assignment.value, true);
+                self.finish_full_expression(assignment.span);
+            }
+            HirStatement::ArrayElementAssignment(assignment) => {
+                self.lower_array_element_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
+            HirStatement::ArraySliceAssignment(assignment) => {
+                self.lower_array_slice_assignment(assignment);
+                self.finish_full_expression(assignment.span);
+            }
         }
     }
 
@@ -138,7 +152,12 @@ impl BodyLowerer<'_> {
                     .register_optional_shared(storage, super::lower_shared_target(value.target));
                 self.finish_full_expression(local.span);
             }
-            crate::hir::HirLocalInitializer::Array(_) => array_lowering_gate(),
+            crate::hir::HirLocalInitializer::Array(initialization) => {
+                self.lower_array_initialize(MirPlace::base(storage), initialization, false);
+                self.cleanup
+                    .register_array(storage, initialization.source.array);
+                self.finish_full_expression(local.span);
+            }
         }
     }
 
@@ -226,7 +245,14 @@ impl BodyLowerer<'_> {
                 });
                 return;
             }
-            Some(crate::hir::HirReturnValue::Array(_)) => array_lowering_gate(),
+            Some(crate::hir::HirReturnValue::Array(initialization)) => {
+                let destination = MirPlace::base(
+                    self.return_storage
+                        .expect("array-returning body must have return storage"),
+                );
+                self.lower_array_initialize(destination, initialization, false);
+                None
+            }
             None => None,
         };
         let cleanups = self.cleanup.for_all_scopes(statement.span);

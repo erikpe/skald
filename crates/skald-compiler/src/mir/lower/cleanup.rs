@@ -3,8 +3,8 @@
 use crate::{identity::ClassId, source::Span};
 
 use super::{
-    BodyLowerer, MirCheckedViewEnd, MirCleanup, MirEndFullExpression, MirInstruction, MirPlace,
-    MirSharedRelease, StorageId,
+    BodyLowerer, MirArrayInstruction, MirCheckedViewEnd, MirCleanup, MirEndFullExpression,
+    MirInstruction, MirPlace, MirSharedRelease, StorageId,
 };
 
 impl BodyLowerer<'_> {
@@ -58,6 +58,31 @@ impl BodyLowerer<'_> {
                     }
                     self.emit(MirInstruction::OptionalSharedCleanup(cleanup));
                 }
+                super::FullExpressionTemporary::Array { storage, array } => {
+                    if !inline.is_empty() {
+                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                            temporaries: std::mem::take(&mut inline),
+                            span,
+                        }));
+                    }
+                    self.emit(MirInstruction::Array(MirArrayInstruction::Release {
+                        owner: MirPlace::base(storage),
+                        array,
+                        span,
+                    }));
+                }
+                super::FullExpressionTemporary::ArrayAnchor(anchor) => {
+                    if !inline.is_empty() {
+                        self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
+                            temporaries: std::mem::take(&mut inline),
+                            span,
+                        }));
+                    }
+                    self.emit(MirInstruction::Array(MirArrayInstruction::AnchorEnd {
+                        anchor,
+                        span,
+                    }));
+                }
             }
         }
         self.emit(MirInstruction::EndFullExpression(MirEndFullExpression {
@@ -81,6 +106,7 @@ enum OwnedStorageKind {
     Shared,
     ClassOptional(ClassId),
     OptionalShared(crate::mir::MirSharedTarget),
+    Array(crate::identity::ArrayTypeId),
 }
 
 pub(super) enum PlannedCleanup {
@@ -88,6 +114,11 @@ pub(super) enum PlannedCleanup {
     Shared(MirSharedRelease),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
+    Array {
+        storage: StorageId,
+        array: crate::identity::ArrayTypeId,
+        span: Span,
+    },
 }
 
 impl PlannedCleanup {
@@ -158,6 +189,20 @@ impl CleanupPlanner {
             });
     }
 
+    pub(super) fn register_array(
+        &mut self,
+        storage: StorageId,
+        array: crate::identity::ArrayTypeId,
+    ) {
+        self.scopes
+            .last_mut()
+            .expect("an initialized local must belong to an active lexical scope")
+            .push(InitializedStorage {
+                storage,
+                kind: OwnedStorageKind::Array(array),
+            });
+    }
+
     pub(super) fn for_current_scope(&self, span: Span) -> Vec<PlannedCleanup> {
         self.scopes
             .last()
@@ -210,6 +255,11 @@ impl InitializedStorage {
                     span,
                 })
             }
+            OwnedStorageKind::Array(array) => PlannedCleanup::Array {
+                storage: self.storage,
+                array,
+                span,
+            },
         }
     }
 }
@@ -251,6 +301,7 @@ mod tests {
                     PlannedCleanup::OptionalShared(cleanup) => {
                         cleanup.destination.base.storage()
                     }
+                    PlannedCleanup::Array { storage, .. } => *storage,
                 })
                 .collect::<Vec<_>>(),
             [second_inner, first_inner, outer]
@@ -264,6 +315,7 @@ mod tests {
                 PlannedCleanup::Shared(release) => release.owner,
                 PlannedCleanup::ClassOptional(cleanup) => cleanup.destination.base.storage(),
                 PlannedCleanup::OptionalShared(cleanup) => cleanup.destination.base.storage(),
+                PlannedCleanup::Array { storage, .. } => *storage,
             },
             outer
         );

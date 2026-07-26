@@ -718,7 +718,17 @@ impl Verifier<'_> {
                             crate::mir::MirClassOptionalSource::Copy(source)
                                 if source == &assignment.destination
                         );
-                        if !self_copy && !state.mutation_permits.remove(&assignment.destination) {
+                        let array_element =
+                            assignment.destination.projections.iter().any(|projection| {
+                                matches!(
+                                    projection,
+                                    crate::mir::MirPlaceProjection::ArrayElement { .. }
+                                )
+                            });
+                        if !self_copy
+                            && !array_element
+                            && !state.mutation_permits.remove(&assignment.destination)
+                        {
                             self.block_error(
                                 function.callable(),
                                 block.id,
@@ -1379,7 +1389,13 @@ fn require_initialized(
                 | crate::mir::MirPlaceBase::AliasParameter(_)
                 | crate::mir::MirPlaceBase::CheckedView(_)
         );
-    if !state.contains(place) && !complete_external_object {
+    let array_element = place.projections.iter().any(|projection| {
+        matches!(
+            projection,
+            crate::mir::MirPlaceProjection::ArrayElement { .. }
+        )
+    });
+    if !state.contains(place) && !complete_external_object && !array_element {
         verifier.block_error(
             function.callable(),
             block.id,

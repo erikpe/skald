@@ -10,13 +10,14 @@ use skald_compiler::{
         dump_hir, HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
         HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection,
     },
-    identity::{CallableId, InterfaceId, InterfaceRequirementId},
+    identity::{ArrayTypeId, CallableId, InterfaceId, InterfaceRequirementId},
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
     mir::{
-        dump_mir, lower_hir, verify_mir, MirBaseCopy, MirCallReceiver, MirDirectBase,
-        MirInterfaceCallTarget, MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView,
-        MirPlaceProjection, MirProgram, MirViewTarget,
+        dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
+        MirArrayTypeTable, MirBaseCopy, MirCallReceiver, MirDirectBase, MirInterfaceCallTarget,
+        MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView, MirPlaceProjection,
+        MirProgram, MirViewTarget,
     },
     passes::run_mir_pipeline,
     resolve::{
@@ -69,6 +70,11 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_conformance: Option<MirInterfaceConformance> = None;
     let _mir_interface_call: Option<MirInterfaceCallTarget> = None;
     let _mir_receiver: Option<MirCallReceiver> = None;
+    let _mir_array_id: Option<ArrayTypeId> = None;
+    let _mir_array_table: Option<MirArrayTypeTable> = None;
+    let _mir_array_type: Option<MirArrayType> = None;
+    let _mir_array_lifecycle: Option<MirArrayLifecycle> = None;
+    let _mir_array_instruction: Option<MirArrayInstruction> = None;
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

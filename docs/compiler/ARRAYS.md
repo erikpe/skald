@@ -1,13 +1,13 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; source syntax, canonical resolution, and construction
-HIR implemented**.
+Status: **frozen design; verified target-independent MIR implemented**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
-[array language contract](../language/ARRAYS.md). The compiler now types array
-owners and construction into explicit HIR, but it does not lower arrays to MIR
-or execute them. Availability remains authoritative in the
+[array language contract](../language/ARRAYS.md). The compiler now lowers all
+typed array operations through verified, layout-independent MIR. The x86-64
+backend deliberately rejects that MIR until the execution stages land.
+Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
 The design borrows Niflheim's useful recursive type syntax, invariant typing,
@@ -33,15 +33,23 @@ dereference, optional owners, and call-scoped anchors.
 No later layer may infer array semantics from bracket syntax, a raw pointer,
 physical element size, or an expected type.
 
-The implemented HIR boundary includes exact canonical array types in
-declarations and owning positions, inline/shared construction mode,
-default/copy/assignment/destruction element plans, and named deep-copy versus
-produced-backing adoption. A fixed-point analysis propagates unavailable copy
-operations through recursive class/array graphs while treating array backing
-as a finite-containment boundary. Indexing, slicing, whole replacement, and
-array aliases remain at the structured `TYP035` type-checking gate. Programs
-whose valid typed HIR contains arrays stop at the separate deliberate
-HIR-to-MIR `TYP035` driver gate; direct MIR lowering asserts the same boundary.
+The implemented MIR boundary carries a canonical array declaration table,
+owning descriptors, unpublished and produced backing roles, shared owners,
+slice temporaries, positions, and anchors. Lowering emits explicit generated
+blocks for construction and copy prefixes; checked allocation, normalization,
+projection and slice failure edges; named deep copy and produced adoption;
+whole replacement; element lifecycle operations; destruction and release.
+Verification is split by array structure, storage, ownership, projection, and
+anchor responsibility. It checks exact lifecycle capabilities, initialized
+prefix shape, publication and consumption, owner state at control-flow joins,
+checked projection, slice checks before writes, and exact terminating failure
+edges. No MIR operation contains a descriptor layout, element stride, header
+offset, target register, or runtime ABI fact.
+
+The current x86-64 legality pass returns a structured backend-unsupported
+error for any verified array MIR. Native layout and execution begin in AR5;
+the type checker and MIR lowering no longer use an array-wide unsupported
+diagnostic.
 
 ## Canonical type model
 

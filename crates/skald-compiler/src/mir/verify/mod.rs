@@ -11,6 +11,7 @@ use crate::identity::CallableId;
 use super::model::{BlockId, MirProgram};
 
 mod arguments;
+mod array;
 mod body;
 mod call;
 mod cleanup;

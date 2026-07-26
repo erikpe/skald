@@ -146,6 +146,7 @@ const fn shared_target_view(target: crate::mir::MirSharedTarget) -> MirViewTarge
         crate::mir::MirSharedTarget::Obj => MirViewTarget::Obj,
         crate::mir::MirSharedTarget::Class(class) => MirViewTarget::Class(class),
         crate::mir::MirSharedTarget::Interface(interface) => MirViewTarget::Interface(interface),
+        crate::mir::MirSharedTarget::Array(_) => panic!(),
     }
 }
 

@@ -458,10 +458,11 @@ to [Optional Values](OPTIONAL_VALUES.md).
 Array tokens, recursive type grouping, construction modes, index and slice
 shapes, and explicit shared bracket projection cross the syntax boundary with
 deterministic AST dumps. Resolution assigns deterministic canonical recursive
-array identities and retains structured construction, projection, and
-assignment nodes. Type checking deliberately reports `TYP035`; no array form
-reaches HIR, lowering, or execution yet. The frozen semantics belong to
-[Arrays](ARRAYS.md).
+array identities, and type checking retains structured lifecycle,
+construction, projection, assignment, slice, and alias operations. These
+forms lower to verified target-independent MIR. The x86-64 backend rejects
+array MIR until native array layout and execution are implemented. The frozen
+semantics belong to [Arrays](ARRAYS.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

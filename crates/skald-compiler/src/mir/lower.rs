@@ -9,6 +9,7 @@ use crate::{
     identity::{BindingId, CallableId, ClassId},
 };
 
+mod array;
 mod call;
 mod cleanup;
 mod control_effect;
@@ -27,10 +28,6 @@ use cleanup::CleanupPlanner;
 /// Lowers every currently representable HIR operation into executable MIR.
 ///
 pub fn lower_hir(hir: &HirProgram) -> MirProgram {
-    assert!(
-        hir.array_types.is_empty(),
-        "typed arrays must stop at the deliberate HIR-to-MIR lowering gate"
-    );
     let mir = program::lower_program(hir);
 
     #[cfg(debug_assertions)]
@@ -40,8 +37,8 @@ pub fn lower_hir(hir: &HirProgram) -> MirProgram {
     mir
 }
 
-fn array_lowering_gate() -> ! {
-    unreachable!("typed arrays cannot reach MIR before array lowering is implemented")
+fn invalid_array_hir() -> ! {
+    unreachable!("typed array HIR violates the lowering contract")
 }
 
 fn lower_selected_copy_operation<I>(
@@ -79,6 +76,11 @@ enum FullExpressionTemporary {
     Shared(StorageId),
     ClassOptional(crate::mir::MirClassOptionalCleanup),
     OptionalShared(crate::mir::MirOptionalSharedCleanup),
+    Array {
+        storage: StorageId,
+        array: crate::identity::ArrayTypeId,
+    },
+    ArrayAnchor(StorageId),
 }
 
 struct BodyLowerer<'hir> {
@@ -145,6 +147,7 @@ impl<'hir> BodyLowerer<'hir> {
                     Type::OptionalShared(target) => lowerer
                         .cleanup
                         .register_optional_shared(*storage, lower_shared_target(target)),
+                    Type::Array(array) => lowerer.cleanup.register_array(*storage, array),
                     _ => {}
                 }
             }
@@ -177,7 +180,18 @@ impl<'hir> BodyLowerer<'hir> {
     }
 
     fn allocate_storage(&mut self) {
-        if let Type::Class(class) = self.input.return_type {
+        if let Type::Array(array) = self.input.return_type {
+            let id = StorageId::new(self.input.callable, self.storage.len());
+            self.return_storage = Some(id);
+            self.storage.push(MirStorage {
+                id,
+                source: None,
+                name: "array-return".to_owned(),
+                kind: MirStorageKind::Return,
+                ty: MirType::Array(array),
+                span: self.input.source_body.span,
+            });
+        } else if let Type::Class(class) = self.input.return_type {
             let id = StorageId::new(self.input.callable, self.storage.len());
             self.return_storage = Some(id);
             self.storage.push(MirStorage {
@@ -300,6 +314,15 @@ impl<'hir> BodyLowerer<'hir> {
                 cleanup::PlannedCleanup::OptionalShared(cleanup) => {
                     self.emit(MirInstruction::OptionalSharedCleanup(cleanup))
                 }
+                cleanup::PlannedCleanup::Array {
+                    storage,
+                    array,
+                    span,
+                } => self.emit(MirInstruction::Array(MirArrayInstruction::Release {
+                    owner: MirPlace::base(storage),
+                    array,
+                    span,
+                })),
             }
         }
     }
@@ -342,7 +365,7 @@ fn lower_type(ty: Type) -> MirType {
             crate::hir::HirSharedTarget::Interface(interface) => {
                 MirSharedTarget::Interface(interface)
             }
-            crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
+            crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
         }),
         Type::OptionalShared(target) => MirType::OptionalShared(match target {
             crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
@@ -350,13 +373,13 @@ fn lower_type(ty: Type) -> MirType {
             crate::hir::HirSharedTarget::Interface(interface) => {
                 MirSharedTarget::Interface(interface)
             }
-            crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
+            crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
         }),
         Type::OptionalPrimitive(payload) => {
             MirType::OptionalPrimitive(optional::lower_primitive_type(payload))
         }
         Type::OptionalClass(class) => MirType::OptionalClass(class),
-        Type::Array(_) => array_lowering_gate(),
+        Type::Array(array) => MirType::Array(array),
     }
 }
 
@@ -365,6 +388,71 @@ fn lower_shared_target(target: crate::hir::HirSharedTarget) -> MirSharedTarget {
         crate::hir::HirSharedTarget::Obj => MirSharedTarget::Obj,
         crate::hir::HirSharedTarget::Class(class) => MirSharedTarget::Class(class),
         crate::hir::HirSharedTarget::Interface(interface) => MirSharedTarget::Interface(interface),
-        crate::hir::HirSharedTarget::Array(_) => array_lowering_gate(),
+        crate::hir::HirSharedTarget::Array(array) => MirSharedTarget::Array(array),
+    }
+}
+
+fn lower_array_default_element(
+    operation: crate::hir::HirArrayDefaultElement,
+) -> MirArrayDefaultElement {
+    use crate::hir::HirArrayDefaultElement as H;
+    match operation {
+        H::Primitive => MirArrayDefaultElement::Primitive,
+        H::OptionalAbsent => MirArrayDefaultElement::OptionalAbsent,
+        H::Class { class, initializer } => MirArrayDefaultElement::Class { class, initializer },
+        H::ArrayEmpty(array) => MirArrayDefaultElement::ArrayEmpty(array),
+        H::SharedClass { class, initializer } => {
+            MirArrayDefaultElement::SharedClass { class, initializer }
+        }
+        H::SharedArrayEmpty(array) => MirArrayDefaultElement::SharedArrayEmpty(array),
+    }
+}
+
+fn lower_array_copy_element(operation: crate::hir::HirArrayCopyElement) -> MirArrayCopyElement {
+    use crate::hir::HirArrayCopyElement as H;
+    match operation {
+        H::Primitive => MirArrayCopyElement::Primitive,
+        H::OptionalPrimitive => MirArrayCopyElement::OptionalPrimitive,
+        H::Class { class, operation } => MirArrayCopyElement::Class {
+            class,
+            operation: lower_selected_copy_operation(operation),
+        },
+        H::OptionalClass { class, operation } => MirArrayCopyElement::OptionalClass {
+            class,
+            operation: lower_selected_copy_operation(operation),
+        },
+        H::Array(array) => MirArrayCopyElement::Array(array),
+        H::Shared(target) => MirArrayCopyElement::Shared(lower_shared_target(target)),
+        H::OptionalShared(target) => {
+            MirArrayCopyElement::OptionalShared(lower_shared_target(target))
+        }
+    }
+}
+
+fn lower_array_assign_element(
+    operation: crate::hir::HirArrayAssignElement,
+) -> MirArrayAssignElement {
+    use crate::hir::HirArrayAssignElement as H;
+    match operation {
+        H::Primitive => MirArrayAssignElement::Primitive,
+        H::OptionalPrimitive => MirArrayAssignElement::OptionalPrimitive,
+        H::Class { class, operation } => MirArrayAssignElement::Class {
+            class,
+            operation: lower_selected_copy_operation(operation),
+        },
+        H::OptionalClass {
+            class,
+            copy_constructor,
+            copy_assignment,
+        } => MirArrayAssignElement::OptionalClass {
+            class,
+            copy_constructor: lower_selected_copy_operation(copy_constructor),
+            copy_assignment: lower_selected_copy_operation(copy_assignment),
+        },
+        H::Array(array) => MirArrayAssignElement::Array(array),
+        H::Shared(target) => MirArrayAssignElement::Shared(lower_shared_target(target)),
+        H::OptionalShared(target) => {
+            MirArrayAssignElement::OptionalShared(lower_shared_target(target))
+        }
     }
 }
