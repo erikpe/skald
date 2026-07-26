@@ -105,6 +105,13 @@ impl MirPlace {
         }
     }
 
+    pub fn array_alias(base: StorageId) -> Self {
+        Self {
+            base: MirPlaceBase::ArrayAlias(base),
+            projections: Vec::new(),
+        }
+    }
+
     pub fn shared_pointee(owner: StorageId) -> Self {
         Self {
             base: MirPlaceBase::SharedPointee(owner),
@@ -153,6 +160,7 @@ pub enum MirPlaceBase {
     Storage(StorageId),
     AliasParameter(StorageId),
     CheckedView(StorageId),
+    ArrayAlias(StorageId),
     /// The complete payload of the allocation retained by one shared owner.
     SharedPointee(StorageId),
     /// The unpublished payload under construction in allocation storage.
@@ -165,6 +173,7 @@ impl MirPlaceBase {
             Self::Storage(storage)
             | Self::AliasParameter(storage)
             | Self::CheckedView(storage)
+            | Self::ArrayAlias(storage)
             | Self::SharedPointee(storage)
             | Self::SharedAllocationPayload(storage) => storage,
         }

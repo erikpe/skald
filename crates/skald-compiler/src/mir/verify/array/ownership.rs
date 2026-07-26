@@ -2,8 +2,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::super::{
     super::model::{
-        MirArrayFailure, MirArrayInstruction, MirDefinitionRef, MirInstruction, MirStorageKind,
-        MirTerminator, StorageId,
+        MirArgument, MirArrayFailure, MirArrayInstruction, MirCall, MirCallReceiver,
+        MirDefinitionRef, MirInstruction, MirPlace, MirPlaceProjection, MirStorageKind,
+        MirTerminator, MirType, StorageId,
     },
     context::Verifier,
 };
@@ -167,6 +168,18 @@ impl Verifier<'_> {
     }
 
     fn verify_array_owner_joins(&mut self, function: MirDefinitionRef<'_>) {
+        let anchor_owners: HashMap<_, _> = function
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter_map(|instruction| match instruction {
+                MirInstruction::Array(MirArrayInstruction::AnchorBegin {
+                    anchor, owner, ..
+                }) => Some((*anchor, owner.clone())),
+                _ => None,
+            })
+            .collect();
         let mut incoming = vec![None; function.body().blocks.len()];
         if function.body().entry.index() >= incoming.len() {
             return;
@@ -182,6 +195,33 @@ impl Verifier<'_> {
                 continue;
             };
             for instruction in &block.instructions {
+                if let MirInstruction::Call(call) = instruction {
+                    self.verify_array_alias_dependencies(
+                        function,
+                        block.id,
+                        call,
+                        &state,
+                        &anchor_owners,
+                    );
+                }
+                if let MirInstruction::Array(MirArrayInstruction::AliasBind {
+                    anchor,
+                    source,
+                    ..
+                }) = instruction
+                {
+                    let compatible = state.anchors.contains(anchor)
+                        && anchor_owners
+                            .get(anchor)
+                            .is_some_and(|owner| array_anchor_covers(*anchor, owner, source));
+                    if !compatible {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "array alias binding requires one compatible live backing or owner anchor",
+                        );
+                    }
+                }
                 state.apply(function, instruction);
             }
 
@@ -278,6 +318,49 @@ impl Verifier<'_> {
         }
     }
 
+    fn verify_array_alias_dependencies(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: crate::mir::BlockId,
+        call: &MirCall,
+        state: &ArrayOwnerState,
+        anchor_owners: &HashMap<StorageId, MirPlace>,
+    ) {
+        let receiver = call.receiver.as_ref().map(|receiver| match receiver {
+            MirCallReceiver::Method(receiver) => &receiver.place,
+            MirCallReceiver::Interface(view) => &view.source,
+        });
+        for borrowed in receiver
+            .into_iter()
+            .chain(call.arguments.iter().filter_map(|argument| match argument {
+                MirArgument::Place(place) => Some(place),
+                _ => None,
+            }))
+        {
+            let covered = match borrowed.base {
+                crate::mir::MirPlaceBase::ArrayAlias(alias) => state
+                    .aliases
+                    .get(&alias)
+                    .is_some_and(|anchor| state.anchors.contains(anchor)),
+                _ if array_borrow_requires_anchor(function, borrowed) => {
+                    state.anchors.iter().any(|anchor| {
+                        anchor_owners
+                            .get(anchor)
+                            .is_some_and(|owner| array_anchor_covers(*anchor, owner, borrowed))
+                    })
+                }
+                _ => true,
+            };
+            if !covered {
+                self.block_error(
+                    function.callable(),
+                    block,
+                    "array alias call requires one compatible live descriptor, backing, or owner anchor",
+                );
+            }
+        }
+    }
+
     fn merge_array_owner_state(
         &mut self,
         function: MirDefinitionRef<'_>,
@@ -305,12 +388,38 @@ impl Verifier<'_> {
     }
 }
 
+fn array_borrow_requires_anchor(function: MirDefinitionRef<'_>, place: &MirPlace) -> bool {
+    function
+        .storage(place.base.storage())
+        .is_some_and(|storage| matches!(storage.ty, MirType::Array(_)))
+        || place
+            .projections
+            .iter()
+            .any(|projection| matches!(projection, MirPlaceProjection::ArrayElement { .. }))
+}
+
+fn array_anchor_covers(anchor: StorageId, owner: &MirPlace, borrowed: &MirPlace) -> bool {
+    if owner.base == borrowed.base
+        && owner.projections.len() <= borrowed.projections.len()
+        && borrowed.projections[..owner.projections.len()] == owner.projections
+    {
+        return true;
+    }
+    borrowed.projections.is_empty()
+        && matches!(
+            borrowed.base,
+            crate::mir::MirPlaceBase::Storage(storage)
+                if storage == anchor
+        )
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct ArrayOwnerState {
     backings: HashSet<StorageId>,
     completed_backings: HashSet<StorageId>,
     produced: HashSet<StorageId>,
     anchors: HashSet<StorageId>,
+    aliases: HashMap<StorageId, StorageId>,
 }
 
 impl ArrayOwnerState {
@@ -364,6 +473,9 @@ impl ArrayOwnerState {
             }
             MirArrayInstruction::AnchorEnd { anchor, .. } => {
                 self.anchors.remove(anchor);
+            }
+            MirArrayInstruction::AliasBind { alias, anchor, .. } => {
+                self.aliases.insert(*alias, *anchor);
             }
             _ => {}
         }

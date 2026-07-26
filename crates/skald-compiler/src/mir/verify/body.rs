@@ -138,6 +138,7 @@ impl<'mir> Verifier<'mir> {
                     | (MirStorageKind::ArraySlice, None)
                     | (MirStorageKind::ArrayPosition, None)
                     | (MirStorageKind::ArrayAnchor(_), None)
+                    | (MirStorageKind::ArrayAlias(_), None)
             );
             if !source_matches_kind {
                 self.function_error(

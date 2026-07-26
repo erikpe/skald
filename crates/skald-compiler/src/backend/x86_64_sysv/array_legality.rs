@@ -4,9 +4,9 @@ use crate::{
     backend::{BackendError, Target},
     mir::{
         MirArrayAnchorKind, MirArrayDefaultElement, MirArrayFailure, MirArrayInstruction,
-        MirArrayOwnership, MirArrayPositionKind, MirDefinitionRef, MirInstruction,
-        MirParameterMode, MirPlace, MirPlaceBase, MirPlaceProjection, MirProgram, MirRvalueKind,
-        MirStorageKind, MirTerminationReason, MirTerminator, MirType,
+        MirArrayOwnership, MirArrayPositionKind, MirDefinitionRef, MirInstruction, MirPlace,
+        MirPlaceBase, MirPlaceProjection, MirProgram, MirRvalueKind, MirStorageKind,
+        MirTerminationReason, MirTerminator, MirType,
     },
 };
 
@@ -49,18 +49,6 @@ fn check_definition(
     program: &MirProgram,
     definition: MirDefinitionRef<'_>,
 ) -> Result<(), BackendError> {
-    let signature = program
-        .callable_signature(definition.callable())
-        .expect("verified definition has a signature");
-    if signature.parameters.iter().any(|parameter| {
-        matches!(parameter.ty, MirType::Array(_)) && parameter.mode != MirParameterMode::Value
-    }) {
-        return Err(error(
-            Some(definition.callable()),
-            "array alias parameters are not yet supported by the x86-64 backend",
-        ));
-    }
-
     for storage in definition.storage_entries() {
         if let MirType::Array(_) = storage.ty {
             let supported = matches!(
@@ -73,6 +61,8 @@ fn check_definition(
                     | MirStorageKind::ArrayProduced
                     | MirStorageKind::ArraySlice
                     | MirStorageKind::ArrayAnchor(_)
+                    | MirStorageKind::ArrayAlias(_)
+                    | MirStorageKind::AliasParameter(_)
             );
             if !supported {
                 return Err(error(
@@ -185,6 +175,9 @@ fn check_instruction(
                 require_executable_array_place(program, definition, owner)?;
             }
             MirArrayInstruction::AnchorEnd { .. } => {}
+            MirArrayInstruction::AliasBind { source, .. } => {
+                require_executable_element_place(program, definition, source)?;
+            }
             MirArrayInstruction::Normalize {
                 owner,
                 kind: MirArrayPositionKind::Element | MirArrayPositionKind::SliceBound,
@@ -298,7 +291,10 @@ fn require_executable_array_place(
         .storage(place.base.storage())
         .expect("verified array place has declared storage");
     let direct_owner = place.projections.is_empty()
-        && matches!(place.base, MirPlaceBase::Storage(_))
+        && matches!(
+            place.base,
+            MirPlaceBase::Storage(_) | MirPlaceBase::AliasParameter(_)
+        )
         && matches!(
             storage.kind,
             MirStorageKind::Local
@@ -307,6 +303,8 @@ fn require_executable_array_place(
                 | MirStorageKind::Argument
                 | MirStorageKind::ArrayProduced
                 | MirStorageKind::ArraySlice
+                | MirStorageKind::ArrayAnchor(_)
+                | MirStorageKind::AliasParameter(_)
         )
         && matches!(storage.ty, MirType::Array(_));
     let projected_owner = (!place.projections.is_empty()

@@ -310,20 +310,142 @@ fn nontrivial_and_nested_inline_array_lifecycle_reaches_native_lowering() {
 }
 
 #[test]
-fn deferred_array_aliases_remain_structured_backend_errors() {
+fn readonly_and_mutable_whole_array_aliases_execute_natively() {
     let source = concat!(
-        "fn length(ref values: i64[]) -> u64 { return values.len(); }\n",
-        "fn main() -> i64 { return 0; }\n",
+        "fn read(ref values: i64[]) -> i64 { return values[0] + values[-1]; }\n",
+        "fn mutate(mut ref values: i64[]) -> unit {\n",
+        "  values[0] = 7;\n",
+        "  values[-1] = 9;\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var values: i64[] = i64[](2u);\n",
+        "  mutate(values);\n",
+        "  return read(values);\n",
+        "}\n",
     );
-    let program = lower_text(source);
-    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
-    assert!(
-        error.to_string().contains("not yet supported")
-            || error
-                .to_string()
-                .contains("outside the executable inline/shared"),
-        "{error}"
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(16));
+}
+
+#[test]
+fn class_and_nested_array_element_aliases_preserve_exact_element_identity() {
+    let source = concat!(
+        "class Item { value: i64; init() { self.value = 0; } }\n",
+        "fn touch(mut ref item: Item) -> unit { item.value = 11; return; }\n",
+        "fn write(mut ref values: i64[]) -> unit { values[0] = 13; return; }\n",
+        "fn overlap(mut ref left: Item, mut ref right: Item) -> unit {\n",
+        "  left.value = 17;\n",
+        "  right.value = 19;\n",
+        "  return;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var items: Item[] = Item[](1u);\n",
+        "  var rows: i64[][] = i64[][](1u);\n",
+        "  rows[0] = i64[](1u);\n",
+        "  touch(items[0]);\n",
+        "  write(rows[0]);\n",
+        "  overlap(items[0], items[0]);\n",
+        "  return items[0].value + rows[0][0];\n",
+        "}\n",
     );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(32));
+}
+
+#[test]
+fn shared_and_optional_shared_array_aliases_reuse_secured_owner_anchors() {
+    let source = concat!(
+        "class Item { value: i64; init() { self.value = 0; } }\n",
+        "class Holder {\n",
+        "  values: shared i64[];\n",
+        "  init(values: shared i64[]) { self.values = values; }\n",
+        "}\n",
+        "fn write(mut ref values: i64[]) -> unit { values[0] = 7; return; }\n",
+        "fn read(ref values: i64[]) -> i64 { return values[0]; }\n",
+        "fn forward(ref values: i64[]) -> i64 { return read(values); }\n",
+        "fn make() -> shared i64[] { return new i64[](1u); }\n",
+        "fn touch(mut ref item: Item) -> unit { item.value = 11; return; }\n",
+        "fn main() -> i64 {\n",
+        "  var values: shared i64[] = new i64[](1u);\n",
+        "  var maybe: shared? i64[] = values;\n",
+        "  write(*values);\n",
+        "  write(*maybe!);\n",
+        "  var holder: Holder = Holder(values);\n",
+        "  var items: shared Item[] = new Item[](1u);\n",
+        "  touch(items->[0]);\n",
+        "  return read(*values) + read(*maybe!) + read(*holder.values)\n",
+        "    + forward(*values)\n",
+        "    + read(*make()) + items->[0].value;\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(native_allocator());
+
+    assert_eq!(run_native_assembly(&output).code(), Some(39));
+}
+
+#[test]
+fn detached_element_alias_keeps_old_backing_while_descriptor_alias_observes_replacement() {
+    let source = concat!(
+        "extern fn validate_counts() -> i64;\n",
+        "class Item {\n",
+        "  value: i64;\n",
+        "  init() { self.value = 0; }\n",
+        "  fn observe(ignored: i64) -> i64 { return self.value; }\n",
+        "  destroy { self.value = 100; }\n",
+        "}\n",
+        "class Holder {\n",
+        "  items: Item[];\n",
+        "  init(value: i64) {\n",
+        "    self.items = Item[](1u);\n",
+        "    self.items[0].value = value;\n",
+        "  }\n",
+        "  mut fn replace(value: i64) -> i64 {\n",
+        "    self.items = Item[](1u);\n",
+        "    self.items[0].value = value;\n",
+        "    return 0;\n",
+        "  }\n",
+        "}\n",
+        "fn observe_element(ref item: Item, ignored: i64) -> i64 {\n",
+        "  return item.value;\n",
+        "}\n",
+        "fn observe_array(ref items: Item[], ignored: i64) -> i64 {\n",
+        "  return items[0].value;\n",
+        "}\n",
+        "fn replace_during_call(ref item: Item, mut ref holder: Holder) -> i64 {\n",
+        "  holder.items = Item[](1u);\n",
+        "  holder.items[0].value = 50;\n",
+        "  return item.value;\n",
+        "}\n",
+        "fn build() -> i64 {\n",
+        "  var element_holder: Holder = Holder(7);\n",
+        "  var descriptor_holder: Holder = Holder(8);\n",
+        "  var receiver_holder: Holder = Holder(9);\n",
+        "  var call_holder: Holder = Holder(12);\n",
+        "  var old_element: i64 = observe_element(\n",
+        "    element_holder.items[0], element_holder.replace(20));\n",
+        "  var new_element: i64 = observe_array(\n",
+        "    descriptor_holder.items, descriptor_holder.replace(30));\n",
+        "  var old_receiver: i64 = receiver_holder.items[0].observe(\n",
+        "    receiver_holder.replace(40));\n",
+        "  var during_call: i64 = replace_during_call(\n",
+        "    call_holder.items[0], call_holder);\n",
+        "  return old_element + new_element + old_receiver + during_call;\n",
+        "}\n",
+        "fn main() -> i64 {\n",
+        "  var result: i64 = build();\n",
+        "  return result + validate_counts();\n",
+        "}\n",
+    );
+    let mut output = assembly(source);
+    output.push_str(&ownership_counter_probe(8));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(58));
 }
 
 #[test]

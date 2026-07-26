@@ -1,13 +1,14 @@
 # Skald Aliases and Ownership
 
-Status: authoritative for executable class, `Obj`, and inline
-optional-container aliases. Interface views
+Status: authoritative for executable class, `Obj`, inline
+optional-container, and array aliases. Interface views
 follow the same source rules and lower through verified MIR; their backend
 execution boundary is owned by [polymorphism](POLYMORPHISM.md). Shared-backed
 call borrows and their hidden owner anchors are implemented as specified by
 [Shared Ownership and Heap Allocation](SHARED_OWNERSHIP.md). Local aliases and
-aliases into other future value families remain unfrozen. Feature maturity is
-authoritative in the [status matrix](STATUS.md).
+aliases into other future value families remain unfrozen. Array-specific
+descriptor and detached-backing behavior belongs to [Arrays](ARRAYS.md).
+Feature maturity is authoritative in the [status matrix](STATUS.md).
 
 The [grammar](GRAMMAR.md#compilation-unit-and-declarations) defines accepted
 parameter syntax, [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md)

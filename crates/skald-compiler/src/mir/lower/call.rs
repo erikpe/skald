@@ -461,10 +461,10 @@ impl BodyLowerer<'_> {
                 HirCallArgument::ArrayAlias(alias) => {
                     let place = match &alias.source {
                         crate::hir::HirArrayAliasSource::Whole(receiver) => {
-                            self.lower_array_receiver_place(receiver)
+                            self.lower_array_alias_receiver_place(receiver)
                         }
                         crate::hir::HirArrayAliasSource::Element(element) => {
-                            self.lower_array_element_place(element)
+                            self.lower_array_alias_element_place(element, alias.access)
                         }
                     };
                     LoweredArgument::Ready(MirArgument::Place(place))
@@ -559,7 +559,7 @@ impl BodyLowerer<'_> {
         receiver: &HirMethodReceiver,
     ) -> MirMethodReceiver {
         if let Some(element) = &receiver.array_element {
-            let place = self.lower_array_element_place(element);
+            let place = self.lower_array_alias_element_place(element, element.receiver.access);
             let Type::Class(dynamic_class) = element.element else {
                 unreachable!("object method array receiver must have exact class type")
             };

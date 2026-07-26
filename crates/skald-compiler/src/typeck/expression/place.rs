@@ -174,9 +174,12 @@ impl CallableChecker<'_, '_> {
             let Type::Class(element_class) = checked.ty else {
                 unreachable!("resolved array-element receiver must retain its class type")
             };
-            let HirExpressionKind::ArrayElement(element) = checked.kind else {
+            let HirExpressionKind::ArrayElement(mut element) = checked.kind else {
                 unreachable!("array-element receiver must be an indexed projection")
             };
+            if element.receiver.ownership == crate::hir::HirArrayReceiverOwnership::Inline {
+                element.receiver.anchor = crate::hir::HirArrayAnchor::InlineBacking;
+            }
             let access = element.receiver.access;
             let place = HirObjectPlace {
                 path: ObjectPath {

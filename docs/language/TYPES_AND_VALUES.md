@@ -162,8 +162,9 @@ intrinsic operations rather than general operators; non-shared inline element
 access currently executes for primitives, optionals, exact classes, and nested
 arrays on x86-64. The same element categories execute in shared outer arrays,
 and copied slices plus checked equal-length slice assignment execute for
-inline, shared, and optional-shared receivers. Array aliases remain a
-target-legality error.
+inline, shared, and optional-shared receivers. Call-scoped whole-array and
+exact class or nested-array element aliases execute with their declared
+read-only or mutable access.
 
 ## Conversions and future value families
 

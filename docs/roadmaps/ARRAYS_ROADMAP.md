@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR12 is next.
+Status: in progress; AR13 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -83,7 +83,7 @@ Use the existing test ownership:
 - [x] AR9 — Execute shared and optional-shared outer arrays
 - [x] AR10 — Execute shared and optional-shared element lifecycle
 - [x] AR11 — Execute copied slices and checked slice assignment
-- [ ] AR12 — Execute array aliases and detached-backing anchors
+- [x] AR12 — Execute array aliases and detached-backing anchors
 - [ ] AR13 — Harden and publish the complete array profile
 
 ## PR-sized implementation sequence
@@ -570,23 +570,23 @@ and overlap and nontrivial lifecycle effects match the frozen snapshot model.
 **Purpose:** Preserve nonexclusive call-scoped borrowing when inline
 whole-array replacement can detach element storage.
 
-- [ ] Execute `ref T[]` and `mut ref T[]` parameters over stable inline array
+- [x] Execute `ref T[]` and `mut ref T[]` parameters over stable inline array
       places and explicitly dereferenced shared array places with exact access.
-- [ ] Execute exact-class and nested-array element alias sources after checked
+- [x] Execute exact-class and nested-array element alias sources after checked
       indexing, preserving source backing and element identity for the
       complete call.
-- [ ] Add compiler-generated inline backing owner and anchor accounting:
+- [x] Add compiler-generated inline backing owner and anchor accounting:
       replacement ends the source-visible owner, while element destruction and
       deallocation wait for the final dependent anchor.
-- [ ] Distinguish a whole-array descriptor alias, which observes descriptor
+- [x] Distinguish a whole-array descriptor alias, which observes descriptor
       replacement, from an element/nested-backing alias tied to the detached
       backing selected at argument evaluation.
-- [ ] Reuse stable/copied/adopted shared owner anchors and secured optional
+- [x] Reuse stable/copied/adopted shared owner anchors and secured optional
       owners for shared-backed whole arrays and elements.
-- [ ] Preserve nonexclusive overlap, receiver/argument source order, later
+- [x] Preserve nonexclusive overlap, receiver/argument source order, later
       invalidating argument behavior, and the prohibition on alias-root
       rebinding or escaping/local aliases.
-- [ ] Extend MIR verification so every borrowed projection has one compatible
+- [x] Extend MIR verification so every borrowed projection has one compatible
       live descriptor/backing/owner dependency and every anchor ends after its
       last consumer but before deferred destruction.
 

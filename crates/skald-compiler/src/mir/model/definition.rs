@@ -322,6 +322,9 @@ pub enum MirStorageKind {
     ArrayPosition,
     /// A hidden dependency retaining an array backing or shared owner.
     ArrayAnchor(super::array::MirArrayAnchorKind),
+    /// A compiler-owned address captured for one call-scoped array or array
+    /// element alias argument.
+    ArrayAlias(MirAliasAccess),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

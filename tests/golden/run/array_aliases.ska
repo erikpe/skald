@@ -1,0 +1,58 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Item {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.value + 1000);
+    }
+}
+
+class Holder {
+    items: Item[];
+
+    init(value: i64) {
+        self.items = Item[](1u);
+        self.items[0].value = value;
+    }
+
+    mut fn replace(value: i64) -> i64 {
+        self.items = Item[](1u);
+        self.items[0].value = value;
+        return 0;
+    }
+}
+
+fn observe_element(ref item: Item, ignored: i64) -> unit {
+    ska_rt_println_i64(item.value);
+    return;
+}
+
+fn observe_array(ref items: Item[], ignored: i64) -> unit {
+    ska_rt_println_i64(items[0].value);
+    return;
+}
+
+fn exercise() -> unit {
+    var element_holder: Holder = Holder(7);
+    var descriptor_holder: Holder = Holder(8);
+
+    observe_element(
+        element_holder.items[0],
+        element_holder.replace(20)
+    );
+    observe_array(
+        descriptor_holder.items,
+        descriptor_holder.replace(30)
+    );
+    return;
+}
+
+fn main() -> i64 {
+    exercise();
+    return 0;
+}

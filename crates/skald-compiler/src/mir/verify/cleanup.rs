@@ -35,7 +35,9 @@ impl<'mir> Verifier<'mir> {
         let destination = self.verify_place(function, block, &cleanup.destination);
         if matches!(
             cleanup.destination.base,
-            MirPlaceBase::AliasParameter(_) | MirPlaceBase::CheckedView(_)
+            MirPlaceBase::AliasParameter(_)
+                | MirPlaceBase::CheckedView(_)
+                | MirPlaceBase::ArrayAlias(_)
         ) {
             self.block_error(
                 function.callable(),
@@ -152,7 +154,8 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | MirStorageKind::ArrayProduced
                 | MirStorageKind::ArraySlice
                 | MirStorageKind::ArrayPosition
-                | MirStorageKind::ArrayAnchor(_) => continue,
+                | MirStorageKind::ArrayAnchor(_)
+                | MirStorageKind::ArrayAlias(_) => continue,
             };
             initial.live.insert(place);
         }
@@ -778,12 +781,20 @@ impl CleanupLivenessAnalysis<'_, '_> {
         place: &MirPlace,
         kind: &str,
     ) {
-        if matches!(place.base, MirPlaceBase::CheckedView(_)) {
+        if matches!(
+            place.base,
+            MirPlaceBase::CheckedView(_) | MirPlaceBase::ArrayAlias(_)
+        ) {
             self.require_live_place(block, state, place, kind);
         }
     }
 
     fn place_is_live(&self, state: &ObjectState, place: &MirPlace) -> bool {
+        if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
+            // The array ownership verifier proves that a captured alias has
+            // one compatible live backing or owner anchor at every consumer.
+            return true;
+        }
         if place
             .projections
             .iter()

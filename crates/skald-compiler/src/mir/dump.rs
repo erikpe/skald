@@ -322,6 +322,8 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
             MirStorageKind::ArraySlice => "array-slice",
             MirStorageKind::ArrayPosition => "array-position",
             MirStorageKind::ArrayAnchor(_) => "array-anchor",
+            MirStorageKind::ArrayAlias(MirAliasAccess::ReadOnly) => "array-alias",
+            MirStorageKind::ArrayAlias(MirAliasAccess::Mutable) => "array-mut-alias",
         };
         let _ = write!(output, "        {} {kind} ", storage.id);
         match storage.source {
@@ -342,6 +344,7 @@ fn dump_executable_body(output: &mut String, function: MirDefinitionRef<'_>) {
                 MirStorageKind::ArraySlice => output.push_str("<array-slice> "),
                 MirStorageKind::ArrayPosition => output.push_str("<array-position> "),
                 MirStorageKind::ArrayAnchor(_) => output.push_str("<array-anchor> "),
+                MirStorageKind::ArrayAlias(_) => output.push_str("<array-alias> "),
                 _ => unreachable!("verified language storage has a source binding"),
             },
         }
@@ -1011,6 +1014,9 @@ fn dump_place(output: &mut String, place: &MirPlace) {
         }
         MirPlaceBase::CheckedView(storage) => {
             let _ = write!(output, "checked({storage})");
+        }
+        MirPlaceBase::ArrayAlias(storage) => {
+            let _ = write!(output, "array-alias({storage})");
         }
         MirPlaceBase::SharedPointee(storage) => {
             let _ = write!(output, "shared-pointee({storage})");

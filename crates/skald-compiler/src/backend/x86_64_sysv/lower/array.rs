@@ -1,4 +1,4 @@
-//! Primitive inline-array instruction and control-flow selection.
+//! Executable inline and shared-array instruction and control-flow selection.
 
 use crate::{
     backend::{BackendError, Target},
@@ -25,6 +25,7 @@ use super::{
     block_label, value, InstructionSelector,
 };
 
+mod anchors;
 mod helpers;
 mod lifecycle;
 mod shared_elements;
@@ -350,14 +351,15 @@ impl InstructionSelector<'_, '_> {
                 }
                 Ok(())
             }
-            MirArrayInstruction::AnchorBegin { anchor, owner, .. } => {
-                self.load_array_owner(owner)?;
-                value::store_rax(value::frame_storage(self.frame, *anchor), self.output);
-                Ok(())
-            }
-            MirArrayInstruction::AnchorEnd { anchor, .. } => {
-                self.clear_storage(*anchor);
-                Ok(())
+            MirArrayInstruction::AnchorBegin {
+                anchor,
+                owner,
+                kind,
+                ..
+            } => self.select_array_anchor_begin(*anchor, owner, *kind),
+            MirArrayInstruction::AnchorEnd { anchor, .. } => self.select_array_anchor_end(*anchor),
+            MirArrayInstruction::AliasBind { alias, source, .. } => {
+                self.select_array_alias_bind(*alias, source)
             }
             MirArrayInstruction::Normalize {
                 destination,

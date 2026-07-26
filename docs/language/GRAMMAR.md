@@ -467,8 +467,9 @@ owners of exact classes and arrays. Construction, immutable length, checked
 element access, named deep copy, produced-backing adoption, arbitrary-length
 replacement, class fields, internal owning parameters/results, secure
 shared-element replacement, deterministic cleanup, copied slices, and checked
-equal-length slice assignment execute. Array aliases remain target-legality
-errors. The frozen semantics belong to [Arrays](ARRAYS.md).
+equal-length slice assignment execute. Call-scoped whole-array and exact
+element aliases execute with hidden backing or shared-owner anchors. The
+frozen semantics belong to [Arrays](ARRAYS.md).
 
 Use the [language overview](README.md) for the broad model and the
 [status matrix](STATUS.md) for the implemented semantic boundary.

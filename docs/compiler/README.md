@@ -80,9 +80,9 @@ length, checked element access, named deep copy, produced-backing adoption,
 arbitrary-length replacement, class fields, internal owning calls/results,
 secure shared-element replacement, and deterministic element cleanup execute.
 Copied slices and checked equal-length slice assignment execute with
-negative-relative bounds and overlapping-write snapshot semantics. Array
-aliases remain structured target-legality errors. The complete direction is
-owned by the
+negative-relative bounds and overlapping-write snapshot semantics. Call-scoped
+whole-array and exact element aliases execute with detached-backing and
+shared-owner anchors. The complete direction is owned by the
 [array compiler and runtime contract](ARRAYS.md).
 
 ## Pipeline

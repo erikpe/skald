@@ -73,7 +73,9 @@ impl Verifier<'_> {
         let access = match (place.base, storage.kind) {
             (
                 MirPlaceBase::Storage(_),
-                MirStorageKind::AliasParameter(_) | MirStorageKind::CheckedView(_),
+                MirStorageKind::AliasParameter(_)
+                | MirStorageKind::CheckedView(_)
+                | MirStorageKind::ArrayAlias(_),
             ) => {
                 self.block_error(
                     function.callable(),
@@ -97,6 +99,15 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("checked-view base {storage_id} is not checked-view storage"),
+                );
+                return None;
+            }
+            (MirPlaceBase::ArrayAlias(_), MirStorageKind::ArrayAlias(access)) => access,
+            (MirPlaceBase::ArrayAlias(_), _) => {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("array-alias base {storage_id} is not array-alias storage"),
                 );
                 return None;
             }

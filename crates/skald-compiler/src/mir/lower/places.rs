@@ -57,7 +57,8 @@ impl BodyLowerer<'_> {
                 | MirStorageKind::ArrayProduced
                 | MirStorageKind::ArraySlice
                 | MirStorageKind::ArrayPosition
-                | MirStorageKind::ArrayAnchor(_) => {
+                | MirStorageKind::ArrayAnchor(_)
+                | MirStorageKind::ArrayAlias(_) => {
                     unreachable!("HIR object paths cannot use compiler-owned storage")
                 }
             }

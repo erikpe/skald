@@ -97,7 +97,12 @@ pub(super) fn call_argument_contains_runtime_cast(argument: &HirCallArgument) ->
             HirSharedSource::Place(_) => false,
         },
         HirCallArgument::Array(value) => array_source_contains_runtime_cast(&value.source),
-        HirCallArgument::ArrayAlias(_) => false,
+        HirCallArgument::ArrayAlias(alias) => match &alias.source {
+            crate::hir::HirArrayAliasSource::Whole(receiver) => {
+                array_receiver_contains_control_effect(receiver)
+            }
+            crate::hir::HirArrayAliasSource::Element(_) => true,
+        },
     }
 }
 
@@ -136,7 +141,11 @@ fn array_construction_contains_runtime_cast(
 }
 
 fn array_source_contains_runtime_cast(source: &crate::hir::HirArraySource) -> bool {
-    match &source.receiver.source {
+    array_receiver_contains_control_effect(&source.receiver)
+}
+
+fn array_receiver_contains_control_effect(receiver: &crate::hir::HirArrayReceiver) -> bool {
+    match &receiver.source {
         crate::hir::HirArrayReceiverSource::Inline(expression) => {
             expression_contains_runtime_cast(expression)
         }

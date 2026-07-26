@@ -103,7 +103,9 @@ replacement, and decreasing-index recursive cleanup. Invalid indices branch
 to the verified terminating failure edge before indexed address selection.
 Copied slices and checked equal-length slice assignment execute after verified
 bounds and length failure edges; right-side slice temporaries provide snapshot
-semantics for overlap. Array aliases remain structured legality errors.
+semantics for overlap. Whole-array and exact element aliases execute through
+internal non-owning addresses. Inline backing accounts defer detached element
+destruction, while shared aliases reuse secured strong-owner anchors.
 
 ## Data layout
 

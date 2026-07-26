@@ -148,7 +148,9 @@ impl FrameLayout {
                 && matches!(
                     storage.ty,
                     MirType::Class(_) | MirType::Interface(_) | MirType::Obj
-                );
+                )
+                || matches!(storage.kind, MirStorageKind::ArrayAlias(_))
+                    && matches!(storage.ty, MirType::Class(_));
             object_origins.push(if carries_origin {
                 Some(ObjectOriginHomes {
                     complete: allocator.allocate(SCALAR_HOME_SIZE, SCALAR_HOME_ALIGNMENT)?,
@@ -242,7 +244,7 @@ impl FrameLayout {
                 },
                 0,
             ),
-            MirPlaceBase::CheckedView(_) => (
+            MirPlaceBase::CheckedView(_) | MirPlaceBase::ArrayAlias(_) => (
                 FramePlaceBase::Alias {
                     home: self.storage(storage_id),
                 },

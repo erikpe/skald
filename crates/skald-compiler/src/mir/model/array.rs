@@ -238,6 +238,12 @@ pub enum MirArrayInstruction {
         anchor: StorageId,
         span: Span,
     },
+    AliasBind {
+        alias: StorageId,
+        source: MirPlace,
+        anchor: StorageId,
+        span: Span,
+    },
     Normalize {
         destination: StorageId,
         owner: MirPlace,
@@ -300,6 +306,7 @@ impl MirArrayInstruction {
             | Self::Release { span, .. }
             | Self::AnchorBegin { span, .. }
             | Self::AnchorEnd { span, .. }
+            | Self::AliasBind { span, .. }
             | Self::Normalize { span, .. }
             | Self::Boundary { span, .. }
             | Self::SliceCopy { span, .. }

@@ -67,9 +67,12 @@ optional absence, and secure-before-release assignment. Slice reads allocate
 distinct inline backing and copy-construct in increasing order; slice writes
 validate both ranges and equal lengths before assigning in increasing order.
 Right-side slice temporaries are fully materialized before writes, which gives
-overlapping assignments snapshot semantics. Array aliases remain structured
-backend-unsupported operations. The type checker and MIR lowering do not use
-an array-wide unsupported diagnostic.
+overlapping assignments snapshot semantics. Whole-array and element aliases
+execute through non-owning internal ABI addresses. Checked element aliases
+capture their selected address before later argument effects, and hidden
+inline-backing or shared-owner anchors keep that address live through the
+call. The type checker and MIR lowering do not use an array-wide unsupported
+diagnostic.
 
 ## Canonical type model
 
@@ -430,8 +433,20 @@ on presence, and nested arrays recursively clone or release their descriptors.
 Named synthesized field copying uses the clone helper. Produced adoption
 installs the existing descriptor without invoking a copy helper. The zero
 descriptor performs no runtime call. The count and header length retain the
-state required by future detached backing anchors without making empty arrays
+state required by detached backing anchors without making empty arrays
 allocate.
+
+An inline-backing anchor increments the same header account used by the
+source-visible owner. Whole replacement releases only the visible owner
+account; destruction and deallocation therefore wait until the final hidden
+anchor releases its account. A checked class or nested-array element alias
+uses a separate compiler-owned address carrier so its selected address is
+captured at argument or receiver evaluation rather than recomputed after later
+effects. A whole inline-array alias continues to carry the source descriptor
+address and consequently observes descriptor replacement. Shared whole-array
+aliases use a hidden inline-layout-compatible descriptor pointing into the
+already-secured shared allocation; the strong owner anchor remains responsible
+for lifetime.
 
 ### Initial x86-64 shared-outer layout
 

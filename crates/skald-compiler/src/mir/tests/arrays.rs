@@ -313,3 +313,91 @@ fn verifier_rejects_slice_write_before_length_check() {
     let errors = verify_mir(&program).unwrap_err().to_string();
     assert!(errors.contains("writes before its length check"));
 }
+
+#[test]
+fn verifier_rejects_unbound_early_and_incompatible_array_alias_dependencies() {
+    let alias_program = || {
+        lower_text(concat!(
+            "class Item { value: i64; init() { self.value = 0; } }\n",
+            "fn read(ref item: Item) -> i64 { return item.value; }\n",
+            "fn exercise() -> i64 {\n",
+            "  var items: Item[] = Item[](1u);\n",
+            "  return read(items[0]);\n",
+            "}\n",
+            "fn main() -> i64 { return 0; }\n",
+        ))
+    };
+
+    let mut program = alias_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    for block in &mut function.body.blocks {
+        block.instructions.retain(|instruction| {
+            !matches!(
+                instruction,
+                MirInstruction::Array(MirArrayInstruction::AliasBind { .. })
+            )
+        });
+    }
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("compatible live") || errors.contains("alias"));
+
+    let mut program = alias_program();
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    let alias = function
+        .storage
+        .iter_mut()
+        .find(|storage| matches!(storage.kind, MirStorageKind::ArrayAlias(_)))
+        .unwrap();
+    alias.kind = MirStorageKind::ScalarSpill;
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("array alias binding has incompatible carrier"));
+
+    let mut program = lower_text(concat!(
+        "fn read(ref values: i64[]) -> u64 { return values.len(); }\n",
+        "fn exercise() -> u64 {\n",
+        "  var values: i64[] = i64[](1u);\n",
+        "  return read(values);\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(1))
+        .unwrap();
+    let block = function
+        .body
+        .blocks
+        .iter_mut()
+        .find(|block| {
+            block
+                .instructions
+                .iter()
+                .any(|instruction| matches!(instruction, MirInstruction::Call(_)))
+        })
+        .unwrap();
+    let end = block
+        .instructions
+        .iter()
+        .position(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Array(MirArrayInstruction::AnchorEnd { .. })
+            )
+        })
+        .unwrap();
+    let end = block.instructions.remove(end);
+    let call = block
+        .instructions
+        .iter()
+        .position(|instruction| matches!(instruction, MirInstruction::Call(_)))
+        .unwrap();
+    block.instructions.insert(call, end);
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("compatible live"));
+}

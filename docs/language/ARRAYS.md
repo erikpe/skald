@@ -20,7 +20,9 @@ one-word slots, exact per-element default allocation, conditional ownership,
 secure replacement, shallow owner copying, and nested shared-array edges.
 Slice bounds support omitted endpoints and signed negative-relative positions;
 slice reads own distinct backing and overlapping writes have snapshot
-semantics. Array aliases remain structured backend errors.
+semantics. Call-scoped read-only and mutable whole-array aliases, exact-class
+element aliases, and nested-array element aliases execute with hidden backing
+or shared-owner anchors.
 
 Arrays are built-in, invariant, fixed-size sequences with an exact element
 type. They may be inline values or shared allocations, may contain every

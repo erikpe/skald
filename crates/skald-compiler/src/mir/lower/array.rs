@@ -191,14 +191,48 @@ impl BodyLowerer<'_> {
     }
 
     pub(super) fn lower_array_element_place(&mut self, element: &HirArrayElementPlace) -> MirPlace {
-        let owner = self.lower_array_receiver(&element.receiver);
+        self.lower_array_element_place_with_anchor(element).0
+    }
+
+    pub(super) fn lower_array_alias_element_place(
+        &mut self,
+        element: &HirArrayElementPlace,
+        access: crate::hir::HirAccess,
+    ) -> MirPlace {
+        let (source, anchor) = self.lower_array_element_place_with_anchor(element);
+        let alias = StorageId::new(self.input.callable, self.storage.len());
+        self.storage.push(MirStorage {
+            id: alias,
+            source: None,
+            name: format!("array-alias-{}", alias.index()),
+            kind: MirStorageKind::ArrayAlias(type_operations::lower_access(access)),
+            ty: lower_type(element.element),
+            span: element.span,
+        });
+        self.emit(MirInstruction::Array(MirArrayInstruction::AliasBind {
+            alias,
+            source,
+            anchor,
+            span: element.span,
+        }));
+        MirPlace::array_alias(alias)
+    }
+
+    fn lower_array_element_place_with_anchor(
+        &mut self,
+        element: &HirArrayElementPlace,
+    ) -> (MirPlace, StorageId) {
+        let (owner, anchor) = self.lower_array_receiver_with_anchor(&element.receiver);
         let position = self.lower_array_index(
             owner.clone(),
             element.receiver.array,
             &element.index,
             MirArrayPositionKind::Element,
         );
-        owner.project_array_element(element.receiver.array, position)
+        (
+            owner.project_array_element(element.receiver.array, position),
+            anchor,
+        )
     }
 
     pub(super) fn lower_array_place(&mut self, place: &HirArrayPlace) -> MirPlace {
@@ -242,6 +276,24 @@ impl BodyLowerer<'_> {
     }
 
     fn lower_array_receiver(&mut self, receiver: &HirArrayReceiver) -> MirPlace {
+        self.lower_array_receiver_with_anchor(receiver).0
+    }
+
+    pub(super) fn lower_array_alias_receiver_place(
+        &mut self,
+        receiver: &HirArrayReceiver,
+    ) -> MirPlace {
+        let (owner, anchor) = self.lower_array_receiver_with_anchor(receiver);
+        match receiver.ownership {
+            crate::hir::HirArrayReceiverOwnership::Inline => owner,
+            crate::hir::HirArrayReceiverOwnership::ExplicitSharedPointee => MirPlace::base(anchor),
+        }
+    }
+
+    fn lower_array_receiver_with_anchor(
+        &mut self,
+        receiver: &HirArrayReceiver,
+    ) -> (MirPlace, StorageId) {
         let owner = match &receiver.source {
             HirArrayReceiverSource::Inline(expression) => {
                 self.lower_array_expression_place(expression)
@@ -278,7 +330,7 @@ impl BodyLowerer<'_> {
         }));
         self.full_expression_temporaries
             .push(FullExpressionTemporary::ArrayAnchor(anchor));
-        owner
+        (owner, anchor)
     }
 
     pub(super) fn lower_array_receiver_place(&mut self, receiver: &HirArrayReceiver) -> MirPlace {
