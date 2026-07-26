@@ -357,18 +357,13 @@ fn excessive_syntax_nesting_is_a_source_error_not_a_panic() {
 }
 
 #[test]
-fn verified_arrays_stop_at_the_structured_backend_legality_gate() {
-    let result = compile_source_to_assembly(
+fn primitive_inline_array_locals_cross_the_complete_driver_pipeline() {
+    let artifact = compile_source_to_assembly(
         "arrays.ska",
         "fn main() -> i64 { var values: i64[] = i64[](4u); return 0; }",
         Target::X86_64SysV,
-    );
-    let CompilationError::Backend(error) =
-        result.expect_err("arrays must stop at target legality before instruction selection")
-    else {
-        panic!("expected backend legality error");
-    };
-    assert!(error
-        .to_string()
-        .contains("verified array MIR is not yet supported"));
+    )
+    .expect("primitive inline local arrays must lower through x86-64");
+    assert!(artifact.assembly.contains("call ska_rt_alloc"));
+    assert!(artifact.assembly.contains("call ska_rt_free"));
 }

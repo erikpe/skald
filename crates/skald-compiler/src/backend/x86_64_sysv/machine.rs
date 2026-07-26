@@ -79,7 +79,16 @@ impl Register {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Operand {
     Register(Register),
-    Memory { base: Register, displacement: i32 },
+    Memory {
+        base: Register,
+        displacement: i32,
+    },
+    IndexedMemory {
+        base: Register,
+        index: Register,
+        scale: u8,
+        displacement: i32,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -194,6 +203,8 @@ pub(super) enum Instruction {
     Jump(Label),
     JumpIfNotZero(Label),
     JumpIfEqual(Label),
+    JumpIfBelow(Label),
+    JumpIfAbove(Label),
     Trap,
     Leave,
     Return,

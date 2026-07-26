@@ -1,15 +1,16 @@
 # Arrays
 
-Status: **frozen design; construction semantics represented in typed HIR, not
-executable**. This
+Status: **frozen design; primitive inline local construction, lifetime, and
+length execute on x86-64**. This
 document is authoritative for the proposed source-visible array contract. The
 [status matrix](STATUS.md) is authoritative for compiler availability, and the
 [implemented grammar](GRAMMAR.md) remains the exact syntax currently accepted
 by the compiler. Array forms receive canonical recursive identities during
-resolution. Owning declarations and empty, default-length, and explicit-copy
-construction now receive exact lifecycle and transfer plans in HIR. Indexing,
-slicing, replacement, and aliases remain behind a deliberate type-checking
-diagnostic, and all array HIR stops before MIR, so arrays are not executable.
+resolution and exact lifecycle, place, slice, alias, and transfer plans in HIR
+and verified MIR. The current native profile executes empty or dynamically
+sized primitive inline local arrays, immutable `len()`, zero/false
+initialization, checked allocation, and normal cleanup. Other frozen array
+operations remain structured backend errors.
 
 Arrays are built-in, invariant, fixed-size sequences with an exact element
 type. They may be inline values or shared allocations, may contain every

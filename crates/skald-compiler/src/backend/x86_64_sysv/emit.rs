@@ -163,6 +163,8 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
         Instruction::Jump(label) => write!(output, "jmp {}", label.name()).unwrap(),
         Instruction::JumpIfNotZero(label) => write!(output, "jne {}", label.name()).unwrap(),
         Instruction::JumpIfEqual(label) => write!(output, "je {}", label.name()).unwrap(),
+        Instruction::JumpIfBelow(label) => write!(output, "jb {}", label.name()).unwrap(),
+        Instruction::JumpIfAbove(label) => write!(output, "ja {}", label.name()).unwrap(),
         Instruction::Trap => output.push_str("ud2"),
         Instruction::Leave => output.push_str("leave"),
         Instruction::Return => output.push_str("ret"),
@@ -199,6 +201,12 @@ fn display_operand(operand: Operand, memory_size: MemorySize) -> String {
         Operand::Memory { base, displacement } => {
             display_memory(base, displacement, Some(memory_size))
         }
+        Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => display_indexed_memory(base, index, scale, displacement, Some(memory_size)),
     }
 }
 
@@ -206,6 +214,34 @@ fn display_address_operand(operand: Operand) -> String {
     match operand {
         Operand::Register(register) => register.name().to_owned(),
         Operand::Memory { base, displacement } => display_memory(base, displacement, None),
+        Operand::IndexedMemory {
+            base,
+            index,
+            scale,
+            displacement,
+        } => display_indexed_memory(base, index, scale, displacement, None),
+    }
+}
+
+fn display_indexed_memory(
+    base: super::machine::Register,
+    index: super::machine::Register,
+    scale: u8,
+    displacement: i32,
+    size: Option<MemorySize>,
+) -> String {
+    let suffix = if displacement == 0 {
+        String::new()
+    } else if displacement > 0 {
+        format!(" + {displacement}")
+    } else {
+        format!(" - {}", displacement.unsigned_abs())
+    };
+    let address = format!("[{} + {}*{scale}{suffix}]", base.name(), index.name());
+    if let Some(size) = size {
+        format!("{} {address}", size.qualifier())
+    } else {
+        address
     }
 }
 

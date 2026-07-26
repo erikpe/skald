@@ -164,6 +164,20 @@ pub(super) fn memory(base: Register, displacement: i32) -> Operand {
     Operand::Memory { base, displacement }
 }
 
+pub(super) fn indexed_memory(
+    base: Register,
+    index: Register,
+    scale: u8,
+    displacement: i32,
+) -> Operand {
+    Operand::IndexedMemory {
+        base,
+        index,
+        scale,
+        displacement,
+    }
+}
+
 pub(super) fn float_memory(base: Register, displacement: i32) -> FloatOperand {
     FloatOperand::Memory { base, displacement }
 }
@@ -171,6 +185,9 @@ pub(super) fn float_memory(base: Register, displacement: i32) -> FloatOperand {
 pub(super) fn float_operand(operand: Operand) -> FloatOperand {
     match operand {
         Operand::Memory { base, displacement } => float_memory(base, displacement),
+        Operand::IndexedMemory { .. } => {
+            unreachable!("indexed floating places use dedicated array helpers")
+        }
         Operand::Register(_) => unreachable!("floating values use XMM registers"),
     }
 }

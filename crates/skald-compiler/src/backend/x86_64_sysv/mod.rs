@@ -8,6 +8,7 @@
 //! `docs/compiler/BACKEND.md`.
 
 mod abi;
+mod array_legality;
 mod dispatch;
 mod emit;
 mod frame;

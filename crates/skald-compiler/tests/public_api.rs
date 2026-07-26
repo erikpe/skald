@@ -100,4 +100,19 @@ fn intentional_driver_paths_compile() {
     .unwrap();
 
     assert!(!artifact.assembly.is_empty());
+
+    let arrays = compile_source_to_assembly(
+        "arrays-api.ska",
+        concat!(
+            "fn main() -> i64 {\n",
+            "  var values: bool[] = bool[](3u);\n",
+            "  var empty: u8[] = u8[]();\n",
+            "  return 0;\n",
+            "}\n",
+        ),
+        Target::X86_64SysV,
+    )
+    .unwrap();
+    assert!(arrays.assembly.contains(".Lska_array_0_initialize_element"));
+    assert!(arrays.assembly.contains("call ska_rt_free"));
 }

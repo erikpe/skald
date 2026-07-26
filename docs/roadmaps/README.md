@@ -8,8 +8,8 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Arrays implementation](ARRAYS_ROADMAP.md) — **in progress**; implement the
   frozen inline/shared array contract through verified MIR and x86-64 native
-  execution. Primitive inline allocation, lifetime, and length execution are
-  next. The completed lifecycle, shared-ownership, explicit-dereference, and
+  execution. Checked primitive indexing and mutation are next. The completed
+  lifecycle, shared-ownership, explicit-dereference, and
   optional-value profiles are prerequisites; the optional-verifier
   maintainability discovery is related but not blocking.
 

@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-use super::{abi, dispatch::DispatchMetadata, layout::DataLayout};
+use super::{abi, array_legality, dispatch::DispatchMetadata, layout::DataLayout};
 
 pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadata), BackendError> {
     verify_mir(program).map_err(|errors| {
@@ -18,13 +18,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
-    if !program.array_types.is_empty() {
-        return Err(BackendError::new(
-            Target::X86_64SysV,
-            None,
-            "verified array MIR is not yet supported by the x86-64 backend",
-        ));
-    }
+    array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
 
@@ -125,9 +119,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::ClassOptionalPublish(_)
                     | MirInstruction::ClassOptionalCleanup(_)
                     | MirInstruction::EndOptionalView(_) => {}
-                    MirInstruction::Array(_) => {
-                        unreachable!("array-bearing programs are rejected before target layout")
-                    }
+                    MirInstruction::Array(_) => {}
                 }
             }
         }

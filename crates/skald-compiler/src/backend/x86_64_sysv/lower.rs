@@ -14,6 +14,7 @@ use super::{
     symbol,
 };
 
+mod array;
 mod assignment;
 mod call;
 mod cleanup;
@@ -40,6 +41,7 @@ pub(super) fn lower(
             lower_definition(program, data_layout, dispatch, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
+    functions.extend(array::lower_helpers(program, data_layout)?);
     functions.extend(finalize::lower_all(program, data_layout, dispatch)?);
     let entry = program
         .declarations
@@ -94,7 +96,8 @@ fn lower_definition(
             .terminator
             .as_ref()
             .expect("verified block is terminated");
-        if !selector.select_optional_terminator(block_terminator)?
+        if !selector.select_array_terminator(block_terminator)?
+            && !selector.select_optional_terminator(block_terminator)?
             && !selector.select_type_operation_terminator(block_terminator, block.id)?
         {
             terminator::select(
@@ -146,6 +149,7 @@ struct InstructionSelector<'program, 'output> {
     frame: &'program FrameLayout,
     block: BlockId,
     optional_sequence: usize,
+    array_sequence: usize,
     output: &'output mut Vec<Instruction>,
 }
 
@@ -167,6 +171,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             frame,
             block,
             optional_sequence: 0,
+            array_sequence: 0,
             output,
         }
     }
@@ -234,9 +239,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_class_optional_cleanup(cleanup)?
             }
             MirInstruction::EndOptionalView(end) => self.select_optional_view_end(end)?,
-            MirInstruction::Array(_) => {
-                unreachable!("array MIR is rejected by target legality")
-            }
+            MirInstruction::Array(array) => self.select_array_instruction(array)?,
         }
         Ok(())
     }

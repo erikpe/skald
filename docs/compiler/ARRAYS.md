@@ -1,12 +1,14 @@
 # Array Compiler and Runtime Contract
 
-Status: **frozen design; verified target-independent MIR implemented**.
+Status: **frozen design; primitive inline construction, lifetime, and length
+execute on x86-64**.
 This document is
 authoritative for the proposed compiler representation, lowering,
 verification, target, and runtime responsibilities required by the
 [array language contract](../language/ARRAYS.md). The compiler now lowers all
 typed array operations through verified, layout-independent MIR. The x86-64
-backend deliberately rejects that MIR until the execution stages land.
+backend executes the initial primitive inline-local profile and structurally
+rejects later array operations at its legality boundary.
 Availability remains authoritative in the
 [status matrix](../language/STATUS.md).
 
@@ -46,10 +48,12 @@ checked projection, slice checks before writes, and exact terminating failure
 edges. No MIR operation contains a descriptor layout, element stride, header
 offset, target register, or runtime ABI fact.
 
-The current x86-64 legality pass returns a structured backend-unsupported
-error for any verified array MIR. Native layout and execution begin in AR5;
-the type checker and MIR lowering no longer use an array-wide unsupported
-diagnostic.
+The current x86-64 profile executes empty and dynamically sized inline local
+arrays of `i64`, `u64`, `u8`, `f64`, and `bool`, their immutable `len()`, exact
+zero/false initialization, and normal cleanup. Non-local ownership, element
+projection, copying, replacement, nontrivial elements, shared outer arrays,
+slices, and aliases remain structured backend-unsupported operations. The
+type checker and MIR lowering do not use an array-wide unsupported diagnostic.
 
 ## Canonical type model
 
@@ -182,9 +186,9 @@ and bounds are checked as exact `i64`, omitted bounds remain absent in HIR,
 slice reads carry their element copy plan, and destinations carry distinct
 whole-replacement, element-write, or equal-length slice-write plans. Receiver,
 bound, and source evaluation order, terminating failure reasons, access, and
-the required inline/shared/optional anchor category are all explicit. Until
-the verified array MIR vocabulary exists, every program containing an array
-type still stops at the deliberate HIR-to-MIR boundary.
+the required inline/shared/optional anchor category are all explicit. Every
+typed operation crosses the verified MIR boundary; target legality decides
+whether the current native execution profile supports it.
 
 ## MIR storage and operations
 
@@ -378,6 +382,33 @@ of the array slot. Thus a 1,000-element shared or optional-shared payload uses
 Default non-optional shared construction additionally performs one pointee
 allocation per element, while default optional shared construction performs
 none.
+
+### Initial x86-64 primitive inline layout
+
+An executable inline descriptor is one aligned eight-byte backing pointer.
+Zero is the complete allocation-free empty representation and implies length
+zero. A nonzero descriptor points to one allocation:
+
+| Offset | Width | Meaning |
+|---:|---:|---|
+| 0 | 8 | inline-owner plus backing-anchor account count |
+| 8 | 8 | immutable `u64` element length |
+| 16 | varies | first element, aligned for its exact primitive type |
+
+Primitive element stride is its target size: eight bytes for `i64`, `u64`, and
+`f64`, and one byte for `u8` and `bool`. Header, element alignment, stride,
+length multiplication, and total allocation size are checked before
+`ska_rt_alloc`. Length never exceeds `i64::MAX`; a stricter arithmetic ceiling
+applies when stride and header cannot fit in `u64`. Allocation failure remains
+the runtime allocator's existing unsuccessful-termination contract.
+
+Generated initialization and release helpers have deterministic private
+symbols specialized by canonical `ArrayTypeId`. Construction writes each
+primitive zero/false element in increasing index order before publication.
+Normal cleanup ends the descriptor's owner account and calls `ska_rt_free`
+exactly when the final account ends; the zero descriptor performs no runtime
+call. The count and header length retain the state required by future detached
+backing anchors without making empty arrays allocate.
 
 ## MIR verification
 

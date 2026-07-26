@@ -47,6 +47,7 @@ use alias_fixtures::*;
 mod native_support;
 use native_support::*;
 
+mod arrays;
 mod assembler;
 mod calls;
 mod control_flow;

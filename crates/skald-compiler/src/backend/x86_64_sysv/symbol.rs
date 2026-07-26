@@ -1,7 +1,7 @@
 //! Collision-proof assembly symbols derived from canonical identities.
 
 use crate::{
-    identity::{CallableId, ClassId},
+    identity::{ArrayTypeId, CallableId, ClassId},
     mir::{MirFunctionLinkage, MirProgram},
 };
 
@@ -49,6 +49,14 @@ pub(super) fn dispatch_table(class: ClassId) -> String {
 
 pub(super) fn complete_finalizer(class: ClassId) -> String {
     format!(".Lska_class_{}_finalize_complete", class.index())
+}
+
+pub(super) fn array_initialize_element(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_initialize_element", array.index())
+}
+
+pub(super) fn array_release(array: ArrayTypeId) -> String {
+    format!(".Lska_array_{}_release", array.index())
 }
 
 pub(super) fn local_label_stem(callable: CallableId) -> String {

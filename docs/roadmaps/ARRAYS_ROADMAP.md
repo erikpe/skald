@@ -1,6 +1,6 @@
 # Arrays Implementation Roadmap
 
-Status: in progress; AR5 is next.
+Status: in progress; AR6 is next.
 
 This roadmap implements the frozen
 [array language contract](../language/ARRAYS.md) and
@@ -76,7 +76,7 @@ Use the existing test ownership:
 - [x] AR2 — Type array storage, construction, and lifecycle capabilities
 - [x] AR3 — Type array places, projections, assignment, slices, and aliases
 - [x] AR4 — Establish verified target-independent array MIR
-- [ ] AR5 — Execute primitive inline construction, lifetime, and length
+- [x] AR5 — Execute primitive inline construction, lifetime, and length
 - [ ] AR6 — Execute checked primitive indexing and mutation
 - [ ] AR7 — Carry inline array values across owning boundaries
 - [ ] AR8 — Execute nontrivial and nested inline element lifecycle
@@ -286,21 +286,21 @@ operation it does not yet execute.
 **Purpose:** Establish the first native array allocation and cleanup vertical
 slice over the simplest element lifecycle.
 
-- [ ] Add the initial x86-64 inline descriptor and one-block nonempty backing
+- [x] Add the initial x86-64 inline descriptor and one-block nonempty backing
       layout, including immutable length, owner/anchor state, alignment, and a
       valid allocation-free empty representation.
-- [ ] Add checked header, stride, padding, element-count, and total-byte
+- [x] Add checked header, stride, padding, element-count, and total-byte
       calculations with the frozen `i64::MAX` length ceiling.
-- [ ] Add deterministic generated helper identity and emission infrastructure
+- [x] Add deterministic generated helper identity and emission infrastructure
       specialized by `ArrayTypeId`, behind cohesive backend facades.
-- [ ] Execute `T[]()`, `T[](length)`, and `len()` for `i64`, `u64`, `u8`,
+- [x] Execute `T[]()`, `T[](length)`, and `len()` for `i64`, `u64`, `u8`,
       `f64`, and `bool`, including exact zero/false initialization in
       increasing order.
-- [ ] Publish only fully initialized backing, destroy primitive arrays in the
+- [x] Publish only fully initialized backing, destroy primitive arrays in the
       verified lifetime order, and free each nonempty backing exactly once.
-- [ ] Reuse `ska_rt_alloc` and `ska_rt_free` without changing the runtime
+- [x] Reuse `ska_rt_alloc` and `ska_rt_free` without changing the runtime
       header, marker, symbols, or ABI version.
-- [ ] Keep non-local owning boundaries and indexing behind their next
+- [x] Keep non-local owning boundaries and indexing behind their next
       deliberate execution gates.
 
 **Tests:** Layout and checked-arithmetic unit tests; empty and representative
@@ -311,6 +311,16 @@ goldens; runtime ABI compatibility test; `make check`; `make msrv-check`.
 **Exit criteria:** Primitive inline array locals can be empty or dynamically
 sized, report exact length, clean their backing once, and fail safely on every
 size/allocation violation without any runtime ABI addition.
+
+**Completion summary:** The x86-64 backend now represents an inline array as
+one descriptor word, uses an allocation-free zero descriptor for empty arrays,
+and allocates one checked header-plus-payload block for nonempty primitive
+arrays. Deterministic per-array initialization and release helpers execute
+zero/false construction, publication, length, and exact cleanup through the
+unchanged runtime allocator ABI. Target legality still rejects indexing and
+non-local owning boundaries structurally. Focused layout, assembly, native,
+driver, public API, and golden coverage passes together with `make check` and
+`make msrv-check`.
 
 ### AR6 — Execute checked primitive indexing and mutation
 

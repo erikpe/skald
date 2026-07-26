@@ -1,0 +1,8 @@
+fn dynamic_maximum() -> u64 {
+    return 9223372036854775807u;
+}
+
+fn main() -> i64 {
+    var values: u8[] = u8[](dynamic_maximum());
+    return 0;
+}

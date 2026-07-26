@@ -91,6 +91,13 @@ entering ordinary shared machinery.
 Inline optional-container aliases use that same container address without
 transferring ownership or scheduling callee cleanup.
 
+Verified primitive inline-array locals are executable for `i64`, `u64`, `u8`,
+`f64`, and `bool` elements. The target accepts empty/default-length
+construction, immutable length, normal cleanup, and inline-owner anchors.
+Array indexing, non-local ownership, copying, replacement, nontrivial
+elements, shared outer arrays, slices, and backing aliases remain structured
+legality errors.
+
 ## Data layout
 
 The x86-64 target layout is:
@@ -105,8 +112,18 @@ The x86-64 target layout is:
 | primitive `T?` | 16 | 8 |
 | `shared T` | 8 | 8 |
 | `shared? T` | 8 | 8 |
+| primitive inline `T[]` descriptor | 8 | 8 |
 | `Obj` | no owning storage layout | no owning storage layout |
 | `unit` | no storage layout | no storage layout |
+
+A primitive inline array uses zero as its allocation-free empty descriptor.
+A nonzero descriptor points to one allocation with an eight-byte owner/anchor
+count at offset zero, immutable eight-byte length at offset eight, and aligned
+elements beginning at offset sixteen. Eight-byte primitives have stride eight;
+`u8` and `bool` have stride one. Checked target layout computes header,
+alignment, stride, maximum element count, and total bytes before allocation.
+Private initialization and release helpers are emitted in canonical
+`ArrayTypeId` order.
 
 An inline root class lays out fields in declaration order. A derived class
 first embeds its complete direct-base layout at offset zero, then lays out its

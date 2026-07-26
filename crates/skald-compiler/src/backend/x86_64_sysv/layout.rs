@@ -6,7 +6,7 @@
 
 use crate::{
     backend::{BackendError, Target},
-    identity::{ClassId, FieldId},
+    identity::{ArrayTypeId, ClassId, FieldId},
     mir::{MirProgram, MirType},
 };
 
@@ -17,6 +17,12 @@ pub(super) const SHARED_HANDLE_SIZE: usize = 8;
 pub(super) const SHARED_HANDLE_ALIGNMENT: usize = 8;
 pub(super) const SHARED_DYNAMIC_METADATA_OFFSET: i32 = 8;
 pub(super) const SHARED_HEADER_SIZE: usize = 16;
+pub(super) const ARRAY_DESCRIPTOR_SIZE: usize = 8;
+pub(super) const ARRAY_DESCRIPTOR_ALIGNMENT: usize = 8;
+pub(super) const ARRAY_OWNER_COUNT_OFFSET: i32 = 0;
+pub(super) const ARRAY_LENGTH_OFFSET: i32 = 8;
+const ARRAY_HEADER_SIZE: usize = 16;
+const MAX_ARRAY_LENGTH: u64 = i64::MAX as u64;
 const OPTIONAL_STATE_SIZE: usize = 8;
 const OPTIONAL_STATE_ALIGNMENT: usize = 8;
 
@@ -92,9 +98,51 @@ impl ClassLayout {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ArrayLayout {
+    element: TypeLayout,
+    element_offset: usize,
+    stride: usize,
+    maximum_length: u64,
+}
+
+impl ArrayLayout {
+    pub(super) const fn descriptor(self) -> TypeLayout {
+        TypeLayout::new(ARRAY_DESCRIPTOR_SIZE, ARRAY_DESCRIPTOR_ALIGNMENT)
+    }
+
+    pub(super) const fn element_offset(self) -> usize {
+        self.element_offset
+    }
+
+    pub(super) const fn stride(self) -> usize {
+        self.stride
+    }
+
+    pub(super) const fn maximum_length(self) -> u64 {
+        self.maximum_length
+    }
+
+    #[cfg(test)]
+    fn allocation_size(self, length: u64) -> Option<Option<u64>> {
+        if length > self.maximum_length {
+            return None;
+        }
+        if length == 0 {
+            return Some(None);
+        }
+        let bytes = u64::try_from(self.stride)
+            .ok()?
+            .checked_mul(length)?
+            .checked_add(u64::try_from(self.element_offset).ok()?)?;
+        Some(Some(bytes))
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct DataLayout {
     classes: Vec<ClassLayout>,
+    arrays: Vec<ArrayLayout>,
 }
 
 impl DataLayout {
@@ -115,6 +163,10 @@ impl DataLayout {
             MirType::Shared(_) | MirType::OptionalShared(_) => {
                 Ok(TypeLayout::new(SHARED_HANDLE_SIZE, SHARED_HANDLE_ALIGNMENT))
             }
+            MirType::Array(array) => self
+                .array(array)
+                .map(ArrayLayout::descriptor)
+                .ok_or_else(|| layout_error(format!("array {array} has no target layout"))),
             MirType::OptionalPrimitive(payload) => Ok(optional_layout(payload)?.ty()),
             MirType::OptionalClass(class) => {
                 let payload = self
@@ -150,6 +202,10 @@ impl DataLayout {
 
     pub(super) fn class(&self, class: ClassId) -> Option<&ClassLayout> {
         self.classes.get(class.index())
+    }
+
+    pub(super) fn array(&self, array: ArrayTypeId) -> Option<ArrayLayout> {
+        self.arrays.get(array.index()).copied()
     }
 
     pub(super) fn field(&self, field: FieldId) -> Option<FieldLayout> {
@@ -213,6 +269,21 @@ impl<'mir> LayoutBuilder<'mir> {
                 .into_iter()
                 .map(|layout| layout.expect("every declared class was laid out"))
                 .collect(),
+            arrays: self
+                .program
+                .array_types
+                .iter()
+                .map(|array| {
+                    primitive_layout(array.element)
+                        .and_then(array_layout)
+                        .ok_or_else(|| {
+                            layout_error(format!(
+                                "array {} has no primitive x86-64 element layout",
+                                array.id
+                            ))
+                        })
+                })
+                .collect::<Result<_, _>>()?,
         })
     }
 
@@ -276,6 +347,13 @@ impl<'mir> LayoutBuilder<'mir> {
             MirType::OptionalClass(_) => {
                 unreachable!("optional class dependencies are handled recursively")
             }
+            MirType::Array(array) => self
+                .program
+                .array_type(array)
+                .and_then(|array| primitive_layout(array.element))
+                .and_then(array_layout)
+                .map(ArrayLayout::descriptor)
+                .ok_or_else(|| layout_error(format!("array {array} has no target layout"))),
             _ => primitive_layout(ty).ok_or_else(|| match ty {
                 MirType::Class(_) => unreachable!("class dependencies are handled recursively"),
                 MirType::Unit => layout_error("field type `unit` has no target layout"),
@@ -283,6 +361,19 @@ impl<'mir> LayoutBuilder<'mir> {
             }),
         }
     }
+}
+
+fn array_layout(element: TypeLayout) -> Option<ArrayLayout> {
+    let element_offset = abi::align_up(ARRAY_HEADER_SIZE, element.alignment())?;
+    let stride = abi::align_up(element.size(), element.alignment())?;
+    let arithmetic_limit =
+        u64::MAX.checked_sub(u64::try_from(element_offset).ok()?)? / u64::try_from(stride).ok()?;
+    Some(ArrayLayout {
+        element,
+        element_offset,
+        stride,
+        maximum_length: MAX_ARRAY_LENGTH.min(arithmetic_limit),
+    })
 }
 
 fn primitive_layout(ty: MirType) -> Option<TypeLayout> {
@@ -423,7 +514,10 @@ mod tests {
 
     #[test]
     fn defines_the_primitive_target_layout_contract() {
-        let data = DataLayout { classes: vec![] };
+        let data = DataLayout {
+            classes: vec![],
+            arrays: vec![],
+        };
         for ty in [MirType::I64, MirType::U64, MirType::F64] {
             assert_eq!(data.ty(ty).unwrap(), TypeLayout::new(8, 8));
         }
@@ -437,6 +531,32 @@ mod tests {
         );
         assert!(data.ty(MirType::Unit).is_err());
         assert!(data.ty(MirType::Obj).is_err());
+    }
+
+    #[test]
+    fn lays_out_inline_primitive_arrays_and_checks_every_size_component() {
+        for (element, expected_stride) in [(TypeLayout::new(8, 8), 8), (TypeLayout::new(1, 1), 1)] {
+            let layout = array_layout(element).unwrap();
+            assert_eq!(layout.descriptor(), TypeLayout::new(8, 8));
+            assert_eq!(layout.element, element);
+            assert_eq!(layout.element_offset(), 16);
+            assert_eq!(layout.stride(), expected_stride);
+            assert_eq!(layout.allocation_size(0), Some(None));
+            assert_eq!(
+                layout.allocation_size(3),
+                Some(Some(16 + 3 * u64::try_from(expected_stride).unwrap()))
+            );
+            assert_eq!(layout.allocation_size(layout.maximum_length() + 1), None);
+        }
+
+        let wide = array_layout(TypeLayout::new(8, 8)).unwrap();
+        assert_eq!(
+            wide.maximum_length(),
+            (u64::MAX - 16) / 8,
+            "allocation arithmetic is stricter than the language length ceiling"
+        );
+        let byte = array_layout(TypeLayout::new(1, 1)).unwrap();
+        assert_eq!(byte.maximum_length(), i64::MAX as u64);
     }
 
     #[test]
