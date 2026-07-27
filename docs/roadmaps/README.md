@@ -10,12 +10,15 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
-
-The frozen
-[module-system language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
-and [compiler contract](../compiler/MODULE_SYSTEM.md) are complete and ready
-to be divided into an implementation roadmap.
+- [Initial Module-System Implementation Roadmap](MODULE_SYSTEM_ROADMAP.md) —
+  implements the frozen whole-program language and compiler contracts across
+  source syntax, anonymous providers, filesystem loading, deterministic
+  identities, visibility and imports, external linkage, the driver, and
+  end-to-end tests. Status: planned; MS0 is next. Material dependencies: the
+  frozen
+  [language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system),
+  frozen [compiler contract](../compiler/MODULE_SYSTEM.md), and the existing
+  flat whole-program phase pipeline.
 
 ## Pending discoveries
 
