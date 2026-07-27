@@ -33,10 +33,14 @@ fn external_declarations_share_the_callable_namespace_and_have_no_body() {
 
     assert!(!output.has_errors());
     let external = output.program.declarations.get(FunctionId::new(0)).unwrap();
-    assert!(matches!(
-        &external.linkage,
-        ResolvedFunctionLinkage::External { symbol } if symbol == "emit"
-    ));
+    let ResolvedFunctionLinkage::External { link } = external.linkage else {
+        panic!("expected external linkage");
+    };
+    assert_eq!(link.index(), 0);
+    assert_eq!(
+        output.program.external_links.get(link).unwrap().symbol,
+        "emit"
+    );
     assert!(output.program.definitions.get(external.id).is_none());
     let main = output
         .program
@@ -52,7 +56,8 @@ fn external_declarations_share_the_callable_namespace_and_have_no_body() {
     assert_eq!(call.function, external.id);
 
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("Declaration f0 module m0 \"emit\" external \"emit\""));
+    assert!(dump.contains("Link ext0 \"emit\" declarations f0"));
+    assert!(dump.contains("Declaration f0 module m0 \"emit\" external ext0"));
     assert!(!dump.contains("Definition f0"));
 }
 

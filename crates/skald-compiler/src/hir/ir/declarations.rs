@@ -1,10 +1,11 @@
 //! Typed declarations and their stable ID-indexed tables.
 
 use crate::{
+    external::ExternalLinkTable,
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
+        FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
         ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     module::ProgramModuleTable,
@@ -20,6 +21,7 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
     pub modules: ProgramModuleTable,
+    pub external_links: ExternalLinkTable,
     pub array_types: super::HirArrayTypeTable,
     pub classes: HirClassDeclarationTable,
     pub interfaces: HirInterfaceDeclarationTable,
@@ -492,10 +494,10 @@ impl HirFunctionDeclaration {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirFunctionLinkage {
     Internal,
-    External { symbol: String },
+    External { link: ExternalLinkId },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -75,8 +75,14 @@ fn rejects_parameter_mode_storage_and_external_signature_corruption() {
 
     let (mut external, ids) = alias_mir();
     let declaration = &mut external.declarations.entries_mut_for_test()[ids.observe.index()];
+    external.external_links =
+        crate::external::ExternalLinkTable::new(vec![crate::external::ExternalLink {
+            id: crate::identity::ExternalLinkId::new(0),
+            symbol: declaration.name.clone(),
+            declarations: vec![declaration.id],
+        }]);
     declaration.linkage = MirFunctionLinkage::External {
-        symbol: declaration.name.clone(),
+        link: crate::identity::ExternalLinkId::new(0),
     };
     external.definitions.remove_for_test(ids.observe);
     assert!(messages(&external).iter().any(|message| message.contains(

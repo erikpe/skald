@@ -19,6 +19,7 @@ mod resolver;
 mod virtuals;
 
 use super::{
+    external_links::ExternalLinkPlan,
     imports::{collect_module_bindings, collect_ordinary_bindings},
     name_lookup::{ModuleLookup, ModuleLookupProgram, TopLevelLookup},
 };

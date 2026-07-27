@@ -81,8 +81,10 @@ fn checks_external_calls_from_bodyless_signatures() {
         assert!(hir.definitions.get(id).is_none());
     }
     let dump = dump_hir(&hir);
-    assert!(dump.contains("Declaration f0 module m0 \"read_value\" external \"read_value\""));
-    assert!(dump.contains("Declaration f1 module m0 \"emit\" external \"emit\""));
+    assert!(dump.contains("Link ext0 \"emit\" declarations f1"));
+    assert!(dump.contains("Link ext1 \"read_value\" declarations f0"));
+    assert!(dump.contains("Declaration f0 module m0 \"read_value\" external ext1"));
+    assert!(dump.contains("Declaration f1 module m0 \"emit\" external ext0"));
     assert!(!dump.contains("Definition f0"));
     assert!(!dump.contains("Definition f1"));
 }

@@ -10,6 +10,7 @@ pub mod backend;
 pub mod diagnostics;
 pub mod driver;
 mod dump_format;
+pub mod external;
 pub mod hir;
 mod id_table;
 pub mod identity;

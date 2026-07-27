@@ -35,6 +35,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .collect();
     MirProgram {
         modules: hir.modules.clone(),
+        external_links: hir.external_links.clone(),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
         classes: MirClassDeclarationTable::new(classes),
         interfaces: MirInterfaceDeclarationTable::new(
@@ -385,9 +386,7 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
         return_type: lower_type(declaration.return_type),
         linkage: match &declaration.linkage {
             HirFunctionLinkage::Internal => MirFunctionLinkage::Internal,
-            HirFunctionLinkage::External { symbol } => MirFunctionLinkage::External {
-                symbol: symbol.clone(),
-            },
+            HirFunctionLinkage::External { link } => MirFunctionLinkage::External { link: *link },
         },
         span: declaration.span,
     }

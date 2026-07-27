@@ -177,6 +177,15 @@ spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
 select entries by identity rather than by source spelling.
 
+External declarations additionally retain their source `FunctionId` while
+referencing a dense compilation-wide `ExternalLinkId`. Resolution allocates
+links in exact symbol order, groups every compatible declaration of that
+symbol, and reports incompatible ABI signatures before HIR. One immutable
+external-link table owns the native symbol and ordered declaration membership
+through resolved IR, HIR, and MIR. Verification checks the table and
+declarations bidirectionally; the backend reads the symbol only from the
+verified link entry.
+
 Recursive array types use dense `ArrayTypeId` values backed by one canonical
 resolved table in deterministic first-use order. Each entry records its exact
 resolved element type, so nested arrays and grouped element ownership remain

@@ -20,6 +20,7 @@ use super::{
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
         self.verify_module_ownership();
+        self.verify_external_links();
         self.verify_array_declarations();
         self.verify_classes();
         self.verify_virtual_families();
@@ -99,7 +100,7 @@ impl<'mir> Verifier<'mir> {
                     "function result cannot have a non-owning interface or `Obj` type",
                 );
             }
-            if let MirFunctionLinkage::External { symbol } = &declaration.linkage {
+            if let MirFunctionLinkage::External { link } = declaration.linkage {
                 if declaration.parameters.iter().any(|parameter| {
                     parameter.mode != MirParameterMode::Value
                         || matches!(
@@ -133,10 +134,17 @@ impl<'mir> Verifier<'mir> {
                         "external function cannot return an object value or shared owner",
                     );
                 }
-                if symbol != &declaration.name || !is_source_identifier(symbol) {
+                let symbol = self
+                    .program
+                    .external_links
+                    .get(link)
+                    .map(|link| &link.symbol);
+                if symbol.is_none_or(|symbol| {
+                    symbol != &declaration.name || !is_source_identifier(symbol)
+                }) {
                     self.function_error(
                         declaration.id,
-                        "external symbol must be the declaration's exact source identifier",
+                        "external link symbol must be the declaration's exact source identifier",
                     );
                 }
             }
@@ -231,6 +239,109 @@ impl<'mir> Verifier<'mir> {
                 continue;
             };
             self.verify_definition(parameters, return_type, definition.into());
+        }
+    }
+
+    fn verify_external_links(&mut self) {
+        let links = self.program.external_links.iter().collect::<Vec<_>>();
+        if links
+            .windows(2)
+            .any(|pair| pair[0].symbol >= pair[1].symbol)
+        {
+            self.program_error("external-link symbols are not unique and ordered");
+        }
+        let mut symbols = HashSet::new();
+        let mut linked_declarations = HashSet::new();
+        for (index, link) in links.into_iter().enumerate() {
+            if link.id.index() != index {
+                self.program_error(format!(
+                    "external-link table index {index} contains {}",
+                    link.id
+                ));
+            }
+            if !symbols.insert(link.symbol.as_str()) {
+                self.program_error(format!("duplicate external symbol `{}`", link.symbol));
+            }
+            if !is_source_identifier(&link.symbol) {
+                self.program_error(format!(
+                    "external link {} has invalid source symbol `{}`",
+                    link.id, link.symbol
+                ));
+            }
+            if link.declarations.is_empty() {
+                self.program_error(format!("external link {} has no declarations", link.id));
+            }
+            if link.declarations.windows(2).any(|pair| pair[0] >= pair[1]) {
+                self.program_error(format!(
+                    "external link {} declarations are not unique and ordered",
+                    link.id
+                ));
+            }
+
+            let mut signature = None;
+            for &function in &link.declarations {
+                if !linked_declarations.insert(function) {
+                    self.function_error(function, "function occurs in multiple external links");
+                }
+                let Some(declaration) = self.program.declarations.get(function) else {
+                    self.function_error(function, "external link references an unknown function");
+                    continue;
+                };
+                if declaration.linkage != (MirFunctionLinkage::External { link: link.id }) {
+                    self.function_error(
+                        function,
+                        format!("external link {} does not match function linkage", link.id),
+                    );
+                }
+                if declaration.name != link.symbol {
+                    self.function_error(
+                        function,
+                        format!(
+                            "external link symbol `{}` differs from declaration name `{}`",
+                            link.symbol, declaration.name
+                        ),
+                    );
+                }
+                let candidate = (&declaration.parameters, declaration.return_type);
+                if let Some((parameters, result)) = signature {
+                    if parameters != candidate.0 || result != candidate.1 {
+                        self.function_error(
+                            function,
+                            format!(
+                                "external link {} contains incompatible function signatures",
+                                link.id
+                            ),
+                        );
+                    }
+                } else {
+                    signature = Some(candidate);
+                }
+            }
+        }
+
+        for declaration in self.program.declarations.iter() {
+            match declaration.linkage {
+                MirFunctionLinkage::Internal if linked_declarations.contains(&declaration.id) => {
+                    self.function_error(
+                        declaration.id,
+                        "internal function must not occur in an external link",
+                    );
+                }
+                MirFunctionLinkage::External { link } => {
+                    if self.program.external_links.get(link).is_none() {
+                        self.function_error(
+                            declaration.id,
+                            format!("function references unknown external link {link}"),
+                        );
+                    } else if !linked_declarations.contains(&declaration.id) {
+                        self.function_error(
+                            declaration.id,
+                            format!("function is absent from external link {link}"),
+                        );
+                    }
+                }
+                MirFunctionLinkage::Internal => {}
+            }
         }
     }
 

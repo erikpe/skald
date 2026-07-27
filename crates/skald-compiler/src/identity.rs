@@ -115,6 +115,7 @@ global_id!(
     "package"
 );
 global_id!(FunctionId, "f");
+global_id!(ExternalLinkId, "ext");
 global_id!(ClassId, "c");
 global_id!(InterfaceId, "i");
 global_id!(ArrayTypeId, "a");

@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS8 is next.
+Status: in progress; MS9 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -139,7 +139,7 @@ implementation template:
 - [x] MS5 — Collect and resolve a deterministic multi-module program
 - [x] MS6 — Resolve module imports and qualified uses
 - [x] MS7 — Resolve selective imports and ordinary bindings
-- [ ] MS8 — Coalesce compatible external ABI declarations
+- [x] MS8 — Coalesce compatible external ABI declarations
 - [ ] MS9 — Integrate compilation requests with the driver and CLI
 - [ ] MS10 — Harden determinism, diagnostics, fixtures, and documentation
 
@@ -600,26 +600,26 @@ and `make msrv-check` pass.
 compilation-wide linkage identity and reject incompatible trusted assertions
 before backend emission.
 
-- [ ] Add a dense `ExternalLinkId` and compilation-wide external-link table
+- [x] Add a dense `ExternalLinkId` and compilation-wide external-link table
       distinct from source `FunctionId`. Each source declaration retains its
       module ownership, visibility, source name, and function identity.
-- [ ] Group valid external declarations across distinct modules by exact
+- [x] Group valid external declarations across distinct modules by exact
       foreign symbol only after their source signatures have resolved to
       canonical ABI-relevant types.
-- [ ] Coalesce declarations only when calling convention, ordered parameter
+- [x] Coalesce declarations only when calling convention, ordered parameter
       types/count, and result type are identical. Ignore parameter names,
       aliases, visibility, and module ownership for ABI compatibility.
-- [ ] Diagnose every incompatible declaration for one foreign symbol in one
+- [x] Diagnose every incompatible declaration for one foreign symbol in one
       deterministic report, label all declaration sites, and describe the
       signature differences before HIR/backend emission.
-- [ ] Preserve ordinary same-module duplicate-name rejection and keep Skald
+- [x] Preserve ordinary same-module duplicate-name rejection and keep Skald
       function definitions entirely outside external coalescing.
-- [ ] Carry `ExternalLinkId` through resolved linkage, HIR, MIR, verification,
+- [x] Carry `ExternalLinkId` through resolved linkage, HIR, MIR, verification,
       dumps, and backend call selection. Resolve the exact native symbol once
       from the external-link table.
-- [ ] Verify that every external declaration references a valid compatible
+- [x] Verify that every external declaration references a valid compatible
       link entry and that internal definitions never do.
-- [ ] Prove root/import/declaration discovery permutations do not change link
+- [x] Prove root/import/declaration discovery permutations do not change link
       IDs, diagnostics, assembly, or calls.
 
 **Tests:** Focused identical and incompatible cross-module signatures,
@@ -631,6 +631,24 @@ linkage tests, followed by `make check` and `make msrv-check`.
 **Exit criteria:** Compatible source declarations remain distinct semantic
 functions but share one verified external-link identity, while every
 incompatible symbol group fails deterministically before code generation.
+
+**Implemented:** Resolution assigns dense external-link identities in exact
+foreign-symbol order after source signatures resolve, while retaining a
+separate function identity for every declaration. A shared immutable table
+owns each native symbol once and records its sorted declaration membership;
+resolved IR, HIR, MIR, dumps, verification, and backend call selection carry
+only the link identity. Compatibility compares the calling convention,
+ordered canonical parameter types, parameter count, and canonical result
+type. An incompatible symbol group produces one deterministic diagnostic that
+labels every valid declaration and renders its signature, while same-module
+duplicate rejection and internal definitions remain separate. MIR
+verification checks table density and ordering, bidirectional membership,
+known declarations, linkage back-references, symbol/name agreement, compatible
+signatures, and internal/external separation. Focused coverage includes
+compatible and incompatible cross-module declarations, ignored properties,
+discovery and declaration permutations, dump stability, corrupted verifier
+inputs, assembly call selection, and native linkage. `make check` and
+`make msrv-check` pass.
 
 ### MS9 — Integrate compilation requests with the driver and CLI
 

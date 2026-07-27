@@ -27,6 +27,21 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 ));
             }
         });
+        if !program.external_links.is_empty() {
+            dumper.heading("ExternalLinks");
+            dumper.indented(|dumper| {
+                for link in program.external_links.iter() {
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "Link {} ", link.id);
+                    write_quoted(&mut dumper.output, &link.symbol);
+                    dumper.output.push_str(" declarations");
+                    for declaration in &link.declarations {
+                        let _ = write!(dumper.output, " {declaration}");
+                    }
+                    dumper.output.push('\n');
+                }
+            });
+        }
         if program
             .module_bindings
             .iter()
@@ -405,9 +420,8 @@ impl ResolvedDumper {
         write_quoted(&mut self.output, &declaration.name);
         match &declaration.linkage {
             ResolvedFunctionLinkage::Internal => self.output.push_str(" internal"),
-            ResolvedFunctionLinkage::External { symbol } => {
-                self.output.push_str(" external ");
-                write_quoted(&mut self.output, symbol);
+            ResolvedFunctionLinkage::External { link } => {
+                let _ = write!(self.output, " external {link}");
             }
         }
         write_span(&mut self.output, declaration.span);

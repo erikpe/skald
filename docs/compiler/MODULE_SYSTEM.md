@@ -14,10 +14,12 @@ reachable closure, allocates canonical graph identities, rejects import
 cycles, and exposes a deterministic graph dump. The graph resolver consumes
 that product, builds separate direct module and selective ordinary binding
 tables, and selects qualified or explicitly imported public declarations into
-one flat semantic pipeline. External-ABI coalescing and active driver
-integration are not implemented. The single-file resolver still reports
-module syntax as unsupported, and the supported driver does not compile
-multiple files. The current one-file driver remains authoritative in
+one flat semantic pipeline. Resolution also coalesces compatible cross-module
+external declarations into compilation-wide link identities and rejects
+incompatible ABI assertions. Active driver integration is not implemented.
+The single-file resolver still reports module syntax as unsupported, and the
+supported driver does not compile multiple files. The current one-file driver
+remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
@@ -368,6 +370,15 @@ conflicting declaration labeled and the signature difference described.
 Duplicate external declarations within one module remain ordinary duplicate
 top-level errors, and a Skald function definition never coalesces with an
 external declaration.
+
+The implemented resolver allocates dense external-link identities in exact
+foreign-symbol order after resolving all source signatures. One immutable
+table owns each symbol and its ordered source `FunctionId` declarations.
+Resolved, HIR, and MIR declarations carry only the corresponding
+`ExternalLinkId`; the table crosses those phases unchanged. MIR verification
+checks table density, symbol uniqueness, complete bidirectional membership,
+signature agreement, and internal/external separation before the backend
+selects the native symbol from the table.
 
 ## Required diagnostic coverage
 

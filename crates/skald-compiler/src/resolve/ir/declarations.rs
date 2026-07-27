@@ -1,10 +1,11 @@
 //! Source-name-bearing declarations and their typed-ID tables.
 
 use crate::{
+    external::ExternalLinkTable,
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
+        FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
         ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
     module::ProgramModuleTable,
@@ -24,6 +25,7 @@ use super::modules::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
     pub modules: ProgramModuleTable,
+    pub external_links: ExternalLinkTable,
     pub module_bindings: ResolvedModuleBindingTable,
     pub ordinary_bindings: ResolvedOrdinaryBindingTable,
     pub module_declarations: ResolvedModuleDeclarationTable,
@@ -461,10 +463,10 @@ impl ResolvedFunctionDeclaration {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResolvedFunctionLinkage {
     Internal,
-    External { symbol: String },
+    External { link: ExternalLinkId },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

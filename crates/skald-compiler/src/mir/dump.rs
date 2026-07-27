@@ -24,6 +24,18 @@ pub fn dump_mir(program: &MirProgram) -> String {
             module.package_id()
         );
     }
+    if !program.external_links.is_empty() {
+        output.push_str("  ExternalLinks\n");
+        for link in program.external_links.iter() {
+            let _ = write!(output, "    Link {} ", link.id);
+            write_quoted(&mut output, &link.symbol);
+            output.push_str(" declarations");
+            for declaration in &link.declarations {
+                let _ = write!(output, " {declaration}");
+            }
+            output.push('\n');
+        }
+    }
     let _ = writeln!(output, "  Entry {}", program.entry_function);
     if !program.array_types.is_empty() {
         output.push_str("  ArrayTypes\n");
@@ -285,9 +297,8 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
     write_quoted(output, &declaration.name);
     match &declaration.linkage {
         MirFunctionLinkage::Internal => output.push_str(" internal"),
-        MirFunctionLinkage::External { symbol } => {
-            output.push_str(" external ");
-            write_quoted(output, symbol);
+        MirFunctionLinkage::External { link } => {
+            let _ = write!(output, " external {link}");
         }
     }
     write_span(output, declaration.span);

@@ -9,13 +9,14 @@ use skald_compiler::{
         compile_source_to_assembly, run_cli, ArtifactKind, ArtifactOptions, CompilationEnvironment,
         CompilationRequest, EntrySelector, StandardLibrarySelection, Toolchain,
     },
+    external::{ExternalLink, ExternalLinkTable},
     hir::{
         dump_hir, HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
         HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection,
     },
     identity::{
-        ArrayTypeId, CallableId, InterfaceId, InterfaceRequirementId, ModuleId, PackageId,
-        ProviderId,
+        ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
+        PackageId, ProviderId,
     },
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
@@ -67,6 +68,9 @@ fn intentional_module_and_request_paths_compose() {
     );
 
     let _module_identity: Option<ModuleId> = None;
+    let _external_link_identity: Option<ExternalLinkId> = None;
+    let _external_link: Option<ExternalLink> = None;
+    let _external_links: Option<ExternalLinkTable> = None;
     let _provider_identity: Option<ProviderId> = None;
     let _package_identity: Option<PackageId> = None;
     let _provenance: Option<ModuleProvenance> = None;

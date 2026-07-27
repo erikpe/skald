@@ -154,7 +154,22 @@ impl<'ast> ProgramResolver<'ast> {
             module_spans: &module_spans,
         };
 
-        let function_declarations = self.collect_function_declarations(lookups);
+        let external_link_plan = ExternalLinkPlan::new(self.units.iter().flat_map(|unit| {
+            unit.function_work.iter().filter_map(|item| {
+                match &unit.ast.declarations[item.ast_index] {
+                    syntax::TopLevelDeclaration::ExternalFunction(function) => {
+                        Some(function.name.text.as_str())
+                    }
+                    syntax::TopLevelDeclaration::Function(_)
+                    | syntax::TopLevelDeclaration::Class(_)
+                    | syntax::TopLevelDeclaration::Interface(_) => None,
+                }
+            })
+        }));
+        let function_declarations =
+            self.collect_function_declarations(lookups, &external_link_plan);
+        let external_links =
+            external_link_plan.finish(&function_declarations, &self.modules, &mut self.diagnostics);
         let interfaces = self.collect_interface_declarations(lookups);
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
@@ -227,6 +242,7 @@ impl<'ast> ProgramResolver<'ast> {
         ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
+                external_links,
                 module_bindings,
                 ordinary_bindings,
                 module_declarations,
@@ -386,6 +402,7 @@ impl<'ast> ProgramResolver<'ast> {
     fn collect_function_declarations(
         &mut self,
         lookups: ProgramLookupTables<'_>,
+        external_links: &ExternalLinkPlan,
     ) -> Vec<ResolvedFunctionDeclaration> {
         let mut declarations = Vec::new();
         for unit in &self.units {
@@ -437,7 +454,7 @@ impl<'ast> ProgramResolver<'ast> {
                                 &mut self.diagnostics,
                             ),
                             linkage: ResolvedFunctionLinkage::External {
-                                symbol: function.name.text.to_string(),
+                                link: external_links.link_for(function.name.text.as_str()),
                             },
                             span: function.span,
                         }

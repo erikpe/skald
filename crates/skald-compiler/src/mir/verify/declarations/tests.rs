@@ -1,5 +1,5 @@
 use crate::{
-    identity::{ArrayTypeId, ClassId, FieldId, FunctionId, ModuleId},
+    identity::{ArrayTypeId, ClassId, ExternalLinkId, FieldId, FunctionId, ModuleId},
     mir::{
         verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess,
         MirSynthesizedFieldCopy,
@@ -21,14 +21,66 @@ fn rejects_invalid_external_symbol_metadata() {
         "extern fn foreign(value: i64) -> i64;\n",
         "fn main() -> i64 { return foreign(7); }\n",
     ));
-    let foreign = FunctionId::new(0);
-    program.declarations.entries_mut_for_test()[foreign.index()].linkage =
-        MirFunctionLinkage::External {
-            symbol: "wrong-symbol".to_owned(),
-        };
+    program.external_links.entries_mut_for_test()[0].symbol = "wrong-symbol".to_owned();
 
     assert!(messages(&program).iter().any(|message| message
-        .contains("external symbol must be the declaration's exact source identifier")));
+        .contains("external link symbol must be the declaration's exact source identifier")));
+}
+
+#[test]
+fn rejects_corrupt_external_link_identity_membership_and_signatures() {
+    let source = concat!(
+        "extern fn foreign(value: i64) -> i64;\n",
+        "fn main() -> i64 { return foreign(7); }\n",
+    );
+
+    let mut non_dense = lower_source_to_mir(source);
+    non_dense.external_links.entries_mut_for_test()[0].id = ExternalLinkId::new(7);
+    assert!(messages(&non_dense)
+        .iter()
+        .any(|message| message.contains("external-link table index 0 contains ext7")));
+
+    let mut absent = lower_source_to_mir(source);
+    absent.external_links.entries_mut_for_test()[0]
+        .declarations
+        .clear();
+    let absent_messages = messages(&absent);
+    assert!(absent_messages
+        .iter()
+        .any(|message| message.contains("external link ext0 has no declarations")));
+    assert!(absent_messages
+        .iter()
+        .any(|message| message.contains("function is absent from external link ext0")));
+
+    let mut unknown = lower_source_to_mir(source);
+    unknown.declarations.entries_mut_for_test()[0].linkage = MirFunctionLinkage::External {
+        link: ExternalLinkId::new(7),
+    };
+    assert!(messages(&unknown)
+        .iter()
+        .any(|message| message.contains("function references unknown external link ext7")));
+
+    let mut incompatible = lower_source_to_mir(source);
+    incompatible.declarations.entries_mut_for_test()[1].linkage = MirFunctionLinkage::External {
+        link: ExternalLinkId::new(0),
+    };
+    incompatible.external_links.entries_mut_for_test()[0]
+        .declarations
+        .push(FunctionId::new(1));
+    incompatible.definitions.remove_for_test(FunctionId::new(1));
+    assert!(messages(&incompatible)
+        .iter()
+        .any(|message| message.contains("contains incompatible function signatures")));
+
+    let mut unordered = lower_source_to_mir(concat!(
+        "extern fn alpha() -> i64;\n",
+        "extern fn beta() -> i64;\n",
+        "fn main() -> i64 { return alpha() + beta(); }\n",
+    ));
+    unordered.external_links.entries_mut_for_test().swap(0, 1);
+    assert!(messages(&unordered)
+        .iter()
+        .any(|message| message.contains("external-link symbols are not unique and ordered")));
 }
 
 #[test]

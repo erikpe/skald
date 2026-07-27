@@ -39,6 +39,7 @@ mod declarations;
 mod diagnostics;
 mod dumps;
 mod expressions;
+mod external_links;
 mod interfaces;
 mod modules;
 mod objects;

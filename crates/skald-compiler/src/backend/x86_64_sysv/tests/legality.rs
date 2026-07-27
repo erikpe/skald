@@ -172,8 +172,14 @@ fn object_bearing_external_signature_is_rejected_before_abi_lowering() {
 fn external_alias_signature_is_a_structured_verification_error() {
     let (mut mir, ids) = alias_counter_program();
     let declaration = &mut mir.declarations.entries_mut_for_test()[ids.add.index()];
+    mir.external_links =
+        crate::external::ExternalLinkTable::new(vec![crate::external::ExternalLink {
+            id: crate::identity::ExternalLinkId::new(0),
+            symbol: declaration.name.clone(),
+            declarations: vec![declaration.id],
+        }]);
     declaration.linkage = MirFunctionLinkage::External {
-        symbol: declaration.name.clone(),
+        link: crate::identity::ExternalLinkId::new(0),
     };
     mir.definitions.remove_for_test(ids.add);
 
@@ -198,8 +204,14 @@ fn external_interface_signature_is_rejected_before_instruction_selection() {
     ));
     let invoke = FunctionId::new(0);
     let declaration = &mut mir.declarations.entries_mut_for_test()[invoke.index()];
+    mir.external_links =
+        crate::external::ExternalLinkTable::new(vec![crate::external::ExternalLink {
+            id: crate::identity::ExternalLinkId::new(0),
+            symbol: declaration.name.clone(),
+            declarations: vec![declaration.id],
+        }]);
     declaration.linkage = MirFunctionLinkage::External {
-        symbol: declaration.name.clone(),
+        link: crate::identity::ExternalLinkId::new(0),
     };
     mir.definitions.remove_for_test(invoke);
 

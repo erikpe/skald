@@ -116,6 +116,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
     } else {
         Some(HirProgram {
             modules: program.modules.clone(),
+            external_links: program.external_links.clone(),
             array_types: copy_capabilities.array_types(),
             classes: HirClassDeclarationTable::new(classes),
             interfaces: HirInterfaceDeclarationTable::new(interface_analysis.declarations),
@@ -306,9 +307,14 @@ fn check_entry_point(
 
 fn check_external_declarations(program: &ResolvedProgram, diagnostics: &mut Diagnostics) {
     for declaration in program.declarations.iter() {
-        let ResolvedFunctionLinkage::External { symbol } = &declaration.linkage else {
+        let ResolvedFunctionLinkage::External { link } = declaration.linkage else {
             continue;
         };
+        let symbol = &program
+            .external_links
+            .get(link)
+            .expect("resolved external declarations reference link entries")
+            .symbol;
         if let Some(parameter) = declaration
             .parameters
             .iter()
@@ -380,9 +386,9 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
         return_type: lower_type(&function.return_type),
         linkage: match &function.linkage {
             ResolvedFunctionLinkage::Internal => HirFunctionLinkage::Internal,
-            ResolvedFunctionLinkage::External { symbol } => HirFunctionLinkage::External {
-                symbol: symbol.clone(),
-            },
+            ResolvedFunctionLinkage::External { link } => {
+                HirFunctionLinkage::External { link: *link }
+            }
         },
         span: function.span,
     }

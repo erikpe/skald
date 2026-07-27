@@ -34,8 +34,23 @@ fn verified_f64_mir_executes_through_internal_and_external_abi_boundaries() {
 #[test]
 fn external_f64_results_are_read_from_xmm0() {
     let mut program = f64_arithmetic_program();
+    program.external_links = crate::external::ExternalLinkTable::new(vec![
+        crate::external::ExternalLink {
+            id: crate::identity::ExternalLinkId::new(0),
+            symbol: "compute".to_owned(),
+            declarations: vec![FunctionId::new(0)],
+        },
+        crate::external::ExternalLink {
+            id: crate::identity::ExternalLinkId::new(1),
+            symbol: "validate_f64".to_owned(),
+            declarations: vec![FunctionId::new(1)],
+        },
+    ]);
     program.declarations.entries_mut_for_test()[0].linkage = MirFunctionLinkage::External {
-        symbol: "compute".to_owned(),
+        link: crate::identity::ExternalLinkId::new(0),
+    };
+    program.declarations.entries_mut_for_test()[1].linkage = MirFunctionLinkage::External {
+        link: crate::identity::ExternalLinkId::new(1),
     };
     program.definitions.remove_for_test(FunctionId::new(0));
     verify_mir(&program).unwrap();

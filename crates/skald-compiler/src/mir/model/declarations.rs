@@ -3,11 +3,12 @@
 use std::fmt;
 
 use crate::{
+    external::ExternalLinkTable,
     id_table::DenseIdTable,
     identity::{
-        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId, ModuleId,
-        VirtualFamilyId, VirtualSlotId,
+        CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, ExternalLinkId,
+        FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
+        ModuleId, VirtualFamilyId, VirtualSlotId,
     },
     module::ProgramModuleTable,
     source::Span,
@@ -26,6 +27,7 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
     pub modules: ProgramModuleTable,
+    pub external_links: ExternalLinkTable,
     pub array_types: MirArrayTypeTable,
     pub classes: MirClassDeclarationTable,
     pub interfaces: MirInterfaceDeclarationTable,
@@ -613,8 +615,8 @@ pub struct MirFunctionDeclaration {
     pub span: Span,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirFunctionLinkage {
     Internal,
-    External { symbol: String },
+    External { link: ExternalLinkId },
 }

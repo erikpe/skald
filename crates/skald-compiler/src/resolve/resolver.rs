@@ -17,6 +17,7 @@ use super::ir::*;
 
 mod array_types;
 mod body;
+mod external_links;
 mod imports;
 mod name_lookup;
 mod program;
@@ -53,6 +54,7 @@ pub const PRIVATE_DECLARATION: &str = "RES026";
 pub const UNKNOWN_QUALIFIED_DECLARATION: &str = "RES027";
 pub const DUPLICATE_ORDINARY_BINDING: &str = "RES028";
 pub const UNKNOWN_IMPORTED_DECLARATION: &str = "RES029";
+pub const INCOMPATIBLE_EXTERNAL_ABI: &str = "RES030";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

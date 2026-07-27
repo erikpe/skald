@@ -1,5 +1,9 @@
 use super::*;
-use crate::mir::{MirClassDeclarationTable, MirInterfaceDeclarationTable};
+use crate::{
+    external::{ExternalLink, ExternalLinkTable},
+    identity::ExternalLinkId,
+    mir::{MirClassDeclarationTable, MirInterfaceDeclarationTable},
+};
 
 pub(super) fn f64_arithmetic_program() -> MirProgram {
     let span = test_span();
@@ -141,6 +145,11 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
 
     MirProgram {
         modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
+        external_links: ExternalLinkTable::new(vec![ExternalLink {
+            id: ExternalLinkId::new(0),
+            symbol: "validate_f64".to_owned(),
+            declarations: vec![validate_id],
+        }]),
         array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),
@@ -161,7 +170,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
                 vec![fixture_parameter(MirParameterMode::Value, MirType::F64)],
                 MirType::I64,
                 MirFunctionLinkage::External {
-                    symbol: "validate_f64".to_owned(),
+                    link: ExternalLinkId::new(0),
                 },
                 span,
             ),
@@ -273,6 +282,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
 
     MirProgram {
         modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
+        external_links: ExternalLinkTable::default(),
         array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),

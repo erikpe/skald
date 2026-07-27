@@ -70,8 +70,10 @@ uses see owned declarations plus explicit selective ordinary bindings. Direct
 module imports create exact default or aliased qualified bindings, and
 selective imports bind only requested directly owned public declarations;
 both resolve once to existing semantic identities without re-exporting.
-External-ABI coalescing and active driver integration remain unavailable,
-while the single-file adapter continues to reject imports. Test
+Compatible cross-module external declarations retain separate `FunctionId`
+values while sharing one verified, symbol-owning external-link identity.
+Active driver integration remains unavailable, while the single-file adapter
+continues to reject imports. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

@@ -14,7 +14,12 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
                 .expect("verified function callable must be declared");
             match &declaration.linkage {
                 MirFunctionLinkage::Internal => format!(".Lska_fn_{}", function.index()),
-                MirFunctionLinkage::External { symbol } => symbol.clone(),
+                MirFunctionLinkage::External { link } => program
+                    .external_links
+                    .get(*link)
+                    .expect("verified external function must reference a link entry")
+                    .symbol
+                    .clone(),
             }
         }
         CallableId::Initializer(initializer) => format!(
