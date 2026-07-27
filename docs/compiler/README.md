@@ -56,9 +56,12 @@ header, finalizer, anchor, and compiler/runtime responsibility design is
 defined by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). Driver
 behavior is defined by
-[driver and artifacts](DRIVER_AND_ARTIFACTS.md). The frozen, unimplemented
-multiple-file request, provider, loading, identity, and linkage design is
-defined by the [module-system compiler contract](MODULE_SYSTEM.md). Test
+[driver and artifacts](DRIVER_AND_ARTIFACTS.md). The frozen multiple-file
+request, provider, loading, identity, and linkage design is defined by the
+[module-system compiler contract](MODULE_SYSTEM.md). Typed logical paths,
+request-local module/provider/package identities, provenance records, and the
+driver request model are implemented foundations; source syntax, filesystem
+loading, and multi-module compilation remain unavailable. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor
@@ -130,8 +133,9 @@ The crate exposes responsibility-oriented facades:
 | `resolve`, `typeck`, `hir` | semantic phase entry points, products, typed identities, deterministic dumps |
 | `mir`, `passes` | MIR schema, lowering, verification, pass sequencing, deterministic dumps |
 | `identity`, `literal` | shared target-independent identity and source-literal vocabulary |
+| `module` | validated logical module paths and request-local module provenance |
 | `backend` | target registry and assembly-emission boundary |
-| `driver` | complete compilation and command-line orchestration |
+| `driver` | typed compilation requests, complete one-source compilation, and command-line orchestration |
 
 These namespaces, rather than private source files, are the supported way for
 repository consumers to cross a compiler boundary. Facades use explicit

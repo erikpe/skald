@@ -41,6 +41,15 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+The `module` facade already provides validated exact-case `ModulePath` values,
+request-local module provenance vocabulary, and distinct `ModuleId`,
+`ProviderId`, and `PackageId` identities. The `driver` facade exposes a typed
+`CompilationRequest` containing entry, root, standard-library, target,
+artifact, working-directory, and installed-standard-library inputs. These are
+foundational request contracts only: the active pipeline entry remains
+`compile_source_to_assembly`, and it neither resolves providers nor loads a
+module graph yet.
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
 target identities. For optional owning values, type checking selects explicit

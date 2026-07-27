@@ -17,6 +17,7 @@ pub mod lexer;
 mod lexical_policy;
 pub mod literal;
 pub mod mir;
+pub mod module;
 mod object_path;
 pub mod passes;
 pub mod resolve;

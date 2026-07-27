@@ -1,16 +1,22 @@
 //! Compile-time coverage for the intentional repository-internal API paths.
 
-use std::ffi::OsString;
+use std::{ffi::OsString, path::Path};
 
 use skald_compiler::{
     backend::{emit_assembly, target_by_name, Target},
     diagnostics::{render_diagnostics, Diagnostics},
-    driver::{compile_source_to_assembly, run_cli, Toolchain},
+    driver::{
+        compile_source_to_assembly, run_cli, ArtifactKind, ArtifactOptions, CompilationEnvironment,
+        CompilationRequest, EntrySelector, StandardLibrarySelection, Toolchain,
+    },
     hir::{
         dump_hir, HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
         HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection,
     },
-    identity::{ArrayTypeId, CallableId, InterfaceId, InterfaceRequirementId},
+    identity::{
+        ArrayTypeId, CallableId, InterfaceId, InterfaceRequirementId, ModuleId, PackageId,
+        ProviderId,
+    },
     lexer::{dump_tokens, lex, LexOutput},
     literal::NumericLiteralKind,
     mir::{
@@ -19,6 +25,7 @@ use skald_compiler::{
         MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView, MirPlaceProjection,
         MirProgram, MirViewTarget,
     },
+    module::{ModulePath, ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation},
     passes::run_mir_pipeline,
     resolve::{
         dump_resolved, resolve, ResolveOutput, ResolvedClassHierarchy, ResolvedClassMember,
@@ -28,6 +35,34 @@ use skald_compiler::{
     syntax::{dump_ast, parse, CompilationUnit, ParseOutput},
     typeck::{type_check, TypeCheckOutput},
 };
+
+#[test]
+fn intentional_module_and_request_paths_compose() {
+    let entry: ModulePath = "app::main".parse().unwrap();
+    let request = CompilationRequest::new(
+        EntrySelector::Module(entry.clone()),
+        vec!["project/modules".into(), "deps/modules".into()],
+        StandardLibrarySelection::Replacement("sdk/modules".into()),
+        Target::X86_64SysV,
+        ArtifactOptions::new(ArtifactKind::Assembly, Some("main.s".into())),
+        CompilationEnvironment::new("project".into(), "install/std".into()),
+    );
+
+    assert_eq!(entry.to_string(), "app::main");
+    assert_eq!(request.entry(), &EntrySelector::Module(entry));
+    assert_eq!(request.module_roots().len(), 2);
+    assert_eq!(request.artifact().output(), Some(Path::new("main.s")));
+    assert_eq!(
+        "not-valid".parse::<ModulePath>().unwrap_err().kind(),
+        ModulePathErrorKind::InvalidComponent
+    );
+
+    let _module_identity: Option<ModuleId> = None;
+    let _provider_identity: Option<ProviderId> = None;
+    let _package_identity: Option<PackageId> = None;
+    let _provenance: Option<ModuleProvenance> = None;
+    let _source_location: Option<ModuleSourceLocation> = None;
+}
 
 #[test]
 fn intentional_phase_and_dump_paths_compose() {

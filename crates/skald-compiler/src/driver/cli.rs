@@ -14,8 +14,10 @@ use crate::{
 };
 
 use super::{
-    artifact::PendingArtifact, compile_source_to_assembly, CompilationError, Toolchain,
-    ToolchainError,
+    artifact::PendingArtifact,
+    compile_source_to_assembly,
+    request::{ArtifactKind, ArtifactOptions},
+    CompilationError, Toolchain, ToolchainError,
 };
 
 pub(super) const HELP: &str = concat!(
@@ -116,7 +118,7 @@ fn compile<Stderr: Write>(
             return Ok(EXIT_IO_ERROR);
         }
     };
-    if let Some(output) = &options.output {
+    if let Some(output) = options.artifact.output() {
         match paths_refer_to_same_file(&options.input, output) {
             Ok(true) => {
                 writeln!(
@@ -163,11 +165,13 @@ fn compile<Stderr: Write>(
     }
 
     let output = options
-        .output
-        .unwrap_or_else(|| default_output_path(&options.input, options.output_kind));
-    let result = match options.output_kind {
-        OutputKind::Assembly => publish_assembly(&artifact.assembly, &output),
-        OutputKind::Executable => toolchain
+        .artifact
+        .output()
+        .map(Path::to_owned)
+        .unwrap_or_else(|| default_output_path(&options.input, options.artifact.kind()));
+    let result = match options.artifact.kind() {
+        ArtifactKind::Assembly => publish_assembly(&artifact.assembly, &output),
+        ArtifactKind::Executable => toolchain
             .link_assembly(&artifact.assembly, &output)
             .map_err(DriverError::Toolchain),
     };
@@ -206,24 +210,17 @@ fn stable_diagnostic_path(input: &Path) -> PathBuf {
         .unwrap_or_else(|| input.to_owned())
 }
 
-fn default_output_path(input: &Path, output_kind: OutputKind) -> PathBuf {
+fn default_output_path(input: &Path, output_kind: ArtifactKind) -> PathBuf {
     match output_kind {
-        OutputKind::Assembly => input.with_extension("s"),
-        OutputKind::Executable => input.with_extension(""),
+        ArtifactKind::Assembly => input.with_extension("s"),
+        ArtifactKind::Executable => input.with_extension(""),
     }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum OutputKind {
-    Executable,
-    Assembly,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct CompileOptions {
     input: PathBuf,
-    output: Option<PathBuf>,
-    output_kind: OutputKind,
+    artifact: ArtifactOptions,
     target: String,
 }
 
@@ -241,7 +238,7 @@ where
     let _program_name = args.next();
     let mut input = None;
     let mut output = None;
-    let mut output_kind = OutputKind::Executable;
+    let mut output_kind = ArtifactKind::Executable;
     let mut emit_seen = false;
     let mut target = None;
 
@@ -264,7 +261,7 @@ where
                 }
                 emit_seen = true;
                 match args.next().and_then(|value| value.into_string().ok()) {
-                    Some(value) if value == "asm" => output_kind = OutputKind::Assembly,
+                    Some(value) if value == "asm" => output_kind = ArtifactKind::Assembly,
                     Some(value) => {
                         return Err(format!(
                             "unsupported emission kind `{value}`; expected `asm`"
@@ -295,8 +292,7 @@ where
     let input = input.ok_or_else(|| "no input file was provided".to_owned())?;
     Ok(Command::Compile(CompileOptions {
         input,
-        output,
-        output_kind,
+        artifact: ArtifactOptions::new(output_kind, output),
         target: target.unwrap_or_else(|| DEFAULT_TARGET_NAME.to_owned()),
     }))
 }

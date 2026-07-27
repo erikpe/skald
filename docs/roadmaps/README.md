@@ -6,19 +6,19 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
-
-## Planned
-
 - [Initial Module-System Implementation Roadmap](MODULE_SYSTEM_ROADMAP.md) —
   implements the frozen whole-program language and compiler contracts across
   source syntax, anonymous providers, filesystem loading, deterministic
   identities, visibility and imports, external linkage, the driver, and
-  end-to-end tests. Status: planned; MS0 is next. Material dependencies: the
-  frozen
+  end-to-end tests. Status: in progress; MS1 is next. Material
+  dependencies: the frozen
   [language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system),
   frozen [compiler contract](../compiler/MODULE_SYSTEM.md), and the existing
   flat whole-program phase pipeline.
+
+## Planned
+
+No implementation roadmaps are currently planned.
 
 ## Pending discoveries
 

@@ -8,11 +8,16 @@
 mod artifact;
 mod cli;
 mod pipeline;
+mod request;
 mod toolchain;
 
 pub use cli::run_cli;
 pub use pipeline::{
     compile_source_to_assembly, AssemblyArtifact, CompilationError, CompilationReport,
+};
+pub use request::{
+    ArtifactKind, ArtifactOptions, CompilationEnvironment, CompilationRequest, EntrySelectionError,
+    EntrySelector, StandardLibrarySelection, StandardLibrarySelectionError,
 };
 pub use toolchain::{Toolchain, ToolchainError, C_COMPILER_ENV, RUNTIME_ARCHIVE_ENV};
 

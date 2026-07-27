@@ -1,13 +1,14 @@
 //! Stable identities shared by name-independent compiler phases.
 //!
-//! Resolution assigns these identities when source declarations and bindings
-//! are selected. Later phases preserve and compare them without depending on
-//! resolver implementation details or returning to source names.
+//! Loading assigns provider and module identities; resolution assigns
+//! declaration and binding identities. Later phases preserve and compare them
+//! without depending on owner implementation details or returning to source
+//! names.
 
 use std::fmt;
 
 macro_rules! global_id {
-    ($name:ident, $prefix:literal) => {
+    ($(#[$new_attribute:meta])* $name:ident, $prefix:literal) => {
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub struct $name(usize);
 
@@ -16,8 +17,9 @@ macro_rules! global_id {
                 self.0
             }
 
-            // Construction stays crate-private so resolution remains the
-            // production authority that allocates semantic identities.
+            // Construction stays crate-private so the owning compiler stage
+            // remains the production authority that allocates identities.
+            $(#[$new_attribute])*
             pub(crate) const fn new(index: usize) -> Self {
                 Self(index)
             }
@@ -97,6 +99,21 @@ macro_rules! interface_member_id {
     };
 }
 
+global_id!(
+    #[allow(dead_code)]
+    ModuleId,
+    "m"
+);
+global_id!(
+    #[allow(dead_code)]
+    ProviderId,
+    "provider"
+);
+global_id!(
+    #[allow(dead_code)]
+    PackageId,
+    "package"
+);
 global_id!(FunctionId, "f");
 global_id!(ClassId, "c");
 global_id!(InterfaceId, "i");
@@ -287,10 +304,27 @@ impl fmt::Display for BindingId {
 
 #[cfg(test)]
 mod tests {
+    use std::any::TypeId;
+
     use super::*;
 
     #[test]
+    fn request_local_module_identities_are_type_distinct() {
+        assert_ne!(TypeId::of::<ModuleId>(), TypeId::of::<ProviderId>());
+        assert_ne!(TypeId::of::<ModuleId>(), TypeId::of::<PackageId>());
+        assert_ne!(TypeId::of::<ProviderId>(), TypeId::of::<PackageId>());
+
+        let first = ModuleId::new(0);
+        let second = ModuleId::new(1);
+        assert_eq!(first.index(), 0);
+        assert!(first < second);
+    }
+
+    #[test]
     fn top_level_identities_preserve_owner_index_ordering_and_display() {
+        let module = ModuleId::new(1);
+        let provider = ProviderId::new(2);
+        let package = PackageId::new(3);
         let first = FunctionId::new(2);
         let second = FunctionId::new(3);
         let family = VirtualFamilyId::new(6);
@@ -298,6 +332,12 @@ mod tests {
         let parameter = ParameterId::new(first, 4);
         let local = LocalId::new(first, 5);
 
+        assert_eq!(module.index(), 1);
+        assert_eq!(provider.index(), 2);
+        assert_eq!(package.index(), 3);
+        assert_eq!(module.to_string(), "m1");
+        assert_eq!(provider.to_string(), "provider2");
+        assert_eq!(package.to_string(), "package3");
         assert_eq!(first.index(), 2);
         assert!(first < second);
         assert_eq!(parameter.callable(), CallableId::Function(first));

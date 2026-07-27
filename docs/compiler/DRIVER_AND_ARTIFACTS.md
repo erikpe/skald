@@ -5,8 +5,8 @@ target and toolchain selection, runtime archive selection, output publication,
 and driver failure boundaries. Compiler phases are owned by
 [Phases and IR](PHASES_AND_IR.md), target emission by the
 [Backend and Target Contract](BACKEND.md), and the linked C surface by the
-[Runtime ABI](RUNTIME_ABI.md). The frozen but unimplemented multiple-file CLI,
-provider, and entry extension is owned by the
+[Runtime ABI](RUNTIME_ABI.md). The frozen but not yet executable multiple-file
+CLI, provider, and entry extension is owned by the
 [Module-System Compiler Contract](MODULE_SYSTEM.md).
 
 ## Driver facade
@@ -25,6 +25,14 @@ compose the compiler:
 `args_os()` to `run_cli` and exits with the returned status. The compiler crate
 is unpublished and does not promise a version-stable API outside this
 repository; see the [compiler crate API policy](README.md#compiler-crate-api-policy).
+
+The facade also exposes the typed future `CompilationRequest` contract:
+`EntrySelector`, repeatable module-root paths, `StandardLibrarySelection`,
+`Target`, `ArtifactOptions`, and an explicit `CompilationEnvironment`.
+Construction resolves mutually exclusive entry and standard-library option
+forms but performs no filesystem access. No driver entry consumes this request
+yet; `compile_source_to_assembly` and `run_cli` retain the current behavior
+below.
 
 ## Compilation orchestration
 

@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: planned; MS0 is next.
+Status: in progress; MS1 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -28,6 +28,10 @@ whole-program representation.
 
 ## Current baseline
 
+- The compiler exposes validated exact-case `ModulePath`, distinct
+  request-local module/provider/package identities, module source-provenance
+  records, and a typed driver `CompilationRequest`. These are foundational
+  values only; no active pipeline or CLI entry consumes the request yet.
 - `SourceDatabase` can own multiple source files, but the driver inserts one
   file and invokes every phase once.
 - Syntax represents one `CompilationUnit` containing only top-level
@@ -127,7 +131,7 @@ implementation template:
 
 ## Progress
 
-- [ ] MS0 — Establish module identities and request contracts
+- [x] MS0 — Establish module identities and request contracts
 - [ ] MS1 — Parse imports, visibility, and qualified source paths
 - [ ] MS2 — Normalize providers and resolve filesystem candidates
 - [ ] MS3 — Select the entry and load the reachable module graph
@@ -146,33 +150,33 @@ implementation template:
 **Purpose:** Introduce stable vocabulary and ownership boundaries before
 filesystem, syntax, or resolver consumers depend on ad hoc strings and paths.
 
-- [ ] Add a validated, non-empty, exact-case `ModulePath` value with canonical
+- [x] Add a validated, non-empty, exact-case `ModulePath` value with canonical
       `::` rendering, component iteration, ordering, and parsing from logical
       CLI text and validated filesystem components. Reuse Skald's identifier
       policy rather than inventing a path-only identifier grammar.
-- [ ] Add dense request-local `ModuleId`, `ProviderId`, and `PackageId`
+- [x] Add dense request-local `ModuleId`, `ProviderId`, and `PackageId`
       identities beside the existing semantic IDs. Keep `SourceId` in the
       source owner and make conversions between these identities impossible by
       type.
-- [ ] Define module provenance records that can retain canonical logical path,
+- [x] Define module provenance records that can retain canonical logical path,
       module/source/provider/package identities, lexical root-relative path,
       deterministic display source path, and optional canonical I/O target
       without treating the latter as semantic identity.
-- [ ] Define the internal compilation-input model: positional file or logical
+- [x] Define the internal compilation-input model: positional file or logical
       entry, repeatable anonymous roots, default/replacement/disabled standard
       library, target, and the driver-owned artifact options that affect output
       selection.
-- [ ] Capture process-dependent inputs such as working directory and installed
+- [x] Capture process-dependent inputs such as working directory and installed
       default standard-library root at one request-construction boundary.
       Provider and graph code should receive explicit values.
-- [ ] Reserve a narrow `module` facade for path, provider, and graph concepts,
+- [x] Reserve a narrow `module` facade for path, provider, and graph concepts,
       with implementation split by responsibility under it.
-- [ ] Keep the current `compile_source_to_assembly` signature available and
+- [x] Keep the current `compile_source_to_assembly` signature available and
       document it as a compatibility convenience to be adapted in MS9.
-- [ ] Add exact unit tests for valid/invalid components, empty paths, `::`
+- [x] Add exact unit tests for valid/invalid components, empty paths, `::`
       parsing/rendering, ordering, identity type separation, and request-option
       conflicts that do not require filesystem access.
-- [ ] Update compiler phase/API documentation only for the new internal
+- [x] Update compiler phase/API documentation only for the new internal
       contracts; do not claim source or CLI support.
 
 **Tests:** Focused module-path, identity, request-model, and public-path tests,

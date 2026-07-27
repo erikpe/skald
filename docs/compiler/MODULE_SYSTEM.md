@@ -2,8 +2,11 @@
 
 Status: authoritative frozen design for multiple-file compilation, module
 providers, filesystem resolution, entry selection, identities, loading, and
-linkage. It is not implemented. The current one-file driver remains
-authoritative in [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
+linkage. Typed logical paths, request-local module/provider/package identities,
+provenance vocabulary, and the driver request model are implemented
+foundations; provider resolution, loading, and multiple-file compilation are
+not implemented. The current one-file driver remains authoritative in
+[Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
 
