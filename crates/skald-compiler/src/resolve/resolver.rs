@@ -17,6 +17,7 @@ use super::ir::*;
 
 mod array_types;
 mod body;
+mod imports;
 mod name_lookup;
 mod program;
 
@@ -50,6 +51,8 @@ pub const DUPLICATE_MODULE_BINDING: &str = "RES024";
 pub const UNKNOWN_MODULE_BINDING: &str = "RES025";
 pub const PRIVATE_DECLARATION: &str = "RES026";
 pub const UNKNOWN_QUALIFIED_DECLARATION: &str = "RES027";
+pub const DUPLICATE_ORDINARY_BINDING: &str = "RES028";
+pub const UNKNOWN_IMPORTED_DECLARATION: &str = "RES029";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -75,7 +78,8 @@ pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
 /// Resolves every reachable module in a loaded graph into one flat program.
 ///
 /// Direct module imports create exact qualified bindings. Selective imports
-/// remain reachability-only until ordinary imported-name lookup is added.
+/// create explicit ordinary bindings to public declarations owned by their
+/// canonical source modules.
 pub fn resolve_module_graph(graph: &ModuleGraph) -> ResolveOutput {
     program::resolve_graph(graph)
 }

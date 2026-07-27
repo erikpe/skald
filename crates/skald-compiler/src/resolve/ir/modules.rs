@@ -71,6 +71,57 @@ pub struct ResolvedModuleDeclarationTable {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedOrdinaryBinding {
+    pub local_name: String,
+    pub target_module: ModuleId,
+    pub target: ResolvedTopLevelId,
+    pub name_span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedOrdinaryBindings {
+    pub module: ModuleId,
+    bindings: Vec<ResolvedOrdinaryBinding>,
+}
+
+impl ResolvedOrdinaryBindings {
+    pub(crate) fn new(module: ModuleId, bindings: Vec<ResolvedOrdinaryBinding>) -> Self {
+        Self { module, bindings }
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedOrdinaryBinding> {
+        self.bindings.iter()
+    }
+
+    pub fn get(&self, local_name: &str) -> Option<&ResolvedOrdinaryBinding> {
+        self.bindings
+            .iter()
+            .find(|binding| binding.local_name == local_name)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedOrdinaryBindingTable {
+    entries: DenseIdTable<ModuleId, ResolvedOrdinaryBindings>,
+}
+
+impl ResolvedOrdinaryBindingTable {
+    pub(crate) fn new(entries: Vec<ResolvedOrdinaryBindings>) -> Self {
+        Self {
+            entries: DenseIdTable::new(entries, |entry| entry.module),
+        }
+    }
+
+    pub fn get(&self, module: ModuleId) -> Option<&ResolvedOrdinaryBindings> {
+        self.entries.get(module, |entry| entry.module)
+    }
+
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedOrdinaryBindings> {
+        self.entries.iter()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedModuleBinding {
     pub local_path: ModulePath,
     pub target: ModuleId,
@@ -133,5 +184,15 @@ impl ResolvedModuleDeclarationTable {
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ResolvedModuleDeclarations> {
         self.entries.iter()
+    }
+
+    pub fn declaration(
+        &self,
+        module: ModuleId,
+        declaration: ResolvedTopLevelId,
+    ) -> Option<&ResolvedModuleDeclaration> {
+        self.get(module)?
+            .iter()
+            .find(|candidate| candidate.declaration == declaration)
     }
 }

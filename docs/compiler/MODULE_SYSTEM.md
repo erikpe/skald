@@ -12,11 +12,12 @@ implemented as an inactive module-layer API. That API also selects logical or
 positional entries, constructs outside-root singletons, loads and parses the
 reachable closure, allocates canonical graph identities, rejects import
 cycles, and exposes a deterministic graph dump. The graph resolver consumes
-that product, builds direct module bindings, and selects qualified public
-declarations into one flat semantic pipeline; selective ordinary bindings are
-not implemented. The single-file resolver still reports module syntax as
-unsupported, and the supported driver does not compile multiple files. The
-current one-file driver remains authoritative in
+that product, builds separate direct module and selective ordinary binding
+tables, and selects qualified or explicitly imported public declarations into
+one flat semantic pipeline. External-ABI coalescing and active driver
+integration are not implemented. The single-file resolver still reports
+module syntax as unsupported, and the supported driver does not compile
+multiple files. The current one-file driver remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
@@ -274,10 +275,17 @@ transitive imports grant no access without an exact direct binding. The
 resolved program records local bindings and canonical targets, while HIR and
 lower phases retain only selected declaration identities.
 
-Unqualified declaration uses still see only declarations owned by the current
-module. Selective imports establish reachability but do not introduce ordinary
-bindings until the next module-system stage. The active driver still uses the
-singleton adapter and does not feed a loaded graph into semantic compilation.
+Each selective item is resolved directly against the canonical import-source
+module's owned declaration index. A valid item adds its source name or explicit
+alias to a separate ordinary-binding table and retains the original dense
+declaration identity and canonical owner. Collection rejects missing and
+private targets, names not owned directly by the target, repeated local
+ordinary names, and collisions with declarations owned by the importer.
+Selective bindings neither create a module binding nor mutate a target public
+surface, so they cannot re-export declarations. Parameters and lexical locals
+continue to shadow imported ordinary names under the existing lexical rules.
+The active driver still uses the singleton adapter and does not feed a loaded
+graph into semantic compilation.
 
 One canonical `ModulePath` resolves to at most one loaded `ModuleId`. Multiple
 module aliases and selective imports of that module reuse its `ModuleId`,

@@ -49,6 +49,7 @@ impl<'ast> ModuleUnit<'ast> {
 #[derive(Clone, Copy)]
 struct ProgramLookupTables<'program> {
     bindings: &'program ResolvedModuleBindingTable,
+    ordinary_bindings: &'program ResolvedOrdinaryBindingTable,
     declarations: &'program ResolvedModuleDeclarationTable,
     module_spans: &'program [Span],
 }
@@ -62,12 +63,19 @@ impl<'program> ProgramLookupTables<'program> {
         ModuleLookup::new(
             unit.module,
             &unit.top_levels,
-            self.bindings
-                .get(unit.module)
-                .expect("every module has a binding namespace"),
-            self.declarations,
-            modules,
-            self.module_spans,
+            ModuleLookupProgram {
+                ordinary_bindings: self
+                    .ordinary_bindings
+                    .get(unit.module)
+                    .expect("every module has an ordinary binding namespace"),
+                bindings: self
+                    .bindings
+                    .get(unit.module)
+                    .expect("every module has a binding namespace"),
+                declarations: self.declarations,
+                modules,
+                module_spans: self.module_spans,
+            },
             unit.qualified_enabled,
         )
     }
@@ -138,8 +146,10 @@ impl<'ast> ProgramResolver<'ast> {
             .iter()
             .map(|unit| unit.ast.span)
             .collect::<Vec<_>>();
+        let ordinary_bindings = self.collect_ordinary_bindings(&module_declarations, &module_spans);
         let lookups = ProgramLookupTables {
             bindings: &module_bindings,
+            ordinary_bindings: &ordinary_bindings,
             declarations: &module_declarations,
             module_spans: &module_spans,
         };
@@ -218,6 +228,7 @@ impl<'ast> ProgramResolver<'ast> {
             program: ResolvedProgram {
                 modules: self.modules,
                 module_bindings,
+                ordinary_bindings,
                 module_declarations,
                 array_types: self.array_types.finish(),
                 declarations: function_declarations,
@@ -337,6 +348,33 @@ impl<'ast> ProgramResolver<'ast> {
                             unit.module,
                             unit.ast,
                             &self.modules,
+                            &mut self.diagnostics,
+                        )
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    fn collect_ordinary_bindings(
+        &mut self,
+        declarations: &ResolvedModuleDeclarationTable,
+        module_spans: &[Span],
+    ) -> ResolvedOrdinaryBindingTable {
+        ResolvedOrdinaryBindingTable::new(
+            self.units
+                .iter()
+                .map(|unit| {
+                    if self.reject_imports {
+                        ResolvedOrdinaryBindings::new(unit.module, Vec::new())
+                    } else {
+                        collect_ordinary_bindings(
+                            unit.module,
+                            unit.ast,
+                            &unit.top_levels,
+                            &self.modules,
+                            declarations,
+                            module_spans,
                             &mut self.diagnostics,
                         )
                     }

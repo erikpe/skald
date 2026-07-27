@@ -46,6 +46,7 @@ pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{
     ResolvedModuleBinding, ResolvedModuleBindingTable, ResolvedModuleBindings,
     ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,
+    ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings,
     ResolvedTopLevelId, ResolvedVisibility,
 };
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};

@@ -60,6 +60,50 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 }
             });
         }
+        if program
+            .ordinary_bindings
+            .iter()
+            .any(|module| module.iter().next().is_some())
+        {
+            dumper.heading("OrdinaryBindings");
+            dumper.indented(|dumper| {
+                for module in program.ordinary_bindings.iter() {
+                    if module.iter().next().is_none() {
+                        continue;
+                    }
+                    dumper.raw_line(&format!("Module {}", module.module));
+                    dumper.indented(|dumper| {
+                        for binding in module.iter() {
+                            let target_module = program
+                                .modules
+                                .get(binding.target_module)
+                                .expect("ordinary bindings reference loaded modules");
+                            let target = program
+                                .module_declarations
+                                .declaration(binding.target_module, binding.target)
+                                .expect("ordinary bindings reference target declarations");
+                            let identity = match binding.target {
+                                ResolvedTopLevelId::Function(function) => function.to_string(),
+                                ResolvedTopLevelId::Class(class) => class.to_string(),
+                                ResolvedTopLevelId::Interface(interface) => interface.to_string(),
+                            };
+                            dumper.write_indentation();
+                            let _ = write!(
+                                dumper.output,
+                                "{} -> {} {} {}::{}",
+                                binding.local_name,
+                                identity,
+                                binding.target_module,
+                                target_module.module_path(),
+                                target.name
+                            );
+                            write_span(&mut dumper.output, binding.name_span);
+                            dumper.output.push('\n');
+                        }
+                    });
+                }
+            });
+        }
         dumper.heading("ModuleDeclarations");
         dumper.indented(|dumper| {
             for module in program.module_declarations.iter() {

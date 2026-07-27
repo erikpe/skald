@@ -17,13 +17,15 @@ use super::body::{
 };
 use super::hierarchy::ResolvedClassHierarchy;
 use super::modules::{
-    ResolvedModuleBindingTable, ResolvedModuleDeclarationTable, ResolvedVisibility,
+    ResolvedModuleBindingTable, ResolvedModuleDeclarationTable, ResolvedOrdinaryBindingTable,
+    ResolvedVisibility,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
     pub modules: ProgramModuleTable,
     pub module_bindings: ResolvedModuleBindingTable,
+    pub ordinary_bindings: ResolvedOrdinaryBindingTable,
     pub module_declarations: ResolvedModuleDeclarationTable,
     pub array_types: ResolvedArrayTypeTable,
     pub declarations: ResolvedFunctionDeclarationTable,

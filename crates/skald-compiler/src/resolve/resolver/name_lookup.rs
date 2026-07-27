@@ -16,9 +16,19 @@ pub(super) enum TopLevelLookup {
 }
 
 #[derive(Clone, Copy)]
+pub(super) struct ModuleLookupProgram<'program> {
+    pub(super) ordinary_bindings: &'program ResolvedOrdinaryBindings,
+    pub(super) bindings: &'program ResolvedModuleBindings,
+    pub(super) declarations: &'program ResolvedModuleDeclarationTable,
+    pub(super) modules: &'program ProgramModuleTable,
+    pub(super) module_spans: &'program [Span],
+}
+
+#[derive(Clone, Copy)]
 pub(super) struct ModuleLookup<'program> {
     current: ModuleId,
     top_levels: &'program HashMap<String, TopLevelSymbol>,
+    ordinary_bindings: &'program ResolvedOrdinaryBindings,
     bindings: &'program ResolvedModuleBindings,
     declarations: &'program ResolvedModuleDeclarationTable,
     modules: &'program ProgramModuleTable,
@@ -30,19 +40,17 @@ impl<'program> ModuleLookup<'program> {
     pub(super) fn new(
         current: ModuleId,
         top_levels: &'program HashMap<String, TopLevelSymbol>,
-        bindings: &'program ResolvedModuleBindings,
-        declarations: &'program ResolvedModuleDeclarationTable,
-        modules: &'program ProgramModuleTable,
-        module_spans: &'program [Span],
+        program: ModuleLookupProgram<'program>,
         qualified_enabled: bool,
     ) -> Self {
         Self {
             current,
             top_levels,
-            bindings,
-            declarations,
-            modules,
-            module_spans,
+            ordinary_bindings: program.ordinary_bindings,
+            bindings: program.bindings,
+            declarations: program.declarations,
+            modules: program.modules,
+            module_spans: program.module_spans,
             qualified_enabled,
         }
     }
@@ -53,11 +61,14 @@ impl<'program> ModuleLookup<'program> {
         diagnostics: &mut Diagnostics,
     ) -> TopLevelLookup {
         if !name.is_qualified() {
+            if let Some(symbol) = self.top_levels.get(name.text.as_str()).copied() {
+                return TopLevelLookup::Found(symbol);
+            }
             return self
-                .top_levels
+                .ordinary_bindings
                 .get(name.text.as_str())
-                .copied()
-                .map_or(TopLevelLookup::Missing, TopLevelLookup::Found);
+                .map(|binding| TopLevelLookup::Found(self.imported_symbol(binding)))
+                .unwrap_or(TopLevelLookup::Missing);
         }
         if !self.qualified_enabled {
             diagnostics.push(
@@ -136,6 +147,23 @@ impl<'program> ModuleLookup<'program> {
         })
     }
 
+    fn imported_symbol(self, binding: &ResolvedOrdinaryBinding) -> TopLevelSymbol {
+        let declaration = self
+            .declarations
+            .declaration(binding.target_module, binding.target)
+            .expect("ordinary bindings reference target declarations");
+        TopLevelSymbol {
+            kind: match binding.target {
+                ResolvedTopLevelId::Function(function) => TopLevelSymbolKind::Function(function),
+                ResolvedTopLevelId::Class(class) => TopLevelSymbolKind::Class(class),
+                ResolvedTopLevelId::Interface(interface) => {
+                    TopLevelSymbolKind::Interface(interface)
+                }
+            },
+            name_span: declaration.name_span,
+        }
+    }
+
     fn report_unknown_binding(
         self,
         name: &syntax::Name,
@@ -208,72 +236,4 @@ impl<'program> ModuleLookup<'program> {
                 .module_path()
         )));
     }
-}
-
-pub(super) fn collect_module_bindings(
-    module: ModuleId,
-    ast: &syntax::CompilationUnit,
-    modules: &ProgramModuleTable,
-    diagnostics: &mut Diagnostics,
-) -> ResolvedModuleBindings {
-    let mut bindings = Vec::<ResolvedModuleBinding>::new();
-    let mut indexes = HashMap::<ModulePath, usize>::new();
-
-    for import in &ast.imports {
-        let syntax::ImportDeclaration::Module(import) = import else {
-            continue;
-        };
-        let canonical_path = module_path(&import.module);
-        let target = modules
-            .find(&canonical_path)
-            .expect("a loaded graph contains every imported module")
-            .module_id();
-        let (local_path, name_span) = import.alias.as_ref().map_or_else(
-            || (canonical_path.clone(), import.module.span),
-            |alias| {
-                (
-                    ModulePath::from_components([alias.text.to_string()])
-                        .expect("parsed aliases are valid module components"),
-                    alias.span,
-                )
-            },
-        );
-
-        if let Some(previous) = indexes.get(&local_path).copied() {
-            let previous = &bindings[previous];
-            let previous_target = modules
-                .get(previous.target)
-                .expect("module bindings reference loaded modules")
-                .module_path();
-            let message = if previous.target == target {
-                format!("repeated module binding `{local_path}`")
-            } else {
-                format!("conflicting module binding `{local_path}`")
-            };
-            diagnostics.push(
-                Diagnostic::error(DUPLICATE_MODULE_BINDING, message)
-                    .with_primary_label(name_span, "rebound here")
-                    .with_secondary_label(previous.name_span, "first bound here")
-                    .with_note(format!(
-                        "the first binding selects `{previous_target}`; this import selects `{canonical_path}`"
-                    )),
-            );
-            continue;
-        }
-
-        indexes.insert(local_path.clone(), bindings.len());
-        bindings.push(ResolvedModuleBinding {
-            local_path,
-            target,
-            name_span,
-        });
-    }
-    bindings.sort_by(|left, right| left.local_path.cmp(&right.local_path));
-
-    ResolvedModuleBindings::new(module, bindings)
-}
-
-fn module_path(name: &syntax::Name) -> ModulePath {
-    ModulePath::from_components(name.components().map(|component| component.text.to_owned()))
-        .expect("parsed import paths are valid module paths")
 }

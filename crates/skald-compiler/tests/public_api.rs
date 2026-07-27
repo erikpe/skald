@@ -37,7 +37,8 @@ use skald_compiler::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
         ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
         ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
-        ResolvedModuleDeclarations, ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
+        ResolvedModuleDeclarations, ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable,
+        ResolvedOrdinaryBindings, ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
     },
     source::SourceDatabase,
     syntax::{dump_ast, parse, CompilationUnit, ParseOutput},
@@ -96,6 +97,9 @@ fn intentional_module_and_request_paths_compose() {
     let _module_binding: Option<ResolvedModuleBinding> = None;
     let _module_bindings: Option<ResolvedModuleBindings> = None;
     let _module_binding_table: Option<ResolvedModuleBindingTable> = None;
+    let _ordinary_binding: Option<ResolvedOrdinaryBinding> = None;
+    let _ordinary_bindings: Option<ResolvedOrdinaryBindings> = None;
+    let _ordinary_binding_table: Option<ResolvedOrdinaryBindingTable> = None;
     let _top_level_id: Option<ResolvedTopLevelId> = None;
     assert!(ResolvedVisibility::Public.is_public());
     assert!(!ResolvedVisibility::Private.is_public());

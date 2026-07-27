@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS7 is next.
+Status: in progress; MS8 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -138,7 +138,7 @@ implementation template:
 - [x] MS4 — Carry module ownership through whole-program IR
 - [x] MS5 — Collect and resolve a deterministic multi-module program
 - [x] MS6 — Resolve module imports and qualified uses
-- [ ] MS7 — Resolve selective imports and ordinary bindings
+- [x] MS7 — Resolve selective imports and ordinary bindings
 - [ ] MS8 — Coalesce compatible external ABI declarations
 - [ ] MS9 — Integrate compilation requests with the driver and CLI
 - [ ] MS10 — Harden determinism, diagnostics, fixtures, and documentation
@@ -544,26 +544,26 @@ as do `make check` and `make msrv-check`.
 **Purpose:** Complete the ergonomic unqualified import form without implicit
 flattening, wildcard behavior, or re-export surfaces.
 
-- [ ] Resolve each selective item from its canonical import-source module,
+- [x] Resolve each selective item from its canonical import-source module,
       never through an earlier alias or source-order-dependent binding.
-- [ ] Permit only public top-level classes, interfaces, defined functions, and
+- [x] Permit only public top-level classes, interfaces, defined functions, and
       external functions owned directly by the target module. Reject private,
       missing, wrong-kind, member, module-binding, and merely imported items.
-- [ ] Introduce the source name or one explicit alias into the importing
+- [x] Introduce the source name or one explicit alias into the importing
       module's ordinary top-level namespace while retaining the target's
       original identity and canonical owner.
-- [ ] Permit multiple local names for one canonical declaration. Reject a
+- [x] Permit multiple local names for one canonical declaration. Reject a
       repeated local ordinary name even when it would select the same target,
       and reject collisions with declarations owned by the importing module.
-- [ ] Preserve existing lexical shadowing: parameters and nested locals may
+- [x] Preserve existing lexical shadowing: parameters and nested locals may
       shadow a selectively imported ordinary name under the same rules as a
       module-local top-level declaration.
-- [ ] Keep selective reachability independent from binding count and do not
+- [x] Keep selective reachability independent from binding count and do not
       bind the source module implicitly. Requiring both qualified and
       unqualified access still requires both import declarations.
-- [ ] Keep target public surfaces direct and immutable; selective imports do
+- [x] Keep target public surfaces direct and immutable; selective imports do
       not alter downstream visibility or create re-exports.
-- [ ] Produce cross-file labels for collisions, privacy, missing targets, and
+- [x] Produce cross-file labels for collisions, privacy, missing targets, and
       wrong declaration kinds, and retain canonical target ownership in dumps.
 
 **Tests:** Focused unaliased/aliased/multiple-name imports, local declaration
@@ -575,6 +575,24 @@ and `make msrv-check`.
 **Exit criteria:** Selective imports add exactly the requested public
 declaration identities to ordinary lookup, with all frozen collision,
 shadowing, reachability, and non-re-export rules enforced centrally.
+
+**Implemented:** Resolution now collects one deterministic selective ordinary
+binding table per module, separate from both owned declarations and qualified
+module bindings. Each item is selected directly from the canonical source
+module's owned declaration index, retains its original dense identity and
+module owner, and enters lookup only under its source name or explicit alias.
+Collection rejects private or missing direct targets, local-declaration
+collisions, and repeated local names; members, module bindings, and imported
+declarations are absent from the selectable direct surface by construction.
+Lexical parameters and locals retain precedence, selective imports create no
+implicit qualified binding, and public surfaces remain immutable so imports
+cannot re-export. Resolved dumps show sorted local names, selected identities,
+and canonical owners, while HIR and MIR remain path-free. Focused coverage
+includes every supported declaration-use context, aliases and multiple names,
+lexical shadowing, cross-file failures, canonical-source independence,
+non-re-export, no implicit module binding, public API composition, type
+checking, HIR/MIR verification, assembly, and native execution. `make check`
+and `make msrv-check` pass.
 
 ### MS8 — Coalesce compatible external ABI declarations
 
