@@ -42,6 +42,7 @@ pub const INVALID_DEREFERENCE: &str = "RES019";
 pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
 pub const INVALID_OPTIONAL_TYPE: &str = "RES022";
+pub const UNSUPPORTED_MODULE_SYNTAX: &str = "RES023";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -70,6 +71,17 @@ fn resolve_type(
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
+    let qualified_name = match &type_syntax.kind {
+        syntax::TypeKind::Named(name) => Some(name),
+        syntax::TypeKind::Optional {
+            payload: syntax::OptionalPayloadKind::Named(name),
+            ..
+        } => Some(name),
+        _ => None,
+    };
+    if qualified_name.is_some_and(|name| reject_qualified_name(name, diagnostics)) {
+        return None;
+    }
     let kind = match &type_syntax.kind {
         syntax::TypeKind::I64 => ResolvedTypeKind::I64,
         syntax::TypeKind::U64 => ResolvedTypeKind::U64,
@@ -98,55 +110,60 @@ fn resolve_type(
                 syntax::OptionalPayloadKind::U8 => ResolvedOptionalPayload::U8,
                 syntax::OptionalPayloadKind::F64 => ResolvedOptionalPayload::F64,
                 syntax::OptionalPayloadKind::Bool => ResolvedOptionalPayload::Bool,
-                syntax::OptionalPayloadKind::Named(name) => match top_levels.get(&name.text) {
-                    Some(TopLevelSymbol {
-                        kind: TopLevelSymbolKind::Class(class),
-                        ..
-                    }) => ResolvedOptionalPayload::Class(*class),
-                    Some(TopLevelSymbol {
-                        kind: TopLevelSymbolKind::Interface(_),
-                        ..
-                    }) => {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_OPTIONAL_TYPE,
-                                format!(
-                                    "interface `{}` cannot be an inline optional payload",
-                                    name.text
+                syntax::OptionalPayloadKind::Named(name) => {
+                    match top_levels.get(name.text.as_str()) {
+                        Some(TopLevelSymbol {
+                            kind: TopLevelSymbolKind::Class(class),
+                            ..
+                        }) => ResolvedOptionalPayload::Class(*class),
+                        Some(TopLevelSymbol {
+                            kind: TopLevelSymbolKind::Interface(_),
+                            ..
+                        }) => {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_OPTIONAL_TYPE,
+                                    format!(
+                                        "interface `{}` cannot be an inline optional payload",
+                                        name.text
+                                    ),
+                                )
+                                .with_primary_label(
+                                    type_syntax.span,
+                                    "use `shared? Interface` for an optional owning view",
                                 ),
-                            )
-                            .with_primary_label(
-                                type_syntax.span,
-                                "use `shared? Interface` for an optional owning view",
-                            ),
-                        );
-                        return None;
+                            );
+                            return None;
+                        }
+                        Some(symbol) => {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    UNKNOWN_TYPE,
+                                    format!(
+                                        "`{}` does not name an optional payload type",
+                                        name.text
+                                    ),
+                                )
+                                .with_primary_label(name.span, "expected a concrete class")
+                                .with_secondary_label(symbol.name_span, "function declared here"),
+                            );
+                            return None;
+                        }
+                        None => {
+                            diagnostics.push(
+                                Diagnostic::error(
+                                    UNKNOWN_TYPE,
+                                    format!("unknown optional payload type `{}`", name.text),
+                                )
+                                .with_primary_label(
+                                    name.span,
+                                    "no concrete class with this name is declared",
+                                ),
+                            );
+                            return None;
+                        }
                     }
-                    Some(symbol) => {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                UNKNOWN_TYPE,
-                                format!("`{}` does not name an optional payload type", name.text),
-                            )
-                            .with_primary_label(name.span, "expected a concrete class")
-                            .with_secondary_label(symbol.name_span, "function declared here"),
-                        );
-                        return None;
-                    }
-                    None => {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                UNKNOWN_TYPE,
-                                format!("unknown optional payload type `{}`", name.text),
-                            )
-                            .with_primary_label(
-                                name.span,
-                                "no concrete class with this name is declared",
-                            ),
-                        );
-                        return None;
-                    }
-                },
+                }
             };
             ResolvedTypeKind::Optional {
                 payload,
@@ -177,7 +194,7 @@ fn resolve_type(
             ResolvedTypeKind::Array(array_types.intern(element))
         }
         syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
-        syntax::TypeKind::Named(name) => match top_levels.get(&name.text) {
+        syntax::TypeKind::Named(name) => match top_levels.get(name.text.as_str()) {
             Some(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
                 ..
@@ -212,6 +229,23 @@ fn resolve_type(
     })
 }
 
+fn reject_qualified_name(name: &syntax::Name, diagnostics: &mut Diagnostics) -> bool {
+    if !name.is_qualified() {
+        return false;
+    }
+    diagnostics.push(
+        Diagnostic::error(
+            UNSUPPORTED_MODULE_SYNTAX,
+            "qualified names require whole-program module compilation",
+        )
+        .with_primary_label(
+            name.span,
+            "the single-file semantic adapter cannot resolve this name",
+        ),
+    );
+    true
+}
+
 fn resolve_shared_target(
     target: &syntax::TypeSyntax,
     top_levels: &HashMap<String, TopLevelSymbol>,
@@ -242,7 +276,7 @@ fn resolve_shared_target(
     if target.text == "Obj" {
         return Some(ResolvedSharedTarget::Obj);
     }
-    match top_levels.get(&target.text) {
+    match top_levels.get(target.text.as_str()) {
         Some(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(class),
             ..

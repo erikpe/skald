@@ -296,6 +296,9 @@ impl CallableResolver<'_, '_> {
     ) -> Option<CallTarget> {
         match callee {
             syntax::Expression::Identifier(identifier) => {
+                if reject_qualified_name(&identifier.name, self.diagnostics) {
+                    return None;
+                }
                 if let Some(binding) = self.lookup_binding(&identifier.name.text) {
                     self.diagnostics.push(
                         Diagnostic::error(
@@ -310,7 +313,7 @@ impl CallableResolver<'_, '_> {
                 match self
                     .environment
                     .top_levels
-                    .get(&identifier.name.text)
+                    .get(identifier.name.text.as_str())
                     .copied()
                 {
                     Some(TopLevelSymbol {
@@ -460,7 +463,7 @@ impl CallableResolver<'_, '_> {
         let Some(requirement) = declaration
             .requirements
             .iter()
-            .find(|requirement| requirement.name == member.member.text)
+            .find(|requirement| requirement.name == member.member.text.as_str())
         else {
             self.diagnostics.push(
                 Diagnostic::error(

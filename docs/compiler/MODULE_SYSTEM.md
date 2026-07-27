@@ -3,9 +3,12 @@
 Status: authoritative frozen design for multiple-file compilation, module
 providers, filesystem resolution, entry selection, identities, loading, and
 linkage. Typed logical paths, request-local module/provider/package identities,
-provenance vocabulary, and the driver request model are implemented
-foundations; provider resolution, loading, and multiple-file compilation are
-not implemented. The current one-file driver remains authoritative in
+provenance vocabulary, the driver request model, and the source-shaped
+frontend representation of imports, visibility, and qualified names are
+implemented foundations. The parser performs no module lookup, and the
+single-file resolver reports module syntax as unsupported; provider
+resolution, loading, and multiple-file compilation are not implemented. The
+current one-file driver remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.

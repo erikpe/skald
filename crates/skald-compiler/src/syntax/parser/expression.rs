@@ -27,7 +27,7 @@ impl Parser<'_> {
             });
             return self.finish_type_or_presence_test(expression);
         }
-        let target = self.parse_name("expected a class, interface, or `Obj` after `is`")?;
+        let target = self.parse_name_path("expected a class, interface, or `Obj` after `is`")?;
         let span = self.cover(source.span(), target.span);
         let expression = Expression::TypeTest(TypeTestExpr {
             source: Box::new(source),
@@ -50,7 +50,7 @@ impl Parser<'_> {
             if self.at_contextual("some") || self.at(TokenKind::None) {
                 self.advance();
             } else {
-                let _ = self.parse_name("expected a type or presence state after `is`");
+                let _ = self.parse_name_path("expected a type or presence state after `is`");
             }
             return None;
         }
@@ -128,23 +128,18 @@ impl Parser<'_> {
         if !self.at(TokenKind::LeftParen) {
             return false;
         }
-        let (right_paren_distance, valid_target) = if self.peek_ahead(1).kind
-            == TokenKind::Identifier
+        let target_start = if self.peek_ahead(1).kind == TokenKind::Identifier
             && self.lexeme(self.peek_ahead(1)) == "shared"
         {
-            (
-                3,
-                self.peek_ahead(2).kind == TokenKind::Identifier
-                    && self.peek_ahead(3).kind == TokenKind::RightParen,
-            )
+            2
         } else {
-            (
-                2,
-                self.peek_ahead(1).kind == TokenKind::Identifier
-                    && self.peek_ahead(2).kind == TokenKind::RightParen,
-            )
+            1
         };
-        valid_target && self.starts_cast_operand(right_paren_distance + 1)
+        let Some(right_paren_distance) = self.name_path_end(target_start) else {
+            return false;
+        };
+        self.peek_ahead(right_paren_distance).kind == TokenKind::RightParen
+            && self.starts_cast_operand(right_paren_distance + 1)
     }
 
     fn starts_cast_operand(&self, distance: usize) -> bool {
@@ -175,7 +170,7 @@ impl Parser<'_> {
         } else {
             ObjectCastTargetMode::Plain
         };
-        let target = self.parse_name("expected a cast target")?;
+        let target = self.parse_name_path("expected a cast target")?;
         let _right_paren = self.expect(TokenKind::RightParen, "`)` after the cast target")?;
         let source = self.with_syntax_nesting(left_paren.span, |parser| parser.parse_unary())?;
         let span = self.cover(left_paren.span, source.span());
@@ -386,10 +381,7 @@ impl Parser<'_> {
         if self.at_contextual("new") && self.starts_array_construction(true) {
             return self.parse_array_construction(true);
         }
-        if self.at_contextual("new")
-            && self.peek_ahead(1).kind == TokenKind::Identifier
-            && self.peek_ahead(2).kind == TokenKind::LeftParen
-        {
+        if self.at_contextual("new") && self.name_path_followed_by(1, TokenKind::LeftParen) {
             return self.parse_allocation();
         }
 
@@ -397,13 +389,10 @@ impl Parser<'_> {
             return Some(Expression::Absent(AbsentExpr { span: token.span }));
         }
 
-        if let Some(token) = self.consume(TokenKind::Identifier) {
-            let name = Name {
-                text: self.lexeme(token).to_owned(),
-                span: token.span,
-            };
+        if self.at(TokenKind::Identifier) {
+            let name = self.parse_name_path("expected a declaration or binding name")?;
             return Some(Expression::Identifier(IdentifierExpr {
-                span: token.span,
+                span: name.span,
                 name,
             }));
         }
@@ -467,7 +456,7 @@ impl Parser<'_> {
     fn parse_allocation(&mut self) -> Option<Expression> {
         let new_token = self.advance();
         debug_assert_eq!(self.lexeme(new_token), "new");
-        let target = self.parse_name("expected a concrete class after `new`")?;
+        let target = self.parse_name_path("expected a concrete class after `new`")?;
         let left_paren = self.peek().span;
         let (arguments, end_span) =
             self.with_syntax_nesting(left_paren, |parser| parser.parse_construction_arguments())?;
@@ -477,5 +466,20 @@ impl Parser<'_> {
             target,
             arguments,
         })))
+    }
+
+    fn name_path_followed_by(&self, start: usize, follower: TokenKind) -> bool {
+        self.name_path_end(start)
+            .is_some_and(|end| self.peek_ahead(end).kind == follower)
+    }
+
+    fn name_path_end(&self, start: usize) -> Option<usize> {
+        (self.peek_ahead(start).kind == TokenKind::Identifier).then_some(())?;
+        let mut distance = start + 1;
+        while self.peek_ahead(distance).kind == TokenKind::DoubleColon {
+            (self.peek_ahead(distance + 1).kind == TokenKind::Identifier).then_some(())?;
+            distance += 2;
+        }
+        Some(distance)
     }
 }

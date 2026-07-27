@@ -1,11 +1,73 @@
 //! Source-shaped AST for the implemented language subset.
 
+use std::{fmt, ops::Deref};
+
 use crate::{literal::NumericLiteralKind, source::Span};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationUnit {
+    pub imports: Vec<ImportDeclaration>,
     pub declarations: Vec<TopLevelDeclaration>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ImportDeclaration {
+    Module(ModuleImport),
+    Selective(SelectiveImport),
+}
+
+impl ImportDeclaration {
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Module(import) => import.span,
+            Self::Selective(import) => import.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModuleImport {
+    pub import_span: Span,
+    pub module: Name,
+    pub as_span: Option<Span>,
+    pub alias: Option<Name>,
+    pub semicolon_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SelectiveImport {
+    pub from_span: Span,
+    pub module: Name,
+    pub import_span: Span,
+    pub items: Vec<SelectiveImportItem>,
+    pub comma_spans: Vec<Span>,
+    pub semicolon_span: Span,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SelectiveImportItem {
+    pub name: Name,
+    pub as_span: Option<Span>,
+    pub alias: Option<Name>,
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Visibility {
+    Private,
+    Public { span: Span },
+}
+
+impl Visibility {
+    pub const fn start_span(self, fallback: Span) -> Span {
+        match self {
+            Self::Private => fallback,
+            Self::Public { span } => span,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,6 +88,15 @@ impl TopLevelDeclaration {
         }
     }
 
+    pub const fn visibility(&self) -> Visibility {
+        match self {
+            Self::Function(function) => function.visibility,
+            Self::ExternalFunction(function) => function.visibility,
+            Self::Class(class) => class.visibility,
+            Self::Interface(interface) => interface.visibility,
+        }
+    }
+
     pub const fn span(&self) -> Span {
         match self {
             Self::Function(function) => function.span,
@@ -38,6 +109,7 @@ impl TopLevelDeclaration {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ClassDecl {
+    pub visibility: Visibility,
     pub name: Name,
     pub direct_base: Option<Name>,
     pub implemented_interfaces: Vec<Name>,
@@ -47,6 +119,7 @@ pub struct ClassDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterfaceDecl {
+    pub visibility: Visibility,
     pub name: Name,
     pub requirements: Vec<InterfaceRequirementDecl>,
     pub span: Span,
@@ -149,6 +222,7 @@ impl MethodModifier {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
+    pub visibility: Visibility,
     pub name: Name,
     pub parameters: Vec<Parameter>,
     pub return_type: TypeSyntax,
@@ -158,6 +232,7 @@ pub struct FunctionDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExternalFunctionDecl {
+    pub visibility: Visibility,
     pub name: Name,
     pub parameters: Vec<Parameter>,
     pub return_type: TypeSyntax,
@@ -191,8 +266,135 @@ impl ParameterBindingMode {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Name {
+    pub text: NameText,
+    pub span: Span,
+}
+
+impl Name {
+    pub fn unqualified(text: String, span: Span) -> Self {
+        Self {
+            text: NameText::Unqualified(text),
+            span,
+        }
+    }
+
+    pub fn qualified(
+        text: String,
+        span: Span,
+        components: Vec<NameComponent>,
+        separator_spans: Vec<Span>,
+    ) -> Self {
+        Self {
+            text: NameText::Qualified(Box::new(NameQualification {
+                text,
+                components,
+                separator_spans,
+            })),
+            span,
+        }
+    }
+
+    pub const fn is_qualified(&self) -> bool {
+        matches!(self.text, NameText::Qualified(_))
+    }
+
+    pub fn components(&self) -> NameComponents<'_> {
+        match &self.text {
+            NameText::Qualified(qualification) => {
+                NameComponents::Qualified(qualification.components.iter())
+            }
+            NameText::Unqualified(_) => NameComponents::Unqualified(Some(NameComponentRef {
+                text: &self.text,
+                span: self.span,
+            })),
+        }
+    }
+
+    pub fn separator_spans(&self) -> &[Span] {
+        match &self.text {
+            NameText::Unqualified(_) => &[],
+            NameText::Qualified(qualification) => &qualification.separator_spans,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum NameText {
+    Unqualified(String),
+    Qualified(Box<NameQualification>),
+}
+
+impl NameText {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Unqualified(text) => text,
+            Self::Qualified(qualification) => &qualification.text,
+        }
+    }
+}
+
+impl Deref for NameText {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
+    }
+}
+
+impl fmt::Display for NameText {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self)
+    }
+}
+
+impl PartialEq<str> for NameText {
+    fn eq(&self, other: &str) -> bool {
+        self.as_str() == other
+    }
+}
+
+impl PartialEq<&str> for NameText {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NameComponent {
     pub text: String,
     pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NameQualification {
+    pub text: String,
+    pub components: Vec<NameComponent>,
+    pub separator_spans: Vec<Span>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NameComponentRef<'name> {
+    pub text: &'name str,
+    pub span: Span,
+}
+
+pub enum NameComponents<'name> {
+    Unqualified(Option<NameComponentRef<'name>>),
+    Qualified(std::slice::Iter<'name, NameComponent>),
+}
+
+impl<'name> Iterator for NameComponents<'name> {
+    type Item = NameComponentRef<'name>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Unqualified(component) => component.take(),
+            Self::Qualified(components) => components.next().map(|component| NameComponentRef {
+                text: &component.text,
+                span: component.span,
+            }),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

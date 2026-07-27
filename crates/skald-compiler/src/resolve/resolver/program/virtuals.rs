@@ -137,7 +137,7 @@ fn report_invalid_redeclarations(
             };
             let Some(direct) = symbols
                 .ordinary
-                .get(&name.text)
+                .get(name.text.as_str())
                 .filter(|symbol| symbol.name_span == name_span)
                 .map(|symbol| resolved_member(symbol.kind))
             else {

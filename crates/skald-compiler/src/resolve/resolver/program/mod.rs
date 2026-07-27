@@ -51,6 +51,19 @@ impl<'ast> ProgramResolver<'ast> {
     }
 
     pub(super) fn resolve(mut self) -> ResolveOutput {
+        for import in &self.ast.imports {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    UNSUPPORTED_MODULE_SYNTAX,
+                    "module imports require whole-program module compilation",
+                )
+                .with_primary_label(
+                    import.span(),
+                    "the single-file semantic adapter cannot resolve this import",
+                )
+                .with_note("module graph loading and import resolution are implemented in later roadmap milestones"),
+            );
+        }
         self.collect_top_levels();
 
         let function_declarations = self.collect_function_declarations();
@@ -154,7 +167,7 @@ impl<'ast> ProgramResolver<'ast> {
                 }
             };
 
-            if let Some(previous) = self.top_levels.get(&name.text) {
+            if let Some(previous) = self.top_levels.get(name.text.as_str()) {
                 let both_functions = matches!(
                     (previous.kind, kind),
                     (
@@ -178,7 +191,7 @@ impl<'ast> ProgramResolver<'ast> {
             }
 
             self.top_levels.insert(
-                name.text.clone(),
+                name.text.to_string(),
                 TopLevelSymbol {
                     kind,
                     name_span: name.span,
@@ -200,7 +213,7 @@ impl<'ast> ProgramResolver<'ast> {
             .map(|item| match &self.ast.declarations[item.ast_index] {
                 syntax::TopLevelDeclaration::Function(function) => ResolvedFunctionDeclaration {
                     id: item.id,
-                    name: function.name.text.clone(),
+                    name: function.name.text.to_string(),
                     name_span: function.name.span,
                     parameters: resolve_parameters(
                         item.id.into(),
@@ -221,7 +234,7 @@ impl<'ast> ProgramResolver<'ast> {
                 syntax::TopLevelDeclaration::ExternalFunction(function) => {
                     ResolvedFunctionDeclaration {
                         id: item.id,
-                        name: function.name.text.clone(),
+                        name: function.name.text.to_string(),
                         name_span: function.name.span,
                         parameters: resolve_parameters(
                             item.id.into(),
@@ -237,7 +250,7 @@ impl<'ast> ProgramResolver<'ast> {
                             &mut self.diagnostics,
                         ),
                         linkage: ResolvedFunctionLinkage::External {
-                            symbol: function.name.text.clone(),
+                            symbol: function.name.text.to_string(),
                         },
                         span: function.span,
                     }
@@ -338,7 +351,7 @@ fn resolve_parameters(
     let mut names = HashMap::<String, Span>::new();
     let mut resolved = Vec::with_capacity(parameters.len());
     for parameter in parameters {
-        if let Some(previous_span) = names.get(&parameter.name.text) {
+        if let Some(previous_span) = names.get(parameter.name.text.as_str()) {
             diagnostics.push(
                 Diagnostic::error(
                     DUPLICATE_BINDING,
@@ -349,7 +362,7 @@ fn resolve_parameters(
             );
             continue;
         }
-        names.insert(parameter.name.text.clone(), parameter.name.span);
+        names.insert(parameter.name.text.to_string(), parameter.name.span);
         let Some(type_syntax) =
             resolve_type(&parameter.type_syntax, top_levels, array_types, diagnostics)
         else {
@@ -358,7 +371,7 @@ fn resolve_parameters(
         resolved.push(ResolvedParameter {
             id: ParameterId::new(callable, resolved.len()),
             binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
-            name: parameter.name.text.clone(),
+            name: parameter.name.text.to_string(),
             name_span: parameter.name.span,
             type_syntax,
             span: parameter.span,

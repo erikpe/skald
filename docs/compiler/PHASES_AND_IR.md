@@ -50,6 +50,14 @@ foundational request contracts only: the active pipeline entry remains
 `compile_source_to_assembly`, and it neither resolves providers nor loads a
 module graph yet.
 
+The lexer and parser additionally recognize the frozen module punctuation,
+imports, top-level visibility, and qualified declaration spellings. The AST
+retains unresolved path components and all diagnostic-relevant separator and
+introducer spans without choosing a module binding or declaration leaf.
+This is a phase-local representation boundary: the single-file resolver emits
+`RES023` for imports and qualified names, so the complete compiler still does
+not accept module-bearing programs.
+
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
 target identities. For optional owning values, type checking selects explicit

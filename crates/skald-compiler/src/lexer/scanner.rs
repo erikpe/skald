@@ -193,6 +193,12 @@ impl<'source> Lexer<'source> {
             self.push_token(TokenKind::Arrow, start);
             return;
         }
+        if self.remaining().starts_with("::") {
+            self.advance();
+            self.advance();
+            self.push_token(TokenKind::DoubleColon, start);
+            return;
+        }
 
         let kind = match character {
             '(' => TokenKind::LeftParen,

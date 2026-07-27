@@ -487,6 +487,35 @@ fn token_dump_is_deterministic_and_escapes_lexemes() {
 }
 
 #[test]
+fn double_colon_is_one_token_with_its_exact_span() {
+    let (sources, source_id, output) = lex_text("std::Str");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        vec![
+            TokenKind::Identifier,
+            TokenKind::DoubleColon,
+            TokenKind::Identifier,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        dump_tokens(source, &output.tokens),
+        concat!(
+            "IDENTIFIER 1:1..1:4 \"std\"\n",
+            "DOUBLE_COLON 1:4..1:6 \"::\"\n",
+            "IDENTIFIER 1:6..1:9 \"Str\"\n",
+            "EOF 1:9..1:9 \"\"\n",
+        )
+    );
+}
+
+#[test]
 #[should_panic(expected = "token span must belong to the source being dumped")]
 fn token_dump_rejects_tokens_from_another_source() {
     let mut sources = SourceDatabase::new();

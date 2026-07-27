@@ -60,8 +60,10 @@ behavior is defined by
 request, provider, loading, identity, and linkage design is defined by the
 [module-system compiler contract](MODULE_SYSTEM.md). Typed logical paths,
 request-local module/provider/package identities, provenance records, and the
-driver request model are implemented foundations; source syntax, filesystem
-loading, and multi-module compilation remain unavailable. Test
+driver request model are implemented foundations. The frontend now represents
+module syntax source-shape, while the single-file semantic adapter rejects it
+with a structured diagnostic; filesystem loading and multi-module compilation
+remain unavailable. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

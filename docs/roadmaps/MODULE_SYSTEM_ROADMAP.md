@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS1 is next.
+Status: in progress; MS2 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -132,7 +132,7 @@ implementation template:
 ## Progress
 
 - [x] MS0 — Establish module identities and request contracts
-- [ ] MS1 — Parse imports, visibility, and qualified source paths
+- [x] MS1 — Parse imports, visibility, and qualified source paths
 - [ ] MS2 — Normalize providers and resolve filesystem candidates
 - [ ] MS3 — Select the entry and load the reachable module graph
 - [ ] MS4 — Carry module ownership through whole-program IR
@@ -191,37 +191,37 @@ semantic identity, while all current one-file behavior remains unchanged.
 **Purpose:** Produce complete source-shaped syntax for every frozen module form
 before graph loading or semantic lookup consumes it.
 
-- [ ] Add one lexer token for `::` with exact token/span/dump behavior. Keep
+- [x] Add one lexer token for `::` with exact token/span/dump behavior. Keep
       `import`, `from`, `as`, and `public` contextual rather than reserving
       them globally.
-- [ ] Add AST forms for module imports, one-identifier module aliases,
+- [x] Add AST forms for module imports, one-identifier module aliases,
       selective imports, selective declaration aliases, and declaration
       visibility. Preserve introducer, component, alias, separator, list, and
       full-declaration spans needed by later diagnostics.
-- [ ] Represent a qualified declaration spelling as an unresolved component
+- [x] Represent a qualified declaration spelling as an unresolved component
       chain wherever a top-level declaration name may currently appear:
       types, calls, construction, inheritance, interface claims, casts, type
       tests, and other existing declaration-bearing source positions.
       Parsing must not guess where a module binding ends and the declaration
       leaf begins.
-- [ ] Parse all imports before top-level declarations, exact `::` module paths,
+- [x] Parse all imports before top-level declarations, exact `::` module paths,
       optional one-identifier module aliases, and comma-separated selective
       lists without trailing commas.
-- [ ] Parse optional `public` on functions, external declarations, classes,
+- [x] Parse optional `public` on functions, external declarations, classes,
       and interfaces only. Preserve private-by-default behavior in the AST.
-- [ ] Reject wildcard imports, relative/parent spellings, empty components,
+- [x] Reject wildcard imports, relative/parent spellings, empty components,
       multi-segment aliases, misplaced imports, trailing selective commas, and
       malformed qualified uses with focused recovery that reaches later
       declarations.
-- [ ] Ensure contextual words remain valid identifiers outside their exact
+- [x] Ensure contextual words remain valid identifiers outside their exact
       import and visibility positions.
-- [ ] Extend token and AST dumps deterministically. Ensure a one-file AST with
+- [x] Extend token and AST dumps deterministically. Ensure a one-file AST with
       no imports retains a compact, stable representation or receives one
       intentional expectation update.
-- [ ] Give the still-single-file semantic adapter a structured unsupported-
+- [x] Give the still-single-file semantic adapter a structured unsupported-
       module diagnostic for a parsed import rather than ignoring it or
       panicking. Full import semantics arrive in MS3 through MS7.
-- [ ] Update the implemented grammar only when a form becomes accepted by the
+- [x] Update the implemented grammar only when a form becomes accepted by the
       complete compiler; until then keep the frozen grammar as the future
       authority and describe syntax support as phase-local.
 
@@ -232,6 +232,15 @@ input, and recovery tests across every qualified-use context, followed by
 **Exit criteria:** The frontend losslessly represents every frozen import,
 visibility, and qualified-use form, rejects every excluded spelling at syntax
 ownership, and never performs module lookup.
+
+**Implementation record (2026-07-27):** Complete. Qualified spellings use a
+compact tagged name representation: ordinary names retain their previous AST
+footprint, while qualified names own normalized text plus component and
+separator spans. This preserves the existing recursive syntax budget while
+allowing iterative paths with thousands of components. The single-file
+resolver reports `RES023` for imports and qualified uses. Focused lexer,
+parser, dump, recovery, contextual-word, long-path, and resolver-adapter tests
+pass, as do `make check`, `make msrv-check`, and `make robustness-long`.
 
 ### MS2 — Normalize providers and resolve filesystem candidates
 

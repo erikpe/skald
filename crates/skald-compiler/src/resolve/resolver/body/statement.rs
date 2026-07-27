@@ -188,7 +188,7 @@ impl CallableResolver<'_, '_> {
         if declared {
             self.locals.push(ResolvedLocal {
                 id,
-                name: local.name.text.clone(),
+                name: local.name.text.to_string(),
                 name_span: local.name.span,
                 type_syntax: ty,
                 span: local.span,

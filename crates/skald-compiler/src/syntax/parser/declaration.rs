@@ -65,7 +65,7 @@ impl TypeContext {
 }
 
 impl Parser<'_> {
-    pub(super) fn parse_function(&mut self) -> Option<FunctionDecl> {
+    pub(super) fn parse_function(&mut self, visibility: Visibility) -> Option<FunctionDecl> {
         let fn_token = self.advance();
         let name = self.parse_name("expected a function name after `fn`");
         let parameters = self.parse_parameter_list();
@@ -79,9 +79,10 @@ impl Parser<'_> {
             }
             _ => return None,
         };
-        let span = self.cover(fn_token.span, body.span);
+        let span = self.cover(visibility.start_span(fn_token.span), body.span);
 
         Some(FunctionDecl {
+            visibility,
             name,
             parameters,
             return_type,
@@ -90,7 +91,10 @@ impl Parser<'_> {
         })
     }
 
-    pub(super) fn parse_external_function(&mut self) -> Option<ExternalFunctionDecl> {
+    pub(super) fn parse_external_function(
+        &mut self,
+        visibility: Visibility,
+    ) -> Option<ExternalFunctionDecl> {
         let extern_token = self.advance();
         self.expect(TokenKind::Fn, "`fn` after `extern`")?;
         let name = self.parse_name("expected a function name after `extern fn`");
@@ -110,10 +114,11 @@ impl Parser<'_> {
             .map(|token| token.span)
             .unwrap_or(return_type.span);
         Some(ExternalFunctionDecl {
+            visibility,
             name,
             parameters,
             return_type,
-            span: self.cover(extern_token.span, end_span),
+            span: self.cover(visibility.start_span(extern_token.span), end_span),
         })
     }
 
@@ -303,7 +308,7 @@ impl Parser<'_> {
         {
             let shared = self.advance();
             self.consume(TokenKind::Question);
-            let target = self.parse_name("a class, interface, or `Obj` after `shared`")?;
+            let target = self.parse_name_path("a class, interface, or `Obj` after `shared`")?;
             let end = self
                 .consume(TokenKind::Question)
                 .map_or(target.span, |question| question.span);
@@ -320,7 +325,7 @@ impl Parser<'_> {
             let shared = self.advance();
             if let Some(question) = self.consume(TokenKind::Question) {
                 if self.at(TokenKind::Question) {
-                    let _ = self.parse_name("a class, interface, or `Obj` after `shared?`")?;
+                    let _ = self.parse_name_path("a class, interface, or `Obj` after `shared?`")?;
                 }
                 let target = self.with_syntax_nesting(shared.span, |parser| {
                     parser.parse_type_inner(
@@ -422,11 +427,8 @@ impl Parser<'_> {
                 return None;
             }
         } else if context.accepts_named() && token.kind == TokenKind::Identifier {
-            self.advance();
-            let name = Name {
-                text: self.lexeme(token).to_owned(),
-                span: token.span,
-            };
+            let name = self.parse_name_path("expected a named type")?;
+            let name_span = name.span;
             if let Some(question) = self.consume(TokenKind::Question) {
                 if name.text == "Obj" {
                     self.report(
@@ -448,15 +450,15 @@ impl Parser<'_> {
                 TypeSyntax {
                     kind: TypeKind::Optional {
                         payload: OptionalPayloadKind::Named(name),
-                        payload_span: token.span,
+                        payload_span: name_span,
                         question_span: question.span,
                     },
-                    span: self.cover(token.span, question.span),
+                    span: self.cover(name_span, question.span),
                 }
             } else {
                 TypeSyntax {
                     kind: TypeKind::Named(name),
-                    span: token.span,
+                    span: name_span,
                 }
             }
         } else if let Some(left_paren) = self.consume(TokenKind::LeftParen) {

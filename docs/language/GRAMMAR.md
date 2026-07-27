@@ -8,11 +8,14 @@ This document defines tokens, concrete source shape, precedence,
 associativity, and syntax-error boundaries. It does not define name lookup,
 types, ownership, evaluation, lifecycle behavior, ABI, or lowering.
 
-The frozen but unimplemented module syntax is deliberately absent from this
-implemented grammar. Its exact extension is owned by
+The frozen module syntax is deliberately absent from this complete-compiler
+grammar until the whole-program module pipeline is implemented. Its exact
+extension is owned by
 [Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#import-syntax);
-until implemented, `import`, `from`, `as`, and `public` remain ordinary
-identifiers and `::` is not accepted punctuation.
+the lexer and parser currently recognize it only as a phase-local,
+source-shaped representation. `import`, `from`, `as`, and `public` remain
+contextual identifiers, and the single-file semantic adapter rejects imports
+and qualified `::` uses with a structured unsupported-module diagnostic.
 
 ## Notation
 

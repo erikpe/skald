@@ -105,6 +105,14 @@ impl Parser<'_> {
                 (inner_end + 1, contains_array)
             } else if token_type_starts_array_element(token.kind) {
                 let mut end = distance + 1;
+                if token.kind == TokenKind::Identifier {
+                    while self.peek_ahead(end).kind == TokenKind::DoubleColon {
+                        if self.peek_ahead(end + 1).kind != TokenKind::Identifier {
+                            return None;
+                        }
+                        end += 2;
+                    }
+                }
                 if self.peek_ahead(end).kind == TokenKind::Question {
                     end += 1;
                 }

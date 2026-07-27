@@ -23,7 +23,7 @@ pub(super) fn collect_interface_declarations(
                 .enumerate()
                 .map(|(index, requirement)| ResolvedInterfaceRequirement {
                     id: InterfaceRequirementId::new(id, index),
-                    name: requirement.name.text.clone(),
+                    name: requirement.name.text.to_string(),
                     name_span: requirement.name.span,
                     mutable: requirement.mut_span.is_some(),
                     parameters: requirement
@@ -41,7 +41,7 @@ pub(super) fn collect_interface_declarations(
                                     binding_mode: resolve_parameter_binding_mode(
                                         parameter.binding_mode,
                                     ),
-                                    name: parameter.name.text.clone(),
+                                    name: parameter.name.text.to_string(),
                                     name_span: parameter.name.span,
                                     type_syntax,
                                     span: parameter.span,
@@ -60,7 +60,7 @@ pub(super) fn collect_interface_declarations(
                 .collect();
             ResolvedInterfaceDeclaration {
                 id,
-                name: interface.name.text.clone(),
+                name: interface.name.text.to_string(),
                 name_span: interface.name.span,
                 requirements,
                 span: interface.span,
@@ -82,7 +82,10 @@ pub(super) fn resolve_interface_claims(
         };
         let mut seen = HashSet::new();
         for claim in &syntax_class.implemented_interfaces {
-            match top_levels.get(&claim.text) {
+            if reject_qualified_name(claim, diagnostics) {
+                continue;
+            }
+            match top_levels.get(claim.text.as_str()) {
                 Some(TopLevelSymbol {
                     kind: TopLevelSymbolKind::Interface(interface),
                     ..

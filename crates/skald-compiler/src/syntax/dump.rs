@@ -13,6 +13,9 @@ pub fn dump_ast(ast: &CompilationUnit) -> String {
     let mut dumper = AstDumper::default();
     dumper.line("CompilationUnit", ast.span);
     dumper.indented(|dumper| {
+        for import in &ast.imports {
+            dumper.import(import);
+        }
         for declaration in &ast.declarations {
             match declaration {
                 TopLevelDeclaration::Function(function) => dumper.function(function),
@@ -34,9 +37,69 @@ struct AstDumper {
 }
 
 impl AstDumper {
+    fn import(&mut self, import: &ImportDeclaration) {
+        match import {
+            ImportDeclaration::Module(import) => {
+                self.line("ModuleImport", import.span);
+                self.indented(|dumper| {
+                    dumper.line("Import", import.import_span);
+                    dumper.name_path("Module", &import.module);
+                    if let (Some(as_span), Some(alias)) = (import.as_span, &import.alias) {
+                        dumper.line("As", as_span);
+                        dumper.named("Alias", &alias.text, alias.span);
+                    }
+                    dumper.line("Semicolon", import.semicolon_span);
+                });
+            }
+            ImportDeclaration::Selective(import) => {
+                self.line("SelectiveImport", import.span);
+                self.indented(|dumper| {
+                    dumper.line("From", import.from_span);
+                    dumper.name_path("Module", &import.module);
+                    dumper.line("Import", import.import_span);
+                    for (index, item) in import.items.iter().enumerate() {
+                        dumper.line("Item", item.span);
+                        dumper.indented(|dumper| {
+                            dumper.named("Name", &item.name.text, item.name.span);
+                            if let (Some(as_span), Some(alias)) = (item.as_span, &item.alias) {
+                                dumper.line("As", as_span);
+                                dumper.named("Alias", &alias.text, alias.span);
+                            }
+                        });
+                        if let Some(comma) = import.comma_spans.get(index) {
+                            dumper.line("Comma", *comma);
+                        }
+                    }
+                    dumper.line("Semicolon", import.semicolon_span);
+                });
+            }
+        }
+    }
+
+    fn visibility(&mut self, visibility: Visibility) {
+        if let Visibility::Public { span } = visibility {
+            self.line("Public", span);
+        }
+    }
+
+    fn name_path(&mut self, label: &str, name: &Name) {
+        self.named(label, &name.text, name.span);
+        if name.is_qualified() {
+            self.indented(|dumper| {
+                for (index, component) in name.components().enumerate() {
+                    dumper.named("Component", component.text, component.span);
+                    if let Some(separator) = name.separator_spans().get(index) {
+                        dumper.line("Separator", *separator);
+                    }
+                }
+            });
+        }
+    }
+
     fn interface(&mut self, interface: &InterfaceDecl) {
         self.line("Interface", interface.span);
         self.indented(|dumper| {
+            dumper.visibility(interface.visibility);
             dumper.named("Name", &interface.name.text, interface.name.span);
             dumper.heading("Requirements");
             dumper.indented(|dumper| {
@@ -62,12 +125,13 @@ impl AstDumper {
     fn class(&mut self, class: &ClassDecl) {
         self.line("Class", class.span);
         self.indented(|dumper| {
+            dumper.visibility(class.visibility);
             dumper.named("Name", &class.name.text, class.name.span);
             if let Some(base) = &class.direct_base {
-                dumper.named("DirectBase", &base.text, base.span);
+                dumper.name_path("DirectBase", base);
             }
             for interface in &class.implemented_interfaces {
-                dumper.named("Implements", &interface.text, interface.span);
+                dumper.name_path("Implements", interface);
             }
             dumper.heading("Members");
             dumper.indented(|dumper| {
@@ -152,6 +216,7 @@ impl AstDumper {
     fn function(&mut self, function: &FunctionDecl) {
         self.line("Function", function.span);
         self.indented(|dumper| {
+            dumper.visibility(function.visibility);
             dumper.named("Name", &function.name.text, function.name.span);
             dumper.parameters_and_return(&function.parameters, &function.return_type);
             dumper.block(&function.body);
@@ -161,6 +226,7 @@ impl AstDumper {
     fn external_function(&mut self, function: &ExternalFunctionDecl) {
         self.line("ExternalFunction", function.span);
         self.indented(|dumper| {
+            dumper.visibility(function.visibility);
             dumper.named("Name", &function.name.text, function.name.span);
             dumper.parameters_and_return(&function.parameters, &function.return_type);
         });
@@ -215,7 +281,7 @@ impl AstDumper {
                 self.line("Type Shared", type_syntax.span);
                 self.indented(|dumper| {
                     if let TypeKind::Named(target) = &target.kind {
-                        dumper.named("Target", &target.text, target.span);
+                        dumper.name_path("Target", target);
                     } else {
                         dumper.heading("Target");
                         dumper.indented(|dumper| dumper.type_syntax(target));
@@ -239,9 +305,7 @@ impl AstDumper {
                         OptionalPayloadKind::U8 => dumper.line("Payload U8", *payload_span),
                         OptionalPayloadKind::F64 => dumper.line("Payload F64", *payload_span),
                         OptionalPayloadKind::Bool => dumper.line("Payload Bool", *payload_span),
-                        OptionalPayloadKind::Named(name) => {
-                            dumper.named("Payload Named", &name.text, *payload_span)
-                        }
+                        OptionalPayloadKind::Named(name) => dumper.name_path("Payload Named", name),
                     }
                     dumper.line("Question", *question_span);
                 });
@@ -263,7 +327,7 @@ impl AstDumper {
                     dumper.line("Shared", *shared_span);
                     dumper.line("Question", *question_span);
                     if let TypeKind::Named(target) = &target.kind {
-                        dumper.named("Target", &target.text, target.span);
+                        dumper.name_path("Target", target);
                     } else {
                         dumper.heading("Target");
                         dumper.indented(|dumper| dumper.type_syntax(target));
@@ -299,7 +363,7 @@ impl AstDumper {
                 return;
             }
             TypeKind::Named(name) => {
-                self.named("Type Named", &name.text, type_syntax.span);
+                self.name_path("Type Named", name);
                 return;
             }
         };
@@ -447,7 +511,7 @@ impl AstDumper {
                     dumper.heading("Source");
                     dumper.indented(|dumper| dumper.expression(&test.source));
                     dumper.line("Is", test.is_span);
-                    dumper.named("Target", &test.target.text, test.target.span);
+                    dumper.name_path("Target", &test.target);
                 });
             }
             Expression::PresenceTest(test) => {
@@ -478,7 +542,7 @@ impl AstDumper {
                 };
                 self.line(mode, cast.span);
                 self.indented(|dumper| {
-                    dumper.named("Target", &cast.target.text, cast.target.span);
+                    dumper.name_path("Target", &cast.target);
                     dumper.heading("Source");
                     dumper.indented(|dumper| dumper.expression(&cast.source));
                 });
@@ -487,7 +551,7 @@ impl AstDumper {
                 self.line("Allocation", allocation.span);
                 self.indented(|dumper| {
                     dumper.line("New", allocation.new_span);
-                    dumper.named("Target", &allocation.target.text, allocation.target.span);
+                    dumper.name_path("Target", &allocation.target);
                     match &allocation.arguments {
                         CallArguments::Ordinary(arguments) => {
                             dumper.heading("Arguments");

@@ -436,13 +436,20 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         &mut self,
         identifier: &syntax::IdentifierExpr,
     ) -> Option<ResolvedExpression> {
+        if reject_qualified_name(&identifier.name, self.diagnostics) {
+            return None;
+        }
         if let Some(symbol) = self.lookup_binding(&identifier.name.text) {
             return Some(ResolvedExpression::Binding(ResolvedBindingExpr {
                 binding: symbol.id,
                 span: identifier.span,
             }));
         }
-        match self.environment.top_levels.get(&identifier.name.text) {
+        match self
+            .environment
+            .top_levels
+            .get(identifier.name.text.as_str())
+        {
             Some(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Function(_),
                 ..

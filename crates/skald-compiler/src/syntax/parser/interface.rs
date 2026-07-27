@@ -3,7 +3,7 @@
 use super::{declaration::TypeContext, *};
 
 impl Parser<'_> {
-    pub(super) fn parse_interface(&mut self) -> Option<InterfaceDecl> {
+    pub(super) fn parse_interface(&mut self, visibility: Visibility) -> Option<InterfaceDecl> {
         let interface_token = self.advance();
         let name = self.parse_name("expected an interface name after `interface`");
         let left = self.expect(TokenKind::LeftBrace, "`{` after the interface name")?;
@@ -26,9 +26,10 @@ impl Parser<'_> {
         self.brace_depth -= 1;
         let right = self.expect(TokenKind::RightBrace, "`}` after the interface body")?;
         Some(InterfaceDecl {
+            visibility,
             name: name?,
             requirements: requirements?,
-            span: self.cover(interface_token.span, right.span),
+            span: self.cover(visibility.start_span(interface_token.span), right.span),
         })
     }
 

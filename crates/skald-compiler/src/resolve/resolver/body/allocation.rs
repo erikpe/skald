@@ -7,6 +7,9 @@ impl CallableResolver<'_, '_> {
         &mut self,
         allocation: &syntax::AllocationExpr,
     ) -> Option<ResolvedExpression> {
+        if reject_qualified_name(&allocation.target, self.diagnostics) {
+            return None;
+        }
         let class = if allocation.target.text == "Obj" {
             self.diagnostics.push(
                 Diagnostic::error(INVALID_CONSTRUCTION_TARGET, "`Obj` cannot be allocated")
@@ -37,7 +40,7 @@ impl CallableResolver<'_, '_> {
         match self
             .environment
             .top_levels
-            .get(&allocation.target.text)
+            .get(allocation.target.text.as_str())
             .copied()
         {
             Some(TopLevelSymbol {

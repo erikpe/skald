@@ -3,7 +3,7 @@
 use super::{declaration::TypeContext, *};
 
 impl Parser<'_> {
-    pub(super) fn parse_class(&mut self) -> Option<ClassDecl> {
+    pub(super) fn parse_class(&mut self, visibility: Visibility) -> Option<ClassDecl> {
         let class_token = self.advance();
         let name = self.parse_name("expected a class name after `class`");
         let direct_base = self.parse_direct_base();
@@ -19,11 +19,12 @@ impl Parser<'_> {
         let name = name?;
 
         Some(ClassDecl {
+            visibility,
             name,
             direct_base,
             implemented_interfaces,
             members,
-            span: self.cover(class_token.span, right_brace.span),
+            span: self.cover(visibility.start_span(class_token.span), right_brace.span),
         })
     }
 
@@ -33,7 +34,8 @@ impl Parser<'_> {
         }
         self.advance();
         let mut interfaces = Vec::new();
-        while let Some(name) = self.parse_name("expected an interface name after `implements`") {
+        while let Some(name) = self.parse_name_path("expected an interface name after `implements`")
+        {
             interfaces.push(name);
             if self.consume(TokenKind::Comma).is_none() {
                 break;
@@ -48,7 +50,7 @@ impl Parser<'_> {
         }
 
         self.advance();
-        self.parse_name("expected a base class name after `extends`")
+        self.parse_name_path("expected a base class name after `extends`")
     }
 
     fn discard_duplicate_base_clauses(&mut self) {

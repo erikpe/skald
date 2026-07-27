@@ -78,7 +78,7 @@ impl ClassCollectionState {
         }
         self.fields.push(ResolvedFieldDeclaration {
             id: field_id,
-            name: field.name.text.clone(),
+            name: field.name.text.to_string(),
             name_span: field.name.span,
             type_syntax,
             span: field.span,
@@ -263,7 +263,7 @@ impl ClassCollectionState {
         }
         self.methods.push(ResolvedMethodDeclaration {
             id,
-            name: method.name.text.clone(),
+            name: method.name.text.to_string(),
             name_span: method.name.span,
             receiver_access: if method.mut_span.is_some() {
                 ResolvedReceiverAccess::Mutable
@@ -325,7 +325,7 @@ impl ClassCollectionState {
         (
             ResolvedClassDeclaration {
                 id: self.id,
-                name: class.name.text.clone(),
+                name: class.name.text.to_string(),
                 name_span: class.name.span,
                 direct_base: self.direct_base,
                 implemented_interfaces: Vec::new(),
@@ -413,7 +413,10 @@ fn resolve_direct_base(
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedDirectBase> {
     let base = class.direct_base.as_ref()?;
-    match top_levels.get(&base.text) {
+    if reject_qualified_name(base, diagnostics) {
+        return None;
+    }
+    match top_levels.get(base.text.as_str()) {
         Some(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(base_id),
             ..
@@ -560,7 +563,7 @@ fn resolve_copy_source_parameter(
     Some(ResolvedParameter {
         id: ParameterId::new(context.callable, 0),
         binding_mode: resolve_parameter_binding_mode(parameter.binding_mode),
-        name: parameter.name.text.clone(),
+        name: parameter.name.text.to_string(),
         name_span: parameter.name.span,
         type_syntax: ty,
         span: parameter.span,
@@ -594,7 +597,7 @@ fn declare_ordinary_member(
     kind: OrdinaryMemberSymbolKind,
     diagnostics: &mut Diagnostics,
 ) -> bool {
-    if let Some(previous) = symbols.ordinary.get(&name.text) {
+    if let Some(previous) = symbols.ordinary.get(name.text.as_str()) {
         diagnostics.push(
             Diagnostic::error(
                 DUPLICATE_MEMBER,
@@ -606,7 +609,7 @@ fn declare_ordinary_member(
         return false;
     }
     symbols.ordinary.insert(
-        name.text.clone(),
+        name.text.to_string(),
         OrdinaryMemberSymbol {
             kind,
             name_span: name.span,

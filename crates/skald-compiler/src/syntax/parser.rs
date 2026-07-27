@@ -13,6 +13,7 @@ mod class;
 mod declaration;
 mod expression;
 mod interface;
+mod module;
 mod recovery;
 mod statement;
 
@@ -26,6 +27,9 @@ pub const INVALID_CLASS_HEADER: &str = "PAR007";
 pub const INVALID_INTERFACE_MEMBER: &str = "PAR008";
 pub const INVALID_TYPE_TEST: &str = "PAR009";
 pub const INVALID_OPTIONAL_TYPE: &str = "PAR010";
+pub const INVALID_IMPORT: &str = "PAR011";
+pub const MISPLACED_IMPORT: &str = "PAR012";
+pub const INVALID_VISIBILITY: &str = "PAR013";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///
@@ -98,7 +102,9 @@ impl<'source> Parser<'source> {
     }
 
     fn parse(mut self) -> ParseOutput {
+        let mut imports = Vec::new();
         let mut declarations = Vec::new();
+        let mut declarations_started = false;
 
         while !self.at(TokenKind::Eof) {
             if self.at(TokenKind::Invalid) {
@@ -107,15 +113,42 @@ impl<'source> Parser<'source> {
                 continue;
             }
 
+            if self.starts_import() {
+                let misplaced_span = self.peek().span;
+                let import = self.parse_import();
+                if declarations_started {
+                    self.report(
+                        MISPLACED_IMPORT,
+                        "imports must precede all top-level declarations",
+                        misplaced_span,
+                        "move this import to the beginning of the file",
+                    );
+                } else if let Some(import) = import {
+                    imports.push(import);
+                }
+                continue;
+            }
+
+            let visibility = self.parse_visibility();
             let declaration = if self.at(TokenKind::Fn) {
-                self.parse_function().map(TopLevelDeclaration::Function)
+                self.parse_function(visibility)
+                    .map(TopLevelDeclaration::Function)
             } else if self.at(TokenKind::Extern) {
-                self.parse_external_function()
+                self.parse_external_function(visibility)
                     .map(TopLevelDeclaration::ExternalFunction)
             } else if self.at(TokenKind::Class) {
-                self.parse_class().map(TopLevelDeclaration::Class)
+                self.parse_class(visibility).map(TopLevelDeclaration::Class)
             } else if self.at_contextual("interface") {
-                self.parse_interface().map(TopLevelDeclaration::Interface)
+                self.parse_interface(visibility)
+                    .map(TopLevelDeclaration::Interface)
+            } else if matches!(visibility, Visibility::Public { .. }) {
+                self.report(
+                    INVALID_VISIBILITY,
+                    "`public` applies only to top-level declarations",
+                    self.peek().span,
+                    "expected `fn`, `extern fn`, `class`, or `interface`",
+                );
+                None
             } else if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
                 self.report(
                     EXPECTED_DECLARATION,
@@ -141,12 +174,16 @@ impl<'source> Parser<'source> {
                 declaration
             };
             match declaration {
-                Some(declaration) => declarations.push(declaration),
+                Some(declaration) => {
+                    declarations_started = true;
+                    declarations.push(declaration);
+                }
                 None => self.synchronize_declaration(),
             }
         }
 
         let ast = CompilationUnit {
+            imports,
             declarations,
             span: self
                 .source
@@ -162,10 +199,48 @@ impl<'source> Parser<'source> {
 
     fn parse_name(&mut self, message: &'static str) -> Option<Name> {
         let token = self.expect(TokenKind::Identifier, message)?;
-        Some(Name {
-            text: self.lexeme(token).to_owned(),
-            span: token.span,
-        })
+        Some(Name::unqualified(self.lexeme(token).to_owned(), token.span))
+    }
+
+    fn parse_name_path(&mut self, message: &'static str) -> Option<Name> {
+        let first = self.expect(TokenKind::Identifier, message)?;
+        let mut components = vec![NameComponent {
+            text: self.lexeme(first).to_owned(),
+            span: first.span,
+        }];
+        let mut separator_spans = Vec::new();
+        while let Some(separator) = self.consume(TokenKind::DoubleColon) {
+            separator_spans.push(separator.span);
+            let component = self.expect(TokenKind::Identifier, "a name component after `::`")?;
+            components.push(NameComponent {
+                text: self.lexeme(component).to_owned(),
+                span: component.span,
+            });
+        }
+        let last = components
+            .last()
+            .expect("a name path has a first component");
+        let text = components
+            .iter()
+            .map(|component| component.text.as_str())
+            .collect::<Vec<_>>()
+            .join("::");
+        let span = self.cover(first.span, last.span);
+        if separator_spans.is_empty() {
+            Some(Name::unqualified(text, span))
+        } else {
+            Some(Name::qualified(text, span, components, separator_spans))
+        }
+    }
+
+    fn parse_visibility(&mut self) -> Visibility {
+        if self.at_contextual("public") {
+            Visibility::Public {
+                span: self.advance().span,
+            }
+        } else {
+            Visibility::Private
+        }
     }
 
     fn expect(&mut self, kind: TokenKind, expectation: &'static str) -> Option<Token> {
