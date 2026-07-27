@@ -23,6 +23,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
     program.classes = MirClassDeclarationTable::new(vec![
         MirClassDeclaration {
             id: inner,
+            module: crate::identity::ModuleId::new(0),
             name: "Inner".to_owned(),
             direct_base: None,
             conformances: vec![],
@@ -43,6 +44,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
         },
         MirClassDeclaration {
             id: outer,
+            module: crate::identity::ModuleId::new(0),
             name: "Outer".to_owned(),
             direct_base: None,
             conformances: vec![],

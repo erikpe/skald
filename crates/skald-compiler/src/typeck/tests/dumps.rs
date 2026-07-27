@@ -9,9 +9,12 @@ fn hir_dump_is_deterministic_and_records_types_and_operations() {
         dump_hir(&hir),
         concat!(
             "HirProgram @0..35\n",
+            "  SelectedModule m0\n",
+            "  Modules\n",
+            "    Module m0 main source 0 provider provider0 package package0\n",
             "  Entry f0\n",
             "  Declarations\n",
-            "    Declaration f0 \"main\" internal @0..35\n",
+            "    Declaration f0 module m0 \"main\" internal @0..35\n",
             "      Parameters\n",
             "      ReturnType i64\n",
             "  Definitions\n",

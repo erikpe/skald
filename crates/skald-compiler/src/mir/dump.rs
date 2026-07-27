@@ -11,6 +11,19 @@ pub fn dump_mir(program: &MirProgram) -> String {
     output.push_str("MirProgram");
     write_span(&mut output, program.span);
     output.push('\n');
+    let _ = writeln!(output, "  SelectedModule {}", program.modules.selected());
+    output.push_str("  Modules\n");
+    for module in program.modules.iter() {
+        let _ = writeln!(
+            output,
+            "    Module {} {} source {} provider {} package {}",
+            module.module_id(),
+            module.module_path(),
+            module.source_id().index(),
+            module.provider_id(),
+            module.package_id()
+        );
+    }
     let _ = writeln!(output, "  Entry {}", program.entry_function);
     if !program.array_types.is_empty() {
         output.push_str("  ArrayTypes\n");
@@ -44,7 +57,11 @@ pub fn dump_mir(program: &MirProgram) -> String {
     if !program.interfaces.is_empty() {
         output.push_str("  Interfaces\n");
         for interface in program.interfaces.iter() {
-            let _ = write!(output, "    Interface {} ", interface.id);
+            let _ = write!(
+                output,
+                "    Interface {} module {} ",
+                interface.id, interface.module
+            );
             write_quoted(&mut output, &interface.name);
             write_span(&mut output, interface.span);
             output.push('\n');
@@ -81,7 +98,7 @@ pub fn dump_mir(program: &MirProgram) -> String {
 }
 
 fn dump_class(output: &mut String, class: &MirClassDeclaration) {
-    let _ = write!(output, "    Class {} ", class.id);
+    let _ = write!(output, "    Class {} module {} ", class.id, class.module);
     write_quoted(output, &class.name);
     write_span(output, class.span);
     output.push('\n');
@@ -260,7 +277,11 @@ fn dump_parameters(output: &mut String, parameters: &[MirParameter]) {
 }
 
 fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
-    let _ = write!(output, "    Declaration {} ", declaration.id);
+    let _ = write!(
+        output,
+        "    Declaration {} module {} ",
+        declaration.id, declaration.module
+    );
     write_quoted(output, &declaration.name);
     match &declaration.linkage {
         MirFunctionLinkage::Internal => output.push_str(" internal"),

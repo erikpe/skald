@@ -5,8 +5,9 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
         FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ParameterId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
+    module::ProgramModuleTable,
     source::Span,
 };
 
@@ -18,6 +19,7 @@ use super::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirProgram {
+    pub modules: ProgramModuleTable,
     pub array_types: super::HirArrayTypeTable,
     pub classes: HirClassDeclarationTable,
     pub interfaces: HirInterfaceDeclarationTable,
@@ -142,6 +144,7 @@ impl HirInterfaceDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirInterfaceDeclaration {
     pub id: InterfaceId,
+    pub module: ModuleId,
     pub name: String,
     pub name_span: Span,
     pub requirements: Vec<HirInterfaceRequirement>,
@@ -223,6 +226,7 @@ impl HirClassDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirClassDeclaration {
     pub id: ClassId,
+    pub module: ModuleId,
     pub name: String,
     pub name_span: Span,
     pub direct_base: Option<HirDirectBase>,
@@ -470,6 +474,7 @@ impl HirFunctionDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirFunctionDeclaration {
     pub id: FunctionId,
+    pub module: ModuleId,
     pub name: String,
     pub name_span: Span,
     pub parameters: Vec<HirParameter>,

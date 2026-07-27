@@ -138,6 +138,7 @@ fn lower_interfaces(
                 .collect();
             HirInterfaceDeclaration {
                 id: interface.id,
+                module: interface.module,
                 name: interface.name.clone(),
                 name_span: interface.name_span,
                 requirements,

@@ -219,6 +219,7 @@ fn declaration(
 ) -> MirFunctionDeclaration {
     MirFunctionDeclaration {
         id,
+        module: crate::identity::ModuleId::new(0),
         name: name.to_owned(),
         parameters,
         return_type: MirType::Unit,

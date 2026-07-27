@@ -82,7 +82,7 @@ fn interface_mir_dump_is_deterministic_and_target_independent() {
     let (program, _) = interface_dispatch_mir();
     let dump = dump_mir(&program);
     assert_eq!(dump, dump_mir(&program));
-    assert!(dump.contains("Interface i0 \"Runner\""));
+    assert!(dump.contains("Interface i0 module m0 \"Runner\""));
     assert!(dump.contains("Requirement i0:requirement0 \"run\" readonly (u64) -> u64"));
     assert!(dump.contains("i0:requirement0 -> c1:method0"));
     assert!(dump.contains(

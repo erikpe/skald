@@ -1,5 +1,5 @@
 use crate::{
-    identity::{ArrayTypeId, ClassId, FieldId, FunctionId},
+    identity::{ArrayTypeId, ClassId, FieldId, FunctionId, ModuleId},
     mir::{
         verify_mir, MirCopyCapability, MirFunctionLinkage, MirReceiverAccess,
         MirSynthesizedFieldCopy,
@@ -29,6 +29,59 @@ fn rejects_invalid_external_symbol_metadata() {
 
     assert!(messages(&program).iter().any(|message| message
         .contains("external symbol must be the declaration's exact source identifier")));
+}
+
+#[test]
+fn rejects_invalid_module_metadata_and_declaration_ownership() {
+    let mut non_dense = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    non_dense
+        .modules
+        .set_module_id_for_test(0, ModuleId::new(7));
+    assert!(messages(&non_dense)
+        .iter()
+        .any(|message| message.contains("module table index 0 contains m7")));
+
+    let mut unknown_owner = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    unknown_owner.declarations.entries_mut_for_test()[0].module = ModuleId::new(7);
+    let errors = messages(&unknown_owner);
+    assert!(errors
+        .iter()
+        .any(|message| message.contains("function has unknown module owner m7")));
+    assert!(errors.iter().any(|message| {
+        message.contains("entry function f0 belongs to m7, but selected entry module is m0")
+    }));
+
+    let mut unknown_class = lower_source_to_mir(concat!(
+        "class Value { init() {} }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    unknown_class.classes.entries_mut_for_test()[0].module = ModuleId::new(7);
+    assert!(messages(&unknown_class)
+        .iter()
+        .any(|message| message.contains("class c0 has unknown module owner m7")));
+
+    let mut unknown_interface = lower_source_to_mir(concat!(
+        "interface Value { fn value() -> i64; }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    unknown_interface.interfaces.entries_mut_for_test()[0].module = ModuleId::new(7);
+    assert!(messages(&unknown_interface)
+        .iter()
+        .any(|message| message.contains("interface i0 has unknown module owner m7")));
+}
+
+#[test]
+fn rejects_an_unknown_selected_entry_module() {
+    let mut program = lower_source_to_mir("fn main() -> i64 { return 0; }");
+    program.modules.set_selected_for_test(ModuleId::new(7));
+
+    let errors = messages(&program);
+    assert!(errors
+        .iter()
+        .any(|message| message.contains("selected entry module m7 is not in the module table")));
+    assert!(errors.iter().any(|message| {
+        message.contains("entry function f0 belongs to m0, but selected entry module is m7")
+    }));
 }
 
 #[test]

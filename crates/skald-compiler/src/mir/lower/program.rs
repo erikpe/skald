@@ -34,6 +34,7 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         .map(|definition| lower_member_definition(hir, definition))
         .collect();
     MirProgram {
+        modules: hir.modules.clone(),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
         classes: MirClassDeclarationTable::new(classes),
         interfaces: MirInterfaceDeclarationTable::new(
@@ -204,6 +205,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
     };
     MirClassDeclaration {
         id: class.id,
+        module: class.module,
         name: class.name.clone(),
         direct_base: class.direct_base.as_ref().map(|base| MirDirectBase {
             class: base.class,
@@ -273,6 +275,7 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
 fn lower_interface_declaration(interface: &HirInterfaceDeclaration) -> MirInterfaceDeclaration {
     MirInterfaceDeclaration {
         id: interface.id,
+        module: interface.module,
         name: interface.name.clone(),
         requirements: interface
             .requirements
@@ -376,6 +379,7 @@ fn lower_base_copy<I: Copy>(copy: crate::hir::HirBaseCopy<I>) -> MirBaseCopy<I> 
 fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclaration {
     MirFunctionDeclaration {
         id: declaration.id,
+        module: declaration.module,
         name: declaration.name.clone(),
         parameters: declaration.parameters.iter().map(lower_parameter).collect(),
         return_type: lower_type(declaration.return_type),

@@ -6,9 +6,10 @@ use crate::{
     id_table::DenseIdTable,
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
-        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId, VirtualFamilyId,
-        VirtualSlotId,
+        FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId, ModuleId,
+        VirtualFamilyId, VirtualSlotId,
     },
+    module::ProgramModuleTable,
     source::Span,
 };
 
@@ -24,6 +25,7 @@ use super::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirProgram {
+    pub modules: ProgramModuleTable,
     pub array_types: MirArrayTypeTable,
     pub classes: MirClassDeclarationTable,
     pub interfaces: MirInterfaceDeclarationTable,
@@ -298,6 +300,7 @@ impl MirClassDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirClassDeclaration {
     pub id: ClassId,
+    pub module: ModuleId,
     pub name: String,
     pub direct_base: Option<MirDirectBase>,
     pub conformances: Vec<MirInterfaceConformance>,
@@ -602,6 +605,7 @@ impl MirFunctionDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirFunctionDeclaration {
     pub id: FunctionId,
+    pub module: ModuleId,
     pub name: String,
     pub parameters: Vec<MirParameter>,
     pub return_type: MirType,

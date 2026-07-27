@@ -15,7 +15,10 @@ fn dump_exposes_modes_indirect_bases_and_ordered_argument_kinds() {
     let (program, ids) = alias_mir();
     let dump = dump_mir(&program);
 
-    assert!(dump.contains(&format!("Declaration {} \"forward\" internal", ids.forward)));
+    assert!(dump.contains(&format!(
+        "Declaration {} module m0 \"forward\" internal",
+        ids.forward
+    )));
     assert!(dump.contains(&format!(
         "Signature (ref class {}, mut ref class {}, i64) -> unit",
         ids.class, ids.class

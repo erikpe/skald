@@ -57,6 +57,7 @@ fn unused_valid_object_metadata_is_accepted() {
     let mut mir = lower_source_to_mir("fn main() -> i64 { return 0; }");
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: ClassId::new(0),
+        module: crate::identity::ModuleId::new(0),
         name: "Empty".to_owned(),
         direct_base: None,
         conformances: vec![],
@@ -269,6 +270,7 @@ fn recursive_inline_layout_is_a_structured_target_error() {
     let recursive_field = FieldId::new(class, 0);
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
+        module: crate::identity::ModuleId::new(0),
         name: "Recursive".to_owned(),
         direct_base: None,
         conformances: vec![],
@@ -302,6 +304,7 @@ fn incomplete_class_metadata_is_rejected_before_layout() {
     let missing_field = FieldId::new(class, 0);
     mir.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
+        module: crate::identity::ModuleId::new(0),
         name: "Incomplete".to_owned(),
         direct_base: None,
         conformances: vec![],

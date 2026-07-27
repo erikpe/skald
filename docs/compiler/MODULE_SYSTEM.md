@@ -241,6 +241,22 @@ identities or group roots without changing source imports. Any future
 package-private visibility compares `PackageId`, never the first component of
 `ModulePath`.
 
+Resolved IR, checked HIR, and MIR each carry one `ProgramModuleTable`. The
+table stores dense `ModuleProvenance` entries in `ModuleId` order and the
+selected entry `ModuleId`. Its constructor rejects non-dense identities,
+duplicate logical paths, and an unknown selected entry. Top-level function,
+class, and interface declarations store their owning `ModuleId`; class and
+interface members derive module ownership through that enclosing declaration.
+Existing declaration and definition tables remain flat and keep their typed
+semantic identities.
+
+The current one-AST `resolve::resolve` API is a compatibility adapter. It
+synthesizes a request-local `main` module owned by `m0`, provider/package zero,
+and the AST's existing `SourceId`, then follows the ordinary resolved-to-HIR-
+to-MIR path. This metadata does not make another file searchable and does not
+claim multi-file semantic resolution; graph-to-program resolution begins in
+the next implementation milestone.
+
 One canonical `ModulePath` resolves to at most one loaded `ModuleId`. Multiple
 module aliases and selective imports of that module reuse its `ModuleId`,
 `SourceId`, parsed product, declaration tables, and graph node. They do not
@@ -300,6 +316,14 @@ The selected entry is explicit request and graph metadata, not a special
 module kind or allocation position. Selecting a different entry without
 changing the reachable module set does not reorder module or declaration
 identities.
+
+`ProgramModuleTable` construction preserves its supplied canonical entry
+order independently of the selected entry. All semantic phases clone that
+table and declaration owners without reallocation. Resolved, HIR, and MIR
+dumps expose the selected module, dense module provenance, and top-level
+owners. MIR verification rejects malformed table metadata, unknown
+declaration owners, and an entry function whose owner differs from the
+selected module.
 
 Source-public declarations remain private compiler-generated native symbols.
 Only the selected entry function feeds the host-visible `main` wrapper.

@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::DenseIdTable,
-    identity::{InterfaceId, InterfaceRequirementId, MethodId},
+    identity::{InterfaceId, InterfaceRequirementId, MethodId, ModuleId},
     source::Span,
 };
 
@@ -41,6 +41,7 @@ impl MirInterfaceDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirInterfaceDeclaration {
     pub id: InterfaceId,
+    pub module: ModuleId,
     pub name: String,
     pub requirements: Vec<MirInterfaceRequirement>,
     pub span: Span,

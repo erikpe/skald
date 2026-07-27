@@ -300,6 +300,7 @@ impl ClassCollectionState {
 
     fn finish(
         self,
+        module: ModuleId,
         class: &syntax::ClassDecl,
     ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
         let copy_constructor = if self.lifecycle.copy_constructor_invalid {
@@ -325,6 +326,7 @@ impl ClassCollectionState {
         (
             ResolvedClassDeclaration {
                 id: self.id,
+                module,
                 name: class.name.text.to_string(),
                 name_span: class.name.span,
                 direct_base: self.direct_base,
@@ -347,6 +349,7 @@ impl ClassCollectionState {
 
 pub(super) fn collect_class(
     id: ClassId,
+    module: ModuleId,
     ast_index: usize,
     class: &syntax::ClassDecl,
     top_levels: &HashMap<String, TopLevelSymbol>,
@@ -391,7 +394,7 @@ pub(super) fn collect_class(
             }
         }
     }
-    state.finish(class)
+    state.finish(module, class)
 }
 
 fn same_parameter_types(

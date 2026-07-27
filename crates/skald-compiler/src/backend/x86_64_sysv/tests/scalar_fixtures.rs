@@ -140,6 +140,7 @@ pub(super) fn f64_arithmetic_program() -> MirProgram {
     );
 
     MirProgram {
+        modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
         array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),
@@ -271,6 +272,7 @@ pub(super) fn mixed_exhausted_abi_program() -> MirProgram {
     );
 
     MirProgram {
+        modules: crate::module::ProgramModuleTable::singleton(span.source_id()),
         array_types: Default::default(),
         classes: MirClassDeclarationTable::default(),
         interfaces: MirInterfaceDeclarationTable::default(),

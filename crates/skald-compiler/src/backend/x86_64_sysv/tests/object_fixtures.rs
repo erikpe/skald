@@ -30,6 +30,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
     program.classes = MirClassDeclarationTable::new(vec![
         MirClassDeclaration {
             id: nested,
+            module: crate::identity::ModuleId::new(0),
             name: "Nested".to_owned(),
             direct_base: None,
             conformances: vec![],
@@ -48,6 +49,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
         },
         MirClassDeclaration {
             id: container,
+            module: crate::identity::ModuleId::new(0),
             name: "Container".to_owned(),
             direct_base: None,
             conformances: vec![],
@@ -67,6 +69,7 @@ pub(super) fn projected_object_program() -> (MirProgram, ObjectProgramIds) {
         },
         MirClassDeclaration {
             id: empty_class,
+            module: crate::identity::ModuleId::new(0),
             name: "Empty".to_owned(),
             direct_base: None,
             conformances: vec![],
@@ -208,6 +211,7 @@ pub(super) fn counter_member_program() -> MirProgram {
     let get_via_receiver = MethodId::new(class, 2);
     program.classes = MirClassDeclarationTable::new(vec![MirClassDeclaration {
         id: class,
+        module: crate::identity::ModuleId::new(0),
         name: "Counter".to_owned(),
         direct_base: None,
         conformances: vec![],

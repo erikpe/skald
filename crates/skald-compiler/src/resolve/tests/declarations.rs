@@ -52,7 +52,7 @@ fn external_declarations_share_the_callable_namespace_and_have_no_body() {
     assert_eq!(call.function, external.id);
 
     let dump = dump_resolved(&output.program);
-    assert!(dump.contains("Declaration f0 \"emit\" external \"emit\""));
+    assert!(dump.contains("Declaration f0 module m0 \"emit\" external \"emit\""));
     assert!(!dump.contains("Definition f0"));
 }
 

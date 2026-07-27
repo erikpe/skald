@@ -346,6 +346,9 @@ fn array_hir_dump_is_exact_and_identity_based() {
         dump_hir(&output.hir.unwrap()),
         concat!(
             "HirProgram @0..59\n",
+            "  SelectedModule m0\n",
+            "  Modules\n",
+            "    Module m0 main source 0 provider provider0 package package0\n",
             "  Entry f0\n",
             "  ArrayTypes\n",
             "    ArrayType a0 element i64\n",
@@ -354,7 +357,7 @@ fn array_hir_dump_is_exact_and_identity_based() {
             "      Assignment primitive\n",
             "      Destruction trivial\n",
             "  Declarations\n",
-            "    Declaration f0 \"main\" internal @0..59\n",
+            "    Declaration f0 module m0 \"main\" internal @0..59\n",
             "      Parameters\n",
             "      ReturnType i64\n",
             "  Definitions\n",

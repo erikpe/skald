@@ -4,6 +4,7 @@
 //! logical paths or typed identities as semantic identity.
 
 mod graph;
+mod metadata;
 mod path;
 mod provenance;
 mod provider;
@@ -12,6 +13,7 @@ pub use graph::{
     dump_module_graph, load_module_graph, LoadedModule, ModuleGraph, ModuleGraphLoadFailure,
     ModuleImportEdge,
 };
+pub use metadata::{ProgramModuleTable, ProgramModuleTableError};
 pub use path::{ModulePath, ModulePathError, ModulePathErrorKind};
 pub use provenance::{ModuleProvenance, ModuleSourceLocation};
 pub use provider::{

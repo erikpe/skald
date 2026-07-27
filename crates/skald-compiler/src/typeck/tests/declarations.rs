@@ -1,6 +1,55 @@
 use super::*;
 
 #[test]
+fn propagates_single_source_module_ownership_through_hir_and_mir() {
+    let resolved = resolve_text(concat!(
+        "interface Value { fn get() -> i64; }\n",
+        "class Box implements Value {\n",
+        "  init() {}\n",
+        "  fn get() -> i64 { return 1; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let module = crate::identity::ModuleId::new(0);
+    assert_eq!(resolved.modules.selected(), module);
+    assert!(resolved
+        .declarations
+        .iter()
+        .all(|declaration| declaration.module == module));
+    assert!(resolved.classes.iter().all(|class| class.module == module));
+    assert!(resolved
+        .interfaces
+        .iter()
+        .all(|interface| interface.module == module));
+
+    let hir = type_check(&resolved)
+        .hir
+        .expect("program should type check");
+    assert_eq!(hir.modules, resolved.modules);
+    assert!(hir
+        .declarations
+        .iter()
+        .all(|declaration| declaration.module == module));
+    assert!(hir.classes.iter().all(|class| class.module == module));
+    assert!(hir
+        .interfaces
+        .iter()
+        .all(|interface| interface.module == module));
+
+    let mir = crate::mir::lower_hir(&hir);
+    assert_eq!(mir.modules, hir.modules);
+    assert!(mir
+        .declarations
+        .iter()
+        .all(|declaration| declaration.module == module));
+    assert!(mir.classes.iter().all(|class| class.module == module));
+    assert!(mir
+        .interfaces
+        .iter()
+        .all(|interface| interface.module == module));
+}
+
+#[test]
 fn boolean_functions_require_a_boolean_return_value() {
     let output = check_text("fn flag() -> bool {} fn main() -> i64 { return 0; }");
 
@@ -32,8 +81,8 @@ fn checks_external_calls_from_bodyless_signatures() {
         assert!(hir.definitions.get(id).is_none());
     }
     let dump = dump_hir(&hir);
-    assert!(dump.contains("Declaration f0 \"read_value\" external \"read_value\""));
-    assert!(dump.contains("Declaration f1 \"emit\" external \"emit\""));
+    assert!(dump.contains("Declaration f0 module m0 \"read_value\" external \"read_value\""));
+    assert!(dump.contains("Declaration f1 module m0 \"emit\" external \"emit\""));
     assert!(!dump.contains("Definition f0"));
     assert!(!dump.contains("Definition f1"));
 }

@@ -29,7 +29,8 @@ use skald_compiler::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
         LoadedModule, ModuleCandidate, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,
         ModulePath, ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation,
-        NormalizedProvider, ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
+        NormalizedProvider, ProgramModuleTable, ProgramModuleTableError,
+        ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::run_mir_pipeline,
     resolve::{
@@ -84,6 +85,8 @@ fn intentional_module_and_request_paths_compose() {
         &ProviderSet,
     ) -> Result<ModuleGraph, ModuleGraphLoadFailure> = load_module_graph;
     let _graph_dumper: fn(&ModuleGraph) -> String = dump_module_graph;
+    let _module_table: Option<ProgramModuleTable> = None;
+    let _module_table_error: Option<ProgramModuleTableError> = None;
 }
 
 #[test]
@@ -102,6 +105,11 @@ fn intentional_phase_and_dump_paths_compose() {
     let _ast_dump = dump_ast(ast);
     let resolved: ResolveOutput = resolve(ast);
     let resolved_program: &ResolvedProgram = &resolved.program;
+    assert_eq!(resolved_program.modules.selected().index(), 0);
+    assert_eq!(
+        resolved_program.classes.iter().next().unwrap().module,
+        resolved_program.modules.selected()
+    );
     let hierarchy: &ResolvedClassHierarchy = &resolved_program.hierarchy;
     let class = resolved_program.classes.iter().next().unwrap().id;
     let _base_chain = hierarchy.base_chain(class);
@@ -109,6 +117,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _resolved_dump = dump_resolved(resolved_program);
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
+    assert_eq!(hir.modules, resolved_program.modules);
     let _hir_dump = dump_hir(hir);
     let _base_projection: Option<ObjectProjection> = None;
     let _object_slice: Option<HirObjectSlice> = None;
@@ -118,6 +127,7 @@ fn intentional_phase_and_dump_paths_compose() {
     let _conformance: Option<HirInterfaceConformance> = None;
     let _interface_call: Option<HirInterfaceCallTarget> = None;
     let mir: MirProgram = lower_hir(hir);
+    assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
     let _mir_base_copy: Option<MirBaseCopy<skald_compiler::identity::CopyConstructorId>> = None;
     let _mir_projection: Option<MirPlaceProjection> = None;

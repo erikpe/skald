@@ -5,8 +5,9 @@ use crate::{
     identity::{
         CallableId, ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId,
         FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
-        ParameterId, VirtualFamilyId, VirtualSlotId,
+        ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
+    module::ProgramModuleTable,
     source::Span,
 };
 
@@ -18,6 +19,7 @@ use super::hierarchy::ResolvedClassHierarchy;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
+    pub modules: ProgramModuleTable,
     pub array_types: ResolvedArrayTypeTable,
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
@@ -26,8 +28,9 @@ pub struct ResolvedProgram {
     pub hierarchy: ResolvedClassHierarchy,
     pub virtual_families: ResolvedVirtualFamilyTable,
     pub class_definitions: ResolvedClassDefinitionTable,
-    /// Function named `main`, selected during resolution. Type checking
-    /// validates its signature and diagnoses its absence.
+    /// Function named `main` in the selected entry module, selected during
+    /// resolution. Type checking validates its signature and diagnoses its
+    /// absence.
     pub entry_function: Option<FunctionId>,
     pub span: Span,
 }
@@ -99,6 +102,7 @@ impl ResolvedInterfaceDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInterfaceDeclaration {
     pub id: InterfaceId,
+    pub module: ModuleId,
     pub name: String,
     pub name_span: Span,
     pub requirements: Vec<ResolvedInterfaceRequirement>,
@@ -166,6 +170,7 @@ impl ResolvedClassDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedClassDeclaration {
     pub id: ClassId,
+    pub module: ModuleId,
     pub name: String,
     pub name_span: Span,
     pub direct_base: Option<ResolvedDirectBase>,
@@ -423,6 +428,7 @@ impl ResolvedFunctionDeclarationTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedFunctionDeclaration {
     pub id: FunctionId,
+    pub module: ModuleId,
     /// Retained for diagnostics, dumps, and external-linkage selection.
     pub name: String,
     pub name_span: Span,

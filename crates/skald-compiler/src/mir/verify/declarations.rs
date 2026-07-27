@@ -19,6 +19,7 @@ use super::{
 
 impl<'mir> Verifier<'mir> {
     pub(super) fn verify_program(&mut self) {
+        self.verify_module_ownership();
         self.verify_array_declarations();
         self.verify_classes();
         self.verify_virtual_families();
@@ -230,6 +231,48 @@ impl<'mir> Verifier<'mir> {
                 continue;
             };
             self.verify_definition(parameters, return_type, definition.into());
+        }
+    }
+
+    fn verify_module_ownership(&mut self) {
+        if let Err(error) = self.program.modules.validate() {
+            self.program_error(error.to_string());
+        }
+
+        for declaration in self.program.declarations.iter() {
+            if self.program.modules.get(declaration.module).is_none() {
+                self.function_error(
+                    declaration.id,
+                    format!("function has unknown module owner {}", declaration.module),
+                );
+            }
+        }
+        for class in self.program.classes.iter() {
+            if self.program.modules.get(class.module).is_none() {
+                self.program_error(format!(
+                    "class {} has unknown module owner {}",
+                    class.id, class.module
+                ));
+            }
+        }
+        for interface in self.program.interfaces.iter() {
+            if self.program.modules.get(interface.module).is_none() {
+                self.program_error(format!(
+                    "interface {} has unknown module owner {}",
+                    interface.id, interface.module
+                ));
+            }
+        }
+
+        if let Some(entry) = self.program.declarations.get(self.program.entry_function) {
+            if entry.module != self.program.modules.selected() {
+                self.program_error(format!(
+                    "entry function {} belongs to {}, but selected entry module is {}",
+                    entry.id,
+                    entry.module,
+                    self.program.modules.selected()
+                ));
+            }
         }
     }
 

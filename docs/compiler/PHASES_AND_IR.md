@@ -41,6 +41,20 @@ behavior is separate from the target-independent phase model and is defined by
 Phase products are request-owned values. The compiler has no global source,
 diagnostic, identity, or IR registry.
 
+Resolved IR, typed HIR, and MIR carry the same validated
+`module::ProgramModuleTable`: dense `ModuleProvenance` in `ModuleId` order plus
+the selected entry module. Every top-level function, class, and interface
+declaration carries its owning `ModuleId`; members derive their module through
+the enclosing class or interface. These additions preserve the existing flat
+whole-program declaration and definition tables. Lower phases use typed
+identities and never repeat module-path or source-name lookup.
+
+The current `resolve::resolve(&CompilationUnit)` entry remains a single-source
+adapter. It synthesizes one request-local logical `main` module around the
+AST's `SourceId` and otherwise uses the normal phase pipeline. It neither
+searches sibling files nor accepts imports semantically yet. Multi-file graph
+resolution remains the next module-system stage.
+
 The `module` facade already provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
 `ProviderId`, and `PackageId` identities. The `driver` facade exposes a typed
@@ -135,6 +149,9 @@ name-dependent.
 The resolved program replaces successful name uses with typed identities for
 functions, classes, interfaces, interface requirements, members, callables,
 parameters, locals, and bindings.
+Its module table and explicit top-level owners preserve source-module
+provenance independently of those declaration IDs. Changing only the selected
+entry in a table does not reorder table entries or declaration identities.
 Optional direct class bases likewise carry `ClassId` rather than source
 spelling. Callable-owned identities also scope later local MIR identities.
 Declaration tables retain deterministic identity order, and later phases
@@ -433,7 +450,9 @@ check succeeds.
 `mir::verify_mir` checks the structural and type invariants required before
 target lowering, including:
 
-- identity ownership, table density, and declaration/definition agreement;
+- module-table density and path uniqueness, selected-entry ownership, known
+  top-level module owners, semantic identity ownership, declaration-table
+  density, and declaration/definition agreement;
 - callable signatures, receiver and argument modes, and external exclusions;
 - storage, value, place, projection, and operation types;
 - hierarchy acyclicity, direct-base paths, view targets/access, and selected
@@ -494,6 +513,8 @@ stable interchange or persistence schema.
 
 Stable identities, deterministic table/block order, and exact renderers are
 tested both within phases and across independent compiler processes. The
+three semantic IR renderers include selected-module metadata, modules in dense
+identity order, and module ownership on top-level declarations. The
 public dump paths let integration tests and temporary tools inspect the same
 representation used by focused tests. Practical inspection steps are in
 [Debugging the Compiler](../development/DEBUGGING.md).

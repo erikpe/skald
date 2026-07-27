@@ -6,7 +6,8 @@ use super::{
 };
 use crate::{
     diagnostics::Diagnostic,
-    identity::{CallableId, InterfaceId, InterfaceRequirementId, ParameterId},
+    identity::{CallableId, InterfaceId, InterfaceRequirementId, ModuleId, ParameterId},
+    module::ProgramModuleTable,
 };
 
 mod class;
@@ -29,6 +30,7 @@ struct FunctionWorkItem {
 
 pub(super) struct ProgramResolver<'ast> {
     ast: &'ast syntax::CompilationUnit,
+    module: ModuleId,
     top_levels: HashMap<String, TopLevelSymbol>,
     function_work: Vec<FunctionWorkItem>,
     class_work: Vec<(ClassId, usize)>,
@@ -41,6 +43,7 @@ impl<'ast> ProgramResolver<'ast> {
     pub(super) fn new(ast: &'ast syntax::CompilationUnit) -> Self {
         Self {
             ast,
+            module: ModuleId::new(0),
             top_levels: HashMap::new(),
             function_work: Vec::new(),
             class_work: Vec::new(),
@@ -69,6 +72,7 @@ impl<'ast> ProgramResolver<'ast> {
         let function_declarations = self.collect_function_declarations();
         let interfaces = ResolvedInterfaceDeclarationTable::new(collect_interface_declarations(
             self.ast,
+            self.module,
             &self.interface_work,
             &self.top_levels,
             &mut self.array_types,
@@ -126,6 +130,7 @@ impl<'ast> ProgramResolver<'ast> {
 
         ResolveOutput {
             program: ResolvedProgram {
+                modules: ProgramModuleTable::singleton(self.ast.span.source_id()),
                 array_types: self.array_types.finish(),
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
@@ -213,6 +218,7 @@ impl<'ast> ProgramResolver<'ast> {
             .map(|item| match &self.ast.declarations[item.ast_index] {
                 syntax::TopLevelDeclaration::Function(function) => ResolvedFunctionDeclaration {
                     id: item.id,
+                    module: self.module,
                     name: function.name.text.to_string(),
                     name_span: function.name.span,
                     parameters: resolve_parameters(
@@ -234,6 +240,7 @@ impl<'ast> ProgramResolver<'ast> {
                 syntax::TopLevelDeclaration::ExternalFunction(function) => {
                     ResolvedFunctionDeclaration {
                         id: item.id,
+                        module: self.module,
                         name: function.name.text.to_string(),
                         name_span: function.name.span,
                         parameters: resolve_parameters(
@@ -284,6 +291,7 @@ impl<'ast> ProgramResolver<'ast> {
             };
             let (declaration, class_symbols, item) = collect_class(
                 id,
+                self.module,
                 ast_index,
                 class,
                 &self.top_levels,

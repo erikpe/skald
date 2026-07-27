@@ -8,9 +8,12 @@ fn resolved_dump_is_deterministic_and_exposes_only_ids_at_uses() {
         dump_resolved(&output.program),
         concat!(
             "ResolvedProgram @0..44\n",
+            "  SelectedModule m0\n",
+            "  Modules\n",
+            "    Module m0 main source 0 provider provider0 package package0\n",
             "  Entry f0\n",
             "  Declarations\n",
-            "    Declaration f0 \"main\" internal @0..44\n",
+            "    Declaration f0 module m0 \"main\" internal @0..44\n",
             "      Parameters\n",
             "        Parameter f0:p0 \"value\" @8..18\n",
             "          Binding Value\n",

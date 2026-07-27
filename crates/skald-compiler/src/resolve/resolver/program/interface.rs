@@ -5,6 +5,7 @@ use std::collections::HashSet;
 
 pub(super) fn collect_interface_declarations(
     ast: &syntax::CompilationUnit,
+    module: ModuleId,
     work: &[(InterfaceId, usize)],
     top_levels: &HashMap<String, TopLevelSymbol>,
     array_types: &mut ArrayTypeInterner,
@@ -60,6 +61,7 @@ pub(super) fn collect_interface_declarations(
                 .collect();
             ResolvedInterfaceDeclaration {
                 id,
+                module,
                 name: interface.name.text.to_string(),
                 name_span: interface.name.span,
                 requirements,

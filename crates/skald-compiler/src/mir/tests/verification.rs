@@ -295,7 +295,7 @@ fn verifier_accepts_an_external_declaration_without_a_definition() {
     assert!(verify_mir(&mir).is_ok());
     assert!(mir.declarations.get(foreign).is_some());
     assert!(mir.definitions.get(foreign).is_none());
-    assert!(dump_mir(&mir).contains("Declaration f0 \"foreign\" external \"foreign\""));
+    assert!(dump_mir(&mir).contains("Declaration f0 module m0 \"foreign\" external \"foreign\""));
 }
 
 #[test]

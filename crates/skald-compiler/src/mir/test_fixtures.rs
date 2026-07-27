@@ -5,7 +5,7 @@
 //! that participates in the contract under examination.
 
 use crate::{
-    identity::{BindingId, CallableId, ClassId, FunctionId, ParameterId},
+    identity::{BindingId, CallableId, ClassId, FunctionId, ModuleId, ParameterId},
     source::Span,
 };
 
@@ -31,6 +31,7 @@ pub(crate) fn function_declaration(
 ) -> MirFunctionDeclaration {
     MirFunctionDeclaration {
         id,
+        module: ModuleId::new(0),
         name: name.into(),
         parameters,
         return_type,

@@ -199,6 +199,7 @@ fn lower_class_declaration(
         .collect();
     valid.then_some(HirClassDeclaration {
         id: class.id,
+        module: class.module,
         name: class.name.clone(),
         name_span: class.name_span,
         direct_base,

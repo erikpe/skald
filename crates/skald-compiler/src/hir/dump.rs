@@ -13,6 +13,20 @@ pub fn dump_hir(program: &HirProgram) -> String {
     let mut dumper = HirDumper::default();
     dumper.line("HirProgram", program.span);
     dumper.indented(|dumper| {
+        dumper.raw_line(&format!("SelectedModule {}", program.modules.selected()));
+        dumper.heading("Modules");
+        dumper.indented(|dumper| {
+            for module in program.modules.iter() {
+                dumper.raw_line(&format!(
+                    "Module {} {} source {} provider {} package {}",
+                    module.module_id(),
+                    module.module_path(),
+                    module.source_id().index(),
+                    module.provider_id(),
+                    module.package_id()
+                ));
+            }
+        });
         dumper.write_indentation();
         let _ = writeln!(dumper.output, "Entry {}", program.entry_function);
         if !program.array_types.is_empty() {
@@ -119,7 +133,11 @@ impl HirDumper {
 
     fn interface_declaration(&mut self, interface: &HirInterfaceDeclaration) {
         self.write_indentation();
-        let _ = write!(self.output, "Interface {} ", interface.id);
+        let _ = write!(
+            self.output,
+            "Interface {} module {} ",
+            interface.id, interface.module
+        );
         write_quoted(&mut self.output, &interface.name);
         write_span(&mut self.output, interface.span);
         self.output.push('\n');
@@ -155,7 +173,7 @@ impl HirDumper {
 
     fn class_declaration(&mut self, class: &HirClassDeclaration) {
         self.write_indentation();
-        let _ = write!(self.output, "Class {} ", class.id);
+        let _ = write!(self.output, "Class {} module {} ", class.id, class.module);
         write_quoted(&mut self.output, &class.name);
         write_span(&mut self.output, class.span);
         self.output.push('\n');
@@ -399,7 +417,11 @@ impl HirDumper {
 
     fn declaration(&mut self, declaration: &HirFunctionDeclaration) {
         self.write_indentation();
-        let _ = write!(self.output, "Declaration {} ", declaration.id);
+        let _ = write!(
+            self.output,
+            "Declaration {} module {} ",
+            declaration.id, declaration.module
+        );
         write_quoted(&mut self.output, &declaration.name);
         match &declaration.linkage {
             HirFunctionLinkage::Internal => self.output.push_str(" internal"),

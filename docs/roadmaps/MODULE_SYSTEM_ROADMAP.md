@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS4 is next.
+Status: in progress; MS5 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -135,7 +135,7 @@ implementation template:
 - [x] MS1 — Parse imports, visibility, and qualified source paths
 - [x] MS2 — Normalize providers and resolve filesystem candidates
 - [x] MS3 — Select the entry and load the reachable module graph
-- [ ] MS4 — Carry module ownership through whole-program IR
+- [x] MS4 — Carry module ownership through whole-program IR
 - [ ] MS5 — Collect and resolve a deterministic multi-module program
 - [ ] MS6 — Resolve module imports and qualified uses
 - [ ] MS7 — Resolve selective imports and ordinary bindings
@@ -374,28 +374,28 @@ a 10,000-node cycle-walk regression, as do `make check` and
 **Purpose:** Make existing whole-program representations capable of preserving
 module provenance before the resolver starts selecting across modules.
 
-- [ ] Add selected `ModuleId` and a dense module metadata table to resolved
+- [x] Add selected `ModuleId` and a dense module metadata table to resolved
       program state. Give every top-level resolved declaration explicit owning
       `ModuleId`; members continue to derive class/interface ownership while
       their enclosing declaration supplies module ownership.
-- [ ] Propagate the selected entry module and declaration ownership through
+- [x] Propagate the selected entry module and declaration ownership through
       checked HIR and MIR wherever needed to retain the frozen identity and
       diagnostic contract. Do not introduce source-name lookup below
       resolution.
-- [ ] Keep flat existing declaration and definition tables. Module metadata
+- [x] Keep flat existing declaration and definition tables. Module metadata
       indexes those tables; it does not create per-module HIR/MIR pipelines or
       a semantic linking phase.
-- [ ] Extend table constructors and verifiers to reject unknown module owners,
+- [x] Extend table constructors and verifiers to reject unknown module owners,
       mismatched declaration ownership, duplicate module paths, invalid
       selected-entry ownership, and non-dense module metadata.
-- [ ] Update resolved, HIR, and MIR dumps with stable module ownership while
+- [x] Update resolved, HIR, and MIR dumps with stable module ownership while
       keeping backend labels based on collision-free semantic identities.
-- [ ] Adapt existing single-source resolution/test helpers to synthesize one
+- [x] Adapt existing single-source resolution/test helpers to synthesize one
       request-local module and preserve all existing tests and public phase
       composition.
-- [ ] Prove that changing only selected-entry metadata cannot renumber module
+- [x] Prove that changing only selected-entry metadata cannot renumber module
       or declaration identities when the reachable module set is unchanged.
-- [ ] Update phase/IR documentation for module ownership without claiming
+- [x] Update phase/IR documentation for module ownership without claiming
       multi-file source acceptance.
 
 **Tests:** Focused resolved/HIR/MIR representation, dump, table-density,
@@ -405,6 +405,22 @@ single-file regression tests, followed by `make check` and `make msrv-check`.
 **Exit criteria:** Every whole-program phase can retain and verify module
 ownership while the compiler still uses one flat semantic program and the
 existing single-source adapter remains behaviorally compatible.
+
+**Implemented:** `ProgramModuleTable` now owns validated dense
+`ModuleProvenance` entries and selected-entry metadata, rejects non-dense
+identities, duplicate logical paths, and unknown selected modules, and can be
+copied directly from a loaded graph. Resolved function, class, and interface
+declarations carry explicit module owners; type checking and MIR lowering
+preserve both those owners and the unchanged module table while retaining the
+existing flat declaration/definition layout. The one-AST resolver synthesizes
+one request-local `main` module over the AST source, so the public single-file
+pipeline remains one ordinary semantic path without making sibling files
+searchable. Resolved, HIR, and MIR dumps now expose selected module, dense
+module provenance, and top-level owners. MIR verification reports malformed
+module metadata, unknown owners, and entry-function/selected-module mismatch.
+Focused constructor, selected-entry determinism, cross-phase propagation,
+verifier mutation, dump, public-API, backend, and existing regression coverage
+passes, as do `make check` and `make msrv-check`.
 
 ### MS5 — Collect and resolve a deterministic multi-module program
 

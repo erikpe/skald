@@ -115,6 +115,7 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
         None
     } else {
         Some(HirProgram {
+            modules: program.modules.clone(),
             array_types: copy_capabilities.array_types(),
             classes: HirClassDeclarationTable::new(classes),
             interfaces: HirInterfaceDeclarationTable::new(interface_analysis.declarations),
@@ -372,6 +373,7 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
 
     HirFunctionDeclaration {
         id: function.id,
+        module: function.module,
         name: function.name.clone(),
         name_span: function.name_span,
         parameters,
