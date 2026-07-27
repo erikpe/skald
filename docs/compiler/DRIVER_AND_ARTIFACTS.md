@@ -31,8 +31,10 @@ The facade also exposes the typed future `CompilationRequest` contract:
 `Target`, `ArtifactOptions`, and an explicit `CompilationEnvironment`.
 Construction resolves mutually exclusive entry and standard-library option
 forms but performs no filesystem access. No driver entry consumes this request
-yet; `compile_source_to_assembly` and `run_cli` retain the current behavior
-below.
+yet. A request can expand the selected ordinary and standard-library roots
+into explicit provider configurations; normalization and candidate lookup are
+owned by the inactive `module` layer. `compile_source_to_assembly` and
+`run_cli` retain the current behavior below.
 
 ## Compilation orchestration
 

@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS2 is next.
+Status: in progress; MS3 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -133,7 +133,7 @@ implementation template:
 
 - [x] MS0 — Establish module identities and request contracts
 - [x] MS1 — Parse imports, visibility, and qualified source paths
-- [ ] MS2 — Normalize providers and resolve filesystem candidates
+- [x] MS2 — Normalize providers and resolve filesystem candidates
 - [ ] MS3 — Select the entry and load the reachable module graph
 - [ ] MS4 — Carry module ownership through whole-program IR
 - [ ] MS5 — Collect and resolve a deterministic multi-module program
@@ -247,35 +247,35 @@ pass, as do `make check`, `make msrv-check`, and `make robustness-long`.
 **Purpose:** Implement the unordered provider union and filesystem rules as a
 testable owner independent of recursive loading and CLI parsing.
 
-- [ ] Normalize each configured root against the captured working directory,
+- [x] Normalize each configured root against the captured working directory,
       canonicalize the root itself, require an existing directory, and retain
       both canonical equivalence data and configuration provenance.
-- [ ] Coalesce every spelling of one canonical directory into one provider,
+- [x] Coalesce every spelling of one canonical directory into one provider,
       including ordinary-root/standard-library duplication, and choose
       deterministic display provenance independent of option order.
-- [ ] Assign request-local provider and package provenance without deriving
+- [x] Assign request-local provider and package provenance without deriving
       either from logical path prefixes. Treat coalesced configurations as one
       provider.
-- [ ] Map a logical `a::b` candidate to lexical `<root>/a/b.ska` without
+- [x] Map a logical `a::b` candidate to lexical `<root>/a/b.ska` without
       scanning the whole root. Validate the canonical `.ska` suffix and exact
       identifier spelling of each path component.
-- [ ] Verify exact component case even on case-insensitive hosts. Diagnose
+- [x] Verify exact component case even on case-insensitive hosts. Diagnose
       host collisions that cannot be distinguished deterministically rather
       than selecting an enumeration winner.
-- [ ] Follow file and directory symlinks below a root, including targets
+- [x] Follow file and directory symlinks below a root, including targets
       outside it. Retain lexical module identity while diagnosing reached
       broken/cyclic links, unreadable paths, non-regular files, and invalid
       components.
-- [ ] Resolve each exact logical path to missing, unique, or ambiguous.
+- [x] Resolve each exact logical path to missing, unique, or ambiguous.
       Ambiguity must report every distinct normalized provider regardless of
       equal bytes, hard links, or common canonical targets.
-- [ ] Prove that partial tree overlap succeeds when exact module paths differ,
+- [x] Prove that partial tree overlap succeeds when exact module paths differ,
       and that one physical file reached through two logical paths yields two
       candidate records rather than semantic deduplication.
-- [ ] Keep candidate canonical targets confined to I/O, optional byte caching,
+- [x] Keep candidate canonical targets confined to I/O, optional byte caching,
       and diagnostics; provider and module ambiguity keys use provider plus
       logical path.
-- [ ] Use injectable filesystem-facing helpers where needed to test
+- [x] Use injectable filesystem-facing helpers where needed to test
       deterministic case and enumeration policy without weakening real-host
       integration tests.
 
@@ -288,6 +288,19 @@ by `make check` and `make msrv-check`.
 **Exit criteria:** Given normalized configuration and one logical path, the
 provider layer returns the one contract-defined outcome with stable
 provenance and diagnostics, without loading or selecting declarations.
+
+**Implementation record (2026-07-27):** Complete. The `module` facade now
+owns normalized provider configurations, deterministic canonical-root
+coalescing and request-local provider/package allocation, retained lexical
+and display provenance, and exact component-by-component candidate probing.
+Lookup returns missing, unique, ambiguous, or structured reached-filesystem
+failures without reading source contents or scanning provider trees.
+Canonical descendant targets are retained only for I/O and diagnostics;
+provider plus logical path remains the candidate identity. Focused
+temporary-filesystem tests cover empty unions, equivalent and standard roots,
+partial overlap, ordering, case policy, hard links, file and directory
+symlinks including escapes, common targets, broken and cyclic links,
+non-files, and unreadable paths. `make check` and `make msrv-check` pass.
 
 ### MS3 — Select the entry and load the reachable module graph
 

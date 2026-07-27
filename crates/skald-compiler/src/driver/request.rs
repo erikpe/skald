@@ -3,7 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{backend::Target, module::ModulePath};
+use crate::{
+    backend::Target,
+    module::{ModulePath, ProviderRootConfiguration},
+};
 
 /// The selected source identity from which reachable compilation begins.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -198,5 +201,30 @@ impl CompilationRequest {
 
     pub const fn environment(&self) -> &CompilationEnvironment {
         &self.environment
+    }
+
+    /// Expands request root selections into provider normalization inputs.
+    ///
+    /// This performs no filesystem access. The provider layer remains the
+    /// owner of normalization, coalescing, validation, and identity order.
+    pub fn provider_root_configurations(&self) -> Vec<ProviderRootConfiguration> {
+        let mut configurations = self
+            .module_roots
+            .iter()
+            .cloned()
+            .map(ProviderRootConfiguration::module_root)
+            .collect::<Vec<_>>();
+        match &self.standard_library {
+            StandardLibrarySelection::Default => {
+                configurations.push(ProviderRootConfiguration::standard_library(
+                    self.environment.default_standard_library_root.clone(),
+                ));
+            }
+            StandardLibrarySelection::Replacement(root) => {
+                configurations.push(ProviderRootConfiguration::standard_library(root.clone()));
+            }
+            StandardLibrarySelection::Disabled => {}
+        }
+        configurations
     }
 }

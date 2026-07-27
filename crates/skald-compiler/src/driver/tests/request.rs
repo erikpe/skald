@@ -1,6 +1,8 @@
 use super::*;
 
-use crate::module::ModulePath;
+use std::path::Path;
+
+use crate::module::{ModulePath, ProviderRootKind};
 
 #[test]
 fn entry_selection_requires_exactly_one_form_without_filesystem_access() {
@@ -79,5 +81,52 @@ fn compilation_request_retains_explicit_process_and_artifact_inputs() {
     assert_eq!(
         request.environment().default_standard_library_root(),
         Path::new("/install/skald/std")
+    );
+}
+
+#[test]
+fn compilation_request_expands_the_active_standard_library_for_provider_normalization() {
+    let request = CompilationRequest::new(
+        EntrySelector::Module("app::main".parse().unwrap()),
+        vec!["modules".into()],
+        StandardLibrarySelection::Default,
+        Target::X86_64SysV,
+        ArtifactOptions::default(),
+        CompilationEnvironment::new("workspace".into(), "installed/std".into()),
+    );
+    let configurations = request.provider_root_configurations();
+    assert_eq!(configurations.len(), 2);
+    assert_eq!(configurations[0].kind(), ProviderRootKind::ModuleRoot);
+    assert_eq!(configurations[0].path(), Path::new("modules"));
+    assert_eq!(configurations[1].kind(), ProviderRootKind::StandardLibrary);
+    assert_eq!(configurations[1].path(), Path::new("installed/std"));
+
+    let disabled = CompilationRequest::new(
+        EntrySelector::Module("app::main".parse().unwrap()),
+        Vec::new(),
+        StandardLibrarySelection::Disabled,
+        Target::X86_64SysV,
+        ArtifactOptions::default(),
+        CompilationEnvironment::new("workspace".into(), "installed/std".into()),
+    );
+    assert!(disabled.provider_root_configurations().is_empty());
+
+    let replacement = CompilationRequest::new(
+        EntrySelector::Module("app::main".parse().unwrap()),
+        Vec::new(),
+        StandardLibrarySelection::Replacement("vendored/std".into()),
+        Target::X86_64SysV,
+        ArtifactOptions::default(),
+        CompilationEnvironment::new("workspace".into(), "installed/std".into()),
+    );
+    let replacement_configurations = replacement.provider_root_configurations();
+    assert_eq!(replacement_configurations.len(), 1);
+    assert_eq!(
+        replacement_configurations[0].kind(),
+        ProviderRootKind::StandardLibrary
+    );
+    assert_eq!(
+        replacement_configurations[0].path(),
+        Path::new("vendored/std")
     );
 }

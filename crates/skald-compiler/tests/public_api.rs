@@ -25,7 +25,11 @@ use skald_compiler::{
         MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView, MirPlaceProjection,
         MirProgram, MirViewTarget,
     },
-    module::{ModulePath, ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation},
+    module::{
+        normalize_provider_roots, CandidateResolution, ModuleCandidate, ModulePath,
+        ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation, NormalizedProvider,
+        ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
+    },
     passes::run_mir_pipeline,
     resolve::{
         dump_resolved, resolve, ResolveOutput, ResolvedClassHierarchy, ResolvedClassMember,
@@ -62,6 +66,14 @@ fn intentional_module_and_request_paths_compose() {
     let _package_identity: Option<PackageId> = None;
     let _provenance: Option<ModuleProvenance> = None;
     let _source_location: Option<ModuleSourceLocation> = None;
+    let _provider_set: Option<ProviderSet> = None;
+    let _provider: Option<NormalizedProvider> = None;
+    let _candidate: Option<ModuleCandidate> = None;
+    let _resolution: Option<CandidateResolution> = None;
+    let _normalizer: fn(
+        &Path,
+        &[ProviderRootConfiguration],
+    ) -> Result<ProviderSet, Vec<ProviderNormalizationError>> = normalize_provider_roots;
 }
 
 #[test]

@@ -45,10 +45,15 @@ The `module` facade already provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
 `ProviderId`, and `PackageId` identities. The `driver` facade exposes a typed
 `CompilationRequest` containing entry, root, standard-library, target,
-artifact, working-directory, and installed-standard-library inputs. These are
-foundational request contracts only: the active pipeline entry remains
-`compile_source_to_assembly`, and it neither resolves providers nor loads a
-module graph yet.
+artifact, working-directory, and installed-standard-library inputs. Requests
+can expand their active ordinary and standard-library roots into explicit
+provider configurations. The `module` facade normalizes and coalesces those
+roots, assigns deterministic request-local provider/package identities, and
+resolves one exact logical path to missing, unique, ambiguous, or structured
+filesystem failure. This layer probes only requested path components and does
+not read source contents. The active pipeline entry remains
+`compile_source_to_assembly`; it neither selects an entry nor loads a module
+graph yet.
 
 The lexer and parser additionally recognize the frozen module punctuation,
 imports, top-level visibility, and qualified declaration spellings. The AST
