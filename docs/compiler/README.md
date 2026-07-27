@@ -62,10 +62,12 @@ request, provider, loading, identity, and linkage design is defined by the
 request-local module/provider/package identities, provenance records, and the
 driver request model are implemented foundations. Deterministic filesystem
 provider normalization and exact candidate lookup are available behind the
-`module` facade, and the frontend represents module syntax source-shape. The
+`module` facade. The facade also provides positional/logical entry selection,
+reachable parsed graph loading, deterministic graph identities and dumps, and
+cycle rejection. The frontend represents module syntax source-shape, but the
 single-file semantic adapter still rejects module programs with a structured
-diagnostic; entry selection, graph loading, and multi-module compilation
-remain unavailable. Test
+diagnostic; the graph is not yet consumed by resolution, and multi-module
+compilation remains unavailable. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

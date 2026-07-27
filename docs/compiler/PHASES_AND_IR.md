@@ -50,10 +50,13 @@ can expand their active ordinary and standard-library roots into explicit
 provider configurations. The `module` facade normalizes and coalesces those
 roots, assigns deterministic request-local provider/package identities, and
 resolves one exact logical path to missing, unique, ambiguous, or structured
-filesystem failure. This layer probes only requested path components and does
-not read source contents. The active pipeline entry remains
-`compile_source_to_assembly`; it neither selects an entry nor loads a module
-graph yet.
+filesystem failure. It can then select a logical or positional entry, create
+an isolated outside-root singleton when required, acquire and parse only the
+reachable import closure, assign dense module/source identities in canonical
+logical-path order, reject cycles, and return an inspectable `ModuleGraph`.
+Discovery caches source text before canonical final parsing, so recursive
+discovery order does not determine final identities. The active pipeline entry
+remains `compile_source_to_assembly`; it does not consume this graph yet.
 
 The lexer and parser additionally recognize the frozen module punctuation,
 imports, top-level visibility, and qualified declaration spellings. The AST

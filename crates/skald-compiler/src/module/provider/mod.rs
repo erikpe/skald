@@ -9,6 +9,7 @@ pub use model::{
     NormalizedProvider, NormalizedRootSpelling, ProviderNormalizationError,
     ProviderNormalizationErrorKind, ProviderRootConfiguration, ProviderRootKind, ProviderSet,
 };
+pub(in crate::module) use normalize::lexical_normalize;
 pub use normalize::normalize_provider_roots;
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ progress. Completed roadmaps and resolved discovery records move to
   implements the frozen whole-program language and compiler contracts across
   source syntax, anonymous providers, filesystem loading, deterministic
   identities, visibility and imports, external linkage, the driver, and
-  end-to-end tests. Status: in progress; MS3 is next. Material
+  end-to-end tests. Status: in progress; MS4 is next. Material
   dependencies: the frozen
   [language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system),
   frozen [compiler contract](../compiler/MODULE_SYSTEM.md), and the existing

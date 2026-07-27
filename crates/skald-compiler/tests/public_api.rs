@@ -26,9 +26,10 @@ use skald_compiler::{
         MirProgram, MirViewTarget,
     },
     module::{
-        normalize_provider_roots, CandidateResolution, ModuleCandidate, ModulePath,
-        ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation, NormalizedProvider,
-        ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
+        dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
+        LoadedModule, ModuleCandidate, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge,
+        ModulePath, ModulePathErrorKind, ModuleProvenance, ModuleSourceLocation,
+        NormalizedProvider, ProviderNormalizationError, ProviderRootConfiguration, ProviderSet,
     },
     passes::run_mir_pipeline,
     resolve::{
@@ -70,10 +71,19 @@ fn intentional_module_and_request_paths_compose() {
     let _provider: Option<NormalizedProvider> = None;
     let _candidate: Option<ModuleCandidate> = None;
     let _resolution: Option<CandidateResolution> = None;
+    let _graph: Option<ModuleGraph> = None;
+    let _loaded_module: Option<LoadedModule> = None;
+    let _import_edge: Option<ModuleImportEdge> = None;
     let _normalizer: fn(
         &Path,
         &[ProviderRootConfiguration],
     ) -> Result<ProviderSet, Vec<ProviderNormalizationError>> = normalize_provider_roots;
+    let _loader: fn(
+        &EntrySelector,
+        &Path,
+        &ProviderSet,
+    ) -> Result<ModuleGraph, ModuleGraphLoadFailure> = load_module_graph;
+    let _graph_dumper: fn(&ModuleGraph) -> String = dump_module_graph;
 }
 
 #[test]

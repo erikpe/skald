@@ -12,6 +12,7 @@ Start at the earliest incorrect product and move one boundary at a time.
 |---|---|---|
 | Tokens | `lexer::dump_tokens` | lexer |
 | Source AST | `syntax::dump_ast` | parser |
+| Reachable module graph | `module::dump_module_graph` | entry selection and module loader |
 | Resolved program | `resolve::dump_resolved` | resolver and stable identities |
 | Typed HIR | `hir::dump_hir` | type checker and semantic operation selection |
 | MIR | `mir::dump_mir` | target-independent lowering, storage, control flow, and cleanup |
@@ -27,6 +28,7 @@ Exact dump tests live with each phase. A focused search is usually enough:
 ```text
 cargo test --locked -p skald-compiler token_dump
 cargo test --locked -p skald-compiler ast_dump
+cargo test --locked -p skald-compiler identities_and_dump_follow_canonical_module_order
 cargo test --locked -p skald-compiler resolved_dump
 cargo test --locked -p skald-compiler hir_dump
 cargo test --locked -p skald-compiler mir_dump

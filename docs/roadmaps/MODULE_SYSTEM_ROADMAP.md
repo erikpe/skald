@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS3 is next.
+Status: in progress; MS4 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -134,7 +134,7 @@ implementation template:
 - [x] MS0 — Establish module identities and request contracts
 - [x] MS1 — Parse imports, visibility, and qualified source paths
 - [x] MS2 — Normalize providers and resolve filesystem candidates
-- [ ] MS3 — Select the entry and load the reachable module graph
+- [x] MS3 — Select the entry and load the reachable module graph
 - [ ] MS4 — Carry module ownership through whole-program IR
 - [ ] MS5 — Collect and resolve a deterministic multi-module program
 - [ ] MS6 — Resolve module imports and qualified uses
@@ -307,38 +307,38 @@ non-files, and unreadable paths. `make check` and `make msrv-check` pass.
 **Purpose:** Turn an entry selector and provider union into one deterministic,
 parsed, acyclic whole-program graph.
 
-- [ ] Implement logical entry selection through ordinary provider lookup and
+- [x] Implement logical entry selection through ordinary provider lookup and
       positional entry validation for existence, regular-file status,
       readability, canonical suffix, and valid stem/components.
-- [ ] Determine positional containment lexically against each provider's
+- [x] Determine positional containment lexically against each provider's
       canonical root and retained normalized spellings. Reject multiple
       provider identities; do not canonicalize descendant targets to infer
       containment.
-- [ ] Create an outside-root singleton provider that exposes exactly the
+- [x] Create an outside-root singleton provider that exposes exactly the
       selected file under its top-level stem. Make it participate in ordinary
       ambiguity and cycle rules without exposing its parent directory.
-- [ ] Intern rooted file selection and logical selection of the same module as
+- [x] Intern rooted file selection and logical selection of the same module as
       one graph node and one eventual `ModuleId`.
-- [ ] Load the selected source, lex and parse it, resolve every canonical
+- [x] Load the selected source, lex and parse it, resolve every canonical
       import source through MS2, and continue to graph closure. Multiple local
       bindings or selective items from one source module add only one graph
       edge and never reload the source.
-- [ ] Keep source acquisition, graph reachability, and import source spans in
+- [x] Keep source acquisition, graph reachability, and import source spans in
       the loader; do not construct module aliases, selective declaration
       bindings, or public surfaces here.
-- [ ] Stage recursive discovery separately from final dense identity
+- [x] Stage recursive discovery separately from final dense identity
       allocation. Finalize modules and their source instances in canonical
       module-path order so online DFS/work-queue order cannot leak through
       `ModuleId`, `SourceId`, diagnostics, or later declaration allocation.
-- [ ] Preserve distinct `SourceId`, AST, and graph nodes when distinct logical
+- [x] Preserve distinct `SourceId`, AST, and graph nodes when distinct logical
       paths reach one physical source. An optional shared byte cache must sit
       below source-instance creation.
-- [ ] Reject self-imports and longer cycles with the complete canonical module
+- [x] Reject self-imports and longer cycles with the complete canonical module
       chain and the corresponding import spans in edge order.
-- [ ] Propagate missing/ambiguous candidates and unreadable or malformed
+- [x] Propagate missing/ambiguous candidates and unreadable or malformed
       imported files as structured, cross-file compilation diagnostics. Stop
       erroneous phase products before semantic resolution.
-- [ ] Expose a deterministic graph dump or equivalent test view containing
+- [x] Expose a deterministic graph dump or equivalent test view containing
       entry, module path/provenance, source identity, direct imports, and
       canonical graph order.
 
@@ -351,6 +351,23 @@ graph dump, and allocation-order tests, followed by `make check` and
 **Exit criteria:** A valid request produces exactly one parsed graph containing
 the selected entry and reachable imports in deterministic order, or one
 structured loading failure satisfying the frozen diagnostic contract.
+
+**Implementation record (2026-07-27):** Complete. The `module` facade now
+selects logical and positional entries, derives rooted identities by lexical
+containment, creates isolated outside-root singleton providers, and loads only
+the reachable import closure. Discovery caches source text and canonical
+import sources; finalization inserts sources, reparses the retained ASTs, and
+allocates `SourceId` and `ModuleId` in canonical module-path order. Repeated
+bindings share one direct edge while retaining every import span, and distinct
+logical paths to one physical target retain separate source, AST, provenance,
+and graph instances. Missing, ambiguous, invalid, unreadable, non-UTF-8, and
+malformed reachable sources produce structured cross-file diagnostics.
+Iterative deterministic cycle detection reports complete self and longer
+cycles without recursive stack growth. The graph facade exposes structural
+inspection plus an exact deterministic dump. Fifteen focused entry, loading,
+identity, diagnostic, symlink, singleton, cycle, and dump tests pass, including
+a 10,000-node cycle-walk regression, as do `make check` and
+`make msrv-check`.
 
 ### MS4 — Carry module ownership through whole-program IR
 

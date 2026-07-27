@@ -8,9 +8,12 @@ frontend representation of imports, visibility, and qualified names are
 implemented foundations. Filesystem-root normalization, canonical root
 coalescing, deterministic provider/package identity assignment, exact-case
 candidate probing, and missing/unique/ambiguous provider resolution are also
-implemented as an inactive module-layer API. The parser performs no module
-lookup, and the single-file resolver reports module syntax as unsupported;
-entry selection, reachable loading, and multiple-file compilation are not
+implemented as an inactive module-layer API. That API also selects logical or
+positional entries, constructs outside-root singletons, loads and parses the
+reachable closure, allocates canonical graph identities, rejects import
+cycles, and exposes a deterministic graph dump. It does not select imported
+declarations or feed the semantic pipeline. The single-file resolver still
+reports module syntax as unsupported, and multiple-file compilation is not
 implemented. The current one-file driver remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
@@ -267,7 +270,7 @@ The module graph records the selected entry, canonical path and provenance of
 each module, its direct imports and local bindings, and deterministic graph
 order.
 
-Lexing and parsing produce one phase product per module instance. An
+Lexing and parsing produce one retained phase product per module instance. An
 unreadable or malformed imported module is an ordinary source failure with
 structured diagnostics, never an internal compiler error. No erroneous source
 product advances into later semantic phases.

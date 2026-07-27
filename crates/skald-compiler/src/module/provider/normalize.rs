@@ -106,7 +106,7 @@ pub fn normalize_provider_roots(
 }
 
 /// Removes ordinary `.` and `..` components without following symlinks.
-fn lexical_normalize(path: &Path) -> PathBuf {
+pub(in crate::module) fn lexical_normalize(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
     for component in path.components() {
         match component {

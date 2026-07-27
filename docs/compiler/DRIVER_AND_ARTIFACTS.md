@@ -33,7 +33,9 @@ Construction resolves mutually exclusive entry and standard-library option
 forms but performs no filesystem access. No driver entry consumes this request
 yet. A request can expand the selected ordinary and standard-library roots
 into explicit provider configurations; normalization and candidate lookup are
-owned by the inactive `module` layer. `compile_source_to_assembly` and
+owned by the inactive `module` layer. Given those normalized providers, the
+module layer can select the request's entry and load a parsed reachable graph,
+but no driver entry consumes that graph yet. `compile_source_to_assembly` and
 `run_cli` retain the current behavior below.
 
 ## Compilation orchestration

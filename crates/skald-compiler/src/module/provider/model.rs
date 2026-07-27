@@ -242,7 +242,7 @@ pub struct ModuleCandidate {
 }
 
 impl ModuleCandidate {
-    pub(super) fn new(
+    pub(in crate::module) fn new(
         module_path: ModulePath,
         provider_id: ProviderId,
         package_id: PackageId,
