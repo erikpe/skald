@@ -119,14 +119,27 @@ exploratory syntax. Skald currently defines no `module`, `import`, `export`,
 package, qualification, or visibility form. Examples inherited from Niflheim
 or older Skald drafts are not a compatibility promise.
 
-A future module design must settle at least:
+The
+[initial Skald module-system proposal](../roadmaps/SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
+is the current design input for a deliberately small whole-program module
+system. It proposes one file per path-derived module, anonymous composable
+module roots without lookup precedence, `::` qualification, explicit
+selective imports, private-by-default top-level declarations, rejected import
+cycles, and file or logical entry selection. It also records the compiler
+identity, loading, diagnostic, standard-library, singleton file-entry, and
+compatible cross-module external-ABI coalescing design. Its filesystem rules
+coalesce equivalent roots rather than physical files, allow symlink targets
+outside roots, derive module paths lexically with exact case, reject exact
+logical-path collisions across distinct providers, and allow one physical
+source to back distinct logical modules. The proposal is design-complete but
+is not implemented or frozen language behavior; the single-file rules above
+remain authoritative.
 
-- source paths and canonical module identity;
-- imports, qualification, re-exports, and ambiguity handling;
-- public and private visibility;
-- dependency cycles and deterministic initialization order;
-- packages, build inputs, and separate-compilation artifacts; and
-- whether compatible external declarations may coalesce across units.
+Later module-system extensions must separately settle re-exports, package
+identity and package-private visibility, initialization if top-level state is
+introduced, dependency distribution and versioning, and separate-compilation
+artifacts. Those later concerns do not block the proposed initial
+whole-program system.
 
 Broader foreign interoperation must separately settle foreign type mappings,
 ownership, callbacks, variadics, alternate symbols and calling conventions,

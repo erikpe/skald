@@ -169,7 +169,9 @@ its maintenance cost.
 New targets belong behind the backend boundary. New runtime services must use
 the versioned runtime boundary instead of leaking host assumptions into
 target-independent phases. Multiple-file compilation must first settle the
-open language and build contracts in
+proposed language, loader, identity, and build contracts in the
+[Initial Skald Module-System Proposal](../roadmaps/SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
+and then promote its source-visible rules through
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md).
 
 Plain checked-place casts and their owning inline copy consumers are
