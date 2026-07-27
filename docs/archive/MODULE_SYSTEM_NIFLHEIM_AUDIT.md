@@ -2,17 +2,18 @@
 
 Status: audit complete against Niflheim commit
 `3dcd543620bfdc14c0b7c70a09364960e28174c9`; the resulting Skald direction is
-developed in the
-[initial module-system proposal](SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md).
+preserved in the
+[initial module-system design record](SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
+and promoted into the frozen
+[language](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
+and [compiler](../compiler/MODULE_SYSTEM.md) contracts.
 
 This document audits Niflheim's implemented module and import system as design
 input for Skald. It describes observed behavior, architecture, strengths,
-limitations, and consequences. It does not freeze Skald syntax or semantics;
-the later Skald proposal incorporates additional root and entry decisions that
-supersede the preliminary recommendations here. The current Skald contract
-remains the single-file behavior in
-[Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md), and
-feature maturity remains owned by the
+limitations, and consequences. It does not itself define Skald syntax or
+semantics; the later Skald design incorporates additional root and entry
+decisions that supersede the preliminary recommendations here. Feature
+maturity remains owned by the
 [status matrix](../language/STATUS.md).
 
 ## Executive conclusion

@@ -5,7 +5,9 @@ target and toolchain selection, runtime archive selection, output publication,
 and driver failure boundaries. Compiler phases are owned by
 [Phases and IR](PHASES_AND_IR.md), target emission by the
 [Backend and Target Contract](BACKEND.md), and the linked C surface by the
-[Runtime ABI](RUNTIME_ABI.md).
+[Runtime ABI](RUNTIME_ABI.md). The frozen but unimplemented multiple-file CLI,
+provider, and entry extension is owned by the
+[Module-System Compiler Contract](MODULE_SYSTEM.md).
 
 ## Driver facade
 
@@ -54,6 +56,12 @@ path with the canonical `.ska` suffix and selects one of two output modes:
 `-o` or `--output` selects another destination. Assembly mode runs the same
 frontend and backend but does not require a runtime archive or invoke the host
 toolchain. `--version`, `-h`, and `--help` complete without compilation.
+
+The current CLI does not accept `--entry`, `--module-root`, `--stdlib-root`,
+or `--no-stdlib`. Their frozen behavior and multi-file output defaults are
+specified in the
+[module-system contract](MODULE_SYSTEM.md#entry-selection-and-command-line)
+for later implementation.
 
 The CLI reads source as UTF-8 text. A missing file, invalid UTF-8, or another
 read failure is an input I/O error. Relative diagnostic paths are preserved;

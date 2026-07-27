@@ -58,10 +58,12 @@ by [Driver and Artifacts](docs/compiler/DRIVER_AND_ARTIFACTS.md).
 Start at the [documentation index](docs/README.md). Principal references are:
 
 - [language overview](docs/language/README.md),
-  [status](docs/language/STATUS.md), and
-  [grammar](docs/language/GRAMMAR.md);
+  [status](docs/language/STATUS.md),
+  [implemented grammar](docs/language/GRAMMAR.md), and frozen
+  [module-system language contract](docs/language/MODULES_AND_INTEROP.md);
 - [compiler architecture](docs/compiler/README.md),
   [phases and IR](docs/compiler/PHASES_AND_IR.md),
+  [module-system contract](docs/compiler/MODULE_SYSTEM.md),
   [backend](docs/compiler/BACKEND.md), and
   [runtime ABI](docs/compiler/RUNTIME_ABI.md);
 - [development workflow](docs/development/README.md),

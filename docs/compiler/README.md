@@ -56,9 +56,12 @@ header, finalizer, anchor, and compiler/runtime responsibility design is
 defined by the
 [shared-ownership compiler and runtime contract](SHARED_OWNERSHIP.md). Driver
 behavior is defined by
-[driver and artifacts](DRIVER_AND_ARTIFACTS.md). Test ownership and selection
-are defined by [Testing](../development/TESTING.md), and inspection workflows
-by [Debugging the Compiler](../development/DEBUGGING.md). Contributor
+[driver and artifacts](DRIVER_AND_ARTIFACTS.md). The frozen, unimplemented
+multiple-file request, provider, loading, identity, and linkage design is
+defined by the [module-system compiler contract](MODULE_SYSTEM.md). Test
+ownership and selection are defined by
+[Testing](../development/TESTING.md), and inspection workflows by
+[Debugging the Compiler](../development/DEBUGGING.md). Contributor
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
@@ -99,10 +102,13 @@ source database
     -> assembly
 ```
 
-The driver composes this path for one source file. Every phase entry point and
-product also remains independently usable by repository tests and debugging
-tools. Source I/O, host tool invocation, runtime linkage, and artifact
-publication are driver responsibilities outside the phase pipeline.
+The current driver composes this path for one source file. The frozen module
+contract extends the source and resolution front of the same pipeline to a
+reachable graph; it does not introduce a second semantic linker or a separate
+lower pipeline. Every phase entry point and product also remains independently
+usable by repository tests and debugging tools. Source I/O, host tool
+invocation, runtime linkage, and artifact publication are driver
+responsibilities outside the phase pipeline.
 
 See [Phases and IR](PHASES_AND_IR.md) for inputs, outputs, invariants,
 verification, dumps, and trust boundaries, and
@@ -168,11 +174,11 @@ its maintenance cost.
 
 New targets belong behind the backend boundary. New runtime services must use
 the versioned runtime boundary instead of leaking host assumptions into
-target-independent phases. Multiple-file compilation must first settle the
-proposed language, loader, identity, and build contracts in the
-[Initial Skald Module-System Proposal](../roadmaps/SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
-and then promote its source-visible rules through
-[Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md).
+target-independent phases. Multiple-file compilation must implement the
+frozen
+[source-visible module contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
+and [compiler module contract](MODULE_SYSTEM.md) without redefining them in an
+implementation roadmap.
 
 Plain checked-place casts and their owning inline copy consumers are
 implemented. The complete source-visible matrix is defined in

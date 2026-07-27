@@ -1,9 +1,10 @@
 # Modules and Foreign Interoperation
 
-Status: authoritative for the implemented compilation-unit, top-level
-namespace, entry-point, and source-visible external-function contracts.
-[Feature maturity](STATUS.md) remains authoritative for compiler support, and
-the [implemented grammar](GRAMMAR.md) owns exact source shape.
+Status: authoritative for the implemented single-file compilation unit and
+foreign-function boundary, and for the frozen initial module-system language
+contract. [Feature maturity](STATUS.md) remains authoritative for compiler
+support, and the [implemented grammar](GRAMMAR.md) owns syntax currently
+accepted by the compiler.
 
 ## Current compilation unit
 
@@ -16,22 +17,22 @@ The implemented top-level declaration kinds are:
 
 - function definitions;
 - bodyless external-function declarations; and
-- class declarations.
+- class and interface declarations.
 
 Declarations are collected before callable bodies are resolved, so a body may
-refer to a later top-level function or class in the same file. There is no
+refer to a later top-level declaration in the same file. There is no
 source-order overload set or fallback to another file.
 
 ## Top-level namespace
 
-Classes, defined functions, and external functions share one non-overloaded
-top-level namespace. A name may occur there at most once, including across
-declaration kinds. In particular:
+Classes, interfaces, defined functions, and external functions share one
+non-overloaded top-level namespace. A name may occur there at most once,
+including across declaration kinds. In particular:
 
 - two identical external declarations are a duplicate rather than a
   coalesced declaration;
 - an external declaration and a function definition cannot share a name; and
-- a class and function cannot share a name.
+- classes, interfaces, and functions cannot share names with one another.
 
 Class-member and lexical-local namespaces are separate and are defined by
 [classes and lifecycle](CLASSES_AND_LIFECYCLE.md#members-and-namespaces) and
@@ -112,34 +113,303 @@ deliberately preserves this restriction: shared values do not cross the
 external boundary, and the allocator functions remain compiler/runtime
 ABI operations rather than source-visible shared-handle interoperation.
 
-## Future modules and broader interoperation
+## Frozen initial module system
 
-Modules and multiple-file programs are an **open question**, not reserved or
-exploratory syntax. Skald currently defines no `module`, `import`, `export`,
-package, qualification, or visibility form. Examples inherited from Niflheim
-or older Skald drafts are not a compatibility promise.
+The initial module system is a **frozen design** but is not implemented.
+The compiler therefore still rejects the syntax in this section and accepts
+only the single-file form above. This section fixes the source-visible
+contract for implementation; the
+[module-system compiler contract](../compiler/MODULE_SYSTEM.md) owns roots,
+filesystem resolution, CLI entry selection, loading, identities, and
+determinism.
 
-The
-[initial Skald module-system proposal](../roadmaps/SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
-is the current design input for a deliberately small whole-program module
-system. It proposes one file per path-derived module, anonymous composable
-module roots without lookup precedence, `::` qualification, explicit
-selective imports, private-by-default top-level declarations, rejected import
-cycles, and file or logical entry selection. It also records the compiler
-identity, loading, diagnostic, standard-library, singleton file-entry, and
-compatible cross-module external-ABI coalescing design. Its filesystem rules
-coalesce equivalent roots rather than physical files, allow symlink targets
-outside roots, derive module paths lexically with exact case, reject exact
-logical-path collisions across distinct providers, and allow one physical
-source to back distinct logical modules. The proposal is design-complete but
-is not implemented or frozen language behavior; the single-file rules above
-remain authoritative.
+### Modules and paths
 
-Later module-system extensions must separately settle re-exports, package
-identity and package-private visibility, initialization if top-level state is
-introduced, dependency distribution and versioning, and separate-compilation
-artifacts. Those later concerns do not block the proposed initial
-whole-program system.
+One module is one logical compilation instance of a `.ska` source mapping.
+There is no source `module` declaration. A module root derives the canonical
+logical path from the source's relative path:
+
+```text
+<root>/app/main.ska        -> app::main
+<root>/math/geometry.ska   -> math::geometry
+<root>/std/collections.ska -> std::collections
+```
+
+The suffix is omitted. Every directory component and the file stem must be a
+valid Skald identifier. Module paths are non-empty and case-sensitive.
+Directories provide path prefixes only; they are not modules or namespaces
+with declarations. A module and a descendant may coexist:
+
+```text
+<root>/math.ska          -> math
+<root>/math/geometry.ska -> math::geometry
+```
+
+Module roots are anonymous lookup locations. Their command-line spelling is
+never part of an import. Roots compose one logical tree without precedence,
+and a shared prefix conveys neither ownership nor visibility:
+
+```text
+/project/modules/math/trigonometry.ska -> math::trigonometry
+/deps/modules/math/geometry.ska        -> math::geometry
+```
+
+The standard library participates through the same rules. Nothing is
+implicitly imported, and `std` has no language-level privilege. A future
+string-literal contract may designate a path such as `std::Str` through an
+explicit language-item rule without making its module otherwise special.
+
+### Import syntax
+
+Imports precede top-level declarations and are visible throughout their
+module:
+
+```text
+compilation-unit     = { import-declaration } { top-level-declaration } EOF
+import-declaration   = module-import | selective-import
+module-import        = "import" module-path ["as" identifier] ";"
+selective-import     = "from" module-path "import" imported-declaration
+                       { "," imported-declaration } ";"
+imported-declaration = identifier ["as" identifier]
+module-path          = identifier { "::" identifier }
+```
+
+Import lists have no trailing comma. `import`, `from`, `as`, and `public` are
+contextual words recognized only in the exact forms above and in the
+visibility form below; they remain ordinary identifiers elsewhere. `::` is
+reserved for module paths and module-qualified declaration use; `.` remains
+inline member access and `->` remains shared-owner member access.
+
+Every import source is a canonical logical module path. An earlier local alias
+cannot be used as another import's source:
+
+```ska
+import std::Str as KesoStr;
+from std::Str import Str; // valid
+from KesoStr import Other; // names canonical top-level module KesoStr
+```
+
+Imports are therefore independent of source order.
+
+### Module imports
+
+A module import binds its complete canonical path:
+
+```ska
+import math::geometry;
+
+fn area() -> f64 {
+    return math::geometry::circle_area();
+}
+```
+
+It does not bind only the final component. A one-identifier alias may shorten
+the local spelling:
+
+```ska
+import math::geometry as geometry;
+
+fn area() -> f64 {
+    return geometry::circle_area();
+}
+```
+
+Module aliases are exactly one identifier; `as foo::geometry` is invalid.
+An alias changes only local spelling, not canonical path, provenance,
+visibility, or declaration identity. Diagnostics may reproduce the alias at
+the importing use, but identify the target by its canonical module and
+declaration; the alias never renames the target in another module.
+
+A module import:
+
+- binds exactly one module, not its descendants;
+- adds no declaration to unqualified lookup;
+- does not expose the imported module's imports;
+- does not re-export anything; and
+- permits qualified use only through a directly imported binding.
+
+Knowing an absolute logical path does not bypass the direct-import
+requirement. A qualified declaration may appear anywhere its unqualified form
+could appear, including types, calls, construction, inheritance, interface
+claims, and casts.
+
+The same canonical module may have multiple local bindings:
+
+```ska
+import std::Str;
+import std::Str as KesoStr;
+import std::Str as OtherStr;
+```
+
+All three bindings select one `ModuleId`; the source is loaded and parsed once
+and contributes one dependency edge. The resolver rejects only:
+
+- repetition of the same local module path;
+- one local module binding designating different modules; or
+- two aliases using the same binding identifier.
+
+Module bindings occupy a namespace selected syntactically by `::`. A module
+alias may therefore share spelling with a top-level declaration, parameter,
+or local:
+
+```ska
+import math::geometry as geometry;
+
+fn area(shape: Shape) -> f64 {
+    var geometry: Shape = shape;
+    geometry.area();
+    return geometry::circle_area();
+}
+```
+
+### Selective imports
+
+A selective import introduces named public top-level declarations into the
+importing module's ordinary top-level namespace:
+
+```ska
+from std::Str import Str, StrBuf;
+from std::Str import Str as HelloStr, StrBuf as HelloStrBuf;
+```
+
+Without `as`, the declaration's source name is bound. With `as`, only the
+alias is bound. Selective imports may name public classes, interfaces,
+defined functions, and external functions. They cannot name private
+declarations, members, module bindings, or declarations merely imported by
+the target module.
+
+Selecting declarations makes the source module reachable but does not bind
+the module itself. Code needing both forms declares both:
+
+```ska
+import std::Str;
+from std::Str import Str;
+from std::Str import Str as HelloStr;
+```
+
+Multiple local names may select the same canonical declaration. They do not
+create new types or functions, require conversions, or change the
+declaration's canonical diagnostic owner. Each local ordinary name must
+nevertheless be unique. The resolver rejects:
+
+- a selective name or alias colliding with a declaration in the importing
+  module;
+- two selective imports introducing the same local name, even when they
+  select the same canonical declaration; and
+- an unknown, private, or unsupported declaration kind.
+
+Existing lexical scopes may shadow a selectively imported ordinary name.
+
+Wildcard imports are invalid:
+
+```ska
+from std::Str import *; // invalid
+```
+
+There is no implicit unqualified lookup, namespace flattening, or re-export.
+Adding a public declaration to a dependency therefore cannot introduce a new
+local binding or collision in an importer.
+
+### Visibility and namespaces
+
+Top-level declarations are private to their defining module unless marked
+`public`:
+
+```text
+top-level-declaration = ["public"] (
+    function-definition
+  | external-function-declaration
+  | class-declaration
+  | interface-declaration
+)
+```
+
+Qualification and aliases never bypass privacy. The initial boundary is only
+module-level:
+
+- there is no package-private or library-private visibility;
+- shared path prefixes grant no access;
+- class-member visibility is unchanged, so a public class or interface exposes
+  only the member surface allowed by the existing member rules; and
+- `public` controls Skald source access, not native symbol export.
+
+Each module retains one non-overloaded ordinary top-level declaration
+namespace. Duplicate leaf names within a module remain errors; equal leaf
+names in different modules denote distinct declarations.
+
+### Reachability and cycles
+
+Compilation is whole-program only. The selected entry module and the
+transitive closure of its imports form the program. Unused imports still make
+their modules reachable. Multiple bindings or selective imports from the same
+module contribute one reachability edge. Unrelated source files are not
+compiled.
+
+Every import cycle is invalid, including self-import. A diagnostic reports the
+complete cycle in import order. A module importing the selected entry through
+the reachable graph therefore creates a cycle and is rejected.
+
+This rule is source semantics, not an incidental recursive-loader limitation.
+There is no module initialization order because the initial language has no
+top-level executable state.
+
+### Selected entry module
+
+The build selects one ordinary module as the entry. Only that module must
+define:
+
+```ska
+fn main() -> i64 {
+    return 0;
+}
+```
+
+Its `main` need not be public. Functions named `main` in other reachable
+modules are ordinary functions and do not compete for entry status. Only the
+selected function is exposed through the host entry wrapper.
+
+The entry may be selected by logical path or file path and need not live below
+a configured root. Those build rules, including singleton file entries and
+default output names, are defined by the
+[compiler contract](../compiler/MODULE_SYSTEM.md#entry-selection-and-command-line).
+
+### External declarations across modules
+
+An external declaration remains a module-owned trusted ABI assertion.
+Valid declarations in different modules for the same exact foreign symbol
+coalesce only when their ABI signatures are identical: equal calling
+convention, parameter count and source-order parameter types, and result type.
+Parameter names, module ownership, import aliases, and visibility do not
+affect ABI identity.
+
+Incompatible declarations are a source error and every conflicting
+declaration is labeled. Coalescing does not merge source declarations or
+visibility. Repeated external declarations within one module remain ordinary
+duplicate top-level declarations. A Skald function definition never coalesces
+with an external declaration sharing its leaf name.
+
+### Initial exclusions
+
+The frozen initial system has no:
+
+- source-declared module or package names;
+- relative or parent imports;
+- wildcard imports, re-exports, implicit import flattening, or facade
+  construction;
+- multi-segment module aliases or alias-based import sources;
+- package-private visibility or new member visibility;
+- directory modules or implicit index files;
+- manifests, registries, versions, or dependency distribution;
+- separate compilation, serialized interfaces, or binary Skald libraries;
+- top-level state or module initialization; or
+- native export of source-public declarations.
+
+Package identities may later group roots and define package-private access
+without changing existing logical paths or imports. Separate compilation may
+later consume the same frozen module graph and declaration identities without
+changing whole-program source meaning.
+
+## Broader interoperation
 
 Broader foreign interoperation must separately settle foreign type mappings,
 ownership, callbacks, variadics, alternate symbols and calling conventions,

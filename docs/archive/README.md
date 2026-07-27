@@ -10,8 +10,10 @@ For current information, use:
 - [the language overview](../language/README.md);
 - [language and compiler status](../language/STATUS.md);
 - [the implemented grammar](../language/GRAMMAR.md);
+- [the module-system language contract](../language/MODULES_AND_INTEROP.md);
 - [the compiler architecture](../compiler/README.md);
 - [compiler phases and IR](../compiler/PHASES_AND_IR.md);
+- [the module-system compiler contract](../compiler/MODULE_SYSTEM.md);
 - [the backend and target contract](../compiler/BACKEND.md);
 - [the runtime ABI](../compiler/RUNTIME_ABI.md);
 - [driver and artifacts](../compiler/DRIVER_AND_ARTIFACTS.md);
@@ -42,6 +44,11 @@ Archived plans:
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
 - [Explicit optional values](OPTIONAL_VALUES_ROADMAP.md)
 - [Arrays](ARRAYS_ROADMAP.md)
+
+Resolved module-system design inputs:
+
+- [Niflheim module-system audit](MODULE_SYSTEM_NIFLHEIM_AUDIT.md)
+- [Initial Skald module-system design record](SKALD_INITIAL_MODULE_SYSTEM_PROPOSAL.md)
 
 Supporting records for the documentation overhaul:
 

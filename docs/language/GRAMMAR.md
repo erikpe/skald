@@ -8,6 +8,12 @@ This document defines tokens, concrete source shape, precedence,
 associativity, and syntax-error boundaries. It does not define name lookup,
 types, ownership, evaluation, lifecycle behavior, ABI, or lowering.
 
+The frozen but unimplemented module syntax is deliberately absent from this
+implemented grammar. Its exact extension is owned by
+[Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#import-syntax);
+until implemented, `import`, `from`, `as`, and `public` remain ordinary
+identifiers and `::` is not accepted punctuation.
+
 ## Notation
 
 The grammar uses this EBNF notation:

@@ -104,8 +104,9 @@ The current compilation unit is one UTF-8 `.ska` source file. Functions,
 external declarations, classes, and interfaces share one non-overloaded
 top-level namespace, and execution starts at a defined `fn main() -> i64`.
 Restricted exact-symbol external declarations connect primitive values to the
-platform ABI. Modules, imports, packages, and separate compilation are not yet
-language features.
+platform ABI. A frozen but unimplemented whole-program module design adds
+path-derived modules, explicit imports, and module-level visibility. Packages
+and separate compilation remain deferred.
 
 Target layout, registers, calling conventions, compiler IR, generated symbols,
 runtime allocation, and tool invocation are implementation concerns. They do
@@ -146,7 +147,8 @@ makes a result source-observable.
   the remaining shared-owner syntax and complete ownership-direction matrix.
 - [Modules and foreign interoperation](MODULES_AND_INTEROP.md) defines the
   implemented single-file namespace, entry point, and trusted primitive
-  external-function boundary, and records future modules as open design.
+  external-function boundary plus the frozen, unimplemented initial module
+  language.
 - [Errors and exceptional control flow](ERRORS.md) defines compile-time
   rejection, the current fatal runtime boundary, normal-flow cleanup limits,
   and the open checked-exception design.

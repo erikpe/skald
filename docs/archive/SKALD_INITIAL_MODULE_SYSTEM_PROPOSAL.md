@@ -1,9 +1,9 @@
-# Initial Skald Module-System Proposal
+# Initial Skald Module-System Design Record
 
-Status: design-complete proposed first-version language and compiler design;
-not implemented and not yet promoted to a frozen language contract. It is
-ready for that formal promotion before an implementation roadmap is
-scheduled.
+Status: historical design record. Its decisions were promoted into the frozen
+[language](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
+and [compiler](../compiler/MODULE_SYSTEM.md) contracts. Those living documents
+are authoritative.
 
 This proposal turns the
 [Niflheim module-system audit](MODULE_SYSTEM_NIFLHEIM_AUDIT.md) into a small
@@ -11,10 +11,9 @@ initial module system for Skald. It incorporates the subsequent decisions
 about multiple anonymous module roots, split logical namespaces, file and
 logical entry selection, and singleton entry modules.
 
-The current compiler still accepts one source file and the current normative
-language behavior remains in
-[Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md).
-Nothing in this proposal is accepted syntax or compiler behavior yet.
+The current compiler still accepts one source file. The
+[status matrix](../language/STATUS.md) distinguishes that implementation
+boundary from the frozen multiple-file design.
 
 ## Intended outcome
 
@@ -933,15 +932,11 @@ The first version excludes:
 - native export of source-public declarations; and
 - eager compilation of every source below a root.
 
-## Freeze readiness
+## Promotion result
 
-The first-version design decisions are complete. In particular, the proposal
-now fixes import-cycle rejection, `::` module paths, qualified and selective
-import behavior, multiple local bindings, entry selection, provider and
-standard-library configuration, external-ABI coalescing, and filesystem
-normalization.
-
-The next design step is a formal review and promotion of these proposed rules
-into the frozen language and compiler contracts. Once promoted, the work can
-be divided into a PR-sized implementation roadmap. Until that promotion, the
-implemented single-file contract remains authoritative.
+The completed decisions were promoted into the living language and compiler
+contracts, followed by a coverage reconciliation that restored the loader,
+resolution, identity, ABI, and diagnostic obligations needed for
+implementation. This record preserves the reasoning that led to them and must
+not be used as a parallel specification. An implementation roadmap should
+consume the complete frozen contracts rather than restate or reopen them.

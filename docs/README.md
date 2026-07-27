@@ -41,7 +41,7 @@ Use the authority closest to the behavior:
   cast failure, and target-directed checked copy sources belong in
   [object casts](language/OBJECT_CASTS.md);
 - the current compilation unit, top-level namespace, entry point, external
-  declarations, and future module boundary belong in
+  declarations, and frozen initial module language belong in
   [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
 - compile-time rejection, current runtime-failure boundaries, and future
   exceptional cleanup belong in
@@ -50,6 +50,9 @@ Use the authority closest to the behavior:
   policy belong in the [compiler architecture](compiler/README.md);
 - phase products, IR responsibilities, verification, dumps, and trust
   boundaries belong in [compiler phases and IR](compiler/PHASES_AND_IR.md);
+- frozen multiple-file providers, filesystem resolution, entry selection,
+  identities, loading, and linkage belong in the
+  [module-system compiler contract](compiler/MODULE_SYSTEM.md);
 - the frozen array phase, lifecycle, backing, anchor, verification, and
   runtime responsibility design belongs in
   [the array compiler and runtime contract](compiler/ARRAYS.md);
