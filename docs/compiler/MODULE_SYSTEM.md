@@ -11,10 +11,12 @@ candidate probing, and missing/unique/ambiguous provider resolution are also
 implemented as an inactive module-layer API. That API also selects logical or
 positional entries, constructs outside-root singletons, loads and parses the
 reachable closure, allocates canonical graph identities, rejects import
-cycles, and exposes a deterministic graph dump. It does not select imported
-declarations or feed the semantic pipeline. The single-file resolver still
-reports module syntax as unsupported, and multiple-file compilation is not
-implemented. The current one-file driver remains authoritative in
+cycles, and exposes a deterministic graph dump. The graph resolver consumes
+that product, builds direct module bindings, and selects qualified public
+declarations into one flat semantic pipeline; selective ordinary bindings are
+not implemented. The single-file resolver still reports module syntax as
+unsupported, and the supported driver does not compile multiple files. The
+current one-file driver remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
@@ -261,12 +263,21 @@ default declaration index and direct public surface per module, selects
 resolved program for the existing type-check, HIR, MIR, verification, and
 backend phases.
 
-At the current implementation boundary, each module resolves unqualified
-declaration uses only against declarations it owns. Imports establish graph
-reachability but do not yet introduce module or ordinary bindings; qualified
-lookup and selective imports belong to the following module-system stages.
-The active driver still uses the singleton adapter and does not yet feed a
-loaded graph into semantic compilation.
+At the current implementation boundary, each direct module import creates one
+exact qualified binding: the complete canonical module path by default, or one
+identifier when aliased. Multiple distinct bindings may select the same loaded
+`ModuleId`; repeated or conflicting local bindings are rejected. Qualified
+lookup resolves the binding and one public declaration leaf centrally across
+types, signatures, hierarchy, interface claims, calls, construction,
+allocation, casts, and type tests. Absolute paths, ancestors, descendants, and
+transitive imports grant no access without an exact direct binding. The
+resolved program records local bindings and canonical targets, while HIR and
+lower phases retain only selected declaration identities.
+
+Unqualified declaration uses still see only declarations owned by the current
+module. Selective imports establish reachability but do not introduce ordinary
+bindings until the next module-system stage. The active driver still uses the
+singleton adapter and does not feed a loaded graph into semantic compilation.
 
 One canonical `ModulePath` resolves to at most one loaded `ModuleId`. Multiple
 module aliases and selective imports of that module reuse its `ModuleId`,

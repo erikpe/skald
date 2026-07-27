@@ -296,31 +296,29 @@ impl CallableResolver<'_, '_> {
     ) -> Option<CallTarget> {
         match callee {
             syntax::Expression::Identifier(identifier) => {
-                if reject_qualified_name(&identifier.name, self.diagnostics) {
-                    return None;
-                }
-                if let Some(binding) = self.lookup_binding(&identifier.name.text) {
-                    self.diagnostics.push(
-                        Diagnostic::error(
-                            INVALID_CALL_TARGET,
-                            format!("binding `{}` is not callable", identifier.name.text),
-                        )
-                        .with_primary_label(identifier.span, "called here")
-                        .with_secondary_label(binding.name_span, "binding declared here"),
-                    );
-                    return None;
+                if !identifier.name.is_qualified() {
+                    if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_CALL_TARGET,
+                                format!("binding `{}` is not callable", identifier.name.text),
+                            )
+                            .with_primary_label(identifier.span, "called here")
+                            .with_secondary_label(binding.name_span, "binding declared here"),
+                        );
+                        return None;
+                    }
                 }
                 match self
                     .environment
-                    .top_levels
-                    .get(identifier.name.text.as_str())
-                    .copied()
+                    .lookup
+                    .select(&identifier.name, self.diagnostics)
                 {
-                    Some(TopLevelSymbol {
+                    TopLevelLookup::Found(TopLevelSymbol {
                         kind: TopLevelSymbolKind::Function(function),
                         ..
                     }) => Some(CallTarget::Function(function)),
-                    Some(TopLevelSymbol {
+                    TopLevelLookup::Found(TopLevelSymbol {
                         kind: TopLevelSymbolKind::Class(class),
                         ..
                     }) => {
@@ -345,7 +343,7 @@ impl CallableResolver<'_, '_> {
                         }
                         Some(CallTarget::Constructor { class })
                     }
-                    Some(TopLevelSymbol {
+                    TopLevelLookup::Found(TopLevelSymbol {
                         kind: TopLevelSymbolKind::Interface(_),
                         ..
                     }) => {
@@ -361,7 +359,7 @@ impl CallableResolver<'_, '_> {
                         );
                         None
                     }
-                    None => {
+                    TopLevelLookup::Missing => {
                         self.report_unknown(
                             &identifier.name.text,
                             identifier.span,
@@ -369,6 +367,7 @@ impl CallableResolver<'_, '_> {
                         );
                         None
                     }
+                    TopLevelLookup::Diagnosed => None,
                 }
             }
             syntax::Expression::MemberAccess(member) => {

@@ -7,10 +7,7 @@ impl CallableResolver<'_, '_> {
         &mut self,
         allocation: &syntax::AllocationExpr,
     ) -> Option<ResolvedExpression> {
-        if reject_qualified_name(&allocation.target, self.diagnostics) {
-            return None;
-        }
-        let class = if allocation.target.text == "Obj" {
+        let class = if !allocation.target.is_qualified() && allocation.target.text == "Obj" {
             self.diagnostics.push(
                 Diagnostic::error(INVALID_CONSTRUCTION_TARGET, "`Obj` cannot be allocated")
                     .with_primary_label(
@@ -39,15 +36,14 @@ impl CallableResolver<'_, '_> {
     fn resolve_allocation_class(&mut self, allocation: &syntax::AllocationExpr) -> Option<ClassId> {
         match self
             .environment
-            .top_levels
-            .get(allocation.target.text.as_str())
-            .copied()
+            .lookup
+            .select(&allocation.target, self.diagnostics)
         {
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
                 ..
             }) => self.validate_constructible_allocation_class(class, allocation),
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(_),
                 ..
             }) => {
@@ -60,7 +56,7 @@ impl CallableResolver<'_, '_> {
                 );
                 None
             }
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Function(_),
                 ..
             }) => {
@@ -76,7 +72,7 @@ impl CallableResolver<'_, '_> {
                 );
                 None
             }
-            None => {
+            TopLevelLookup::Missing => {
                 self.report_unknown(
                     &allocation.target.text,
                     allocation.target.span,
@@ -84,6 +80,7 @@ impl CallableResolver<'_, '_> {
                 );
                 None
             }
+            TopLevelLookup::Diagnosed => None,
         }
     }
 

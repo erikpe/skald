@@ -18,6 +18,7 @@ mod interface;
 mod resolver;
 mod virtuals;
 
+use super::name_lookup::{collect_module_bindings, ModuleLookup, TopLevelLookup};
 use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
 use hierarchy::build_class_hierarchy;

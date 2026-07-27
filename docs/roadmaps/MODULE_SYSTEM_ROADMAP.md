@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS6 is next.
+Status: in progress; MS7 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -137,7 +137,7 @@ implementation template:
 - [x] MS3 — Select the entry and load the reachable module graph
 - [x] MS4 — Carry module ownership through whole-program IR
 - [x] MS5 — Collect and resolve a deterministic multi-module program
-- [ ] MS6 — Resolve module imports and qualified uses
+- [x] MS6 — Resolve module imports and qualified uses
 - [ ] MS7 — Resolve selective imports and ordinary bindings
 - [ ] MS8 — Coalesce compatible external ABI declarations
 - [ ] MS9 — Integrate compilation requests with the driver and CLI
@@ -484,30 +484,30 @@ cross-file diagnostic, dump, public-API, and native backend tests pass, as do
 **Purpose:** Implement direct module bindings and central qualified declaration
 selection across every existing declaration-use context.
 
-- [ ] Build each module's module-binding namespace from direct module imports.
+- [x] Build each module's module-binding namespace from direct module imports.
       The default binding is the complete canonical module path; an alias is
       exactly one local identifier.
-- [ ] Permit multiple distinct local bindings of one canonical module while
+- [x] Permit multiple distinct local bindings of one canonical module while
       retaining one graph node and dependency edge. Reject repetition or
       conflict only under the frozen local-binding rules.
-- [ ] Keep module bindings in the `::`-selected namespace so aliases may share
+- [x] Keep module bindings in the `::`-selected namespace so aliases may share
       spelling with a top-level declaration, parameter, or lexical local
       without contaminating ordinary lookup.
-- [ ] Add one centralized current-module lookup service that splits an
+- [x] Add one centralized current-module lookup service that splits an
       unresolved qualified chain through a directly imported module binding,
       then selects exactly one declaration leaf from the target module.
-- [ ] Resolve qualified functions, external functions, classes, and interfaces
+- [x] Resolve qualified functions, external functions, classes, and interfaces
       in every source context represented by MS1, returning existing dense
       declaration identities rather than path/name pairs.
-- [ ] Enforce direct import and target visibility. Knowing an absolute logical
+- [x] Enforce direct import and target visibility. Knowing an absolute logical
       path, importing an ancestor, or importing a module that imports the
       target must not grant access.
-- [ ] Diagnose unknown bindings, partial paths, qualified private declarations,
+- [x] Diagnose unknown bindings, partial paths, qualified private declarations,
       missing leaves, wrong declaration kinds, descendant assumptions, and
       attempted transitive access with importing-use and target labels.
-- [ ] Ensure aliases affect only the local source spelling in diagnostics;
+- [x] Ensure aliases affect only the local source spelling in diagnostics;
       canonical module/declaration ownership remains visible and unchanged.
-- [ ] Update resolved dumps to show selected identities and canonical owners,
+- [x] Update resolved dumps to show selected identities and canonical owners,
       not unresolved paths. Keep HIR and lower phases path-free.
 
 **Tests:** Focused default/alias/multiple-binding, binding-conflict,
@@ -519,6 +519,25 @@ resolved dump, type-check, HIR/MIR, and native call tests, followed by
 **Exit criteria:** Every qualified use either resolves once through a direct
 module binding to an existing declaration ID or receives one deterministic
 module-aware diagnostic; no later phase repeats the lookup.
+
+**Implemented:** Every graph-resolved module now owns a deterministic direct
+module-binding table. Unaliased imports bind their complete canonical path;
+aliases bind one identifier; distinct bindings may share one loaded
+`ModuleId`; and repeated or conflicting local paths receive structured
+diagnostics. One current-module lookup service keeps module bindings separate
+from ordinary declarations, splits each qualified spelling into an exact
+binding plus declaration leaf, enforces direct access and public visibility,
+and returns the existing function, class, or interface identity. Types,
+signatures, inheritance, interface claims, calls, construction, allocation,
+casts, and type tests all use that service. Diagnostics distinguish unknown
+bindings, private declarations, and missing leaves while existing
+context-specific diagnostics retain wrong-kind ownership labels. Resolved
+dumps show sorted local bindings, target `ModuleId`, canonical module paths,
+and identity-selected operations; HIR and MIR carry no binding paths. Shared
+test support now owns native assembly execution so qualified internal calls
+are exercised without duplicating linker helpers. Fourteen focused module
+tests plus public API, full compiler, native, and documentation coverage pass,
+as do `make check` and `make msrv-check`.
 
 ### MS7 — Resolve selective imports and ordinary bindings
 

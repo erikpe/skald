@@ -27,6 +27,39 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 ));
             }
         });
+        if program
+            .module_bindings
+            .iter()
+            .any(|module| module.iter().next().is_some())
+        {
+            dumper.heading("ModuleBindings");
+            dumper.indented(|dumper| {
+                for module in program.module_bindings.iter() {
+                    if module.iter().next().is_none() {
+                        continue;
+                    }
+                    dumper.raw_line(&format!("Module {}", module.module));
+                    dumper.indented(|dumper| {
+                        for binding in module.iter() {
+                            let target = program
+                                .modules
+                                .get(binding.target)
+                                .expect("resolved bindings reference loaded modules");
+                            dumper.write_indentation();
+                            let _ = write!(
+                                dumper.output,
+                                "{} -> {} {}",
+                                binding.local_path,
+                                binding.target,
+                                target.module_path()
+                            );
+                            write_span(&mut dumper.output, binding.name_span);
+                            dumper.output.push('\n');
+                        }
+                    });
+                }
+            });
+        }
         dumper.heading("ModuleDeclarations");
         dumper.indented(|dumper| {
             for module in program.module_declarations.iter() {

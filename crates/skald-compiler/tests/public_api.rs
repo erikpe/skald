@@ -35,7 +35,8 @@ use skald_compiler::{
     passes::run_mir_pipeline,
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
-        ResolvedClassMember, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
+        ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
+        ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
         ResolvedModuleDeclarations, ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
     },
     source::SourceDatabase,
@@ -92,6 +93,9 @@ fn intentional_module_and_request_paths_compose() {
     let _module_declaration: Option<ResolvedModuleDeclaration> = None;
     let _module_declarations: Option<ResolvedModuleDeclarations> = None;
     let _module_declaration_table: Option<ResolvedModuleDeclarationTable> = None;
+    let _module_binding: Option<ResolvedModuleBinding> = None;
+    let _module_bindings: Option<ResolvedModuleBindings> = None;
+    let _module_binding_table: Option<ResolvedModuleBindingTable> = None;
     let _top_level_id: Option<ResolvedTopLevelId> = None;
     assert!(ResolvedVisibility::Public.is_public());
     assert!(!ResolvedVisibility::Private.is_public());

@@ -66,9 +66,11 @@ provider normalization and exact candidate lookup are available behind the
 reachable parsed graph loading, deterministic graph identities and dumps, and
 cycle rejection. The resolver can collect a loaded graph into deterministic
 per-module declaration indexes and one flat whole-program IR; unqualified
-uses currently see only declarations owned by their module. Import bindings,
-qualified lookup, selective imports, and active driver integration remain
-unavailable, while the single-file adapter continues to reject imports. Test
+uses currently see only declarations owned by their module. Direct module
+imports now create exact default or aliased qualified bindings, with public
+declaration selection resolved once to existing semantic identities.
+Selective ordinary imports and active driver integration remain unavailable,
+while the single-file adapter continues to reject imports. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

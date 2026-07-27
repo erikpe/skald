@@ -7,7 +7,7 @@ pub(super) fn collect_interface_declarations(
     ast: &syntax::CompilationUnit,
     module: ModuleId,
     work: &[(InterfaceId, usize)],
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedInterfaceDeclaration> {
@@ -31,14 +31,8 @@ pub(super) fn collect_interface_declarations(
                         .parameters
                         .iter()
                         .filter_map(|parameter| {
-                            resolve_type(
-                                &parameter.type_syntax,
-                                top_levels,
-                                array_types,
-                                diagnostics,
-                            )
-                            .map(|type_syntax| {
-                                ResolvedInterfaceParameter {
+                            resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)
+                                .map(|type_syntax| ResolvedInterfaceParameter {
                                     binding_mode: resolve_parameter_binding_mode(
                                         parameter.binding_mode,
                                     ),
@@ -46,13 +40,12 @@ pub(super) fn collect_interface_declarations(
                                     name_span: parameter.name.span,
                                     type_syntax,
                                     span: parameter.span,
-                                }
-                            })
+                                })
                         })
                         .collect(),
                     return_type: resolve_result_type(
                         &requirement.return_type,
-                        top_levels,
+                        lookup,
                         array_types,
                         diagnostics,
                     ),
@@ -75,7 +68,7 @@ pub(super) fn collect_interface_declarations(
 pub(super) fn resolve_interface_claims(
     ast: &syntax::CompilationUnit,
     work: &[(ClassId, usize)],
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     classes: &mut ResolvedClassDeclarationTable,
     diagnostics: &mut Diagnostics,
 ) {
@@ -88,20 +81,17 @@ pub(super) fn resolve_interface_claims(
         };
         let mut seen = HashSet::new();
         for claim in &syntax_class.implemented_interfaces {
-            if reject_qualified_name(claim, diagnostics) {
-                continue;
-            }
-            match top_levels.get(claim.text.as_str()) {
-                Some(TopLevelSymbol {
+            match lookup.select(claim, diagnostics) {
+                TopLevelLookup::Found(TopLevelSymbol {
                     kind: TopLevelSymbolKind::Interface(interface),
                     ..
-                }) if seen.insert(*interface) => {
+                }) if seen.insert(interface) => {
                     class.implemented_interfaces.push(ResolvedInterfaceClaim {
-                        interface: *interface,
+                        interface,
                         span: claim.span,
                     });
                 }
-                Some(TopLevelSymbol {
+                TopLevelLookup::Found(TopLevelSymbol {
                     kind: TopLevelSymbolKind::Interface(_),
                     name_span,
                 }) => {
@@ -111,10 +101,10 @@ pub(super) fn resolve_interface_claims(
                             format!("duplicate interface `{}`", claim.text),
                         )
                         .with_primary_label(claim.span, "repeated here")
-                        .with_secondary_label(*name_span, "interface declared here"),
+                        .with_secondary_label(name_span, "interface declared here"),
                     );
                 }
-                Some(symbol) => diagnostics.push(
+                TopLevelLookup::Found(symbol) => diagnostics.push(
                     Diagnostic::error(
                         INVALID_INTERFACE_CLAIM,
                         format!("`{}` does not name an interface", claim.text),
@@ -122,13 +112,14 @@ pub(super) fn resolve_interface_claims(
                     .with_primary_label(claim.span, "expected an interface name")
                     .with_secondary_label(symbol.name_span, "different declaration kind here"),
                 ),
-                None => diagnostics.push(
+                TopLevelLookup::Missing => diagnostics.push(
                     Diagnostic::error(
                         INVALID_INTERFACE_CLAIM,
                         format!("unknown interface `{}`", claim.text),
                     )
                     .with_primary_label(claim.span, "no interface with this name is declared"),
                 ),
+                TopLevelLookup::Diagnosed => {}
             }
         }
     }

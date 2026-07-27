@@ -28,7 +28,8 @@ pub use ir::{
     ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
     ResolvedInterfaceReceiver, ResolvedInterfaceRequirement, ResolvedLocal, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedMethodCallExpr, ResolvedMethodDeclaration,
-    ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedModuleDeclaration,
+    ResolvedMethodDispatch, ResolvedMethodModifier, ResolvedModuleBinding,
+    ResolvedModuleBindingTable, ResolvedModuleBindings, ResolvedModuleDeclaration,
     ResolvedModuleDeclarationTable, ResolvedModuleDeclarations, ResolvedNumericLiteralExpr,
     ResolvedObjectAssignment, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
     ResolvedObjectPlace, ResolvedObjectReceiver, ResolvedOptionalAssignment,
@@ -41,12 +42,13 @@ pub use ir::{
 };
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER,
-    DUPLICATE_TOP_LEVEL, IMPLICIT_SHARED_DEREFERENCE, INHERITANCE_CYCLE,
+    DUPLICATE_MODULE_BINDING, DUPLICATE_TOP_LEVEL, IMPLICIT_SHARED_DEREFERENCE, INHERITANCE_CYCLE,
     INHERITED_MEMBER_COLLISION, INVALID_BASE_CLASS, INVALID_BASE_INITIALIZATION,
     INVALID_CALL_TARGET, INVALID_CONSTRUCTION_TARGET, INVALID_DEREFERENCE, INVALID_INTERFACE_CLAIM,
     INVALID_LIFECYCLE_SIGNATURE, INVALID_MEMBER_SELECTION, INVALID_OPTIONAL_TYPE, INVALID_OVERRIDE,
-    INVALID_POINTEE_ASSIGNMENT, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE, UNKNOWN_MEMBER,
-    UNKNOWN_NAME, UNKNOWN_TYPE, UNSUPPORTED_MODULE_SYNTAX,
+    INVALID_POINTEE_ASSIGNMENT, PRIVATE_DECLARATION, SELF_OUTSIDE_MEMBER, TOP_LEVEL_USED_AS_VALUE,
+    UNKNOWN_MEMBER, UNKNOWN_MODULE_BINDING, UNKNOWN_NAME, UNKNOWN_QUALIFIED_DECLARATION,
+    UNKNOWN_TYPE, UNSUPPORTED_MODULE_SYNTAX,
 };
 
 #[cfg(test)]

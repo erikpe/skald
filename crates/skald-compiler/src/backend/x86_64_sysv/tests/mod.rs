@@ -1,8 +1,3 @@
-use std::{
-    io::Write,
-    process::{Command, Stdio},
-};
-
 use crate::mir::test_fixtures::{
     assign as fixture_assign, block as fixture_block, call as fixture_call,
     function_declaration as fixture_function_declaration,
@@ -12,7 +7,7 @@ use crate::mir::test_fixtures::{
     store as fixture_store, value as fixture_value, OneBlockDefinition,
 };
 use crate::{
-    backend::{emit_assembly, Target, RUNTIME_ABI_MARKER_SYMBOL},
+    backend::{emit_assembly, Target},
     identity::{
         BindingId, ClassId, CopyConstructorId, FieldId, FunctionId, InitializerId, LocalId,
         MethodId, ParameterId,
@@ -31,7 +26,7 @@ use crate::{
         MirUnaryOperation, MirValue, MirViewTarget, MirVirtualFamilyTable, StorageId, ValueId,
     },
     source::SourceDatabase,
-    test_support::{lower_source_to_assembly, lower_source_to_mir, TemporaryFile},
+    test_support::{lower_source_to_assembly, lower_source_to_mir},
 };
 
 mod source_support;

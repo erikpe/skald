@@ -17,9 +17,11 @@ use super::ir::*;
 
 mod array_types;
 mod body;
+mod name_lookup;
 mod program;
 
 use array_types::ArrayTypeInterner;
+use name_lookup::{ModuleLookup, TopLevelLookup};
 
 pub const DUPLICATE_TOP_LEVEL: &str = "RES001";
 pub const DUPLICATE_BINDING: &str = "RES002";
@@ -44,6 +46,10 @@ pub const INVALID_POINTEE_ASSIGNMENT: &str = "RES020";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "RES021";
 pub const INVALID_OPTIONAL_TYPE: &str = "RES022";
 pub const UNSUPPORTED_MODULE_SYNTAX: &str = "RES023";
+pub const DUPLICATE_MODULE_BINDING: &str = "RES024";
+pub const UNKNOWN_MODULE_BINDING: &str = "RES025";
+pub const PRIVATE_DECLARATION: &str = "RES026";
+pub const UNKNOWN_QUALIFIED_DECLARATION: &str = "RES027";
 
 #[derive(Debug)]
 pub struct ResolveOutput {
@@ -68,29 +74,18 @@ pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
 
 /// Resolves every reachable module in a loaded graph into one flat program.
 ///
-/// This stage deliberately exposes only declarations owned by the current
-/// module. Import bindings and qualified lookup are added by later stages.
+/// Direct module imports create exact qualified bindings. Selective imports
+/// remain reachability-only until ordinary imported-name lookup is added.
 pub fn resolve_module_graph(graph: &ModuleGraph) -> ResolveOutput {
     program::resolve_graph(graph)
 }
 
 fn resolve_type(
     type_syntax: &syntax::TypeSyntax,
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedType> {
-    let qualified_name = match &type_syntax.kind {
-        syntax::TypeKind::Named(name) => Some(name),
-        syntax::TypeKind::Optional {
-            payload: syntax::OptionalPayloadKind::Named(name),
-            ..
-        } => Some(name),
-        _ => None,
-    };
-    if qualified_name.is_some_and(|name| reject_qualified_name(name, diagnostics)) {
-        return None;
-    }
     let kind = match &type_syntax.kind {
         syntax::TypeKind::I64 => ResolvedTypeKind::I64,
         syntax::TypeKind::U64 => ResolvedTypeKind::U64,
@@ -103,7 +98,7 @@ fn resolve_type(
             target,
         } => ResolvedTypeKind::Shared(resolve_shared_target(
             target,
-            top_levels,
+            lookup,
             array_types,
             diagnostics,
             false,
@@ -120,12 +115,12 @@ fn resolve_type(
                 syntax::OptionalPayloadKind::F64 => ResolvedOptionalPayload::F64,
                 syntax::OptionalPayloadKind::Bool => ResolvedOptionalPayload::Bool,
                 syntax::OptionalPayloadKind::Named(name) => {
-                    match top_levels.get(name.text.as_str()) {
-                        Some(TopLevelSymbol {
+                    match lookup.select(name, diagnostics) {
+                        TopLevelLookup::Found(TopLevelSymbol {
                             kind: TopLevelSymbolKind::Class(class),
                             ..
-                        }) => ResolvedOptionalPayload::Class(*class),
-                        Some(TopLevelSymbol {
+                        }) => ResolvedOptionalPayload::Class(class),
+                        TopLevelLookup::Found(TopLevelSymbol {
                             kind: TopLevelSymbolKind::Interface(_),
                             ..
                         }) => {
@@ -144,7 +139,7 @@ fn resolve_type(
                             );
                             return None;
                         }
-                        Some(symbol) => {
+                        TopLevelLookup::Found(symbol) => {
                             diagnostics.push(
                                 Diagnostic::error(
                                     UNKNOWN_TYPE,
@@ -158,7 +153,7 @@ fn resolve_type(
                             );
                             return None;
                         }
-                        None => {
+                        TopLevelLookup::Missing => {
                             diagnostics.push(
                                 Diagnostic::error(
                                     UNKNOWN_TYPE,
@@ -171,6 +166,7 @@ fn resolve_type(
                             );
                             return None;
                         }
+                        TopLevelLookup::Diagnosed => return None,
                     }
                 }
             };
@@ -185,34 +181,34 @@ fn resolve_type(
             question_span,
             target,
         } => ResolvedTypeKind::OptionalShared {
-            target: resolve_shared_target(target, top_levels, array_types, diagnostics, true)?,
+            target: resolve_shared_target(target, lookup, array_types, diagnostics, true)?,
             shared_span: *shared_span,
             question_span: *question_span,
             target_span: target.span,
         },
         syntax::TypeKind::Grouped { inner, .. } => {
-            return resolve_type(inner, top_levels, array_types, diagnostics).map(
-                |mut resolved| {
-                    resolved.span = type_syntax.span;
-                    resolved
-                },
-            );
+            return resolve_type(inner, lookup, array_types, diagnostics).map(|mut resolved| {
+                resolved.span = type_syntax.span;
+                resolved
+            });
         }
         syntax::TypeKind::Array { element, .. } => {
-            let element = resolve_type(element, top_levels, array_types, diagnostics)?;
+            let element = resolve_type(element, lookup, array_types, diagnostics)?;
             ResolvedTypeKind::Array(array_types.intern(element))
         }
-        syntax::TypeKind::Named(name) if name.text == "Obj" => ResolvedTypeKind::Obj,
-        syntax::TypeKind::Named(name) => match top_levels.get(name.text.as_str()) {
-            Some(TopLevelSymbol {
+        syntax::TypeKind::Named(name) if !name.is_qualified() && name.text == "Obj" => {
+            ResolvedTypeKind::Obj
+        }
+        syntax::TypeKind::Named(name) => match lookup.select(name, diagnostics) {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(class),
                 ..
-            }) => ResolvedTypeKind::Class(*class),
-            Some(TopLevelSymbol {
+            }) => ResolvedTypeKind::Class(class),
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(interface),
                 ..
-            }) => ResolvedTypeKind::Interface(*interface),
-            Some(symbol) => {
+            }) => ResolvedTypeKind::Interface(interface),
+            TopLevelLookup::Found(symbol) => {
                 diagnostics.push(
                     Diagnostic::error(
                         UNKNOWN_TYPE,
@@ -223,13 +219,14 @@ fn resolve_type(
                 );
                 return None;
             }
-            None => {
+            TopLevelLookup::Missing => {
                 diagnostics.push(
                     Diagnostic::error(UNKNOWN_TYPE, format!("unknown type `{}`", name.text))
                         .with_primary_label(name.span, "no class with this name is declared"),
                 );
                 return None;
             }
+            TopLevelLookup::Diagnosed => return None,
         },
     };
     Some(ResolvedType {
@@ -238,35 +235,18 @@ fn resolve_type(
     })
 }
 
-fn reject_qualified_name(name: &syntax::Name, diagnostics: &mut Diagnostics) -> bool {
-    if !name.is_qualified() {
-        return false;
-    }
-    diagnostics.push(
-        Diagnostic::error(
-            UNSUPPORTED_MODULE_SYNTAX,
-            "qualified module bindings are not available in semantic resolution yet",
-        )
-        .with_primary_label(
-            name.span,
-            "qualified import lookup is implemented in the next module-system stage",
-        ),
-    );
-    true
-}
-
 fn resolve_shared_target(
     target: &syntax::TypeSyntax,
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
     optional: bool,
 ) -> Option<ResolvedSharedTarget> {
     if let syntax::TypeKind::Grouped { inner, .. } = &target.kind {
-        return resolve_shared_target(inner, top_levels, array_types, diagnostics, optional);
+        return resolve_shared_target(inner, lookup, array_types, diagnostics, optional);
     }
     if matches!(target.kind, syntax::TypeKind::Array { .. }) {
-        let resolved = resolve_type(target, top_levels, array_types, diagnostics)?;
+        let resolved = resolve_type(target, lookup, array_types, diagnostics)?;
         let ResolvedTypeKind::Array(array) = resolved.kind else {
             unreachable!("an array target must resolve to an array identity")
         };
@@ -282,19 +262,19 @@ fn resolve_shared_target(
         );
         return None;
     };
-    if target.text == "Obj" {
+    if !target.is_qualified() && target.text == "Obj" {
         return Some(ResolvedSharedTarget::Obj);
     }
-    match top_levels.get(target.text.as_str()) {
-        Some(TopLevelSymbol {
+    match lookup.select(target, diagnostics) {
+        TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(class),
             ..
-        }) => Some(ResolvedSharedTarget::Class(*class)),
-        Some(TopLevelSymbol {
+        }) => Some(ResolvedSharedTarget::Class(class)),
+        TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Interface(interface),
             ..
-        }) => Some(ResolvedSharedTarget::Interface(*interface)),
-        Some(symbol) => {
+        }) => Some(ResolvedSharedTarget::Interface(interface)),
+        TopLevelLookup::Found(symbol) => {
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
@@ -305,7 +285,7 @@ fn resolve_shared_target(
             );
             None
         }
-        None => {
+        TopLevelLookup::Missing => {
             diagnostics.push(
                 Diagnostic::error(
                     UNKNOWN_TYPE,
@@ -322,6 +302,7 @@ fn resolve_shared_target(
             );
             None
         }
+        TopLevelLookup::Diagnosed => None,
     }
 }
 

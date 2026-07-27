@@ -44,6 +44,7 @@ pub use expression::{
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{
+    ResolvedModuleBinding, ResolvedModuleBindingTable, ResolvedModuleBindings,
     ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,
     ResolvedTopLevelId, ResolvedVisibility,
 };

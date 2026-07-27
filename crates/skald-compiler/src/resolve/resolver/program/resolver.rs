@@ -23,6 +23,7 @@ struct FunctionWorkItem {
 struct ModuleUnit<'ast> {
     ast: &'ast syntax::CompilationUnit,
     module: ModuleId,
+    qualified_enabled: bool,
     top_levels: HashMap<String, TopLevelSymbol>,
     function_work: Vec<FunctionWorkItem>,
     class_work: Vec<(ClassId, usize)>,
@@ -31,16 +32,44 @@ struct ModuleUnit<'ast> {
 }
 
 impl<'ast> ModuleUnit<'ast> {
-    fn new(ast: &'ast syntax::CompilationUnit, module: ModuleId) -> Self {
+    fn new(ast: &'ast syntax::CompilationUnit, module: ModuleId, qualified_enabled: bool) -> Self {
         Self {
             ast,
             module,
+            qualified_enabled,
             top_levels: HashMap::new(),
             function_work: Vec::new(),
             class_work: Vec::new(),
             interface_work: Vec::new(),
             declarations: Vec::new(),
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ProgramLookupTables<'program> {
+    bindings: &'program ResolvedModuleBindingTable,
+    declarations: &'program ResolvedModuleDeclarationTable,
+    module_spans: &'program [Span],
+}
+
+impl<'program> ProgramLookupTables<'program> {
+    fn for_unit(
+        self,
+        unit: &'program ModuleUnit<'_>,
+        modules: &'program ProgramModuleTable,
+    ) -> ModuleLookup<'program> {
+        ModuleLookup::new(
+            unit.module,
+            &unit.top_levels,
+            self.bindings
+                .get(unit.module)
+                .expect("every module has a binding namespace"),
+            self.declarations,
+            modules,
+            self.module_spans,
+            unit.qualified_enabled,
+        )
     }
 }
 
@@ -55,7 +84,7 @@ pub(super) struct ProgramResolver<'ast> {
 impl<'ast> ProgramResolver<'ast> {
     pub(super) fn singleton(ast: &'ast syntax::CompilationUnit) -> Self {
         Self {
-            units: vec![ModuleUnit::new(ast, ModuleId::new(0))],
+            units: vec![ModuleUnit::new(ast, ModuleId::new(0), false)],
             modules: ProgramModuleTable::singleton(ast.span.source_id()),
             reject_imports: true,
             array_types: ArrayTypeInterner::default(),
@@ -68,7 +97,7 @@ impl<'ast> ProgramResolver<'ast> {
             units: graph
                 .modules()
                 .iter()
-                .map(|module| ModuleUnit::new(module.ast(), module.provenance().module_id()))
+                .map(|module| ModuleUnit::new(module.ast(), module.provenance().module_id(), true))
                 .collect(),
             modules: ProgramModuleTable::from_graph(graph),
             reject_imports: false,
@@ -97,16 +126,36 @@ impl<'ast> ProgramResolver<'ast> {
         }
         self.collect_top_levels();
 
-        let function_declarations = self.collect_function_declarations();
-        let interfaces = self.collect_interface_declarations();
-        let (class_declarations, class_symbols, class_work) = self.collect_class_declarations();
+        let module_declarations = ResolvedModuleDeclarationTable::new(
+            self.units
+                .iter()
+                .map(|unit| ResolvedModuleDeclarations::new(unit.module, unit.declarations.clone()))
+                .collect(),
+        );
+        let module_bindings = self.collect_module_bindings();
+        let module_spans = self
+            .units
+            .iter()
+            .map(|unit| unit.ast.span)
+            .collect::<Vec<_>>();
+        let lookups = ProgramLookupTables {
+            bindings: &module_bindings,
+            declarations: &module_declarations,
+            module_spans: &module_spans,
+        };
+
+        let function_declarations = self.collect_function_declarations(lookups);
+        let interfaces = self.collect_interface_declarations(lookups);
+        let (class_declarations, class_symbols, class_work) =
+            self.collect_class_declarations(lookups);
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             resolve_interface_claims(
                 unit.ast,
                 &unit.class_work,
-                &unit.top_levels,
+                lookup,
                 &mut class_declarations,
                 &mut self.diagnostics,
             );
@@ -124,6 +173,7 @@ impl<'ast> ProgramResolver<'ast> {
         );
 
         let function_definitions = self.resolve_function_bodies(
+            lookups,
             &function_declarations,
             &class_declarations,
             &hierarchy,
@@ -131,6 +181,7 @@ impl<'ast> ProgramResolver<'ast> {
         );
         let mut class_definitions = Vec::with_capacity(class_declarations.len());
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             let unit_class_work = class_work
                 .iter()
                 .filter(|item| item.module == unit.module)
@@ -141,7 +192,7 @@ impl<'ast> ProgramResolver<'ast> {
                 &unit_class_work,
                 &class_declarations,
                 BodyResolutionEnvironment::new(
-                    &unit.top_levels,
+                    lookup,
                     &function_declarations,
                     &class_declarations,
                     &interfaces,
@@ -163,15 +214,10 @@ impl<'ast> ProgramResolver<'ast> {
                 });
 
         let span = entry_unit.ast.span;
-        let module_declarations = ResolvedModuleDeclarationTable::new(
-            self.units
-                .iter()
-                .map(|unit| ResolvedModuleDeclarations::new(unit.module, unit.declarations.clone()))
-                .collect(),
-        );
         ResolveOutput {
             program: ResolvedProgram {
                 modules: self.modules,
+                module_bindings,
                 module_declarations,
                 array_types: self.array_types.finish(),
                 declarations: function_declarations,
@@ -279,9 +325,33 @@ impl<'ast> ProgramResolver<'ast> {
         }
     }
 
-    fn collect_function_declarations(&mut self) -> Vec<ResolvedFunctionDeclaration> {
+    fn collect_module_bindings(&mut self) -> ResolvedModuleBindingTable {
+        ResolvedModuleBindingTable::new(
+            self.units
+                .iter()
+                .map(|unit| {
+                    if self.reject_imports {
+                        ResolvedModuleBindings::new(unit.module, Vec::new())
+                    } else {
+                        collect_module_bindings(
+                            unit.module,
+                            unit.ast,
+                            &self.modules,
+                            &mut self.diagnostics,
+                        )
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    fn collect_function_declarations(
+        &mut self,
+        lookups: ProgramLookupTables<'_>,
+    ) -> Vec<ResolvedFunctionDeclaration> {
         let mut declarations = Vec::new();
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             for item in &unit.function_work {
                 let declaration = match &unit.ast.declarations[item.ast_index] {
                     syntax::TopLevelDeclaration::Function(function) => {
@@ -294,13 +364,13 @@ impl<'ast> ProgramResolver<'ast> {
                             parameters: resolve_parameters(
                                 item.id.into(),
                                 &function.parameters,
-                                &unit.top_levels,
+                                lookup,
                                 &mut self.array_types,
                                 &mut self.diagnostics,
                             ),
                             return_type: resolve_result_type(
                                 &function.return_type,
-                                &unit.top_levels,
+                                lookup,
                                 &mut self.array_types,
                                 &mut self.diagnostics,
                             ),
@@ -318,13 +388,13 @@ impl<'ast> ProgramResolver<'ast> {
                             parameters: resolve_parameters(
                                 item.id.into(),
                                 &function.parameters,
-                                &unit.top_levels,
+                                lookup,
                                 &mut self.array_types,
                                 &mut self.diagnostics,
                             ),
                             return_type: resolve_result_type(
                                 &function.return_type,
-                                &unit.top_levels,
+                                lookup,
                                 &mut self.array_types,
                                 &mut self.diagnostics,
                             ),
@@ -345,14 +415,18 @@ impl<'ast> ProgramResolver<'ast> {
         declarations
     }
 
-    fn collect_interface_declarations(&mut self) -> ResolvedInterfaceDeclarationTable {
+    fn collect_interface_declarations(
+        &mut self,
+        lookups: ProgramLookupTables<'_>,
+    ) -> ResolvedInterfaceDeclarationTable {
         let mut declarations = Vec::new();
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             declarations.extend(collect_interface_declarations(
                 unit.ast,
                 unit.module,
                 &unit.interface_work,
-                &unit.top_levels,
+                lookup,
                 &mut self.array_types,
                 &mut self.diagnostics,
             ));
@@ -362,6 +436,7 @@ impl<'ast> ProgramResolver<'ast> {
 
     fn collect_class_declarations(
         &mut self,
+        lookups: ProgramLookupTables<'_>,
     ) -> (
         Vec<ResolvedClassDeclaration>,
         Vec<ClassSymbols>,
@@ -372,6 +447,7 @@ impl<'ast> ProgramResolver<'ast> {
         let mut body_work = Vec::new();
 
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             for &(id, ast_index) in &unit.class_work {
                 let syntax::TopLevelDeclaration::Class(class) = &unit.ast.declarations[ast_index]
                 else {
@@ -382,7 +458,7 @@ impl<'ast> ProgramResolver<'ast> {
                     unit.module,
                     ast_index,
                     class,
-                    &unit.top_levels,
+                    lookup,
                     &mut self.array_types,
                     &mut self.diagnostics,
                 );
@@ -397,6 +473,7 @@ impl<'ast> ProgramResolver<'ast> {
 
     fn resolve_function_bodies(
         &mut self,
+        lookups: ProgramLookupTables<'_>,
         functions: &ResolvedFunctionDeclarationTable,
         classes: &ResolvedClassDeclarationTable,
         hierarchy: &ResolvedClassHierarchy,
@@ -404,6 +481,7 @@ impl<'ast> ProgramResolver<'ast> {
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let mut definitions = Vec::with_capacity(functions.len());
         for unit in &self.units {
+            let lookup = lookups.for_unit(unit, &self.modules);
             for item in &unit.function_work {
                 let declaration = functions
                     .get(item.id)
@@ -419,11 +497,7 @@ impl<'ast> ProgramResolver<'ast> {
                     &declaration.parameters,
                     &function.body,
                     BodyResolutionEnvironment::new(
-                        &unit.top_levels,
-                        functions,
-                        classes,
-                        interfaces,
-                        hierarchy,
+                        lookup, functions, classes, interfaces, hierarchy,
                     ),
                     &mut self.array_types,
                     &mut self.diagnostics,
@@ -443,7 +517,7 @@ impl<'ast> ProgramResolver<'ast> {
 pub(super) fn resolve_parameters(
     callable: CallableId,
     parameters: &[syntax::Parameter],
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Vec<ResolvedParameter> {
@@ -463,7 +537,7 @@ pub(super) fn resolve_parameters(
         }
         names.insert(parameter.name.text.to_string(), parameter.name.span);
         let Some(type_syntax) =
-            resolve_type(&parameter.type_syntax, top_levels, array_types, diagnostics)
+            resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)
         else {
             continue;
         };
@@ -495,11 +569,11 @@ pub(super) const fn resolve_parameter_binding_mode(
 
 pub(super) fn resolve_result_type(
     type_syntax: &syntax::TypeSyntax,
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedType {
-    resolve_type(type_syntax, top_levels, array_types, diagnostics).unwrap_or(ResolvedType {
+    resolve_type(type_syntax, lookup, array_types, diagnostics).unwrap_or(ResolvedType {
         // Resolution diagnostics stop later phases. Retaining a payload-free
         // placeholder keeps declaration collection total and panic-free.
         kind: ResolvedTypeKind::Unit,

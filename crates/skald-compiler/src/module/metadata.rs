@@ -75,6 +75,12 @@ impl ProgramModuleTable {
             .filter(|entry| entry.module_id() == id)
     }
 
+    pub fn find(&self, path: &ModulePath) -> Option<&ModuleProvenance> {
+        self.entries
+            .iter()
+            .find(|entry| entry.module_path() == path)
+    }
+
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ModuleProvenance> {
         self.entries.iter()
     }

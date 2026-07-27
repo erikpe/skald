@@ -20,7 +20,7 @@ pub(super) struct ResolvedCallableBody {
 
 #[derive(Clone, Copy)]
 pub(super) struct BodyResolutionEnvironment<'program> {
-    top_levels: &'program HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'program>,
     functions: &'program ResolvedFunctionDeclarationTable,
     classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
@@ -29,14 +29,14 @@ pub(super) struct BodyResolutionEnvironment<'program> {
 
 impl<'program> BodyResolutionEnvironment<'program> {
     pub(super) fn new(
-        top_levels: &'program HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'program>,
         functions: &'program ResolvedFunctionDeclarationTable,
         classes: &'program ResolvedClassDeclarationTable,
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         hierarchy: &'program ResolvedClassHierarchy,
     ) -> Self {
         Self {
-            top_levels,
+            lookup,
             functions,
             classes,
             interfaces,
@@ -195,7 +195,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
     fn resolve_type(&mut self, type_syntax: &syntax::TypeSyntax) -> Option<ResolvedType> {
         super::resolve_type(
             type_syntax,
-            self.environment.top_levels,
+            self.environment.lookup,
             self.array_types,
             self.diagnostics,
         )
@@ -436,21 +436,20 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
         &mut self,
         identifier: &syntax::IdentifierExpr,
     ) -> Option<ResolvedExpression> {
-        if reject_qualified_name(&identifier.name, self.diagnostics) {
-            return None;
-        }
-        if let Some(symbol) = self.lookup_binding(&identifier.name.text) {
-            return Some(ResolvedExpression::Binding(ResolvedBindingExpr {
-                binding: symbol.id,
-                span: identifier.span,
-            }));
+        if !identifier.name.is_qualified() {
+            if let Some(symbol) = self.lookup_binding(&identifier.name.text) {
+                return Some(ResolvedExpression::Binding(ResolvedBindingExpr {
+                    binding: symbol.id,
+                    span: identifier.span,
+                }));
+            }
         }
         match self
             .environment
-            .top_levels
-            .get(identifier.name.text.as_str())
+            .lookup
+            .select(&identifier.name, self.diagnostics)
         {
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Function(_),
                 ..
             }) => self.diagnostics.push(
@@ -463,7 +462,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 )
                 .with_primary_label(identifier.span, "call the function with `(...)`"),
             ),
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Class(_),
                 ..
             }) => self.diagnostics.push(
@@ -473,7 +472,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 )
                 .with_primary_label(identifier.span, "construct it with `(...)`"),
             ),
-            Some(TopLevelSymbol {
+            TopLevelLookup::Found(TopLevelSymbol {
                 kind: TopLevelSymbolKind::Interface(_),
                 ..
             }) => self.diagnostics.push(
@@ -486,7 +485,10 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 )
                 .with_primary_label(identifier.span, "interfaces are declaration-only"),
             ),
-            None => self.report_unknown(&identifier.name.text, identifier.span, "unknown name"),
+            TopLevelLookup::Missing => {
+                self.report_unknown(&identifier.name.text, identifier.span, "unknown name")
+            }
+            TopLevelLookup::Diagnosed => {}
         }
         None
     }

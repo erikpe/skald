@@ -64,12 +64,11 @@ impl ClassCollectionState {
     fn collect_field(
         &mut self,
         field: &syntax::FieldDecl,
-        top_levels: &HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
-        let Some(type_syntax) =
-            resolve_type(&field.type_syntax, top_levels, array_types, diagnostics)
+        let Some(type_syntax) = resolve_type(&field.type_syntax, lookup, array_types, diagnostics)
         else {
             return;
         };
@@ -95,7 +94,7 @@ impl ClassCollectionState {
         &mut self,
         member_index: usize,
         source: &syntax::InitializerDecl,
-        top_levels: &HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
@@ -105,7 +104,7 @@ impl ClassCollectionState {
             parameters: resolve_parameters(
                 id.into(),
                 &source.parameters,
-                top_levels,
+                lookup,
                 array_types,
                 diagnostics,
             ),
@@ -143,7 +142,7 @@ impl ClassCollectionState {
         member_index: usize,
         source: &syntax::CopyConstructorDecl,
         class_name: &str,
-        top_levels: &HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
@@ -166,7 +165,7 @@ impl ClassCollectionState {
                 operation: CopyLifecycleKind::Constructor,
             },
             &source.parameters,
-            top_levels,
+            lookup,
             array_types,
             diagnostics,
         ) else {
@@ -187,7 +186,7 @@ impl ClassCollectionState {
         member_index: usize,
         source: &syntax::CopyAssignmentDecl,
         class_name: &str,
-        top_levels: &HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
@@ -210,7 +209,7 @@ impl ClassCollectionState {
                 operation: CopyLifecycleKind::Assignment,
             },
             &source.parameters,
-            top_levels,
+            lookup,
             array_types,
             diagnostics,
         ) else {
@@ -254,7 +253,7 @@ impl ClassCollectionState {
         &mut self,
         member_index: usize,
         method: &syntax::MethodDecl,
-        top_levels: &HashMap<String, TopLevelSymbol>,
+        lookup: ModuleLookup<'_>,
         array_types: &mut ArrayTypeInterner,
         diagnostics: &mut Diagnostics,
     ) {
@@ -289,16 +288,11 @@ impl ClassCollectionState {
             parameters: resolve_parameters(
                 id.into(),
                 &method.parameters,
-                top_levels,
+                lookup,
                 array_types,
                 diagnostics,
             ),
-            return_type: resolve_result_type(
-                &method.return_type,
-                top_levels,
-                array_types,
-                diagnostics,
-            ),
+            return_type: resolve_result_type(&method.return_type, lookup, array_types, diagnostics),
             span: method.span,
         });
         self.work.method_members.push(member_index);
@@ -359,21 +353,21 @@ pub(super) fn collect_class(
     module: ModuleId,
     ast_index: usize,
     class: &syntax::ClassDecl,
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
-    let direct_base = resolve_direct_base(id, class, top_levels, diagnostics);
+    let direct_base = resolve_direct_base(id, class, lookup, diagnostics);
     let mut state = ClassCollectionState::new(id, module, ast_index, direct_base);
     for (member_index, member) in class.members.iter().enumerate() {
         match member {
             syntax::ClassMember::Field(field) => {
-                state.collect_field(field, top_levels, array_types, diagnostics)
+                state.collect_field(field, lookup, array_types, diagnostics)
             }
             syntax::ClassMember::Initializer(initializer) => state.collect_initializer(
                 member_index,
                 initializer,
-                top_levels,
+                lookup,
                 array_types,
                 diagnostics,
             ),
@@ -381,7 +375,7 @@ pub(super) fn collect_class(
                 member_index,
                 constructor,
                 &class.name.text,
-                top_levels,
+                lookup,
                 array_types,
                 diagnostics,
             ),
@@ -389,7 +383,7 @@ pub(super) fn collect_class(
                 member_index,
                 assignment,
                 &class.name.text,
-                top_levels,
+                lookup,
                 array_types,
                 diagnostics,
             ),
@@ -397,7 +391,7 @@ pub(super) fn collect_class(
                 state.collect_destructor(member_index, destructor, &class.name.text, diagnostics)
             }
             syntax::ClassMember::Method(method) => {
-                state.collect_method(member_index, method, top_levels, array_types, diagnostics)
+                state.collect_method(member_index, method, lookup, array_types, diagnostics)
             }
         }
     }
@@ -419,18 +413,15 @@ fn same_parameter_types(
 fn resolve_direct_base(
     owner: ClassId,
     class: &syntax::ClassDecl,
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedDirectBase> {
     let base = class.direct_base.as_ref()?;
-    if reject_qualified_name(base, diagnostics) {
-        return None;
-    }
-    match top_levels.get(base.text.as_str()) {
-        Some(TopLevelSymbol {
+    match lookup.select(base, diagnostics) {
+        TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(base_id),
             ..
-        }) if *base_id == owner => {
+        }) if base_id == owner => {
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_BASE_CLASS,
@@ -441,14 +432,14 @@ fn resolve_direct_base(
             );
             None
         }
-        Some(TopLevelSymbol {
+        TopLevelLookup::Found(TopLevelSymbol {
             kind: TopLevelSymbolKind::Class(base_id),
             ..
         }) => Some(ResolvedDirectBase {
-            class: *base_id,
+            class: base_id,
             span: base.span,
         }),
-        Some(symbol) => {
+        TopLevelLookup::Found(symbol) => {
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_BASE_CLASS,
@@ -459,7 +450,7 @@ fn resolve_direct_base(
             );
             None
         }
-        None => {
+        TopLevelLookup::Missing => {
             diagnostics.push(
                 Diagnostic::error(
                     INVALID_BASE_CLASS,
@@ -469,6 +460,7 @@ fn resolve_direct_base(
             );
             None
         }
+        TopLevelLookup::Diagnosed => None,
     }
 }
 
@@ -523,7 +515,7 @@ impl CopyLifecycleKind {
 fn resolve_copy_source_parameter(
     context: CopySourceContext,
     parameters: &[syntax::Parameter],
-    top_levels: &HashMap<String, TopLevelSymbol>,
+    lookup: ModuleLookup<'_>,
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedParameter> {
@@ -559,7 +551,7 @@ fn resolve_copy_source_parameter(
         return None;
     }
 
-    let ty = resolve_type(&parameter.type_syntax, top_levels, array_types, diagnostics)?;
+    let ty = resolve_type(&parameter.type_syntax, lookup, array_types, diagnostics)?;
     if ty.kind != ResolvedTypeKind::Class(context.owner) {
         diagnostics.push(
             Diagnostic::error(

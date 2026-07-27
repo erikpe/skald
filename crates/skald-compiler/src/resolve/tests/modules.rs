@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     backend::{emit_assembly, Target},
     mir::{lower_hir, verify_mir},
-    test_support::load_module_sources,
+    test_support::{load_module_sources, run_native_assembly},
     typeck::type_check,
 };
 
@@ -251,4 +251,345 @@ fn graph_resolution_reports_cross_file_hierarchy_and_signature_uses_in_the_ownin
             .provenance()
             .source_id()
     );
+}
+
+#[test]
+fn qualified_imports_resolve_all_declaration_use_contexts_to_existing_ids() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import lib::types;\n",
+                    "import lib::types as types;\n",
+                    "class Derived extends lib::types::Base implements types::View {\n",
+                    "  item: types::Thing;\n",
+                    "  init() { super(); self.item = types::Thing(); }\n",
+                    "  fn copy(item: types::Thing) -> types::Thing {\n",
+                    "    var made: types::Thing = types::Thing();\n",
+                    "    var owned: shared types::Thing = new types::Thing();\n",
+                    "    return types::identity(made);\n",
+                    "  }\n",
+                    "}\n",
+                    "fn main() -> i64 {\n",
+                    "  var made: types::Thing = lib::types::Thing();\n",
+                    "  return types::external_value();\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "lib/types.ska",
+                concat!(
+                    "public interface View {}\n",
+                    "public class Base { init() {} }\n",
+                    "public class Thing { init() {} }\n",
+                    "public fn identity(value: Thing) -> Thing { return value; }\n",
+                    "public extern fn external_value() -> i64;\n",
+                ),
+            ),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    assert!(
+        output.diagnostics.is_empty(),
+        "qualified program must resolve: {:?}",
+        output.diagnostics
+    );
+    let program = output.program;
+    let app_bindings = program
+        .module_bindings
+        .get(graph.entry())
+        .expect("the entry module has a binding namespace");
+    assert_eq!(app_bindings.iter().count(), 2);
+    assert!(app_bindings
+        .iter()
+        .all(|binding| binding.target == crate::identity::ModuleId::new(1)));
+
+    let dump = dump_resolved(&program);
+    assert!(dump.contains("lib::types -> m1 lib::types"));
+    assert!(dump.contains("types -> m1 lib::types"));
+    assert!(dump.contains("DirectBase c1"));
+    assert!(dump.contains("Class c2"));
+    assert!(dump.contains("Interface i0"));
+    assert!(dump.contains("DirectCall f2"));
+
+    let checked = type_check(&program);
+    assert!(
+        checked.diagnostics.is_empty(),
+        "qualified identities must type check: {:?}",
+        checked.diagnostics
+    );
+    let hir = checked.hir.unwrap();
+    assert!(!crate::hir::dump_hir(&hir).contains("ModuleBindings"));
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    assert!(!crate::mir::dump_mir(&mir).contains("ModuleBindings"));
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+    assert!(assembly.contains("call external_value"));
+}
+
+#[test]
+fn qualified_cast_and_type_test_targets_resolve_to_canonical_declarations() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep as types;\n",
+                    "fn inspect(ref value: Obj) -> unit {\n",
+                    "  value is types::Thing;\n",
+                    "  (types::Thing) value;\n",
+                    "}\n",
+                    "fn main() -> unit {}\n",
+                ),
+            ),
+            ("dep.ska", "public class Thing { init() {} }\n"),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    assert!(
+        output.diagnostics.is_empty(),
+        "qualified cast targets must resolve: {:?}",
+        output.diagnostics
+    );
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("TypeTest target class c0"));
+    assert!(dump.contains("ObjectCast target class c0"));
+}
+
+#[test]
+fn module_bindings_allow_multiple_names_and_an_independent_ordinary_namespace() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep as second;\n",
+                    "import dep;\n",
+                    "import dep as first;\n",
+                    "class first { init() {} }\n",
+                    "fn read(first: i64) -> i64 {\n",
+                    "  var second: i64 = first;\n",
+                    "  return dep::value() + first::value() + second::value() + second;\n",
+                    "}\n",
+                    "fn main() -> i64 { return read(0); }\n",
+                ),
+            ),
+            ("dep.ska", "public fn value() -> i64 { return 1; }\n"),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    assert!(
+        output.diagnostics.is_empty(),
+        "module and ordinary namespaces must remain separate: {:?}",
+        output.diagnostics
+    );
+    let bindings = output
+        .program
+        .module_bindings
+        .get(graph.entry())
+        .unwrap()
+        .iter()
+        .map(|binding| binding.local_path.to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(bindings, ["dep", "first", "second"]);
+}
+
+#[test]
+fn module_binding_collisions_are_rejected_in_source_order() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep;\n",
+                    "import dep;\n",
+                    "import dep as shared;\n",
+                    "import other as shared;\n",
+                    "fn main() -> unit {}\n",
+                ),
+            ),
+            ("dep.ska", "public fn dep_value() -> unit {}\n"),
+            ("other.ska", "public fn other_value() -> unit {}\n"),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == DUPLICATE_MODULE_BINDING)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(diagnostics[0]
+        .message
+        .contains("repeated module binding `dep`"));
+    assert!(diagnostics[1]
+        .message
+        .contains("conflicting module binding `shared`"));
+    assert!(diagnostics
+        .iter()
+        .all(|diagnostic| diagnostic.labels.len() == 2));
+}
+
+#[test]
+fn qualified_lookup_enforces_visibility_leaf_and_declaration_kind() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep;\n",
+                    "fn consume(value: dep::public_fn) -> unit {}\n",
+                    "fn main() -> unit {\n",
+                    "  dep::private_fn();\n",
+                    "  dep::missing();\n",
+                    "  dep::PublicView();\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "dep.ska",
+                concat!(
+                    "fn private_fn() -> unit {}\n",
+                    "public fn public_fn() -> unit {}\n",
+                    "public interface PublicView {}\n",
+                ),
+            ),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    assert!(output
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == PRIVATE_DECLARATION
+            && diagnostic.message.contains("dep::private_fn")
+            && diagnostic.labels.len() == 2));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == UNKNOWN_QUALIFIED_DECLARATION
+            && diagnostic
+                .message
+                .contains("no declaration named `missing`")
+            && diagnostic.labels.len() == 2
+    }));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == UNKNOWN_TYPE
+            && diagnostic.message.contains("does not name a type")
+            && diagnostic.labels.len() == 2
+    }));
+    assert!(output.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == INVALID_CALL_TARGET
+            && diagnostic
+                .message
+                .contains("interface `dep::PublicView` is not callable")
+    }));
+}
+
+#[test]
+fn qualified_lookup_requires_the_exact_direct_binding() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import bridge;\n",
+                    "import tree;\n",
+                    "fn main() -> unit {\n",
+                    "  target::value();\n",
+                    "  tree::leaf::value();\n",
+                    "  bridge::target::value();\n",
+                    "}\n",
+                ),
+            ),
+            (
+                "bridge.ska",
+                "import target;\npublic fn value() -> unit {}\n",
+            ),
+            ("target.ska", "public fn value() -> unit {}\n"),
+            (
+                "tree.ska",
+                "import tree::leaf;\npublic fn value() -> unit {}\n",
+            ),
+            ("tree/leaf.ska", "public fn value() -> unit {}\n"),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    let diagnostics = output
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == UNKNOWN_MODULE_BINDING)
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 3);
+    assert!(diagnostics[0].message.contains("`target`"));
+    assert!(diagnostics[0].labels.len() >= 2);
+    assert!(diagnostics[1].message.contains("`tree::leaf`"));
+    assert!(diagnostics[2].message.contains("`bridge::target`"));
+    assert!(diagnostics[2]
+        .notes
+        .iter()
+        .any(|note| note.contains("descendant module directly")));
+}
+
+#[test]
+fn module_aliases_are_the_only_local_spelling_they_introduce() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep as renamed;\n",
+                    "fn valid() -> i64 { return renamed::value(); }\n",
+                    "fn main() -> i64 { return dep::value(); }\n",
+                ),
+            ),
+            ("dep.ska", "public fn value() -> i64 { return 1; }\n"),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    let diagnostic = output
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == UNKNOWN_MODULE_BINDING)
+        .expect("the canonical path is not also bound when an alias is present");
+    assert!(diagnostic.message.contains("`dep`"));
+    assert!(diagnostic
+        .notes
+        .iter()
+        .any(|note| note.contains("use `renamed::value`")));
+}
+
+#[test]
+fn qualified_internal_calls_execute_through_the_native_backend() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep as library;\nfn main() -> i64 { return library::value(); }\n",
+            ),
+            ("dep.ska", "public fn value() -> i64 { return 42; }\n"),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty());
+    let mir = lower_hir(&checked.hir.unwrap());
+    verify_mir(&mir).unwrap();
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
 }

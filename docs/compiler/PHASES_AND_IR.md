@@ -59,11 +59,18 @@ retain visibility and expose only directly owned public declarations. The
 selected entry module alone supplies the prospective `main`; other declarations
 named `main` are ordinary functions.
 
-Graph resolution currently gives each module only its own top-level
-declarations for unqualified signature, hierarchy, and body lookup. Imports
-have already determined reachability, but do not introduce semantic bindings
-until the qualified and selective import stages. The active driver still uses
-the singleton entry and does not consume a graph.
+Graph resolution gives each module its own ordinary top-level declarations and
+a separate namespace of direct module bindings. An unaliased module import
+binds its complete canonical path; an alias binds one identifier. One
+current-module lookup service resolves qualified signatures, hierarchy uses,
+interface claims, calls, construction, allocation, casts, and type tests to
+the target module's directly owned public declaration identity. Exact direct
+imports are required: absolute, descendant, and transitive paths do not create
+bindings. Resolved dumps retain local binding spelling plus canonical module
+ownership; HIR and lower phases contain only selected dense identities.
+
+Selective imports still add reachability without ordinary-name bindings. The
+active driver uses the singleton entry and does not consume a graph.
 
 The `module` facade already provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
@@ -88,11 +95,10 @@ The lexer and parser additionally recognize the frozen module punctuation,
 imports, top-level visibility, and qualified declaration spellings. The AST
 retains unresolved path components and all diagnostic-relevant separator and
 introducer spans without choosing a module binding or declaration leaf.
-This is a phase-local representation boundary: the single-file resolver emits
-`RES023` for imports and qualified names, while graph resolution accepts
-imports only as already-resolved reachability edges and still emits `RES023`
-for qualified uses. The complete driver therefore does not accept
-module-bearing programs yet.
+This remains a phase-local complete-compiler boundary: the single-file
+resolver emits `RES023` for imports and qualified names. Graph resolution
+constructs direct module bindings and resolves qualified uses, but selective
+ordinary imports are not yet active and the driver does not consume the graph.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
