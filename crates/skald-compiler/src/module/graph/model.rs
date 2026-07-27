@@ -114,6 +114,10 @@ impl ModuleGraph {
             .ok()
             .map(|index| &self.modules[index])
     }
+
+    pub(crate) fn into_sources(self) -> SourceDatabase {
+        self.sources
+    }
 }
 
 /// Structured source diagnostics produced before a graph can be finalized.

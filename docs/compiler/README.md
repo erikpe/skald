@@ -72,8 +72,9 @@ selective imports bind only requested directly owned public declarations;
 both resolve once to existing semantic identities without re-exporting.
 Compatible cross-module external declarations retain separate `FunctionId`
 values while sharing one verified, symbol-owning external-link identity.
-Active driver integration remains unavailable, while the single-file adapter
-continues to reject imports. Test
+The request pipeline and CLI compile positional or logical entries with
+anonymous roots and replaceable or disabled standard-library lookup. The
+in-memory single-file adapter continues to reject imports. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

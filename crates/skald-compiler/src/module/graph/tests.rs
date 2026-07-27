@@ -236,6 +236,15 @@ fn relative_positional_entry_uses_the_captured_working_directory() {
             .to_string(),
         "app::main"
     );
+    assert_eq!(
+        graph
+            .module(graph.entry())
+            .unwrap()
+            .provenance()
+            .source_location()
+            .display_source_path(),
+        Path::new("modules/other/../app/main.ska")
+    );
 }
 
 #[test]

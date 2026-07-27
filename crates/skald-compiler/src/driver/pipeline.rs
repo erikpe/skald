@@ -7,12 +7,17 @@ use crate::{
     diagnostics::Diagnostics,
     lexer::lex,
     mir::lower_hir,
+    module::{
+        load_module_graph, normalize_provider_roots, ModuleGraph, ProviderNormalizationError,
+    },
     passes::run_mir_pipeline,
-    resolve::resolve,
+    resolve::{resolve, resolve_module_graph, ResolvedProgram},
     source::SourceDatabase,
     syntax::parse,
     typeck::type_check,
 };
+
+use super::CompilationRequest;
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -28,13 +33,39 @@ pub struct AssemblyArtifact {
 
 #[derive(Debug)]
 pub enum CompilationError {
+    ProviderConfiguration(Vec<ProviderNormalizationError>),
     Diagnostics(CompilationReport),
     MirVerification(crate::mir::MirVerificationErrors),
     Backend(BackendError),
 }
 
-/// Runs the complete target-independent pipeline and selected backend for one
-/// source file. Source I/O and artifact publication remain driver concerns.
+/// Loads and compiles one request's complete reachable module program.
+///
+/// Filesystem source acquisition remains in module loading. Artifact
+/// publication remains a separate driver responsibility.
+pub fn compile_request_to_assembly(
+    request: &CompilationRequest,
+) -> Result<AssemblyArtifact, CompilationError> {
+    let providers = normalize_provider_roots(
+        request.environment().working_directory(),
+        &request.provider_root_configurations(),
+    )
+    .map_err(CompilationError::ProviderConfiguration)?;
+    let graph = load_module_graph(
+        request.entry(),
+        request.environment().working_directory(),
+        &providers,
+    )
+    .map_err(|failure| {
+        let (sources, diagnostics) = failure.into_parts();
+        diagnostic_failure(sources, diagnostics)
+    })?;
+
+    compile_module_graph_to_assembly(graph, request.target())
+}
+
+/// Compiles one in-memory singleton source through the same semantic and
+/// backend pipeline as request compilation, without filesystem discovery.
 pub fn compile_source_to_assembly(
     path: impl AsRef<Path>,
     text: impl Into<String>,
@@ -61,11 +92,29 @@ pub fn compile_source_to_assembly(
 
     let resolved = resolve(&parsed.ast);
     diagnostics.append(resolved.diagnostics);
+    finish_compilation(sources, diagnostics, resolved.program, target)
+}
+
+fn compile_module_graph_to_assembly(
+    graph: ModuleGraph,
+    target: Target,
+) -> Result<AssemblyArtifact, CompilationError> {
+    let resolved = resolve_module_graph(&graph);
+    let sources = graph.into_sources();
+    finish_compilation(sources, resolved.diagnostics, resolved.program, target)
+}
+
+fn finish_compilation(
+    sources: SourceDatabase,
+    mut diagnostics: Diagnostics,
+    resolved: ResolvedProgram,
+    target: Target,
+) -> Result<AssemblyArtifact, CompilationError> {
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));
     }
 
-    let checked = type_check(&resolved.program);
+    let checked = type_check(&resolved);
     diagnostics.append(checked.diagnostics);
     if diagnostics.has_errors() {
         return Err(diagnostic_failure(sources, diagnostics));

@@ -1,6 +1,17 @@
 use super::*;
 
 #[test]
+fn standard_library_installation_is_explicitly_injectable() {
+    let toolchain =
+        Toolchain::new("cc", "runtime.a").with_standard_library_root("/test/install/std");
+
+    assert_eq!(
+        toolchain.standard_library_root(),
+        Path::new("/test/install/std")
+    );
+}
+
+#[test]
 fn linker_failure_is_a_driver_error_not_a_panic() {
     let directory = TemporaryDirectory::new("driver-toolchain-failure").unwrap();
     let input = directory.join("valid.ska");

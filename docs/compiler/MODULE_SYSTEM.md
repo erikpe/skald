@@ -8,7 +8,7 @@ frontend representation of imports, visibility, and qualified names are
 implemented foundations. Filesystem-root normalization, canonical root
 coalescing, deterministic provider/package identity assignment, exact-case
 candidate probing, and missing/unique/ambiguous provider resolution are also
-implemented as an inactive module-layer API. That API also selects logical or
+implemented. The module layer also selects logical or
 positional entries, constructs outside-root singletons, loads and parses the
 reachable closure, allocates canonical graph identities, rejects import
 cycles, and exposes a deterministic graph dump. The graph resolver consumes
@@ -16,10 +16,11 @@ that product, builds separate direct module and selective ordinary binding
 tables, and selects qualified or explicitly imported public declarations into
 one flat semantic pipeline. Resolution also coalesces compatible cross-module
 external declarations into compilation-wide link identities and rejects
-incompatible ABI assertions. Active driver integration is not implemented.
-The single-file resolver still reports module syntax as unsupported, and the
-supported driver does not compile multiple files. The current one-file driver
-remains authoritative in
+incompatible ABI assertions. The request pipeline and CLI now compile either
+entry form through that reachable whole-program graph. The in-memory
+single-source adapter remains available without filesystem discovery and
+reports module syntax as unsupported. Driver and artifact behavior remains
+authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
@@ -286,8 +287,9 @@ ordinary names, and collisions with declarations owned by the importer.
 Selective bindings neither create a module binding nor mutate a target public
 surface, so they cannot re-export declarations. Parameters and lexical locals
 continue to shadow imported ordinary names under the existing lexical rules.
-The active driver still uses the singleton adapter and does not feed a loaded
-graph into semantic compilation.
+Request compilation feeds this loaded graph into semantic compilation. The
+in-memory source-text adapter continues to synthesize one singleton semantic
+module without filesystem lookup.
 
 One canonical `ModulePath` resolves to at most one loaded `ModuleId`. Multiple
 module aliases and selective imports of that module reuse its `ModuleId`,

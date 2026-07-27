@@ -6,7 +6,8 @@ use skald_compiler::{
     backend::{emit_assembly, target_by_name, Target},
     diagnostics::{render_diagnostics, Diagnostics},
     driver::{
-        compile_source_to_assembly, run_cli, ArtifactKind, ArtifactOptions, CompilationEnvironment,
+        compile_request_to_assembly, compile_source_to_assembly, run_cli, ArtifactKind,
+        ArtifactOptions, AssemblyArtifact, CompilationEnvironment, CompilationError,
         CompilationRequest, EntrySelector, StandardLibrarySelection, Toolchain,
     },
     external::{ExternalLink, ExternalLinkTable},
@@ -178,6 +179,8 @@ fn intentional_phase_and_dump_paths_compose() {
 #[test]
 fn intentional_driver_paths_compile() {
     let _cli_entry: fn(Vec<OsString>) -> i32 = run_cli::<Vec<OsString>>;
+    let _request_pipeline: fn(&CompilationRequest) -> Result<AssemblyArtifact, CompilationError> =
+        compile_request_to_assembly;
     let _toolchain = Toolchain::new("cc", "runtime.a");
     let artifact = compile_source_to_assembly(
         "api.ska",

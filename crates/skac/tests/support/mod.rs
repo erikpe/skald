@@ -29,6 +29,10 @@ impl TemporaryDirectory {
     pub(crate) fn join(&self, path: impl AsRef<Path>) -> PathBuf {
         self.path.join(path)
     }
+
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl Drop for TemporaryDirectory {

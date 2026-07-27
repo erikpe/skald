@@ -118,6 +118,7 @@ fn select_file_entry(
         working_directory.join(configured_path)
     };
     let lexical_path = lexical_normalize(&absolute);
+    let display_source_path = positional_display_path(configured_path, working_directory);
     validate_source_suffix_and_stem(&lexical_path)?;
 
     let canonical_io_path =
@@ -152,7 +153,7 @@ fn select_file_entry(
                     .file_name()
                     .expect("validated entry path has a file name")
                     .into(),
-                lexical_path.clone(),
+                display_source_path,
                 canonical_io_path,
             );
             let candidate = LoaderProviders::new(providers, Some(singleton.clone()))
@@ -166,7 +167,8 @@ fn select_file_entry(
         [(provider_id, module_path)] => {
             let candidate = LoaderProviders::new(providers, None)
                 .resolve(module_path)
-                .map_err(EntryError::Resolution)?;
+                .map_err(EntryError::Resolution)?
+                .with_display_source_path(display_source_path);
             if candidate.provider_id() != *provider_id
                 || candidate.canonical_io_path() != canonical_io_path
             {
@@ -185,6 +187,16 @@ fn select_file_entry(
             identities,
         }),
     }
+}
+
+fn positional_display_path(configured_path: &Path, working_directory: &Path) -> PathBuf {
+    if !configured_path.is_absolute() {
+        return configured_path.to_owned();
+    }
+    configured_path
+        .strip_prefix(working_directory)
+        .map(Path::to_owned)
+        .unwrap_or_else(|_| configured_path.to_owned())
 }
 
 fn validate_source_suffix_and_stem(path: &Path) -> Result<(), EntryError> {

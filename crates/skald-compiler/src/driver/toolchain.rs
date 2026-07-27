@@ -13,15 +13,19 @@ use super::artifact::PendingArtifact;
 
 pub const C_COMPILER_ENV: &str = "CC";
 pub const RUNTIME_ARCHIVE_ENV: &str = "SKALD_RUNTIME_ARCHIVE";
+pub const STANDARD_LIBRARY_ROOT_ENV: &str = "SKALD_STDLIB_ROOT";
 
 const DEFAULT_RUNTIME_ARCHIVE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../build/runtime/libskald_runtime.a"
 );
+const DEFAULT_STANDARD_LIBRARY_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../std");
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Toolchain {
     c_compiler: OsString,
     runtime_archive: PathBuf,
+    standard_library_root: PathBuf,
 }
 
 impl Toolchain {
@@ -31,6 +35,9 @@ impl Toolchain {
             runtime_archive: env::var_os(RUNTIME_ARCHIVE_ENV)
                 .map(PathBuf::from)
                 .unwrap_or_else(|| PathBuf::from(DEFAULT_RUNTIME_ARCHIVE)),
+            standard_library_root: env::var_os(STANDARD_LIBRARY_ROOT_ENV)
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from(DEFAULT_STANDARD_LIBRARY_ROOT)),
         }
     }
 
@@ -38,7 +45,17 @@ impl Toolchain {
         Self {
             c_compiler: c_compiler.into(),
             runtime_archive: runtime_archive.into(),
+            standard_library_root: PathBuf::from(DEFAULT_STANDARD_LIBRARY_ROOT),
         }
+    }
+
+    pub fn with_standard_library_root(mut self, root: impl Into<PathBuf>) -> Self {
+        self.standard_library_root = root.into();
+        self
+    }
+
+    pub fn standard_library_root(&self) -> &Path {
+        &self.standard_library_root
     }
 
     pub fn link_assembly(&self, assembly: &str, output: &Path) -> Result<(), ToolchainError> {

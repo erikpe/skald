@@ -1,5 +1,98 @@
 use super::*;
 
+fn module_request(
+    directory: &TemporaryDirectory,
+    entry: EntrySelector,
+    roots: Vec<PathBuf>,
+) -> CompilationRequest {
+    CompilationRequest::new(
+        entry,
+        roots,
+        StandardLibrarySelection::Disabled,
+        Target::X86_64SysV,
+        ArtifactOptions::new(ArtifactKind::Assembly, None),
+        CompilationEnvironment::new(directory.path().to_owned(), directory.join("unused-std")),
+    )
+}
+
+#[test]
+fn request_pipeline_compiles_the_reachable_multi_module_program() {
+    let directory = TemporaryDirectory::new("request-pipeline").unwrap();
+    let root = directory.join("modules");
+    fs::create_dir_all(root.join("app")).unwrap();
+    fs::create_dir_all(root.join("lib")).unwrap();
+    fs::write(
+        root.join("app/main.ska"),
+        concat!(
+            "import lib::answer;\n",
+            "fn main() -> i64 { return lib::answer::value(); }\n",
+        ),
+    )
+    .unwrap();
+    fs::write(
+        root.join("lib/answer.ska"),
+        "public fn value() -> i64 { return 42; }\n",
+    )
+    .unwrap();
+    let request = module_request(
+        &directory,
+        EntrySelector::Module("app::main".parse().unwrap()),
+        vec![root],
+    );
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(artifact.report.sources.len(), 2);
+    assert!(artifact.assembly.contains("call .Lska_fn_1"));
+    assert!(artifact.assembly.contains(".globl main"));
+}
+
+#[test]
+fn request_pipeline_accepts_a_positional_entry_outside_all_roots() {
+    let directory = TemporaryDirectory::new("request-singleton").unwrap();
+    let spaced_directory = directory.join("directory with spaces");
+    fs::create_dir(&spaced_directory).unwrap();
+    let input = spaced_directory.join("outside_main.ska");
+    fs::write(&input, "fn main() -> i64 { return 42; }\n").unwrap();
+    let request = module_request(&directory, EntrySelector::File(input), Vec::new());
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(artifact.report.sources.len(), 1);
+    assert!(artifact.assembly.contains("mov rax, 42"));
+}
+
+#[test]
+fn request_pipeline_preserves_configuration_and_source_failure_categories() {
+    let directory = TemporaryDirectory::new("request-failures").unwrap();
+    let invalid_root = directory.join("missing-root");
+    let request = module_request(
+        &directory,
+        EntrySelector::Module("app::main".parse().unwrap()),
+        vec![invalid_root],
+    );
+    let CompilationError::ProviderConfiguration(errors) =
+        compile_request_to_assembly(&request).unwrap_err()
+    else {
+        panic!("expected provider configuration failure");
+    };
+    assert_eq!(errors.len(), 1);
+
+    let missing = module_request(
+        &directory,
+        EntrySelector::File(directory.join("missing.ska")),
+        Vec::new(),
+    );
+    let CompilationError::Diagnostics(report) = compile_request_to_assembly(&missing).unwrap_err()
+    else {
+        panic!("expected source diagnostics");
+    };
+    assert!(render_diagnostics(&report.sources, &report.diagnostics)
+        .contains("error[MOD001]: invalid entry"));
+}
+
 #[test]
 fn unused_destructor_bodies_lower_through_the_backend() {
     let artifact = compile_source_to_assembly(

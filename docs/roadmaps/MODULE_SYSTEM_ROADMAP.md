@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS9 is next.
+Status: in progress; MS10 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -140,7 +140,7 @@ implementation template:
 - [x] MS6 — Resolve module imports and qualified uses
 - [x] MS7 — Resolve selective imports and ordinary bindings
 - [x] MS8 — Coalesce compatible external ABI declarations
-- [ ] MS9 — Integrate compilation requests with the driver and CLI
+- [x] MS9 — Integrate compilation requests with the driver and CLI
 - [ ] MS10 — Harden determinism, diagnostics, fixtures, and documentation
 
 ## PR-sized implementation sequence
@@ -655,34 +655,34 @@ inputs, assembly call selection, and native linkage. `make check` and
 **Purpose:** Expose the completed module pipeline through the supported
 library/driver boundary and exact frozen command-line behavior.
 
-- [ ] Add one request-based source-to-assembly orchestration API that owns
+- [x] Add one request-based source-to-assembly orchestration API that owns
       provider normalization, graph loading, multi-module semantics, and the
       existing backend pipeline. Keep source I/O in loading/driver owners and
       artifact publication in the driver.
-- [ ] Reimplement `compile_source_to_assembly` as an in-memory singleton
+- [x] Reimplement `compile_source_to_assembly` as an in-memory singleton
       request adapter so existing phase/public tests use the same semantic
       pipeline without gaining filesystem-root discovery.
-- [ ] Extend CLI parsing with mutually exclusive positional file and
+- [x] Extend CLI parsing with mutually exclusive positional file and
       `--entry`, repeatable `--module-root`, one optional `--stdlib-root`, and
       `--no-stdlib`. Preserve existing target, emit, output, help, and version
       behavior.
-- [ ] Supply the installed default standard-library root through one
+- [x] Supply the installed default standard-library root through one
       test-injectable driver/toolchain configuration. A replacement fully
       replaces it; disabling removes it; neither form adds lookup precedence
       or eager loading.
-- [ ] Classify missing/repeated/conflicting selectors and options as usage
+- [x] Classify missing/repeated/conflicting selectors and options as usage
       errors; classify reached source/module failures as compilation errors;
       and preserve established I/O/toolchain/artifact exit boundaries.
-- [ ] Implement positional output defaults from the input path and logical
+- [x] Implement positional output defaults from the input path and logical
       entry defaults from the final module component in the current directory.
       Preserve explicit `-o`/`--output`.
-- [ ] Apply the frozen existing input/output-alias protection to the selected
+- [x] Apply the frozen existing input/output-alias protection to the selected
       positional source and preserve recoverable pending-artifact publication.
       Do not silently broaden alias policy based on imports or physical module
       deduplication.
-- [ ] Update help text and driver documentation with both entry forms, all
+- [x] Update help text and driver documentation with both entry forms, all
       module/standard-library options, and output examples.
-- [ ] Cover option-order independence, non-UTF-8 OS arguments where relevant,
+- [x] Cover option-order independence, non-UTF-8 OS arguments where relevant,
       paths with spaces, relative working directories, and standard-library
       installation injection through the real binary.
 
@@ -695,6 +695,26 @@ artifact/toolchain regressions, followed by `make check` and
 whole-program pipeline with exact root, standard-library, output, diagnostic,
 and process behavior, while the old source-text convenience API remains a
 thin adapter.
+
+**Implemented:** `compile_request_to_assembly` now normalizes the request's
+provider union, loads only the reachable parsed graph, resolves and checks one
+whole program, and reuses the verified MIR and backend completion path.
+`compile_source_to_assembly` remains an I/O-free singleton adapter over the
+same program resolver and lower pipeline. The CLI parser is isolated in a
+focused submodule and accepts exactly one positional or logical entry,
+repeatable anonymous roots, and default, replacement, or disabled
+standard-library selection independently of option order. Driver
+configuration owns the installed standard-library root and supports explicit
+test and process-environment injection. Output defaults follow the positional
+path or final logical component; explicit output, positional input-alias
+protection, pending publication, targets, emission, help, version, toolchain,
+and artifact boundaries remain intact. Positional display provenance preserves
+stable relative diagnostics while canonical I/O and module identity stay
+separate. Focused pipeline, parser, artifact, public API, provider, and real
+binary tests cover both entry forms, repeated split roots, standard-library
+selection, usage/compilation statuses, paths with spaces, relative working
+directories, non-UTF-8 OS paths, output defaults, and whole-program assembly.
+`make check` and `make msrv-check` pass.
 
 ### MS10 — Harden determinism, diagnostics, fixtures, and documentation
 

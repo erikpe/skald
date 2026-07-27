@@ -284,6 +284,11 @@ impl ModuleCandidate {
     pub fn canonical_io_path(&self) -> &Path {
         &self.canonical_io_path
     }
+
+    pub(in crate::module) fn with_display_source_path(mut self, path: PathBuf) -> Self {
+        self.display_source_path = path;
+        self
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

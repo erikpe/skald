@@ -28,9 +28,11 @@ The target-independent compiler path is:
 | MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
 
-`driver::compile_source_to_assembly` composes these phases with target
-selection and backend emission. It stops after any source phase that produced
-an error. Successful type checking always produces HIR; failed type checking
+`driver::compile_request_to_assembly` composes provider normalization,
+reachable graph loading, these phases, target selection, and backend emission.
+`driver::compile_source_to_assembly` is its in-memory singleton convenience
+surface. Both stop after any source phase that produced an error. Successful
+type checking always produces HIR; failed type checking
 produces no HIR. HIR lowering represents every typed operation directly in
 target-independent MIR. The
 [backend and target contract](BACKEND.md)
@@ -69,9 +71,6 @@ imports are required: absolute, descendant, and transitive paths do not create
 bindings. Resolved dumps retain local binding spelling plus canonical module
 ownership; HIR and lower phases contain only selected dense identities.
 
-Selective imports still add reachability without ordinary-name bindings. The
-active driver uses the singleton entry and does not consume a graph.
-
 The `module` facade already provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
 `ProviderId`, and `PackageId` identities. The `driver` facade exposes a typed
@@ -88,17 +87,16 @@ logical-path order, reject cycles, and return an inspectable `ModuleGraph`.
 Discovery caches source text before canonical final parsing, so recursive
 discovery order does not determine final identities. The graph resolver
 preserves that canonical module order when allocating all semantic identities.
-The active pipeline entry remains `compile_source_to_assembly`; it does not
-consume this graph yet.
+The request pipeline consumes this graph directly; the source-text convenience
+entry remains isolated from filesystem discovery.
 
 The lexer and parser additionally recognize the frozen module punctuation,
 imports, top-level visibility, and qualified declaration spellings. The AST
 retains unresolved path components and all diagnostic-relevant separator and
 introducer spans without choosing a module binding or declaration leaf.
-This remains a phase-local complete-compiler boundary: the single-file
-resolver emits `RES023` for imports and qualified names. Graph resolution
-constructs direct module bindings and resolves qualified uses, but selective
-ordinary imports are not yet active and the driver does not consume the graph.
+The single-file resolver emits `RES023` for imports and qualified names.
+Request graph resolution constructs direct module and selective ordinary
+bindings and resolves their uses before lower phases.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional
