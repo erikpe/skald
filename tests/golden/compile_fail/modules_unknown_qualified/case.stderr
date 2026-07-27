@@ -1,0 +1,17 @@
+error[RES013]: `dependency::value` does not name a base class
+ --> modules/app.ska:3:21
+   |
+3 | class Child extends dependency::value {
+   |                     ^^^^^^^^^^^^^^^^^ expected a class name
+   |
+1 | public fn value() -> i64 {
+   |           ----- function declared here
+
+error[RES027]: module `dependency` has no declaration named `missing`
+ --> modules/app.ska:8:24
+   |
+8 |     return dependency::missing();
+   |                        ^^^^^^^ unknown declaration
+   |
+1 | import dependency;
+   |        ---------- module bound here

@@ -1,0 +1,5 @@
+--entry
+app::main
+--module-root
+modules
+--no-stdlib

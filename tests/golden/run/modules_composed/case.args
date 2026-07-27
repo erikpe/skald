@@ -1,0 +1,7 @@
+--entry
+app::main
+--module-root
+application
+--module-root
+dependencies
+--no-stdlib

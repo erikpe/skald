@@ -1,0 +1,8 @@
+error[RES026]: declaration `dependency::hidden` is private
+ --> modules/app.ska:4:24
+   |
+4 |     return dependency::hidden();
+   |                        ^^^^^^ private declaration used here
+   |
+1 | fn hidden() -> i64 {
+   |    ------ declared private here

@@ -1,0 +1,18 @@
+error[RES026]: declaration `dependency::hidden` is private
+ --> modules/app.ska:1:24
+   |
+1 | from dependency import hidden, missing;
+   |                        ^^^^^^ private declaration imported here
+   |
+1 | fn hidden() -> i64 {
+   |    ------ declared private here
+
+error[RES029]: module `dependency` has no directly owned declaration named `missing`
+ --> modules/app.ska:1:32
+   |
+1 | from dependency import hidden, missing;
+   |                                ^^^^^^^ unknown selective-import target
+   |
+1 | fn hidden() -> i64 {
+   | -------------------- import source module defined here
+  = note: members, module bindings, and declarations imported by the target module cannot be selected

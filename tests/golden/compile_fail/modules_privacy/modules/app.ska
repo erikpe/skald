@@ -1,0 +1,5 @@
+import dependency;
+
+fn main() -> i64 {
+    return dependency::hidden();
+}

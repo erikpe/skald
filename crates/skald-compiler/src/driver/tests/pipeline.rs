@@ -49,6 +49,31 @@ fn request_pipeline_compiles_the_reachable_multi_module_program() {
 }
 
 #[test]
+fn request_pipeline_ignores_malformed_sources_outside_the_reachable_closure() {
+    let directory = TemporaryDirectory::new("request-reachability").unwrap();
+    let root = directory.join("modules");
+    fs::create_dir_all(root.join("app")).unwrap();
+    fs::create_dir_all(root.join("unused")).unwrap();
+    fs::write(
+        root.join("app/main.ska"),
+        "fn main() -> i64 { return 42; }\n",
+    )
+    .unwrap();
+    fs::write(root.join("unused/malformed.ska"), "fn broken( {\n").unwrap();
+    let request = module_request(
+        &directory,
+        EntrySelector::Module("app::main".parse().unwrap()),
+        vec![root],
+    );
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+
+    assert!(artifact.report.diagnostics.is_empty());
+    assert_eq!(artifact.report.sources.len(), 1);
+    assert!(artifact.assembly.contains("mov rax, 42"));
+}
+
+#[test]
 fn request_pipeline_accepts_a_positional_entry_outside_all_roots() {
     let directory = TemporaryDirectory::new("request-singleton").unwrap();
     let spaced_directory = directory.join("directory with spaces");

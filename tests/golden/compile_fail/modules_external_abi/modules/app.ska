@@ -1,0 +1,7 @@
+import first;
+import second;
+import third;
+
+fn main() -> i64 {
+    return 0;
+}

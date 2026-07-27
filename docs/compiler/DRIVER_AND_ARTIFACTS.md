@@ -74,6 +74,19 @@ is mutually exclusive with `--no-stdlib`.
 frontend and backend but does not require a runtime archive or invoke the host
 toolchain. `--version`, `-h`, and `--help` complete without compilation.
 
+For example, split application, dependency, and SDK trees compose without
+source-visible root bindings:
+
+```text
+skac --entry app::main \
+  --module-root application/modules \
+  --module-root dependencies/modules \
+  --stdlib-root sdk/modules
+```
+
+Imports in those sources use only logical paths such as `app::model`,
+`math::geometry`, or `std::Str`.
+
 Logical paths and target/emission names require UTF-8. Positional files,
 provider roots, standard-library roots, and output paths retain native OS
 strings. Loading reads every reached source as UTF-8 text. Invalid entries,

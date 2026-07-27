@@ -1,7 +1,7 @@
 # Initial Skald Module-System Design Record
 
 Status: historical design record. Its decisions were promoted into the frozen
-[language](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
+[language](../language/MODULES_AND_INTEROP.md#initial-module-system)
 and [compiler](../compiler/MODULE_SYSTEM.md) contracts. Those living documents
 are authoritative.
 

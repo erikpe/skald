@@ -1,0 +1,9 @@
+public extern fn ska_rt_println_i64(value: i64) -> unit;
+
+public fn answer() -> i64 {
+    return 42;
+}
+
+public fn zero() -> i64 {
+    return 0;
+}

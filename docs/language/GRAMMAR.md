@@ -8,18 +8,11 @@ This document defines tokens, concrete source shape, precedence,
 associativity, and syntax-error boundaries. It does not define name lookup,
 types, ownership, evaluation, lifecycle behavior, ABI, or lowering.
 
-The frozen module syntax is deliberately absent from this complete-compiler
-grammar until the whole-program module pipeline is implemented. Its exact
-extension is owned by
-[Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#import-syntax);
-the lexer and parser currently recognize it only as a phase-local,
-source-shaped representation. `import`, `from`, `as`, and `public` remain
-contextual identifiers, and the single-file semantic adapter rejects imports
-and qualified `::` uses with a structured unsupported-module diagnostic. The
-inactive whole-program graph resolver consumes parsed imports for reachability,
-builds direct default or aliased module bindings, and resolves qualified source
-uses. Selective imports remain reachability-only, and the supported driver
-does not yet expose the whole-program module pipeline.
+Module imports, visibility, and qualified declaration names below are part of
+the implemented complete-compiler grammar. Their lookup and visibility
+semantics are owned by
+[Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#import-syntax).
+`import`, `from`, `as`, and `public` remain contextual identifiers.
 
 ## Notation
 
@@ -96,13 +89,15 @@ and forms either an absent expression or the target of a presence test.
 `shared` is contextual before an object or array target in stored and result
 types and inside a cast target. `new` is contextual before a class allocation
 or an array construction. Both remain ordinary identifiers elsewhere.
+`import`, `from`, and `as` are contextual in file-leading import declarations;
+`public` is contextual before a top-level declaration.
 
 ## Punctuation
 
 The complete punctuation and operator token set is:
 
 ```text
-( ) { } [ ] , : ; . -> + - * = ? !
+( ) { } [ ] , : :: ; . -> + - * = ? !
 ```
 
 There are no string, character, comparison, or division tokens in the
@@ -138,12 +133,23 @@ not grammar.
 ## Compilation unit and declarations
 
 ```text
-compilation-unit              = { top-level-declaration } EOF
+compilation-unit              = { import-declaration }
+                                { top-level-declaration } EOF
 
-top-level-declaration         = function-definition
-                              | external-function-declaration
-                              | class-declaration
-                              | interface-declaration
+import-declaration            = module-import | selective-import
+module-import                 = "import" module-path ["as" identifier] ";"
+selective-import              = "from" module-path "import" imported-declaration
+                                {"," imported-declaration} ";"
+imported-declaration          = identifier ["as" identifier]
+module-path                   = identifier {"::" identifier}
+declaration-path              = identifier {"::" identifier}
+
+top-level-declaration         = ["public"] (
+                                  function-definition
+                                | external-function-declaration
+                                | class-declaration
+                                | interface-declaration
+                                )
 
 function-definition           = "fn" identifier parameter-list
                                 "->" result-type block
@@ -155,11 +161,11 @@ parameter-list                = "(" [parameter {"," parameter}] ")"
 parameter                     = value-parameter | alias-parameter
 value-parameter               = identifier ":" storage-type
 alias-parameter               = ["mut"] "ref" identifier ":" alias-target
-alias-target                  = identifier | identifier "?" | "Obj"
+alias-target                  = declaration-path | declaration-path "?" | "Obj"
 
 primitive-type                = "i64" | "u64" | "u8" | "f64" | "bool"
-named-type                    = identifier
-shared-target                 = identifier | "Obj"
+named-type                    = declaration-path
+shared-target                 = declaration-path | "Obj"
 shared-type                   = "shared" shared-target
 inline-optional-type          = (primitive-type | named-type) "?"
 optional-shared-type          = "shared" "?" shared-target
@@ -173,7 +179,14 @@ storage-type                  = primitive-type | named-type | shared-type
 result-type                   = storage-type | "unit"
 ```
 
-Parameter and argument lists do not accept trailing commas. Alias parameter
+Imports must precede declarations. Selective import lists, parameter lists,
+and argument lists do not accept trailing commas. Wildcard imports,
+multi-segment aliases, relative imports, and empty module components are not
+grammar forms. A `declaration-path` with more than one component is later
+resolved through a direct module binding; an unqualified path uses the
+module's ordinary namespace.
+
+Alias parameter
 syntax is parsed uniformly for functions, external declarations,
 initializers, and methods; later semantic rules decide which declarations and
 named types are legal. Alias targets retain their separate grammar and do not
@@ -199,8 +212,8 @@ defined by [modules and foreign interoperation](MODULES_AND_INTEROP.md).
 ## Class declarations
 
 ```text
-class-declaration           = "class" identifier ["extends" identifier]
-                              ["implements" identifier {"," identifier}]
+class-declaration           = "class" identifier ["extends" declaration-path]
+                              ["implements" declaration-path {"," declaration-path}]
                               "{" {class-member} "}"
 
 class-member                = field-declaration
@@ -323,7 +336,7 @@ parenthesized expression and a block.
 ```text
 expression       = additive-expression
                    ["is" (view-target | "some" | "none")]
-view-target      = identifier
+view-target      = declaration-path
 
 additive-expression
                  = multiplicative-expression
@@ -364,7 +377,7 @@ argument-list    = expression {"," expression}
 
 primary-expression
                  = "none"
-                 | identifier
+                 | declaration-path
                  | literal
                  | "self"
                  | allocation-expression
@@ -372,7 +385,7 @@ primary-expression
                  | "(" expression ")"
 
 allocation-expression
-                 = "new" identifier allocation-arguments
+                 = "new" declaration-path allocation-arguments
 allocation-arguments
                  = "(" [argument-list] ")"
                  | copy-construction-arguments

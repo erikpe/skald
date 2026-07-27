@@ -98,6 +98,31 @@ fn logical_entry_loads_only_the_reachable_import_closure() {
 }
 
 #[test]
+fn hostile_import_paths_fail_without_panicking_or_scanning_the_root() {
+    let workspace = directory("graph-hostile-import");
+    let root = workspace.join("modules");
+    let hostile_path = std::iter::repeat_n("component", 2_048)
+        .collect::<Vec<_>>()
+        .join("::");
+    source(
+        &root,
+        "app.ska",
+        &format!("import {hostile_path};\nfn main() -> i64 {{ return 0; }}\n"),
+    );
+    source(&root, "unrelated.ska", "fn malformed( {\n");
+
+    let failure = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap_err();
+
+    assert!(!failure.diagnostics().is_empty());
+    assert_eq!(failure.sources().len(), 1);
+}
+
+#[test]
 fn positional_and_logical_selection_intern_the_same_rooted_module() {
     let workspace = directory("graph-rooted-entry");
     let root = workspace.join("modules");

@@ -1,0 +1,23 @@
+error[PAR002]: expected `)` after the parameters
+ --> modules/malformed.ska:1:19
+   |
+1 | public fn broken( {
+   |                   ^ found LEFT_BRACE
+
+error[PAR002]: expected `->` after the parameter list
+ --> modules/malformed.ska:1:19
+   |
+1 | public fn broken( {
+   |                   ^ found LEFT_BRACE
+
+error[PAR002]: expected a return type after `->`
+ --> modules/malformed.ska:1:19
+   |
+1 | public fn broken( {
+   |                   ^ expected `i64`, `u64`, `u8`, `f64`, `bool`, or `unit`, a named class type, or a shared object type
+
+error[PAR002]: expected `}` after the block
+ --> modules/malformed.ska:2:1
+   |
+2 | 
+   | ^ found EOF

@@ -1,10 +1,10 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS10 is next.
+Status: complete; archived after MS10.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
-[Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system).
+[Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md#initial-module-system).
 The provider, filesystem, entry, identity, loading, determinism, linkage, and
 diagnostic authority is the
 [Module-System Compiler Contract](../compiler/MODULE_SYSTEM.md). If
@@ -141,7 +141,7 @@ implementation template:
 - [x] MS7 — Resolve selective imports and ordinary bindings
 - [x] MS8 — Coalesce compatible external ABI declarations
 - [x] MS9 — Integrate compilation requests with the driver and CLI
-- [ ] MS10 — Harden determinism, diagnostics, fixtures, and documentation
+- [x] MS10 — Harden determinism, diagnostics, fixtures, and documentation
 
 ## PR-sized implementation sequence
 
@@ -722,38 +722,38 @@ directories, non-UTF-8 OS paths, output defaults, and whole-program assembly.
 promote the frozen design to implemented status only after that evidence
 passes.
 
-- [ ] Define and document a golden-fixture convention that groups one entry,
+- [x] Define and document a golden-fixture convention that groups one entry,
       supporting module trees, entry mode, and root/standard-library arguments
       without causing support `.ska` files to be discovered as independent
       cases. Preserve every existing one-file fixture unchanged.
-- [ ] Add end-to-end success cases for split logical trees, qualified and
+- [x] Add end-to-end success cases for split logical trees, qualified and
       selective imports, multiple bindings, private entry `main`, non-entry
       `main` functions, replacement/disabled standard library, and compatible
       external declarations.
-- [ ] Add exact compile-failure goldens for the complete required diagnostic
+- [x] Add exact compile-failure goldens for the complete required diagnostic
       list in the compiler contract, using multi-file labels where ownership,
       ambiguity, cycles, privacy, or ABI conflicts require them.
-- [ ] Add filesystem integration matrices for equivalent roots, same logical
+- [x] Add filesystem integration matrices for equivalent roots, same logical
       path from distinct providers regardless of contents/physical target,
       symlink escapes, distinct logical instances of one physical file, exact
       case, singleton visibility, and positional containment aliases.
-- [ ] Extend cross-process determinism coverage to permute root option order,
+- [x] Extend cross-process determinism coverage to permute root option order,
       import declaration order, discovery shape, equivalent root spellings,
       and selected entry with an unchanged reachable set. Compare graph,
       resolved, HIR, MIR, diagnostics, assembly, and native observations as
       applicable.
-- [ ] Prove unrelated root files are not read or compiled and that malformed
+- [x] Prove unrelated root files are not read or compiled and that malformed
       unreachable files cannot affect a build.
-- [ ] Add hostile frontend/import-path corpus cases and retain the smallest
+- [x] Add hostile frontend/import-path corpus cases and retain the smallest
       focused regression for any failure found.
-- [ ] Remove transitional unsupported-module diagnostics/adapters that are no
+- [x] Remove transitional unsupported-module diagnostics/adapters that are no
       longer needed, dead one-file orchestration, and duplicated lookup or
       path-normalization helpers.
-- [ ] Update the implemented grammar, language/compiler status matrix,
+- [x] Update the implemented grammar, language/compiler status matrix,
       compiler phase and driver documents, testing guide, examples, and module
       contracts' implementation-status wording. Keep the frozen semantics
       unchanged.
-- [ ] Review every deferred feature boundary and ensure no manifest,
+- [x] Review every deferred feature boundary and ensure no manifest,
       re-export, wildcard, package-private, directory-module, separate-
       compilation, module-initialization, or native-export behavior slipped
       into the implementation.
@@ -767,6 +767,29 @@ multi-file goldens, then `make check`, `make msrv-check`, and
 owning test, identities and artifacts are stable across independent process
 and ordering permutations, living documentation describes the implemented
 compiler, and no transitional module path remains.
+
+**Implemented:** Golden discovery now treats a directory containing
+`case.args` as one relocatable multi-file fixture while preserving all
+existing single-file cases. Complete executions cover split roots, both
+entry modes, qualified and selective imports, multiple bindings, entry
+selection, standard-library replacement and disabling, and external-ABI
+coalescing. Exact module diagnostics cover import syntax and binding failures,
+provider ambiguity, reachability, cycles, privacy, qualified lookup, selected
+entry validation, malformed reached sources, and incompatible external
+declarations; host-dependent filesystem failures retain structured owning
+tests. Provider and graph matrices cover every normalization and physical-path
+rule. Independent processes permute roots, equivalent spellings, creation and
+import order, and entry form while comparing canonical graph, diagnostics,
+resolved IR, HIR, MIR, and assembly; golden compilation and native execution
+remain independently repeated. Malformed unreachable sources are excluded by
+the complete request pipeline, and a fixed 2,048-component import regression
+joins the existing hostile frontend corpus. The no-context source-text API
+remains a supported convenience boundary with the precise `RES023` module
+context diagnostic; obsolete milestone wording and state were removed. Living
+grammar, language/compiler status, phase, driver, testing, examples, and both
+module contracts now describe the implemented whole-program system. Deferred
+features remain excluded. `make check`, `make msrv-check`, and
+`make robustness-long` pass.
 
 ## Ordering and dependencies
 

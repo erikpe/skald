@@ -1,0 +1,11 @@
+error[PAR011]: import aliases must be one identifier
+ --> tests/golden/compile_fail/module_import_alias_path.ska:1:28
+   |
+1 | import dependency as nested::Alias;
+   |                            ^^ remove the additional alias components
+
+error[PAR001]: expected a top-level declaration
+ --> tests/golden/compile_fail/module_import_alias_path.ska:1:28
+   |
+1 | import dependency as nested::Alias;
+   |                            ^^ expected `fn`, `extern fn`, `class`, or `interface` at file scope

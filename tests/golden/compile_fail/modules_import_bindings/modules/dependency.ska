@@ -1,0 +1,7 @@
+public fn value() -> i64 {
+    return 1;
+}
+
+public fn other() -> i64 {
+    return 2;
+}

@@ -1,0 +1,5 @@
+from dependency import hidden, missing;
+
+fn main() -> i64 {
+    return 0;
+}

@@ -1,0 +1,8 @@
+import math::calc;
+import math::calc as Calc;
+from math::calc import answer as selected, answer as repeated;
+import support::other;
+
+fn main() -> i64 {
+    return math::calc::answer() + Calc::zero() + selected();
+}

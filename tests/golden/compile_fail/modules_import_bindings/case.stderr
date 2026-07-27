@@ -1,0 +1,18 @@
+error[RES024]: conflicting module binding `Alias`
+ --> modules/app.ska:2:17
+   |
+2 | import other as Alias;
+   |                 ^^^^^ rebound here
+   |
+1 | import dependency as Alias;
+   |                      ----- first bound here
+  = note: the first binding selects `dependency`; this import selects `other`
+
+error[RES028]: repeated imported name `selected`
+ --> modules/app.ska:4:33
+   |
+4 | from dependency import other as selected;
+   |                                 ^^^^^^^^ rebound here
+   |
+3 | from dependency import value as selected;
+   |                                 -------- first bound here

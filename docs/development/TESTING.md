@@ -93,9 +93,35 @@ Top-level corpus and sidecar formats are documented locally:
 - [golden discovery and sidecars](../../tests/golden/README.md); and
 - [runtime harnesses](../../tests/runtime/README.md).
 
+Multi-file golden directories contain one `case.args` manifest plus their
+entry and supporting trees. The manifest records one exact command argument
+per line, including entry mode, module roots, and standard-library selection;
+its directory is the compiler working directory. Discovery treats the whole
+directory as one case and never promotes supporting `.ska` files into
+independent fixtures.
+
 Exact dump and diagnostic expectations should remain readable and intentional.
 When an expectation changes, inspect the semantic difference before updating
 it. Do not introduce a second renderer solely to make a test convenient.
+
+### Module-system coverage map
+
+The required diagnostics in the
+[module compiler contract](../compiler/MODULE_SYSTEM.md#required-diagnostic-coverage)
+have explicit owners:
+
+| Contract area | Owning evidence |
+|---|---|
+| Entry selectors, logical spelling, root/standard-library options, suffixes, output defaults, and process status | driver CLI unit tests and `crates/skac/tests/cli.rs` through the real binary |
+| Root equivalence, provider ambiguity independent of contents or physical target, symlink traversal and failure, exact case, unreadable/non-regular candidates, and positional containment | `module::provider::tests` and `module::graph::tests` filesystem matrices |
+| Missing and ambiguous imports, import-source aliases, cycles, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | exact single- and multi-file snapshots under `tests/golden/compile_fail/`, plus structured resolver tests |
+| Multi-segment aliases, wildcard imports, and trailing selective-import commas | exact parser goldens and syntax recovery tests |
+| Ordering and independent-process stability | `pipeline_determinism`, graph/provider permutation tests, and the two-process golden runner |
+
+Host-dependent filesystem wording stays asserted structurally at the provider
+boundary; portable source diagnostics use byte-exact golden snapshots. This
+keeps every required failure owned without freezing operating-system error
+text.
 
 Explicit-copy tests should distinguish `T(copy source)` from ordinary
 `T(copy)` and `T(copy, other)`, cover static and runtime target selection,
@@ -143,8 +169,11 @@ Because array failures promise only non-return, `.exit` sidecars use
 Phase dump tests call the same renderer repeatedly and compare exact text.
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
 products for representative object-lifetime, polymorphism, shared-ownership,
-optional-value, and array programs from two independent test processes. The
-golden runner invokes `skac`
+optional-value, and array programs from two independent test processes. Its
+module cases additionally permute root option order, equivalent root
+spellings, source creation order, import declaration order, and logical versus
+positional selection of the same rooted entry, then compare canonical graph,
+resolved, HIR, MIR, assembly, and diagnostic products. The golden runner invokes `skac`
 twice for every successful assembly and every compile failure, comparing
 assembly or diagnostic bytes. It also executes every native case twice and
 compares status, stdout, and stderr before evaluating the checked-in

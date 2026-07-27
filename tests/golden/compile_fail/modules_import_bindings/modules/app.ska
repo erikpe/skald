@@ -1,0 +1,8 @@
+import dependency as Alias;
+import other as Alias;
+from dependency import value as selected;
+from dependency import other as selected;
+
+fn main() -> i64 {
+    return 0;
+}

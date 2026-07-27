@@ -84,7 +84,7 @@ impl<'program> ProgramLookupTables<'program> {
 pub(super) struct ProgramResolver<'ast> {
     units: Vec<ModuleUnit<'ast>>,
     modules: ProgramModuleTable,
-    reject_imports: bool,
+    has_module_context: bool,
     array_types: ArrayTypeInterner,
     diagnostics: Diagnostics,
 }
@@ -94,7 +94,7 @@ impl<'ast> ProgramResolver<'ast> {
         Self {
             units: vec![ModuleUnit::new(ast, ModuleId::new(0), false)],
             modules: ProgramModuleTable::singleton(ast.span.source_id()),
-            reject_imports: true,
+            has_module_context: false,
             array_types: ArrayTypeInterner::default(),
             diagnostics: Diagnostics::new(),
         }
@@ -108,26 +108,26 @@ impl<'ast> ProgramResolver<'ast> {
                 .map(|module| ModuleUnit::new(module.ast(), module.provenance().module_id(), true))
                 .collect(),
             modules: ProgramModuleTable::from_graph(graph),
-            reject_imports: false,
+            has_module_context: true,
             array_types: ArrayTypeInterner::default(),
             diagnostics: Diagnostics::new(),
         }
     }
 
     pub(super) fn resolve(mut self) -> ResolveOutput {
-        if self.reject_imports {
+        if !self.has_module_context {
             for unit in &self.units {
                 for import in &unit.ast.imports {
                     self.diagnostics.push(
                         Diagnostic::error(
-                            UNSUPPORTED_MODULE_SYNTAX,
+                            MODULE_CONTEXT_REQUIRED,
                             "module imports require whole-program module compilation",
                         )
                         .with_primary_label(
                             import.span(),
-                            "the single-file semantic adapter cannot resolve this import",
+                            "use a compilation request to supply module roots and an entry",
                         )
-                        .with_note("use the parsed module-graph resolver for module programs"),
+                        .with_note("the source-text convenience API has no filesystem context"),
                     );
                 }
             }
@@ -357,7 +357,7 @@ impl<'ast> ProgramResolver<'ast> {
             self.units
                 .iter()
                 .map(|unit| {
-                    if self.reject_imports {
+                    if !self.has_module_context {
                         ResolvedModuleBindings::new(unit.module, Vec::new())
                     } else {
                         collect_module_bindings(
@@ -381,7 +381,7 @@ impl<'ast> ProgramResolver<'ast> {
             self.units
                 .iter()
                 .map(|unit| {
-                    if self.reject_imports {
+                    if !self.has_module_context {
                         ResolvedOrdinaryBindings::new(unit.module, Vec::new())
                     } else {
                         collect_ordinary_bindings(

@@ -44,6 +44,7 @@ Archived plans:
 - [Intel-syntax x86-64 assembly](INTEL_ASSEMBLY_SYNTAX_ROADMAP.md)
 - [Explicit optional values](OPTIONAL_VALUES_ROADMAP.md)
 - [Arrays](ARRAYS_ROADMAP.md)
+- [Initial whole-program module system](MODULE_SYSTEM_ROADMAP.md)
 
 Resolved module-system design inputs:
 

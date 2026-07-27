@@ -73,12 +73,12 @@ impl<'program> ModuleLookup<'program> {
         if !self.qualified_enabled {
             diagnostics.push(
                 Diagnostic::error(
-                    UNSUPPORTED_MODULE_SYNTAX,
+                    MODULE_CONTEXT_REQUIRED,
                     "qualified names require whole-program module compilation",
                 )
                 .with_primary_label(
                     name.span,
-                    "the single-file semantic adapter cannot resolve this name",
+                    "use a compilation request to supply module roots and an entry",
                 ),
             );
             return TopLevelLookup::Diagnosed;

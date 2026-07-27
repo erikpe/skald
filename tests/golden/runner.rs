@@ -3,6 +3,7 @@
 mod native_expectations;
 
 use std::{
+    ffi::OsString,
     fs, io,
     path::{Path, PathBuf},
     process::{self, Command, Output},
@@ -11,6 +12,31 @@ use std::{
 use native_expectations::{load_native_expectations, verify_native_execution};
 
 const COMPILE_FAILURE_EXIT_CODE: i32 = 1;
+const CASE_ARGUMENTS_FILE: &str = "case.args";
+
+#[derive(Debug)]
+struct GoldenCase {
+    expectation_stem: PathBuf,
+    working_directory: PathBuf,
+    arguments: Vec<OsString>,
+    diagnostic_path_prefix: Option<Vec<u8>>,
+}
+
+impl GoldenCase {
+    fn relative_to<'a>(&'a self, golden_root: &'a Path) -> &'a Path {
+        self.expectation_stem
+            .strip_prefix(golden_root)
+            .expect("discovered below root")
+    }
+
+    fn command(&self) -> Command {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_skac"));
+        command
+            .current_dir(&self.working_directory)
+            .args(&self.arguments);
+        command
+    }
+}
 
 fn main() {
     if let Err(message) = run() {
@@ -27,11 +53,11 @@ fn run() -> Result<(), String> {
     let build_root = repository.join("build/golden");
     let runtime_archive = repository.join("build/runtime/libskald_runtime.a");
 
-    let run_sources = sorted_sources(&run_root)?;
-    let compile_fail_sources = sorted_sources(&compile_fail_root)?;
-    if run_sources.is_empty() && compile_fail_sources.is_empty() {
+    let run_cases = sorted_cases(&repository, &run_root)?;
+    let compile_fail_cases = sorted_cases(&repository, &compile_fail_root)?;
+    if run_cases.is_empty() && compile_fail_cases.is_empty() {
         return Err(format!(
-            "no `.ska` cases found under {}",
+            "no golden cases found under {}",
             golden_root.display()
         ));
     }
@@ -40,11 +66,9 @@ fn run() -> Result<(), String> {
         .map_err(|error| format!("could not create golden build directory: {error}"))?;
 
     let mut failures = 0;
-    for source in &run_sources {
-        let relative = source
-            .strip_prefix(&golden_root)
-            .expect("discovered below root");
-        match run_native_case(&repository, source, relative, &build_root, &runtime_archive) {
+    for case in &run_cases {
+        let relative = case.relative_to(&golden_root);
+        match run_native_case(case, relative, &build_root, &runtime_archive) {
             Ok(()) => println!("PASS tests/golden/{}", relative.display()),
             Err(message) => {
                 failures += 1;
@@ -52,11 +76,9 @@ fn run() -> Result<(), String> {
             }
         }
     }
-    for source in &compile_fail_sources {
-        let relative = source
-            .strip_prefix(&golden_root)
-            .expect("discovered below root");
-        match run_compile_fail_case(&repository, source, relative, &build_root) {
+    for case in &compile_fail_cases {
+        let relative = case.relative_to(&golden_root);
+        match run_compile_fail_case(case, relative, &build_root) {
             Ok(()) => println!("PASS tests/golden/{}", relative.display()),
             Err(message) => {
                 failures += 1;
@@ -65,13 +87,13 @@ fn run() -> Result<(), String> {
         }
     }
 
-    let total = run_sources.len() + compile_fail_sources.len();
+    let total = run_cases.len() + compile_fail_cases.len();
     println!(
         "golden: {}/{} cases passed ({} native, {} compile-fail)",
         total - failures,
         total,
-        run_sources.len(),
-        compile_fail_sources.len()
+        run_cases.len(),
+        compile_fail_cases.len()
     );
     if failures == 0 {
         Ok(())
@@ -80,39 +102,82 @@ fn run() -> Result<(), String> {
     }
 }
 
-fn sorted_sources(directory: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut sources = Vec::new();
-    discover_sources(directory, &mut sources)
+fn sorted_cases(repository: &Path, directory: &Path) -> Result<Vec<GoldenCase>, String> {
+    let mut cases = Vec::new();
+    discover_cases(repository, directory, &mut cases)
         .map_err(|error| format!("could not discover {}: {error}", directory.display()))?;
-    sources.sort();
-    Ok(sources)
+    cases.sort_by(|left, right| left.expectation_stem.cmp(&right.expectation_stem));
+    Ok(cases)
 }
 
-fn discover_sources(directory: &Path, sources: &mut Vec<PathBuf>) -> Result<(), io::Error> {
+fn discover_cases(
+    repository: &Path,
+    directory: &Path,
+    cases: &mut Vec<GoldenCase>,
+) -> Result<(), io::Error> {
+    let arguments_path = directory.join(CASE_ARGUMENTS_FILE);
+    if arguments_path.is_file() {
+        cases.push(load_multi_file_case(directory, &arguments_path)?);
+        return Ok(());
+    }
+
     for entry in fs::read_dir(directory)? {
         let path = entry?.path();
         if path.is_dir() {
-            discover_sources(&path, sources)?;
+            discover_cases(repository, &path, cases)?;
         } else if path.extension().is_some_and(|extension| extension == "ska") {
-            sources.push(path);
+            cases.push(GoldenCase {
+                expectation_stem: path.clone(),
+                working_directory: repository.to_owned(),
+                arguments: vec![path
+                    .strip_prefix(repository)
+                    .expect("golden source is inside the repository")
+                    .as_os_str()
+                    .to_owned()],
+                diagnostic_path_prefix: None,
+            });
         }
     }
     Ok(())
 }
 
+fn load_multi_file_case(directory: &Path, arguments_path: &Path) -> Result<GoldenCase, io::Error> {
+    let text = fs::read_to_string(arguments_path)?;
+    let arguments = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(OsString::from)
+        .collect::<Vec<_>>();
+    if arguments.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{} contains no arguments", arguments_path.display()),
+        ));
+    }
+
+    let canonical_directory = fs::canonicalize(directory)?;
+    Ok(GoldenCase {
+        expectation_stem: arguments_path.to_owned(),
+        working_directory: directory.to_owned(),
+        arguments,
+        diagnostic_path_prefix: Some(format!("{}/", canonical_directory.display()).into_bytes()),
+    })
+}
+
 fn run_native_case(
-    repository: &Path,
-    source: &Path,
+    case: &GoldenCase,
     relative: &Path,
     build_root: &Path,
     runtime_archive: &Path,
 ) -> Result<(), String> {
-    let expected = load_native_expectations(source)?;
+    let expected = load_native_expectations(&case.expectation_stem)?;
 
-    assert_deterministic_assembly(repository, source, relative, build_root)?;
+    assert_deterministic_assembly(case, relative, build_root)?;
 
     let executable = build_root.join(flattened_stem(relative));
-    let compilation = skac(repository, source)
+    let compilation = case
+        .command()
         .args(["-o".as_ref(), executable.as_os_str()])
         .env("SKALD_RUNTIME_ARCHIVE", runtime_archive)
         .output()
@@ -144,8 +209,7 @@ fn run_executable(executable: &Path) -> Result<Output, String> {
 }
 
 fn assert_deterministic_assembly(
-    repository: &Path,
-    source: &Path,
+    case: &GoldenCase,
     relative: &Path,
     build_root: &Path,
 ) -> Result<(), String> {
@@ -154,7 +218,8 @@ fn assert_deterministic_assembly(
     let second_path = build_root.join(format!("{stem}.second.s"));
 
     for output_path in [&first_path, &second_path] {
-        let compilation = skac(repository, source)
+        let compilation = case
+            .command()
             .args([
                 "--emit".as_ref(),
                 "asm".as_ref(),
@@ -177,18 +242,17 @@ fn assert_deterministic_assembly(
 }
 
 fn run_compile_fail_case(
-    repository: &Path,
-    source: &Path,
+    case: &GoldenCase,
     relative: &Path,
     build_root: &Path,
 ) -> Result<(), String> {
-    let expected_path = source.with_extension("stderr");
+    let expected_path = case.expectation_stem.with_extension("stderr");
     let expected = fs::read(&expected_path)
         .map_err(|error| format!("could not read {}: {error}", expected_path.display()))?;
     let output_path = build_root.join(format!("{}.unexpected.s", flattened_stem(relative)));
 
-    let first = compile_failure(repository, source, &output_path)?;
-    let second = compile_failure(repository, source, &output_path)?;
+    let first = compile_failure(case, &output_path)?;
+    let second = compile_failure(case, &output_path)?;
     if first.stderr != second.stderr {
         return Err("diagnostics changed across two independent compiler runs".to_owned());
     }
@@ -202,8 +266,9 @@ fn run_compile_fail_case(
     Ok(())
 }
 
-fn compile_failure(repository: &Path, source: &Path, output_path: &Path) -> Result<Output, String> {
-    let result = skac(repository, source)
+fn compile_failure(case: &GoldenCase, output_path: &Path) -> Result<Output, String> {
+    let mut result = case
+        .command()
         .args([
             "--emit".as_ref(),
             "asm".as_ref(),
@@ -212,6 +277,9 @@ fn compile_failure(repository: &Path, source: &Path, output_path: &Path) -> Resu
         ])
         .output()
         .map_err(|error| format!("could not start skac: {error}"))?;
+    if let Some(prefix) = &case.diagnostic_path_prefix {
+        result.stderr = replace_bytes(&result.stderr, prefix, b"");
+    }
     if result.status.code() != Some(COMPILE_FAILURE_EXIT_CODE) {
         return Err(format!(
             "expected compiler exit status {COMPILE_FAILURE_EXIT_CODE}, found {}: {}",
@@ -228,14 +296,23 @@ fn compile_failure(repository: &Path, source: &Path, output_path: &Path) -> Resu
     Ok(result)
 }
 
-fn skac(repository: &Path, source: &Path) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_skac"));
-    command.current_dir(repository).arg(
-        source
-            .strip_prefix(repository)
-            .expect("golden source is inside the repository"),
-    );
-    command
+fn replace_bytes(input: &[u8], needle: &[u8], replacement: &[u8]) -> Vec<u8> {
+    if needle.is_empty() {
+        return input.to_owned();
+    }
+
+    let mut output = Vec::with_capacity(input.len());
+    let mut remaining = input;
+    while let Some(index) = remaining
+        .windows(needle.len())
+        .position(|window| window == needle)
+    {
+        output.extend_from_slice(&remaining[..index]);
+        output.extend_from_slice(replacement);
+        remaining = &remaining[index + needle.len()..];
+    }
+    output.extend_from_slice(remaining);
+    output
 }
 
 fn require_successful_compilation(compilation: &Output) -> Result<(), String> {

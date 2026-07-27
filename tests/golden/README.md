@@ -14,6 +14,34 @@ The runner recursively discovers two case families:
 - `compile_fail/**/*.ska` requires a same-named `.stderr` sidecar containing
   exact rendered diagnostics.
 
+Existing single-file cases keep this convention unchanged. A directory that
+contains `case.args` is instead one multi-file case. The runner does not
+descend into that directory, so supporting `.ska` files are never mistaken for
+independent cases. Each nonempty, non-comment line in `case.args` is one exact
+`skac` argument; arguments are not split on whitespace. Paths are relative to
+the case directory because the compiler runs with that directory as its
+working directory. This makes the entry mode and all root/standard-library
+choices explicit:
+
+```text
+--entry
+app::main
+--module-root
+application modules
+--module-root
+dependency modules
+--stdlib-root
+sdk modules
+```
+
+Use a source path line instead of `--entry` plus a logical path for positional
+entry cases. Multi-file sidecars are named `case.exit`, optional
+`case.stdout`, or `case.stderr`. Keep all module roots and support files below
+the case directory so fixtures remain hermetic and relocatable. In multi-file
+diagnostic snapshots, the runner removes the absolute case-directory prefix;
+source and provider paths therefore begin with the relative fixture path such
+as `modules/app.ska`.
+
 Sidecars are byte-for-byte expectations. Whitespace, line endings, trailing
 line feeds, and non-UTF-8 stdout are not normalized. Successful native cases
 must produce empty stderr. Compile failures must produce no stdout and exit

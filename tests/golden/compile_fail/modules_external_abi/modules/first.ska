@@ -1,0 +1,1 @@
+extern fn foreign(value: i64) -> i64;

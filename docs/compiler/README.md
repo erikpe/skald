@@ -191,9 +191,8 @@ its maintenance cost.
 
 New targets belong behind the backend boundary. New runtime services must use
 the versioned runtime boundary instead of leaking host assumptions into
-target-independent phases. Multiple-file compilation must implement the
-frozen
-[source-visible module contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system)
+target-independent phases. Multiple-file compilation follows the implemented
+[source-visible module contract](../language/MODULES_AND_INTEROP.md#initial-module-system)
 and [compiler module contract](MODULE_SYSTEM.md) without redefining them in an
 implementation roadmap.
 

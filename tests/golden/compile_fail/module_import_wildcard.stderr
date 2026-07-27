@@ -1,0 +1,11 @@
+error[PAR011]: wildcard imports are not supported
+ --> tests/golden/compile_fail/module_import_wildcard.ska:1:24
+   |
+1 | from dependency import *;
+   |                        ^ name each imported declaration explicitly
+
+error[PAR001]: expected a top-level declaration
+ --> tests/golden/compile_fail/module_import_wildcard.ska:1:25
+   |
+1 | from dependency import *;
+   |                         ^ expected `fn`, `extern fn`, `class`, or `interface` at file scope

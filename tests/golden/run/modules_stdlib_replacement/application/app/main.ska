@@ -1,0 +1,5 @@
+import std::answer;
+
+fn main() -> i64 {
+    return std::answer::value();
+}

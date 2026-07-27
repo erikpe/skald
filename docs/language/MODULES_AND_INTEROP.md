@@ -1,17 +1,17 @@
 # Modules and Foreign Interoperation
 
-Status: authoritative for the implemented single-file compilation unit and
-foreign-function boundary, and for the frozen initial module-system language
-contract. [Feature maturity](STATUS.md) remains authoritative for compiler
-support, and the [implemented grammar](GRAMMAR.md) owns syntax currently
-accepted by the compiler.
+Status: authoritative for the implemented initial module system and
+foreign-function boundary. [Feature maturity](STATUS.md) summarizes compiler
+support, and the [implemented grammar](GRAMMAR.md) owns accepted syntax.
 
-## Current compilation unit
+## Compilation units and modules
 
-One compiler invocation accepts one UTF-8 source file. The command-line
-compiler requires the canonical `.ska` suffix. That file is the complete
-compilation unit: it has no declared module identity and cannot import another
-Skald file.
+One compiler invocation selects an entry module and compiles its complete
+reachable module graph as one program. Each module is one UTF-8 `.ska` source
+mapping and has a logical identity selected by roots or positional-entry
+rules; source files contain no `module` declaration. The source-text
+convenience API constructs one in-memory singleton module and therefore has no
+filesystem context in which to resolve imports.
 
 The implemented top-level declaration kinds are:
 
@@ -29,20 +29,20 @@ Classes, interfaces, defined functions, and external functions share one
 non-overloaded top-level namespace. A name may occur there at most once,
 including across declaration kinds. In particular:
 
-- two identical external declarations are a duplicate rather than a
-  coalesced declaration;
+- two identical external declarations in one module are a duplicate rather
+  than a coalesced declaration;
 - an external declaration and a function definition cannot share a name; and
 - classes, interfaces, and functions cannot share names with one another.
 
 Class-member and lexical-local namespaces are separate and are defined by
 [classes and lifecycle](CLASSES_AND_LIFECYCLE.md#members-and-namespaces) and
 [functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md#lexical-scopes-and-locals).
-Skald has no top-level overloading, import precedence, qualification, or
-visibility rule in the implemented language.
+Skald has no top-level overloading or import precedence. Qualification and
+visibility follow the module rules below.
 
 ## Program entry point
 
-An executable program must define exactly this source function:
+The selected entry module must define exactly this source function:
 
 ```ska
 fn main() -> i64 {
@@ -88,7 +88,7 @@ additional language semantics.
 
 ## Unsupported external forms
 
-The current external boundary rejects or has no syntax for:
+The external boundary rejects or has no syntax for:
 
 - alias, object, array, optional, shared, interface, and function-value
   parameters or results;
@@ -97,7 +97,8 @@ The current external boundary rejects or has no syntax for:
 - source-selected calling conventions or link names;
 - external variables, static data, classes, methods, and lifecycle members;
   and
-- repeated declarations intended to describe one foreign definition.
+- repeated declarations within one module intended to describe one foreign
+  definition.
 
 Some type shapes above can be parsed in a general declaration position but
 are rejected semantically for external functions. Their appearance in the
@@ -113,12 +114,10 @@ deliberately preserves this restriction: shared values do not cross the
 external boundary, and the allocator functions remain compiler/runtime
 ABI operations rather than source-visible shared-handle interoperation.
 
-## Frozen initial module system
+## Initial module system
 
-The initial module system is a **frozen design** but is not implemented.
-The compiler therefore still rejects the syntax in this section and accepts
-only the single-file form above. This section fixes the source-visible
-contract for implementation; the
+The initial module system is implemented for whole-program compilation. This
+section defines its source-visible contract; the
 [module-system compiler contract](../compiler/MODULE_SYSTEM.md) owns roots,
 filesystem resolution, CLI entry selection, loading, identities, and
 determinism.

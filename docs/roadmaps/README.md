@@ -6,15 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Initial Module-System Implementation Roadmap](MODULE_SYSTEM_ROADMAP.md) —
-  implements the frozen whole-program language and compiler contracts across
-  source syntax, anonymous providers, filesystem loading, deterministic
-  identities, visibility and imports, external linkage, the driver, and
-  end-to-end tests. Status: in progress; MS10 is next. Material
-  dependencies: the frozen
-  [language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system),
-  frozen [compiler contract](../compiler/MODULE_SYSTEM.md), and the existing
-  flat whole-program phase pipeline.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 
@@ -26,9 +18,13 @@ No maintainability discoveries are currently pending.
 
 ## Implementation baseline
 
-The completed polymorphism, object-cast, and constructor profiles remain the
-implementation baseline. Constructor overload and explicit-copy semantics are
-specified in [Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).
+The completed initial module system, polymorphism, object-cast, and constructor
+profiles remain the implementation baseline. Module behavior is specified by
+the implemented
+[language contract](../language/MODULES_AND_INTEROP.md#initial-module-system)
+and [compiler contract](../compiler/MODULE_SYSTEM.md). Constructor overload
+and explicit-copy semantics are specified in
+[Classes and Lifecycle](../language/CLASSES_AND_LIFECYCLE.md).
 Shared-ownership language and implementation contracts are current in
 [Shared Ownership and Heap Allocation](../language/SHARED_OWNERSHIP.md) and
 the

@@ -1,0 +1,5 @@
+public extern fn ska_rt_println_i64(number: i64) -> unit;
+
+public fn main() -> i64 {
+    return 1;
+}

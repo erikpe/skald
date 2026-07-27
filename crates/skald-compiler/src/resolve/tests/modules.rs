@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[test]
-fn single_file_resolution_reports_imports_as_unsupported_module_syntax() {
+fn source_text_resolution_requires_a_module_context_for_imports() {
     let output = resolve_text(
         "import std::Str;\n\
          fn main() -> unit {}\n",
@@ -16,7 +16,7 @@ fn single_file_resolution_reports_imports_as_unsupported_module_syntax() {
     assert!(output.has_errors());
     let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
     assert_eq!(diagnostics.len(), 1);
-    assert_eq!(diagnostics[0].code, UNSUPPORTED_MODULE_SYNTAX);
+    assert_eq!(diagnostics[0].code, MODULE_CONTEXT_REQUIRED);
     assert!(diagnostics[0]
         .message
         .contains("whole-program module compilation"));
@@ -34,7 +34,7 @@ fn qualified_uses_do_not_panic_or_degrade_to_unknown_name_diagnostics() {
     assert!(output
         .diagnostics
         .iter()
-        .all(|diagnostic| diagnostic.code == UNSUPPORTED_MODULE_SYNTAX));
+        .all(|diagnostic| diagnostic.code == MODULE_CONTEXT_REQUIRED));
 }
 
 #[test]
@@ -229,7 +229,7 @@ fn graph_resolution_reports_cross_file_hierarchy_and_signature_uses_in_the_ownin
         .diagnostics
         .iter()
         .find(|diagnostic| diagnostic.code == INVALID_BASE_CLASS)
-        .expect("an imported class is not an unqualified local base before MS6/MS7");
+        .expect("a module import does not add unqualified names");
     assert_eq!(
         diagnostic.labels[0].span.source_id(),
         graph
@@ -242,7 +242,7 @@ fn graph_resolution_reports_cross_file_hierarchy_and_signature_uses_in_the_ownin
         .diagnostics
         .iter()
         .find(|diagnostic| diagnostic.code == UNKNOWN_TYPE)
-        .expect("an imported class is not an unqualified signature type before MS6/MS7");
+        .expect("a module import does not add unqualified signature types");
     assert_eq!(
         signature_diagnostic.labels[0].span.source_id(),
         graph

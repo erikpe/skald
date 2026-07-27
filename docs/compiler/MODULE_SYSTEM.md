@@ -1,26 +1,16 @@
 # Module-System Compiler Contract
 
-Status: authoritative frozen design for multiple-file compilation, module
-providers, filesystem resolution, entry selection, identities, loading, and
-linkage. Typed logical paths, request-local module/provider/package identities,
-provenance vocabulary, the driver request model, and the source-shaped
-frontend representation of imports, visibility, and qualified names are
-implemented foundations. Filesystem-root normalization, canonical root
-coalescing, deterministic provider/package identity assignment, exact-case
-candidate probing, and missing/unique/ambiguous provider resolution are also
-implemented. The module layer also selects logical or
-positional entries, constructs outside-root singletons, loads and parses the
-reachable closure, allocates canonical graph identities, rejects import
-cycles, and exposes a deterministic graph dump. The graph resolver consumes
-that product, builds separate direct module and selective ordinary binding
-tables, and selects qualified or explicitly imported public declarations into
-one flat semantic pipeline. Resolution also coalesces compatible cross-module
-external declarations into compilation-wide link identities and rejects
-incompatible ABI assertions. The request pipeline and CLI now compile either
-entry form through that reachable whole-program graph. The in-memory
-single-source adapter remains available without filesystem discovery and
-reports module syntax as unsupported. Driver and artifact behavior remains
-authoritative in
+Status: authoritative implemented compiler contract for multiple-file
+whole-program compilation, module providers, filesystem resolution, entry
+selection, identities, loading, diagnostics, determinism, and linkage. The
+module layer selects logical or positional entries, constructs outside-root
+singletons, loads and parses only the reachable closure, allocates canonical
+graph and semantic identities, rejects cycles, enforces imports and
+visibility, and coalesces compatible cross-module external declarations. The
+request pipeline and CLI compile either entry form through this graph. The
+in-memory source-text convenience API remains available without filesystem
+discovery; module-bearing sources require a `CompilationRequest`. Driver and
+artifact behavior remains authoritative in
 [Driver and Artifacts](DRIVER_AND_ARTIFACTS.md), while
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md)
 owns source-visible module semantics.
@@ -496,13 +486,13 @@ The frozen initial contract excludes:
 
 Source-level exclusions such as relative imports, wildcards, re-exports, and
 multi-segment aliases are owned by the
-[language contract](../language/MODULES_AND_INTEROP.md#frozen-initial-module-system).
+[language contract](../language/MODULES_AND_INTEROP.md#initial-module-system).
 
-## Implementation readiness
+## Implementation status
 
-The initial module system has no remaining source, provider, filesystem,
-entry, graph, identity, visibility, linkage, or diagnostic design decisions.
-An implementation roadmap may divide this contract into reviewable work but
-must not redefine it. Any newly discovered decision that would change these
-rules requires an explicit language or compiler contract revision before the
-dependent implementation task proceeds.
+The initial module system is implemented across the CLI, driver request,
+provider normalization, reachable graph loader, frontend, resolver, semantic
+IRs, verifier, backend, diagnostics, and end-to-end fixtures. This contract
+has no remaining source, provider, filesystem, entry, graph, identity,
+visibility, linkage, or diagnostic design decisions. Future work that changes
+these rules requires an explicit language or compiler contract revision.

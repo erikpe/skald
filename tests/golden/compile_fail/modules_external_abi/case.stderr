@@ -1,0 +1,12 @@
+error[RES030]: incompatible declarations for external symbol `foreign`
+ --> modules/first.ska:1:1
+   |
+1 | extern fn foreign(value: i64) -> i64;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ module `first` declares `fn(i64) -> i64`
+   |
+1 | extern fn foreign(value: u64) -> i64;
+   | ------------------------------------- module `second` declares `fn(u64) -> i64`
+   |
+1 | extern fn foreign(left: i64, right: i64) -> bool;
+   | ------------------------------------------------- module `third` declares `fn(i64, i64) -> bool`
+  = note: parameter names, visibility, aliases, and module ownership do not affect ABI compatibility

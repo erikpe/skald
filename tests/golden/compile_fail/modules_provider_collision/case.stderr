@@ -1,0 +1,7 @@
+error[MOD004]: module `shared` is ambiguous
+ --> application/app.ska:1:8
+   |
+1 | import shared;
+   |        ^^^^^^ this import has multiple provider candidates
+  = note: provider1 provides `first/shared.ska`
+  = note: provider2 provides `second/shared.ska`

@@ -71,7 +71,7 @@ imports are required: absolute, descendant, and transitive paths do not create
 bindings. Resolved dumps retain local binding spelling plus canonical module
 ownership; HIR and lower phases contain only selected dense identities.
 
-The `module` facade already provides validated exact-case `ModulePath` values,
+The `module` facade provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
 `ProviderId`, and `PackageId` identities. The `driver` facade exposes a typed
 `CompilationRequest` containing entry, root, standard-library, target,
@@ -90,11 +90,13 @@ preserves that canonical module order when allocating all semantic identities.
 The request pipeline consumes this graph directly; the source-text convenience
 entry remains isolated from filesystem discovery.
 
-The lexer and parser additionally recognize the frozen module punctuation,
-imports, top-level visibility, and qualified declaration spellings. The AST
+The lexer and parser recognize module punctuation, imports, top-level
+visibility, and qualified declaration spellings. The AST
 retains unresolved path components and all diagnostic-relevant separator and
 introducer spans without choosing a module binding or declaration leaf.
-The single-file resolver emits `RES023` for imports and qualified names.
+The source-text convenience resolver emits `RES023` when an import or
+qualified name requires the module/root context that only a
+`CompilationRequest` supplies.
 Request graph resolution constructs direct module and selective ordinary
 bindings and resolves their uses before lower phases.
 
