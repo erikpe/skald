@@ -35,7 +35,12 @@ struct ClassCollectionState {
 }
 
 impl ClassCollectionState {
-    fn new(id: ClassId, ast_index: usize, direct_base: Option<ResolvedDirectBase>) -> Self {
+    fn new(
+        id: ClassId,
+        module: ModuleId,
+        ast_index: usize,
+        direct_base: Option<ResolvedDirectBase>,
+    ) -> Self {
         Self {
             id,
             direct_base,
@@ -45,6 +50,7 @@ impl ClassCollectionState {
             symbols: ClassSymbols::default(),
             work: ClassWorkItem {
                 id,
+                module,
                 ast_index,
                 initializer_members: Vec::new(),
                 copy_constructor_member: None,
@@ -327,6 +333,7 @@ impl ClassCollectionState {
             ResolvedClassDeclaration {
                 id: self.id,
                 module,
+                visibility: resolved_visibility(class.visibility),
                 name: class.name.text.to_string(),
                 name_span: class.name.span,
                 direct_base: self.direct_base,
@@ -357,7 +364,7 @@ pub(super) fn collect_class(
     diagnostics: &mut Diagnostics,
 ) -> (ResolvedClassDeclaration, ClassSymbols, ClassWorkItem) {
     let direct_base = resolve_direct_base(id, class, top_levels, diagnostics);
-    let mut state = ClassCollectionState::new(id, ast_index, direct_base);
+    let mut state = ClassCollectionState::new(id, module, ast_index, direct_base);
     for (member_index, member) in class.members.iter().enumerate() {
         match member {
             syntax::ClassMember::Field(field) => {
@@ -468,6 +475,7 @@ fn resolve_direct_base(
 #[derive(Clone)]
 pub(super) struct ClassWorkItem {
     pub(super) id: ClassId,
+    pub(super) module: ModuleId,
     pub(super) ast_index: usize,
     pub(super) initializer_members: Vec<InitializerWorkItem>,
     pub(super) copy_constructor_member: Option<usize>,

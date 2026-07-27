@@ -1,6 +1,6 @@
 # Initial Module-System Implementation Roadmap
 
-Status: in progress; MS5 is next.
+Status: in progress; MS6 is next.
 
 This roadmap implements the frozen initial whole-program module system without
 redefining it. The source-visible authority is
@@ -136,7 +136,7 @@ implementation template:
 - [x] MS2 — Normalize providers and resolve filesystem candidates
 - [x] MS3 — Select the entry and load the reachable module graph
 - [x] MS4 — Carry module ownership through whole-program IR
-- [ ] MS5 — Collect and resolve a deterministic multi-module program
+- [x] MS5 — Collect and resolve a deterministic multi-module program
 - [ ] MS6 — Resolve module imports and qualified uses
 - [ ] MS7 — Resolve selective imports and ordinary bindings
 - [ ] MS8 — Coalesce compatible external ABI declarations
@@ -427,30 +427,30 @@ passes, as do `make check` and `make msrv-check`.
 **Purpose:** Replace the one-global-namespace assumption with per-module
 declaration indexing and deterministic whole-program identity allocation.
 
-- [ ] Add a resolver entry point over the parsed module graph while retaining
+- [x] Add a resolver entry point over the parsed module graph while retaining
       the current one-AST facade as a synthesized singleton adapter.
-- [ ] Separate program work into declaration collection, hierarchy/signature
+- [x] Separate program work into declaration collection, hierarchy/signature
       resolution, and body resolution so every reachable module's declarations
       exist before any body selects a declaration.
-- [ ] Allocate functions, classes, interfaces, and existing member identities
+- [x] Allocate functions, classes, interfaces, and existing member identities
       in canonical module-path order, then source declaration/member order,
       independent of graph discovery, root configuration, import spelling, or
       selected entry.
-- [ ] Build one ordinary top-level declaration table per module. Reject
+- [x] Build one ordinary top-level declaration table per module. Reject
       duplicate leaf names only within that module; same leaf names in
       different modules receive distinct identities.
-- [ ] Record private-by-default/public visibility and build a direct public
+- [x] Record private-by-default/public visibility and build a direct public
       surface containing only the module's own supported public declarations.
       Do not add imports, flattening, or re-exports to that surface.
-- [ ] Resolve every module's unqualified local declaration uses against its
+- [x] Resolve every module's unqualified local declaration uses against its
       own table, preserving existing lexical binding and member lookup rules.
       Imported lookup remains delegated to MS6 and MS7.
-- [ ] Select `main` only from the selected entry module. Allow private entry
+- [x] Select `main` only from the selected entry module. Allow private entry
       `main`; treat every `main` elsewhere as ordinary; preserve the existing
       exact type-check signature and host-wrapper checks.
-- [ ] Lower and verify one flat HIR/MIR program containing all reachable
+- [x] Lower and verify one flat HIR/MIR program containing all reachable
       definitions, including modules imported only for reachability.
-- [ ] Add deterministic cross-file duplicate, hierarchy, signature, entry, and
+- [x] Add deterministic cross-file duplicate, hierarchy, signature, entry, and
       local-body diagnostics with source ownership intact.
 
 **Tests:** Focused multi-module collection, same-leaf distinct identity,
@@ -462,6 +462,22 @@ symbol, and local-only body tests, followed by `make check` and
 **Exit criteria:** The semantic pipeline compiles a reachable graph whose
 modules use only their own declarations, with deterministic global IDs and
 exactly one selected entry, without yet granting imported names.
+
+**Implemented:** `resolve::resolve_module_graph` now consumes the canonical
+parsed graph through the same staged program resolver as the singleton
+compatibility facade. Resolution first creates one ordinary declaration index
+per module, then collects signatures and hierarchy state for all reachable
+modules, and only then resolves bodies. Functions, classes, interfaces, and
+members retain flat dense identities allocated by canonical module path and
+source order. Each index records private-by-default visibility and exposes a
+direct public surface containing only declarations owned by that module.
+Unqualified signature, hierarchy, and body lookup remains deliberately local;
+imports grant reachability but no bindings before MS6 and MS7. Only the
+selected module supplies `main`, while all reachable definitions continue
+through the existing flat type-check, HIR, MIR, verifier, and backend pipeline.
+Focused canonical-ID, same-leaf, visibility, selected-entry, local-only lookup,
+cross-file diagnostic, dump, public-API, and native backend tests pass, as do
+`make check` and `make msrv-check`.
 
 ### MS6 — Resolve module imports and qualified uses
 

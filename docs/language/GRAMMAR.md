@@ -15,7 +15,10 @@ extension is owned by
 the lexer and parser currently recognize it only as a phase-local,
 source-shaped representation. `import`, `from`, `as`, and `public` remain
 contextual identifiers, and the single-file semantic adapter rejects imports
-and qualified `::` uses with a structured unsupported-module diagnostic.
+and qualified `::` uses with a structured unsupported-module diagnostic. The
+inactive whole-program graph resolver consumes parsed imports for reachability,
+but import bindings and qualified source uses are not semantic language
+features until their remaining implementation stages land.
 
 ## Notation
 

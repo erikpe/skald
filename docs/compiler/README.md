@@ -64,10 +64,11 @@ driver request model are implemented foundations. Deterministic filesystem
 provider normalization and exact candidate lookup are available behind the
 `module` facade. The facade also provides positional/logical entry selection,
 reachable parsed graph loading, deterministic graph identities and dumps, and
-cycle rejection. The frontend represents module syntax source-shape, but the
-single-file semantic adapter still rejects module programs with a structured
-diagnostic; the graph is not yet consumed by resolution, and multi-module
-compilation remains unavailable. Test
+cycle rejection. The resolver can collect a loaded graph into deterministic
+per-module declaration indexes and one flat whole-program IR; unqualified
+uses currently see only declarations owned by their module. Import bindings,
+qualified lookup, selective imports, and active driver integration remain
+unavailable, while the single-file adapter continues to reject imports. Test
 ownership and selection are defined by
 [Testing](../development/TESTING.md), and inspection workflows by
 [Debugging the Compiler](../development/DEBUGGING.md). Contributor

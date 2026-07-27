@@ -172,7 +172,7 @@ fn resolved_dump_declares_canonical_nested_arrays_before_their_uses() {
 
     assert_eq!(dump.matches("ArrayType a0").count(), 1);
     assert_eq!(dump.matches("ArrayType a1").count(), 1);
-    assert!(dump.find("ArrayTypes").unwrap() < dump.find("Declarations").unwrap());
+    assert!(dump.find("ArrayTypes").unwrap() < dump.find("\n  Declarations\n").unwrap());
     assert!(dump.contains("Type Array a1"));
     assert!(dump.contains("Type Shared array a1"));
 }

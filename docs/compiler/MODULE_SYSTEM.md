@@ -250,12 +250,23 @@ interface members derive module ownership through that enclosing declaration.
 Existing declaration and definition tables remain flat and keep their typed
 semantic identities.
 
-The current one-AST `resolve::resolve` API is a compatibility adapter. It
-synthesizes a request-local `main` module owned by `m0`, provider/package zero,
-and the AST's existing `SourceId`, then follows the ordinary resolved-to-HIR-
-to-MIR path. This metadata does not make another file searchable and does not
-claim multi-file semantic resolution; graph-to-program resolution begins in
-the next implementation milestone.
+The one-AST `resolve::resolve` API is a compatibility adapter. It synthesizes a
+request-local `main` module owned by `m0`, provider/package zero, and the AST's
+existing `SourceId`, then uses the same program-resolution stage as
+`resolve::resolve_module_graph`. The graph entry collects every reachable
+module in canonical logical-path order and allocates top-level and member
+identities in source order within each module. It records one private-by-
+default declaration index and direct public surface per module, selects
+`main` only from the graph's selected entry module, and produces one flat
+resolved program for the existing type-check, HIR, MIR, verification, and
+backend phases.
+
+At the current implementation boundary, each module resolves unqualified
+declaration uses only against declarations it owns. Imports establish graph
+reachability but do not yet introduce module or ordinary bindings; qualified
+lookup and selective imports belong to the following module-system stages.
+The active driver still uses the singleton adapter and does not yet feed a
+loaded graph into semantic compilation.
 
 One canonical `ModulePath` resolves to at most one loaded `ModuleId`. Multiple
 module aliases and selective imports of that module reuse its `ModuleId`,

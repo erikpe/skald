@@ -5,6 +5,7 @@ mod body;
 mod declarations;
 mod expression;
 mod hierarchy;
+mod modules;
 mod object_place;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
@@ -42,6 +43,10 @@ pub use expression::{
     ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
+pub use modules::{
+    ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,
+    ResolvedTopLevelId, ResolvedVisibility,
+};
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};
 
 pub(crate) use hierarchy::ResolvedClassHierarchyEntry;

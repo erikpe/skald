@@ -16,10 +16,12 @@ use super::body::{
     ResolvedClassDefinitionTable, ResolvedFunctionDefinitionTable, ResolvedMemberDefinition,
 };
 use super::hierarchy::ResolvedClassHierarchy;
+use super::modules::{ResolvedModuleDeclarationTable, ResolvedVisibility};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedProgram {
     pub modules: ProgramModuleTable,
+    pub module_declarations: ResolvedModuleDeclarationTable,
     pub array_types: ResolvedArrayTypeTable,
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
@@ -103,6 +105,7 @@ impl ResolvedInterfaceDeclarationTable {
 pub struct ResolvedInterfaceDeclaration {
     pub id: InterfaceId,
     pub module: ModuleId,
+    pub visibility: ResolvedVisibility,
     pub name: String,
     pub name_span: Span,
     pub requirements: Vec<ResolvedInterfaceRequirement>,
@@ -161,6 +164,10 @@ impl ResolvedClassDeclarationTable {
         self.entries.iter_mut()
     }
 
+    pub(crate) fn get_mut(&mut self, id: ClassId) -> Option<&mut ResolvedClassDeclaration> {
+        self.entries.get_mut(id, |class| class.id)
+    }
+
     #[cfg(test)]
     pub(crate) fn entries_mut_for_test(&mut self) -> &mut [ResolvedClassDeclaration] {
         self.entries.entries_mut_for_test()
@@ -171,6 +178,7 @@ impl ResolvedClassDeclarationTable {
 pub struct ResolvedClassDeclaration {
     pub id: ClassId,
     pub module: ModuleId,
+    pub visibility: ResolvedVisibility,
     pub name: String,
     pub name_span: Span,
     pub direct_base: Option<ResolvedDirectBase>,
@@ -429,6 +437,7 @@ impl ResolvedFunctionDeclarationTable {
 pub struct ResolvedFunctionDeclaration {
     pub id: FunctionId,
     pub module: ModuleId,
+    pub visibility: ResolvedVisibility,
     /// Retained for diagnostics, dumps, and external-linkage selection.
     pub name: String,
     pub name_span: Span,

@@ -8,6 +8,7 @@ use crate::{
         ClassId, CopyAssignmentId, CopyConstructorId, DestructorId, FieldId, FunctionId,
         InitializerId, InterfaceId, MethodId,
     },
+    module::ModuleGraph,
     source::Span,
     syntax,
 };
@@ -62,7 +63,15 @@ impl ResolveOutput {
 /// while ensuring that all successful uses below this boundary carry stable
 /// identities rather than source names.
 pub fn resolve(ast: &syntax::CompilationUnit) -> ResolveOutput {
-    program::ProgramResolver::new(ast).resolve()
+    program::resolve_singleton(ast)
+}
+
+/// Resolves every reachable module in a loaded graph into one flat program.
+///
+/// This stage deliberately exposes only declarations owned by the current
+/// module. Import bindings and qualified lookup are added by later stages.
+pub fn resolve_module_graph(graph: &ModuleGraph) -> ResolveOutput {
+    program::resolve_graph(graph)
 }
 
 fn resolve_type(
@@ -236,11 +245,11 @@ fn reject_qualified_name(name: &syntax::Name, diagnostics: &mut Diagnostics) -> 
     diagnostics.push(
         Diagnostic::error(
             UNSUPPORTED_MODULE_SYNTAX,
-            "qualified names require whole-program module compilation",
+            "qualified module bindings are not available in semantic resolution yet",
         )
         .with_primary_label(
             name.span,
-            "the single-file semantic adapter cannot resolve this name",
+            "qualified import lookup is implemented in the next module-system stage",
         ),
     );
     true

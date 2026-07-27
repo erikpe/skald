@@ -62,6 +62,7 @@ pub(super) fn collect_interface_declarations(
             ResolvedInterfaceDeclaration {
                 id,
                 module,
+                visibility: resolved_visibility(interface.visibility),
                 name: interface.name.text.to_string(),
                 name_span: interface.name.span,
                 requirements,
@@ -78,7 +79,10 @@ pub(super) fn resolve_interface_claims(
     classes: &mut ResolvedClassDeclarationTable,
     diagnostics: &mut Diagnostics,
 ) {
-    for ((_, ast_index), class) in work.iter().copied().zip(classes.iter_mut()) {
+    for (class_id, ast_index) in work.iter().copied() {
+        let class = classes
+            .get_mut(class_id)
+            .expect("class work must reference its declaration");
         let syntax::TopLevelDeclaration::Class(syntax_class) = &ast.declarations[ast_index] else {
             unreachable!("class work item must reference a class")
         };

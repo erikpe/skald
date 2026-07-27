@@ -23,7 +23,7 @@ The target-independent compiler path is:
 | Source ownership | `source::SourceDatabase` | source IDs, files, text, spans, line locations |
 | Lexing | `lexer::lex` | `LexOutput`: tokens and diagnostics |
 | Parsing | `syntax::parse` | `ParseOutput`: source-shaped AST and diagnostics |
-| Resolution | `resolve::resolve` | `ResolveOutput`: resolved program and diagnostics |
+| Resolution | `resolve::resolve`, `resolve::resolve_module_graph` | `ResolveOutput`: resolved program and diagnostics |
 | Type checking | `typeck::type_check` | `TypeCheckOutput`: diagnostics and optional typed HIR |
 | MIR lowering | `mir::lower_hir` | target-independent `MirProgram` |
 | MIR passes | `passes::run_mir_pipeline` | verified `MirProgram` or verification errors |
@@ -49,11 +49,21 @@ the enclosing class or interface. These additions preserve the existing flat
 whole-program declaration and definition tables. Lower phases use typed
 identities and never repeat module-path or source-name lookup.
 
-The current `resolve::resolve(&CompilationUnit)` entry remains a single-source
-adapter. It synthesizes one request-local logical `main` module around the
-AST's `SourceId` and otherwise uses the normal phase pipeline. It neither
-searches sibling files nor accepts imports semantically yet. Multi-file graph
-resolution remains the next module-system stage.
+`resolve::resolve(&CompilationUnit)` remains a single-source adapter. It
+synthesizes one request-local logical `main` module around the AST's `SourceId`
+and otherwise uses the normal program resolver.
+`resolve::resolve_module_graph(&ModuleGraph)` collects all reachable parsed
+modules in canonical logical-path order, allocates declarations and members in
+source order, and produces the same flat resolved program. Per-module indexes
+retain visibility and expose only directly owned public declarations. The
+selected entry module alone supplies the prospective `main`; other declarations
+named `main` are ordinary functions.
+
+Graph resolution currently gives each module only its own top-level
+declarations for unqualified signature, hierarchy, and body lookup. Imports
+have already determined reachability, but do not introduce semantic bindings
+until the qualified and selective import stages. The active driver still uses
+the singleton entry and does not consume a graph.
 
 The `module` facade already provides validated exact-case `ModulePath` values,
 request-local module provenance vocabulary, and distinct `ModuleId`,
@@ -69,16 +79,20 @@ an isolated outside-root singleton when required, acquire and parse only the
 reachable import closure, assign dense module/source identities in canonical
 logical-path order, reject cycles, and return an inspectable `ModuleGraph`.
 Discovery caches source text before canonical final parsing, so recursive
-discovery order does not determine final identities. The active pipeline entry
-remains `compile_source_to_assembly`; it does not consume this graph yet.
+discovery order does not determine final identities. The graph resolver
+preserves that canonical module order when allocating all semantic identities.
+The active pipeline entry remains `compile_source_to_assembly`; it does not
+consume this graph yet.
 
 The lexer and parser additionally recognize the frozen module punctuation,
 imports, top-level visibility, and qualified declaration spellings. The AST
 retains unresolved path components and all diagnostic-relevant separator and
 introducer spans without choosing a module binding or declaration leaf.
 This is a phase-local representation boundary: the single-file resolver emits
-`RES023` for imports and qualified names, so the complete compiler still does
-not accept module-bearing programs.
+`RES023` for imports and qualified names, while graph resolution accepts
+imports only as already-resolved reachability edges and still emits `RES023`
+for qualified uses. The complete driver therefore does not accept
+module-bearing programs yet.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

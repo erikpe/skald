@@ -27,6 +27,30 @@ pub fn dump_resolved(program: &ResolvedProgram) -> String {
                 ));
             }
         });
+        dumper.heading("ModuleDeclarations");
+        dumper.indented(|dumper| {
+            for module in program.module_declarations.iter() {
+                dumper.raw_line(&format!("Module {}", module.module));
+                dumper.indented(|dumper| {
+                    for declaration in module.iter() {
+                        dumper.write_indentation();
+                        let visibility = match declaration.visibility {
+                            ResolvedVisibility::Private => "private",
+                            ResolvedVisibility::Public => "public",
+                        };
+                        let identity = match declaration.declaration {
+                            ResolvedTopLevelId::Function(function) => function.to_string(),
+                            ResolvedTopLevelId::Class(class) => class.to_string(),
+                            ResolvedTopLevelId::Interface(interface) => interface.to_string(),
+                        };
+                        let _ = write!(dumper.output, "{visibility} {identity} ");
+                        write_quoted(&mut dumper.output, &declaration.name);
+                        write_span(&mut dumper.output, declaration.name_span);
+                        dumper.output.push('\n');
+                    }
+                });
+            }
+        });
         dumper.write_indentation();
         match program.entry_function {
             Some(function) => {

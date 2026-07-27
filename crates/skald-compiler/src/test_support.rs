@@ -12,8 +12,10 @@ use std::{
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
+    driver::EntrySelector,
     lexer::{lex, LexOutput},
     mir::{lower_hir, MirProgram},
+    module::{load_module_graph, normalize_provider_roots, ModuleGraph, ProviderRootConfiguration},
     resolve::{resolve, ResolveOutput},
     source::{SourceDatabase, SourceId},
     syntax::{parse, ParseOutput},
@@ -108,6 +110,31 @@ pub(crate) fn lower_source_to_assembly(
     target: Target,
 ) -> Result<String, BackendError> {
     emit_assembly(target, &lower_source_to_mir(text))
+}
+
+pub(crate) fn load_module_sources(
+    entry: &str,
+    sources: &[(&str, &str)],
+) -> (TemporaryDirectory, ModuleGraph) {
+    let workspace = TemporaryDirectory::new("module-sources").unwrap();
+    let root = workspace.join("modules");
+    for (relative, text) in sources {
+        let path = root.join(relative);
+        fs::create_dir_all(path.parent().expect("module source has a parent")).unwrap();
+        fs::write(path, text).unwrap();
+    }
+    let providers = normalize_provider_roots(
+        workspace.path(),
+        &[ProviderRootConfiguration::module_root(root)],
+    )
+    .unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module(entry.parse().unwrap()),
+        workspace.path(),
+        &providers,
+    )
+    .unwrap();
+    (workspace, graph)
 }
 
 fn assert_phase_succeeded(phase: &str, diagnostics: &crate::diagnostics::Diagnostics) {

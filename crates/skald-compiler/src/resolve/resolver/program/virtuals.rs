@@ -8,7 +8,7 @@ use crate::{
 use super::*;
 
 pub(super) fn resolve_virtual_families(
-    ast: &syntax::CompilationUnit,
+    asts: &[&syntax::CompilationUnit],
     work: &[ClassWorkItem],
     classes: &mut ResolvedClassDeclarationTable,
     class_symbols: &[ClassSymbols],
@@ -50,7 +50,7 @@ pub(super) fn resolve_virtual_families(
         }
     }
 
-    report_invalid_redeclarations(ast, work, classes, class_symbols, hierarchy, diagnostics);
+    report_invalid_redeclarations(asts, work, classes, class_symbols, hierarchy, diagnostics);
     ResolvedVirtualFamilyTable::new(families)
 }
 
@@ -115,7 +115,7 @@ fn resolve_class_overrides(
 }
 
 fn report_invalid_redeclarations(
-    ast: &syntax::CompilationUnit,
+    asts: &[&syntax::CompilationUnit],
     work: &[ClassWorkItem],
     classes: &ResolvedClassDeclarationTable,
     class_symbols: &[ClassSymbols],
@@ -126,6 +126,9 @@ fn report_invalid_redeclarations(
         if hierarchy.base_chain(item.id).is_none() {
             continue;
         }
+        let ast = asts
+            .get(item.module.index())
+            .expect("class work module must have an AST");
         let syntax::TopLevelDeclaration::Class(class) = &ast.declarations[item.ast_index] else {
             unreachable!("class work item must reference a class")
         };

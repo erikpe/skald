@@ -6,13 +6,19 @@
 
 use std::marker::PhantomData;
 
-use crate::identity::{ArrayTypeId, ClassId, FunctionId, InterfaceId, VirtualFamilyId};
+use crate::identity::{ArrayTypeId, ClassId, FunctionId, InterfaceId, ModuleId, VirtualFamilyId};
 
 pub(crate) trait DenseId: Copy + Eq {
     fn index(self) -> usize;
 }
 
 impl DenseId for FunctionId {
+    fn index(self) -> usize {
+        self.index()
+    }
+}
+
+impl DenseId for ModuleId {
     fn index(self) -> usize {
         self.index()
     }
@@ -65,6 +71,12 @@ impl<I: DenseId, T> DenseIdTable<I, T> {
     pub(crate) fn get(&self, id: I, id_of: impl Fn(&T) -> I) -> Option<&T> {
         self.entries
             .get(id.index())
+            .filter(|entry| id_of(entry) == id)
+    }
+
+    pub(crate) fn get_mut(&mut self, id: I, id_of: impl Fn(&T) -> I) -> Option<&mut T> {
+        self.entries
+            .get_mut(id.index())
             .filter(|entry| id_of(entry) == id)
     }
 
