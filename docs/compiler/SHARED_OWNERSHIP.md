@@ -341,16 +341,20 @@ and complete-object payload are ready to become the produced owner.
 A generated retain:
 
 1. loads the `u64` count;
-2. terminates unsuccessfully if it is `u64::MAX`; and
-3. stores the incremented count.
+2. returns without storing if it is the verified immortal sentinel
+   `u64::MAX`;
+3. terminates unsuccessfully if it is `u64::MAX - 1`; and
+4. otherwise stores the incremented count.
 
 A generated release:
 
 1. requires a non-null valid header and a positive count;
-2. if the count is greater than one, stores the decremented count and returns;
-3. if the count is one, marks it zero, loads the dynamic finalizer, and calls
+2. returns without storing if it is the verified immortal sentinel
+   `u64::MAX`;
+3. if the count is greater than one, stores the decremented count and returns;
+4. if the count is one, marks it zero, loads the dynamic finalizer, and calls
    that finalizer on the complete payload; and
-4. after the finalizer returns, calls the runtime deallocator on the original
+5. after the finalizer returns, calls the runtime deallocator on the original
    header.
 
 Marking the last count zero makes reentrant misuse fail as a compiler defect.
@@ -365,7 +369,7 @@ text nor remaining cleanup.
 
 ### Frozen immortal-allocation extension
 
-The frozen, unimplemented
+The frozen
 [string compiler contract](STRINGS.md#immortal-shared-storage) reserves
 `u64::MAX` for verified compiler-emitted program-lifetime allocations. Once
 that producer exists, retain and release of a proven immortal handle are
@@ -374,10 +378,9 @@ successful no-ops, while retaining an ordinary dynamic count of
 
 This is a general compiler-private shared-allocation state, not a source
 ownership qualifier or string-specific header. Only verified static allocation
-may publish it. The current implemented backend still follows the ordinary
-rules above and treats `u64::MAX` as overflow; the string implementation
-roadmap must add explicit MIR origin and verification before changing generated
-count operations.
+may publish it. The backend implements the sentinel-aware rules above;
+ordinary dynamic publication writes one and cannot reach the reserved value
+because retain traps at `u64::MAX - 1`.
 
 ## Hidden anchor lowering
 

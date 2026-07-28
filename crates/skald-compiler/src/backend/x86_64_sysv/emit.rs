@@ -25,8 +25,27 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         }
         writeln!(output, ".size {}, .-{}", function.symbol, function.symbol).unwrap();
     }
-    if !program.dispatch_tables.is_empty() {
+    if !program.literal_backings.is_empty() || !program.dispatch_tables.is_empty() {
         output.push_str("\n.section .data.rel.ro.local,\"aw\",@progbits\n");
+        for backing in &program.literal_backings {
+            output.push_str(".p2align 3\n");
+            writeln!(output, ".type {}, @object", backing.symbol).unwrap();
+            writeln!(output, "{}:", backing.symbol).unwrap();
+            output.push_str("    .quad 0xffffffffffffffff\n");
+            writeln!(output, "    .quad {}", backing.metadata_symbol).unwrap();
+            writeln!(output, "    .quad {}", backing.bytes.len()).unwrap();
+            if !backing.bytes.is_empty() {
+                output.push_str("    .byte ");
+                for (index, byte) in backing.bytes.iter().enumerate() {
+                    if index != 0 {
+                        output.push_str(", ");
+                    }
+                    write!(output, "0x{byte:02x}").unwrap();
+                }
+                output.push('\n');
+            }
+            writeln!(output, ".size {}, .-{}", backing.symbol, backing.symbol).unwrap();
+        }
         for table in &program.dispatch_tables {
             output.push_str(".p2align 3\n");
             writeln!(output, ".type {}, @object", table.symbol).unwrap();

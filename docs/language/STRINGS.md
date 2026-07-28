@@ -1,10 +1,11 @@
 # Skald Strings
 
-Status: **frozen design, partially implemented through STR2**. The compiler
+Status: **frozen design, partially implemented through STR3**. The compiler
 accepts and decodes string-literal syntax, conditionally discovers and
 validates `std::str::Str`, and represents literals as exact typed produced
-values through verified MIR descriptor materialization. Target emission and
-execution remain unimplemented.
+values through verified MIR descriptor materialization and deterministic
+x86-64 execution. Ordinary standard-library string operations remain
+unimplemented.
 This document is authoritative for the source-visible string contract, while
 the [status matrix](STATUS.md) remains authoritative for compiler availability.
 

@@ -88,6 +88,10 @@ pub(super) fn shared_array_finalizer(array: ArrayTypeId) -> String {
     format!(".Lska_array_{}_finalize_shared", array.index())
 }
 
+pub(super) fn literal_backing(pool_index: usize) -> String {
+    format!(".Lska_literal_{pool_index}_backing")
+}
+
 pub(super) fn shared_handle_retain() -> String {
     ".Lska_shared_handle_retain".to_owned()
 }

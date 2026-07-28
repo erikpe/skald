@@ -10,6 +10,7 @@ use super::{
     dispatch::DispatchMetadata,
     frame::FrameLayout,
     layout::DataLayout,
+    literal_data::LiteralPool,
     machine::{AssemblyFunction, AssemblyProgram, Instruction, Label, Register},
     symbol,
 };
@@ -23,6 +24,7 @@ mod finalize;
 mod object_abi;
 mod optional;
 mod ownership;
+mod strings;
 mod terminator;
 mod type_operations;
 mod value;
@@ -32,13 +34,20 @@ pub(super) fn lower(
     data_layout: &DataLayout,
     dispatch: &DispatchMetadata,
 ) -> Result<AssemblyProgram, BackendError> {
+    let literal_pool = LiteralPool::build(program);
+    let context = LoweringContext {
+        program,
+        data_layout,
+        dispatch,
+        literal_pool: &literal_pool,
+    };
     let mut functions = program
         .executable_definitions()
         .map(|definition| {
             let signature = program
                 .callable_signature(definition.callable())
                 .expect("verified definition must have a declaration");
-            lower_definition(program, data_layout, dispatch, signature, definition)
+            lower_definition(&context, signature, definition)
         })
         .collect::<Result<Vec<_>, _>>()?;
     functions.extend(array::lower_helpers(program, data_layout)?);
@@ -52,17 +61,23 @@ pub(super) fn lower(
     Ok(AssemblyProgram {
         functions,
         dispatch_tables: dispatch.assembly_tables(program),
+        literal_backings: literal_pool.into_backings(),
     })
 }
 
+struct LoweringContext<'program> {
+    program: &'program MirProgram,
+    data_layout: &'program DataLayout,
+    dispatch: &'program DispatchMetadata,
+    literal_pool: &'program LiteralPool,
+}
+
 fn lower_definition(
-    program: &MirProgram,
-    data_layout: &DataLayout,
-    dispatch: &DispatchMetadata,
+    context: &LoweringContext<'_>,
     signature: MirCallableSignature<'_>,
     function: MirDefinitionRef<'_>,
 ) -> Result<AssemblyFunction, BackendError> {
-    let frame = FrameLayout::plan(function, data_layout)?;
+    let frame = FrameLayout::plan(function, context.data_layout)?;
     let mut instructions = vec![
         Instruction::Push(Register::Rbp),
         Instruction::Move {
@@ -81,15 +96,8 @@ fn lower_definition(
     let epilogue = epilogue_label(function.callable());
     for block in &function.body().blocks {
         instructions.push(Instruction::Label(block_label(block.id)));
-        let mut selector = InstructionSelector::new(
-            program,
-            data_layout,
-            dispatch,
-            function,
-            block.id,
-            &frame,
-            &mut instructions,
-        );
+        let mut selector =
+            InstructionSelector::new(context, function, block.id, &frame, &mut instructions);
         for instruction in &block.instructions {
             selector.select(instruction)?;
         }
@@ -115,7 +123,7 @@ fn lower_definition(
     instructions.push(Instruction::Return);
 
     Ok(AssemblyFunction {
-        symbol: symbol::callable(program, function.callable()),
+        symbol: symbol::callable(context.program, function.callable()),
         exported: false,
         instructions,
     })
@@ -146,6 +154,7 @@ struct InstructionSelector<'program, 'output> {
     program: &'program MirProgram,
     data_layout: &'program DataLayout,
     dispatch: &'program DispatchMetadata,
+    literal_pool: &'program LiteralPool,
     function: MirDefinitionRef<'program>,
     frame: &'program FrameLayout,
     block: BlockId,
@@ -156,18 +165,17 @@ struct InstructionSelector<'program, 'output> {
 
 impl<'program, 'output> InstructionSelector<'program, 'output> {
     fn new(
-        program: &'program MirProgram,
-        data_layout: &'program DataLayout,
-        dispatch: &'program DispatchMetadata,
+        context: &LoweringContext<'program>,
         function: MirDefinitionRef<'program>,
         block: BlockId,
         frame: &'program FrameLayout,
         output: &'output mut Vec<Instruction>,
     ) -> Self {
         Self {
-            program,
-            data_layout,
-            dispatch,
+            program: context.program,
+            data_layout: context.data_layout,
+            dispatch: context.dispatch,
+            literal_pool: context.literal_pool,
             function,
             frame,
             block,
@@ -200,9 +208,7 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_shared_initialize(initialize)?
             }
             MirInstruction::SharedPublish(publish) => self.select_shared_publish(publish)?,
-            MirInstruction::SharedStatic(_) | MirInstruction::StringInitialize(_) => {
-                unreachable!("literal-bearing MIR is rejected before instruction selection")
-            }
+            MirInstruction::SharedStatic(static_owner) => self.select_shared_static(static_owner),
             MirInstruction::SharedAdopt(adopt) => self.select_shared_adopt(adopt),
             MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),
@@ -214,6 +220,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
             }
             MirInstruction::SharedFieldReplace(replace) => {
                 self.select_shared_field_replace(replace)?
+            }
+            MirInstruction::StringInitialize(initialize) => {
+                self.select_string_initialize(initialize)?
             }
             MirInstruction::OptionalInitialize(initialize) => {
                 self.select_optional_initialize(initialize)?

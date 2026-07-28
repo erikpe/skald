@@ -14,7 +14,7 @@ mod toolchain;
 pub use cli::run_cli;
 pub use pipeline::{
     compile_request_to_assembly, compile_source_to_assembly, AssemblyArtifact, CompilationError,
-    CompilationReport, STRING_LITERAL_MIR_UNAVAILABLE,
+    CompilationReport,
 };
 pub use request::{
     ArtifactKind, ArtifactOptions, CompilationEnvironment, CompilationRequest, EntrySelectionError,

@@ -1,12 +1,13 @@
 # Strings Compiler Contract
 
-Status: **frozen design, implemented through STR2**. The lexer, AST, and module
+Status: **frozen design, implemented through STR3**. The lexer, AST, and module
 graph implement literal recognition, decoded bytes, and conditional
 `std::str` reachability. Resolution validates the exact language item, and HIR
 represents literals as intrinsic produced `Str` values with deterministic data
 identities. MIR declares and verifies immutable immortal backing and exact
-descriptor publication. Backend emission and execution remain future work.
-This document is authoritative for compiler
+descriptor publication. The x86-64 backend emits deterministic immutable
+backing and literals execute through ordinary class lifecycle. Standard-library
+string operations remain future work. This document is authoritative for compiler
 handling of the source-visible [string contract](../language/STRINGS.md).
 
 The generic ownership header and generated count machinery are owned by
@@ -93,9 +94,8 @@ call, allocation call, or opaque standard-library invocation. Ordinary
 expected-type, destination, argument, result, temporary, copy, assignment, and
 cleanup machinery handles the resulting `Str`.
 
-Literal-bearing HIR passes through MIR lowering and verification. The complete
-compiler driver then stops before target emission with structured diagnostic
-`CMP001`, because STR3 owns static data layout and machine-code materialization.
+Literal-bearing HIR passes through MIR lowering, verification, target
+selection, and assembly emission. No driver-only feature gate remains.
 
 ### MIR and verification
 
@@ -120,7 +120,7 @@ allocation with a special count. It produces one short-lived exact
 The completed `Str` then uses the ordinary class copy, assignment, result,
 temporary, and cleanup machinery.
 
-### Backend (STR3)
+### Backend
 
 The x86-64 backend pools decoded byte blocks deterministically, emits stable
 collision-proof private symbols, and places bytes and relocations in immutable
@@ -170,9 +170,9 @@ authorizes its first producer only for verified string-literal `u8[]` backing.
 It does not define globals, static fields, static initialization, or immortal
 mutable source storage.
 
-The current compiler instead treats `u64::MAX` as retain overflow. Implementing
-strings deliberately changes generated retain/release behavior only after MIR
-can prove the handle's legal immortal origin.
+The compiler implements this count behavior generically. MIR verification is
+the authority that restricts sentinel publication to the exact supported
+static producer; generated dynamic publication still writes one.
 
 ## Compiler and standard-library boundary
 

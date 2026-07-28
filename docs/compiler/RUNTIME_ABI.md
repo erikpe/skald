@@ -183,6 +183,11 @@ optionals, including checked payload guard counts and failure traps, implement
 this compiler-owned boundary without changing the runtime marker or adding a
 runtime symbol.
 
+The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
+symbol or ABI revision. Literal backing, array metadata relocations,
+descriptor materialization, and immortal retain/release behavior are generated
+compiler responsibilities; the runtime marker remains version 5.
+
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
 transition, and focused tests.

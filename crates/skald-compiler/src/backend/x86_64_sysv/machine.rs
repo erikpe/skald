@@ -233,10 +233,18 @@ pub(super) struct AssemblyFunction {
 pub(super) struct AssemblyProgram {
     pub functions: Vec<AssemblyFunction>,
     pub dispatch_tables: Vec<AssemblyDispatchTable>,
+    pub literal_backings: Vec<AssemblyLiteralBacking>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct AssemblyDispatchTable {
     pub symbol: String,
     pub entries: Vec<Option<String>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyLiteralBacking {
+    pub symbol: String,
+    pub metadata_symbol: String,
+    pub bytes: Vec<u8>,
 }

@@ -6,11 +6,11 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR2
-  implemented; STR3 is next**. Literal syntax and conditional discovery feed
+- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR3
+  implemented; STR4 is next**. Literal syntax and conditional discovery feed
   exact language-item validation, intrinsic typed `Str` production, and
-  verified target-independent descriptor materialization; deterministic
-  x86-64 static-data emission is next.
+  verified target-independent descriptor materialization and deterministic
+  x86-64 immortal backing; ordinary standard-library behavior is next.
 
 ## Planned
 

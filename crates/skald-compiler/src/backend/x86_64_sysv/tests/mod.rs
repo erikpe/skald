@@ -58,6 +58,7 @@ mod objects;
 mod optional_values;
 mod shared_ownership;
 mod static_inheritance;
+mod strings;
 mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;

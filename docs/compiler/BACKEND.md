@@ -107,6 +107,20 @@ semantics for overlap. Whole-array and exact element aliases execute through
 internal non-owning addresses. Inline backing accounts defer detached element
 destruction, while shared aliases reuse secured strong-owner anchors.
 
+Verified string literal data is pooled by exact decoded bytes in first
+canonical identity order. The target emits one eight-aligned local object per
+unique byte sequence in relocation-read-only data: immortal count, exact
+shared-array metadata relocation, byte length, then bytes. Empty literals use
+the same 24-byte header without a byte payload. Literal evaluation loads that
+symbol directly and initializes the three identity-selected descriptor fields
+through ordinary class layout; it performs no allocation or byte copy.
+
+Generated shared retain/release recognizes `u64::MAX` as the verified immortal
+sentinel and returns without storing, finalizing, or freeing. Dynamic retain
+traps at `u64::MAX - 1` before it could collide with the sentinel. MIR
+verification remains the trust boundary that restricts static sentinel
+publication; ordinary dynamic publication writes count one.
+
 ## Data layout
 
 The x86-64 target layout is:

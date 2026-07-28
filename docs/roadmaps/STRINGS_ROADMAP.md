@@ -1,6 +1,6 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR2 are implemented and STR3 is next.
+Status: in progress; STR0–STR3 are implemented and STR4 is next.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -40,7 +40,7 @@ emission, and ordinary standard-library behavior.
 - [x] STR0 — Recognize literals and discover the canonical language item
 - [x] STR1 — Validate and type intrinsic `Str` production
 - [x] STR2 — Verify literal descriptors and immortal shared backing
-- [ ] STR3 — Emit deterministic immortal literal data on x86-64
+- [x] STR3 — Emit deterministic immortal literal data on x86-64
 - [ ] STR4 — Provide ordinary standard-library string behavior
 - [ ] STR5 — Harden, document, and promote strings as implemented
 
@@ -155,19 +155,19 @@ unverified privacy bypass.
 **Purpose:** Realize verified static backing and generic immortal count
 semantics without changing the public runtime boundary.
 
-- [ ] Pool decoded byte sequences deterministically and emit one canonical
+- [x] Pool decoded byte sequences deterministically and emit one canonical
       empty backing plus collision-proof private symbols.
-- [ ] Emit the exact shared `u8[]` header, metadata relocation, length, bytes,
+- [x] Emit the exact shared `u8[]` header, metadata relocation, length, bytes,
       alignment, and immutable/relocation-read-only section placement.
-- [ ] Materialize `Str` descriptors through existing class field layout and
+- [x] Materialize `Str` descriptors through existing class field layout and
       hidden-result/destination machinery with no allocator or byte-copy call.
-- [ ] Change generated retain/release so a verified `u64::MAX` immortal count
+- [x] Change generated retain/release so a verified `u64::MAX` immortal count
       is a no-op and dynamic `u64::MAX - 1` retain terminates before collision.
-- [ ] Derive legality from MIR static-allocation origin; arbitrary mutated MIR
+- [x] Derive legality from MIR static-allocation origin; arbitrary mutated MIR
       or ordinary dynamic handles cannot select immortal behavior.
-- [ ] Reuse generic array metadata/finalizer tables and keep runtime ABI
+- [x] Reuse generic array metadata/finalizer tables and keep runtime ABI
       version 5 and the public C header unchanged.
-- [ ] Keep pooling, data layout, strong-count lowering, and descriptor
+- [x] Keep pooling, data layout, strong-count lowering, and descriptor
       materialization in cohesive backend owners behind the x86-64 facade.
 
 **Tests:** Layout/relocation/alignment tests for empty, ASCII, embedded zero,

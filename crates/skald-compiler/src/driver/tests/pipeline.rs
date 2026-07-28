@@ -74,8 +74,8 @@ fn request_pipeline_ignores_malformed_sources_outside_the_reachable_closure() {
 }
 
 #[test]
-fn literal_program_stops_after_verified_mir_before_target_emission() {
-    let directory = TemporaryDirectory::new("request-string-mir-boundary").unwrap();
+fn literal_program_reaches_target_emission() {
+    let directory = TemporaryDirectory::new("request-string-target-emission").unwrap();
     let root = directory.join("modules");
     fs::create_dir_all(root.join("std")).unwrap();
     fs::write(
@@ -104,16 +104,10 @@ fn literal_program_stops_after_verified_mir_before_target_emission() {
         vec![root],
     );
 
-    let CompilationError::Diagnostics(report) = compile_request_to_assembly(&request).unwrap_err()
-    else {
-        panic!("STR2 must stop with a structured pre-backend diagnostic");
-    };
-    let diagnostics = report.diagnostics.iter().collect::<Vec<_>>();
-    assert_eq!(diagnostics.len(), 1);
-    assert_eq!(diagnostics[0].code, STRING_LITERAL_MIR_UNAVAILABLE);
-    assert!(diagnostics[0]
-        .message
-        .contains("string literal target emission is not implemented"));
+    let artifact = compile_request_to_assembly(&request).unwrap();
+    assert!(artifact.report.diagnostics.is_empty());
+    assert!(artifact.assembly.contains(".Lska_literal_0_backing:"));
+    assert!(artifact.assembly.contains(".quad 0xffffffffffffffff"));
 }
 
 #[test]

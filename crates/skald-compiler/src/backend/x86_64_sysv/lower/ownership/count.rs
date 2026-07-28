@@ -8,6 +8,7 @@ use crate::backend::x86_64_sysv::{
 use super::{super::value, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET};
 
 pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut Vec<Instruction>) {
+    let immortal = Label::new(format!("{}_immortal", failure.name()));
     output.push(Instruction::Test(Register::Rax));
     output.push(Instruction::JumpIfEqual(failure.clone()));
     output.push(Instruction::Move {
@@ -18,6 +19,15 @@ pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut V
     output.push(Instruction::JumpIfEqual(failure.clone()));
     output.push(Instruction::MoveImmediate64 {
         bits: u64::MAX,
+        destination: Register::R11,
+    });
+    output.push(Instruction::Compare {
+        source: Register::R11,
+        destination: Register::Rcx,
+    });
+    output.push(Instruction::JumpIfEqual(immortal.clone()));
+    output.push(Instruction::MoveImmediate64 {
+        bits: u64::MAX - 1,
         destination: Register::R11,
     });
     output.push(Instruction::Compare {
@@ -37,6 +47,7 @@ pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut V
         source: Register::Rcx.into(),
         destination: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
     });
+    output.push(Instruction::Label(immortal));
 }
 
 pub(in super::super) fn emit_release_loaded_handle(
@@ -54,6 +65,15 @@ pub(in super::super) fn emit_release_loaded_handle(
     });
     output.push(Instruction::Test(Register::Rcx));
     output.push(Instruction::JumpIfEqual(failure.clone()));
+    output.push(Instruction::MoveImmediate64 {
+        bits: u64::MAX,
+        destination: Register::R11,
+    });
+    output.push(Instruction::Compare {
+        source: Register::R11,
+        destination: Register::Rcx,
+    });
+    output.push(Instruction::JumpIfEqual(complete.clone()));
     output.push(Instruction::MoveImmediate64 {
         bits: 1,
         destination: Register::R11,

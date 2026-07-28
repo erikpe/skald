@@ -14,6 +14,7 @@ mod emit;
 mod frame;
 mod layout;
 mod legality;
+mod literal_data;
 mod lower;
 mod machine;
 mod symbol;

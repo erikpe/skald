@@ -179,7 +179,7 @@ fn dynamic_length_overflow_terminates_before_allocation() {
 
 #[test]
 fn array_owner_count_overflow_terminates_natively() {
-    for (source, failure_label) in [
+    for (source, failure_label, saturated_count) in [
         (
             concat!(
                 "fn main() -> i64 {\n",
@@ -189,6 +189,7 @@ fn array_owner_count_overflow_terminates_natively() {
                 "}\n",
             ),
             "ownership_retain_invalid",
+            "0xfffffffffffffffe",
         ),
         (
             concat!(
@@ -200,6 +201,7 @@ fn array_owner_count_overflow_terminates_natively() {
                 "}\n",
             ),
             "anchor_retain_failure",
+            "0xffffffffffffffff",
         ),
     ] {
         let mut output = assembly(source);
@@ -214,7 +216,7 @@ fn array_owner_count_overflow_terminates_natively() {
             .expect("the checked retain must load its owner count");
         output.replace_range(
             load..load + count_load.len(),
-            "    mov rcx, 0xffffffffffffffff\n",
+            &format!("    mov rcx, {saturated_count}\n"),
         );
         output.push_str(native_allocator());
 
