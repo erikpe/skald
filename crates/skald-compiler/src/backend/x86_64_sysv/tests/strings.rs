@@ -41,17 +41,6 @@ fn string_assembly(app: &str) -> String {
     emit_assembly(Target::X86_64SysV, &string_program(app)).unwrap()
 }
 
-fn function_text<'assembly>(assembly: &'assembly str, symbol: &str) -> &'assembly str {
-    let start = assembly
-        .find(&format!(".type {symbol}, @function"))
-        .expect("function symbol must be emitted");
-    let remaining = &assembly[start..];
-    let end = remaining
-        .find(&format!(".size {symbol}, .-{symbol}"))
-        .expect("function size must be emitted");
-    &remaining[..end]
-}
-
 #[test]
 fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
     let source = concat!(
@@ -78,7 +67,7 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
     )));
     assert!(output.contains("    .quad 3\n    .byte 0x61, 0x62, 0x63\n"));
     assert!(output.contains("    .quad 4\n    .byte 0x61, 0x00, 0x80, 0xff\n"));
-    let ascii = function_text(&output, ".Lska_fn_1");
+    let ascii = function_assembly(&output, ".Lska_fn_1");
     assert!(ascii.contains("lea rax, [rip + .Lska_literal_1_backing]"));
     assert!(ascii.contains("mov qword ptr [rdx], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 8], rax"));
@@ -86,7 +75,8 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
     assert!(!ascii.contains("call .Lska_array_0_copy_element"));
     for function in 0..4 {
         assert!(
-            !function_text(&output, &format!(".Lska_fn_{function}")).contains("call ska_rt_alloc"),
+            !function_assembly(&output, &format!(".Lska_fn_{function}"))
+                .contains("call ska_rt_alloc"),
             "literal materialization must not allocate"
         );
     }

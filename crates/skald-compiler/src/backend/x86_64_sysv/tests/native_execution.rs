@@ -24,6 +24,29 @@ fn integer_comparison_boundaries_store_canonical_booleans_and_branch_natively() 
 }
 
 #[test]
+fn integer_cast_boundaries_execute_without_runtime_support() {
+    let output = assembly(concat!(
+        "fn narrow(value: u64) -> u8 { return (u8) value; }\n",
+        "fn widen(value: u8) -> u64 { return (u64) value; }\n",
+        "fn reinterpret(value: u64) -> i64 { return (i64) value; }\n",
+        "fn main() -> i64 {\n",
+        "  if (narrow(258u) == 2u8) {\n",
+        "    if (narrow(18446744073709551615u) == 255u8) {\n",
+        "      if (widen(255u8) == 255u) {\n",
+        "        if (reinterpret(18446744073709551615u) == -1) {\n",
+        "          return 87;\n",
+        "        }\n",
+        "      }\n",
+        "    }\n",
+        "  }\n",
+        "  return 1;\n",
+        "}\n",
+    ));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(87));
+}
+
+#[test]
 fn receiverless_static_methods_use_method_symbols_and_stack_arguments() {
     let program = lower_source_to_mir(concat!(
         "class Math {\n",

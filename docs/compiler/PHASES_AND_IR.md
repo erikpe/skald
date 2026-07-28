@@ -128,9 +128,7 @@ HIR.
 
 Primitive integer comparisons and casts have a
 [source contract](../language/TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts)
-with staged compiler availability. Comparisons are current products through
-native x86-64 execution; primitive integer casts are current through verified
-target-independent MIR and await target execution.
+and are current products through native x86-64 execution.
 The pipeline responsibilities are:
 
 - Lexing recognizes comparison punctuation by longest match and otherwise
@@ -160,11 +158,11 @@ The pipeline responsibilities are:
   invariants.
 - Each backend receives already selected signedness and width through verified
   MIR. The x86-64 target realizes signed `i64` ordering and unsigned
-  `u64`/`u8` ordering with canonical boolean results. Until INT4, x86-64
-  rejects verified cast MIR with a structured target error; later cast
-  lowering will realize bit preservation, truncation, identity, or zero
-  extension without inferring semantics from source spelling or target
-  register accidents.
+  `u64`/`u8` ordering with canonical boolean results. It realizes integer
+  casts through canonical scalar loads and stores: same-width bits are
+  preserved, narrowing retains the low byte, and `u8` widening zero-extends.
+  Selection does not infer semantics from source spelling or expose target
+  registers to MIR.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
 Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and

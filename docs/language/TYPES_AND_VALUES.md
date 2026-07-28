@@ -172,8 +172,7 @@ declared read-only or mutable access.
 This section freezes the complete source-visible integer-only profile.
 Comparison syntax, exact-type checking, typed HIR, and verified
 target-independent MIR are implemented for both operation families, and all
-comparisons execute through the x86-64 target. Integer casts currently stop at
-a structured target-legality error until INT4 adds execution. The
+comparisons and casts execute through the x86-64 target. The
 [status matrix](STATUS.md#implemented-language) records availability
 separately from the language contract.
 
@@ -255,11 +254,9 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler accepts primitive integer casts through verified
-target-independent MIR but does not yet execute them. It performs no
-user-defined conversions. Integer comparisons execute through the x86-64
-backend. All other numeric conversion
-behavior remains deferred. Object casts are defined separately in
+The current compiler executes primitive integer comparisons and casts through
+the x86-64 backend. It performs no user-defined conversions. All other numeric
+conversion behavior remains deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form
 reinterprets bytes.

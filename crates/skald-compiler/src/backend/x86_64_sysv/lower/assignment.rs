@@ -3,8 +3,9 @@
 use crate::{
     backend::BackendError,
     mir::{
-        MirAssignment, MirBinaryOperation, MirComparisonPredicate, MirIntegerComparison,
-        MirIntegerType, MirPlace, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
+        MirAssignment, MirBinaryOperation, MirComparisonPredicate, MirIntegerCast,
+        MirIntegerComparison, MirIntegerType, MirPlace, MirRvalueKind, MirType, MirUnaryOperation,
+        ValueId,
     },
 };
 
@@ -82,8 +83,8 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_integer_comparison(*operation, *left, *right, destination),
-            MirRvalueKind::IntegerCast { .. } => {
-                unreachable!("integer casts are rejected by target legality until INT4")
+            MirRvalueKind::IntegerCast { operation, operand } => {
+                self.select_integer_cast(*operation, *operand, destination)
             }
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
@@ -297,6 +298,20 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         value::store_canonical_rax(MirType::Bool, destination, self.output);
+    }
+
+    fn select_integer_cast(
+        &mut self,
+        operation: MirIntegerCast,
+        operand: ValueId,
+        destination: Operand,
+    ) {
+        // Verified integer values use canonical eight-byte homes. Loading the
+        // complete home preserves every i64/u64 bit and the canonical u8
+        // value. The target store is the only width-dependent operation:
+        // u8 keeps and zero-extends AL, while 64-bit targets preserve RAX.
+        value::load_rax(value::frame_value(self.frame, operand), self.output);
+        value::store_canonical_rax(operation.result_type(), destination, self.output);
     }
 
     fn select_float_binary(

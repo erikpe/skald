@@ -5,7 +5,7 @@ use crate::{
     identity::CallableId,
     mir::{
         verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
-        MirParameter, MirProgram, MirRvalueKind,
+        MirParameter, MirProgram,
     },
 };
 
@@ -33,15 +33,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         for block in &function.body().blocks {
             for instruction in &block.instructions {
                 match instruction {
-                    MirInstruction::Assign(assignment)
-                        if matches!(assignment.rvalue.kind, MirRvalueKind::IntegerCast { .. }) =>
-                    {
-                        return Err(BackendError::new(
-                            Target::X86_64SysV,
-                            Some(function.callable()),
-                            "primitive integer casts are not yet supported by the x86-64 target",
-                        ));
-                    }
                     MirInstruction::Initialize(initialize) => {
                         check_member_target(
                             program,

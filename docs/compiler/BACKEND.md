@@ -74,11 +74,13 @@ compares canonical full-register operands, chooses signed conditions for
 into one byte, and zero-extends it before storing a canonical `bool`.
 Comparisons add no target labels, runtime calls, or ABI surface.
 
-Verified primitive integer cast rvalues are intentionally rejected by target
-legality during INT3. The error is structured and occurs after MIR
-verification, keeping malformed cast MIR at the verifier boundary. INT4 will
-replace this boundary with inline bit-preserving, narrowing, and zero-extension
-selection; no runtime helper or ABI change is planned.
+Verified primitive integer cast rvalues lower inline through the canonical
+scalar load/store boundary. Same-width casts preserve all 64 bits, widening
+from canonical `u8` zero-extends, and narrowing retains and canonicalizes the
+low byte. The same representation crosses locals, fields, calls, returns,
+temporaries, and later comparisons. Casts add no target labels, traps, runtime
+calls, allocations, symbols, or ABI surface; malformed cast MIR remains a
+verifier-boundary error.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: in progress; INT0–INT3 are complete and INT4 is next.
+Status: in progress; INT0–INT4 are complete and INT5 is next.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -89,7 +89,7 @@ public ABI remains unchanged.
 - [x] INT1 — Establish verified target-independent integer comparisons
 - [x] INT2 — Execute integer comparisons on x86-64
 - [x] INT3 — Establish verified target-independent integer casts
-- [ ] INT4 — Execute integer casts on x86-64
+- [x] INT4 — Execute integer casts on x86-64
 - [ ] INT5 — Harden and promote the integer operation profile
 
 ## PR-sized implementation sequence
@@ -227,16 +227,16 @@ reaches HIR.
 **Purpose:** Realize the portable cast matrix using the simplest correct target
 operations while proving that no cast can fail or enter the runtime.
 
-- [ ] Select identity or bit-preserving moves for `i64`/`u64` same-width casts,
-      canonical zero extension for `u8` widening, and low-byte masking for
-      `i64`/`u64` narrowing to `u8`.
-- [ ] Reuse the backend's canonical scalar load/store boundary so cast results
+- [x] Select identity or bit-preserving moves for `i64`/`u64` same-width casts,
+      canonical zero extension for `u8` widening, and low-byte retention and
+      canonicalization for `i64`/`u64` narrowing to `u8`.
+- [x] Reuse the backend's canonical scalar load/store boundary so cast results
       remain valid across locals, fields, calls, returns, temporaries, and
       subsequent comparisons.
-- [ ] Add target-legality coverage and structured rejection for malformed MIR
+- [x] Add target-legality coverage and structured rejection for malformed MIR
       without adding a cast-specific trap, branch, helper, symbol, allocation,
       or public runtime ABI change.
-- [ ] Prove exact modulo observations around zero, sign transitions, low-byte
+- [x] Prove exact modulo observations around zero, sign transitions, low-byte
       boundaries, and both 64-bit extrema through native execution.
 
 **Tests:** Selector and assembly-shape tests for all nine pairs; identities,

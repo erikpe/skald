@@ -78,3 +78,49 @@ fn selects_every_integer_comparison_with_exact_signedness_and_canonical_results(
     assert!(output.contains("call ska_rt_abi_v5"));
     assert!(!output.contains("ska_rt_compare"));
 }
+
+#[test]
+fn selects_every_integer_cast_through_canonical_scalar_moves() {
+    let mut source = String::new();
+    let mut functions = Vec::new();
+    for source_type in ["i64", "u64", "u8"] {
+        for target_type in ["i64", "u64", "u8"] {
+            functions.push((source_type, target_type));
+            source.push_str(&format!(
+                "fn cast_{source_type}_to_{target_type}(value: {source_type}) -> {target_type} {{ \
+                 return ({target_type}) value; }}\n"
+            ));
+        }
+    }
+    source.push_str("fn main() -> i64 { return 0; }\n");
+
+    let output = assembly(&source);
+    assert_eq!(output, assembly(&source));
+    for (index, (source_type, target_type)) in functions.into_iter().enumerate() {
+        let function = function_assembly(&output, &format!(".Lska_fn_{index}"));
+        assert!(function.contains("mov rax, qword ptr [rbp"));
+        assert!(!function.contains("ud2"));
+        assert!(!function.contains("cmp "));
+        assert!(!function.contains("set"));
+        assert!(!function.contains("call "));
+
+        if target_type == "u8" {
+            assert!(
+                function.contains("movzx rax, al"),
+                "{source_type}-to-{target_type} must retain and canonicalize the low byte"
+            );
+        }
+        if source_type != "u8" && target_type != "u8" {
+            assert!(
+                !function.contains("movzx"),
+                "{source_type}-to-{target_type} must preserve all 64 bits"
+            );
+        }
+        if source_type == "u8" && target_type != "u8" {
+            assert!(
+                function.contains("movzx rax, al"),
+                "{source_type}-to-{target_type} must consume a canonical zero-extended source"
+            );
+        }
+    }
+}

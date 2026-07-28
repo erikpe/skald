@@ -54,8 +54,15 @@ fn generated_text_is_accepted_by_the_system_assembler() {
         "fn compare_u8(left: u8, right: u8) -> bool { return left != right; }\n",
         "fn main() -> i64 { if (compare_i64(-1, 0)) { return 1; } return 0; }\n",
     ));
+    let casts = assembly(concat!(
+        "fn narrow(value: u64) -> u8 { return (u8) value; }\n",
+        "fn widen(value: u8) -> i64 { return (i64) value; }\n",
+        "fn reinterpret(value: i64) -> u64 { return (u64) value; }\n",
+        "fn main() -> i64 { return widen(narrow(reinterpret(-1))); }\n",
+    ));
 
     assert_system_assembler_accepts(&straight_line);
     assert_system_assembler_accepts(&multi_block);
     assert_system_assembler_accepts(&comparisons);
+    assert_system_assembler_accepts(&casts);
 }
