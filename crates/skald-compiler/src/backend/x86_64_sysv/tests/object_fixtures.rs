@@ -387,8 +387,9 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
         empty_initializer_definition(initializer, program.span),
         MirMemberDefinition {
             callable,
+            class_owner: ids.container,
             return_storage: None,
-            receiver,
+            receiver: Some(receiver),
             parameters: parameters.iter().map(|parameter| parameter.id).collect(),
             storage: std::iter::once(receiver_storage(
                 callable,
@@ -480,7 +481,7 @@ pub(super) fn empty_initializer_definition(
     let receiver = StorageId::new(callable, 0);
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters: vec![],
@@ -504,7 +505,7 @@ fn initializer_definition(
     let value = ValueId::new(callable, 0);
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters: vec![parameter],
@@ -547,7 +548,7 @@ fn add_definition(
     let receiver_value = MirPlace::base(receiver).project_field(value_field);
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters: vec![parameter],
@@ -595,7 +596,7 @@ fn get_definition(
     let result = ValueId::new(callable, 0);
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters: vec![],
@@ -626,7 +627,7 @@ fn forwarding_get_definition(
     let result = ValueId::new(callable, 0);
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters: vec![],

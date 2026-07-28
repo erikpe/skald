@@ -545,7 +545,7 @@ fn member_definition(
     let parameters = storage.iter().skip(1).map(|storage| storage.id).collect();
     fixture_member_definition(
         callable,
-        receiver,
+        Some(receiver),
         OneBlockDefinition {
             return_storage: None,
             parameters,

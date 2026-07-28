@@ -104,14 +104,15 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
         &copy_capabilities,
         MemberCheckContext {
             callable: method.id.into(),
+            owner: class.id,
             parameters: &method.parameters,
             definition,
             return_type: Type::I64,
-            receiver: ReceiverContext {
+            receiver: Some(ReceiverContext {
                 class: class.id,
                 access: HirAccess::ReadOnly,
-                body_kind: MemberBodyKind::MethodOrDestructor,
-            },
+            }),
+            body_kind: MemberBodyKind::MethodOrDestructor,
             callable_name: "method `nested`".to_owned(),
         },
         &mut diagnostics,
@@ -130,6 +131,44 @@ fn lowers_nested_object_places_with_one_root_capability_and_identity_path() {
     assert_eq!(field.receiver.projections(), expected);
     assert_eq!(field.receiver.root(), BindingId::Receiver(method.id.into()));
     assert_eq!(field.receiver.access, HirAccess::ReadOnly);
+}
+
+#[test]
+fn checks_a_class_owned_body_with_explicitly_absent_receiver_context() {
+    let resolved = resolve_text(concat!(
+        "class Tools {\n",
+        "    init() {}\n",
+        "    fn answer() -> i64 { return 42; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let copy_capabilities = CopyCapabilities::compute(&resolved);
+    let class = resolved.classes.get(ClassId::new(0)).unwrap();
+    let method = &class.methods[0];
+    let definition = &resolved.class_definitions.get(class.id).unwrap().methods[0];
+    let mut diagnostics = Diagnostics::new();
+
+    let member = CallableChecker::new_member(
+        &resolved,
+        &copy_capabilities,
+        MemberCheckContext {
+            callable: method.id.into(),
+            owner: class.id,
+            parameters: &method.parameters,
+            definition,
+            return_type: Type::I64,
+            receiver: None,
+            body_kind: MemberBodyKind::MethodOrDestructor,
+            callable_name: "receiverless class body".to_owned(),
+        },
+        &mut diagnostics,
+    )
+    .check_member();
+
+    assert!(diagnostics.is_empty());
+    assert_eq!(member.class_owner, class.id);
+    assert_eq!(member.receiver_class, None);
+    assert!(matches!(member.body.statements[0], HirStatement::Return(_)));
 }
 
 #[test]

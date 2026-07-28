@@ -11,6 +11,7 @@ use crate::{
     resolve::{ResolvedMethodDispatch, ResolvedParameterBindingMode},
 };
 
+use crate::typeck::function::MemberBodyKind;
 use crate::typeck::program::{
     lower_type, INVALID_INITIALIZER_BODY, READ_ONLY_RECEIVER, WRONG_ARGUMENT_COUNT,
 };
@@ -157,8 +158,8 @@ impl CallableChecker<'_, '_> {
             .expect("resolved method call must reference a method");
         let mut valid = true;
         if self
-            .receiver
-            .is_some_and(|context| context.body_kind.initializes_receiver())
+            .member_body_kind
+            .is_some_and(MemberBodyKind::initializes_receiver)
             && receiver.place.root() == BindingId::Receiver(self.callable)
             && receiver.place.path.is_root()
         {

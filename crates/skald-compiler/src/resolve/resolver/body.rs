@@ -53,21 +53,13 @@ pub(super) fn resolve_callable_body(
     array_types: &mut ArrayTypeInterner,
     diagnostics: &mut Diagnostics,
 ) -> ResolvedCallableBody {
-    CallableResolver::new(
-        context.callable,
-        context.receiver_class,
-        parameters,
-        context.base_initialization,
-        environment,
-        array_types,
-        diagnostics,
-    )
-    .resolve(body)
+    CallableResolver::new(context, parameters, environment, array_types, diagnostics).resolve(body)
 }
 
 #[derive(Clone, Copy)]
 pub(super) struct CallableResolutionContext {
     callable: CallableId,
+    class_owner: Option<ClassId>,
     receiver_class: Option<ClassId>,
     base_initialization: BaseInitializationPolicy,
 }
@@ -80,6 +72,7 @@ impl CallableResolutionContext {
     pub(super) const fn function(callable: CallableId) -> Self {
         Self {
             callable,
+            class_owner: None,
             receiver_class: None,
             base_initialization: BaseInitializationPolicy::Forbidden,
         }
@@ -87,13 +80,29 @@ impl CallableResolutionContext {
 
     pub(super) const fn member(
         callable: CallableId,
+        class_owner: ClassId,
+        receiver_class: Option<ClassId>,
         base_initialization: BaseInitializationPolicy,
     ) -> Self {
         Self {
             callable,
-            receiver_class: callable.class(),
+            class_owner: Some(class_owner),
+            receiver_class,
             base_initialization,
         }
+    }
+
+    pub(super) const fn receiver_member(
+        callable: CallableId,
+        class_owner: ClassId,
+        base_initialization: BaseInitializationPolicy,
+    ) -> Self {
+        Self::member(
+            callable,
+            class_owner,
+            Some(class_owner),
+            base_initialization,
+        )
     }
 }
 
@@ -112,6 +121,7 @@ struct BindingSymbol {
 
 struct CallableResolver<'program, 'state> {
     callable: CallableId,
+    class_owner: Option<ClassId>,
     receiver_class: Option<ClassId>,
     environment: BodyResolutionEnvironment<'program>,
     array_types: &'state mut ArrayTypeInterner,
@@ -123,10 +133,8 @@ struct CallableResolver<'program, 'state> {
 
 impl<'program, 'state> CallableResolver<'program, 'state> {
     fn new(
-        callable: CallableId,
-        receiver_class: Option<ClassId>,
+        context: CallableResolutionContext,
         parameters: &[ResolvedParameter],
-        base_initialization: BaseInitializationPolicy,
         environment: BodyResolutionEnvironment<'program>,
         array_types: &'state mut ArrayTypeInterner,
         diagnostics: &'state mut Diagnostics,
@@ -145,18 +153,20 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             })
             .collect();
         Self {
-            callable,
-            receiver_class,
+            callable: context.callable,
+            class_owner: context.class_owner,
+            receiver_class: context.receiver_class,
             environment,
             array_types,
             diagnostics,
-            base_initialization,
+            base_initialization: context.base_initialization,
             scopes: vec![parameters],
             locals: Vec::new(),
         }
     }
 
     fn resolve(mut self, body: &syntax::Block) -> ResolvedCallableBody {
+        debug_assert_eq!(self.class_owner, self.callable.class());
         if matches!(
             self.base_initialization,
             BaseInitializationPolicy::Required { .. }

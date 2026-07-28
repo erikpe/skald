@@ -85,8 +85,11 @@ pub(crate) fn empty_member_definition(
     );
     MirMemberDefinition {
         callable,
+        class_owner: callable
+            .class()
+            .expect("member fixture needs a class owner"),
         return_storage: None,
-        receiver,
+        receiver: Some(receiver),
         parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
         storage,
         values: vec![],
@@ -227,11 +230,14 @@ pub(crate) fn function_definition(
 
 pub(crate) fn member_definition(
     callable: CallableId,
-    receiver: StorageId,
+    receiver: Option<StorageId>,
     definition: OneBlockDefinition,
 ) -> MirMemberDefinition {
     MirMemberDefinition {
         callable,
+        class_owner: callable
+            .class()
+            .expect("member fixture needs a class owner"),
         return_storage: definition.return_storage,
         receiver,
         parameters: definition.parameters,
@@ -319,7 +325,7 @@ mod tests {
         let receiver_metadata = receiver_storage(receiver, class, span);
         let member = member_definition(
             method.into(),
-            receiver,
+            Some(receiver),
             OneBlockDefinition {
                 return_storage: None,
                 parameters: Vec::new(),
@@ -331,9 +337,26 @@ mod tests {
             },
         );
 
-        assert_eq!(member.receiver, receiver);
+        assert_eq!(member.receiver, Some(receiver));
         assert_eq!(member.storage, [receiver_metadata]);
         assert_eq!(member.body.entry.callable(), method.into());
+
+        let receiverless = member_definition(
+            method.into(),
+            None,
+            OneBlockDefinition {
+                return_storage: None,
+                parameters: Vec::new(),
+                storage: Vec::new(),
+                values: Vec::new(),
+                instructions: Vec::new(),
+                terminator: Some(MirTerminator::Return { value: None, span }),
+                span,
+            },
+        );
+        assert_eq!(receiverless.class_owner, class);
+        assert_eq!(receiverless.receiver, None);
+        assert!(receiverless.storage.is_empty());
     }
 
     #[test]

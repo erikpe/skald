@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::super::{
-    function::CallableChecker,
+    function::{CallableChecker, MemberBodyKind},
     program::{
         lower_parameter_mode, lower_type, FIELD_INITIALIZATION, INVALID_ALIAS_ARGUMENT,
         INVALID_OBJECT_CONTEXT,
@@ -464,7 +464,11 @@ impl CallableChecker<'_, '_> {
                 let receiver = self
                     .receiver
                     .expect("resolved receiver place must occur in a member");
-                if receiver.body_kind.initializes_receiver() && !allow_initializing_self {
+                if self
+                    .member_body_kind
+                    .is_some_and(MemberBodyKind::initializes_receiver)
+                    && !allow_initializing_self
+                {
                     self.diagnostics.push(
                         Diagnostic::error(
                             INVALID_ALIAS_ARGUMENT,
@@ -488,12 +492,15 @@ impl CallableChecker<'_, '_> {
     }
 
     pub(super) fn check_initializer_field_liveness(&mut self, field: FieldId, span: Span) -> bool {
-        let Some(receiver) = self
-            .receiver
-            .filter(|receiver| receiver.body_kind.initializes_receiver())
-        else {
+        if !self
+            .member_body_kind
+            .is_some_and(MemberBodyKind::initializes_receiver)
+        {
             return true;
-        };
+        }
+        let receiver = self
+            .receiver
+            .expect("an initializing member body must have a receiver");
         if field.class() != receiver.class || self.initialized_fields.contains(&field) {
             return true;
         }

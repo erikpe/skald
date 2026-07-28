@@ -49,7 +49,7 @@ fn lays_out_and_addresses_deep_source_subobjects_from_every_storage_base() {
             &program,
             adjust.into(),
             &data,
-            &MirPlace::base(adjust.receiver)
+            &MirPlace::base(adjust.receiver.unwrap())
                 .project_field(root_left)
                 .project_field(branch_leaf)
                 .project_field(leaf_small),
@@ -182,6 +182,26 @@ fn verifier_rejects_corrupt_member_receiver_metadata() {
 
     let errors = verify_mir(&program).unwrap_err().to_string();
     assert!(errors.contains("receiver storage has the wrong class type"));
+}
+
+#[test]
+fn emits_a_class_owned_definition_with_no_receiver_abi_components() {
+    let mut program = lower_text(concat!(
+        "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let definition = program
+        .member_definitions
+        .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap();
+    definition.receiver = None;
+    definition.storage.clear();
+
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert!(output.contains(".Lska_class_0_method_0:"));
+    assert_system_assembler_accepts(&output);
 }
 
 #[test]

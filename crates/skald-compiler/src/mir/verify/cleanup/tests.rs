@@ -97,7 +97,7 @@ fn structural_cleanup_validation_rejects_read_only_receiver_access() {
     definition.body.blocks[0]
         .instructions
         .push(MirInstruction::Cleanup(MirCleanup {
-            destination: definition.receiver.into(),
+            destination: definition.receiver.unwrap().into(),
             target: ClassId::new(0),
             span: definition.span,
         }));

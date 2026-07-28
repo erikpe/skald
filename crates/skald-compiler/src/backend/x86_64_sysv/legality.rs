@@ -132,17 +132,17 @@ fn check_member_target(
     caller: CallableId,
     target: CallableId,
 ) -> Result<(), BackendError> {
-    if program.member_definition(target).is_none() {
+    let Some(definition) = program.member_definition(target) else {
         return Err(BackendError::new(
             Target::X86_64SysV,
             Some(caller),
             format!("member call target {target} has no MIR definition"),
         ));
-    }
+    };
     let signature = program
         .callable_signature(target)
         .expect("verified member target must be declared");
-    if classify(signature.parameters, true).is_none() {
+    if classify(signature.parameters, definition.receiver.is_some()).is_none() {
         return Err(abi_limit(caller, "outgoing argument area"));
     }
     Ok(())

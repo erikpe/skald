@@ -255,7 +255,7 @@ fn verifier_rejects_complete_receiver_replacement() {
     definition.body.blocks[0].instructions.insert(
         0,
         MirInstruction::CopyAssign(MirCopyAssignment {
-            destination: MirPlace::base(definition.receiver),
+            destination: MirPlace::base(definition.receiver.unwrap()),
             source: MirPlace::alias_parameter(definition.parameters[0]),
             class,
             operation: MirSelectedCopyOperation::User(assignment),

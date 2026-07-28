@@ -1,5 +1,63 @@
 use super::*;
 
+fn receiverless_member_program() -> MirProgram {
+    let mut program = lower_text(concat!(
+        "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let definition = program
+        .member_definitions
+        .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap();
+    assert_eq!(definition.storage.len(), 1);
+    assert_eq!(definition.storage[0].kind, MirStorageKind::Receiver);
+    definition.receiver = None;
+    definition.storage.clear();
+    program
+}
+
+#[test]
+fn verifier_accepts_explicitly_receiverless_class_owned_definitions() {
+    let program = receiverless_member_program();
+
+    verify_mir(&program).unwrap();
+    let definition = program
+        .member_definition(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap();
+    assert_eq!(definition.class_owner, ClassId::new(0));
+    assert_eq!(definition.receiver, None);
+    assert!(!dump_mir(&program).contains("Receiver c0:method0"));
+}
+
+#[test]
+fn verifier_rejects_receiver_storage_without_an_identified_receiver() {
+    let mut program = lower_text(concat!(
+        "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    program
+        .member_definitions
+        .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap()
+        .receiver = None;
+
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("definition without a receiver cannot declare receiver storage"));
+}
+
+#[test]
+fn verifier_rejects_a_member_owner_that_differs_from_its_callable() {
+    let mut program = receiverless_member_program();
+    program
+        .member_definitions
+        .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap()
+        .class_owner = ClassId::new(1);
+
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("definition class owner differs from its callable identity"));
+}
+
 #[test]
 fn verifier_rejects_u8_constant_and_operation_type_corruption() {
     let mut constant_mismatch =

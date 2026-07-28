@@ -82,7 +82,7 @@ fn verifies_cleanup_of_live_owning_roots_and_deep_fields_through_the_pipeline() 
     definition.body.blocks[0]
         .instructions
         .push(MirInstruction::Cleanup(MirCleanup {
-            destination: MirPlace::base(definition.receiver)
+            destination: MirPlace::base(definition.receiver.unwrap())
                 .project_field(FieldId::new(ClassId::new(1), 0)),
             target: ClassId::new(0),
             span: definition.span,

@@ -6,17 +6,17 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Private Members and Static Methods Roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
+  — **in progress; declaring-class privacy is next**. Receiver presence is now
+  independent of lexical class ownership through checking, MIR verification,
+  and x86-64 lowering. The remaining work adds privacy, public and private
+  receiverless static methods, and the documentation confirmation that clears
+  the string-design freeze gate. Source-visible static fields remain separate
+  future work.
 
 ## Planned
 
-- [Private Members and Static Methods Roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
-  — **planned; receiver-model groundwork is next**. Implements exact
-  declaring-class privacy, public and private receiverless static methods,
-  verified receiver presence, complete x86-64 execution, and the documentation
-  confirmation that clears the string-design freeze gate. It builds on the
-  completed module, polymorphism, ownership, optional-value, and array
-  contracts. Source-visible static fields remain separate future work.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

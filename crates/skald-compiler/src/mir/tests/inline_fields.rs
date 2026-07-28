@@ -30,7 +30,7 @@ fn lowers_deep_source_places_without_class_values_and_preserves_them_through_pas
     assert_eq!(constructions.len(), 2);
     assert_eq!(
         constructions[0].destination.base,
-        MirPlaceBase::Storage(initializer.receiver)
+        MirPlaceBase::Storage(initializer.receiver.unwrap())
     );
     assert_eq!(
         constructions[0].destination.projections,

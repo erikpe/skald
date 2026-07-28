@@ -55,8 +55,9 @@ impl ClassBodyResolver<'_> {
                     .initializer(work.id)
                     .expect("accepted initializer work must retain its declaration identity");
                 self.resolve_member(
-                    CallableResolutionContext::member(
+                    CallableResolutionContext::receiver_member(
                         metadata.id.into(),
+                        declaration.id,
                         declaration
                             .direct_base
                             .map_or(BaseInitializationPolicy::Forbidden, |base| {
@@ -80,8 +81,9 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted copy constructor must have declaration metadata");
             self.resolve_member(
-                CallableResolutionContext::member(
+                CallableResolutionContext::receiver_member(
                     metadata.id.into(),
+                    declaration.id,
                     BaseInitializationPolicy::Forbidden,
                 ),
                 &metadata.parameters,
@@ -100,8 +102,9 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted copy assignment must have declaration metadata");
             self.resolve_member(
-                CallableResolutionContext::member(
+                CallableResolutionContext::receiver_member(
                     metadata.id.into(),
+                    declaration.id,
                     BaseInitializationPolicy::Forbidden,
                 ),
                 std::slice::from_ref(&metadata.parameter),
@@ -120,8 +123,9 @@ impl ClassBodyResolver<'_> {
                 .as_ref()
                 .expect("accepted destructor must have declaration metadata");
             self.resolve_member(
-                CallableResolutionContext::member(
+                CallableResolutionContext::receiver_member(
                     metadata.id.into(),
+                    declaration.id,
                     BaseInitializationPolicy::Forbidden,
                 ),
                 &[],
@@ -141,8 +145,9 @@ impl ClassBodyResolver<'_> {
                 };
                 let metadata = &declaration.methods[method_index];
                 self.resolve_member(
-                    CallableResolutionContext::member(
+                    CallableResolutionContext::receiver_member(
                         metadata.id.into(),
+                        declaration.id,
                         BaseInitializationPolicy::Forbidden,
                     ),
                     &metadata.parameters,

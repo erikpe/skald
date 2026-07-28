@@ -419,6 +419,7 @@ fn lower_member_definition(
     hir: &HirProgram,
     definition: &HirMemberDefinition,
 ) -> MirMemberDefinition {
+    debug_assert_eq!(definition.callable.class(), Some(definition.class_owner));
     let signature = hir
         .callable_signature(definition.callable)
         .expect("typed member definition must have a signature");
@@ -428,12 +429,13 @@ fn lower_member_definition(
         locals: &definition.locals,
         source_body: &definition.body,
         return_type: signature.return_type,
-        receiver_class: definition.callable.class(),
+        receiver_class: definition.receiver_class,
     });
     MirMemberDefinition {
         callable: definition.callable,
+        class_owner: definition.class_owner,
         return_storage: lowered.return_storage,
-        receiver: lowered.receiver.expect("member body must lower a receiver"),
+        receiver: lowered.receiver,
         parameters: lowered.parameters,
         storage: lowered.storage,
         values: lowered.values,

@@ -101,6 +101,8 @@ impl HirClassDefinition {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirMemberDefinition {
     pub callable: CallableId,
+    pub class_owner: ClassId,
+    pub receiver_class: Option<ClassId>,
     pub locals: Vec<HirLocal>,
     pub body: HirBlock,
     pub span: Span,

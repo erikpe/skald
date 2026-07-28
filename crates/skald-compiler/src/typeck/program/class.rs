@@ -355,14 +355,15 @@ impl ClassDefinitionChecker<'_, '_> {
             self.copy_capabilities,
             MemberCheckContext {
                 callable: context.callable,
+                owner: self.class.id,
                 parameters: context.parameters,
                 definition: context.definition,
                 return_type: context.return_type,
-                receiver: ReceiverContext {
+                receiver: Some(ReceiverContext {
                     class: self.class.id,
                     access: context.access,
-                    body_kind: context.body_kind,
-                },
+                }),
+                body_kind: context.body_kind,
                 callable_name: context.callable_name,
             },
             self.diagnostics,

@@ -1,6 +1,6 @@
 # Private Members and Static Methods Roadmap
 
-Status: planned; PSM0 is next.
+Status: in progress; PSM1 is next.
 
 This roadmap adds declaring-class privacy and receiverless class-owned methods
 without creating a second callable, member-lookup, ownership, or backend
@@ -90,7 +90,7 @@ last class-member prerequisite from the
 
 ## Progress
 
-- [ ] PSM0 — Separate lexical class ownership from receiver presence
+- [x] PSM0 — Separate lexical class ownership from receiver presence
 - [ ] PSM1 — Implement declaring-class member privacy
 - [ ] PSM2 — Establish receiverless static-method IR and execution
 - [ ] PSM3 — Expose static methods through the complete source pipeline
@@ -104,30 +104,30 @@ last class-member prerequisite from the
 a receiver before static declarations or calls depend on a receiverless member
 model.
 
-- [ ] Split callable context into lexical class ownership and optional receiver
+- [x] Split callable context into lexical class ownership and optional receiver
       availability. Preserve `self`, base-initialization, lifecycle, and
       receiver-access behavior for every currently accepted member.
-- [ ] Make member-body checking accept explicit optional receiver context while
+- [x] Make member-body checking accept explicit optional receiver context while
       retaining initializer completeness, missing-return, local ownership, and
       cleanup behavior.
-- [ ] Change MIR member definitions and shared definition views to record an
+- [x] Change MIR member definitions and shared definition views to record an
       optional receiver storage slot. Keep every existing initializer, copy
       operation, destructor, and instance method receiver-bearing.
-- [ ] Make body lowering receive explicit optional receiver class information
+- [x] Make body lowering receive explicit optional receiver class information
       instead of deriving receiver existence from `CallableId::class()`.
-- [ ] Update MIR verification so current receiver-bearing declarations still
+- [x] Update MIR verification so current receiver-bearing declarations still
       require exactly one correctly owned `MirStorageKind::Receiver` slot, and
       receiverless definitions reject any such slot.
-- [ ] Derive frame layout, incoming parameter spilling, outgoing ABI
+- [x] Derive frame layout, incoming parameter spilling, outgoing ABI
       classification, receiver-origin homes, legality checks, and cleanup rules
       from verified receiver presence rather than callable category.
-- [ ] Update test-only MIR and backend fixtures through cohesive constructors
+- [x] Update test-only MIR and backend fixtures through cohesive constructors
       so later static-method tests do not duplicate raw optional-receiver
       assembly.
-- [ ] Keep public phase facades narrow and explicit; extract a focused private
+- [x] Keep public phase facades narrow and explicit; extract a focused private
       owner only where optional-receiver branching would otherwise spread
       substantial implementation logic across a facade.
-- [ ] Update [compiler phases and IR](../compiler/PHASES_AND_IR.md) and
+- [x] Update [compiler phases and IR](../compiler/PHASES_AND_IR.md) and
       [backend](../compiler/BACKEND.md) only for the durable explicit-receiver
       representation. Do not claim static source support.
 

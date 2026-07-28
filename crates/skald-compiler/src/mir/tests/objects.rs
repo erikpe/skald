@@ -373,7 +373,7 @@ fn preserves_object_storage_and_call_order_across_nested_control_flow() {
                 .unwrap()
                 .place
                 .base,
-            MirPlaceBase::Storage(relay.receiver)
+            MirPlaceBase::Storage(relay.receiver.unwrap())
         );
     }
 }

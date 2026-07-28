@@ -236,6 +236,14 @@ components immediately follow its static address. Explicit scalar/value
 arguments otherwise retain source order, SSE arguments retain their
 independent sequence, and overflow components share one aligned stack area.
 
+The verified definition's optional receiver storage is the sole authority for
+incoming receiver classification, spilling, frame homes, and object-origin
+homes. Class ownership alone does not add receiver ABI components. Target
+legality likewise classifies a called member from its verified definition's
+receiver presence. Current source-level class members all retain receivers;
+the receiverless representation is internal groundwork rather than static
+method support.
+
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible
 behavior remains unchanged. Metadata is never reconstructed from a
@@ -257,6 +265,8 @@ class layout. The complete frame is rounded to 16-byte alignment and uses
 Return destinations and owned class, primitive-optional, or primitive-array
 parameters store an incoming pointer in a frame home. Receivers and aliases
 additionally store complete-object and metadata homes for forwarding.
+Definitions without receiver storage allocate and spill no receiver or
+receiver-origin homes.
 Projecting a MIR place loads the appropriate base when indirect, then
 accumulates checked target base and field offsets.
 Byte fields use byte-width loads and stores; wider primitive and address

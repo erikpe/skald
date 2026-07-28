@@ -17,8 +17,7 @@ impl CallableChecker<'_, '_> {
         assignment: &crate::resolve::ResolvedFieldAssignment,
     ) -> CheckedStatement {
         let body_kind = self
-            .receiver
-            .map(|receiver| receiver.body_kind)
+            .member_body_kind
             .unwrap_or(MemberBodyKind::MethodOrDestructor);
         let Some(target) = self.check_field_assignment_target(assignment, body_kind) else {
             return CheckedStatement::falls_through(None);

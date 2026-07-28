@@ -294,6 +294,12 @@ alias access, selected primitive and lifecycle operations, exact callable
 targets, object places, construction destinations, copy choices, and
 structured flow summaries.
 
+Callable-body resolution and checking record a class-owned body's lexical
+`ClassId` independently of whether that body has a receiver. A receiver, when
+present, separately records its exact class and access. Current source
+initializers, lifecycle members, and methods remain receiver-bearing; this
+representation does not add receiverless source declarations.
+
 Static inheritance crosses this boundary explicitly. HIR records selected base
 initializers, complete lifecycle composition, identity-based base projections,
 inherited field and direct-method selections, access-preserving class/`Obj`
@@ -427,6 +433,12 @@ explicit:
 MIR is not SSA. State that crosses control-flow edges uses storage. Class
 objects remain addressable places rather than transient scalar values. Field
 and base projections carry semantic identities rather than target offsets.
+Every class-owned MIR definition records its exact owner and an optional
+receiver storage identity as separate facts. Verification requires the owner
+to agree with the callable identity, requires an identified receiver to name
+exactly one correctly owned receiver storage slot of the owning class, and
+rejects receiver storage when the optional identity is absent. All MIR
+produced from current source remains receiver-bearing for class members.
 Static views retain their source place, target, access, and complete-object
 origin; slices are exact target-class copy operations from a verified
 base-projected source.

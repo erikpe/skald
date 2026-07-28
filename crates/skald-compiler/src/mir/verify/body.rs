@@ -20,6 +20,12 @@ impl<'mir> Verifier<'mir> {
         return_type: MirType,
         function: MirDefinitionRef<'mir>,
     ) {
+        if function.class_owner() != function.callable().class() {
+            self.function_error(
+                function.callable(),
+                "definition class owner differs from its callable identity",
+            );
+        }
         self.verify_storage(function);
         self.verify_values(function);
         self.verify_receiver(function);
@@ -509,7 +515,7 @@ impl<'mir> Verifier<'mir> {
             if !receiver_slots.is_empty() {
                 self.function_error(
                     function.callable(),
-                    "top-level function cannot declare receiver storage",
+                    "definition without a receiver cannot declare receiver storage",
                 );
             }
             return;

@@ -51,15 +51,16 @@ impl MemberBodyKind {
 pub(super) struct ReceiverContext {
     pub(super) class: ClassId,
     pub(super) access: HirAccess,
-    pub(super) body_kind: MemberBodyKind,
 }
 
 pub(super) struct MemberCheckContext<'program> {
     pub(super) callable: CallableId,
+    pub(super) owner: ClassId,
     pub(super) parameters: &'program [ResolvedParameter],
     pub(super) definition: &'program ResolvedMemberDefinition,
     pub(super) return_type: Type,
-    pub(super) receiver: ReceiverContext,
+    pub(super) receiver: Option<ReceiverContext>,
+    pub(super) body_kind: MemberBodyKind,
     pub(super) callable_name: String,
 }
 
@@ -73,7 +74,9 @@ pub(super) struct CallableChecker<'program, 'diagnostics> {
     definition_span: crate::source::Span,
     callable_name: String,
     pub(super) return_type: Type,
+    pub(super) class_owner: Option<ClassId>,
     pub(super) receiver: Option<ReceiverContext>,
+    pub(super) member_body_kind: Option<MemberBodyKind>,
     pub(super) initialized_fields: BTreeSet<FieldId>,
     pub(super) base_initialized: bool,
     pub(super) diagnostics: &'diagnostics mut Diagnostics,
@@ -97,7 +100,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             definition_span: definition.span,
             callable_name: format!("function `{}`", declaration.name),
             return_type: lower_type(&declaration.return_type),
+            class_owner: None,
             receiver: None,
+            member_body_kind: None,
             initialized_fields: BTreeSet::new(),
             base_initialized: true,
             diagnostics,
@@ -140,14 +145,12 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         context: MemberCheckContext<'program>,
         diagnostics: &'diagnostics mut Diagnostics,
     ) -> Self {
-        let base_initialized = !matches!(
-            context.receiver.body_kind,
-            MemberBodyKind::OrdinaryInitializer
-        ) || program
-            .class(context.receiver.class)
-            .expect("member receiver class must exist")
-            .direct_base
-            .is_none();
+        let base_initialized = context.body_kind != MemberBodyKind::OrdinaryInitializer
+            || program
+                .class(context.owner)
+                .expect("member owner class must exist")
+                .direct_base
+                .is_none();
         Self {
             program,
             copy_capabilities,
@@ -158,7 +161,9 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
             definition_span: context.definition.span,
             callable_name: context.callable_name,
             return_type: context.return_type,
-            receiver: Some(context.receiver),
+            class_owner: Some(context.owner),
+            receiver: context.receiver,
+            member_body_kind: Some(context.body_kind),
             initialized_fields: BTreeSet::new(),
             base_initialized,
             diagnostics,
@@ -168,12 +173,17 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
     pub(super) fn check_member(mut self) -> HirMemberDefinition {
         let locals = self.lower_locals();
         let body = self.check_block(self.body);
-        let receiver = self.receiver.expect("member checker needs receiver");
-        if receiver.body_kind.initializes_receiver() {
+        let owner = self
+            .class_owner
+            .expect("member checker needs a class owner");
+        let body_kind = self
+            .member_body_kind
+            .expect("member checker needs a member body kind");
+        if body_kind.initializes_receiver() {
             let class = self
                 .program
-                .class(receiver.class)
-                .expect("member receiver must reference a class");
+                .class(owner)
+                .expect("member owner must reference a class");
             if class.direct_base.is_some() && !self.base_initialized {
                 self.diagnostics.push(
                     Diagnostic::error(
@@ -216,6 +226,8 @@ impl<'program, 'diagnostics> CallableChecker<'program, 'diagnostics> {
         }
         HirMemberDefinition {
             callable: self.callable,
+            class_owner: owner,
+            receiver_class: self.receiver.map(|receiver| receiver.class),
             locals,
             body,
             span: self.definition_span,

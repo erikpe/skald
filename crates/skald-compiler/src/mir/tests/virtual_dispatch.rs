@@ -83,7 +83,7 @@ fn direct_method_forwarding_retains_dynamic_origin() {
     assert!(matches!(
         method_receiver(call).origin.as_ref(),
         MirObjectOrigin::Forwarded { carrier, .. }
-            if *carrier == relay.receiver
+            if Some(*carrier) == relay.receiver
     ));
 }
 

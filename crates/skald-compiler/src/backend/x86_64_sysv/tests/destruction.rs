@@ -170,7 +170,7 @@ fn projected_receiver_cleanup_reuses_indirect_place_addressing() {
     definition.body.blocks[0]
         .instructions
         .push(MirInstruction::Cleanup(MirCleanup {
-            destination: MirPlace::base(definition.receiver).project_field(leaf_field),
+            destination: MirPlace::base(definition.receiver.unwrap()).project_field(leaf_field),
             target: leaf,
             span: definition.span,
         }));

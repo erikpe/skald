@@ -15,8 +15,8 @@ use crate::{
 };
 
 use super::{
-    is_call_through_groups, lower_type, require_type, CallableChecker, INVALID_CALL_STATEMENT,
-    INVALID_INITIALIZER_BODY, INVALID_RETURN, READ_ONLY_RECEIVER,
+    is_call_through_groups, lower_type, require_type, CallableChecker, MemberBodyKind,
+    INVALID_CALL_STATEMENT, INVALID_INITIALIZER_BODY, INVALID_RETURN, READ_ONLY_RECEIVER,
 };
 
 impl CallableChecker<'_, '_> {
@@ -40,8 +40,8 @@ impl CallableChecker<'_, '_> {
 
     fn check_statement(&mut self, statement: &ResolvedStatement) -> CheckedStatement {
         if self
-            .receiver
-            .is_some_and(|receiver| receiver.body_kind.initializes_receiver())
+            .member_body_kind
+            .is_some_and(MemberBodyKind::initializes_receiver)
             && !matches!(
                 statement,
                 ResolvedStatement::BaseInitialization(_) | ResolvedStatement::FieldAssignment(_)
@@ -180,10 +180,8 @@ impl CallableChecker<'_, '_> {
         &mut self,
         statement: &crate::resolve::ResolvedBaseInitialization,
     ) -> CheckedStatement {
-        let receiver = self
-            .receiver
-            .expect("resolved base initialization must occur in a member");
-        if receiver.body_kind != crate::typeck::function::MemberBodyKind::OrdinaryInitializer
+        if self.member_body_kind
+            != Some(crate::typeck::function::MemberBodyKind::OrdinaryInitializer)
             || self.base_initialized
         {
             self.diagnostics.push(

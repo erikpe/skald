@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     id_table::SparseFunctionTable,
-    identity::{BindingId, CallableId, FunctionId},
+    identity::{BindingId, CallableId, ClassId, FunctionId},
     source::Span,
 };
 
@@ -132,8 +132,9 @@ impl MirMemberDefinitionTable {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirMemberDefinition {
     pub callable: CallableId,
+    pub class_owner: ClassId,
     pub return_storage: Option<StorageId>,
-    pub receiver: StorageId,
+    pub receiver: Option<StorageId>,
     pub parameters: Vec<StorageId>,
     pub storage: Vec<MirStorage>,
     pub values: Vec<MirValue>,
@@ -181,7 +182,14 @@ impl<'mir> MirDefinitionRef<'mir> {
     pub const fn receiver(self) -> Option<StorageId> {
         match self {
             Self::Function(_) => None,
-            Self::Member(definition) => Some(definition.receiver),
+            Self::Member(definition) => definition.receiver,
+        }
+    }
+
+    pub const fn class_owner(self) -> Option<ClassId> {
+        match self {
+            Self::Function(_) => None,
+            Self::Member(definition) => Some(definition.class_owner),
         }
     }
 

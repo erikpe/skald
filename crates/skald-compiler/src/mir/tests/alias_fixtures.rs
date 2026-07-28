@@ -426,8 +426,11 @@ fn empty_member_definition(
     }
     MirMemberDefinition {
         callable,
+        class_owner: callable
+            .class()
+            .expect("member fixture needs a class owner"),
         return_storage: None,
-        receiver,
+        receiver: Some(receiver),
         parameters: storage.iter().skip(1).map(|storage| storage.id).collect(),
         storage,
         values: vec![],
