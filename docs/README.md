@@ -15,7 +15,8 @@ Use the authority closest to the behavior:
   [language status matrix](language/STATUS.md);
 - exact accepted syntax belongs in the
   [implemented grammar](language/GRAMMAR.md);
-- type, value, literal, and expression semantics belong in
+- type, value, literal, and expression semantics, including the frozen
+  primitive integer comparison and cast contract, belong in
   [types and values](language/TYPES_AND_VALUES.md);
 - the frozen raw-byte `std::str::Str` value and literal design belongs in
   [strings](language/STRINGS.md);

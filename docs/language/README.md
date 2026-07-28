@@ -120,7 +120,9 @@ makes a result source-observable.
   current compiler support.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
-  type model, literals, exact-type rules, and operator availability.
+  type model, literals, exact-type rules, and operator availability, plus the
+  frozen but not yet implemented primitive integer comparison and cast
+  contract.
 - [Strings](STRINGS.md) freezes the partially implemented raw-byte
   `std::str::Str` descriptor, literal syntax, logical immutability, and
   compiler/standard-library boundary.

@@ -124,6 +124,46 @@ container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxed, nested, and optional-reference shapes remain diagnosed before
 HIR.
 
+## Frozen primitive integer operation boundary
+
+Primitive integer comparisons and casts have a
+[frozen source contract](../language/TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts)
+but are not current compiler phase products. Their implementation uses the
+existing pipeline with these fixed responsibilities:
+
+- Lexing recognizes comparison punctuation by longest match and otherwise
+  preserves source spellings. Syntax retains each predicate, both operand
+  shapes and spans, or one primitive cast target and operand. It assigns no
+  numeric meaning or target behavior.
+- Resolution preserves comparison and primitive-cast shape without performing
+  declaration lookup for primitive keywords. Nominal and shared object-cast
+  targets continue through their existing identity lookup; lower phases never
+  disambiguate cast kinds from source text.
+- Type checking is the sole owner of operation selection. It requires matching
+  `i64`, `u64`, or `u8` comparison operands and records a `bool` result, or
+  selects one of the nine valid integer source/target cast pairs. Unsupported
+  and implicit conversions are rejected before HIR.
+- Typed HIR records the selected comparison predicate and integer operand type,
+  or both the integer cast source and target types. It does not retain a
+  backend condition code, register width, or spelling-based signedness choice.
+- MIR lowering evaluates comparison operands left to right and every operand
+  exactly once. Comparisons become typed boolean-producing rvalues; integer
+  casts become ordinary pure rvalues with no trap, call, allocation, cleanup,
+  or exceptional control-flow edge.
+- MIR verification proves matching comparison operand definitions and types,
+  a `bool` result, and the closed integer cast matrix with exact source and
+  result types. Both operation families retain the existing block-local value,
+  definition-before-use, and deterministic-error invariants.
+- Each backend first receives the already selected signedness and width through
+  verified MIR. It realizes signed `i64` ordering, unsigned `u64`/`u8`
+  ordering, canonical boolean results, bit preservation, truncation, identity,
+  or zero extension without inferring semantics from source spelling or target
+  register accidents.
+
+These operations add no ownership or lifetime rule and no public runtime ABI.
+Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and
+user-defined conversion remain outside this boundary.
+
 ## Sources and diagnostics
 
 `SourceDatabase` owns source text and assigns `SourceId` values. `Span` and

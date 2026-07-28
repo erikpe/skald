@@ -466,6 +466,46 @@ stored/result types. `new` is contextual only when followed by an identifier
 and allocation argument list; `new()` remains an ordinary call to a binding
 named `new`.
 
+### Frozen integer expression extension
+
+Integer comparisons and primitive integer casts have frozen syntax but are not
+accepted by the current compiler. When implemented, the expression grammar
+above gains exactly these replacements and additions:
+
+```text
+expression       = comparison-expression
+                   ["is" (view-target | "some" | "none")]
+
+comparison-expression
+                 = additive-expression
+                   [comparison-operator additive-expression]
+comparison-operator
+                 = "==" | "!=" | "<" | "<=" | ">" | ">="
+
+unary-expression = "-" unary-expression
+                 | "*" unary-expression
+                 | cast-expression
+                 | postfix-expression
+
+cast-expression  = "(" cast-target ")" unary-expression
+cast-target      = primitive-integer-type | object-cast-target
+primitive-integer-type
+                 = "i64" | "u64" | "u8"
+```
+
+The comparison level follows arithmetic and is non-associative: one
+`comparison-expression` contains at most one comparison operator. Contextual
+`is` remains weaker. Primitive and object casts retain the existing unary
+precedence and right-associative operand shape; a primitive keyword
+unambiguously selects a primitive cast target, while a declaration path or
+`shared` declaration path selects the existing object-cast syntax. Postfix use
+of either cast still requires grouping.
+
+The six comparison spellings will be added to the punctuation set only when
+their complete compiler path is implemented. Their exact-type semantics and
+the closed primitive cast matrix are defined by
+[Types, Values, and Expressions](TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts).
+
 ## Syntax errors and nesting
 
 Unrecognized characters and malformed numeric-looking spellings produce

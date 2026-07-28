@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: planned; INT0 is next.
+Status: in progress; INT0 is complete and INT1 is next.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -85,7 +85,7 @@ public ABI remains unchanged.
 
 ## Progress
 
-- [ ] INT0 — Freeze the integer operation contract
+- [x] INT0 — Freeze the integer operation contract
 - [ ] INT1 — Establish verified target-independent integer comparisons
 - [ ] INT2 — Execute integer comparisons on x86-64
 - [ ] INT3 — Establish verified target-independent integer casts
@@ -100,17 +100,17 @@ public ABI remains unchanged.
 their authoritative living documents before implementation representations
 depend on them.
 
-- [ ] Update the primitive language contract and status matrix with the exact
+- [x] Update the primitive language contract and status matrix with the exact
       comparison surface, explicit cast matrix, two's-complement/modulo rule,
       totality, evaluation order, and exclusions without claiming compiler
       availability.
-- [ ] Record the intended precedence: primitive casts retain unary precedence,
+- [x] Record the intended precedence: primitive casts retain unary precedence,
       one non-associative comparison level follows arithmetic, and contextual
       `is` remains weaker.
-- [ ] Record phase ownership: syntax preserves source shape, type checking
+- [x] Record phase ownership: syntax preserves source shape, type checking
       selects exact integer operations, MIR verifies operand and result types,
       and backends realize already selected signedness and width.
-- [ ] Keep checked, saturating, floating, boolean/numeric, mixed-type, and
+- [x] Keep checked, saturating, floating, boolean/numeric, mixed-type, and
       user-defined conversions explicitly deferred rather than leaving their
       behavior inferable from integer casts.
 

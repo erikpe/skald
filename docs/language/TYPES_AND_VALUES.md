@@ -1,8 +1,9 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics. The [status matrix](STATUS.md) is authoritative for feature maturity,
-and the [implemented grammar](GRAMMAR.md) defines accepted source syntax.
+semantics and for the frozen primitive integer comparison and cast design. The
+[status matrix](STATUS.md) is authoritative for feature maturity, and the
+[implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
 ## Type model
 
@@ -156,24 +157,108 @@ unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
 No equality, ordering, logical, division, remainder, bitwise, shift, or
-exponentiation operator is implemented. In particular, even primitive equality
-is currently unavailable in source. Built-in array indexing and slicing are
-intrinsic operations rather than general operators; non-shared inline element
-access currently executes for primitives, optionals, exact classes, and nested
-arrays on x86-64. The same element categories execute in shared outer arrays,
-and copied slices plus checked equal-length slice assignment execute for
-inline, shared, and optional-shared receivers. Call-scoped whole-array and
-exact class or nested-array element aliases execute with their declared
-read-only or mutable access.
+exponentiation operator is implemented. Integer equality and ordering have the
+frozen but not yet implemented contract below; floating equality and ordering
+remain deferred. Built-in array indexing and slicing are intrinsic operations
+rather than general operators; non-shared inline element access currently
+executes for primitives, optionals, exact classes, and nested arrays on
+x86-64. The same element categories execute in shared outer arrays, and copied
+slices plus checked equal-length slice assignment execute for inline, shared,
+and optional-shared receivers. Call-scoped whole-array and exact class or
+nested-array element aliases execute with their declared read-only or mutable
+access.
 
-## Conversions and future value families
+## Frozen primitive integer comparisons and casts
 
-The language performs no primitive casts or user-defined conversions. Numeric
-conversion behavior, including integer width changes and numeric/boolean
-conversion, is not frozen. Object casts are defined separately in
-[Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
-places, while shared casts preserve existing allocations. Neither form
-reinterprets bytes.
+This section freezes a source-visible integer-only extension. The current
+compiler does not yet accept comparison operators or primitive-keyword cast
+targets; the [status matrix](STATUS.md#not-implemented) records that
+availability separately from this contract.
+
+### Integer comparisons
+
+The comparison operators `==`, `!=`, `<`, `<=`, `>`, and `>=` accept exactly
+two operands of the same type among `i64`, `u64`, and `u8`. Every comparison
+produces `bool`.
+
+Equality and inequality compare complete values. Ordering is signed for `i64`
+and unsigned for `u64` and `u8`. Operand spelling does not affect the selected
+operation after type checking.
+
+Comparisons never promote, narrow, or reinterpret an operand. Mixed integer
+types are errors, including otherwise representable literal values:
+`1 == 1u` is invalid because its operands are `i64` and `u64`. A programmer
+must cast one operand explicitly before comparing different integer types.
+
+The two operands evaluate exactly once from left to right. All six operators
+share one non-associative precedence level below arithmetic and above
+contextual `is`; consequently an ungrouped chain such as `a < b < c` is a
+syntax error. The [grammar](GRAMMAR.md#frozen-integer-expression-extension)
+records the exact planned source shape.
+
+### Explicit integer casts
+
+An integer cast has unary syntax `(T) source`, where `T` is exactly `i64`,
+`u64`, or `u8` and `source` has one of those same three types. All nine
+source/target pairs are valid, including same-type identity casts. Casts do not
+appear implicitly at initialization, assignment, argument, return, arithmetic,
+or comparison boundaries.
+
+Skald defines integer casts using fixed-width two's-complement bits. Casting to
+an `N`-bit integer retains the source value modulo `2^N`, then interprets the
+retained bits using the target signedness:
+
+- an unsigned target denotes the retained value directly;
+- an `i64` target denotes a retained value below `2^63` directly and otherwise
+  denotes that value minus `2^64`.
+
+This gives the complete conversion matrix:
+
+| Source | `i64` target | `u64` target | `u8` target |
+|---|---|---|---|
+| `i64` | identity | preserve all 64 bits | retain the low 8 bits |
+| `u64` | preserve all 64 bits and interpret the sign bit | identity | retain the low 8 bits |
+| `u8` | zero-extend | zero-extend | identity |
+
+For example:
+
+```ska
+(i64) 18446744073709551615u // -1
+(u64) -1                   // 18446744073709551615u
+(u8) 258u                  // 2u8
+(u8) -1                    // 255u8
+```
+
+Every integer cast is total and evaluates its operand exactly once before
+conversion. It cannot diagnose a target-range error, terminate, allocate,
+invoke runtime support, or introduce exceptional control flow. A literal must
+first be valid for the type selected by its spelling; applying an explicit
+cast adds no further range check. The conversion rule is portable language
+meaning, not a promise about memory layout, endianness, registers, or the
+external ABI. It does not settle signed `i64` arithmetic overflow.
+
+### Deferred conversion and comparison work
+
+This contract does not define:
+
+- floating-point comparisons or casts between floating and integer types;
+- conversions between `bool` and numeric types;
+- implicit numeric conversions or mixed-type comparisons;
+- checked, saturating, or user-defined conversions;
+- object, optional, array, `Obj`, or `unit` conversion through primitive casts;
+- logical operators or equality for objects, owners, optionals, or arrays.
+
+Those areas require separate design. In particular, no checked variant is
+implied by the total integer cast syntax.
+
+## Other conversions and future value families
+
+The current compiler performs no primitive casts or user-defined conversions.
+The integer-only behavior above is frozen for implementation; all other
+numeric conversion behavior remains deferred. Object casts are defined
+separately in [Object Casts](OBJECT_CASTS.md): implemented plain casts select
+checked object places, while shared casts preserve existing allocations.
+Neither form reinterprets bytes.
 
 Optional values have an [implemented contract](OPTIONAL_VALUES.md) for
 representing absence without making every value nullable. Primitive and
