@@ -173,6 +173,36 @@ malformed-MIR rejection. Golden cases own exact diagnostics, extrema and
 modulo observations, and range-check-before-cast composition with array
 positions.
 
+## String coverage
+
+String coverage follows the
+[language](../language/STRINGS.md) and
+[compiler](../compiler/STRINGS.md#diagnostics-and-test-obligations) contracts:
+
+- lexer and syntax tests own decoded bytes, every escape and malformed-literal
+  category, spans, recovery, and nesting limits;
+- module/provider tests own synthetic `std::str` reachability, explicit-edge
+  coalescing, missing/ambiguous/exact-case lookup, malformed and non-UTF-8
+  providers, cycles, replacement roots, and disabled standard-library lookup;
+- resolver and type-check tests own exact language-item identity, the complete
+  descriptor/privacy/lifecycle rejection matrix, produced-value contexts, and
+  the rule that ordinary method names have no compiler meaning;
+- MIR tests mutate each string declaration, literal-data, static-owner,
+  descriptor-publication, and ownership invariant independently;
+- backend tests own immutable bytes, pooling, alignment, relocations,
+  sentinel-aware retain/release, dynamic reclamation, malformed-input
+  rejection, and the unchanged runtime ABI;
+- native goldens own copying, assignment, arguments, results, temporaries,
+  checked failures, slicing, factory isolation, conversion, concatenation,
+  embedded zero/high bytes, and repeated execution; and
+- `pipeline_determinism` compares canonical graph, diagnostics, resolved HIR,
+  verified MIR, and assembly across independent processes and provider/source
+  permutations.
+
+The canonical standard-library source is included directly by focused
+resolver/backend tests so its public surface and lifecycle behavior cannot
+drift independently of compiler coverage.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.

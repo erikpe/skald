@@ -38,7 +38,10 @@ const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINI
 const INTEGER_OPERATION_TEST_NAME: &str =
     "integer_operation_phase_products_are_deterministic_across_processes";
 const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
-const STRING_TEST_NAME: &str = "string_typed_phase_products_are_deterministic_across_processes";
+const STRING_TEST_NAME: &str = "string_phase_products_are_deterministic_across_processes";
+const STRING_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_STRING_DIAGNOSTIC_DETERMINISM_OUTPUT";
+const STRING_DIAGNOSTIC_TEST_NAME: &str =
+    "string_language_item_diagnostics_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
 const MODULE_HELPER_VARIANT: &str = "SKALD_MODULE_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
@@ -106,12 +109,28 @@ fn integer_operation_phase_products_are_deterministic_across_processes() {
 }
 
 #[test]
-fn string_typed_phase_products_are_deterministic_across_processes() {
+fn string_phase_products_are_deterministic_across_processes() {
     assert_cross_process_determinism(
         "strings",
         STRING_HELPER_OUTPUT,
         STRING_TEST_NAME,
-        string_typed_phase_dump,
+        string_phase_dump,
+    );
+}
+
+#[test]
+fn string_language_item_diagnostics_are_deterministic_across_processes() {
+    if let Some(output) = env::var_os(STRING_DIAGNOSTIC_HELPER_OUTPUT) {
+        let variant = env::var(MODULE_HELPER_VARIANT).unwrap().parse().unwrap();
+        fs::write(output, string_diagnostic_dump(variant)).unwrap();
+        return;
+    }
+
+    assert_cross_process_variants(
+        "string-diagnostics",
+        STRING_DIAGNOSTIC_HELPER_OUTPUT,
+        STRING_DIAGNOSTIC_TEST_NAME,
+        MODULE_HELPER_VARIANT,
     );
 }
 
@@ -456,27 +475,16 @@ fn integer_operation_phase_dump() -> String {
     ))
 }
 
-fn string_typed_phase_dump() -> String {
+fn string_phase_dump() -> String {
     let fixture = ModuleFixture::new("string-products", 0);
     let root = fixture.path.join("modules");
     write_source(
         &root.join("app.ska"),
-        concat!(
-            "from std::str import Str;\n",
-            "fn produce() -> Str { return \"first\\0\"; }\n",
-            "fn main() -> i64 { var value: Str = \"\\x73econd\"; return 0; }\n",
-        ),
+        include_str!("../../../tests/golden/run/strings.ska"),
     );
     write_source(
         &root.join("std/str.ska"),
-        concat!(
-            "public class Str {\n",
-            "  private storage: shared u8[];\n",
-            "  private start: u64;\n",
-            "  private length: u64;\n",
-            "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
-            "}\n",
-        ),
+        include_str!("../../../std/std/str.ska"),
     );
     let providers = normalize_provider_roots(
         &fixture.path,
@@ -494,14 +502,85 @@ fn string_typed_phase_dump() -> String {
     let checked = type_check(&resolved.program);
     assert!(checked.diagnostics.is_empty());
     let hir = checked.hir.unwrap();
+    let mir = run_mir_pipeline(lower_hir(&hir)).unwrap();
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
 
     normalize_fixture_paths(
         &fixture.path,
         format!(
-            "GRAPH\n{}RESOLVED\n{}HIR\n{}",
+            "GRAPH\n{}DIAGNOSTICS\n{}RESOLVED\n{}HIR\n{}MIR\n{}ASSEMBLY\n{}",
             dump_module_graph(&graph),
+            render_diagnostics(graph.sources(), &resolved.diagnostics),
             dump_resolved(&resolved.program),
             dump_hir(&hir),
+            dump_mir(&mir),
+            assembly,
+        ),
+    )
+}
+
+fn string_diagnostic_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("string-diagnostics", variant);
+    let application = fixture.path.join("application");
+    let standard_library = fixture.path.join("standard-library");
+    let sources = [
+        (
+            application.join("app.ska"),
+            "import feature;\nfn main() -> i64 { \"app\"; return 0; }\n",
+        ),
+        (
+            application.join("feature.ska"),
+            "public fn value() -> unit { \"feature\"; }\n",
+        ),
+        (
+            standard_library.join("std/str.ska"),
+            concat!(
+                "public class Str {\n",
+                "  private storage: shared u64[];\n",
+                "  private start: u8;\n",
+                "  private length: i64;\n",
+                "  private extra: u64;\n",
+                "  init() {\n",
+                "    self.storage = new u64[]();\n",
+                "    self.start = 0u8;\n",
+                "    self.length = 0;\n",
+                "    self.extra = 0u;\n",
+                "  }\n",
+                "}\n",
+            ),
+        ),
+    ];
+    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::standard_library(standard_library),
+            ProviderRootConfiguration::module_root(application),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(application),
+            ProviderRootConfiguration::standard_library(standard_library),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module("app".parse().unwrap()),
+        &fixture.path,
+        &providers,
+    )
+    .unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(resolved.diagnostics.has_errors());
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}DIAGNOSTICS\n{}",
+            dump_module_graph(&graph),
+            render_diagnostics(graph.sources(), &resolved.diagnostics),
         ),
     )
 }

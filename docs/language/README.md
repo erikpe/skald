@@ -46,6 +46,7 @@ arguments have deterministic source order.
 | **optional value** | An explicit `T?` or `shared? T` wrapper containing either no payload or one complete valid payload. Primitive, exact-class, and shared-owner optionals execute across internal owning boundaries; class unwrap supplies a bounded checked payload view and shared unwrap secures an ordinary non-null owner. |
 | **shared dereference** | The bounded non-owning pointee place selected by `*owner`; `owner->member` selects one member through exactly one shared edge. |
 | **array** | A built-in invariant fixed-size sequence. Inline `T[]` values deep-copy named sources and adopt produced backing; `shared T[]` owners share one allocation. Arrays support nested owning element categories, immutable length, checked indexing, copied slices, explicit shared projection, deterministic lifecycle, and call-scoped aliases on x86-64. |
+| **string** | An exact `std::str::Str` class value describing an immutable finite sequence of `u8` bytes. Literals use immortal backing; ordinary standard-library construction and concatenation use dynamically reclaimed shared backing. |
 | **alias** | A call-scoped, non-owning view of an existing class place. Read-only and mutable access are explicit; the static target may be a class, an ancestor, an interface, or `Obj`. |
 | **exact class** | One nominal class identity as an owning value. Derived-to-base owning conversion slices into a new exact base value. |
 | **lifecycle member** | A contextual `init`, `copy`, `assign`, or `destroy` class member occupying a dedicated semantic slot or overload set rather than the ordinary method namespace. Ordinary `init` declarations form an overload set; `copy`, `assign`, and `destroy` retain their distinct slots. |
@@ -123,9 +124,9 @@ makes a result source-observable.
   type model, literals, exact-type rules, and operator availability.
   Primitive integer comparisons and explicit total integer casts execute
   through verified MIR and the x86-64 backend.
-- [Strings](STRINGS.md) freezes the partially implemented raw-byte
-  `std::str::Str` descriptor, literal syntax, logical immutability, and
-  compiler/standard-library boundary.
+- [Strings](STRINGS.md) defines the implemented raw-byte `std::str::Str`
+  descriptor, literal syntax, logical immutability, ordinary standard-library
+  operations, and compiler/library boundary.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

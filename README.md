@@ -19,10 +19,14 @@ virtual/interface dispatch, type tests, and checked object casts. The
 compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and
 whole-object assignment contexts, plus allocation-free owner-preserving shared
-casts and explicit exact-class shared copy allocation. A `shared T` expression
-is an owner handle: `*owner` selects its bounded non-owning pointee place and
-`owner->member` crosses exactly one shared edge. Raw shared handles are not
-implicitly treated as inline objects. The
+casts and explicit exact-class shared copy allocation. Primitive and owning
+arrays, explicit optional values, same-type integer comparisons, total integer
+casts, and raw-byte strings execute through verified MIR on x86-64. Strings
+use the canonical `std::str::Str` class and Skald-written standard-library
+operations rather than compiler-selected method names. A `shared T`
+expression is an owner handle: `*owner` selects its bounded non-owning pointee
+place and `owner->member` crosses exactly one shared edge. Raw shared handles
+are not implicitly treated as inline objects. The
 [language status matrix](docs/language/STATUS.md) is the authoritative support
 summary; the [implemented grammar](docs/language/GRAMMAR.md) defines the exact
 accepted syntax.
@@ -40,13 +44,13 @@ then from the repository root run:
 
 ```text
 make runtime
-cargo run --locked -p skac -- samples/inline_counter.ska -o build/inline_counter
+cargo run --locked -p skac -- samples/strings.ska -o build/strings
 ```
 
 Emit assembly without linking:
 
 ```text
-cargo run --locked -p skac -- samples/inline_counter.ska --emit asm -o build/inline_counter.s
+cargo run --locked -p skac -- samples/strings.ska --emit asm -o build/strings.s
 ```
 
 `skac --help` is the exact command-line reference. Run `make help` for the
@@ -60,7 +64,7 @@ Start at the [documentation index](docs/README.md). Principal references are:
 
 - [language overview](docs/language/README.md),
   [status](docs/language/STATUS.md),
-  [implemented grammar](docs/language/GRAMMAR.md), and frozen
+  [implemented grammar](docs/language/GRAMMAR.md), and implemented
   [module-system](docs/language/MODULES_AND_INTEROP.md) and
   [string](docs/language/STRINGS.md) language contracts;
 - [compiler architecture](docs/compiler/README.md),

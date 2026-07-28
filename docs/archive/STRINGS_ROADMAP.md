@@ -1,7 +1,7 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR4 are implemented and STR5 is next. The
-[primitive integer operations prerequisite](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+Status: complete. The
+[primitive integer operations prerequisite](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
 is complete.
 
 This roadmap implements the frozen
@@ -44,7 +44,7 @@ emission, and ordinary standard-library behavior.
 - [x] STR2 — Verify literal descriptors and immortal shared backing
 - [x] STR3 — Emit deterministic immortal literal data on x86-64
 - [x] STR4 — Provide ordinary standard-library string behavior
-- [ ] STR5 — Harden, document, and promote strings as implemented
+- [x] STR5 — Harden, document, and promote strings as implemented
 
 ## PR-sized implementation sequence
 
@@ -217,19 +217,19 @@ outside intrinsic literal materialization.
 **Purpose:** Close the implementation with adversarial coverage, current
 documentation, and no rollout-only structure.
 
-- [ ] Complete every diagnostic and ownership matrix from the language and
+- [x] Complete every diagnostic and ownership matrix from the language and
       compiler contracts, including provider permutations and malformed MIR.
-- [ ] Add independent-process phase/assembly/diagnostic determinism coverage
+- [x] Add independent-process phase/assembly/diagnostic determinism coverage
       for literals and canonical language-item loading.
-- [ ] Audit touched lexer, syntax, module, resolution, HIR, MIR, verifier,
+- [x] Audit touched lexer, syntax, module, resolution, HIR, MIR, verifier,
       backend, and standard-library owners by responsibility; resolve
       high-priority hotspots and index any lower-priority discoveries.
-- [ ] Remove roadmap vocabulary and stale “not implemented” language from
+- [x] Remove roadmap vocabulary and stale “not implemented” language from
       living code and documentation.
-- [ ] Update grammar, language/compiler overviews, status, testing/debugging
+- [x] Update grammar, language/compiler overviews, status, testing/debugging
       guidance, examples, and cross-links to the exact implemented boundary.
-- [ ] Confirm runtime ABI/public header stability and artifact cleanliness.
-- [ ] Complete and archive this roadmap after all focused and repository gates
+- [x] Confirm runtime ABI/public header stability and artifact cleanliness.
+- [x] Complete and archive this roadmap after all focused and repository gates
       pass.
 
 **Tests:** Focused documentation checker tests and link inspection; full
@@ -241,6 +241,17 @@ suites; artifact-free `make check`, `make msrv-check`,
 contract with frozen representation and literal semantics, all living
 documentation is current, and the roadmap is ready to archive.
 
+**Completion summary:** Raw-byte literals and the canonical `std::str::Str`
+library now execute as one deterministic source-to-native contract. The
+compiler validates exact language-item identity, emits verified immortal
+literal backing without a string runtime ABI, and leaves copying construction,
+observation, slicing, conversion, and concatenation to ordinary Skald source.
+Diagnostic, malformed-MIR, ownership, native, and independent-process
+determinism matrices cover the implemented boundary. The phase-owner audit
+found no remaining actionable string implementation discovery. Focused tests,
+an artifact-free `make check`, `make msrv-check`, `make robustness-long`,
+documentation validation, sample compilation, and diff hygiene all passed.
+
 ## Ordering and dependencies
 
 STR0 combines literal parsing with language-item discovery because module
@@ -249,7 +260,7 @@ STR1 then freezes that identity into typed products before executable
 representations exist. STR2 establishes explicit verified static ownership
 before STR3 changes generated count behavior or emits immortal data. The
 completed
-[primitive integer operations roadmap](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+[primitive integer operations roadmap](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
 supplies general comparisons and casts before STR4 builds on complete literal
 execution and demonstrates the intended standard-library boundary.
 STR5 closes broad matrices and documentation after all behavior is observable.

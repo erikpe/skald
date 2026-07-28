@@ -576,4 +576,4 @@ required to freeze or implement this proposal.
 
 The design is promoted to [Strings](../language/STRINGS.md) and the
 [Strings Compiler Contract](../compiler/STRINGS.md), with implementation
-ordered by the active [string implementation roadmap](../roadmaps/STRINGS_ROADMAP.md).
+ordered by the completed [string implementation roadmap](STRINGS_ROADMAP.md).

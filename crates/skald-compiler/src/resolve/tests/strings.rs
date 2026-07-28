@@ -163,16 +163,36 @@ fn rejects_every_structural_language_item_mismatch_before_hir() {
             "public class Str { private storage: shared u8[]; private start: u64; init() { self.storage = new u8[](); self.start = 0u; } }\n",
         ),
         (
+            "extra field",
+            "public class Str { private storage: shared u8[]; private start: u64; private length: u64; private extra: u64; init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; self.extra = 0u; } }\n",
+        ),
+        (
             "reordered field",
             "public class Str { private start: u64; private storage: shared u8[]; private length: u64; init() { self.start = 0u; self.storage = new u8[](); self.length = 0u; } }\n",
         ),
         (
-            "public field",
+            "public storage field",
             "public class Str { storage: shared u8[]; private start: u64; private length: u64; init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; } }\n",
         ),
         (
-            "wrong type",
+            "public start field",
+            "public class Str { private storage: shared u8[]; start: u64; private length: u64; init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; } }\n",
+        ),
+        (
+            "public length field",
+            "public class Str { private storage: shared u8[]; private start: u64; length: u64; init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; } }\n",
+        ),
+        (
+            "wrong storage type",
             "public class Str { private storage: shared u64[]; private start: u64; private length: u64; init() { self.storage = new u64[](); self.start = 0u; self.length = 0u; } }\n",
+        ),
+        (
+            "wrong start type",
+            "public class Str { private storage: shared u8[]; private start: i64; private length: u64; init() { self.storage = new u8[](); self.start = 0; self.length = 0u; } }\n",
+        ),
+        (
+            "wrong length type",
+            "public class Str { private storage: shared u8[]; private start: u64; private length: u8; init() { self.storage = new u8[](); self.start = 0u; self.length = 0u8; } }\n",
         ),
         (
             "copy constructor",

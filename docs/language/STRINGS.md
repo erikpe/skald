@@ -1,11 +1,11 @@
 # Skald Strings
 
-Status: **frozen design, partially implemented through STR4**. The compiler
-accepts and decodes string-literal syntax, conditionally discovers and
-validates `std::str::Str`, and represents literals as exact typed produced
-values through verified MIR descriptor materialization and deterministic
-x86-64 execution. The installed standard library provides representative
-construction, observation, slicing, conversion, and concatenation behavior.
+Status: **implemented contract**. The compiler accepts and decodes
+string-literal syntax, conditionally discovers and validates
+`std::str::Str`, and represents literals as exact typed produced values
+through verified MIR descriptor materialization and deterministic x86-64
+execution. The installed standard library provides copying construction,
+observation, slicing, conversion, and concatenation behavior.
 This document is authoritative for the source-visible string contract, while
 the [status matrix](STATUS.md) remains authoritative for compiler availability.
 
@@ -226,5 +226,6 @@ This frozen profile does not define:
 - external C ABI passage of `Str`; or
 - a string-specific C runtime service.
 
-Implementation ordering and acceptance coverage are tracked by the active
-[string implementation roadmap](../roadmaps/STRINGS_ROADMAP.md).
+Implementation coverage and inspection workflows are documented by
+[Testing](../development/TESTING.md#string-coverage) and
+[Debugging the Compiler](../development/DEBUGGING.md#string-pipeline-inspection).

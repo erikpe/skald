@@ -156,6 +156,38 @@ rendered text. For a native-only failure, reproduce at the narrowest available
 layer: backend native unit test, golden executable, or direct C runtime harness.
 The [testing guide](TESTING.md) explains where the resulting regression belongs.
 
+## String pipeline inspection
+
+For a string literal, start with the token and AST dumps to confirm decoded
+bytes and the complete literal span. In a provider-aware request, the module
+graph must contain one synthetic edge to `std::str` for each requiring module;
+an explicit import coalesces with that edge but remains distinguishable in the
+graph dump.
+
+The resolved dump names one exact `StringLanguageItem` class and its three
+field identities, followed by source-ordered literal-data identities. HIR
+retains those identities on produced exact-class values and contains no
+initializer, factory, or method-name lookup. MIR then shows immutable literal
+data, `shared-static`, and `string-initialize` before ordinary copy,
+assignment, argument/result, and cleanup operations.
+
+In assembly, literal backing appears in immutable or relocation-read-only data
+with the shared `u8[]` metadata relocation, `u64::MAX` strong-count sentinel,
+exact decoded length, and bytes. Literal materialization must not call the
+allocator or copy helper. Dynamic strings created by `std::str::Str` methods
+instead use ordinary shared-array allocation, retain/release, slicing, and
+last-owner reclamation. If a public byte/range operation fails only for very
+large `u64` input, inspect the unsigned comparison branch before the explicit
+total cast to the signed array-position type.
+
+Use the string-focused tests for the nearest reproduction:
+
+```text
+cargo test --locked -p skald-compiler strings
+cargo test --locked -p skald-compiler --test pipeline_determinism string
+cargo test --locked -p skac --test golden
+```
+
 ## Optional-value frontend inspection
 
 Inspect optional frontend behavior at the narrowest owner defined by the

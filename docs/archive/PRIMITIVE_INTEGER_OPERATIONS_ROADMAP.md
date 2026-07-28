@@ -300,7 +300,7 @@ model. It changes no ownership, cleanup, array, object-cast, external-signature,
 or public runtime contract.
 
 The roadmap is a prerequisite for
-[ordinary standard-library string behavior](../roadmaps/STRINGS_ROADMAP.md). That work
+[ordinary standard-library string behavior](STRINGS_ROADMAP.md). That work
 uses matching `u64` `<` and `<=` comparisons to validate public byte and slice
 bounds, then uses the total `u64`-to-`i64` cast only after existing string
 descriptor and array maximum-length invariants establish numeric

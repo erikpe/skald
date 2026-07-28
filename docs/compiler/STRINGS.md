@@ -1,6 +1,6 @@
 # Strings Compiler Contract
 
-Status: **frozen design, implemented through STR4**. The lexer, AST, and module
+Status: **implemented contract**. The lexer, AST, and module
 graph implement literal recognition, decoded bytes, and conditional
 `std::str` reachability. Resolution validates the exact language item, and HIR
 represents literals as intrinsic produced `Str` values with deterministic data
@@ -245,5 +245,7 @@ Implementation coverage belongs at the narrowest owner:
 - runtime-boundary tests confirming the public C surface and ABI version are
   unchanged.
 
-The active [string implementation roadmap](../roadmaps/STRINGS_ROADMAP.md)
-assigns these obligations to reviewable tasks.
+The [testing guide](../development/TESTING.md#string-coverage) maps these
+obligations to their current owners, and the
+[debugging guide](../development/DEBUGGING.md#string-pipeline-inspection)
+describes the corresponding phase products.

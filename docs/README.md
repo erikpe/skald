@@ -18,7 +18,8 @@ Use the authority closest to the behavior:
 - type, value, literal, and expression semantics, including the primitive
   integer comparison and cast contract, belong in
   [types and values](language/TYPES_AND_VALUES.md);
-- the frozen raw-byte `std::str::Str` value and literal design belongs in
+- the implemented raw-byte `std::str::Str` value, literals, and library
+  boundary belong in
   [strings](language/STRINGS.md);
 - the frozen source-visible contract for inline, shared, optional-shared,
   nested, indexed, and sliced arrays belongs in
@@ -62,7 +63,7 @@ Use the authority closest to the behavior:
 - the implemented optional HIR, checked views, verification, x86-64 layout,
   internal ABI, and explicit exclusions belong in
   [the optional-values compiler contract](compiler/OPTIONAL_VALUES.md);
-- frozen language-item, literal-data, immortal-backing, verification, and
+- implemented language-item, literal-data, immortal-backing, verification, and
   target responsibilities belong in
   [the strings compiler contract](compiler/STRINGS.md);
 - implemented shared-owner lowering, allocation layout, generated reference

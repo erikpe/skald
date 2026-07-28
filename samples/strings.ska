@@ -1,0 +1,23 @@
+from std::str import Str;
+
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+fn main() -> i64 {
+    var greeting: Str = "hello";
+    var tail: Str = greeting.slice(1u, 4u);
+
+    var punctuation: u8[] = u8[](1u);
+    punctuation[0] = 33u8;
+    var frozen_punctuation: Str = Str.from_bytes(punctuation);
+    var message: Str = greeting.concat(frozen_punctuation);
+
+    var independent: u8[] = tail.to_bytes();
+    independent[0] = 65u8;
+
+    ska_rt_println_u64(message.len());
+    ska_rt_println_u8(message.byte(5u));
+    ska_rt_println_u8(tail.byte(0u));
+    ska_rt_println_u8(independent[0]);
+    return 0;
+}

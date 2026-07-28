@@ -1,6 +1,8 @@
 use super::*;
 use crate::{
-    identity::LiteralDataId, resolve::resolve_module_graph, test_support::load_module_sources,
+    identity::{ArrayTypeId, ClassId, LiteralDataId},
+    resolve::resolve_module_graph,
+    test_support::load_module_sources,
     typeck::type_check,
 };
 
@@ -48,6 +50,40 @@ fn errors_after(mutator: impl FnOnce(&mut MirProgram)) -> String {
     verify_mir(&program).unwrap_err().to_string()
 }
 
+fn shared_static_mut(program: &mut MirProgram) -> &mut MirSharedStatic {
+    let entry = program.entry_function;
+    program
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::SharedStatic(static_owner) => Some(static_owner),
+            _ => None,
+        })
+        .unwrap()
+}
+
+fn string_initialize_mut(program: &mut MirProgram) -> &mut MirStringInitialize {
+    let entry = program.entry_function;
+    program
+        .definitions
+        .get_mut_for_test(entry)
+        .unwrap()
+        .body
+        .blocks
+        .iter_mut()
+        .flat_map(|block| &mut block.instructions)
+        .find_map(|instruction| match instruction {
+            MirInstruction::StringInitialize(initialize) => Some(initialize),
+            _ => None,
+        })
+        .unwrap()
+}
+
 #[test]
 fn lowers_exact_literal_data_static_backing_and_ordinary_string_lifecycle() {
     let program = string_mir(concat!(
@@ -85,10 +121,35 @@ fn lowers_exact_literal_data_static_backing_and_ordinary_string_lifecycle() {
 
 #[test]
 fn rejects_malformed_literal_declarations_one_invariant_at_a_time() {
+    let missing_metadata = errors_after(|program| {
+        program.string_language_item = None;
+    });
+    assert!(missing_metadata.contains("literal data requires string language-item metadata"));
+
+    let missing_class = errors_after(|program| {
+        program.string_language_item.as_mut().unwrap().class = ClassId::new(99);
+    });
+    assert!(missing_class.contains("string language-item class is not declared"));
+
+    let inherited_class = errors_after(|program| {
+        let item = program.string_language_item.unwrap();
+        let class = &mut program.classes.entries_mut_for_test()[item.class.index()];
+        class.direct_base = Some(MirDirectBase {
+            class: item.class,
+            span: class.span,
+        });
+    });
+    assert!(inherited_class.contains("string language-item class must be a root class"));
+
     let wrong_density = errors_after(|program| {
         program.literal_data.entries_mut_for_test()[0].id = LiteralDataId::new(1);
     });
     assert!(wrong_density.contains("literal-data table index 0 contains str1"));
+
+    let wrong_storage_array = errors_after(|program| {
+        program.literal_data.entries_mut_for_test()[0].array = ArrayTypeId::new(99);
+    });
+    assert!(wrong_storage_array.contains("does not use the string storage-array identity"));
 
     let wrong_length = errors_after(|program| {
         program.literal_data.entries_mut_for_test()[0].length += 1;
@@ -112,21 +173,97 @@ fn rejects_malformed_literal_declarations_one_invariant_at_a_time() {
         std::mem::swap(&mut item.start_field, &mut item.length_field);
     });
     assert!(wrong_fields.contains("fields must be the exact shared u8[]/u64/u64 descriptor"));
+
+    let wrong_element = errors_after(|program| {
+        let array = program.string_language_item.unwrap().storage_array;
+        program.array_types.entries_mut_for_test()[array.index()].element = MirType::U64;
+    });
+    assert!(wrong_element.contains("string language-item storage array must have u8 elements"));
+
+    let wrong_lifecycle = errors_after(|program| {
+        let class = program.string_language_item.unwrap().class;
+        program.classes.entries_mut_for_test()[class.index()].copy_constructor =
+            MirCopyCapability::Unavailable;
+    });
+    assert!(wrong_lifecycle.contains(
+        "string language-item class must retain its exact synthesized descriptor lifecycle"
+    ));
+}
+
+#[test]
+fn rejects_malformed_static_literal_owners_one_invariant_at_a_time() {
+    let undeclared_data = errors_after(|program| {
+        shared_static_mut(program).data = LiteralDataId::new(99);
+    });
+    assert!(
+        undeclared_data.contains("static shared owner references undeclared literal data str99")
+    );
+
+    let wrong_target = errors_after(|program| {
+        let class = program.string_language_item.unwrap().class;
+        shared_static_mut(program).target = MirSharedTarget::Class(class);
+    });
+    assert!(wrong_target.contains("static shared owner target does not match its literal data"));
+
+    let mortal = errors_after(|program| {
+        shared_static_mut(program).origin = MirStaticAllocationOrigin::Unspecified;
+    });
+    assert!(mortal.contains("static shared owner must have immortal provenance"));
+
+    let wrong_destination = errors_after(|program| {
+        let destination = shared_static_mut(program).destination;
+        let entry = program.entry_function;
+        program.definitions.get_mut_for_test(entry).unwrap().storage[destination.index()].kind =
+            MirStorageKind::Local;
+    });
+    assert!(wrong_destination
+        .contains("static shared owner destination must be a fresh exact shared temporary"));
+}
+
+#[test]
+fn rejects_malformed_string_publication_one_invariant_at_a_time() {
+    let missing_metadata = errors_after(|program| {
+        program.string_language_item = None;
+    });
+    assert!(missing_metadata.contains("string initialization requires language-item metadata"));
+
+    let undeclared_data = errors_after(|program| {
+        string_initialize_mut(program).data = LiteralDataId::new(99);
+    });
+    assert!(
+        undeclared_data.contains("string initialization references undeclared literal data str99")
+    );
+
+    let wrong_identity = errors_after(|program| {
+        string_initialize_mut(program).class = ClassId::new(99);
+    });
+    assert!(wrong_identity
+        .contains("string initialization does not use the exact language-item identities"));
+
+    let wrong_descriptor = errors_after(|program| {
+        string_initialize_mut(program).start = 1;
+    });
+    assert!(wrong_descriptor.contains("string initialization has invalid start or length metadata"));
+
+    let wrong_destination = errors_after(|program| {
+        let backing = string_initialize_mut(program).backing;
+        string_initialize_mut(program).destination = MirPlace::shared_pointee(backing);
+    });
+    assert!(wrong_destination
+        .contains("string initialization destination must be mutable owning string storage"));
+
+    let wrong_backing = errors_after(|program| {
+        let destination = string_initialize_mut(program).destination.base.storage();
+        string_initialize_mut(program).backing = destination;
+    });
+    assert!(wrong_backing
+        .contains("string initialization backing must be the exact shared u8[] temporary"));
 }
 
 #[test]
 fn rejects_mismatched_publication_and_static_owner_escape() {
     let wrong_descriptor = errors_after(|program| {
-        let function = program
-            .definitions
-            .get_mut_for_test(program.entry_function)
-            .unwrap();
-        for instruction in &mut function.body.blocks[0].instructions {
-            if let MirInstruction::StringInitialize(initialize) = instruction {
-                initialize.length += 1;
-                break;
-            }
-        }
+        string_initialize_mut(program).length += 1;
     });
     assert!(wrong_descriptor.contains("invalid start or length metadata"));
 

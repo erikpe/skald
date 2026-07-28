@@ -81,15 +81,16 @@ ownership and selection are defined by
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
-The frozen [strings compiler contract](STRINGS.md), implemented through STR3,
-defines
-canonical `std::str::Str` discovery and validation, intrinsic produced-value
-lowering, verified immortal shared-array backing, deterministic literal data,
-and the compiler/standard-library/runtime boundary. Literal syntax and
-conditional `std::str` reachability, exact validation, typed HIR production,
-verified target-independent literal materialization, deterministic x86-64
-backing emission, and ordinary literal lifecycle execution are current phase
-products; standard-library string behavior remains tracked by its roadmap.
+The implemented [strings compiler contract](STRINGS.md) defines canonical
+`std::str::Str` discovery and validation, intrinsic produced-value lowering,
+verified immortal shared-array backing, deterministic literal data, and the
+compiler/standard-library/runtime boundary. Literal syntax, conditional
+`std::str` reachability, exact validation, typed HIR production, verified
+target-independent descriptor materialization, deterministic x86-64 backing
+emission, and ordinary literal lifecycle are compiler phase products.
+Copying construction, observation, slicing, byte-array conversion, and
+concatenation remain ordinary source in the canonical standard-library
+module.
 
 Primitive integer comparisons and casts are complete source-to-native phase
 products. Type checking selects exact same-type comparison signedness or one

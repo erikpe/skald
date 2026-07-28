@@ -478,6 +478,35 @@ fn synthetic_std_str_dependency_uses_ordinary_missing_ambiguity_and_case_rules()
 }
 
 #[test]
+fn synthetic_std_str_dependency_reports_malformed_and_non_utf8_sources() {
+    let workspace = directory("graph-string-source-errors");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "fn main() -> i64 { \"requires Str\"; return 0; }\n",
+    );
+
+    source(&root, "std/str.ska", "public class Str {\n");
+    let malformed = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&root),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&malformed), ["PAR002"]);
+
+    fs::write(root.join("std/str.ska"), [0xff, 0xfe]).unwrap();
+    let non_utf8 = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&root),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&non_utf8), [MODULE_SOURCE_FAILURE]);
+}
+
+#[test]
 fn synthetic_dependencies_participate_in_cycle_detection() {
     let workspace = directory("graph-string-cycle");
     let root = workspace.join("modules");

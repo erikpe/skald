@@ -47,6 +47,7 @@ Archived plans:
 - [Initial whole-program module system](MODULE_SYSTEM_ROADMAP.md)
 - [Private members and static methods](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
 - [Primitive integer casts and comparisons](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+- [String types](STRINGS_ROADMAP.md)
 
 Resolved string-design inputs:
 
