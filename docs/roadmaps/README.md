@@ -7,14 +7,20 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR3
-  implemented; STR4 is next**. Literal syntax and conditional discovery feed
-  exact language-item validation, intrinsic typed `Str` production, and
-  verified target-independent descriptor materialization and deterministic
-  x86-64 immortal backing; ordinary standard-library behavior is next.
+  implemented; STR4 follows the primitive-integer prerequisite**. Literal
+  syntax and conditional discovery feed exact language-item validation,
+  intrinsic typed `Str` production, verified target-independent descriptor
+  materialization, and deterministic x86-64 immortal backing. Ordinary
+  standard-library behavior is paused until matching integer comparisons and
+  explicit total integer casts are implemented.
 
 ## Planned
 
-No implementation roadmaps are currently only planned.
+- [Primitive Integer Casts and Comparisons Roadmap](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+  — **planned; INT0 is next**. It freezes and implements exact-type `i64`,
+  `u64`, and `u8` comparisons plus explicit total two's-complement/modulo
+  casts, and is the only new prerequisite for ordinary standard-library string
+  behavior.
 
 ## Design proposals
 

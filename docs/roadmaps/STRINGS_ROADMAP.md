@@ -1,6 +1,8 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR3 are implemented and STR4 is next.
+Status: in progress; STR0–STR3 are implemented, the
+[primitive integer operations prerequisite](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+is next, and STR4 follows it.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -245,18 +247,23 @@ STR0 combines literal parsing with language-item discovery because module
 reachability must be known before resolution can assign the canonical class.
 STR1 then freezes that identity into typed products before executable
 representations exist. STR2 establishes explicit verified static ownership
-before STR3 changes generated count behavior or emits immortal data. STR4
-builds only on complete literal execution and demonstrates the intended
-standard-library boundary. STR5 closes broad matrices and documentation after
-all behavior is observable.
+before STR3 changes generated count behavior or emits immortal data. The
+separate
+[primitive integer operations roadmap](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+then supplies general comparisons and casts before STR4 builds on complete
+literal execution and demonstrates the intended standard-library boundary.
+STR5 closes broad matrices and documentation after all behavior is observable.
 
 The roadmap depends on implemented private fields, private methods, public and
 private static methods, exact-class lifecycle, shared primitive arrays, copied
 slices and slice assignment, deterministic module providers, and verified
-shared ownership. STR4 additionally needs ordinary checked `u64` range
-arithmetic and conversion to the `i64` array-position type for its public
-byte/range API. If those general operations are still absent after STR3, they
-must land as a separate primitive-language prerequisite before STR4 rather
-than as string-only intrinsics. They are not dependencies for STR0–STR3 or for
-freezing the string representation. Loops, static fields, string operators,
-Unicode, and a complete standard-library framework are not dependencies.
+shared ownership. STR4 additionally needs same-type `u64` `<` and `<=`
+comparisons plus an explicit total `u64`-to-`i64` cast for its public
+byte/range API. Its ordinary library code validates bounds before using a cast
+result as an array position; existing descriptor and array maximum-length
+invariants make every successful position numerically representable. Those
+general operations must complete in their separate primitive-language roadmap
+before STR4 rather than arriving as string-only intrinsics. Floating,
+checked, saturating, and implicit numeric conversions are not dependencies.
+Neither are loops, static fields, string operators, Unicode, or a complete
+standard-library framework.
