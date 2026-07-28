@@ -3,13 +3,13 @@
 use crate::{
     backend::BackendError,
     mir::{
-        MirAssignment, MirBinaryOperation, MirPlace, MirRvalueKind, MirType, MirUnaryOperation,
-        ValueId,
+        MirAssignment, MirBinaryOperation, MirComparisonPredicate, MirIntegerComparison,
+        MirIntegerType, MirPlace, MirRvalueKind, MirType, MirUnaryOperation, ValueId,
     },
 };
 
 use super::{
-    super::machine::{Instruction, Operand, Register, XmmRegister},
+    super::machine::{ByteRegister, ConditionCode, Instruction, Operand, Register, XmmRegister},
     value, InstructionSelector,
 };
 
@@ -77,9 +77,11 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
-            MirRvalueKind::IntegerComparison { .. } => {
-                unreachable!("integer comparisons are rejected by target legality")
-            }
+            MirRvalueKind::IntegerComparison {
+                operation,
+                left,
+                right,
+            } => self.select_integer_comparison(*operation, *left, *right, destination),
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
             }
@@ -267,6 +269,33 @@ impl InstructionSelector<'_, '_> {
         value::store_canonical_rax(ty, destination, self.output);
     }
 
+    fn select_integer_comparison(
+        &mut self,
+        operation: MirIntegerComparison,
+        left: ValueId,
+        right: ValueId,
+        destination: Operand,
+    ) {
+        value::load_rax(value::frame_value(self.frame, left), self.output);
+        self.output.push(Instruction::Move {
+            source: value::frame_value(self.frame, right),
+            destination: Register::Rcx.into(),
+        });
+        self.output.push(Instruction::Compare {
+            source: Register::Rcx,
+            destination: Register::Rax,
+        });
+        self.output.push(Instruction::SetCondition {
+            condition: comparison_condition(operation),
+            destination: ByteRegister::Al,
+        });
+        self.output.push(Instruction::ZeroExtendByte {
+            source: ByteRegister::Al,
+            destination: Register::Rax,
+        });
+        value::store_canonical_rax(MirType::Bool, destination, self.output);
+    }
+
     fn select_float_binary(
         &mut self,
         operation: FloatBinaryOperation,
@@ -303,5 +332,28 @@ impl InstructionSelector<'_, '_> {
             value::float_operand(destination),
             self.output,
         );
+    }
+}
+
+fn comparison_condition(operation: MirIntegerComparison) -> ConditionCode {
+    match operation.predicate {
+        MirComparisonPredicate::Equal => ConditionCode::Equal,
+        MirComparisonPredicate::NotEqual => ConditionCode::NotEqual,
+        MirComparisonPredicate::LessThan => match operation.operand {
+            MirIntegerType::I64 => ConditionCode::SignedLess,
+            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedBelow,
+        },
+        MirComparisonPredicate::LessEqual => match operation.operand {
+            MirIntegerType::I64 => ConditionCode::SignedLessEqual,
+            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedBelowEqual,
+        },
+        MirComparisonPredicate::GreaterThan => match operation.operand {
+            MirIntegerType::I64 => ConditionCode::SignedGreater,
+            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedAbove,
+        },
+        MirComparisonPredicate::GreaterEqual => match operation.operand {
+            MirIntegerType::I64 => ConditionCode::SignedGreaterEqual,
+            MirIntegerType::U64 | MirIntegerType::U8 => ConditionCode::UnsignedAboveEqual,
+        },
     }
 }

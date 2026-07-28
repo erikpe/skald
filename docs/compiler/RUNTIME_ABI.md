@@ -188,6 +188,11 @@ symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated
 compiler responsibilities; the runtime marker remains version 5.
 
+Primitive integer comparisons likewise add no public C symbol or ABI revision.
+The x86-64 backend selects signed or unsigned target conditions and
+materializes canonical boolean results entirely in generated code; the runtime
+marker remains version 5.
+
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
 transition, and focused tests.

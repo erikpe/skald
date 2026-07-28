@@ -79,6 +79,37 @@ impl Register {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ConditionCode {
+    Equal,
+    NotEqual,
+    SignedLess,
+    SignedLessEqual,
+    SignedGreater,
+    SignedGreaterEqual,
+    UnsignedBelow,
+    UnsignedBelowEqual,
+    UnsignedAbove,
+    UnsignedAboveEqual,
+}
+
+impl ConditionCode {
+    pub(super) const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::Equal => "e",
+            Self::NotEqual => "ne",
+            Self::SignedLess => "l",
+            Self::SignedLessEqual => "le",
+            Self::SignedGreater => "g",
+            Self::SignedGreaterEqual => "ge",
+            Self::UnsignedBelow => "b",
+            Self::UnsignedBelowEqual => "be",
+            Self::UnsignedAbove => "a",
+            Self::UnsignedAboveEqual => "ae",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Operand {
     Register(Register),
     Memory {
@@ -206,6 +237,10 @@ pub(super) enum Instruction {
     Compare {
         source: Register,
         destination: Register,
+    },
+    SetCondition {
+        condition: ConditionCode,
+        destination: ByteRegister,
     },
     ReserveStack(u32),
     ReleaseStack(u32),

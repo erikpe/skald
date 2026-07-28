@@ -121,9 +121,8 @@ makes a result source-observable.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, and operator availability.
-  Primitive integer comparisons are implemented through verified
-  target-independent MIR; their x86-64 realization and the frozen primitive
-  integer cast contract remain roadmap work.
+  Primitive integer comparisons execute through the x86-64 backend; the
+  frozen primitive integer cast contract remains roadmap work.
 - [Strings](STRINGS.md) freezes the partially implemented raw-byte
   `std::str::Str` descriptor, literal syntax, logical immutability, and
   compiler/standard-library boundary.

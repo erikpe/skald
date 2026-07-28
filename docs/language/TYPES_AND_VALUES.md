@@ -172,9 +172,8 @@ access.
 
 This section freezes the complete source-visible integer-only profile.
 Comparison syntax, exact-type checking, typed HIR, and verified
-target-independent MIR are implemented. The x86-64 target currently rejects
-comparison MIR until backend realization lands, and primitive-keyword cast
-targets remain unaccepted. The
+target-independent MIR are implemented, and all comparisons execute through
+the x86-64 target. Primitive-keyword cast targets remain unaccepted. The
 [status matrix](STATUS.md#not-implemented) records availability separately
 from the language contract.
 
@@ -257,12 +256,12 @@ implied by the total integer cast syntax.
 ## Other conversions and future value families
 
 The current compiler performs no primitive casts or user-defined conversions.
-Integer comparisons are implemented through verified target-independent MIR;
-native execution and the frozen integer-cast matrix remain later roadmap
-steps. All other numeric conversion behavior remains deferred. Object casts
-are defined separately in [Object Casts](OBJECT_CASTS.md): implemented plain
-casts select checked object places, while shared casts preserve existing
-allocations. Neither form reinterprets bytes.
+Integer comparisons execute through the x86-64 backend; the frozen
+integer-cast matrix remains later roadmap work. All other numeric conversion
+behavior remains deferred. Object casts are defined separately in
+[Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
+places, while shared casts preserve existing allocations. Neither form
+reinterprets bytes.
 
 Optional values have an [implemented contract](OPTIONAL_VALUES.md) for
 representing absence without making every value nullable. Primitive and

@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: in progress; INT0–INT1 are complete and INT2 is next.
+Status: in progress; INT0–INT2 are complete and INT3 is next.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -87,7 +87,7 @@ public ABI remains unchanged.
 
 - [x] INT0 — Freeze the integer operation contract
 - [x] INT1 — Establish verified target-independent integer comparisons
-- [ ] INT2 — Execute integer comparisons on x86-64
+- [x] INT2 — Execute integer comparisons on x86-64
 - [ ] INT3 — Establish verified target-independent integer casts
 - [ ] INT4 — Execute integer casts on x86-64
 - [ ] INT5 — Harden and promote the integer operation profile
@@ -163,15 +163,15 @@ type and `bool` result, while invalid pairs fail before HIR.
 **Purpose:** Realize the verified comparison profile with canonical booleans
 and correct signedness without leaking target conditions into MIR.
 
-- [ ] Extend the private machine model with cohesive condition-setting support
+- [x] Extend the private machine model with cohesive condition-setting support
       for equality, inequality, signed ordering, and unsigned ordering rather
       than predicate-specific ad hoc instructions.
-- [ ] Select signed conditions for `i64`, unsigned conditions for `u64` and
+- [x] Select signed conditions for `i64`, unsigned conditions for `u64` and
       canonical `u8`, and zero-extend every condition result before storing a
       `bool`.
-- [ ] Extend target legality and backend errors so every verified comparison is
+- [x] Extend target legality and backend errors so every verified comparison is
       accepted and malformed MIR remains rejected at the verifier boundary.
-- [ ] Preserve deterministic labels, assembly, frame behavior, evaluation
+- [x] Preserve deterministic labels, assembly, frame behavior, evaluation
       order, and the unchanged runtime header and ABI version.
 
 **Tests:** Instruction emission and selector tests for every predicate and

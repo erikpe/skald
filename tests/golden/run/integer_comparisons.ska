@@ -1,0 +1,48 @@
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+fn main() -> i64 {
+    ska_rt_println_bool(-9223372036854775808 == -9223372036854775808);
+    ska_rt_println_bool(-9223372036854775808 == 9223372036854775807);
+    ska_rt_println_bool(-9223372036854775808 != 9223372036854775807);
+    ska_rt_println_bool(-9223372036854775808 != -9223372036854775808);
+    ska_rt_println_bool(-9223372036854775808 < 9223372036854775807);
+    ska_rt_println_bool(9223372036854775807 < -9223372036854775808);
+    ska_rt_println_bool(-9223372036854775808 <= -9223372036854775808);
+    ska_rt_println_bool(9223372036854775807 <= -9223372036854775808);
+    ska_rt_println_bool(9223372036854775807 > -9223372036854775808);
+    ska_rt_println_bool(-9223372036854775808 > 9223372036854775807);
+    ska_rt_println_bool(9223372036854775807 >= 9223372036854775807);
+    ska_rt_println_bool(-9223372036854775808 >= 9223372036854775807);
+
+    ska_rt_println_bool(0u == 0u);
+    ska_rt_println_bool(0u == 18446744073709551615u);
+    ska_rt_println_bool(0u != 18446744073709551615u);
+    ska_rt_println_bool(18446744073709551615u != 18446744073709551615u);
+    ska_rt_println_bool(9223372036854775807u < 9223372036854775808u);
+    ska_rt_println_bool(18446744073709551615u < 0u);
+    ska_rt_println_bool(9223372036854775807u <= 9223372036854775808u);
+    ska_rt_println_bool(18446744073709551615u <= 0u);
+    ska_rt_println_bool(18446744073709551615u > 9223372036854775808u);
+    ska_rt_println_bool(0u > 18446744073709551615u);
+    ska_rt_println_bool(18446744073709551615u >= 18446744073709551615u);
+    ska_rt_println_bool(0u >= 18446744073709551615u);
+
+    ska_rt_println_bool(0u8 == 0u8);
+    ska_rt_println_bool(0u8 == 255u8);
+    ska_rt_println_bool(127u8 != 128u8);
+    ska_rt_println_bool(255u8 != 255u8);
+    ska_rt_println_bool(127u8 < 128u8);
+    ska_rt_println_bool(255u8 < 0u8);
+    ska_rt_println_bool(128u8 <= 128u8);
+    ska_rt_println_bool(255u8 <= 128u8);
+    ska_rt_println_bool(255u8 > 128u8);
+    ska_rt_println_bool(0u8 > 255u8);
+    ska_rt_println_bool(255u8 >= 255u8);
+    ska_rt_println_bool(0u8 >= 255u8);
+
+    var branch: bool = 255u8 >= 255u8;
+    if (branch) {
+        return 83;
+    }
+    return 1;
+}

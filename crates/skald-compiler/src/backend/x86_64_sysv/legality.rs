@@ -5,7 +5,7 @@ use crate::{
     identity::CallableId,
     mir::{
         verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
-        MirParameter, MirProgram, MirRvalueKind,
+        MirParameter, MirProgram,
     },
 };
 
@@ -19,7 +19,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
-    check_unsupported_features(program)?;
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
@@ -132,29 +131,6 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
         }
     }
     Ok((data_layout, dispatch))
-}
-
-fn check_unsupported_features(program: &MirProgram) -> Result<(), BackendError> {
-    for function in program.executable_definitions() {
-        for block in &function.body().blocks {
-            for instruction in &block.instructions {
-                let MirInstruction::Assign(assignment) = instruction else {
-                    continue;
-                };
-                if matches!(
-                    assignment.rvalue.kind,
-                    MirRvalueKind::IntegerComparison { .. }
-                ) {
-                    return Err(BackendError::new(
-                        Target::X86_64SysV,
-                        Some(function.callable()),
-                        "integer comparisons are not yet supported by the x86-64 target",
-                    ));
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 fn check_member_target(

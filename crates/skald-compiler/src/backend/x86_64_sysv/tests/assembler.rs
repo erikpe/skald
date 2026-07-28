@@ -48,7 +48,14 @@ fn generated_text_is_accepted_by_the_system_assembler() {
         "fn main() -> i64 { return calculate(6, 7); }",
     ));
     let multi_block = emit_assembly(Target::X86_64SysV, &branch_call_diamond_mir()).unwrap();
+    let comparisons = assembly(concat!(
+        "fn compare_i64(left: i64, right: i64) -> bool { return left < right; }\n",
+        "fn compare_u64(left: u64, right: u64) -> bool { return left >= right; }\n",
+        "fn compare_u8(left: u8, right: u8) -> bool { return left != right; }\n",
+        "fn main() -> i64 { if (compare_i64(-1, 0)) { return 1; } return 0; }\n",
+    ));
 
     assert_system_assembler_accepts(&straight_line);
     assert_system_assembler_accepts(&multi_block);
+    assert_system_assembler_accepts(&comparisons);
 }

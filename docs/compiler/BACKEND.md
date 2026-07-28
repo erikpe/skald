@@ -68,9 +68,11 @@ illegal-instruction trap on failure. Shared-owner casts use the same metadata
 membership test, retain or transfer the source handle on success, preserve the
 existing allocation header, and never call the allocator.
 
-Verified primitive integer comparison rvalues are intentionally rejected with
-a structured target error until their x86-64 instruction selection lands.
-They never reach an unreachable selector arm or masquerade as malformed MIR.
+Verified primitive integer comparison rvalues lower inline. The selector
+compares canonical full-register operands, chooses signed conditions for
+`i64` and unsigned conditions for `u64` and `u8`, materializes the condition
+into one byte, and zero-extends it before storing a canonical `bool`.
+Comparisons add no target labels, runtime calls, or ABI surface.
 
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through

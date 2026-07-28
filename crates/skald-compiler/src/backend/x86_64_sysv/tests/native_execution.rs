@@ -2,6 +2,28 @@ use super::*;
 use crate::test_support::INLINE_FIELD_SOURCE;
 
 #[test]
+fn integer_comparison_boundaries_store_canonical_booleans_and_branch_natively() {
+    let output = assembly(concat!(
+        "fn main() -> i64 {\n",
+        "  var signed: bool = -9223372036854775808 < -1;\n",
+        "  var unsigned: bool = 9223372036854775808u < 18446744073709551615u;\n",
+        "  var byte: bool = 128u8 < 255u8;\n",
+        "  if (signed) {\n",
+        "    if (unsigned) {\n",
+        "      if (byte) {\n",
+        "        if (18446744073709551615u < 0u) { return 2; }\n",
+        "        return 91;\n",
+        "      }\n",
+        "    }\n",
+        "  }\n",
+        "  return 1;\n",
+        "}\n",
+    ));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(91));
+}
+
+#[test]
 fn receiverless_static_methods_use_method_symbols_and_stack_arguments() {
     let program = lower_source_to_mir(concat!(
         "class Math {\n",

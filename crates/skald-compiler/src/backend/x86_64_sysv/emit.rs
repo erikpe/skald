@@ -175,6 +175,10 @@ fn emit_instruction(output: &mut String, instruction: &Instruction) {
             source,
             destination,
         } => write!(output, "cmp {}, {}", destination.name(), source.name()).unwrap(),
+        Instruction::SetCondition {
+            condition,
+            destination,
+        } => write!(output, "set{} {}", condition.mnemonic(), destination.name()).unwrap(),
         Instruction::ReserveStack(bytes) => write!(output, "sub rsp, {bytes}").unwrap(),
         Instruction::ReleaseStack(bytes) => write!(output, "add rsp, {bytes}").unwrap(),
         Instruction::Call(symbol) => write!(output, "call {symbol}").unwrap(),
@@ -287,5 +291,37 @@ fn display_memory(
         format!("{} {address}", size.qualifier())
     } else {
         address
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::x86_64_sysv::machine::{ByteRegister, ConditionCode};
+
+    #[test]
+    fn emits_every_integer_condition_code() {
+        for (condition, expected) in [
+            (ConditionCode::Equal, "sete al"),
+            (ConditionCode::NotEqual, "setne al"),
+            (ConditionCode::SignedLess, "setl al"),
+            (ConditionCode::SignedLessEqual, "setle al"),
+            (ConditionCode::SignedGreater, "setg al"),
+            (ConditionCode::SignedGreaterEqual, "setge al"),
+            (ConditionCode::UnsignedBelow, "setb al"),
+            (ConditionCode::UnsignedBelowEqual, "setbe al"),
+            (ConditionCode::UnsignedAbove, "seta al"),
+            (ConditionCode::UnsignedAboveEqual, "setae al"),
+        ] {
+            let mut output = String::new();
+            emit_instruction(
+                &mut output,
+                &Instruction::SetCondition {
+                    condition,
+                    destination: ByteRegister::Al,
+                },
+            );
+            assert_eq!(output, expected);
+        }
     }
 }

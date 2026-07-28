@@ -129,8 +129,8 @@ HIR.
 Primitive integer comparisons and casts have a
 [frozen source contract](../language/TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts)
 with staged compiler availability. Comparisons are current products through
-verified target-independent MIR; x86-64 execution and primitive integer casts
-remain later roadmap steps. The pipeline responsibilities are:
+native x86-64 execution; primitive integer casts remain a later roadmap step.
+The pipeline responsibilities are:
 
 - Lexing recognizes comparison punctuation by longest match and otherwise
   preserves source spellings. Syntax retains each predicate, both operand
@@ -158,11 +158,10 @@ remain later roadmap steps. The pipeline responsibilities are:
   retain the existing block-local value, definition-before-use, and
   deterministic-error invariants.
 - Each backend receives already selected signedness and width through verified
-  MIR. The x86-64 legality boundary currently returns a structured unsupported
-  feature error for comparison rvalues. Later target steps realize signed
-  `i64` ordering, unsigned `u64`/`u8` ordering, canonical boolean results, bit
-  preservation, truncation, identity, or zero extension without inferring
-  semantics from source spelling or target register accidents.
+  MIR. The x86-64 target realizes signed `i64` ordering and unsigned
+  `u64`/`u8` ordering with canonical boolean results. Later cast lowering will
+  realize bit preservation, truncation, identity, or zero extension without
+  inferring semantics from source spelling or target register accidents.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
 Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and

@@ -22,18 +22,35 @@ fn malformed_f64_mir_is_a_structured_backend_error() {
 }
 
 #[test]
-fn verified_integer_comparisons_are_structured_target_errors_until_int2() {
-    let program = lower_source_to_mir(
+fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
+    let mut program = lower_source_to_mir(
         "fn compare() -> bool { return 1u < 2u; } fn main() -> i64 { return 0; }",
     );
-    verify_mir(&program).unwrap();
+    let function = program
+        .definitions
+        .get_mut_for_test(FunctionId::new(0))
+        .unwrap();
+    let operation = function.body.blocks[0]
+        .instructions
+        .iter_mut()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Assign(MirAssignment {
+                rvalue:
+                    MirRvalue {
+                        kind: MirRvalueKind::IntegerComparison { operation, .. },
+                        ..
+                    },
+                ..
+            }) => Some(operation),
+            _ => None,
+        })
+        .expect("comparison source must lower to a comparison rvalue");
+    operation.operand = crate::mir::MirIntegerType::I64;
 
     let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
     assert_eq!(error.target(), Target::X86_64SysV);
-    assert_eq!(
-        error.message(),
-        "integer comparisons are not yet supported by the x86-64 target"
-    );
+    assert!(error.message().contains("input MIR failed verification"));
+    assert!(error.message().contains("comparison operand is not `i64`"));
 }
 
 #[test]

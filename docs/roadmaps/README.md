@@ -7,17 +7,17 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Primitive Integer Casts and Comparisons Roadmap](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
-  — **INT0–INT1 are complete and INT2 is next**. Exact-type `i64`, `u64`, and
-  `u8` comparisons now reach verified target-independent MIR; x86-64 execution
-  and explicit total two's-complement/modulo casts remain before ordinary
-  standard-library string behavior resumes.
+  — **INT0–INT2 are complete and INT3 is next**. Exact-type `i64`, `u64`, and
+  `u8` comparisons execute through x86-64; explicit total
+  two's-complement/modulo casts remain before ordinary standard-library string
+  behavior resumes.
 - [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR3
   implemented; STR4 follows the primitive-integer prerequisite**. Literal
   syntax and conditional discovery feed exact language-item validation,
   intrinsic typed `Str` production, verified target-independent descriptor
   materialization, and deterministic x86-64 immortal backing. Ordinary
-  standard-library behavior is paused until matching integer comparisons and
-  explicit total integer casts are implemented.
+  standard-library behavior has its matching integer comparisons and remains
+  paused until explicit total integer casts are implemented.
 
 ## Planned
 
