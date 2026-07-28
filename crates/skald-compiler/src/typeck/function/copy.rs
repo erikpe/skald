@@ -407,6 +407,13 @@ impl CallableChecker<'_, '_> {
                     crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
                     _ => None,
                 }),
+            crate::resolve::ResolvedExpression::StaticCall(call) => self
+                .program
+                .method(call.method)
+                .and_then(|method| match method.return_type.kind {
+                    crate::resolve::ResolvedTypeKind::Class(class) => Some(class),
+                    _ => None,
+                }),
             crate::resolve::ResolvedExpression::MethodCall(call) => self
                 .program
                 .method(call.method)
@@ -578,6 +585,7 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
 fn is_object_call_source(expression: &crate::resolve::ResolvedExpression) -> bool {
     match expression {
         crate::resolve::ResolvedExpression::DirectCall(_)
+        | crate::resolve::ResolvedExpression::StaticCall(_)
         | crate::resolve::ResolvedExpression::MethodCall(_)
         | crate::resolve::ResolvedExpression::InterfaceCall(_) => true,
         crate::resolve::ResolvedExpression::Grouped(grouped) => {

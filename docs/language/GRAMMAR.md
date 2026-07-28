@@ -84,9 +84,12 @@ alias-parameter and type-operation target positions; it remains an ordinary
 identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
 `private` is contextually recognized before a field declaration or before the
-optional `mut` of a direct method declaration. It remains an ordinary
+optional `mut` or `static` of a direct method declaration. `static` is
+contextually recognized before `fn` in a class member, including after
+`private`. Both remain ordinary
 identifier elsewhere, including in `private: i64;`, `fn private() -> unit {}`,
-parameters, locals, and top-level declarations.
+`static: i64;`, `fn static() -> unit {}`, parameters, locals, and top-level
+declarations.
 `implements`, `interface`, and `is` are likewise contextual in the exact forms
 below. `some` is contextual only after `is`; `none` is reserved by the lexer
 and forms either an absent expression or the target of a presence test.
@@ -234,9 +237,12 @@ copy-assignment-declaration = "assign" parameter-list block
 destruction-declaration     = "destroy" block
 method-declaration          = public-method-declaration
                             | private-method-declaration
+                            | static-method-declaration
 public-method-declaration   = [method-modifier] ["mut"] "fn" identifier parameter-list
                               "->" result-type block
 private-method-declaration  = "private" ["mut"] "fn" identifier parameter-list
+                              "->" result-type block
+static-method-declaration   = ["private"] "static" "fn" identifier parameter-list
                               "->" result-type block
 method-modifier             = "virtual" | "override"
 
@@ -252,8 +258,10 @@ initializer-body restrictions, receiver access, or member type legality. It
 only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
 name. Fields and methods are public unless prefixed by `private`. Lifecycle
-declarations do not accept visibility, and a private method cannot use
-`virtual` or `override`.
+declarations do not accept visibility or `static`; static methods cannot use
+`mut`, `virtual`, or `override`. Static field forms such as `static name: T`
+and `private static name: T` are rejected because static storage is a separate
+future feature.
 
 ### Construction-selection syntax
 

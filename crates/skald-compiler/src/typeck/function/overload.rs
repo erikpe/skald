@@ -234,6 +234,11 @@ impl CallableChecker<'_, '_> {
                 .get(call.function)
                 .map(|declaration| lower_type(&declaration.return_type))
                 .expect("resolved direct call must reference a declaration"),
+            ResolvedExpression::StaticCall(call) => self
+                .program
+                .method(call.method)
+                .map(|method| lower_type(&method.return_type))
+                .expect("resolved static call must reference a declaration"),
             ResolvedExpression::Grouped(grouped) => {
                 self.static_expression_type(&grouped.expression)
             }
@@ -331,6 +336,7 @@ impl CallableChecker<'_, '_> {
             }),
             ResolvedExpression::Construct(_)
             | ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => Some(ObjectArgument {
                 access: HirAccess::Mutable,

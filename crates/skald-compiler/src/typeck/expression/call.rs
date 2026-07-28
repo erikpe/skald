@@ -44,6 +44,33 @@ impl CallableChecker<'_, '_> {
         })
     }
 
+    pub(super) fn check_static_call(
+        &mut self,
+        call: &crate::resolve::ResolvedStaticCallExpr,
+    ) -> Option<HirExpression> {
+        let target = self
+            .program
+            .method(call.method)
+            .expect("resolved static-call target must exist");
+        debug_assert_eq!(target.kind, crate::resolve::ResolvedMethodKind::Static);
+        let arguments = self.check_arguments(
+            &call.arguments,
+            &target.parameters,
+            call.member_span,
+            "static method",
+            Some(&target.name),
+            Some(target.name_span),
+        )?;
+        Some(HirExpression {
+            kind: HirExpressionKind::StaticCall {
+                method: call.method,
+                arguments,
+            },
+            ty: lower_type(&target.return_type),
+            span: call.span,
+        })
+    }
+
     pub(super) fn check_interface_call(
         &mut self,
         call: &crate::resolve::ResolvedInterfaceCallExpr,
@@ -172,9 +199,10 @@ impl CallableChecker<'_, '_> {
             );
             valid = false;
         }
-        let Some(receiver_access) = method.kind.receiver_access() else {
-            unreachable!("static methods are not object-selected before static source support");
-        };
+        let receiver_access = method
+            .kind
+            .receiver_access()
+            .expect("resolved object-selected methods must be instance methods");
         if receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
             && receiver.place.access == HirAccess::ReadOnly
         {

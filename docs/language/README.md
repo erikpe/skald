@@ -28,9 +28,10 @@ subobjects of their containing value, and each complete value has one
 deterministic lifetime.
 
 Execution is organized around top-level functions and class members with
-explicit direct, virtual, or interface selection. Blocks introduce lexical
-scopes. Receivers, operands, and arguments have deterministic source order; a
-receiver is evaluated before its explicit arguments.
+explicit direct, static, virtual, or interface selection. Static methods are
+class-owned and receiverless; instance receivers are evaluated before their
+explicit arguments. Blocks introduce lexical scopes, and operands and
+arguments have deterministic source order.
 
 ## Terms
 

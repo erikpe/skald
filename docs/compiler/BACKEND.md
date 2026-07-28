@@ -245,9 +245,8 @@ agrees with definition receiver presence. A verified
 `MirCallTarget::Static(MethodId)` selects the existing class-method symbol as a
 direct `CallableId::Method` call and uses this same convention without receiver
 components. Hidden result destinations, explicit argument classification,
-stack overflow, ownership, and cleanup are unchanged. Current source-level
-class members still retain receivers: this is executable internal static
-method support, not accepted static source syntax.
+stack overflow, ownership, and cleanup are unchanged. Source `static fn` and
+`private static fn` declarations use this path directly.
 
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible

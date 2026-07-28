@@ -129,6 +129,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::ArrayLength(length) => self.check_array_length(length),
             ResolvedExpression::DirectCall(call) => self.check_direct_call(call),
+            ResolvedExpression::StaticCall(call) => self.check_static_call(call),
             ResolvedExpression::Grouped(grouped) => self.check_grouped_expression(grouped),
             ResolvedExpression::FieldAccess(access) => self.check_field_read(access),
             ResolvedExpression::ArrayProjection(projection) => {
@@ -170,6 +171,7 @@ pub(super) fn require_type(
 pub(super) fn is_call_through_groups(expression: &ResolvedExpression) -> bool {
     match expression {
         ResolvedExpression::DirectCall(_)
+        | ResolvedExpression::StaticCall(_)
         | ResolvedExpression::MethodCall(_)
         | ResolvedExpression::InterfaceCall(_) => true,
         ResolvedExpression::Grouped(grouped) => is_call_through_groups(&grouped.expression),

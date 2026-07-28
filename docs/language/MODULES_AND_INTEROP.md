@@ -230,7 +230,9 @@ A module import:
 Knowing an absolute logical path does not bypass the direct-import
 requirement. A qualified declaration may appear anywhere its unqualified form
 could appear, including types, calls, construction, inheritance, interface
-claims, and casts.
+claims, and casts. A qualified public class may select a static method with
+`module_binding::Class.method(arguments)`; qualification establishes class
+visibility but does not bypass member privacy.
 
 The same canonical module may have multiple local bindings:
 
@@ -328,8 +330,9 @@ visibility and class-member visibility are independent:
 
 - there is no package-private or library-private visibility;
 - shared path prefixes grant no access;
-- a public class may contain private fields and methods, and neither same-module
-  access nor an import grants access to them; the exact rule is
+- a public class may contain private fields, instance methods, and static
+  methods, and neither same-module access nor an import grants access to them;
+  the exact rule is
   [declaring-class privacy](CLASSES_AND_LIFECYCLE.md#declaring-class-privacy);
   and
 - `public` controls Skald source access, not native symbol export.

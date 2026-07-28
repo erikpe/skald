@@ -37,9 +37,9 @@ pub use ir::{
     ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings, ResolvedParameter,
     ResolvedParameterBindingMode, ResolvedPresenceTestExpr, ResolvedPresenceTestKind,
     ResolvedProgram, ResolvedReceiverAccess, ResolvedReturn, ResolvedSharedAssignment,
-    ResolvedSharedTarget, ResolvedStatement, ResolvedTopLevelId, ResolvedType, ResolvedTypeKind,
-    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
-    ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility,
+    ResolvedSharedTarget, ResolvedStatement, ResolvedStaticCallExpr, ResolvedTopLevelId,
+    ResolvedType, ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility,
 };
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER,

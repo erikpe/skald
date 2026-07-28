@@ -137,14 +137,6 @@ impl HirFunctionDefinitionTable {
         self.entries.iter()
     }
 
-    #[cfg(test)]
-    pub(crate) fn get_mut_for_test(
-        &mut self,
-        function: FunctionId,
-    ) -> Option<&mut HirFunctionDefinition> {
-        self.entries.get_mut_for_test(function)
-    }
-
     pub const fn len(&self) -> usize {
         self.entries.len()
     }

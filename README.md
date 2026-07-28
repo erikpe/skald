@@ -14,6 +14,7 @@ primitive values, functions, lexical control flow, exact nominal inline
 classes, deterministic copying and destruction, owning class parameters and
 results, non-null reference-counted shared objects, owning shared fields,
 hidden borrow anchors, call-scoped object views, single inheritance,
+declaring-class private members, receiverless static methods,
 virtual/interface dispatch, type tests, and checked object casts. The
 compiler also supports plain checked object casts in receiver, alias-argument,
 field, inline copy-construction, value-parameter, result, slicing, and

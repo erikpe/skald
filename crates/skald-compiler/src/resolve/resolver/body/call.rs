@@ -7,6 +7,17 @@ impl CallableResolver<'_, '_> {
         &mut self,
         member: &syntax::MemberAccessExpr,
     ) -> Option<ResolvedExpression> {
+        if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
+            match self.class_receiver(&member.receiver) {
+                ClassReceiver::Class(class) => {
+                    let selected = self.select_member(class, &member.member)?;
+                    self.report_class_member_used_as_value(selected, &member.member);
+                    return None;
+                }
+                ClassReceiver::Diagnosed => return None,
+                ClassReceiver::NotClass => {}
+            }
+        }
         let receiver = self.resolve_member_object_receiver(member)?;
         let selected = self.select_member(receiver.class(), &member.member)?;
         let receiver =
@@ -114,6 +125,15 @@ impl CallableResolver<'_, '_> {
                 member_span,
             } => ResolvedExpression::MethodCall(ResolvedMethodCallExpr {
                 receiver,
+                method,
+                member_span,
+                arguments,
+                span: call.span,
+            }),
+            CallTarget::Static {
+                method,
+                member_span,
+            } => ResolvedExpression::StaticCall(ResolvedStaticCallExpr {
                 method,
                 member_span,
                 arguments,
@@ -267,6 +287,12 @@ impl CallableResolver<'_, '_> {
                 .functions
                 .get(call.function)
                 .map(|declaration| declaration.return_type.kind),
+            ResolvedExpression::StaticCall(call) => self
+                .environment
+                .classes
+                .get(call.method.class())
+                .and_then(|class| class.method(call.method))
+                .map(|method| method.return_type.kind),
             ResolvedExpression::MethodCall(call) => self
                 .environment
                 .classes
@@ -371,6 +397,15 @@ impl CallableResolver<'_, '_> {
                 }
             }
             syntax::Expression::MemberAccess(member) => {
+                if matches!(member.operator, syntax::MemberAccessOperator::Dot { .. }) {
+                    match self.class_receiver(&member.receiver) {
+                        ClassReceiver::Class(class) => {
+                            return self.select_static_call_target(class, member);
+                        }
+                        ClassReceiver::Diagnosed => return None,
+                        ClassReceiver::NotClass => {}
+                    }
+                }
                 let receiver = match member.operator {
                     syntax::MemberAccessOperator::Dot { .. } => {
                         if let Some((receiver, interface, receiver_span)) =
@@ -410,11 +445,40 @@ impl CallableResolver<'_, '_> {
                 let receiver =
                     self.project_receiver_to_declaring_class(receiver, selected.declaring_class());
                 match selected {
-                    OrdinaryMemberSymbolKind::Method(method) => Some(CallTarget::Method {
-                        receiver,
-                        method,
-                        member_span: member.member.span,
-                    }),
+                    OrdinaryMemberSymbolKind::Method(method) => {
+                        let declaration = self
+                            .environment
+                            .classes
+                            .get(method.class())
+                            .and_then(|class| class.method(method))
+                            .expect("member symbols must reference declaration metadata");
+                        if declaration.kind == ResolvedMethodKind::Static {
+                            self.diagnostics.push(
+                                Diagnostic::error(
+                                    INVALID_CALL_TARGET,
+                                    format!(
+                                        "static method `{}` must be called through a class",
+                                        declaration.name
+                                    ),
+                                )
+                                .with_primary_label(
+                                    member.member.span,
+                                    "object-selected static method",
+                                )
+                                .with_secondary_label(
+                                    declaration.name_span,
+                                    "static method declared here",
+                                ),
+                            );
+                            None
+                        } else {
+                            Some(CallTarget::Method {
+                                receiver,
+                                method,
+                                member_span: member.member.span,
+                            })
+                        }
+                    }
                     OrdinaryMemberSymbolKind::Field(field) => {
                         let declaration = self
                             .environment
@@ -443,6 +507,133 @@ impl CallableResolver<'_, '_> {
                         ),
                 );
                 None
+            }
+        }
+    }
+
+    fn class_receiver(&mut self, expression: &syntax::Expression) -> ClassReceiver {
+        let syntax::Expression::Identifier(identifier) = expression else {
+            return ClassReceiver::NotClass;
+        };
+        if !identifier.name.is_qualified() && self.lookup_binding(&identifier.name.text).is_some() {
+            return ClassReceiver::NotClass;
+        }
+        match self
+            .environment
+            .lookup
+            .select(&identifier.name, self.diagnostics)
+        {
+            TopLevelLookup::Found(TopLevelSymbol {
+                kind: TopLevelSymbolKind::Class(class),
+                ..
+            }) => ClassReceiver::Class(class),
+            TopLevelLookup::Diagnosed => ClassReceiver::Diagnosed,
+            TopLevelLookup::Found(_) | TopLevelLookup::Missing => ClassReceiver::NotClass,
+        }
+    }
+
+    fn select_static_call_target(
+        &mut self,
+        class: ClassId,
+        member: &syntax::MemberAccessExpr,
+    ) -> Option<CallTarget> {
+        let selected = self.select_member(class, &member.member)?;
+        match selected {
+            OrdinaryMemberSymbolKind::Method(method) => {
+                let declaration = self
+                    .environment
+                    .classes
+                    .get(method.class())
+                    .and_then(|class| class.method(method))
+                    .expect("member symbols must reference declaration metadata");
+                if declaration.kind == ResolvedMethodKind::Static {
+                    Some(CallTarget::Static {
+                        method,
+                        member_span: member.member.span,
+                    })
+                } else {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            INVALID_CALL_TARGET,
+                            format!(
+                                "instance method `{}` requires an object receiver",
+                                declaration.name
+                            ),
+                        )
+                        .with_primary_label(member.member.span, "class-selected instance method")
+                        .with_secondary_label(
+                            declaration.name_span,
+                            "instance method declared here",
+                        ),
+                    );
+                    None
+                }
+            }
+            OrdinaryMemberSymbolKind::Field(field) => {
+                let declaration = self
+                    .environment
+                    .classes
+                    .get(field.class())
+                    .and_then(|class| class.field(field))
+                    .expect("member symbols must reference declaration metadata");
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_CALL_TARGET,
+                        format!("field `{}` requires an object receiver", declaration.name),
+                    )
+                    .with_primary_label(member.member.span, "class-selected field")
+                    .with_secondary_label(declaration.name_span, "field declared here"),
+                );
+                None
+            }
+        }
+    }
+
+    fn report_class_member_used_as_value(
+        &mut self,
+        selected: OrdinaryMemberSymbolKind,
+        name: &syntax::Name,
+    ) {
+        match selected {
+            OrdinaryMemberSymbolKind::Method(method) => {
+                let declaration = self
+                    .environment
+                    .classes
+                    .get(method.class())
+                    .and_then(|class| class.method(method))
+                    .expect("member symbols must reference declaration metadata");
+                let message = if declaration.kind == ResolvedMethodKind::Static {
+                    format!(
+                        "static method `{}` cannot be used as a value",
+                        declaration.name
+                    )
+                } else {
+                    format!(
+                        "instance method `{}` requires an object receiver",
+                        declaration.name
+                    )
+                };
+                self.diagnostics.push(
+                    Diagnostic::error(INVALID_MEMBER_SELECTION, message)
+                        .with_primary_label(name.span, "call the method with `(...)`")
+                        .with_secondary_label(declaration.name_span, "method declared here"),
+                );
+            }
+            OrdinaryMemberSymbolKind::Field(field) => {
+                let declaration = self
+                    .environment
+                    .classes
+                    .get(field.class())
+                    .and_then(|class| class.field(field))
+                    .expect("member symbols must reference declaration metadata");
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_MEMBER_SELECTION,
+                        format!("field `{}` requires an object receiver", declaration.name),
+                    )
+                    .with_primary_label(name.span, "class-selected field")
+                    .with_secondary_label(declaration.name_span, "field declared here"),
+                );
             }
         }
     }
@@ -652,6 +843,10 @@ enum CallTarget {
         method: MethodId,
         member_span: Span,
     },
+    Static {
+        method: MethodId,
+        member_span: Span,
+    },
     Interface {
         receiver: ResolvedInterfaceReceiver,
         interface: crate::identity::InterfaceId,
@@ -659,4 +854,10 @@ enum CallTarget {
         receiver_span: Span,
         member_span: Span,
     },
+}
+
+enum ClassReceiver {
+    NotClass,
+    Class(ClassId),
+    Diagnosed,
 }

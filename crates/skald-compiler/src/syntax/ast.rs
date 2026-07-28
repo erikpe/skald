@@ -214,6 +214,7 @@ pub struct DestructorDecl {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodDecl {
     pub visibility: MemberVisibility,
+    pub static_span: Option<Span>,
     pub modifier: Option<MethodModifier>,
     pub mut_span: Option<Span>,
     pub name: Name,

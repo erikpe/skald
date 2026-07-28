@@ -12,11 +12,11 @@ The [modules and interoperation contract](MODULES_AND_INTEROP.md) defines the
 current single-file compilation unit and top-level namespace. All top-level
 declarations are known before any body is resolved, so a function may call a
 later function and direct recursion is supported. Calls select a named
-function or a named instance method directly; functions and methods are not
-first-class values.
+function, a named instance method, or a class-selected static method directly;
+functions and methods are not first-class values.
 
-The callable rules in this document also apply to instance methods where their
-class-owned receiver rules permit. Initializers, copy assignment, and
+The callable rules in this document also apply to instance and static methods
+where their class-owned rules permit. Initializers, copy assignment, and
 copy construction and destructors use more specialized body and result
 contracts owned by
 [class and lifecycle semantics](CLASSES_AND_LIFECYCLE.md).
@@ -182,8 +182,9 @@ calls:
 3. a field receiver place is selected before the field is read;
 4. an assignment destination place is selected before its right-hand source;
 5. a method receiver is selected before explicit arguments;
-6. explicit function, method, and constructor arguments are evaluated left to
-   right;
+6. explicit function, instance-method, static-method, and constructor
+   arguments are evaluated left to right; a static call's class spelling is
+   not evaluated;
 7. an exact-class value-argument copy completes before the next argument is
    evaluated;
 8. object destination storage is selected before construction or an

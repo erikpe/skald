@@ -7,12 +7,10 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [Private Members and Static Methods Roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
-  — **in progress; declaring-class privacy is next**. Receiver presence is now
-  independent of lexical class ownership through checking, MIR verification,
-  and x86-64 lowering. The remaining work adds privacy, public and private
-  receiverless static methods, and the documentation confirmation that clears
-  the string-design freeze gate. Source-visible static fields remain separate
-  future work.
+  — **in progress; string-design confirmation is next**. Declaring-class
+  privacy and public/private receiverless static methods now execute through
+  x86-64 lowering. PSM4 confirms and promotes the unblocked string design.
+  Source-visible static fields remain separate future work.
 
 ## Planned
 

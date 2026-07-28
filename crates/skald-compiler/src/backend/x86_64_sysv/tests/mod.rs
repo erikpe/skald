@@ -27,9 +27,7 @@ use crate::{
         MirVirtualFamilyTable, StorageId, ValueId,
     },
     source::SourceDatabase,
-    test_support::{
-        lower_internal_static_scalar_call_to_mir, lower_source_to_assembly, lower_source_to_mir,
-    },
+    test_support::{lower_source_to_assembly, lower_source_to_mir},
 };
 
 mod source_support;

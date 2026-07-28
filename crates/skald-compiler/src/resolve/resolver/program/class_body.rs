@@ -145,9 +145,10 @@ impl ClassBodyResolver<'_> {
                 };
                 let metadata = &declaration.methods[method_index];
                 self.resolve_member(
-                    CallableResolutionContext::receiver_member(
+                    CallableResolutionContext::member(
                         metadata.id.into(),
                         declaration.id,
+                        metadata.kind.receiver_access().map(|_| declaration.id),
                         BaseInitializationPolicy::Forbidden,
                     ),
                     &metadata.parameters,

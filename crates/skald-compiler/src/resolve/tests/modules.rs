@@ -629,6 +629,73 @@ fn qualified_internal_calls_execute_through_the_native_backend() {
 }
 
 #[test]
+fn qualified_and_selectively_imported_static_methods_execute_by_class_identity() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep as library;\n",
+                    "from dep import Tools;\n",
+                    "fn main() -> i64 { return library::Tools.answer(40) + Tools.answer(2); }\n",
+                ),
+            ),
+            (
+                "dep.ska",
+                concat!(
+                    "public class Tools {\n",
+                    "  init() {}\n",
+                    "  static fn answer(value: i64) -> i64 { return value; }\n",
+                    "}\n",
+                ),
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let mir = lower_hir(&checked.hir.unwrap());
+    verify_mir(&mir).unwrap();
+    let assembly = emit_assembly(Target::X86_64SysV, &mir).unwrap();
+
+    assert_eq!(run_native_assembly(&assembly).code(), Some(42));
+}
+
+#[test]
+fn cross_module_private_static_access_uses_member_privacy() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "import dep;\nfn main() -> i64 { return dep::Tools.hidden(); }\n",
+            ),
+            (
+                "dep.ska",
+                concat!(
+                    "public class Tools {\n",
+                    "  init() {}\n",
+                    "  private static fn hidden() -> i64 { return 42; }\n",
+                    "}\n",
+                ),
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+
+    assert!(resolved
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == PRIVATE_MEMBER_ACCESS));
+}
+
+#[test]
 fn selective_imports_resolve_supported_declarations_in_all_use_contexts() {
     let (_workspace, graph) = load_module_sources(
         "app",

@@ -1,6 +1,6 @@
 # Private Members and Static Methods Roadmap
 
-Status: in progress; PSM3 is next.
+Status: in progress; PSM4 is next.
 
 This roadmap adds declaring-class privacy and receiverless class-owned methods
 without creating a second callable, member-lookup, ownership, or backend
@@ -93,7 +93,7 @@ last class-member prerequisite from the
 - [x] PSM0 — Separate lexical class ownership from receiver presence
 - [x] PSM1 — Implement declaring-class member privacy
 - [x] PSM2 — Establish receiverless static-method IR and execution
-- [ ] PSM3 — Expose static methods through the complete source pipeline
+- [x] PSM3 — Expose static methods through the complete source pipeline
 - [ ] PSM4 — Confirm and promote the unblocked string design
 
 ## PR-sized implementation sequence
@@ -257,41 +257,41 @@ method spelling.
 **Purpose:** Add the public static and private static source contract on top of
 the already verified receiverless callable model.
 
-- [ ] Accept `static fn` and `private static fn` in that exact order with
+- [x] Accept `static fn` and `private static fn` in that exact order with
       complete modifier, name, signature, body, and declaration spans. Keep
       `static` contextual and preserve `static` and `private` as ordinary names
       outside modifier position.
-- [ ] Reject `static mut fn`, virtual/override static combinations, repeated or
+- [x] Reject `static mut fn`, virtual/override static combinations, repeated or
       misplaced modifiers, static lifecycle members, and source-visible
       `static name: T` or `private static name: T` with deterministic recovery.
       Static-field diagnostics must state that static fields are a separate
       future feature.
-- [ ] Collect static methods in the existing class-owned `MethodId` sequence
+- [x] Collect static methods in the existing class-owned `MethodId` sequence
       and ordinary member namespace. Preserve source/member ordering,
       inherited lookup, declaring-class identity, collision diagnostics, and
       non-overloading.
-- [ ] Resolve `Class.method(arguments)` and
+- [x] Resolve `Class.method(arguments)` and
       `module_binding::Class.method(arguments)` before object-receiver
       selection when the class spelling is not shadowed by a local binding.
       Reuse ordinary module visibility and qualified-declaration lookup.
-- [ ] Produce focused diagnostics for unknown class members, class-selected
+- [x] Produce focused diagnostics for unknown class members, class-selected
       instance methods, object-selected static methods, fields used as static
       callables, static methods used without a call, and inaccessible private
       static methods.
-- [ ] Give static bodies their enclosing `ClassId` for private access while
+- [x] Give static bodies their enclosing `ClassId` for private access while
       rejecting `self`. Permit private field/method access through explicit
       object values and private static helper calls only under the same exact
       declaring-class rule.
-- [ ] Type-check static call parameters and results through the shared call and
+- [x] Type-check static call parameters and results through the shared call and
       ownership machinery. Do not add static-specific conversions, overload
       selection, elision, lifetime, cleanup, or failure rules.
-- [ ] Exclude static methods from virtual roots, overrides, interface
+- [x] Exclude static methods from virtual roots, overrides, interface
       implementations, receiver-access checks, dispatch metadata, and
       receiver-before-argument evaluation.
-- [ ] Exercise inherited public and private static selection, cross-module
+- [x] Exercise inherited public and private static selection, cross-module
       public class access, selective imports and aliases, unqualified local
       shadowing, recursive static helpers, and private static factories.
-- [ ] Update the implemented
+- [x] Update the implemented
       [grammar](../language/GRAMMAR.md),
       [classes and lifecycle](../language/CLASSES_AND_LIFECYCLE.md),
       [functions and control flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md),
@@ -301,7 +301,7 @@ the already verified receiverless callable model.
       [compiler phases and IR](../compiler/PHASES_AND_IR.md), and
       [backend](../compiler/BACKEND.md) in the same task. Document private
       static methods as composition, not a separate capability.
-- [ ] Update the repository overview only as needed to keep its concise current
+- [x] Update the repository overview only as needed to keep its concise current
       feature summary accurate. Do not add runtime ABI or static-storage
       documentation because neither contract changes.
 

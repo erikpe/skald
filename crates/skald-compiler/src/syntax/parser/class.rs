@@ -109,6 +109,7 @@ impl Parser<'_> {
         self.at_any(&[TokenKind::Fn, TokenKind::Mut, TokenKind::Ref])
             || (self.at(TokenKind::Identifier)
                 && (self.starts_member_visibility()
+                    || self.starts_static_member()
                     || self.starts_method_modifier()
                     || self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
@@ -120,6 +121,53 @@ impl Parser<'_> {
 
     fn parse_class_member(&mut self) -> Option<ClassMember> {
         let visibility = self.parse_member_visibility();
+
+        if self.at_contextual("static") && self.peek_ahead(1).kind != TokenKind::Colon {
+            let static_token = self.advance();
+            if self.peek_ahead(1).kind == TokenKind::Colon {
+                self.report(
+                    INVALID_CLASS_MEMBER,
+                    "static fields are not supported",
+                    static_token.span,
+                    "static storage is a separate future feature",
+                );
+                self.parse_field(MemberVisibility::Public);
+                return None;
+            }
+            if self.at(TokenKind::Identifier)
+                && matches!(
+                    self.lexeme(self.peek()),
+                    "init" | "copy" | "assign" | "destroy"
+                )
+            {
+                let lifecycle = self.lexeme(self.peek()).to_owned();
+                self.report(
+                    INVALID_CLASS_MEMBER,
+                    format!("{lifecycle} members cannot be static"),
+                    static_token.span,
+                    "lifecycle members always operate on an object receiver",
+                );
+                match lifecycle.as_str() {
+                    "init" => {
+                        self.parse_initializer();
+                    }
+                    "copy" => {
+                        self.parse_copy_constructor();
+                    }
+                    "assign" => {
+                        self.parse_copy_assignment();
+                    }
+                    "destroy" => {
+                        self.parse_destructor();
+                    }
+                    _ => unreachable!("guarded lifecycle spelling"),
+                }
+                return None;
+            }
+            return self
+                .parse_method(visibility, Some(static_token.span))
+                .map(ClassMember::Method);
+        }
 
         if self.at(TokenKind::Ref)
             || (self.at(TokenKind::Mut) && self.peek_ahead(1).kind == TokenKind::Ref)
@@ -164,7 +212,7 @@ impl Parser<'_> {
         }
 
         if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) || self.starts_method_modifier() {
-            return self.parse_method(visibility).map(ClassMember::Method);
+            return self.parse_method(visibility, None).map(ClassMember::Method);
         }
 
         if self.at(TokenKind::Identifier) {
@@ -265,7 +313,27 @@ impl Parser<'_> {
             || (next.kind == TokenKind::Identifier
                 && (matches!(
                     self.lexeme(next),
-                    "private" | "virtual" | "override" | "init" | "copy" | "assign" | "destroy"
+                    "private"
+                        | "static"
+                        | "virtual"
+                        | "override"
+                        | "init"
+                        | "copy"
+                        | "assign"
+                        | "destroy"
+                ) || self.peek_ahead(2).kind == TokenKind::Colon))
+    }
+
+    fn starts_static_member(&self) -> bool {
+        if !self.at_contextual("static") {
+            return false;
+        }
+        let next = self.peek_ahead(1);
+        matches!(next.kind, TokenKind::Fn | TokenKind::Mut)
+            || (next.kind == TokenKind::Identifier
+                && (matches!(
+                    self.lexeme(next),
+                    "static" | "virtual" | "override" | "init" | "copy" | "assign" | "destroy"
                 ) || self.peek_ahead(2).kind == TokenKind::Colon))
     }
 
@@ -430,8 +498,23 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_method(&mut self, visibility: MemberVisibility) -> Option<MethodDecl> {
+    fn parse_method(
+        &mut self,
+        visibility: MemberVisibility,
+        static_span: Option<Span>,
+    ) -> Option<MethodDecl> {
         let modifier = self.parse_method_modifier();
+        let mut valid = true;
+        if let (Some(static_span), Some(modifier)) = (static_span, modifier) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "static methods cannot be `virtual` or `override`",
+                modifier.span(),
+                "static methods use receiverless direct dispatch",
+            );
+            let _ = static_span;
+            valid = false;
+        }
         if let (MemberVisibility::Private { .. }, Some(modifier)) = (visibility, modifier) {
             self.report(
                 INVALID_CLASS_MEMBER,
@@ -441,6 +524,34 @@ impl Parser<'_> {
             );
         }
         let mut_token = self.consume(TokenKind::Mut);
+        if let (Some(static_span), Some(mut_token)) = (static_span, mut_token) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "static methods cannot use `mut`",
+                mut_token.span,
+                "static methods have no receiver to mutate",
+            );
+            let _ = static_span;
+            valid = false;
+        }
+        if self.at_contextual("static") {
+            let misplaced = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                if static_span.is_some() {
+                    "a static method cannot repeat `static`"
+                } else {
+                    "`static` must precede method dispatch modifiers and `mut`"
+                },
+                misplaced.span,
+                if static_span.is_some() {
+                    "remove this duplicate method modifier"
+                } else {
+                    "write `static fn`"
+                },
+            );
+            valid = false;
+        }
         if self.at_contextual("private") {
             let misplaced = self.advance();
             self.report(
@@ -463,6 +574,7 @@ impl Parser<'_> {
         let method_start = modifier
             .map(MethodModifier::span)
             .or_else(|| mut_token.map(|token| token.span))
+            .or(static_span)
             .unwrap_or_else(|| self.peek().span);
         let start_span = visibility.start_span(method_start);
         let expectation = if modifier.is_some() || mut_token.is_some() {
@@ -485,8 +597,9 @@ impl Parser<'_> {
             }
             _ => return None,
         };
-        Some(MethodDecl {
+        valid.then_some(MethodDecl {
             visibility,
+            static_span,
             modifier,
             mut_span: mut_token.map(|token| token.span),
             name,
@@ -529,6 +642,9 @@ impl Parser<'_> {
         let next = self.peek_ahead(1);
         matches!(next.kind, TokenKind::Fn | TokenKind::Mut)
             || (next.kind == TokenKind::Identifier
-                && matches!(self.lexeme(next), "private" | "virtual" | "override"))
+                && matches!(
+                    self.lexeme(next),
+                    "private" | "static" | "virtual" | "override"
+                ))
     }
 }

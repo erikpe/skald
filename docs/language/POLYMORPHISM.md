@@ -78,7 +78,8 @@ exists only through an explicit `implements` clause or inheritance from a base
 that already conforms. Repeating a direct interface or redundantly naming an
 inherited conformance is invalid.
 
-Fields and methods retain one ordinary member namespace across a complete base
+Fields, instance methods, and static methods retain one ordinary member
+namespace across a complete base
 chain. Lookup begins at the receiver's static class and proceeds toward the
 root, selecting the nearest declaration. A derived field may not reuse any
 inherited field or method name. A derived method may reuse an inherited name
@@ -92,7 +93,9 @@ uses the single
 Thus a private inherited declaration still prevents hiding and redeclaration.
 
 Selected fields and non-virtual methods retain the identity and declaring
-class of their original declaration. An override retains its own method
+class of their original declaration. An inherited static selection likewise
+retains its declaring class and exact method identity without a receiver
+projection. An override retains its own method
 identity and joins the virtual family rooted at the inherited declaration.
 Lower phases never recreate inheritance or ownership from source names.
 
@@ -108,8 +111,9 @@ Instance methods are non-virtual by default. `virtual` introduces a family;
 `override` extends the nearest inherited family of the same name and is itself
 virtual. A virtual root must be a concrete ordinary instance method. Fields,
 initializers, copy assignment, destructors, top-level functions, and interface
-requirements cannot use `virtual` or `override`. Private methods are direct
-only: they cannot introduce or extend a virtual family.
+requirements cannot use `virtual` or `override`. Private instance methods are
+direct only: they cannot introduce or extend a virtual family. Static methods
+have no dispatch kind and cannot introduce or extend a virtual family.
 
 An override is valid only when the nearest inherited ordinary member with that
 name is a virtual method. Compatibility is exact:
@@ -145,7 +149,8 @@ requirement must be satisfied by one public effective instance method of
 the same name with exact parameter types, binding modes, result type, and
 receiver mutability. A method need not be declared `virtual` to satisfy an
 interface. An inherited method may satisfy a requirement, and an override is
-the effective implementation for its family.
+the effective implementation for its family. Static methods never satisfy
+interface requirements.
 
 One class method may satisfy same-signature requirements from several
 interfaces. Incompatible same-named requirements remain distinct, but a class

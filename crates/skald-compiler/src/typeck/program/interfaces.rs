@@ -267,6 +267,24 @@ fn validate_conformance(
         let method = program
             .method(method_id)
             .expect("selected method must exist");
+        if method.kind == crate::resolve::ResolvedMethodKind::Static {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTERFACE_CONFORMANCE,
+                    format!(
+                        "static method `{}` cannot implement `{}.{}`",
+                        method.name, interface.name, requirement.name
+                    ),
+                )
+                .with_primary_label(
+                    method.name_span,
+                    "static methods have no interface receiver",
+                )
+                .with_secondary_label(requirement.name_span, "requirement declared here"),
+            );
+            valid = false;
+            continue;
+        }
         if let Some(private_span) = method.visibility.private_span() {
             diagnostics.push(
                 Diagnostic::error(

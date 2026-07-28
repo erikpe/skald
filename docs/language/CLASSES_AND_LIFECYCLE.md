@@ -37,6 +37,7 @@ The implemented class model uses these member categories:
 | Field | Named inline storage with a primitive or exact-class type. |
 | Ordinary initializer | One member of the required overload set that establishes a new complete object. |
 | Method | An instance operation with a read-only or mutable receiver; polymorphism defines direct and virtual selection. |
+| Static method | A class-owned operation with no receiver or `self`; it is selected through a class spelling. |
 | Copy constructor, copy assignment, destructor | Optional or synthesized lifecycle operations defined by this document. |
 
 The shared top-level namespace is defined by
@@ -62,7 +63,9 @@ and never participates in ordinary initializer overload resolution.
 
 Fields and methods are public by default and may instead begin with the
 contextual modifier `private`. Lifecycle declarations do not declare
-visibility. Static members are not implemented.
+visibility. Static methods use `static fn`; `private static fn` composes the
+same visibility rule with receiverless method kind. Static fields are not
+implemented.
 
 ### Declaring-class privacy
 
@@ -83,6 +86,10 @@ privacy rather than reporting an unknown member. Resolution preserves
 visibility and its source span long enough to make and diagnose this decision;
 typed HIR and later phases contain only already-authorized member identities.
 
+Static methods use the same rule: a private static method is accessible only
+from a body lexically owned by its exact declaring class. It is not a separate
+privacy capability.
+
 Privacy does not alter storage or lifecycle. Private fields participate in
 finite containment, layout, definite initialization, synthesized and
 user-defined copying, assignment, and destruction exactly like public fields.
@@ -96,6 +103,29 @@ extend an inherited virtual family with `override`; the exact rules are owned
 by [polymorphism](POLYMORPHISM.md#virtual-methods-and-overrides). Typed HIR
 projects statically selected receivers through each direct base to the
 member's declaring class.
+
+### Static methods
+
+`Class.method(arguments)` selects a public static method from `Class`'s
+complete inherited ordinary-member namespace.
+`module_binding::Class.method(arguments)` first resolves the visible qualified
+class and then applies the same selection. A derived class may select an
+inherited public static method while retaining the base declaration's
+`MethodId`; inherited private methods remain selected and then fail the
+declaring-class privacy check outside their owner.
+
+A static method has no receiver access mode and no `self`. It may call other
+static methods, including private helpers allowed by declaring-class privacy,
+and it may access private instance members only through an explicit object
+value. Static methods are direct, cannot be `mut`, `virtual`, or `override`,
+and do not satisfy interface requirements.
+
+The class spelling in a static call is a declaration path, not an evaluated
+expression. An unqualified local binding shadows an unqualified class name,
+so `name.method()` remains object selection when `name` is a local. Calling a
+static method through an object, calling an instance method through a class,
+using a field as a static callable, and using a static method as a value are
+errors.
 
 ## Fields and finite containment
 
@@ -626,8 +656,8 @@ field order. Checked optional-class payload access uses bounded presence
 guards. Optional `shared? T` fields also execute: absence owns nothing,
 presence owns one strong handle, synthesized copy retains conditionally, and
 assignment/destruction conditionally release in the ordinary reverse field
-order. The model does not yet include static members, access modifiers,
-`final`, abstract members,
+order. The model does not yet include static fields or state, lifecycle-member
+visibility, protected access, `final`, abstract members,
 method overloads, reflection, or user-defined conversions. Exact shared
 allocations, owners, calls, results, and owning fields execute; shared fields
 follow the ordinary target layout, copy lifecycle, and derived-to-base

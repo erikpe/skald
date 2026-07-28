@@ -165,6 +165,7 @@ impl CallableChecker<'_, '_> {
                 ))
             }
             ResolvedExpression::DirectCall(_)
+            | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
             | ResolvedExpression::InterfaceCall(_) => {
                 let call = self.check_expression(expression)?;
@@ -442,6 +443,16 @@ impl CallableChecker<'_, '_> {
                     }
                     _ => None,
                 }),
+            ResolvedExpression::StaticCall(call) => {
+                self.program
+                    .method(call.method)
+                    .and_then(|method| match method.return_type.kind {
+                        crate::resolve::ResolvedTypeKind::Shared(target) => {
+                            Some(lower_shared_target(target))
+                        }
+                        _ => None,
+                    })
+            }
             ResolvedExpression::MethodCall(call) => {
                 self.program
                     .method(call.method)
@@ -509,6 +520,9 @@ impl CallableChecker<'_, '_> {
                     .get(call.function)?
                     .return_type
                     .kind
+            }
+            ResolvedExpression::StaticCall(call) => {
+                self.program.method(call.method)?.return_type.kind
             }
             ResolvedExpression::MethodCall(call) => {
                 self.program.method(call.method)?.return_type.kind

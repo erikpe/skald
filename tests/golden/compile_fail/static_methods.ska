@@ -1,0 +1,32 @@
+class Tools {
+    value: i64;
+
+    init() {
+        self.value = 0;
+    }
+
+    fn instance() -> i64 {
+        return self.value;
+    }
+
+    static fn utility() -> i64 {
+        return 1;
+    }
+
+    private static fn hidden() -> i64 {
+        return 2;
+    }
+
+    static fn invalid_self() -> i64 {
+        return self.value;
+    }
+}
+
+fn main() -> i64 {
+    var tools: Tools = Tools();
+    Tools.instance();
+    tools.utility();
+    Tools.value();
+    Tools.utility;
+    return Tools.hidden();
+}

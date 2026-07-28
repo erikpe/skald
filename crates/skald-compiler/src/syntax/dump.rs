@@ -191,7 +191,9 @@ impl AstDumper {
             }
             ClassMember::Method(method) => {
                 self.line(
-                    if method.mut_span.is_some() {
+                    if method.static_span.is_some() {
+                        "Method Static"
+                    } else if method.mut_span.is_some() {
                         "Method Mutable"
                     } else {
                         "Method ReadOnly"
@@ -200,6 +202,9 @@ impl AstDumper {
                 );
                 self.indented(|dumper| {
                     dumper.member_visibility(method.visibility);
+                    if let Some(span) = method.static_span {
+                        dumper.line("Static", span);
+                    }
                     if let Some(modifier) = method.modifier {
                         match modifier {
                             MethodModifier::Virtual { span } => {

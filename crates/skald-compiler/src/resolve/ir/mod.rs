@@ -39,8 +39,8 @@ pub use expression::{
     ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
-    ResolvedPresenceTestKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
-    ResolvedUnwrapExpr,
+    ResolvedPresenceTestKind, ResolvedStaticCallExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr,
+    ResolvedUnaryOperator, ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

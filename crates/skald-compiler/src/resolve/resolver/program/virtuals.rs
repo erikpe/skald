@@ -49,9 +49,11 @@ pub(super) fn resolve_virtual_families(
     }
     for class in classes.iter_mut() {
         for method in &mut class.methods {
-            method
-                .kind
-                .set_instance_dispatch(dispatch[class.id.index()][method.id.index()]);
+            if matches!(method.kind, ResolvedMethodKind::Instance { .. }) {
+                method
+                    .kind
+                    .set_instance_dispatch(dispatch[class.id.index()][method.id.index()]);
+            }
         }
     }
 

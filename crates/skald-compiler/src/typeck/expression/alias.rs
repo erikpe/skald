@@ -596,6 +596,7 @@ impl CallableChecker<'_, '_> {
                         expression,
                         ResolvedExpression::Allocation(_)
                             | ResolvedExpression::DirectCall(_)
+                            | ResolvedExpression::StaticCall(_)
                             | ResolvedExpression::MethodCall(_)
                             | ResolvedExpression::InterfaceCall(_)
                             | ResolvedExpression::ObjectCast(_)

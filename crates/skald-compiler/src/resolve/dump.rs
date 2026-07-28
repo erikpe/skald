@@ -857,6 +857,14 @@ impl ResolvedDumper {
                     }
                 });
             }
+            ResolvedExpression::StaticCall(call) => {
+                self.line(&format!("StaticCall {}", call.method), call.span);
+                self.indented(|dumper| {
+                    for argument in &call.arguments {
+                        dumper.expression(argument);
+                    }
+                });
+            }
             ResolvedExpression::Grouped(grouped) => {
                 self.line("Grouped", grouped.span);
                 self.indented(|dumper| dumper.expression(&grouped.expression));

@@ -1,0 +1,76 @@
+class Value {
+    value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+}
+
+class Tools {
+    init() {}
+
+    static fn primitive(value: i64) -> i64 {
+        return value;
+    }
+
+    static fn notify(value: bool) -> unit {}
+
+    static fn object(ref value: Value) -> Value {
+        return value;
+    }
+
+    static fn shared_value(value: shared Value) -> shared Value {
+        return value;
+    }
+
+    static fn optional_value(value: i64?) -> i64? {
+        return value;
+    }
+
+    static fn optional_owner(value: shared? Value) -> shared? Value {
+        return value;
+    }
+
+    static fn array_value(value: i64[]) -> i64[] {
+        return value;
+    }
+
+    static fn recurse(value: i64, again: bool) -> i64 {
+        if (again) {
+            return Tools.recurse(value, false);
+        }
+        return value;
+    }
+
+    private static fn make(value: i64) -> shared Value {
+        return new Value(value);
+    }
+
+    static fn create(value: i64) -> shared Value {
+        return Tools.make(value);
+    }
+}
+
+fn main() -> i64 {
+    Tools.notify(true);
+
+    var inline: Value = Value(2);
+    var copied: Value = Tools.object(inline);
+    var owner: shared Value = Tools.create(3);
+    var forwarded: shared Value = Tools.shared_value(owner);
+
+    var optional: i64? = Tools.optional_value(4);
+    var optional_owner: shared? Value = Tools.optional_owner(forwarded);
+
+    var values: i64[] = i64[](1u);
+    values[0] = 5;
+    var copied_values: i64[] = Tools.array_value(values);
+
+    return Tools.primitive(1)
+        + copied.value
+        + forwarded->value
+        + optional!
+        + optional_owner!->value
+        + copied_values[0]
+        + Tools.recurse(6, true);
+}

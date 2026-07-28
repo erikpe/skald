@@ -45,4 +45,5 @@ mod modules;
 mod objects;
 mod optional_values;
 mod shared_ownership;
+mod static_methods;
 mod type_operations;

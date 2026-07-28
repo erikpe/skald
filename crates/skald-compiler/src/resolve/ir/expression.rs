@@ -27,6 +27,7 @@ pub enum ResolvedExpression {
     ArrayConstruction(Box<ResolvedArrayConstructionExpr>),
     ArrayLength(Box<ResolvedArrayLengthExpr>),
     DirectCall(ResolvedDirectCallExpr),
+    StaticCall(ResolvedStaticCallExpr),
     Grouped(ResolvedGroupedExpr),
     FieldAccess(ResolvedFieldAccessExpr),
     ArrayProjection(Box<ResolvedArrayProjectionExpr>),
@@ -53,6 +54,7 @@ impl ResolvedExpression {
             Self::ArrayConstruction(expression) => expression.span,
             Self::ArrayLength(expression) => expression.span,
             Self::DirectCall(expression) => expression.span,
+            Self::StaticCall(expression) => expression.span,
             Self::Grouped(expression) => expression.span,
             Self::FieldAccess(expression) => expression.span,
             Self::ArrayProjection(expression) => expression.span,
@@ -238,6 +240,14 @@ pub struct ResolvedFieldAccessExpr {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedMethodCallExpr {
     pub receiver: ResolvedObjectReceiver,
+    pub method: MethodId,
+    pub member_span: Span,
+    pub arguments: Vec<ResolvedExpression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedStaticCallExpr {
     pub method: MethodId,
     pub member_span: Span,
     pub arguments: Vec<ResolvedExpression>,

@@ -310,12 +310,10 @@ Callable-body resolution and checking record a class-owned body's lexical
 `ClassId` independently of whether that body has a receiver. A receiver, when
 present, separately records its exact class and access. Resolved and HIR method
 declarations use mutually exclusive instance and static kinds: instance kinds
-carry receiver access and dispatch, while static kinds carry neither. Internal
-static-method fixtures therefore check bodies with lexical class ownership but
-without `self` or receiver state. Initializers and lifecycle members remain
-receiver-bearing. The parser and resolver do not yet expose static method
-syntax; ordinary source methods still enter these representations as instance
-methods.
+carry receiver access and dispatch, while static kinds carry neither. Source
+`static fn` and `private static fn` bodies therefore retain lexical class
+ownership without `self` or receiver state. Initializers and lifecycle members
+remain receiver-bearing.
 
 HIR calls likewise distinguish receiver-bearing direct/virtual method calls
 from receiverless static calls. A static scalar or object producer retains its
@@ -467,9 +465,9 @@ method declarations use an instance-or-static kind matching their definitions.
 Static calls lower to `MirCallTarget::Static(MethodId)` with no
 `MirCallReceiver`; explicit arguments retain source order and use the ordinary
 argument, destination, ownership, and cleanup machinery. Static methods are
-rejected from virtual families and interface conformance maps. Ordinary source
-still produces only receiver-bearing class methods until static syntax and
-selection are added.
+rejected from virtual families and interface conformance maps. Source class
+selection produces this receiverless target directly; resolution has already
+selected inherited identity and enforced declaring-class privacy.
 Static views retain their source place, target, access, and complete-object
 origin; slices are exact target-class copy operations from a verified
 base-projected source.
