@@ -12,6 +12,16 @@ No implementation roadmaps are currently in progress.
 
 No implementation roadmaps are currently planned.
 
+## Design proposals
+
+- [String Types Design Proposal](STRINGS_DESIGN_PROPOSAL.md) — **proposed
+  design complete**. Defines raw-byte `std::str::Str` values, compiler-emitted
+  immortal shared-array literal backing, the compiler/standard-library
+  boundary, and the freeze criteria. Next action: implement private fields,
+  private methods, and static methods, then confirm and promote the proposal
+  to frozen language and compiler contracts. No other feature is a freeze
+  dependency.
+
 ## Pending discoveries
 
 No maintainability discoveries are currently pending.
