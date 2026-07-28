@@ -56,7 +56,7 @@ pub(super) fn alias_counter_program() -> (MirProgram, AliasProgramIds) {
     class_declaration.methods.push(MirMethodDeclaration {
         id: alias_method,
         name: "add_from_alias".to_owned(),
-        receiver_access: MirReceiverAccess::ReadOnly,
+        kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
         parameters: vec![
             MirParameter::mutable_alias(MirType::Class(class)),
             MirParameter::value(MirType::F64),
@@ -239,7 +239,7 @@ pub(super) fn exhausted_receiver_alias_abi_program() -> MirProgram {
     class.methods.push(MirMethodDeclaration {
         id: method,
         name: "exhaust_aliases".to_owned(),
-        receiver_access: MirReceiverAccess::ReadOnly,
+        kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
         parameters: parameters.clone(),
         return_type: MirType::Unit,
         span,

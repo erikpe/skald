@@ -614,6 +614,12 @@ pub(in crate::typeck) fn lower_object_call(
             class,
             span,
         },
+        HirExpressionKind::StaticCall { method, arguments } => HirObjectCall {
+            target: HirObjectCallTarget::Static(method),
+            arguments,
+            class,
+            span,
+        },
         HirExpressionKind::MethodCall {
             receiver,
             target,

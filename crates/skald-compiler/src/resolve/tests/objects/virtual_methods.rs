@@ -30,29 +30,29 @@ fn forward_declared_deep_overrides_share_one_stable_family() {
     assert_eq!(family.root, root);
     assert_eq!(family.slot, VirtualSlotId::new(0));
     assert_eq!(
-        class(&output, 1).methods[0].dispatch,
-        ResolvedMethodDispatch::VirtualRoot {
+        class(&output, 1).methods[0].kind.dispatch(),
+        Some(ResolvedMethodDispatch::VirtualRoot {
             family: VirtualFamilyId::new(0),
             slot: VirtualSlotId::new(0),
-        }
+        })
     );
     assert_eq!(
-        class(&output, 2).methods[0].dispatch,
-        ResolvedMethodDispatch::Override {
+        class(&output, 2).methods[0].kind.dispatch(),
+        Some(ResolvedMethodDispatch::Override {
             family: VirtualFamilyId::new(0),
             slot: VirtualSlotId::new(0),
             root,
             overridden: root,
-        }
+        })
     );
     assert_eq!(
-        class(&output, 0).methods[0].dispatch,
-        ResolvedMethodDispatch::Override {
+        class(&output, 0).methods[0].kind.dispatch(),
+        Some(ResolvedMethodDispatch::Override {
             family: VirtualFamilyId::new(0),
             slot: VirtualSlotId::new(0),
             root,
             overridden: middle,
-        }
+        })
     );
     assert_eq!(leaf, class(&output, 0).methods[0].id);
 }
@@ -90,7 +90,7 @@ fn invalid_overrides_and_implicit_redeclarations_have_stable_precedence() {
     assert!(class(&output, 1)
         .methods
         .iter()
-        .all(|method| matches!(method.dispatch, ResolvedMethodDispatch::Direct)));
+        .all(|method| matches!(method.kind.dispatch(), Some(ResolvedMethodDispatch::Direct))));
 }
 
 #[test]

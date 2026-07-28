@@ -27,6 +27,7 @@ mod optional_values;
 mod robustness;
 mod shared;
 mod static_inheritance;
+mod static_methods;
 mod type_operation_fixtures;
 mod type_operations;
 mod value_parameters;

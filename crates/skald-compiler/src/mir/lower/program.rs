@@ -4,7 +4,7 @@ use super::*;
 use crate::hir::{
     HirAccess, HirClassDeclaration, HirCopyCapability, HirDestructionStep, HirFunctionDeclaration,
     HirFunctionDefinition, HirFunctionLinkage, HirInterfaceDeclaration, HirMemberDefinition,
-    HirMethodDispatch, HirSynthesizedFieldCopy,
+    HirMethodDispatch, HirMethodKind, HirSynthesizedFieldCopy,
 };
 
 pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
@@ -53,15 +53,17 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
                             hir.classes
                                 .iter()
                                 .flat_map(|class| &class.methods)
-                                .filter_map(|method| match method.dispatch {
-                                    HirMethodDispatch::VirtualRoot {
+                                .filter_map(|method| match method.kind.dispatch() {
+                                    Some(HirMethodDispatch::VirtualRoot {
                                         family: method_family,
                                         ..
-                                    }
-                                    | HirMethodDispatch::Override {
+                                    })
+                                    | Some(HirMethodDispatch::Override {
                                         family: method_family,
                                         ..
-                                    } if method_family == family.id && method.id != family.root => {
+                                    }) if method_family == family.id
+                                        && method.id != family.root =>
+                                    {
                                         Some(method.id)
                                     }
                                     _ => None,
@@ -260,9 +262,20 @@ fn lower_class_declaration(class: &HirClassDeclaration) -> MirClassDeclaration {
             .map(|method| MirMethodDeclaration {
                 id: method.id,
                 name: method.name.clone(),
-                receiver_access: match method.receiver_access {
-                    HirAccess::ReadOnly => MirReceiverAccess::ReadOnly,
-                    HirAccess::Mutable => MirReceiverAccess::Mutable,
+                kind: match method.kind {
+                    HirMethodKind::Instance {
+                        receiver_access: HirAccess::ReadOnly,
+                        ..
+                    } => MirMethodKind::Instance {
+                        receiver_access: MirReceiverAccess::ReadOnly,
+                    },
+                    HirMethodKind::Instance {
+                        receiver_access: HirAccess::Mutable,
+                        ..
+                    } => MirMethodKind::Instance {
+                        receiver_access: MirReceiverAccess::Mutable,
+                    },
+                    HirMethodKind::Static => MirMethodKind::Static,
                 },
                 parameters: method.parameters.iter().map(lower_parameter).collect(),
                 return_type: lower_type(method.return_type),

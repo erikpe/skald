@@ -5,8 +5,9 @@ use std::collections::HashSet;
 use super::{
     super::model::{
         MirAliasAccess, MirBasicBlock, MirCall, MirCallReceiver, MirCallTarget, MirDefinitionRef,
-        MirInitialize, MirMethodCallTarget, MirMethodDeclaration, MirMethodReceiver, MirParameter,
-        MirPlaceBase, MirReceiverAccess, MirStorageKind, MirType, MirViewTarget, ValueId,
+        MirInitialize, MirMethodCallTarget, MirMethodDeclaration, MirMethodKind, MirMethodReceiver,
+        MirParameter, MirPlaceBase, MirReceiverAccess, MirStorageKind, MirType, MirViewTarget,
+        ValueId,
     },
     context::Verifier,
     view::VerifiedOrigin,
@@ -157,6 +158,34 @@ impl<'mir> Verifier<'mir> {
                     return_type: target.return_type,
                 })
             }
+            MirCallTarget::Static(target_id) => {
+                if call.receiver.is_some() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "static method call must not have a receiver",
+                    );
+                }
+                let Some(target) = self.program.method(target_id) else {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        format!("static method target {target_id} is not declared"),
+                    );
+                    return None;
+                };
+                if target.kind != MirMethodKind::Static {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "static call target is an instance method",
+                    );
+                }
+                Some(CallSignature {
+                    parameters: &target.parameters,
+                    return_type: target.return_type,
+                })
+            }
             MirCallTarget::Method(method_target) => {
                 let target_id = method_target.selected();
                 let Some(target) = self.program.method(target_id) else {
@@ -167,6 +196,13 @@ impl<'mir> Verifier<'mir> {
                     );
                     return None;
                 };
+                if !matches!(target.kind, MirMethodKind::Instance { .. }) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "receiver-bearing method call target is static",
+                    );
+                }
                 self.verify_method_receiver(
                     function,
                     block,
@@ -302,7 +338,7 @@ impl<'mir> Verifier<'mir> {
                 "method receiver has the wrong class type",
             );
         }
-        if target.receiver_access == MirReceiverAccess::Mutable
+        if target.kind.receiver_access() == Some(MirReceiverAccess::Mutable)
             && place.is_some_and(|place| place.access != MirAliasAccess::Mutable)
         {
             self.block_error(

@@ -341,12 +341,53 @@ pub struct ResolvedMethodDeclaration {
     pub visibility: ResolvedMemberVisibility,
     pub name: String,
     pub name_span: Span,
-    pub receiver_access: ResolvedReceiverAccess,
-    pub modifier: ResolvedMethodModifier,
-    pub dispatch: ResolvedMethodDispatch,
+    pub kind: ResolvedMethodKind,
     pub parameters: Vec<ResolvedParameter>,
     pub return_type: ResolvedType,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedMethodKind {
+    Instance {
+        receiver_access: ResolvedReceiverAccess,
+        modifier: ResolvedMethodModifier,
+        dispatch: ResolvedMethodDispatch,
+    },
+    Static,
+}
+
+impl ResolvedMethodKind {
+    pub const fn receiver_access(self) -> Option<ResolvedReceiverAccess> {
+        match self {
+            Self::Instance {
+                receiver_access, ..
+            } => Some(receiver_access),
+            Self::Static => None,
+        }
+    }
+
+    pub const fn modifier(self) -> Option<ResolvedMethodModifier> {
+        match self {
+            Self::Instance { modifier, .. } => Some(modifier),
+            Self::Static => None,
+        }
+    }
+
+    pub const fn dispatch(self) -> Option<ResolvedMethodDispatch> {
+        match self {
+            Self::Instance { dispatch, .. } => Some(dispatch),
+            Self::Static => None,
+        }
+    }
+
+    pub(crate) fn set_instance_dispatch(&mut self, value: ResolvedMethodDispatch) {
+        let Self::Instance { dispatch, .. } = self else {
+            debug_assert!(false, "static methods cannot receive instance dispatch");
+            return;
+        };
+        *dispatch = value;
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

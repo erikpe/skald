@@ -51,6 +51,9 @@ impl BodyLowerer<'_> {
                 function,
                 arguments,
             } => self.lower_direct_call(expression, *function, arguments),
+            HirExpressionKind::StaticCall { method, arguments } => {
+                self.lower_static_call(expression, *method, arguments)
+            }
             HirExpressionKind::Grouped(inner) => self.lower_expression(inner),
             HirExpressionKind::FieldRead(place) => {
                 let optional_mark = self.optional_view_mark();

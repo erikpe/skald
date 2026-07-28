@@ -54,3 +54,16 @@ fn parsed_source_ast_still_contains_names_before_resolution() {
         Some(syntax::Expression::Identifier(_))
     ));
 }
+
+#[test]
+fn resolved_dump_renders_internal_static_method_kinds_deterministically() {
+    let mut output = resolve_text(concat!(
+        "class Tools { init() {} private fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    output.program.classes.entries_mut_for_test()[0].methods[0].kind = ResolvedMethodKind::Static;
+
+    let dump = dump_resolved(&output.program);
+    assert_eq!(dump, dump_resolved(&output.program));
+    assert!(dump.contains("Method c0:method0 static private \"answer\""));
+}

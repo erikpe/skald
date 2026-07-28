@@ -32,7 +32,7 @@ pub use ir::{
     HirInterfaceDeclaration, HirInterfaceDeclarationTable, HirInterfaceParameter,
     HirInterfaceReceiver, HirInterfaceRequirement, HirLocal, HirLocalDecl, HirLocalInitializer,
     HirMemberDefinition, HirMethodCallTarget, HirMethodDeclaration, HirMethodDispatch,
-    HirMethodReceiver, HirObjectCall, HirObjectCallTarget, HirObjectInitialization,
+    HirMethodKind, HirMethodReceiver, HirObjectCall, HirObjectCallTarget, HirObjectInitialization,
     HirObjectOrigin, HirObjectPath, HirObjectPlace, HirObjectProducer, HirObjectReturn,
     HirObjectSlice, HirObjectSource, HirObjectView, HirOptionalAliasPlace, HirOptionalAssignment,
     HirOptionalOperand, HirOptionalPlace, HirOptionalSharedAssignment, HirOptionalSharedInitialize,

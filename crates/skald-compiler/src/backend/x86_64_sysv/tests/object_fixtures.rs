@@ -230,7 +230,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             MirMethodDeclaration {
                 id: add,
                 name: "add".to_owned(),
-                receiver_access: MirReceiverAccess::Mutable,
+                kind: MirMethodKind::instance(MirReceiverAccess::Mutable),
                 parameters: MirParameter::values([MirType::I64]),
                 return_type: MirType::Unit,
                 span,
@@ -238,7 +238,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             MirMethodDeclaration {
                 id: get,
                 name: "get".to_owned(),
-                receiver_access: MirReceiverAccess::ReadOnly,
+                kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
                 parameters: vec![],
                 return_type: MirType::I64,
                 span,
@@ -246,7 +246,7 @@ pub(super) fn counter_member_program() -> MirProgram {
             MirMethodDeclaration {
                 id: get_via_receiver,
                 name: "get_via_receiver".to_owned(),
-                receiver_access: MirReceiverAccess::ReadOnly,
+                kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
                 parameters: vec![],
                 return_type: MirType::I64,
                 span,
@@ -362,7 +362,7 @@ pub(super) fn exhausted_receiver_abi_program() -> MirProgram {
     class.methods.push(MirMethodDeclaration {
         id: method,
         name: "exhaust".to_owned(),
-        receiver_access: MirReceiverAccess::ReadOnly,
+        kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
         parameters: MirParameter::values(parameter_types.clone()),
         return_type: MirType::Unit,
         span: program.span,

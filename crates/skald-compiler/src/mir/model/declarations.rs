@@ -564,10 +564,29 @@ impl fmt::Display for MirReceiverAccess {
 pub struct MirMethodDeclaration {
     pub id: MethodId,
     pub name: String,
-    pub receiver_access: MirReceiverAccess,
+    pub kind: MirMethodKind,
     pub parameters: Vec<MirParameter>,
     pub return_type: MirType,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MirMethodKind {
+    Instance { receiver_access: MirReceiverAccess },
+    Static,
+}
+
+impl MirMethodKind {
+    pub const fn instance(receiver_access: MirReceiverAccess) -> Self {
+        Self::Instance { receiver_access }
+    }
+
+    pub const fn receiver_access(self) -> Option<MirReceiverAccess> {
+        match self {
+            Self::Instance { receiver_access } => Some(receiver_access),
+            Self::Static => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

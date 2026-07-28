@@ -67,7 +67,7 @@ pub(super) fn object_mir() -> (MirProgram, ObjectFixtureIds) {
             methods: vec![MirMethodDeclaration {
                 id: outer_method,
                 name: "get".to_owned(),
-                receiver_access: MirReceiverAccess::ReadOnly,
+                kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
                 parameters: vec![],
                 return_type: MirType::I64,
                 span,

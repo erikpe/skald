@@ -266,7 +266,7 @@ impl Verifier<'_> {
             CallableId::Method(method) => match self
                 .program
                 .method(method)
-                .map(|method| method.receiver_access)
+                .and_then(|method| method.kind.receiver_access())
             {
                 Some(MirReceiverAccess::ReadOnly) => MirAliasAccess::ReadOnly,
                 Some(MirReceiverAccess::Mutable) => MirAliasAccess::Mutable,

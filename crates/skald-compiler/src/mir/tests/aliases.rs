@@ -187,8 +187,8 @@ fn rejects_direct_alias_homes_readonly_writes_and_mutable_receiver_calls() {
         .any(|message| message.contains("initializer destination must be owning storage")));
 
     let (mut receiver, ids) = alias_mir();
-    receiver.classes.entries_mut_for_test()[ids.class.index()].methods[ids.method.index()]
-        .receiver_access = MirReceiverAccess::Mutable;
+    receiver.classes.entries_mut_for_test()[ids.class.index()].methods[ids.method.index()].kind =
+        MirMethodKind::instance(MirReceiverAccess::Mutable);
     let function = receiver.definitions.get_mut_for_test(ids.forward).unwrap();
     function.body.blocks[0]
         .instructions

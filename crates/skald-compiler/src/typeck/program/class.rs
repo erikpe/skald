@@ -7,12 +7,13 @@ use crate::{
         HirCopyConstructorDeclaration, HirDestructionPlan, HirDestructionStep,
         HirDestructorDeclaration, HirDirectBase, HirFieldDeclaration, HirInitializerDeclaration,
         HirInterfaceConformance, HirMemberDefinition, HirMethodDeclaration, HirMethodDispatch,
-        Type,
+        HirMethodKind, Type,
     },
     identity::CallableId,
     resolve::{
         ResolvedClassDeclaration, ResolvedClassDefinition, ResolvedMemberDefinition,
-        ResolvedMethodDispatch, ResolvedParameter, ResolvedProgram, ResolvedReceiverAccess,
+        ResolvedMethodDispatch, ResolvedMethodKind, ResolvedParameter, ResolvedProgram,
+        ResolvedReceiverAccess,
     },
 };
 
@@ -173,24 +174,7 @@ fn lower_class_declaration(
                 id: method.id,
                 name: method.name.clone(),
                 name_span: method.name_span,
-                receiver_access: lower_receiver_access(method.receiver_access),
-                dispatch: match method.dispatch {
-                    ResolvedMethodDispatch::Direct => HirMethodDispatch::Direct,
-                    ResolvedMethodDispatch::VirtualRoot { family, slot } => {
-                        HirMethodDispatch::VirtualRoot { family, slot }
-                    }
-                    ResolvedMethodDispatch::Override {
-                        family,
-                        slot,
-                        root,
-                        overridden,
-                    } => HirMethodDispatch::Override {
-                        family,
-                        slot,
-                        root,
-                        overridden,
-                    },
-                },
+                kind: lower_method_kind(method.kind),
                 parameters: method.parameters.iter().map(lower_parameter).collect(),
                 return_type,
                 span: method.span,
@@ -266,7 +250,10 @@ impl ClassDefinitionChecker<'_, '_> {
                     parameters: &initializer.parameters,
                     definition,
                     return_type: Type::Unit,
-                    access: HirAccess::Mutable,
+                    receiver: Some(ReceiverContext {
+                        class: self.class.id,
+                        access: HirAccess::Mutable,
+                    }),
                     body_kind: MemberBodyKind::OrdinaryInitializer,
                     callable_name: format!("initializer for class `{}`", self.class.name),
                 })
@@ -286,7 +273,10 @@ impl ClassDefinitionChecker<'_, '_> {
                         .as_ref()
                         .expect("resolved copy-constructor declaration must have a body"),
                     return_type: Type::Unit,
-                    access: HirAccess::Mutable,
+                    receiver: Some(ReceiverContext {
+                        class: self.class.id,
+                        access: HirAccess::Mutable,
+                    }),
                     body_kind: MemberBodyKind::CopyConstructor,
                     callable_name: format!("copy constructor for class `{}`", self.class.name),
                 })
@@ -301,7 +291,10 @@ impl ClassDefinitionChecker<'_, '_> {
                     .as_ref()
                     .expect("resolved copy-assignment declaration must have a body"),
                 return_type: Type::Unit,
-                access: HirAccess::Mutable,
+                receiver: Some(ReceiverContext {
+                    class: self.class.id,
+                    access: HirAccess::Mutable,
+                }),
                 body_kind: MemberBodyKind::CopyAssignment,
                 callable_name: format!("copy assignment for class `{}`", self.class.name),
             })
@@ -316,7 +309,10 @@ impl ClassDefinitionChecker<'_, '_> {
                     .as_ref()
                     .expect("resolved destructor declaration must have a body"),
                 return_type: Type::Unit,
-                access: DESTRUCTOR_RECEIVER_ACCESS,
+                receiver: Some(ReceiverContext {
+                    class: self.class.id,
+                    access: DESTRUCTOR_RECEIVER_ACCESS,
+                }),
                 body_kind: MemberBodyKind::MethodOrDestructor,
                 callable_name: format!("destructor for class `{}`", self.class.name),
             })
@@ -327,12 +323,16 @@ impl ClassDefinitionChecker<'_, '_> {
             .iter()
             .zip(&self.definition.methods)
             .map(|(method, body)| {
+                let receiver = method.kind.receiver_access().map(|access| ReceiverContext {
+                    class: self.class.id,
+                    access: lower_receiver_access(access),
+                });
                 self.check_member(ClassMemberContext {
                     callable: method.id.into(),
                     parameters: &method.parameters,
                     definition: body,
                     return_type: lower_type(&method.return_type),
-                    access: lower_receiver_access(method.receiver_access),
+                    receiver,
                     body_kind: MemberBodyKind::MethodOrDestructor,
                     callable_name: format!("method `{}`", method.name),
                 })
@@ -359,10 +359,7 @@ impl ClassDefinitionChecker<'_, '_> {
                 parameters: context.parameters,
                 definition: context.definition,
                 return_type: context.return_type,
-                receiver: Some(ReceiverContext {
-                    class: self.class.id,
-                    access: context.access,
-                }),
+                receiver: context.receiver,
                 body_kind: context.body_kind,
                 callable_name: context.callable_name,
             },
@@ -377,7 +374,7 @@ struct ClassMemberContext<'program> {
     parameters: &'program [ResolvedParameter],
     definition: &'program ResolvedMemberDefinition,
     return_type: Type,
-    access: HirAccess,
+    receiver: Option<ReceiverContext>,
     body_kind: MemberBodyKind,
     callable_name: String,
 }
@@ -386,6 +383,36 @@ const fn lower_receiver_access(access: ResolvedReceiverAccess) -> HirAccess {
     match access {
         ResolvedReceiverAccess::ReadOnly => HirAccess::ReadOnly,
         ResolvedReceiverAccess::Mutable => HirAccess::Mutable,
+    }
+}
+
+const fn lower_method_kind(kind: ResolvedMethodKind) -> HirMethodKind {
+    match kind {
+        ResolvedMethodKind::Instance {
+            receiver_access,
+            dispatch,
+            ..
+        } => HirMethodKind::Instance {
+            receiver_access: lower_receiver_access(receiver_access),
+            dispatch: match dispatch {
+                ResolvedMethodDispatch::Direct => HirMethodDispatch::Direct,
+                ResolvedMethodDispatch::VirtualRoot { family, slot } => {
+                    HirMethodDispatch::VirtualRoot { family, slot }
+                }
+                ResolvedMethodDispatch::Override {
+                    family,
+                    slot,
+                    root,
+                    overridden,
+                } => HirMethodDispatch::Override {
+                    family,
+                    slot,
+                    root,
+                    overridden,
+                },
+            },
+        },
+        ResolvedMethodKind::Static => HirMethodKind::Static,
     }
 }
 

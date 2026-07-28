@@ -386,11 +386,37 @@ pub struct HirMethodDeclaration {
     pub id: MethodId,
     pub name: String,
     pub name_span: Span,
-    pub receiver_access: HirAccess,
-    pub dispatch: HirMethodDispatch,
+    pub kind: HirMethodKind,
     pub parameters: Vec<HirParameter>,
     pub return_type: Type,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HirMethodKind {
+    Instance {
+        receiver_access: HirAccess,
+        dispatch: HirMethodDispatch,
+    },
+    Static,
+}
+
+impl HirMethodKind {
+    pub const fn receiver_access(self) -> Option<HirAccess> {
+        match self {
+            Self::Instance {
+                receiver_access, ..
+            } => Some(receiver_access),
+            Self::Static => None,
+        }
+    }
+
+    pub const fn dispatch(self) -> Option<HirMethodDispatch> {
+        match self {
+            Self::Instance { dispatch, .. } => Some(dispatch),
+            Self::Static => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

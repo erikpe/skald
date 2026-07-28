@@ -20,13 +20,16 @@ use crate::{
         MirFunctionDeclarationTable, MirFunctionDefinition, MirFunctionDefinitionTable,
         MirFunctionLinkage, MirInitialize, MirInitializerDeclaration, MirInstruction,
         MirMemberDefinition, MirMemberDefinitionTable, MirMethodCallTarget, MirMethodDeclaration,
-        MirMethodReceiver, MirObjectOrigin, MirParameter, MirParameterMode, MirPlace, MirProgram,
-        MirReceiverAccess, MirRvalue, MirRvalueKind, MirSelectedCopyOperation, MirSharedCopy,
-        MirSharedRelease, MirSharedTarget, MirStorage, MirStorageKind, MirTerminator, MirType,
-        MirUnaryOperation, MirValue, MirViewTarget, MirVirtualFamilyTable, StorageId, ValueId,
+        MirMethodKind, MirMethodReceiver, MirObjectOrigin, MirParameter, MirParameterMode,
+        MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
+        MirSelectedCopyOperation, MirSharedCopy, MirSharedRelease, MirSharedTarget, MirStorage,
+        MirStorageKind, MirTerminator, MirType, MirUnaryOperation, MirValue, MirViewTarget,
+        MirVirtualFamilyTable, StorageId, ValueId,
     },
     source::SourceDatabase,
-    test_support::{lower_source_to_assembly, lower_source_to_mir},
+    test_support::{
+        lower_internal_static_scalar_call_to_mir, lower_source_to_assembly, lower_source_to_mir,
+    },
 };
 
 mod source_support;

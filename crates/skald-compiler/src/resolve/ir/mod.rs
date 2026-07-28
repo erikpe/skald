@@ -25,7 +25,7 @@ pub use declarations::{
     ResolvedInterfaceClaim, ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable,
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
     ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
-    ResolvedMethodModifier, ResolvedOptionalPayload, ResolvedParameter,
+    ResolvedMethodKind, ResolvedMethodModifier, ResolvedOptionalPayload, ResolvedParameter,
     ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
     ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };

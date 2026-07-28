@@ -175,7 +175,7 @@ pub(super) fn alias_mir() -> (MirProgram, AliasFixtureIds) {
     class_declaration.methods.push(MirMethodDeclaration {
         id: method,
         name: "mix".to_owned(),
-        receiver_access: MirReceiverAccess::ReadOnly,
+        kind: MirMethodKind::instance(MirReceiverAccess::ReadOnly),
         parameters: vec![
             MirParameter::read_only_alias(MirType::Class(class)),
             MirParameter::mutable_alias(MirType::Class(class)),

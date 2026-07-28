@@ -239,10 +239,15 @@ independent sequence, and overflow components share one aligned stack area.
 The verified definition's optional receiver storage is the sole authority for
 incoming receiver classification, spilling, frame homes, and object-origin
 homes. Class ownership alone does not add receiver ABI components. Target
-legality likewise classifies a called member from its verified definition's
-receiver presence. Current source-level class members all retain receivers;
-the receiverless representation is internal groundwork rather than static
-method support.
+legality classifies outgoing method calls from the declared method kind and
+lifecycle calls as receiver-bearing; MIR verification guarantees that this
+agrees with definition receiver presence. A verified
+`MirCallTarget::Static(MethodId)` selects the existing class-method symbol as a
+direct `CallableId::Method` call and uses this same convention without receiver
+components. Hidden result destinations, explicit argument classification,
+stack overflow, ownership, and cleanup are unchanged. Current source-level
+class members still retain receivers: this is executable internal static
+method support, not accepted static source syntax.
 
 These conventions are not a stable public object ABI. They may change with the
 compiler as long as each generated caller and callee agree and source-visible
@@ -371,7 +376,10 @@ operation.
 Internal callable and block symbols are derived deterministically from stable
 compiler identities and use target-private local names. Their exact textual
 spelling is a debugging detail, not a compatibility contract and not an input
-to semantic lookup.
+to semantic lookup. Instance and static methods intentionally share the same
+collision-proof class-owned method symbol family because their `MethodId`
+identities are already distinct; static methods do not create a parallel
+symbol namespace.
 
 External calls preserve the exact declared symbol. The backend also emits one
 exported C-compatible `main` wrapper, which checks runtime ABI compatibility

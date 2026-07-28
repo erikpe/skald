@@ -321,7 +321,7 @@ fn signature_difference(
     } else {
         ResolvedReceiverAccess::ReadOnly
     };
-    if method.receiver_access != expected_access {
+    if method.kind.receiver_access() != Some(expected_access) {
         return Some("receiver access differs from the interface requirement");
     }
     if method.parameters.len() != requirement.parameters.len() {

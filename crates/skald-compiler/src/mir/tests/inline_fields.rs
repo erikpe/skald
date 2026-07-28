@@ -112,8 +112,8 @@ fn deep_source_places_are_checked_by_the_shared_verifier_path() {
     let mut program = lower_text(INLINE_FIELD_SOURCE);
     let root = program.class(ClassId::new(0)).unwrap();
     let method = root.methods[1].id;
-    program.classes.entries_mut_for_test()[0].methods[1].receiver_access =
-        MirReceiverAccess::ReadOnly;
+    program.classes.entries_mut_for_test()[0].methods[1].kind =
+        MirMethodKind::instance(MirReceiverAccess::ReadOnly);
 
     let errors = verify_mir(&program).unwrap_err().to_string();
     assert!(errors.contains(&format!("{method}")));

@@ -52,6 +52,12 @@ impl Verifier<'_> {
             ));
             return;
         };
+        if root.kind.receiver_access().is_none() {
+            self.program_error(format!(
+                "virtual family {} root {} is a static method",
+                family.id, family.root
+            ));
+        }
         let mut family_members = HashSet::new();
         for member_id in &family.members {
             if !family_members.insert(*member_id) {
@@ -73,6 +79,12 @@ impl Verifier<'_> {
                 ));
                 continue;
             };
+            if member.kind.receiver_access().is_none() {
+                self.program_error(format!(
+                    "virtual family {} member {member_id} is a static method",
+                    family.id
+                ));
+            }
             if *member_id != family.root
                 && !self
                     .program
@@ -94,7 +106,8 @@ impl Verifier<'_> {
 }
 
 fn same_signature(left: &MirMethodDeclaration, right: &MirMethodDeclaration) -> bool {
-    left.receiver_access == right.receiver_access
+    left.kind.receiver_access().is_some()
+        && left.kind.receiver_access() == right.kind.receiver_access()
         && left.parameters == right.parameters
         && left.return_type == right.return_type
 }

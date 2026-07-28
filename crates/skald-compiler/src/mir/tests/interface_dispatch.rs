@@ -192,6 +192,13 @@ fn rejects_corrupt_conformance_requirements_views_and_signatures() {
     assert!(messages(&wrong_access).iter().any(|message| {
         message == "mutable interface requirement requires mutable receiver access"
     }));
+
+    let (mut static_implementation, ids) = interface_dispatch_mir();
+    static_implementation.classes.entries_mut_for_test()[ids.worker.index()].methods[0].kind =
+        MirMethodKind::Static;
+    assert!(messages(&static_implementation).iter().any(|message| {
+        message.contains("static method c1:method0, which cannot satisfy an interface requirement")
+    }));
 }
 
 #[test]

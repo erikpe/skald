@@ -272,21 +272,23 @@ impl ClassCollectionState {
             visibility: resolved_member_visibility(method.visibility),
             name: method.name.text.to_string(),
             name_span: method.name.span,
-            receiver_access: if method.mut_span.is_some() {
-                ResolvedReceiverAccess::Mutable
-            } else {
-                ResolvedReceiverAccess::ReadOnly
+            kind: ResolvedMethodKind::Instance {
+                receiver_access: if method.mut_span.is_some() {
+                    ResolvedReceiverAccess::Mutable
+                } else {
+                    ResolvedReceiverAccess::ReadOnly
+                },
+                modifier: match method.modifier {
+                    None => ResolvedMethodModifier::Direct,
+                    Some(syntax::MethodModifier::Virtual { span }) => {
+                        ResolvedMethodModifier::Virtual { span }
+                    }
+                    Some(syntax::MethodModifier::Override { span }) => {
+                        ResolvedMethodModifier::Override { span }
+                    }
+                },
+                dispatch: ResolvedMethodDispatch::Direct,
             },
-            modifier: match method.modifier {
-                None => ResolvedMethodModifier::Direct,
-                Some(syntax::MethodModifier::Virtual { span }) => {
-                    ResolvedMethodModifier::Virtual { span }
-                }
-                Some(syntax::MethodModifier::Override { span }) => {
-                    ResolvedMethodModifier::Override { span }
-                }
-            },
-            dispatch: ResolvedMethodDispatch::Direct,
             parameters: resolve_parameters(
                 id.into(),
                 &method.parameters,

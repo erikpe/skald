@@ -5,6 +5,7 @@ fn receiverless_member_program() -> MirProgram {
         "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
+    program.classes.entries_mut_for_test()[0].methods[0].kind = MirMethodKind::Static;
     let definition = program
         .member_definitions
         .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
@@ -17,7 +18,7 @@ fn receiverless_member_program() -> MirProgram {
 }
 
 #[test]
-fn verifier_accepts_explicitly_receiverless_class_owned_definitions() {
+fn verifier_accepts_static_method_definitions_without_receivers() {
     let program = receiverless_member_program();
 
     verify_mir(&program).unwrap();
@@ -43,6 +44,35 @@ fn verifier_rejects_receiver_storage_without_an_identified_receiver() {
 
     let errors = verify_mir(&program).unwrap_err().to_string();
     assert!(errors.contains("definition without a receiver cannot declare receiver storage"));
+}
+
+#[test]
+fn verifier_rejects_static_definitions_with_receivers() {
+    let mut program = lower_text(concat!(
+        "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    program.classes.entries_mut_for_test()[0].methods[0].kind = MirMethodKind::Static;
+
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("static member definition must not have a receiver"));
+}
+
+#[test]
+fn verifier_rejects_instance_definitions_without_receivers() {
+    let mut program = lower_text(concat!(
+        "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let definition = program
+        .member_definitions
+        .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())
+        .unwrap();
+    definition.receiver = None;
+    definition.storage.clear();
+
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("instance member definition requires a receiver"));
 }
 
 #[test]

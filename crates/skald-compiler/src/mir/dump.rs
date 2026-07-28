@@ -185,7 +185,12 @@ fn dump_class(output: &mut String, class: &MirClassDeclaration) {
     for method in &class.methods {
         let _ = write!(output, "      Method {} ", method.id);
         write_quoted(output, &method.name);
-        let _ = write!(output, " {} (", method.receiver_access);
+        match method.kind {
+            MirMethodKind::Instance { receiver_access } => {
+                let _ = write!(output, " {receiver_access} (");
+            }
+            MirMethodKind::Static => output.push_str(" static ("),
+        }
         dump_parameters(output, &method.parameters);
         let _ = write!(output, ") -> {}", method.return_type);
         write_span(output, method.span);
@@ -422,6 +427,9 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 match call.target {
                     MirCallTarget::Direct(target) => {
                         let _ = write!(output, "call {target}");
+                    }
+                    MirCallTarget::Static(target) => {
+                        let _ = write!(output, "call static {target}");
                     }
                     MirCallTarget::Method(MirMethodCallTarget::Direct(target)) => {
                         let _ = write!(output, "call direct {target}");

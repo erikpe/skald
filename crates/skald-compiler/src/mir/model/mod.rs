@@ -22,9 +22,9 @@ pub use declarations::{
     MirCopyAssignmentDeclaration, MirCopyCapability, MirCopyConstructorDeclaration,
     MirDestructionPlan, MirDestructionStep, MirDestructorDeclaration, MirDirectBase,
     MirFieldDeclaration, MirFunctionDeclaration, MirFunctionDeclarationTable, MirFunctionLinkage,
-    MirInitializerDeclaration, MirMethodDeclaration, MirParameter, MirParameterMode, MirProgram,
-    MirReceiverAccess, MirSelectedCopyOperation, MirSynthesizedCopy, MirSynthesizedFieldCopy,
-    MirUserCopy, MirVirtualFamily, MirVirtualFamilyTable,
+    MirInitializerDeclaration, MirMethodDeclaration, MirMethodKind, MirParameter, MirParameterMode,
+    MirProgram, MirReceiverAccess, MirSelectedCopyOperation, MirSynthesizedCopy,
+    MirSynthesizedFieldCopy, MirUserCopy, MirVirtualFamily, MirVirtualFamilyTable,
 };
 pub use definition::{
     MirAliasAccess, MirDefinitionRef, MirFunctionDefinition, MirFunctionDefinitionTable,

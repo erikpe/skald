@@ -42,7 +42,8 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_expression_is_fully_typed(left);
             assert_expression_is_fully_typed(right);
         }
-        HirExpressionKind::DirectCall { arguments, .. } => {
+        HirExpressionKind::DirectCall { arguments, .. }
+        | HirExpressionKind::StaticCall { arguments, .. } => {
             for argument in arguments {
                 assert_call_argument_is_fully_typed(argument);
             }
@@ -145,5 +146,6 @@ mod object_results;
 mod objects;
 mod optional_values;
 mod shared_ownership;
+mod static_methods;
 mod type_operations;
 mod value_parameters;

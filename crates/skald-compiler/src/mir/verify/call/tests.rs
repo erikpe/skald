@@ -1,10 +1,10 @@
 use crate::{
-    identity::{ClassId, FieldId, FunctionId, InitializerId},
+    identity::{ClassId, FieldId, FunctionId, InitializerId, MethodId},
     mir::{
-        verify_mir, MirCall, MirCallTarget, MirInstruction, MirMethodReceiver, MirPlace, MirType,
-        MirValue, ValueId,
+        verify_mir, MirCall, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
+        MirMethodReceiver, MirPlace, MirReceiverAccess, MirType, MirValue, ValueId,
     },
-    test_support::lower_source_to_mir,
+    test_support::{lower_internal_static_scalar_call_to_mir, lower_source_to_mir},
 };
 
 fn call_mut(program: &mut crate::mir::MirProgram) -> &mut MirCall {
@@ -155,6 +155,46 @@ fn initializer_and_method_receiver_contracts_retain_exact_diagnostics() {
     assert!(messages(&wrong_receiver)
         .iter()
         .any(|message| message == "method receiver has the wrong class type"));
+}
+
+#[test]
+fn static_and_instance_call_kinds_require_matching_targets_and_receivers() {
+    let source = concat!(
+        "class Math {\n",
+        "  init() {}\n",
+        "  fn answer(value: i64) -> i64 { return value + 1; }\n",
+        "}\n",
+        "fn proxy(value: i64) -> i64 { return 99; }\n",
+        "fn main() -> i64 { var math: Math = Math(); return proxy(41); }\n",
+    );
+    let method = MethodId::new(ClassId::new(0), 0);
+
+    let mut receiver = lower_internal_static_scalar_call_to_mir(source);
+    let storage = receiver
+        .definitions
+        .get(receiver.entry_function)
+        .unwrap()
+        .storage[0]
+        .id;
+    call_mut(&mut receiver).receiver =
+        Some(MirMethodReceiver::exact(MirPlace::base(storage), ClassId::new(0)).into());
+    assert!(messages(&receiver)
+        .iter()
+        .any(|message| message == "static method call must not have a receiver"));
+
+    let mut wrong_static_target = lower_internal_static_scalar_call_to_mir(source);
+    wrong_static_target.classes.entries_mut_for_test()[0].methods[0].kind =
+        MirMethodKind::instance(MirReceiverAccess::ReadOnly);
+    assert!(messages(&wrong_static_target)
+        .iter()
+        .any(|message| message == "static call target is an instance method"));
+
+    let mut wrong_method_target = lower_internal_static_scalar_call_to_mir(source);
+    call_mut(&mut wrong_method_target).target =
+        MirCallTarget::Method(MirMethodCallTarget::Direct(method));
+    assert!(messages(&wrong_method_target)
+        .iter()
+        .any(|message| message == "receiver-bearing method call target is static"));
 }
 
 #[test]

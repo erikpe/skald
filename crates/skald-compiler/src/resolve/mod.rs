@@ -28,7 +28,7 @@ pub use ir::{
     ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable, ResolvedInterfaceParameter,
     ResolvedInterfaceReceiver, ResolvedInterfaceRequirement, ResolvedLocal, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedMemberVisibility, ResolvedMethodCallExpr,
-    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier,
+    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodKind, ResolvedMethodModifier,
     ResolvedModuleBinding, ResolvedModuleBindingTable, ResolvedModuleBindings,
     ResolvedModuleDeclaration, ResolvedModuleDeclarationTable, ResolvedModuleDeclarations,
     ResolvedNumericLiteralExpr, ResolvedObjectAssignment, ResolvedObjectCastExpr,

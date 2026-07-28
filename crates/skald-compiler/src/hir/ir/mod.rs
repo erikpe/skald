@@ -37,8 +37,8 @@ pub use declarations::{
     HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionLinkage,
     HirInitializerDeclaration, HirInterfaceConformance, HirInterfaceDeclaration,
     HirInterfaceDeclarationTable, HirInterfaceParameter, HirInterfaceRequirement, HirLocal,
-    HirMethodDeclaration, HirMethodDispatch, HirParameter, HirParameterMode, HirProgram,
-    HirRequirementImplementation, HirVirtualFamily, HirVirtualFamilyTable,
+    HirMethodDeclaration, HirMethodDispatch, HirMethodKind, HirParameter, HirParameterMode,
+    HirProgram, HirRequirementImplementation, HirVirtualFamily, HirVirtualFamilyTable,
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirCopyArgument, HirExpression, HirExpressionKind,

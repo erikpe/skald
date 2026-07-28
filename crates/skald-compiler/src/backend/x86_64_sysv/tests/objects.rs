@@ -190,6 +190,7 @@ fn emits_a_class_owned_definition_with_no_receiver_abi_components() {
         "class Tools { init() {} fn answer() -> i64 { return 42; } }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
+    program.classes.entries_mut_for_test()[0].methods[0].kind = MirMethodKind::Static;
     let definition = program
         .member_definitions
         .get_mut_for_test(MethodId::new(ClassId::new(0), 0).into())

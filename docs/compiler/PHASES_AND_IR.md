@@ -308,9 +308,21 @@ structured flow summaries.
 
 Callable-body resolution and checking record a class-owned body's lexical
 `ClassId` independently of whether that body has a receiver. A receiver, when
-present, separately records its exact class and access. Current source
-initializers, lifecycle members, and methods remain receiver-bearing; this
-representation does not add receiverless source declarations.
+present, separately records its exact class and access. Resolved and HIR method
+declarations use mutually exclusive instance and static kinds: instance kinds
+carry receiver access and dispatch, while static kinds carry neither. Internal
+static-method fixtures therefore check bodies with lexical class ownership but
+without `self` or receiver state. Initializers and lifecycle members remain
+receiver-bearing. The parser and resolver do not yet expose static method
+syntax; ordinary source methods still enter these representations as instance
+methods.
+
+HIR calls likewise distinguish receiver-bearing direct/virtual method calls
+from receiverless static calls. A static scalar or object producer retains its
+selected class-owned `MethodId` and explicit arguments but has no receiver
+expression. Primitive, unit, class, shared, optional, optional-shared, and
+array results continue through their existing typed result and ownership
+forms.
 
 Static inheritance crosses this boundary explicitly. HIR records selected base
 initializers, complete lifecycle composition, identity-based base projections,
@@ -420,8 +432,9 @@ explicit:
 - transient primitive values;
 - source-ordered calls, argument modes, and access-restricted
   class/interface/`Obj` views;
-- canonical virtual-family metadata, explicit direct/virtual method targets,
-  and complete-object receiver origins;
+- canonical virtual-family metadata, explicit receiver-bearing direct/virtual
+  method targets, receiverless static method targets, and complete-object
+  receiver origins;
 - interface declarations, effective class conformance maps, and explicit
   interface call targets;
 - initialization, copying, assignment, and cleanup operations;
@@ -450,7 +463,13 @@ receiver storage identity as separate facts. Verification requires the owner
 to agree with the callable identity, requires an identified receiver to name
 exactly one correctly owned receiver storage slot of the owning class, and
 rejects receiver storage when the optional identity is absent. All MIR
-produced from current source remains receiver-bearing for class members.
+method declarations use an instance-or-static kind matching their definitions.
+Static calls lower to `MirCallTarget::Static(MethodId)` with no
+`MirCallReceiver`; explicit arguments retain source order and use the ordinary
+argument, destination, ownership, and cleanup machinery. Static methods are
+rejected from virtual families and interface conformance maps. Ordinary source
+still produces only receiver-bearing class methods until static syntax and
+selection are added.
 Static views retain their source place, target, access, and complete-object
 origin; slices are exact target-class copy operations from a verified
 base-projected source.
@@ -507,6 +526,8 @@ target lowering, including:
   top-level module owners, semantic identity ownership, declaration-table
   density, and declaration/definition agreement;
 - callable signatures, receiver and argument modes, and external exclusions;
+- method declaration/definition kind agreement, static receiver absence,
+  static-call target kind, and static exclusion from virtual/interface maps;
 - storage, value, place, projection, and operation types;
 - hierarchy acyclicity, direct-base paths, view targets/access, and selected
   base lifecycle operations;

@@ -346,15 +346,17 @@ impl ResolvedDumper {
             dumper.indented(|dumper| {
                 for method in &class.methods {
                     dumper.write_indentation();
-                    let _ = write!(
-                        dumper.output,
-                        "Method {} {} ",
-                        method.id,
-                        match method.receiver_access {
+                    let _ = write!(dumper.output, "Method {} ", method.id);
+                    match method.kind {
+                        ResolvedMethodKind::Instance {
+                            receiver_access, ..
+                        } => dumper.output.push_str(match receiver_access {
                             ResolvedReceiverAccess::ReadOnly => "readonly",
                             ResolvedReceiverAccess::Mutable => "mutable",
-                        }
-                    );
+                        }),
+                        ResolvedMethodKind::Static => dumper.output.push_str("static"),
+                    }
+                    dumper.output.push(' ');
                     if method.visibility.private_span().is_some() {
                         dumper.output.push_str("private ");
                     }
@@ -365,7 +367,9 @@ impl ResolvedDumper {
                         if let Some(span) = method.visibility.private_span() {
                             dumper.line("Private", span);
                         }
-                        dumper.method_dispatch(method.dispatch);
+                        if let Some(dispatch) = method.kind.dispatch() {
+                            dumper.method_dispatch(dispatch);
+                        }
                         dumper.parameters(&method.parameters);
                         dumper.heading("ReturnType");
                         dumper.indented(|dumper| dumper.type_syntax(&method.return_type));

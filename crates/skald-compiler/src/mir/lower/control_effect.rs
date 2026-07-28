@@ -14,7 +14,8 @@ pub(super) fn expression_contains_control_effect(expression: &HirExpression) -> 
         HirExpressionKind::Binary { left, right, .. } => {
             expression_contains_control_effect(left) || expression_contains_control_effect(right)
         }
-        HirExpressionKind::DirectCall { arguments, .. } => {
+        HirExpressionKind::DirectCall { arguments, .. }
+        | HirExpressionKind::StaticCall { arguments, .. } => {
             arguments.iter().any(call_argument_contains_control_effect)
         }
         HirExpressionKind::MethodCall {
@@ -208,7 +209,7 @@ fn producer_contains_control_effect(producer: &HirObjectProducer) -> bool {
         },
         HirObjectProducer::Call(call) => {
             let receiver_has_cast = match &call.target {
-                HirObjectCallTarget::Direct(_) => false,
+                HirObjectCallTarget::Direct(_) | HirObjectCallTarget::Static(_) => false,
                 HirObjectCallTarget::Method { receiver, .. } => {
                     method_receiver_contains_control_effect(receiver)
                 }

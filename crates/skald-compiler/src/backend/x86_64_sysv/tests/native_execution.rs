@@ -2,6 +2,29 @@ use super::*;
 use crate::test_support::INLINE_FIELD_SOURCE;
 
 #[test]
+fn receiverless_static_methods_use_method_symbols_and_stack_arguments() {
+    let program = lower_internal_static_scalar_call_to_mir(concat!(
+        "class Math {\n",
+        "  init() {}\n",
+        "  fn sum(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64) -> i64 {\n",
+        "    return a + b + c + d + e + f + g;\n",
+        "  }\n",
+        "}\n",
+        "fn proxy(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64) -> i64 {\n",
+        "  return 99;\n",
+        "}\n",
+        "fn main() -> i64 { return proxy(1, 2, 3, 4, 5, 6, 7); }\n",
+    ));
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+
+    assert!(output.contains(".Lska_class_0_method_0:"));
+    assert!(output.contains("call .Lska_class_0_method_0"));
+    assert!(output.contains("sub rsp, 16"));
+    assert_eq!(run_native_assembly(&output).code(), Some(28));
+}
+
+#[test]
 fn source_inline_fields_construct_and_execute_through_deep_places() {
     let output = assembly(INLINE_FIELD_SOURCE);
     let result = run_native_assembly_output(&output);

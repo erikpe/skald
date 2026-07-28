@@ -6,7 +6,7 @@ use crate::{
         HirMethodCallTarget, HirMethodReceiver, HirObjectOrigin, HirObjectView, HirViewSource,
         HirViewTarget,
     },
-    identity::FunctionId,
+    identity::{FunctionId, MethodId},
 };
 
 use super::*;
@@ -23,6 +23,21 @@ impl BodyLowerer<'_> {
         let arguments = self.lower_call_arguments(arguments);
         let result =
             self.emit_scalar_call(MirCallTarget::Direct(function), None, arguments, expression);
+        self.end_optional_views_from(optional_mark, expression.span);
+        result
+    }
+
+    pub(super) fn lower_static_call(
+        &mut self,
+        expression: &HirExpression,
+        method: MethodId,
+        arguments: &[HirCallArgument],
+    ) -> Option<ValueId> {
+        let optional_mark = self.optional_view_mark();
+        // Static calls evaluate only their explicit arguments, left to right.
+        let arguments = self.lower_call_arguments(arguments);
+        let result =
+            self.emit_scalar_call(MirCallTarget::Static(method), None, arguments, expression);
         self.end_optional_views_from(optional_mark, expression.span);
         result
     }
@@ -107,6 +122,11 @@ impl BodyLowerer<'_> {
                 None,
                 self.lower_call_arguments(arguments),
             ),
+            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
+                MirCallTarget::Static(*method),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
             crate::hir::HirExpressionKind::MethodCall {
                 receiver,
                 target,
@@ -163,6 +183,11 @@ impl BodyLowerer<'_> {
                 None,
                 self.lower_call_arguments(arguments),
             ),
+            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
+                MirCallTarget::Static(*method),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
             crate::hir::HirExpressionKind::MethodCall {
                 receiver,
                 target,
@@ -216,6 +241,11 @@ impl BodyLowerer<'_> {
                 arguments,
             } => (
                 MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
+                MirCallTarget::Static(*method),
                 None,
                 self.lower_call_arguments(arguments),
             ),
@@ -276,6 +306,11 @@ impl BodyLowerer<'_> {
                 arguments,
             } => (
                 MirCallTarget::Direct(*function),
+                None,
+                self.lower_call_arguments(arguments),
+            ),
+            crate::hir::HirExpressionKind::StaticCall { method, arguments } => (
+                MirCallTarget::Static(*method),
                 None,
                 self.lower_call_arguments(arguments),
             ),

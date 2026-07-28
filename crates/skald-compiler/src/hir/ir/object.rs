@@ -3,7 +3,7 @@
 use crate::{
     identity::{
         BindingId, ClassId, CopyAssignmentId, CopyConstructorId, FieldId, FunctionId,
-        InitializerId, InterfaceId,
+        InitializerId, InterfaceId, MethodId,
     },
     object_path::ObjectPath,
     source::Span,
@@ -162,6 +162,7 @@ pub struct HirObjectCall {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum HirObjectCallTarget {
     Direct(FunctionId),
+    Static(MethodId),
     Method {
         receiver: HirMethodReceiver,
         target: HirMethodCallTarget,

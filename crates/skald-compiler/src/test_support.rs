@@ -14,10 +14,12 @@ use std::{
 use crate::{
     backend::{emit_assembly, BackendError, Target, RUNTIME_ABI_MARKER_SYMBOL},
     driver::EntrySelector,
+    hir::{HirExpressionKind, HirReturnValue, HirStatement},
+    identity::{ClassId, MethodId},
     lexer::{lex, LexOutput},
     mir::{lower_hir, MirProgram},
     module::{load_module_graph, normalize_provider_roots, ModuleGraph, ProviderRootConfiguration},
-    resolve::{resolve, ResolveOutput},
+    resolve::{resolve, ResolveOutput, ResolvedMethodKind},
     source::{SourceDatabase, SourceId},
     syntax::{parse, ParseOutput},
     typeck::{type_check, TypeCheckOutput},
@@ -104,6 +106,56 @@ pub(crate) fn lower_source_to_mir(text: impl Into<String>) -> MirProgram {
             .hir
             .expect("successful type checking must produce typed HIR"),
     )
+}
+
+/// Checks receiverless static methods before static source syntax is exposed.
+///
+/// Every method of the first resolved class is converted after resolution,
+/// retaining visibility, signatures, bodies, and class-owned identities.
+pub(crate) fn type_check_internal_static_methods(
+    text: impl Into<String>,
+) -> crate::hir::HirProgram {
+    let mut resolved = resolve_source(text);
+    assert_phase_succeeded("resolution", &resolved.diagnostics);
+    for method in &mut resolved.program.classes.entries_mut_for_test()[0].methods {
+        method.kind = ResolvedMethodKind::Static;
+    }
+
+    let checked = type_check(&resolved.program);
+    assert_phase_succeeded("type checking", &checked.diagnostics);
+    checked
+        .hir
+        .expect("successful type checking must produce typed HIR")
+}
+
+/// Builds an internal receiverless scalar static call while source selection
+/// for static methods remains intentionally unavailable.
+pub(crate) fn lower_internal_static_scalar_call_to_mir(text: impl Into<String>) -> MirProgram {
+    let mut hir = type_check_internal_static_methods(text);
+    let entry = hir
+        .definitions
+        .get_mut_for_test(hir.entry_function)
+        .expect("entry function must have a definition");
+    let HirStatement::Return(return_) = entry
+        .body
+        .statements
+        .last_mut()
+        .expect("fixture entry function must end in a return")
+    else {
+        panic!("fixture entry function must end in a return");
+    };
+    let Some(HirReturnValue::Scalar(expression)) = &mut return_.value else {
+        panic!("fixture entry function must return a scalar call");
+    };
+    let HirExpressionKind::DirectCall { arguments, .. } = &mut expression.kind else {
+        panic!("fixture entry function must return a direct call");
+    };
+    expression.kind = HirExpressionKind::StaticCall {
+        method: MethodId::new(ClassId::new(0), 0),
+        arguments: std::mem::take(arguments),
+    };
+
+    lower_hir(&hir)
 }
 
 pub(crate) fn lower_source_to_assembly(

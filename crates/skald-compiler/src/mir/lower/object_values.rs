@@ -72,6 +72,7 @@ impl BodyLowerer<'_> {
         let optional_mark = self.optional_view_mark();
         let (target, receiver) = match &call.target {
             HirObjectCallTarget::Direct(function) => (MirCallTarget::Direct(*function), None),
+            HirObjectCallTarget::Static(method) => (MirCallTarget::Static(*method), None),
             HirObjectCallTarget::Method { receiver, target } => (
                 MirCallTarget::Method(lower_method_target(*target)),
                 Some(self.lower_method_receiver(receiver).into()),

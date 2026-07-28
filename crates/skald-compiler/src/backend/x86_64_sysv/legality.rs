@@ -4,7 +4,8 @@ use crate::{
     backend::{BackendError, Target},
     identity::CallableId,
     mir::{
-        verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirParameter, MirProgram,
+        verify_mir, MirCallTarget, MirInstruction, MirMethodCallTarget, MirMethodKind,
+        MirParameter, MirProgram,
     },
 };
 
@@ -57,6 +58,9 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                             selected, ..
                         }) => {
                             check_member_target(program, function.callable(), selected.into())?;
+                        }
+                        MirCallTarget::Static(method) => {
+                            check_member_target(program, function.callable(), method.into())?;
                         }
                         MirCallTarget::Direct(target) => {
                             let target = program
@@ -142,7 +146,18 @@ fn check_member_target(
     let signature = program
         .callable_signature(target)
         .expect("verified member target must be declared");
-    if classify(signature.parameters, definition.receiver.is_some()).is_none() {
+    let has_receiver = match target {
+        CallableId::Method(method) => program
+            .method(method)
+            .is_some_and(|method| matches!(method.kind, MirMethodKind::Instance { .. })),
+        CallableId::Initializer(_)
+        | CallableId::CopyConstructor(_)
+        | CallableId::CopyAssignment(_)
+        | CallableId::Destructor(_) => true,
+        CallableId::Function(_) => unreachable!("member target cannot be a top-level function"),
+    };
+    debug_assert_eq!(definition.receiver.is_some(), has_receiver);
+    if classify(signature.parameters, has_receiver).is_none() {
         return Err(abi_limit(caller, "outgoing argument area"));
     }
     Ok(())

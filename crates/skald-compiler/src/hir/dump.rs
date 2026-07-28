@@ -293,18 +293,27 @@ impl HirDumper {
             dumper.heading("Methods");
             dumper.indented(|dumper| {
                 for method in &class.methods {
-                    let access = match method.receiver_access {
-                        HirAccess::ReadOnly => "readonly",
-                        HirAccess::Mutable => "mutable",
+                    let kind = match method.kind {
+                        HirMethodKind::Instance {
+                            receiver_access: HirAccess::ReadOnly,
+                            ..
+                        } => "readonly",
+                        HirMethodKind::Instance {
+                            receiver_access: HirAccess::Mutable,
+                            ..
+                        } => "mutable",
+                        HirMethodKind::Static => "static",
                     };
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Method {} ", method.id);
                     write_quoted(&mut dumper.output, &method.name);
-                    let _ = write!(dumper.output, " {access} -> {}", method.return_type.name());
+                    let _ = write!(dumper.output, " {kind} -> {}", method.return_type.name());
                     write_span(&mut dumper.output, method.span);
                     dumper.output.push('\n');
                     dumper.indented(|dumper| {
-                        dumper.method_dispatch(method.dispatch);
+                        if let Some(dispatch) = method.kind.dispatch() {
+                            dumper.method_dispatch(dispatch);
+                        }
                         for parameter in &method.parameters {
                             dumper.parameter(parameter);
                         }
@@ -853,6 +862,14 @@ impl HirDumper {
                     }
                 });
             }
+            HirExpressionKind::StaticCall { method, arguments } => {
+                self.typed_line(&format!("StaticCall {method}"), expression);
+                self.indented(|dumper| {
+                    for argument in arguments {
+                        dumper.call_argument(argument);
+                    }
+                });
+            }
             HirExpressionKind::Grouped(inner) => {
                 self.typed_line("Grouped", expression);
                 self.indented(|dumper| dumper.expression(inner));
@@ -1231,6 +1248,7 @@ impl HirDumper {
     fn object_call(&mut self, call: &HirObjectCall) {
         let target = match call.target {
             HirObjectCallTarget::Direct(function) => format!("function {function}"),
+            HirObjectCallTarget::Static(method) => format!("static {method}"),
             HirObjectCallTarget::Method { target, .. } => {
                 format!("method {}", method_target(&target))
             }

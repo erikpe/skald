@@ -29,6 +29,7 @@ impl CallTarget {
     pub(super) fn from_call(call: &MirCall) -> (Self, Option<ReceiverOperand<'_>>) {
         match call.target {
             MirCallTarget::Direct(function) => (Self::Direct(function.into()), None),
+            MirCallTarget::Static(method) => (Self::Direct(method.into()), None),
             MirCallTarget::Method(method) => {
                 let receiver = call
                     .receiver

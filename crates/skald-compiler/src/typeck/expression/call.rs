@@ -172,7 +172,10 @@ impl CallableChecker<'_, '_> {
             );
             valid = false;
         }
-        if method.receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
+        let Some(receiver_access) = method.kind.receiver_access() else {
+            unreachable!("static methods are not object-selected before static source support");
+        };
+        if receiver_access == crate::resolve::ResolvedReceiverAccess::Mutable
             && receiver.place.access == HirAccess::ReadOnly
         {
             self.diagnostics.push(
@@ -196,7 +199,11 @@ impl CallableChecker<'_, '_> {
             Some(&method.name),
             Some(method.name_span),
         )?;
-        let target = match method.dispatch {
+        let target = match method
+            .kind
+            .dispatch()
+            .expect("instance method must carry dispatch")
+        {
             ResolvedMethodDispatch::Direct => HirMethodCallTarget::Direct(call.method),
             ResolvedMethodDispatch::VirtualRoot { family, slot }
             | ResolvedMethodDispatch::Override { family, slot, .. } => {

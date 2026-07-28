@@ -506,11 +506,46 @@ impl<'mir> Verifier<'mir> {
     }
 
     fn verify_receiver(&mut self, function: MirDefinitionRef<'_>) {
+        let receiver_required = match function.callable() {
+            crate::identity::CallableId::Method(method) => {
+                self.program.method(method).is_some_and(|method| {
+                    matches!(
+                        method.kind,
+                        super::super::model::MirMethodKind::Instance { .. }
+                    )
+                })
+            }
+            crate::identity::CallableId::Initializer(_)
+            | crate::identity::CallableId::CopyConstructor(_)
+            | crate::identity::CallableId::CopyAssignment(_)
+            | crate::identity::CallableId::Destructor(_) => true,
+            crate::identity::CallableId::Function(_) => false,
+        };
         let receiver_slots: Vec<_> = function
             .storage_entries()
             .iter()
             .filter(|storage| storage.kind == MirStorageKind::Receiver)
             .collect();
+        if function.receiver().is_some() != receiver_required {
+            let unexpected_receiver = match function.callable() {
+                crate::identity::CallableId::Method(method)
+                    if self.program.method(method).is_some_and(|method| {
+                        method.kind == super::super::model::MirMethodKind::Static
+                    }) =>
+                {
+                    "static member definition must not have a receiver"
+                }
+                _ => "receiverless callable definition must not identify a receiver",
+            };
+            self.function_error(
+                function.callable(),
+                if receiver_required {
+                    "instance member definition requires a receiver"
+                } else {
+                    unexpected_receiver
+                },
+            );
+        }
         let Some(receiver) = function.receiver() else {
             if !receiver_slots.is_empty() {
                 self.function_error(

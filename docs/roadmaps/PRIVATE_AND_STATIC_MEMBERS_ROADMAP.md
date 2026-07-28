@@ -1,6 +1,6 @@
 # Private Members and Static Methods Roadmap
 
-Status: in progress; PSM2 is next.
+Status: in progress; PSM3 is next.
 
 This roadmap adds declaring-class privacy and receiverless class-owned methods
 without creating a second callable, member-lookup, ownership, or backend
@@ -92,7 +92,7 @@ last class-member prerequisite from the
 
 - [x] PSM0 — Separate lexical class ownership from receiver presence
 - [x] PSM1 — Implement declaring-class member privacy
-- [ ] PSM2 — Establish receiverless static-method IR and execution
+- [x] PSM2 — Establish receiverless static-method IR and execution
 - [ ] PSM3 — Expose static methods through the complete source pipeline
 - [ ] PSM4 — Confirm and promote the unblocked string design
 
@@ -205,37 +205,37 @@ and compiler documentation describes the implemented privacy contract.
 behavior explicit and verifiable before the parser and resolver expose them to
 ordinary source.
 
-- [ ] Replace independent method booleans or mandatory receiver fields with
+- [x] Replace independent method booleans or mandatory receiver fields with
       phase-appropriate method-kind enums that make instance and static
       metadata mutually exclusive. Existing source methods initially lower as
       instance methods.
-- [ ] Add explicit receiverless static call forms to HIR object/scalar
+- [x] Add explicit receiverless static call forms to HIR object/scalar
       producers and MIR call targets while retaining the selected class-owned
       `MethodId`.
-- [ ] Teach member-body checking and lowering to process a static method body
+- [x] Teach member-body checking and lowering to process a static method body
       with lexical class ownership but no receiver context, `self` binding,
       receiver storage, receiver access, base initialization, or receiver
       cleanup.
-- [ ] Extend class-result destinations, primitive/unit results, shared and
+- [x] Extend class-result destinations, primitive/unit results, shared and
       optional-shared results, inline optionals, arrays, alias/value
       arguments, temporaries, ownership transfer, full-expression cleanup, and
       control-effect classification with receiverless static-call variants.
-- [ ] Lower static calls to `MirCallTarget::Static(MethodId)` with no
+- [x] Lower static calls to `MirCallTarget::Static(MethodId)` with no
       `MirCallReceiver`, preserving left-to-right explicit argument evaluation
       and all existing destination/result conventions.
-- [ ] Verify declaration/definition kind agreement, receiver absence, callable
+- [x] Verify declaration/definition kind agreement, receiver absence, callable
       and parameter ownership, result storage, static call target kind,
       argument modes and types, and exclusion from virtual families and
       interface conformance maps.
-- [ ] Reuse the existing collision-proof class method symbol for static
+- [x] Reuse the existing collision-proof class method symbol for static
       methods. Select it as a direct `CallableId::Method` call using the
       receiverless internal call layout.
-- [ ] Generalize backend member-target legality to derive receiver
+- [x] Generalize backend member-target legality to derive receiver
       classification from the declared method kind rather than assuming every
       `MethodId` has a receiver.
-- [ ] Extend resolved/HIR/MIR/backend dumps and public phase facade re-exports
+- [x] Extend resolved/HIR/MIR/backend dumps and public phase facade re-exports
       with explicit, deterministic static kinds and targets.
-- [ ] Update [compiler phases and IR](../compiler/PHASES_AND_IR.md) and
+- [x] Update [compiler phases and IR](../compiler/PHASES_AND_IR.md) and
       [backend](../compiler/BACKEND.md) for receiverless class callables and
       their verifier/ABI invariants without yet claiming accepted static source
       syntax.

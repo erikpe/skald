@@ -23,8 +23,10 @@ pub(super) fn resolve_virtual_families(
 
     for class in classes.iter() {
         for method in &class.methods {
-            if matches!(method.modifier, ResolvedMethodModifier::Virtual { .. })
-                && method.visibility.private_span().is_none()
+            if matches!(
+                method.kind.modifier(),
+                Some(ResolvedMethodModifier::Virtual { .. })
+            ) && method.visibility.private_span().is_none()
                 && hierarchy.inherited_member(class.id, &method.name).is_none()
                 && hierarchy.base_chain(class.id).is_some()
             {
@@ -47,7 +49,9 @@ pub(super) fn resolve_virtual_families(
     }
     for class in classes.iter_mut() {
         for method in &mut class.methods {
-            method.dispatch = dispatch[class.id.index()][method.id.index()];
+            method
+                .kind
+                .set_instance_dispatch(dispatch[class.id.index()][method.id.index()]);
         }
     }
 
@@ -83,7 +87,10 @@ fn resolve_class_overrides(
 
     let declaration = classes.get(class).expect("hierarchy class must exist");
     for method in &declaration.methods {
-        if !matches!(method.modifier, ResolvedMethodModifier::Override { .. }) {
+        if !matches!(
+            method.kind.modifier(),
+            Some(ResolvedMethodModifier::Override { .. })
+        ) {
             continue;
         }
         if method.visibility.private_span().is_some() {
@@ -157,8 +164,11 @@ fn report_invalid_redeclarations(
                     .get(item.id)
                     .and_then(|class| class.method(method_id))
                     .expect("direct method symbol must have a declaration");
-                if let ResolvedMethodModifier::Override { span } = method.modifier {
-                    if matches!(method.dispatch, ResolvedMethodDispatch::Override { .. }) {
+                if let Some(ResolvedMethodModifier::Override { span }) = method.kind.modifier() {
+                    if matches!(
+                        method.kind.dispatch(),
+                        Some(ResolvedMethodDispatch::Override { .. })
+                    ) {
                         continue;
                     }
                     diagnostics.push(invalid_override_diagnostic(

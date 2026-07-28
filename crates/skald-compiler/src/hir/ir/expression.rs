@@ -45,6 +45,10 @@ pub enum HirExpressionKind {
         function: FunctionId,
         arguments: Vec<HirCallArgument>,
     },
+    StaticCall {
+        method: MethodId,
+        arguments: Vec<HirCallArgument>,
+    },
     FieldRead(HirFieldPlace),
     MethodCall {
         receiver: HirMethodReceiver,

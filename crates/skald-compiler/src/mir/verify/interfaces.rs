@@ -189,7 +189,12 @@ impl Verifier<'_> {
                     interface.id, requirement.name
                 ));
             }
-            if !requirement_matches_method(requirement, method) {
+            if matches!(method.kind, super::super::model::MirMethodKind::Static) {
+                self.program_error(format!(
+                    "class {class} conformance to {} maps {} to static method {}, which cannot satisfy an interface requirement",
+                    interface.id, requirement.id, method.id
+                ));
+            } else if !requirement_matches_method(requirement, method) {
                 self.program_error(format!(
                     "class {class} conformance to {} maps {} to a method with a different signature or receiver access",
                     interface.id, requirement.id
@@ -242,7 +247,7 @@ fn requirement_matches_method(
     requirement: &MirInterfaceRequirement,
     method: &MirMethodDeclaration,
 ) -> bool {
-    requirement.receiver_access == method.receiver_access
+    method.kind.receiver_access() == Some(requirement.receiver_access)
         && requirement.parameters == method.parameters
         && requirement.return_type == method.return_type
 }

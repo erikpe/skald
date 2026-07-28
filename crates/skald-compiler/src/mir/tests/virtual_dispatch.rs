@@ -148,6 +148,20 @@ fn rejects_corrupt_family_slot_membership_and_signature_metadata() {
     assert!(messages(&wrong_signature)
         .iter()
         .any(|message| message.contains("different signature or receiver access")));
+
+    let (mut static_root, ids) = virtual_dispatch_mir();
+    static_root.classes.entries_mut_for_test()[ids.root.index()].methods[0].kind =
+        MirMethodKind::Static;
+    assert!(messages(&static_root)
+        .iter()
+        .any(|message| message.contains("root c0:method0 is a static method")));
+
+    let (mut static_member, ids) = virtual_dispatch_mir();
+    static_member.classes.entries_mut_for_test()[ids.middle.index()].methods[0].kind =
+        MirMethodKind::Static;
+    assert!(messages(&static_member)
+        .iter()
+        .any(|message| message.contains("member c1:method0 is a static method")));
 }
 
 #[test]

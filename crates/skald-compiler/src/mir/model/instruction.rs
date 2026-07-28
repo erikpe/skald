@@ -280,6 +280,7 @@ impl MirArgument {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MirCallTarget {
     Direct(FunctionId),
+    Static(MethodId),
     Method(MirMethodCallTarget),
     Interface(MirInterfaceCallTarget),
 }

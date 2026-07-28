@@ -18,8 +18,14 @@ fn checks_construction_fields_methods_and_all_callable_owners() {
     assert_eq!(class.fields[0].id, FieldId::new(class.id, 0));
     assert_eq!(class.initializers[0].id, InitializerId::new(class.id, 0));
     assert_eq!(class.methods[0].id, MethodId::new(class.id, 0));
-    assert_eq!(class.methods[0].receiver_access, HirAccess::Mutable);
-    assert_eq!(class.methods[1].receiver_access, HirAccess::ReadOnly);
+    assert_eq!(
+        class.methods[0].kind.receiver_access(),
+        Some(HirAccess::Mutable)
+    );
+    assert_eq!(
+        class.methods[1].kind.receiver_access(),
+        Some(HirAccess::ReadOnly)
+    );
 
     let initializer = hir
         .member_definition(class.initializers[0].id.into())

@@ -77,20 +77,24 @@ fn exact_override_signatures_allow_different_parameter_names() {
     let hir = output.hir.expect("valid overrides must produce HIR");
     let root = MethodId::new(ClassId::new(1), 0);
     assert_eq!(
-        hir.classes.get(ClassId::new(1)).unwrap().methods[0].dispatch,
-        HirMethodDispatch::VirtualRoot {
+        hir.classes.get(ClassId::new(1)).unwrap().methods[0]
+            .kind
+            .dispatch(),
+        Some(HirMethodDispatch::VirtualRoot {
             family: VirtualFamilyId::new(0),
             slot: VirtualSlotId::new(0),
-        }
+        })
     );
     assert_eq!(
-        hir.classes.get(ClassId::new(2)).unwrap().methods[0].dispatch,
-        HirMethodDispatch::Override {
+        hir.classes.get(ClassId::new(2)).unwrap().methods[0]
+            .kind
+            .dispatch(),
+        Some(HirMethodDispatch::Override {
             family: VirtualFamilyId::new(0),
             slot: VirtualSlotId::new(0),
             root,
             overridden: root,
-        }
+        })
     );
 }
 

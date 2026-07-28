@@ -32,12 +32,12 @@ fn resolves_forward_classes_members_construction_and_all_callable_owners() {
     assert_eq!(counter.methods[1].id, MethodId::new(counter.id, 1));
     assert_eq!(counter.methods[2].id, MethodId::new(counter.id, 2));
     assert_eq!(
-        counter.methods[0].receiver_access,
-        ResolvedReceiverAccess::Mutable
+        counter.methods[0].kind.receiver_access(),
+        Some(ResolvedReceiverAccess::Mutable)
     );
     assert_eq!(
-        counter.methods[1].receiver_access,
-        ResolvedReceiverAccess::ReadOnly
+        counter.methods[1].kind.receiver_access(),
+        Some(ResolvedReceiverAccess::ReadOnly)
     );
 
     let class_definition = output.program.class_definitions.get(counter.id).unwrap();

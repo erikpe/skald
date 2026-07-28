@@ -353,6 +353,7 @@ impl BodyLowerer<'_> {
     fn lower_array_produced_expression(&mut self, expression: &HirExpression) -> StorageId {
         match &expression.kind {
             HirExpressionKind::DirectCall { .. }
+            | HirExpressionKind::StaticCall { .. }
             | HirExpressionKind::MethodCall { .. }
             | HirExpressionKind::InterfaceCall { .. } => {
                 let Type::Array(array) = expression.ty else {

@@ -17,7 +17,8 @@ pub(super) fn validate_override_signatures(
 ) {
     for class in program.classes.iter() {
         for method in &class.methods {
-            let ResolvedMethodDispatch::Override { overridden, .. } = method.dispatch else {
+            let Some(ResolvedMethodDispatch::Override { overridden, .. }) = method.kind.dispatch()
+            else {
                 continue;
             };
             let inherited = program
@@ -34,7 +35,9 @@ fn signature_mismatch(
     method: &ResolvedMethodDeclaration,
     inherited: &ResolvedMethodDeclaration,
 ) -> Option<Diagnostic> {
-    if method.receiver_access != inherited.receiver_access {
+    let method_access = method.kind.receiver_access()?;
+    let inherited_access = inherited.kind.receiver_access()?;
+    if method_access != inherited_access {
         return Some(mismatch(
             format!(
                 "override method `{}` has incompatible receiver access",
@@ -43,12 +46,12 @@ fn signature_mismatch(
             method.name_span,
             format!(
                 "this method has a {} receiver",
-                receiver_name(method.receiver_access)
+                receiver_name(method_access)
             ),
             inherited.name_span,
             format!(
                 "inherited virtual method has a {} receiver",
-                receiver_name(inherited.receiver_access)
+                receiver_name(inherited_access)
             ),
         ));
     }

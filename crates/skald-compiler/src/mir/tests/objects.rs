@@ -318,11 +318,17 @@ fn preserves_object_storage_and_call_order_across_nested_control_flow() {
         ]
     );
     assert_eq!(
-        class.methods[0].receiver_access,
-        MirReceiverAccess::ReadOnly
+        class.methods[0].kind.receiver_access(),
+        Some(MirReceiverAccess::ReadOnly)
     );
-    assert_eq!(class.methods[1].receiver_access, MirReceiverAccess::Mutable);
-    assert_eq!(class.methods[2].receiver_access, MirReceiverAccess::Mutable);
+    assert_eq!(
+        class.methods[1].kind.receiver_access(),
+        Some(MirReceiverAccess::Mutable)
+    );
+    assert_eq!(
+        class.methods[2].kind.receiver_access(),
+        Some(MirReceiverAccess::Mutable)
+    );
 
     let main = program.definitions.get(program.entry_function).unwrap();
     let object_storage = main
