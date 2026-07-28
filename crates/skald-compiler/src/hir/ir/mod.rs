@@ -43,8 +43,9 @@ pub use declarations::{
 };
 pub use expression::{
     HirBinaryOperation, HirCallArgument, HirComparisonPredicate, HirCopyArgument, HirExpression,
-    HirExpressionKind, HirIntegerComparison, HirIntegerType, HirInterfaceCallTarget,
-    HirInterfaceReceiver, HirMethodCallTarget, HirTypeTest, HirTypeTestKind, HirUnaryOperation,
+    HirExpressionKind, HirIntegerCast, HirIntegerComparison, HirIntegerType,
+    HirInterfaceCallTarget, HirInterfaceReceiver, HirMethodCallTarget, HirTypeTest,
+    HirTypeTestKind, HirUnaryOperation,
 };
 pub use object::{
     HirBaseCopy, HirBaseInitialization, HirCheckedObjectView, HirCheckedObjectViewKind,

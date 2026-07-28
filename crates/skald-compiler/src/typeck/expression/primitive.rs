@@ -4,10 +4,10 @@ use super::*;
 use crate::{
     diagnostics::format_type_list,
     hir::{
-        HirBinaryOperation, HirComparisonPredicate, HirExpressionKind, HirIntegerComparison,
-        HirIntegerType, HirUnaryOperation,
+        HirBinaryOperation, HirComparisonPredicate, HirExpressionKind, HirIntegerCast,
+        HirIntegerComparison, HirIntegerType, HirUnaryOperation,
     },
-    resolve::{ResolvedBinaryOperator, ResolvedUnaryOperator},
+    resolve::{ResolvedBinaryOperator, ResolvedIntegerType, ResolvedUnaryOperator},
 };
 
 use crate::typeck::{
@@ -20,6 +20,45 @@ const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
 impl CallableChecker<'_, '_> {
+    pub(super) fn check_integer_cast(
+        &mut self,
+        cast: &crate::resolve::ResolvedIntegerCastExpr,
+    ) -> Option<HirExpression> {
+        let operand = self.check_expression(&cast.source)?;
+        let Some(source) = HirIntegerType::from_type(operand.ty) else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    "integer cast requires a primitive integer source",
+                )
+                .with_primary_label(
+                    operand.span,
+                    format!("source has type `{}`", operand.ty.name()),
+                )
+                .with_secondary_label(cast.target_span, "primitive integer cast target")
+                .with_note(format!(
+                    "integer source types are {}",
+                    format_type_list(INTEGER_TYPE_NAMES)
+                )),
+            );
+            return None;
+        };
+        let target = match cast.target {
+            ResolvedIntegerType::I64 => HirIntegerType::I64,
+            ResolvedIntegerType::U64 => HirIntegerType::U64,
+            ResolvedIntegerType::U8 => HirIntegerType::U8,
+        };
+        let operation = HirIntegerCast { source, target };
+        Some(HirExpression {
+            kind: HirExpressionKind::IntegerCast {
+                operation,
+                operand: Box::new(operand),
+            },
+            ty: operation.result_type(),
+            span: cast.span,
+        })
+    }
+
     pub(super) fn check_binding_expression(
         &mut self,
         binding: &crate::resolve::ResolvedBindingExpr,

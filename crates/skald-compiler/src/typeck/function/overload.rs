@@ -227,7 +227,24 @@ impl CallableChecker<'_, '_> {
                 }
                 crate::resolve::ResolvedSharedTarget::Array(array) => Type::Array(array),
             },
-            ResolvedExpression::Binary(binary) => self.static_expression_type(&binary.left),
+            ResolvedExpression::Binary(binary) => match binary.operator {
+                crate::resolve::ResolvedBinaryOperator::Equal
+                | crate::resolve::ResolvedBinaryOperator::NotEqual
+                | crate::resolve::ResolvedBinaryOperator::LessThan
+                | crate::resolve::ResolvedBinaryOperator::LessEqual
+                | crate::resolve::ResolvedBinaryOperator::GreaterThan
+                | crate::resolve::ResolvedBinaryOperator::GreaterEqual => Type::Bool,
+                crate::resolve::ResolvedBinaryOperator::Add
+                | crate::resolve::ResolvedBinaryOperator::Subtract
+                | crate::resolve::ResolvedBinaryOperator::Multiply => {
+                    self.static_expression_type(&binary.left)
+                }
+            },
+            ResolvedExpression::IntegerCast(cast) => match cast.target {
+                crate::resolve::ResolvedIntegerType::I64 => Type::I64,
+                crate::resolve::ResolvedIntegerType::U64 => Type::U64,
+                crate::resolve::ResolvedIntegerType::U8 => Type::U8,
+            },
             ResolvedExpression::ObjectCast(cast) => lower_type(&cast.target),
             ResolvedExpression::DirectCall(call) => self
                 .program

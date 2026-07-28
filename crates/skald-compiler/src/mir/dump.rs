@@ -1054,6 +1054,14 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
                 operation.operand.name()
             );
         }
+        MirRvalueKind::IntegerCast { operation, operand } => {
+            let _ = write!(
+                output,
+                "cast.{}.{} {operand}",
+                operation.source.name(),
+                operation.target.name()
+            );
+        }
         MirRvalueKind::TypeTest { source, target } => {
             output.push_str("type-test ");
             dump_object_view(output, source);

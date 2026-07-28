@@ -1,7 +1,7 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics and for the frozen primitive integer comparison and cast design. The
+semantics and for the primitive integer comparison and cast contract. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -156,26 +156,26 @@ environment. Signed zeroes, subnormals, infinities, and NaNs can result. An
 unchanged value retains its binary64 value, but arithmetic does not guarantee a
 particular NaN payload.
 
-No equality, ordering, logical, division, remainder, bitwise, shift, or
-exponentiation operator is implemented. Integer equality and ordering have the
-frozen but not yet implemented contract below; floating equality and ordering
-remain deferred. Built-in array indexing and slicing are intrinsic operations
-rather than general operators; non-shared inline element access currently
-executes for primitives, optionals, exact classes, and nested arrays on
-x86-64. The same element categories execute in shared outer arrays, and copied
-slices plus checked equal-length slice assignment execute for inline, shared,
-and optional-shared receivers. Call-scoped whole-array and exact class or
-nested-array element aliases execute with their declared read-only or mutable
-access.
+Integer equality and ordering are implemented as specified below. No floating
+equality or ordering, logical, division, remainder, bitwise, shift, or
+exponentiation operator is implemented. Built-in array indexing and slicing
+are intrinsic operations rather than general operators; non-shared inline
+element access currently executes for primitives, optionals, exact classes,
+and nested arrays on x86-64. The same element categories execute in shared
+outer arrays, and copied slices plus checked equal-length slice assignment
+execute for inline, shared, and optional-shared receivers. Call-scoped
+whole-array and exact class or nested-array element aliases execute with their
+declared read-only or mutable access.
 
-## Frozen primitive integer comparisons and casts
+## Primitive integer comparisons and casts
 
 This section freezes the complete source-visible integer-only profile.
 Comparison syntax, exact-type checking, typed HIR, and verified
-target-independent MIR are implemented, and all comparisons execute through
-the x86-64 target. Primitive-keyword cast targets remain unaccepted. The
-[status matrix](STATUS.md#not-implemented) records availability separately
-from the language contract.
+target-independent MIR are implemented for both operation families, and all
+comparisons execute through the x86-64 target. Integer casts currently stop at
+a structured target-legality error until INT4 adds execution. The
+[status matrix](STATUS.md#implemented-language) records availability
+separately from the language contract.
 
 ### Integer comparisons
 
@@ -255,9 +255,10 @@ implied by the total integer cast syntax.
 
 ## Other conversions and future value families
 
-The current compiler performs no primitive casts or user-defined conversions.
-Integer comparisons execute through the x86-64 backend; the frozen
-integer-cast matrix remains later roadmap work. All other numeric conversion
+The current compiler accepts primitive integer casts through verified
+target-independent MIR but does not yet execute them. It performs no
+user-defined conversions. Integer comparisons execute through the x86-64
+backend. All other numeric conversion
 behavior remains deferred. Object casts are defined separately in
 [Object Casts](OBJECT_CASTS.md): implemented plain casts select checked object
 places, while shared casts preserve existing allocations. Neither form

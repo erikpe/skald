@@ -82,6 +82,9 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_integer_comparison(*operation, *left, *right, destination),
+            MirRvalueKind::IntegerCast { .. } => {
+                unreachable!("integer casts are rejected by target legality until INT4")
+            }
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
             }

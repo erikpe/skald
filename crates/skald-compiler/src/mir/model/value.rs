@@ -228,6 +228,10 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
+    IntegerCast {
+        operation: MirIntegerCast,
+        operand: ValueId,
+    },
     /// A runtime metadata query. Statically known outcomes are constants.
     TypeTest {
         source: super::instruction::MirObjectView,
@@ -337,6 +341,22 @@ impl MirComparisonPredicate {
 pub struct MirIntegerComparison {
     pub predicate: MirComparisonPredicate,
     pub operand: MirIntegerType,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct MirIntegerCast {
+    pub source: MirIntegerType,
+    pub target: MirIntegerType,
+}
+
+impl MirIntegerCast {
+    pub const fn source_type(self) -> MirType {
+        self.source.operand_type()
+    }
+
+    pub const fn result_type(self) -> MirType {
+        self.target.operand_type()
+    }
 }
 
 impl MirIntegerComparison {

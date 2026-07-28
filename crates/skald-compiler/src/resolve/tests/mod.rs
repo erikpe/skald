@@ -41,6 +41,7 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod external_links;
+mod integer_casts;
 mod interfaces;
 mod modules;
 mod objects;

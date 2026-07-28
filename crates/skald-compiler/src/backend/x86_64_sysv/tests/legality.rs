@@ -54,6 +54,20 @@ fn malformed_integer_comparisons_are_rejected_at_the_verifier_boundary() {
 }
 
 #[test]
+fn valid_integer_casts_are_rejected_at_the_int3_backend_boundary() {
+    let program =
+        lower_source_to_mir("fn cast() -> u8 { return (u8) 258u; } fn main() -> i64 { return 0; }");
+    verify_mir(&program).unwrap();
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert_eq!(
+        error.message(),
+        "primitive integer casts are not yet supported by the x86-64 target"
+    );
+}
+
+#[test]
 fn uses_no_unpreserved_callee_saved_scratch_registers() {
     let output = assembly("fn main() -> i64 { return (2 + 3) * 4; }");
 

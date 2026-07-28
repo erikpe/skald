@@ -159,11 +159,25 @@ impl Parser<'_> {
             }));
         }
 
+        if self.starts_integer_cast() {
+            return self.parse_integer_cast();
+        }
+
         if self.starts_object_cast() {
             return self.parse_object_cast();
         }
 
         self.parse_postfix()
+    }
+
+    fn starts_integer_cast(&self) -> bool {
+        self.at(TokenKind::LeftParen)
+            && matches!(
+                self.peek_ahead(1).kind,
+                TokenKind::I64 | TokenKind::U64 | TokenKind::U8
+            )
+            && self.peek_ahead(2).kind == TokenKind::RightParen
+            && self.starts_cast_operand(3, true)
     }
 
     fn starts_object_cast(&self) -> bool {
@@ -181,27 +195,48 @@ impl Parser<'_> {
             return false;
         };
         self.peek_ahead(right_paren_distance).kind == TokenKind::RightParen
-            && self.starts_cast_operand(right_paren_distance + 1)
+            && self.starts_cast_operand(right_paren_distance + 1, false)
     }
 
-    fn starts_cast_operand(&self, distance: usize) -> bool {
+    fn starts_cast_operand(&self, distance: usize, allow_leading_minus: bool) -> bool {
         if self.peek_ahead(distance).kind == TokenKind::LeftParen
             && self.peek_ahead(distance + 1).kind == TokenKind::RightParen
         {
             return false;
         }
-        matches!(
-            self.peek_ahead(distance).kind,
-            TokenKind::Identifier
-                | TokenKind::SelfValue
-                | TokenKind::NumericLiteral(_)
-                | TokenKind::StringLiteral
-                | TokenKind::True
-                | TokenKind::False
-                | TokenKind::None
-                | TokenKind::Star
-                | TokenKind::LeftParen
-        )
+        (allow_leading_minus && self.peek_ahead(distance).kind == TokenKind::Minus)
+            || matches!(
+                self.peek_ahead(distance).kind,
+                TokenKind::Identifier
+                    | TokenKind::SelfValue
+                    | TokenKind::NumericLiteral(_)
+                    | TokenKind::StringLiteral
+                    | TokenKind::True
+                    | TokenKind::False
+                    | TokenKind::None
+                    | TokenKind::Star
+                    | TokenKind::LeftParen
+            )
+    }
+
+    fn parse_integer_cast(&mut self) -> Option<Expression> {
+        let left_paren = self.advance();
+        let target = self.advance();
+        let target_kind = match target.kind {
+            TokenKind::I64 => PrimitiveIntegerType::I64,
+            TokenKind::U64 => PrimitiveIntegerType::U64,
+            TokenKind::U8 => PrimitiveIntegerType::U8,
+            _ => unreachable!("integer-cast parser accepted a non-integer target"),
+        };
+        let _right_paren = self.expect(TokenKind::RightParen, "`)` after the cast target")?;
+        let source = self.with_syntax_nesting(left_paren.span, |parser| parser.parse_unary())?;
+        let span = self.cover(left_paren.span, source.span());
+        Some(Expression::IntegerCast(IntegerCastExpr {
+            target: target_kind,
+            target_span: target.span,
+            source: Box::new(source),
+            span,
+        }))
     }
 
     fn parse_object_cast(&mut self) -> Option<Expression> {

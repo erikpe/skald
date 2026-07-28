@@ -127,41 +127,44 @@ HIR.
 ## Primitive integer operation boundary
 
 Primitive integer comparisons and casts have a
-[frozen source contract](../language/TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts)
+[source contract](../language/TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts)
 with staged compiler availability. Comparisons are current products through
-native x86-64 execution; primitive integer casts remain a later roadmap step.
+native x86-64 execution; primitive integer casts are current through verified
+target-independent MIR and await target execution.
 The pipeline responsibilities are:
 
 - Lexing recognizes comparison punctuation by longest match and otherwise
   preserves source spellings. Syntax retains each predicate, both operand
   shapes and spans, or one primitive cast target and operand. It assigns no
   numeric meaning or target behavior.
-- Resolution currently preserves comparison shape. Primitive casts will
-  preserve their primitive target without declaration lookup, while nominal
-  and shared object-cast targets continue through existing identity lookup;
-  lower phases never disambiguate cast kinds from source text.
+- Resolution preserves comparison shape. Primitive casts preserve their
+  primitive target without declaration lookup, while nominal and shared
+  object-cast targets continue through existing identity lookup; lower phases
+  never disambiguate cast kinds from source text.
 - Type checking is the sole owner of operation selection. It requires matching
   `i64`, `u64`, or `u8` comparison operands and records a `bool` result, or
   selects one of the nine valid integer source/target cast pairs. Unsupported
   and implicit conversions are rejected before HIR.
 - Typed HIR records the selected comparison predicate and integer operand
-  type. Primitive casts will record both integer source and target types.
+  type. Primitive casts record both integer source and target types.
   Neither representation retains a backend condition code, register width, or
   spelling-based signedness choice.
 - MIR lowering evaluates comparison operands left to right and every operand
   exactly once. Comparisons become typed boolean-producing rvalues; integer
   casts become ordinary pure rvalues with no trap, call, allocation, cleanup,
   or exceptional control-flow edge.
-- MIR verification currently proves matching comparison operand definitions
-  and types plus a `bool` result. Cast verification will prove the closed
-  integer matrix with exact source and result types. Both operation families
-  retain the existing block-local value, definition-before-use, and
-  deterministic-error invariants.
+- MIR verification proves matching comparison operand definitions and types
+  plus a `bool` result. Cast verification proves the closed integer matrix with
+  exact source and result types. Both operation families retain the existing
+  block-local value, definition-before-use, and deterministic-error
+  invariants.
 - Each backend receives already selected signedness and width through verified
   MIR. The x86-64 target realizes signed `i64` ordering and unsigned
-  `u64`/`u8` ordering with canonical boolean results. Later cast lowering will
-  realize bit preservation, truncation, identity, or zero extension without
-  inferring semantics from source spelling or target register accidents.
+  `u64`/`u8` ordering with canonical boolean results. Until INT4, x86-64
+  rejects verified cast MIR with a structured target error; later cast
+  lowering will realize bit preservation, truncation, identity, or zero
+  extension without inferring semantics from source spelling or target
+  register accidents.
 
 These operations add no ownership or lifetime rule and no public runtime ABI.
 Floating, boolean/numeric, checked, saturating, implicit, mixed-type, and

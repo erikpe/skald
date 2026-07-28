@@ -393,6 +393,19 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     span: unwrap.span,
                 }))
             }
+            syntax::Expression::IntegerCast(cast) => {
+                let source = self.resolve_expression(&cast.source)?;
+                Some(ResolvedExpression::IntegerCast(ResolvedIntegerCastExpr {
+                    target: match cast.target {
+                        syntax::PrimitiveIntegerType::I64 => ResolvedIntegerType::I64,
+                        syntax::PrimitiveIntegerType::U64 => ResolvedIntegerType::U64,
+                        syntax::PrimitiveIntegerType::U8 => ResolvedIntegerType::U8,
+                    },
+                    target_span: cast.target_span,
+                    source: Box::new(source),
+                    span: cast.span,
+                }))
+            }
             syntax::Expression::ObjectCast(cast) => {
                 let source = self.resolve_expression(&cast.source);
                 let target = self.resolve_view_target(&cast.target);

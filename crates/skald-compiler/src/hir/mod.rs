@@ -28,7 +28,7 @@ pub use ir::{
     HirDestructorDeclaration, HirDirectBase, HirExpression, HirExpressionKind, HirFieldAssignment,
     HirFieldConstruction, HirFieldCopyAssignment, HirFieldCopyConstruction, HirFieldDeclaration,
     HirFieldPlace, HirFunctionDeclaration, HirFunctionDeclarationTable, HirFunctionDefinition,
-    HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration,
+    HirFunctionDefinitionTable, HirFunctionLinkage, HirInitializerDeclaration, HirIntegerCast,
     HirIntegerComparison, HirIntegerType, HirInterfaceCallTarget, HirInterfaceConformance,
     HirInterfaceDeclaration, HirInterfaceDeclarationTable, HirInterfaceParameter,
     HirInterfaceReceiver, HirInterfaceRequirement, HirLiteralData, HirLiteralDataTable, HirLocal,

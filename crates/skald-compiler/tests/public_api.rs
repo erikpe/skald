@@ -12,7 +12,7 @@ use skald_compiler::{
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
-        dump_hir, HirComparisonPredicate, HirIntegerComparison, HirIntegerType,
+        dump_hir, HirComparisonPredicate, HirIntegerCast, HirIntegerComparison, HirIntegerType,
         HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice,
         HirObjectView, HirProgram, HirViewTarget, ObjectProjection, Type,
     },
@@ -25,9 +25,9 @@ use skald_compiler::{
     mir::{
         dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
         MirArrayTypeTable, MirBaseCopy, MirCallReceiver, MirComparisonPredicate, MirDirectBase,
-        MirIntegerComparison, MirIntegerType, MirInterfaceCallTarget, MirInterfaceConformance,
-        MirInterfaceDeclaration, MirObjectView, MirPlaceProjection, MirProgram, MirType,
-        MirViewTarget,
+        MirIntegerCast, MirIntegerComparison, MirIntegerType, MirInterfaceCallTarget,
+        MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView, MirPlaceProjection,
+        MirProgram, MirType, MirViewTarget,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -39,13 +39,16 @@ use skald_compiler::{
     passes::run_mir_pipeline,
     resolve::{
         dump_resolved, resolve, resolve_module_graph, ResolveOutput, ResolvedClassHierarchy,
-        ResolvedClassMember, ResolvedModuleBinding, ResolvedModuleBindingTable,
-        ResolvedModuleBindings, ResolvedModuleDeclaration, ResolvedModuleDeclarationTable,
-        ResolvedModuleDeclarations, ResolvedOrdinaryBinding, ResolvedOrdinaryBindingTable,
-        ResolvedOrdinaryBindings, ResolvedProgram, ResolvedTopLevelId, ResolvedVisibility,
+        ResolvedClassMember, ResolvedIntegerCastExpr, ResolvedIntegerType, ResolvedModuleBinding,
+        ResolvedModuleBindingTable, ResolvedModuleBindings, ResolvedModuleDeclaration,
+        ResolvedModuleDeclarationTable, ResolvedModuleDeclarations, ResolvedOrdinaryBinding,
+        ResolvedOrdinaryBindingTable, ResolvedOrdinaryBindings, ResolvedProgram,
+        ResolvedTopLevelId, ResolvedVisibility,
     },
     source::SourceDatabase,
-    syntax::{dump_ast, parse, CompilationUnit, ParseOutput},
+    syntax::{
+        dump_ast, parse, CompilationUnit, IntegerCastExpr, ParseOutput, PrimitiveIntegerType,
+    },
     typeck::{type_check, TypeCheckOutput},
 };
 
@@ -137,6 +140,10 @@ fn intentional_phase_and_dump_paths_compose() {
     let class = resolved_program.classes.iter().next().unwrap().id;
     let _base_chain = hierarchy.base_chain(class);
     let _member: Option<ResolvedClassMember> = hierarchy.member(class, "member");
+    let _syntax_integer_cast: Option<IntegerCastExpr> = None;
+    let _syntax_integer_type: Option<PrimitiveIntegerType> = None;
+    let _resolved_integer_cast: Option<ResolvedIntegerCastExpr> = None;
+    let _resolved_integer_type: Option<ResolvedIntegerType> = None;
     let _resolved_dump = dump_resolved(resolved_program);
     let checked: TypeCheckOutput = type_check(resolved_program);
     let hir: &HirProgram = checked.hir.as_ref().unwrap();
@@ -155,6 +162,12 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(hir_comparison.operand_type(), Type::U64);
     assert_eq!(hir_comparison.result_type(), Type::Bool);
+    let hir_cast = HirIntegerCast {
+        source: HirIntegerType::U64,
+        target: HirIntegerType::U8,
+    };
+    assert_eq!(hir_cast.source_type(), Type::U64);
+    assert_eq!(hir_cast.result_type(), Type::U8);
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
@@ -177,6 +190,12 @@ fn intentional_phase_and_dump_paths_compose() {
     };
     assert_eq!(mir_comparison.operand_type(), MirType::U64);
     assert_eq!(mir_comparison.result_type(), MirType::Bool);
+    let mir_cast = MirIntegerCast {
+        source: MirIntegerType::U64,
+        target: MirIntegerType::U8,
+    };
+    assert_eq!(mir_cast.source_type(), MirType::U64);
+    assert_eq!(mir_cast.result_type(), MirType::U8);
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

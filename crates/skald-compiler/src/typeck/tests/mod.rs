@@ -43,6 +43,10 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
             assert_expression_is_fully_typed(left);
             assert_expression_is_fully_typed(right);
         }
+        HirExpressionKind::IntegerCast { operation, operand } => {
+            assert_eq!(operand.ty, operation.source_type());
+            assert_eq!(expression.ty, operation.result_type());
+        }
         HirExpressionKind::DirectCall { arguments, .. }
         | HirExpressionKind::StaticCall { arguments, .. } => {
             for argument in arguments {
@@ -142,6 +146,7 @@ mod diagnostics;
 mod dumps;
 mod expressions;
 mod inline_fields;
+mod integer_casts;
 mod interfaces;
 mod literals;
 mod object_results;

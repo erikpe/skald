@@ -622,6 +622,24 @@ impl Verifier<'_> {
                 self.verify_comparison_operand(function, block, *left, expected, defined);
                 self.verify_comparison_operand(function, block, *right, expected, defined);
             }
+            MirRvalueKind::IntegerCast { operation, operand } => {
+                if rvalue.ty != operation.result_type() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "integer cast result type mismatch",
+                    );
+                }
+                if let Some(ty) = self.verify_value_use(function, block, *operand, defined) {
+                    if ty != operation.source_type() {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            format!("integer cast source is not `{}`", operation.source_type()),
+                        );
+                    }
+                }
+            }
             MirRvalueKind::TypeTest { source, target } => {
                 self.verify_type_test(function, block, rvalue, source, *target)
             }

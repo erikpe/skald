@@ -37,11 +37,12 @@ pub use expression::{
     ResolvedBinaryExpr, ResolvedBinaryOperator, ResolvedBindingExpr, ResolvedBooleanExpr,
     ResolvedConstructExpr, ResolvedConstructionMode, ResolvedDereferenceExpr,
     ResolvedDereferenceOperator, ResolvedDirectCallExpr, ResolvedExpression,
-    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
-    ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
-    ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
-    ResolvedPresenceTestKind, ResolvedStaticCallExpr, ResolvedStringLiteralExpr,
-    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
+    ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedIntegerCastExpr, ResolvedIntegerType,
+    ResolvedInterfaceCallExpr, ResolvedInterfaceReceiver, ResolvedMethodCallExpr,
+    ResolvedNumericLiteralExpr, ResolvedObjectCastExpr, ResolvedObjectCastTargetMode,
+    ResolvedPresenceTestExpr, ResolvedPresenceTestKind, ResolvedStaticCallExpr,
+    ResolvedStringLiteralExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
+    ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{

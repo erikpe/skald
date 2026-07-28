@@ -803,6 +803,13 @@ impl ResolvedDumper {
                     dumper.line("Bang", unwrap.bang_span);
                 });
             }
+            ResolvedExpression::IntegerCast(cast) => {
+                self.line(
+                    &format!("IntegerCast target {}", cast.target.name()),
+                    cast.span,
+                );
+                self.indented(|dumper| dumper.expression(&cast.source));
+            }
             ResolvedExpression::ObjectCast(cast) => {
                 let mode = match cast.target_mode {
                     ResolvedObjectCastTargetMode::Plain => "ObjectCast",

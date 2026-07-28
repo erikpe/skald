@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::hir::{
-    HirBinaryOperation, HirComparisonPredicate, HirExpression, HirExpressionKind,
+    HirBinaryOperation, HirComparisonPredicate, HirExpression, HirExpressionKind, HirIntegerCast,
     HirIntegerComparison, HirIntegerType, HirUnaryOperation,
 };
 
@@ -55,6 +55,9 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_integer_comparison(expression, *operation, left, right),
+            HirExpressionKind::IntegerCast { operation, operand } => {
+                self.lower_integer_cast(expression, *operation, operand)
+            }
             HirExpressionKind::DirectCall {
                 function,
                 arguments,
@@ -190,11 +193,7 @@ impl BodyLowerer<'_> {
                 HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
                 HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
             },
-            operand: match operation.operand {
-                HirIntegerType::I64 => MirIntegerType::I64,
-                HirIntegerType::U64 => MirIntegerType::U64,
-                HirIntegerType::U8 => MirIntegerType::U8,
-            },
+            operand: lower_integer_type(operation.operand),
         };
         let (left, right) =
             self.lower_binary_operands(left, right, operation.operand_type(), expression);
@@ -204,6 +203,26 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             },
+            operation.result_type(),
+            expression.span,
+        ))
+    }
+
+    fn lower_integer_cast(
+        &mut self,
+        expression: &HirExpression,
+        operation: HirIntegerCast,
+        operand: &HirExpression,
+    ) -> Option<ValueId> {
+        let operand = self
+            .lower_expression(operand)
+            .expect("typed integer-cast operand must produce a value");
+        let operation = MirIntegerCast {
+            source: lower_integer_type(operation.source),
+            target: lower_integer_type(operation.target),
+        };
+        Some(self.assign(
+            MirRvalueKind::IntegerCast { operation, operand },
             operation.result_type(),
             expression.span,
         ))
@@ -270,5 +289,13 @@ impl BodyLowerer<'_> {
             span,
         }));
         result
+    }
+}
+
+const fn lower_integer_type(ty: HirIntegerType) -> MirIntegerType {
+    match ty {
+        HirIntegerType::I64 => MirIntegerType::I64,
+        HirIntegerType::U64 => MirIntegerType::U64,
+        HirIntegerType::U8 => MirIntegerType::U8,
     }
 }

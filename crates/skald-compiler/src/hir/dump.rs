@@ -889,6 +889,17 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
+            HirExpressionKind::IntegerCast { operation, operand } => {
+                self.typed_line(
+                    &format!(
+                        "IntegerCast {}.{}",
+                        operation.source.name(),
+                        operation.target.name()
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| dumper.expression(operand));
+            }
             HirExpressionKind::DirectCall {
                 function,
                 arguments,

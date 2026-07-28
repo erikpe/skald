@@ -381,9 +381,15 @@ multiplicative-expression
 
 unary-expression = "-" unary-expression
                  | "*" unary-expression
-                 | object-cast-expression
+                 | cast-expression
                  | postfix-expression
 
+cast-expression  = primitive-integer-cast-expression
+                 | object-cast-expression
+primitive-integer-cast-expression
+                 = "(" primitive-integer-type ")" unary-expression
+primitive-integer-type
+                 = "i64" | "u64" | "u8"
 object-cast-expression
                  = "(" object-cast-target ")" unary-expression
 object-cast-target
@@ -440,7 +446,7 @@ From tightest to loosest binding, precedence is:
 
 1. postfix unwrap, member access, dereferencing member access, calls, indexing,
    and slicing;
-2. unary `-`, unary `*`, and object casts;
+2. unary `-`, unary `*`, and primitive or object casts;
 3. binary `*`;
 4. binary `+` and `-`;
 5. integer comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
@@ -463,33 +469,16 @@ selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
 Declaration selection and call legality are semantic concerns.
 
-A parenthesized identifier followed by an adjacent expression is an object-cast
-candidate. Cast syntax deliberately wins over grouped callable spelling:
-`(f)(argument)` is resolved as a cast candidate, while direct calls use
-`f(argument)`. Empty `()` is not an expression operand, and `(value) - other`
-remains grouped subtraction. Postfix use of a cast requires grouping, as in
-`((Leaf) value).read()`. `shared` is contextual in cast targets and
-stored/result types. `new` is contextual only when followed by an identifier
-and allocation argument list; `new()` remains an ordinary call to a binding
-named `new`.
-
-### Frozen primitive integer cast extension
-
-Primitive integer casts have frozen syntax but are not accepted by the current
-compiler. When implemented, the unary grammar above gains exactly these
-replacements and additions:
-
-```text
-unary-expression = "-" unary-expression
-                 | "*" unary-expression
-                 | cast-expression
-                 | postfix-expression
-
-cast-expression  = "(" cast-target ")" unary-expression
-cast-target      = primitive-integer-type | object-cast-target
-primitive-integer-type
-                 = "i64" | "u64" | "u8"
-```
+A primitive integer keyword in this position unambiguously selects an integer
+cast. A parenthesized identifier followed by an adjacent expression is an
+object-cast candidate. Cast syntax deliberately wins over grouped callable
+spelling: `(f)(argument)` is resolved as a cast candidate, while direct calls
+use `f(argument)`. Empty `()` is not an expression operand, and
+`(value) - other` remains grouped subtraction. Postfix use of a cast requires
+grouping, as in `((Leaf) value).read()`. `shared` is contextual in cast targets
+and stored/result types. `new` is contextual only when followed by an
+identifier and allocation argument list; `new()` remains an ordinary call to
+a binding named `new`.
 
 Primitive and object casts retain the existing unary precedence and
 right-associative operand shape. A primitive keyword unambiguously selects a
@@ -497,7 +486,7 @@ primitive cast target, while a declaration path or `shared` declaration path
 selects the existing object-cast syntax. Postfix use of either cast still
 requires grouping. The exact-type comparison semantics and closed primitive
 cast matrix are defined by
-[Types, Values, and Expressions](TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts).
+[Types, Values, and Expressions](TYPES_AND_VALUES.md#primitive-integer-comparisons-and-casts).
 
 ## Syntax errors and nesting
 
@@ -509,9 +498,9 @@ never accepted merely because recovery reaches later source.
 
 The current compiler limits simultaneously active recursive syntax constructs
 to 128 levels. Class bodies, function and class-member bodies, nested blocks,
-grouped expressions, unary expressions, nested calls, and postfix chains share
-this budget. Recursive array type grouping and postfix array dimensions use
-the same budget.
+grouped expressions, unary expressions, primitive and object casts, nested
+calls, and postfix chains share this budget. Recursive array type grouping and
+postfix array dimensions use the same budget.
 Exceeding it reports `PAR005`, omits the affected declaration from the partial
 syntax tree, and resumes at a later top-level declaration when possible.
 

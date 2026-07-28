@@ -18,6 +18,7 @@ mod aliases;
 mod arrays;
 mod comparisons;
 mod copy;
+mod integer_casts;
 mod interface_dispatch;
 mod interface_fixtures;
 mod object_fixtures;

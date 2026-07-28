@@ -561,6 +561,17 @@ impl AstDumper {
                     dumper.line("Bang", unwrap.bang_span);
                 });
             }
+            Expression::IntegerCast(cast) => {
+                self.line(
+                    &format!("IntegerCast target {}", cast.target.name()),
+                    cast.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Target", cast.target_span);
+                    dumper.heading("Source");
+                    dumper.indented(|dumper| dumper.expression(&cast.source));
+                });
+            }
             Expression::ObjectCast(cast) => {
                 let mode = match cast.target_mode {
                     ObjectCastTargetMode::Plain => "ObjectCast",

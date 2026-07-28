@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: in progress; INT0–INT2 are complete and INT3 is next.
+Status: in progress; INT0–INT3 are complete and INT4 is next.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -88,7 +88,7 @@ public ABI remains unchanged.
 - [x] INT0 — Freeze the integer operation contract
 - [x] INT1 — Establish verified target-independent integer comparisons
 - [x] INT2 — Execute integer comparisons on x86-64
-- [ ] INT3 — Establish verified target-independent integer casts
+- [x] INT3 — Establish verified target-independent integer casts
 - [ ] INT4 — Execute integer casts on x86-64
 - [ ] INT5 — Harden and promote the integer operation profile
 
@@ -188,26 +188,26 @@ the public x86-64 backend and produce canonical `bool` without runtime support.
 **Purpose:** Add one complete explicit integer-cast matrix as pure typed
 operations before target code relies on shared register widths.
 
-- [ ] Recognize primitive-keyword cast targets without changing nominal
+- [x] Recognize primitive-keyword cast targets without changing nominal
       object-cast or shared-cast lookup, precedence, postfix grouping, source
       spans, nesting accounting, or recovery.
-- [ ] Preserve the primitive target and source expression through syntax and
+- [x] Preserve the primitive target and source expression through syntax and
       resolution; type checking selects the source and target integer kinds
       once and rejects floating, boolean, unit, optional, array, class, and
       object-view combinations.
-- [ ] Accept all nine integer source/target pairs, including identities, with
+- [x] Accept all nine integer source/target pairs, including identities, with
       no expected-type inference or implicit use at initialization, argument,
       return, assignment, arithmetic, or comparison boundaries.
-- [ ] Record one cohesive HIR/MIR integer-cast operation carrying enough
+- [x] Record one cohesive HIR/MIR integer-cast operation carrying enough
       source/target information to verify identity, bit preservation,
       truncation, and zero extension without inspecting source spelling.
-- [ ] Lower casts as ordinary pure rvalues that evaluate their operand once,
+- [x] Lower casts as ordinary pure rvalues that evaluate their operand once,
       add no block or termination edge, and are not classified as control
       effects.
-- [ ] Verify exact source and result types, the closed integer matrix,
+- [x] Verify exact source and result types, the closed integer matrix,
       block-local use, and deterministic mutation diagnostics; expose only the
       minimal public phase vocabulary and deterministic dumps.
-- [ ] Keep constant operands semantically identical to runtime operands:
+- [x] Keep constant operands semantically identical to runtime operands:
       after a literal is valid for its own spelling-selected source type, its
       explicit cast is never a new range diagnostic.
 

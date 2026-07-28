@@ -109,6 +109,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedExpression::Binary(binary) => self.check_binary_expression(binary),
             ResolvedExpression::TypeTest(test) => self.check_type_test(test),
+            ResolvedExpression::IntegerCast(cast) => self.check_integer_cast(cast),
             ResolvedExpression::ObjectCast(cast) => {
                 if self.check_object_cast(cast).is_some() {
                     self.diagnostics.push(

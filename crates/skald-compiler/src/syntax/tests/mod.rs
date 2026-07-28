@@ -31,6 +31,7 @@ mod conditionals;
 mod declarations;
 mod dumps;
 mod expressions;
+mod integer_casts;
 mod interfaces;
 mod modules;
 mod objects;
