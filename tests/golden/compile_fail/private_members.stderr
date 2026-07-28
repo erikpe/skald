@@ -1,0 +1,19 @@
+error[RES031]: member `read` is private to class `Secret`
+ --> tests/golden/compile_fail/private_members.ska:24:19
+    |
+24 |     return secret.read();
+    |                   ^^^^ private member is not accessible here
+   |
+8 |     private fn read() -> i64 {
+   |     ------- declared private here
+  = note: private access is granted only inside the declaring class
+
+error[RES031]: member `value` is private to class `Secret`
+ --> tests/golden/compile_fail/private_members.ska:19:21
+    |
+19 |         return self.value;
+    |                     ^^^^^ private member is not accessible here
+   |
+2 |     private value: i64;
+   |     ------- declared private here
+  = note: private access is granted only inside the declaring class

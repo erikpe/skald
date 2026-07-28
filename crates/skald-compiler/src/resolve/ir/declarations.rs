@@ -273,10 +273,26 @@ impl ResolvedClassDeclaration {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedFieldDeclaration {
     pub id: FieldId,
+    pub visibility: ResolvedMemberVisibility,
     pub name: String,
     pub name_span: Span,
     pub type_syntax: ResolvedType,
     pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResolvedMemberVisibility {
+    Public,
+    Private { span: Span },
+}
+
+impl ResolvedMemberVisibility {
+    pub const fn private_span(self) -> Option<Span> {
+        match self {
+            Self::Public => None,
+            Self::Private { span } => Some(span),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -322,6 +338,7 @@ pub enum ResolvedReceiverAccess {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedMethodDeclaration {
     pub id: MethodId,
+    pub visibility: ResolvedMemberVisibility,
     pub name: String,
     pub name_span: Span,
     pub receiver_access: ResolvedReceiverAccess,

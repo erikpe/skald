@@ -281,10 +281,18 @@ impl ResolvedDumper {
                 for field in &class.fields {
                     dumper.write_indentation();
                     let _ = write!(dumper.output, "Field {} ", field.id);
+                    if field.visibility.private_span().is_some() {
+                        dumper.output.push_str("private ");
+                    }
                     write_quoted(&mut dumper.output, &field.name);
                     write_span(&mut dumper.output, field.span);
                     dumper.output.push('\n');
-                    dumper.indented(|dumper| dumper.type_syntax(&field.type_syntax));
+                    dumper.indented(|dumper| {
+                        if let Some(span) = field.visibility.private_span() {
+                            dumper.line("Private", span);
+                        }
+                        dumper.type_syntax(&field.type_syntax);
+                    });
                 }
             });
             dumper.heading("OrdinaryInitializers");
@@ -347,10 +355,16 @@ impl ResolvedDumper {
                             ResolvedReceiverAccess::Mutable => "mutable",
                         }
                     );
+                    if method.visibility.private_span().is_some() {
+                        dumper.output.push_str("private ");
+                    }
                     write_quoted(&mut dumper.output, &method.name);
                     write_span(&mut dumper.output, method.span);
                     dumper.output.push('\n');
                     dumper.indented(|dumper| {
+                        if let Some(span) = method.visibility.private_span() {
+                            dumper.line("Private", span);
+                        }
                         dumper.method_dispatch(method.dispatch);
                         dumper.parameters(&method.parameters);
                         dumper.heading("ReturnType");

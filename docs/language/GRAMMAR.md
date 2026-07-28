@@ -83,6 +83,10 @@ initializer. Both spellings remain ordinary identifiers outside those shapes.
 alias-parameter and type-operation target positions; it remains an ordinary
 identifier elsewhere except that it cannot name a top-level declaration.
 `virtual` and `override` are contextually recognized only as method modifiers.
+`private` is contextually recognized before a field declaration or before the
+optional `mut` of a direct method declaration. It remains an ordinary
+identifier elsewhere, including in `private: i64;`, `fn private() -> unit {}`,
+parameters, locals, and top-level declarations.
 `implements`, `interface`, and `is` are likewise contextual in the exact forms
 below. `some` is contextual only after `is`; `none` is reserved by the lexer
 and forms either an absent expression or the target of a presence test.
@@ -223,12 +227,16 @@ class-member                = field-declaration
                             | destruction-declaration
                             | method-declaration
 
-field-declaration           = identifier ":" storage-type ";"
+field-declaration           = ["private"] identifier ":" storage-type ";"
 initializer-declaration     = "init" parameter-list block
 copy-constructor-declaration = "copy" parameter-list block
 copy-assignment-declaration = "assign" parameter-list block
 destruction-declaration     = "destroy" block
-method-declaration          = [method-modifier] ["mut"] "fn" identifier parameter-list
+method-declaration          = public-method-declaration
+                            | private-method-declaration
+public-method-declaration   = [method-modifier] ["mut"] "fn" identifier parameter-list
+                              "->" result-type block
+private-method-declaration  = "private" ["mut"] "fn" identifier parameter-list
                               "->" result-type block
 method-modifier             = "virtual" | "override"
 
@@ -243,7 +251,9 @@ validity, the required number or signature of lifecycle members,
 initializer-body restrictions, receiver access, or member type legality. It
 only classifies their source forms. A lifecycle word used after `fn` is an
 ordinary method name; a lifecycle word followed by `:` is an ordinary field
-name.
+name. Fields and methods are public unless prefixed by `private`. Lifecycle
+declarations do not accept visibility, and a private method cannot use
+`virtual` or `override`.
 
 ### Construction-selection syntax
 

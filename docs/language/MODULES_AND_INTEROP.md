@@ -323,13 +323,15 @@ top-level-declaration = ["public"] (
 )
 ```
 
-Qualification and aliases never bypass privacy. The initial boundary is only
-module-level:
+Qualification and aliases never bypass top-level privacy. Top-level
+visibility and class-member visibility are independent:
 
 - there is no package-private or library-private visibility;
 - shared path prefixes grant no access;
-- class-member visibility is unchanged, so a public class or interface exposes
-  only the member surface allowed by the existing member rules; and
+- a public class may contain private fields and methods, and neither same-module
+  access nor an import grants access to them; the exact rule is
+  [declaring-class privacy](CLASSES_AND_LIFECYCLE.md#declaring-class-privacy);
+  and
 - `public` controls Skald source access, not native symbol export.
 
 Each module retains one non-overloaded ordinary top-level declaration
@@ -396,7 +398,7 @@ The frozen initial system has no:
 - wildcard imports, re-exports, implicit import flattening, or facade
   construction;
 - multi-segment module aliases or alias-based import sources;
-- package-private visibility or new member visibility;
+- package-private visibility;
 - directory modules or implicit index files;
 - manifests, registries, versions, or dependency distribution;
 - separate compilation, serialized interfaces, or binary Skald libraries;

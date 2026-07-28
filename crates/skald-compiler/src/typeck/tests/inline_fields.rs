@@ -6,6 +6,31 @@ use crate::{
 };
 
 #[test]
+fn authorized_private_members_are_erased_before_hir() {
+    let output = check_text(concat!(
+        "class Secret {\n",
+        "  private value: i64;\n",
+        "  init(value: i64) { self.value = value; }\n",
+        "  private fn read() -> i64 { return self.value; }\n",
+        "  fn reveal() -> i64 { return self.read(); }\n",
+        "}\n",
+        "fn clone(ref source: Secret) -> Secret { return Secret(copy source); }\n",
+        "fn main() -> i64 {\n",
+        "  var original: Secret = Secret(7);\n",
+        "  var value: Secret = clone(original);\n",
+        "  return value.reveal();\n",
+        "}\n",
+    ));
+
+    assert!(!output.has_errors(), "{:?}", output.diagnostics);
+    let hir = output.hir.unwrap();
+    let class = hir.class(ClassId::new(0)).unwrap();
+    assert_eq!(class.fields.len(), 1);
+    assert_eq!(class.methods.len(), 2);
+    assert!(!dump_hir(&hir).contains("private"));
+}
+
+#[test]
 fn supports_nested_places_across_every_live_root_kind() {
     let output = check_text(concat!(
         "class Leaf {\n",

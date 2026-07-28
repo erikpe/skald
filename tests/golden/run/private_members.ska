@@ -1,0 +1,25 @@
+class Secret {
+    private value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    private fn read() -> i64 {
+        return self.value;
+    }
+
+    fn reveal() -> i64 {
+        return self.read();
+    }
+}
+
+fn clone(ref source: Secret) -> Secret {
+    return Secret(copy source);
+}
+
+fn main() -> i64 {
+    var original: Secret = Secret(40);
+    var copied: Secret = clone(original);
+    return copied.reveal();
+}

@@ -108,7 +108,8 @@ impl Parser<'_> {
     fn starts_class_member(&self) -> bool {
         self.at_any(&[TokenKind::Fn, TokenKind::Mut, TokenKind::Ref])
             || (self.at(TokenKind::Identifier)
-                && (self.starts_method_modifier()
+                && (self.starts_member_visibility()
+                    || self.starts_method_modifier()
                     || self.peek_ahead(1).kind == TokenKind::Colon
                     || self.lexeme(self.peek()) == "destroy"
                     || (matches!(self.lexeme(self.peek()), "copy" | "assign")
@@ -118,6 +119,8 @@ impl Parser<'_> {
     }
 
     fn parse_class_member(&mut self) -> Option<ClassMember> {
+        let visibility = self.parse_member_visibility();
+
         if self.at(TokenKind::Ref)
             || (self.at(TokenKind::Mut) && self.peek_ahead(1).kind == TokenKind::Ref)
         {
@@ -161,28 +164,48 @@ impl Parser<'_> {
         }
 
         if self.at(TokenKind::Fn) || self.at(TokenKind::Mut) || self.starts_method_modifier() {
-            return self.parse_method().map(ClassMember::Method);
+            return self.parse_method(visibility).map(ClassMember::Method);
         }
 
         if self.at(TokenKind::Identifier) {
             let text = self.lexeme(self.peek());
             if text == "init" && self.peek_ahead(1).kind == TokenKind::LeftParen {
+                if let MemberVisibility::Private { span } = visibility {
+                    self.report_private_lifecycle(span, "initializers");
+                    self.parse_initializer();
+                    return None;
+                }
                 return self.parse_initializer().map(ClassMember::Initializer);
             }
             if text == "copy" && self.peek_ahead(1).kind == TokenKind::LeftParen {
+                if let MemberVisibility::Private { span } = visibility {
+                    self.report_private_lifecycle(span, "copy constructors");
+                    self.parse_copy_constructor();
+                    return None;
+                }
                 return self
                     .parse_copy_constructor()
                     .map(ClassMember::CopyConstructor);
             }
             if self.peek_ahead(1).kind == TokenKind::Colon {
-                return self.parse_field().map(ClassMember::Field);
+                return self.parse_field(visibility).map(ClassMember::Field);
             }
             if text == "assign" && self.peek_ahead(1).kind == TokenKind::LeftParen {
+                if let MemberVisibility::Private { span } = visibility {
+                    self.report_private_lifecycle(span, "copy assignments");
+                    self.parse_copy_assignment();
+                    return None;
+                }
                 return self
                     .parse_copy_assignment()
                     .map(ClassMember::CopyAssignment);
             }
             if text == "destroy" {
+                if let MemberVisibility::Private { span } = visibility {
+                    self.report_private_lifecycle(span, "destructors");
+                    self.parse_destructor();
+                    return None;
+                }
                 return self.parse_destructor().map(ClassMember::Destructor);
             }
 
@@ -214,7 +237,48 @@ impl Parser<'_> {
         None
     }
 
-    fn parse_field(&mut self) -> Option<FieldDecl> {
+    fn parse_member_visibility(&mut self) -> MemberVisibility {
+        if !self.starts_member_visibility() {
+            return MemberVisibility::Public;
+        }
+
+        let span = self.advance().span;
+        while self.starts_member_visibility() && self.at_contextual("private") {
+            let duplicate = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "a class member cannot repeat `private`",
+                duplicate.span,
+                "remove this duplicate visibility modifier",
+            );
+        }
+        MemberVisibility::Private { span }
+    }
+
+    fn starts_member_visibility(&self) -> bool {
+        if !self.at_contextual("private") {
+            return false;
+        }
+
+        let next = self.peek_ahead(1);
+        matches!(next.kind, TokenKind::Fn | TokenKind::Mut)
+            || (next.kind == TokenKind::Identifier
+                && (matches!(
+                    self.lexeme(next),
+                    "private" | "virtual" | "override" | "init" | "copy" | "assign" | "destroy"
+                ) || self.peek_ahead(2).kind == TokenKind::Colon))
+    }
+
+    fn report_private_lifecycle(&mut self, span: Span, member: &str) {
+        self.report(
+            INVALID_CLASS_MEMBER,
+            format!("{member} cannot be private"),
+            span,
+            "lifecycle members do not declare visibility",
+        );
+    }
+
+    fn parse_field(&mut self, visibility: MemberVisibility) -> Option<FieldDecl> {
         let name = self.parse_name("expected a field name")?;
         self.expect(TokenKind::Colon, "`:` after the field name");
         let type_syntax = self.parse_type(
@@ -227,7 +291,8 @@ impl Parser<'_> {
         let semicolon = self.expect(TokenKind::Semicolon, "`;` after the field declaration");
         let end_span = semicolon.map_or(type_syntax.span, |token| token.span);
         Some(FieldDecl {
-            span: self.cover(name.span, end_span),
+            span: self.cover(visibility.start_span(name.span), end_span),
+            visibility,
             name,
             type_syntax,
         })
@@ -365,9 +430,26 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_method(&mut self) -> Option<MethodDecl> {
+    fn parse_method(&mut self, visibility: MemberVisibility) -> Option<MethodDecl> {
         let modifier = self.parse_method_modifier();
+        if let (MemberVisibility::Private { .. }, Some(modifier)) = (visibility, modifier) {
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "private methods cannot be `virtual` or `override`",
+                modifier.span(),
+                "private methods use direct dispatch",
+            );
+        }
         let mut_token = self.consume(TokenKind::Mut);
+        if self.at_contextual("private") {
+            let misplaced = self.advance();
+            self.report(
+                INVALID_CLASS_MEMBER,
+                "`private` must precede method modifiers and `mut`",
+                misplaced.span,
+                "write `private mut fn`",
+            );
+        }
         if mut_token.is_some() && (self.at_contextual("virtual") || self.at_contextual("override"))
         {
             let misplaced = self.advance();
@@ -378,10 +460,11 @@ impl Parser<'_> {
                 "write `virtual mut fn` or `override mut fn`",
             );
         }
-        let start_span = modifier
+        let method_start = modifier
             .map(MethodModifier::span)
             .or_else(|| mut_token.map(|token| token.span))
             .unwrap_or_else(|| self.peek().span);
+        let start_span = visibility.start_span(method_start);
         let expectation = if modifier.is_some() || mut_token.is_some() {
             "`fn` after method modifiers"
         } else {
@@ -403,6 +486,7 @@ impl Parser<'_> {
             _ => return None,
         };
         Some(MethodDecl {
+            visibility,
             modifier,
             mut_span: mut_token.map(|token| token.span),
             name,
@@ -445,6 +529,6 @@ impl Parser<'_> {
         let next = self.peek_ahead(1);
         matches!(next.kind, TokenKind::Fn | TokenKind::Mut)
             || (next.kind == TokenKind::Identifier
-                && matches!(self.lexeme(next), "virtual" | "override"))
+                && matches!(self.lexeme(next), "private" | "virtual" | "override"))
     }
 }

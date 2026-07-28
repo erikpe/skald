@@ -50,6 +50,8 @@ All remain ordinary identifiers outside the exact forms above; the lexer does
 not reserve them. A class header always places `extends` before `implements`.
 Modifier order is `virtual` or `override`, then optional `mut`, then `fn`.
 Neither modifier may be repeated or combined with the other.
+Private methods use the separate `private ["mut"] fn` form and cannot carry a
+dispatch modifier.
 
 `Obj` cannot be the name of a top-level declaration because type positions
 must identify the universal root unambiguously. It remains usable as an
@@ -84,6 +86,11 @@ only as a valid explicit `override`; otherwise field hiding, method hiding, and
 implicit overriding are errors. Lifecycle slots remain class-owned special
 members rather than inherited ordinary names.
 
+Member visibility does not filter this lookup. After selection, private access
+uses the single
+[declaring-class rule](CLASSES_AND_LIFECYCLE.md#declaring-class-privacy).
+Thus a private inherited declaration still prevents hiding and redeclaration.
+
 Selected fields and non-virtual methods retain the identity and declaring
 class of their original declaration. An override retains its own method
 identity and joins the virtual family rooted at the inherited declaration.
@@ -101,7 +108,8 @@ Instance methods are non-virtual by default. `virtual` introduces a family;
 `override` extends the nearest inherited family of the same name and is itself
 virtual. A virtual root must be a concrete ordinary instance method. Fields,
 initializers, copy assignment, destructors, top-level functions, and interface
-requirements cannot use `virtual` or `override`.
+requirements cannot use `virtual` or `override`. Private methods are direct
+only: they cannot introduce or extend a virtual family.
 
 An override is valid only when the nearest inherited ordinary member with that
 name is a virtual method. Compatibility is exact:
@@ -133,7 +141,7 @@ is a new exact base object and dispatches with that exact dynamic class.
 ## Interface conformance and calls
 
 Conformance is checked after hierarchy and override validation. Every
-requirement must be satisfied by one accessible effective instance method of
+requirement must be satisfied by one public effective instance method of
 the same name with exact parameter types, binding modes, result type, and
 receiver mutability. A method need not be declared `virtual` to satisfy an
 interface. An inherited method may satisfy a requirement, and an override is
@@ -432,8 +440,8 @@ guarantees.
 This profile excludes:
 
 - multiple class inheritance and interface inheritance;
-- access modifiers, `final`, abstract methods/classes, default interface
-  bodies, interface fields, overloads, and covariant overrides;
+- `final`, abstract methods/classes, default interface bodies, interface
+  fields, overloads, and covariant overrides;
 - standalone inline `Obj` or interface values, fields, value parameters, or
   results;
 - local/general reference values and stored cast views;

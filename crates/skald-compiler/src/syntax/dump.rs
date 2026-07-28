@@ -82,6 +82,12 @@ impl AstDumper {
         }
     }
 
+    fn member_visibility(&mut self, visibility: MemberVisibility) {
+        if let MemberVisibility::Private { span } = visibility {
+            self.line("Private", span);
+        }
+    }
+
     fn name_path(&mut self, label: &str, name: &Name) {
         self.named(label, &name.text, name.span);
         if name.is_qualified() {
@@ -147,6 +153,7 @@ impl AstDumper {
             ClassMember::Field(field) => {
                 self.line("Field", field.span);
                 self.indented(|dumper| {
+                    dumper.member_visibility(field.visibility);
                     dumper.named("Name", &field.name.text, field.name.span);
                     dumper.type_syntax(&field.type_syntax);
                 });
@@ -192,6 +199,7 @@ impl AstDumper {
                     method.span,
                 );
                 self.indented(|dumper| {
+                    dumper.member_visibility(method.visibility);
                     if let Some(modifier) = method.modifier {
                         match modifier {
                             MethodModifier::Virtual { span } => {

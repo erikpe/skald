@@ -83,6 +83,7 @@ impl ClassCollectionState {
         }
         self.fields.push(ResolvedFieldDeclaration {
             id: field_id,
+            visibility: resolved_member_visibility(field.visibility),
             name: field.name.text.to_string(),
             name_span: field.name.span,
             type_syntax,
@@ -268,6 +269,7 @@ impl ClassCollectionState {
         }
         self.methods.push(ResolvedMethodDeclaration {
             id,
+            visibility: resolved_member_visibility(method.visibility),
             name: method.name.text.to_string(),
             name_span: method.name.span,
             receiver_access: if method.mut_span.is_some() {
@@ -345,6 +347,15 @@ impl ClassCollectionState {
             self.symbols,
             self.work,
         )
+    }
+}
+
+const fn resolved_member_visibility(
+    visibility: syntax::MemberVisibility,
+) -> ResolvedMemberVisibility {
+    match visibility {
+        syntax::MemberVisibility::Public => ResolvedMemberVisibility::Public,
+        syntax::MemberVisibility::Private { span } => ResolvedMemberVisibility::Private { span },
     }
 }
 

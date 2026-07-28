@@ -70,6 +70,21 @@ impl Visibility {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemberVisibility {
+    Public,
+    Private { span: Span },
+}
+
+impl MemberVisibility {
+    pub const fn start_span(self, fallback: Span) -> Span {
+        match self {
+            Self::Public => fallback,
+            Self::Private { span } => span,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TopLevelDeclaration {
     Function(FunctionDecl),
@@ -159,6 +174,7 @@ impl ClassMember {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FieldDecl {
+    pub visibility: MemberVisibility,
     pub name: Name,
     pub type_syntax: TypeSyntax,
     pub span: Span,
@@ -197,6 +213,7 @@ pub struct DestructorDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodDecl {
+    pub visibility: MemberVisibility,
     pub modifier: Option<MethodModifier>,
     pub mut_span: Option<Span>,
     pub name: Name,

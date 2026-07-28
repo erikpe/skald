@@ -24,10 +24,10 @@ pub use declarations::{
     ResolvedFunctionDeclarationTable, ResolvedFunctionLinkage, ResolvedInitializerDeclaration,
     ResolvedInterfaceClaim, ResolvedInterfaceDeclaration, ResolvedInterfaceDeclarationTable,
     ResolvedInterfaceParameter, ResolvedInterfaceRequirement, ResolvedLocal,
-    ResolvedMethodDeclaration, ResolvedMethodDispatch, ResolvedMethodModifier,
-    ResolvedOptionalPayload, ResolvedParameter, ResolvedParameterBindingMode, ResolvedProgram,
-    ResolvedReceiverAccess, ResolvedSharedTarget, ResolvedType, ResolvedTypeKind,
-    ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
+    ResolvedMemberVisibility, ResolvedMethodDeclaration, ResolvedMethodDispatch,
+    ResolvedMethodModifier, ResolvedOptionalPayload, ResolvedParameter,
+    ResolvedParameterBindingMode, ResolvedProgram, ResolvedReceiverAccess, ResolvedSharedTarget,
+    ResolvedType, ResolvedTypeKind, ResolvedVirtualFamily, ResolvedVirtualFamilyTable,
 };
 pub use expression::{
     ResolvedAbsentExpr, ResolvedAllocationExpr, ResolvedArrayConstructionArguments,

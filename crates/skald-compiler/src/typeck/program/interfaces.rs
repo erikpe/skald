@@ -267,6 +267,24 @@ fn validate_conformance(
         let method = program
             .method(method_id)
             .expect("selected method must exist");
+        if let Some(private_span) = method.visibility.private_span() {
+            diagnostics.push(
+                Diagnostic::error(
+                    INVALID_INTERFACE_CONFORMANCE,
+                    format!(
+                        "private method `{}` cannot implement `{}.{}`",
+                        method.name, interface.name, requirement.name
+                    ),
+                )
+                .with_primary_label(
+                    private_span,
+                    "private methods do not satisfy interface requirements",
+                )
+                .with_secondary_label(requirement.name_span, "requirement declared here"),
+            );
+            valid = false;
+            continue;
+        }
         if let Some(reason) = signature_difference(method, requirement) {
             diagnostics.push(
                 Diagnostic::error(

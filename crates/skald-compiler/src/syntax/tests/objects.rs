@@ -199,6 +199,96 @@ fn parses_contextual_virtual_method_modifiers_in_the_required_order() {
 }
 
 #[test]
+fn parses_contextual_private_members_with_source_shaped_spans() {
+    let (sources, output) = parse_text(concat!(
+        "class Secrets {\n",
+        "  private value: i64;\n",
+        "  private mut fn set(value: i64) -> unit { self.value = value; }\n",
+        "  private fn read() -> i64 { return self.value; }\n",
+        "  private: bool;\n",
+        "  fn private() -> unit {}\n",
+        "}\n",
+        "fn private(private: i64) -> i64 { return private; }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let secrets = class(&output.ast, 0);
+    let ClassMember::Field(value) = &secrets.members[0] else {
+        panic!("expected private field");
+    };
+    assert_eq!(source_text(&sources, value.span), "private value: i64;");
+    let MemberVisibility::Private { span } = value.visibility else {
+        panic!("expected private field visibility");
+    };
+    assert_eq!(source_text(&sources, span), "private");
+
+    let ClassMember::Method(set) = &secrets.members[1] else {
+        panic!("expected private mutable method");
+    };
+    assert_eq!(
+        source_text(&sources, set.span),
+        "private mut fn set(value: i64) -> unit { self.value = value; }"
+    );
+    assert!(matches!(set.visibility, MemberVisibility::Private { .. }));
+    assert_eq!(source_text(&sources, set.mut_span.unwrap()), "mut");
+
+    let ClassMember::Field(contextual_field) = &secrets.members[3] else {
+        panic!("expected field named private");
+    };
+    assert_eq!(contextual_field.name.text, "private");
+    assert_eq!(contextual_field.visibility, MemberVisibility::Public);
+    let ClassMember::Method(contextual_method) = &secrets.members[4] else {
+        panic!("expected method named private");
+    };
+    assert_eq!(contextual_method.name.text, "private");
+    assert_eq!(function(&output.ast, 1).name.text, "private");
+
+    let dump = dump_ast(&output.ast);
+    assert_eq!(
+        dump.lines()
+            .filter(|line| line.trim_start().starts_with("Private @"))
+            .count(),
+        3
+    );
+}
+
+#[test]
+fn invalid_private_member_modifiers_recover_at_later_members() {
+    let (_, output) = parse_text(concat!(
+        "class Broken {\n",
+        "  private virtual fn first() -> unit {}\n",
+        "  private override fn second() -> unit {}\n",
+        "  private private fn repeated() -> unit {}\n",
+        "  mut private fn misplaced() -> unit {}\n",
+        "  virtual private fn misplaced_after_dispatch() -> unit {}\n",
+        "  private init() {}\n",
+        "  private copy(ref source: Broken) {}\n",
+        "  private assign(ref source: Broken) {}\n",
+        "  private destroy {}\n",
+        "  fn recovered() -> unit {}\n",
+        "  after: i64;\n",
+        "}\n",
+    ));
+
+    assert_eq!(
+        output
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code)
+            .collect::<Vec<_>>(),
+        [INVALID_CLASS_MEMBER; 9]
+    );
+    let broken = class(&output.ast, 0);
+    assert!(broken.members.iter().any(
+        |member| matches!(member, ClassMember::Method(method) if method.name.text == "recovered")
+    ));
+    assert!(broken
+        .members
+        .iter()
+        .any(|member| matches!(member, ClassMember::Field(field) if field.name.text == "after")));
+}
+
+#[test]
 fn invalid_method_modifier_sequences_recover_at_following_members() {
     let (_, output) = parse_text(concat!(
         "class Broken {\n",

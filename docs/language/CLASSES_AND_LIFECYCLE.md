@@ -60,10 +60,38 @@ construction and direct-base `super(arguments)` use the same overload
 selection engine. `T(copy source)` selects the separate copy-construction slot
 and never participates in ordinary initializer overload resolution.
 
-All executable exact-class fields and methods are accessible wherever the
-receiver is available. Static members and access modifiers are not
-implemented. Resolution selects inherited ordinary members and rejects
-implicit redeclarations across a base chain. A method may instead explicitly
+Fields and methods are public by default and may instead begin with the
+contextual modifier `private`. Lifecycle declarations do not declare
+visibility. Static members are not implemented.
+
+### Declaring-class privacy
+
+A selected private field or method is accessible exactly when the accessing
+callable is lexically owned by that member's declaring class. This is the
+authoritative private-member access rule. It applies uniformly to ordinary
+methods, initializers, copy constructors, copy assignments, and destructors,
+and to every receiver form. The receiver's static spelling, dynamic class,
+module, base relationship, and the class that supplied an inherited lookup do
+not grant access. Consequently, a class body may use its own private members
+through `self` or another instance of that exact class, while a derived class,
+unrelated class, and top-level function may not.
+
+Lookup still selects the nearest declaration before checking access. A private
+inherited declaration therefore remains part of the complete ordinary-member
+namespace: it cannot be hidden or redeclared, and an attempted use diagnoses
+privacy rather than reporting an unknown member. Resolution preserves
+visibility and its source span long enough to make and diagnose this decision;
+typed HIR and later phases contain only already-authorized member identities.
+
+Privacy does not alter storage or lifecycle. Private fields participate in
+finite containment, layout, definite initialization, synthesized and
+user-defined copying, assignment, and destruction exactly like public fields.
+Private methods always use direct dispatch and cannot implement interface
+requirements. The virtual and conformance rules are owned by
+[polymorphism](POLYMORPHISM.md#virtual-methods-and-overrides).
+
+Resolution selects inherited ordinary members and rejects implicit
+redeclarations across a base chain. A public method may instead explicitly
 extend an inherited virtual family with `override`; the exact rules are owned
 by [polymorphism](POLYMORPHISM.md#virtual-methods-and-overrides). Typed HIR
 projects statically selected receivers through each direct base to the

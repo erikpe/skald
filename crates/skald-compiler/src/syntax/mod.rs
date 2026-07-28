@@ -18,12 +18,13 @@ pub use ast::{
     CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement,
     ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
     IdentifierExpr, ImportDeclaration, InitializerDecl, LocalDecl, MemberAccessExpr,
-    MemberAccessOperator, MethodDecl, MethodModifier, ModuleImport, Name, NameComponent,
-    NameComponentRef, NameComponents, NameQualification, NameText, NumericLiteralExpr,
-    ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode, OptionalPayloadKind,
-    Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind, ReturnStatement,
-    SelectiveImport, SelectiveImportItem, SelfExpr, Statement, TopLevelDeclaration, TypeKind,
-    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility,
+    MemberAccessOperator, MemberVisibility, MethodDecl, MethodModifier, ModuleImport, Name,
+    NameComponent, NameComponentRef, NameComponents, NameQualification, NameText,
+    NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
+    OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind,
+    ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr, Statement,
+    TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr,
+    Visibility,
 };
 pub use dump::dump_ast;
 pub use parser::{

@@ -146,8 +146,9 @@ stream. Token kinds and accepted lexical forms follow the
 ## Syntax
 
 The recovering parser produces an unresolved, source-oriented AST. Nodes keep
-spans and spellings needed by later diagnostics, but contain no selected
-declaration identities, inferred types, access decisions, or target details.
+spans and spellings needed by later diagnostics, including exact private field
+and method modifier spans, but contain no selected declaration identities,
+inferred types, access decisions, or target details.
 
 Grammar nesting uses a shared finite budget. Exceeding it is a source
 diagnostic with recovery rather than unbounded recursion. The precise accepted
@@ -234,6 +235,17 @@ resolution, and finite-containment analysis consume the canonical hierarchy
 instead of rebuilding ancestry from declarations. Interface calls likewise
 select one requirement identity during resolution; later phases do not repeat
 requirement-name lookup.
+
+Resolved field and method declarations retain source member visibility.
+Ordinary lookup first selects the nearest identity without filtering the
+inherited namespace, then one centralized check compares that identity's
+declaring `ClassId` with the callable's lexical class owner. This gives
+unknown-member and inaccessible-member diagnostics deterministic precedence
+before member-kind, receiver-access, or type checking. Private methods are
+excluded from virtual families and interface conformance. Once access is
+authorized, visibility is deliberately erased: HIR, MIR, verification, layout,
+lifecycle lowering, and target code operate on the same field and method
+identities as public members.
 
 Resolved IR remains source-oriented: it records selected declarations and
 object paths, but does not decide final expression types, access validity,

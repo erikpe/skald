@@ -1,6 +1,6 @@
 # Private Members and Static Methods Roadmap
 
-Status: in progress; PSM1 is next.
+Status: in progress; PSM2 is next.
 
 This roadmap adds declaring-class privacy and receiverless class-owned methods
 without creating a second callable, member-lookup, ownership, or backend
@@ -91,7 +91,7 @@ last class-member prerequisite from the
 ## Progress
 
 - [x] PSM0 — Separate lexical class ownership from receiver presence
-- [ ] PSM1 — Implement declaring-class member privacy
+- [x] PSM1 — Implement declaring-class member privacy
 - [ ] PSM2 — Establish receiverless static-method IR and execution
 - [ ] PSM3 — Expose static methods through the complete source pipeline
 - [ ] PSM4 — Confirm and promote the unblocked string design
@@ -145,38 +145,38 @@ source form is added.
 **Purpose:** Add the complete source access boundary needed by strings while
 keeping privacy out of layout, lifecycle, and lower-phase execution.
 
-- [ ] Add source-shaped member visibility to fields and instance methods with
+- [x] Add source-shaped member visibility to fields and instance methods with
       exact modifier and declaration spans. Keep `private` contextual, fields
       and methods public by default, and lifecycle declarations unmodified.
-- [ ] Accept the canonical instance forms `private fn` and
+- [x] Accept the canonical instance forms `private fn` and
       `private mut fn`. Reject private virtual/override declarations,
       duplicate or misplaced visibility, private lifecycle declarations, and
       malformed forms with focused recovery to later members.
-- [ ] Preserve member visibility on resolved field and method declarations and
+- [x] Preserve member visibility on resolved field and method declarations and
       in deterministic syntax/resolved dumps. Do not carry privacy into HIR or
       MIR after access has been decided.
-- [ ] Centralize member-access validation beside ordinary member selection.
+- [x] Centralize member-access validation beside ordinary member selection.
       Compare the selected member's declaring `ClassId` with the current
       callable's lexical class owner, never with module, name, receiver, base,
       or dynamic-class spellings.
-- [ ] Apply the centralized check to field reads and writes, nested object
+- [x] Apply the centralized check to field reads and writes, nested object
       places, method calls, aliases, casts and checked views, shared pointee
       access, initializer and lifecycle bodies, and every other existing
       member consumer.
-- [ ] Preserve the complete inherited ordinary-member namespace and collision
+- [x] Preserve the complete inherited ordinary-member namespace and collision
       rules. Private inherited declarations remain selected identities that
       produce privacy diagnostics rather than enabling hiding or
       redeclaration.
-- [ ] Exclude private methods from interface conformance and virtual-family
+- [x] Exclude private methods from interface conformance and virtual-family
       formation with declaration-linked diagnostics. Preserve exact signature
       checking for eligible public instance methods.
-- [ ] Prove that synthesized copy construction, copy assignment, destruction,
+- [x] Prove that synthesized copy construction, copy assignment, destruction,
       containment, target layout, and compiler-owned metadata inspection treat
       private fields exactly like public stored fields.
-- [ ] Add one stable resolver diagnostic code for inaccessible private members
+- [x] Add one stable resolver diagnostic code for inaccessible private members
       and define deterministic precedence against unknown member, wrong member
       kind, receiver access, and type errors.
-- [ ] Update the implemented
+- [x] Update the implemented
       [grammar](../language/GRAMMAR.md),
       [classes and lifecycle](../language/CLASSES_AND_LIFECYCLE.md),
       [polymorphism](../language/POLYMORPHISM.md),

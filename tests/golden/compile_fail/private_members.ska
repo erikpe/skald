@@ -1,0 +1,29 @@
+class Secret {
+    private value: i64;
+
+    init(value: i64) {
+        self.value = value;
+    }
+
+    private fn read() -> i64 {
+        return self.value;
+    }
+}
+
+class Derived extends Secret {
+    init(value: i64) {
+        super(value);
+    }
+
+    fn expose() -> i64 {
+        return self.value;
+    }
+}
+
+fn inspect(ref secret: Secret) -> i64 {
+    return secret.read();
+}
+
+fn main() -> i64 {
+    return 0;
+}

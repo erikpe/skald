@@ -135,6 +135,28 @@ fn selects_inherited_conformance_and_interface_calls_by_identity() {
 }
 
 #[test]
+fn private_methods_do_not_satisfy_interface_requirements() {
+    let resolved = crate::test_support::resolve_source(concat!(
+        "interface Readable { fn read() -> i64; }\n",
+        "class Secret implements Readable {\n",
+        "  init() {}\n",
+        "  private fn read() -> i64 { return 1; }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    assert!(resolved.diagnostics.is_empty());
+
+    let output = crate::typeck::type_check(&resolved.program);
+    assert!(output.hir.is_none());
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, INVALID_INTERFACE_CONFORMANCE);
+    assert!(diagnostic
+        .message
+        .contains("private method `read` cannot implement `Readable.read`"));
+}
+
+#[test]
 fn preserves_interface_and_requirement_source_order_independently_of_methods() {
     let output = check_text(
         "interface First { fn one(ref other: First) -> unit; fn two() -> unit; }\n\

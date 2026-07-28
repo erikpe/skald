@@ -24,6 +24,7 @@ pub(super) fn resolve_virtual_families(
     for class in classes.iter() {
         for method in &class.methods {
             if matches!(method.modifier, ResolvedMethodModifier::Virtual { .. })
+                && method.visibility.private_span().is_none()
                 && hierarchy.inherited_member(class.id, &method.name).is_none()
                 && hierarchy.base_chain(class.id).is_some()
             {
@@ -83,6 +84,9 @@ fn resolve_class_overrides(
     let declaration = classes.get(class).expect("hierarchy class must exist");
     for method in &declaration.methods {
         if !matches!(method.modifier, ResolvedMethodModifier::Override { .. }) {
+            continue;
+        }
+        if method.visibility.private_span().is_some() {
             continue;
         }
         let Some(ResolvedClassMember::Method(overridden)) =

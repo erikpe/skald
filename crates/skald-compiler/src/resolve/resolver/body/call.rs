@@ -572,13 +572,10 @@ impl CallableResolver<'_, '_> {
         class: ClassId,
         name: &syntax::Name,
     ) -> Option<OrdinaryMemberSymbolKind> {
-        self.environment
+        let member = self
+            .environment
             .hierarchy
             .member(class, &name.text)
-            .map(|member| match member {
-                ResolvedClassMember::Field(field) => OrdinaryMemberSymbolKind::Field(field),
-                ResolvedClassMember::Method(method) => OrdinaryMemberSymbolKind::Method(method),
-            })
             .or_else(|| {
                 let class_name = &self
                     .environment
@@ -594,7 +591,54 @@ impl CallableResolver<'_, '_> {
                     .with_primary_label(name.span, "unknown member"),
                 );
                 None
-            })
+            })?;
+
+        let declaring_class = member.declaring_class();
+        let private_span = match member {
+            ResolvedClassMember::Field(field) => self
+                .environment
+                .classes
+                .get(declaring_class)
+                .and_then(|class| class.field(field))
+                .expect("selected field must have declaration metadata")
+                .visibility
+                .private_span(),
+            ResolvedClassMember::Method(method) => self
+                .environment
+                .classes
+                .get(declaring_class)
+                .and_then(|class| class.method(method))
+                .expect("selected method must have declaration metadata")
+                .visibility
+                .private_span(),
+        };
+        if let Some(private_span) =
+            private_span.filter(|_| self.class_owner != Some(declaring_class))
+        {
+            let owner = self
+                .environment
+                .classes
+                .get(declaring_class)
+                .expect("selected member owner must exist");
+            self.diagnostics.push(
+                Diagnostic::error(
+                    PRIVATE_MEMBER_ACCESS,
+                    format!(
+                        "member `{}` is private to class `{}`",
+                        name.text, owner.name
+                    ),
+                )
+                .with_primary_label(name.span, "private member is not accessible here")
+                .with_secondary_label(private_span, "declared private here")
+                .with_note("private access is granted only inside the declaring class"),
+            );
+            return None;
+        }
+
+        Some(match member {
+            ResolvedClassMember::Field(field) => OrdinaryMemberSymbolKind::Field(field),
+            ResolvedClassMember::Method(method) => OrdinaryMemberSymbolKind::Method(method),
+        })
     }
 }
 

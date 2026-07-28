@@ -174,6 +174,40 @@ fn graph_resolution_keeps_unqualified_lookup_module_local() {
 }
 
 #[test]
+fn member_privacy_is_independent_of_module_visibility() {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "import dep;\n",
+                    "fn inspect(ref secret: dep::Secret) -> i64 { return secret.value; }\n",
+                    "fn main() -> i64 { return 0; }\n",
+                ),
+            ),
+            (
+                "dep.ska",
+                concat!(
+                    "public class Secret {\n",
+                    "  private value: i64;\n",
+                    "  init(value: i64) { self.value = value; }\n",
+                    "}\n",
+                ),
+            ),
+        ],
+    );
+
+    let output = resolve_module_graph(&graph);
+    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].code, PRIVATE_MEMBER_ACCESS);
+    assert!(diagnostics[0]
+        .message
+        .contains("member `value` is private to class `Secret`"));
+}
+
+#[test]
 fn graph_resolution_rejects_duplicates_only_within_the_owning_module() {
     let (_workspace, graph) = load_module_sources(
         "app",
