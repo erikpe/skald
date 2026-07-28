@@ -185,8 +185,11 @@ slicing, equality, comparison, hashing, concatenation, formatting, and parsing
 are not string-specific operators in this contract. In particular, `+` is not
 lowered by searching for a method named `concat`. Public checked byte/range
 methods use ordinary general primitive comparison, arithmetic, and conversion
-operations once those operations are available; the compiler does not add
-string-only numeric rules.
+operations. They compare their `u64` bounds before converting a successful
+position to the array index type. The array maximum-length rule and descriptor
+invariant make every successful position representable as `i64`; values above
+`i64::MAX` fail the unsigned range comparison before the total cast is used.
+The compiler adds neither a checked cast nor string-only numeric rules.
 
 ## Exclusions
 

@@ -164,20 +164,29 @@ Golden cases own complete successful and unsuccessful process observations.
 Because array failures promise only non-return, `.exit` sidecars use
 `failure`; tests must not depend on a particular signal or numeric status.
 
+Primitive integer operation coverage keeps the closed matrices explicit.
+Type-check and MIR tests enumerate all eighteen same-type comparisons and all
+nine casts, while rejection tests enumerate every ordered mixed integer pair,
+predicate, noninteger operand family, and cast target. Backend tests own
+condition signedness, canonical scalar results, instruction shape, and
+malformed-MIR rejection. Golden cases own exact diagnostics, extrema and
+modulo observations, and range-check-before-cast composition with array
+positions.
+
 ## Determinism and process isolation
 
 Phase dump tests call the same renderer repeatedly and compare exact text.
 `pipeline_determinism` compares tokens, AST, resolved, HIR, MIR, and assembly
 products for representative object-lifetime, polymorphism, shared-ownership,
-optional-value, and array programs from two independent test processes. Its
-module cases additionally permute root option order, equivalent root
-spellings, source creation order, import declaration order, and logical versus
-positional selection of the same rooted entry, then compare canonical graph,
-resolved, HIR, MIR, assembly, and diagnostic products. The golden runner invokes `skac`
-twice for every successful assembly and every compile failure, comparing
-assembly or diagnostic bytes. It also executes every native case twice and
-compares status, stdout, and stderr before evaluating the checked-in
-expectations.
+optional-value, array, primitive-integer-operation, and string programs from
+two independent test processes. Its module cases additionally permute root
+option order, equivalent root spellings, source creation order, import
+declaration order, and logical versus positional selection of the same rooted
+entry, then compare canonical graph, resolved, HIR, MIR, assembly, and
+diagnostic products. The golden runner invokes `skac` twice for every
+successful assembly and every compile failure, comparing assembly or
+diagnostic bytes. It also executes every native case twice and compares
+status, stdout, and stderr before evaluating the checked-in expectations.
 
 Preserve this process isolation for behavior affected by identity allocation,
 table traversal, filesystem paths, labels, diagnostics, or formatting. A

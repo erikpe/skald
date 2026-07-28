@@ -1,0 +1,61 @@
+error[TYP005]: integer comparison requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_operation_types.ska:2:14
+   |
+2 |     return 1 < 2u;
+   |              ^ operator cannot be applied to these operand types
+   |
+2 |     return 1 < 2u;
+   |            - left operand has type `i64`
+   |
+2 |     return 1 < 2u;
+   |                -- right operand has type `u64`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: integer comparison requires operands of the same primitive integer type
+ --> tests/golden/compile_fail/integer_operation_types.ska:6:17
+   |
+6 |     return true == false;
+   |                 ^^ operator cannot be applied to these operand types
+   |
+6 |     return true == false;
+   |            ---- left operand has type `bool`
+   |
+6 |     return true == false;
+   |                    ----- right operand has type `bool`
+  = note: integer operand types are `i64`, `u64`, or `u8`
+
+error[TYP005]: integer cast requires a primitive integer source
+ --> tests/golden/compile_fail/integer_operation_types.ska:10:18
+    |
+10 |     return (i64) 1.0;
+    |                  ^^^ source has type `f64`
+    |
+10 |     return (i64) 1.0;
+    |             --- primitive integer cast target
+  = note: integer source types are `i64`, `u64`, or `u8`
+
+error[TYP005]: integer cast requires a primitive integer source
+ --> tests/golden/compile_fail/integer_operation_types.ska:14:17
+    |
+14 |     return (u8) true;
+    |                 ^^^^ source has type `bool`
+    |
+14 |     return (u8) true;
+    |             -- primitive integer cast target
+  = note: integer source types are `i64`, `u64`, or `u8`
+
+error[TYP005]: integer cast requires a primitive integer source
+ --> tests/golden/compile_fail/integer_operation_types.ska:18:18
+    |
+18 |     return (u64) value;
+    |                  ^^^^^ source has type `array a0`
+    |
+18 |     return (u64) value;
+    |             --- primitive integer cast target
+  = note: integer source types are `i64`, `u64`, or `u8`
+
+error[TYP005]: return value has type `u64` but `i64` is required
+ --> tests/golden/compile_fail/integer_operation_types.ska:22:12
+    |
+22 |     return value;
+    |            ^^^^^ type mismatch

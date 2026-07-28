@@ -48,6 +48,15 @@ later products are not created after diagnostics from an earlier source phase.
 For successful typed HIR, inspect MIR before assembly so semantic lowering and
 target realization remain distinguishable.
 
+For primitive integer comparisons, AST and resolved dumps retain the source
+predicate, HIR records the exact integer operand type, and MIR prints an
+operation such as `lt.u64` with a `bool` result. Signed versus unsigned target
+conditions first appear in backend selection. For `(T) source` integer casts,
+HIR and MIR record both source and target integer types; MIR prints forms such
+as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
+array position, inspect the preceding source-level unsigned comparison and its
+control-flow branch rather than looking for a hidden checked conversion.
+
 For `T(copy source)`, the AST and resolved dumps must retain a distinct copy
 mode rather than an ordinary argument. HIR must show one selected copy
 operation and checked exact-`T` source. MIR then shows any `checked_cast`

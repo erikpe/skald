@@ -1,8 +1,8 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR3 are implemented, the
-[primitive integer operations prerequisite](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
-is next, and STR4 follows it.
+Status: in progress; STR0–STR3 are implemented and STR4 is next. The
+[primitive integer operations prerequisite](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+is complete.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -248,10 +248,10 @@ reachability must be known before resolution can assign the canonical class.
 STR1 then freezes that identity into typed products before executable
 representations exist. STR2 establishes explicit verified static ownership
 before STR3 changes generated count behavior or emits immortal data. The
-separate
-[primitive integer operations roadmap](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
-then supplies general comparisons and casts before STR4 builds on complete
-literal execution and demonstrates the intended standard-library boundary.
+completed
+[primitive integer operations roadmap](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
+supplies general comparisons and casts before STR4 builds on complete literal
+execution and demonstrates the intended standard-library boundary.
 STR5 closes broad matrices and documentation after all behavior is observable.
 
 The roadmap depends on implemented private fields, private methods, public and
@@ -262,8 +262,8 @@ comparisons plus an explicit total `u64`-to-`i64` cast for its public
 byte/range API. Its ordinary library code validates bounds before using a cast
 result as an array position; existing descriptor and array maximum-length
 invariants make every successful position numerically representable. Those
-general operations must complete in their separate primitive-language roadmap
-before STR4 rather than arriving as string-only intrinsics. Floating,
-checked, saturating, and implicit numeric conversions are not dependencies.
+general operations are implemented as ordinary primitive-language behavior
+rather than string-only intrinsics. Floating, checked, saturating, and implicit
+numeric conversions are not dependencies.
 Neither are loops, static fields, string operators, Unicode, or a complete
 standard-library framework.

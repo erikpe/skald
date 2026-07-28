@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: in progress; INT0–INT4 are complete and INT5 is next.
+Status: complete.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -90,7 +90,7 @@ public ABI remains unchanged.
 - [x] INT2 — Execute integer comparisons on x86-64
 - [x] INT3 — Establish verified target-independent integer casts
 - [x] INT4 — Execute integer casts on x86-64
-- [ ] INT5 — Harden and promote the integer operation profile
+- [x] INT5 — Harden and promote the integer operation profile
 
 ## PR-sized implementation sequence
 
@@ -255,22 +255,22 @@ two's-complement/modulo result and cannot terminate or call the runtime.
 documentation, and no rollout-only structure before string-library work
 depends on it.
 
-- [ ] Complete independent-process diagnostic, phase-dump, assembly, and native
+- [x] Complete independent-process diagnostic, phase-dump, assembly, and native
       determinism coverage for comparisons and casts.
-- [ ] Add source-to-native tests composing range checks with casts in the shape
+- [x] Add source-to-native tests composing range checks with casts in the shape
       required by public string byte and slice methods, including unsigned
       values above `i64::MAX` that are rejected by the comparison before their
       cast result can be used as an array position.
-- [ ] Confirm the existing array maximum-length invariant makes every
+- [x] Confirm the existing array maximum-length invariant makes every
       range-validated string backing position numerically representable as
       `i64`; do not add a checked cast or string-specific numeric rule.
-- [ ] Audit touched lexer, syntax, resolution, type-check, HIR, MIR, verifier,
+- [x] Audit touched lexer, syntax, resolution, type-check, HIR, MIR, verifier,
       backend, facade, dump, and test owners by responsibility; resolve
       high-priority hotspots and index lower-priority discoveries separately.
-- [ ] Update grammar, language/compiler overviews, status, debugging/testing
+- [x] Update grammar, language/compiler overviews, status, debugging/testing
       guidance, string dependency wording, and cross-links to describe only
       current implemented behavior.
-- [ ] Remove rollout vocabulary from living code and documentation, confirm
+- [x] Remove rollout vocabulary from living code and documentation, confirm
       runtime ABI and artifact cleanliness, complete this roadmap, and archive
       it.
 
@@ -300,7 +300,7 @@ model. It changes no ownership, cleanup, array, object-cast, external-signature,
 or public runtime contract.
 
 The roadmap is a prerequisite for
-[ordinary standard-library string behavior](STRINGS_ROADMAP.md). That work
+[ordinary standard-library string behavior](../roadmaps/STRINGS_ROADMAP.md). That work
 uses matching `u64` `<` and `<=` comparisons to validate public byte and slice
 bounds, then uses the total `u64`-to-`i64` cast only after existing string
 descriptor and array maximum-length invariants establish numeric

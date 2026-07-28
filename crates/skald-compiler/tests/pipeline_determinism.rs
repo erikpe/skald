@@ -34,6 +34,9 @@ const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
 const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
 const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
+const INTEGER_OPERATION_HELPER_OUTPUT: &str = "SKALD_INTEGER_OPERATION_DETERMINISM_OUTPUT";
+const INTEGER_OPERATION_TEST_NAME: &str =
+    "integer_operation_phase_products_are_deterministic_across_processes";
 const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
 const STRING_TEST_NAME: &str = "string_typed_phase_products_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
@@ -89,6 +92,16 @@ fn array_phase_products_are_deterministic_across_processes() {
         ARRAY_HELPER_OUTPUT,
         ARRAY_TEST_NAME,
         array_phase_dump,
+    );
+}
+
+#[test]
+fn integer_operation_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "integer-operations",
+        INTEGER_OPERATION_HELPER_OUTPUT,
+        INTEGER_OPERATION_TEST_NAME,
+        integer_operation_phase_dump,
     );
 }
 
@@ -435,6 +448,12 @@ fn optional_phase_dump() -> String {
 
 fn array_phase_dump() -> String {
     complete_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
+}
+
+fn integer_operation_phase_dump() -> String {
+    complete_phase_dump(include_str!(
+        "../../../tests/golden/run/integer_string_range_guards.ska"
+    ))
 }
 
 fn string_typed_phase_dump() -> String {

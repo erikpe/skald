@@ -190,9 +190,13 @@ use ordinary public static factories and private instance/static helpers.
 Because lifecycle visibility is not private, caller-provided mutable bytes are
 accepted only through copying APIs; trusted slices copy an existing descriptor
 and update private bounds. No method spelling is compiler-selected.
-Checked public range APIs may depend on future general primitive
-comparison/conversion support, but receive no string-specific numeric
-intrinsics.
+Checked public range APIs use ordinary exact-type `u64` comparisons before an
+explicit total `u64`-to-`i64` cast supplies an array position. Every array
+length is at most `i64::MAX`, and a valid descriptor range stays within its
+backing, so every successfully checked position is representable as `i64`.
+An out-of-range value, including any `u64` above `i64::MAX`, must take the
+range-failure path before the cast result is used. No checked cast or
+string-specific numeric intrinsic is required.
 
 Dynamic strings use ordinary shared-array allocation and the existing generic
 allocator/free boundary. No public runtime symbol, runtime ABI version, native

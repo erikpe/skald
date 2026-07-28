@@ -64,42 +64,57 @@ fn checks_all_eighteen_exact_type_integer_comparisons() {
 }
 
 #[test]
-fn mixed_integer_comparisons_report_both_actual_types() {
-    let output =
-        check_text("fn compare() -> bool { return 1 < 2u; } fn main() -> i64 { return 0; }");
-    assert!(output.hir.is_none());
-    let diagnostic = output
-        .diagnostics
-        .iter()
-        .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
-        .unwrap();
+fn rejects_every_ordered_mixed_integer_comparison_with_both_actual_types() {
+    for &(_, left_type, left, _) in INTEGER_TYPES {
+        for &(_, right_type, _, right) in INTEGER_TYPES {
+            if left_type == right_type {
+                continue;
+            }
+            for &(_, spelling) in OPERATORS {
+                let source = format!(
+                    "fn compare() -> bool {{ return {left} {spelling} {right}; }} \
+                     fn main() -> i64 {{ return 0; }}"
+                );
+                let output = check_text(&source);
+                assert!(output.hir.is_none(), "{source}");
+                let diagnostic = output
+                    .diagnostics
+                    .iter()
+                    .find(|diagnostic| diagnostic.code == TYPE_MISMATCH)
+                    .unwrap();
 
-    assert_eq!(
-        diagnostic.message,
-        "integer comparison requires operands of the same primitive integer type"
-    );
-    assert!(diagnostic
-        .labels
-        .iter()
-        .any(|label| label.message.contains("left operand has type `i64`")));
-    assert!(diagnostic
-        .labels
-        .iter()
-        .any(|label| label.message.contains("right operand has type `u64`")));
+                assert_eq!(
+                    diagnostic.message,
+                    "integer comparison requires operands of the same primitive integer type"
+                );
+                assert!(diagnostic.labels.iter().any(|label| label
+                    .message
+                    .contains(&format!("left operand has type `{left_type}`"))));
+                assert!(diagnostic.labels.iter().any(|label| label
+                    .message
+                    .contains(&format!("right operand has type `{right_type}`"))));
+            }
+        }
+    }
 }
 
 #[test]
-fn rejects_noninteger_comparison_families_before_hir() {
-    for source in [
-        "fn compare() -> bool { return true == false; } fn main() -> i64 { return 0; }",
-        "fn compare() -> bool { return 1.0 < 2.0; } fn main() -> i64 { return 0; }",
-        "fn compare(left: i64?, right: i64?) -> bool { return left == right; } fn main() -> i64 { return 0; }",
-        "fn notify() -> unit {} fn compare() -> bool { return notify() == notify(); } fn main() -> i64 { return 0; }",
-        "class Item { init() {} } fn compare(ref left: Item, ref right: Item) -> bool { return left == right; } fn main() -> i64 { return 0; }",
-        "fn compare(left: i64[], right: i64[]) -> bool { return left == right; } fn main() -> i64 { return 0; }",
-    ] {
-        let output = check_text(source);
-        assert!(output.has_errors(), "{source}");
-        assert!(output.hir.is_none(), "{source}");
+fn rejects_every_predicate_for_each_noninteger_operand_family_before_hir() {
+    const SOURCES: &[&str] = &[
+        "fn compare() -> bool { return true {operator} false; } fn main() -> i64 { return 0; }",
+        "fn compare() -> bool { return 1.0 {operator} 2.0; } fn main() -> i64 { return 0; }",
+        "fn compare(left: i64?, right: i64?) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
+        "fn notify() -> unit {} fn compare() -> bool { return notify() {operator} notify(); } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn compare(ref left: Item, ref right: Item) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
+        "fn compare(left: i64[], right: i64[]) -> bool { return left {operator} right; } fn main() -> i64 { return 0; }",
+    ];
+
+    for template in SOURCES {
+        for &(_, spelling) in OPERATORS {
+            let source = template.replace("{operator}", spelling);
+            let output = check_text(&source);
+            assert!(output.has_errors(), "{source}");
+            assert!(output.hir.is_none(), "{source}");
+        }
     }
 }

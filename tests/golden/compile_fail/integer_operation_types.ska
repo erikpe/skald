@@ -1,0 +1,27 @@
+fn mixed_comparison() -> bool {
+    return 1 < 2u;
+}
+
+fn boolean_comparison() -> bool {
+    return true == false;
+}
+
+fn floating_cast() -> i64 {
+    return (i64) 1.0;
+}
+
+fn boolean_cast() -> u8 {
+    return (u8) true;
+}
+
+fn array_cast(value: u64[]) -> u64 {
+    return (u64) value;
+}
+
+fn implicit_cast(value: u64) -> i64 {
+    return value;
+}
+
+fn main() -> i64 {
+    return 0;
+}

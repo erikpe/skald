@@ -67,19 +67,24 @@ fn casts_do_not_change_literal_validity_and_enable_exact_type_comparisons() {
 }
 
 #[test]
-fn rejects_every_noninteger_source_family_before_hir() {
-    for source in [
-        "fn cast() -> i64 { return (i64) 1.0; } fn main() -> i64 { return 0; }",
-        "fn cast() -> i64 { return (i64) true; } fn main() -> i64 { return 0; }",
-        "fn notify() -> unit {} fn cast() -> i64 { return (i64) notify(); } fn main() -> i64 { return 0; }",
-        "fn cast(value: i64?) -> i64 { return (i64) value; } fn main() -> i64 { return 0; }",
-        "fn cast(value: i64[]) -> i64 { return (i64) value; } fn main() -> i64 { return 0; }",
-        "class Item { init() {} } fn cast(value: Item) -> i64 { return (i64) value; } fn main() -> i64 { return 0; }",
-        "fn cast(ref value: Obj) -> i64 { return (i64) value; } fn main() -> i64 { return 0; }",
-    ] {
-        let output = check_text(source);
-        assert!(output.has_errors(), "{source}");
-        assert!(output.hir.is_none(), "{source}");
+fn rejects_every_noninteger_source_family_for_each_integer_target_before_hir() {
+    const SOURCES: &[&str] = &[
+        "fn cast() -> {target} { return ({target}) 1.0; } fn main() -> i64 { return 0; }",
+        "fn cast() -> {target} { return ({target}) true; } fn main() -> i64 { return 0; }",
+        "fn notify() -> unit {} fn cast() -> {target} { return ({target}) notify(); } fn main() -> i64 { return 0; }",
+        "fn cast(value: i64?) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
+        "fn cast(value: i64[]) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn cast(value: Item) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
+        "fn cast(ref value: Obj) -> {target} { return ({target}) value; } fn main() -> i64 { return 0; }",
+    ];
+
+    for &(_, target, _) in INTEGER_TYPES {
+        for template in SOURCES {
+            let source = template.replace("{target}", target);
+            let output = check_text(&source);
+            assert!(output.has_errors(), "{source}");
+            assert!(output.hir.is_none(), "{source}");
+        }
     }
 }
 

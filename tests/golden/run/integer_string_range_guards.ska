@@ -1,0 +1,78 @@
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+fn byte_or(
+    ref storage: u8[],
+    start: u64,
+    length: u64,
+    index: u64,
+    fallback: u8
+) -> u8 {
+    if (index < length) {
+        var position: u64 = start + index;
+        return storage[(i64) position];
+    }
+    return fallback;
+}
+
+fn range_length_or(
+    ref storage: u8[],
+    start: u64,
+    length: u64,
+    begin: u64,
+    end: u64,
+    fallback: u64
+) -> u64 {
+    if (begin <= end) {
+        if (end <= length) {
+            var absolute_begin: u64 = start + begin;
+            var absolute_end: u64 = start + end;
+            var selected: u8[] =
+                storage[(i64) absolute_begin:(i64) absolute_end];
+            return selected.len();
+        }
+    }
+    return fallback;
+}
+
+fn main() -> i64 {
+    var storage: u8[] = u8[](5u);
+    storage[0] = 10u8;
+    storage[1] = 20u8;
+    storage[2] = 30u8;
+    storage[3] = 40u8;
+    storage[4] = 50u8;
+
+    ska_rt_println_u8(byte_or(storage, 1u, 3u, 0u, 80u8));
+    ska_rt_println_u8(byte_or(storage, 1u, 3u, 2u, 81u8));
+    ska_rt_println_u8(
+        byte_or(storage, 1u, 3u, 18446744073709551615u, 90u8)
+    );
+    ska_rt_println_u8(
+        byte_or(storage, 1u, 3u, 9223372036854775808u, 91u8)
+    );
+
+    ska_rt_println_u64(range_length_or(storage, 1u, 3u, 0u, 3u, 800u));
+    ska_rt_println_u64(range_length_or(storage, 1u, 3u, 1u, 2u, 801u));
+    ska_rt_println_u64(
+        range_length_or(
+            storage,
+            1u,
+            3u,
+            0u,
+            18446744073709551615u,
+            900u
+        )
+    );
+    ska_rt_println_u64(
+        range_length_or(
+            storage,
+            1u,
+            3u,
+            9223372036854775808u,
+            18446744073709551615u,
+            901u
+        )
+    );
+    return 0;
+}

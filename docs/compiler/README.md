@@ -91,6 +91,13 @@ verified target-independent literal materialization, deterministic x86-64
 backing emission, and ordinary literal lifecycle execution are current phase
 products; standard-library string behavior remains tracked by its roadmap.
 
+Primitive integer comparisons and casts are complete source-to-native phase
+products. Type checking selects exact same-type comparison signedness or one
+of the nine explicit integer cast pairs; HIR and MIR retain that selection,
+verification checks it, and x86-64 realizes it without runtime support. The
+detailed ownership boundary is documented in
+[Phases and IR](PHASES_AND_IR.md#primitive-integer-operation-boundary).
+
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
