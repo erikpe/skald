@@ -38,7 +38,8 @@ fn assert_expression_is_fully_typed(expression: &HirExpression) {
         HirExpressionKind::Unary { operand, .. } | HirExpressionKind::Grouped(operand) => {
             assert_expression_is_fully_typed(operand)
         }
-        HirExpressionKind::Binary { left, right, .. } => {
+        HirExpressionKind::Binary { left, right, .. }
+        | HirExpressionKind::IntegerComparison { left, right, .. } => {
             assert_expression_is_fully_typed(left);
             assert_expression_is_fully_typed(right);
         }
@@ -133,6 +134,7 @@ fn source_place(source: &crate::hir::HirObjectSource) -> &crate::hir::HirObjectP
 mod alias_parameters;
 mod arrays;
 mod capabilities;
+mod comparisons;
 mod control_flow;
 mod declarations;
 mod destructors;

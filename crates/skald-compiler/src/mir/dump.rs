@@ -1042,6 +1042,18 @@ fn dump_rvalue(output: &mut String, rvalue: &MirRvalue) {
             };
             let _ = write!(output, "{operation} {left}, {right}");
         }
+        MirRvalueKind::IntegerComparison {
+            operation,
+            left,
+            right,
+        } => {
+            let _ = write!(
+                output,
+                "{}.{} {left}, {right}",
+                operation.predicate.mnemonic(),
+                operation.operand.name()
+            );
+        }
         MirRvalueKind::TypeTest { source, target } => {
             output.push_str("type-test ");
             dump_object_view(output, source);

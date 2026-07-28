@@ -1,0 +1,109 @@
+use super::*;
+
+const OPERATORS: &[(MirComparisonPredicate, &str, &str)] = &[
+    (MirComparisonPredicate::Equal, "==", "eq"),
+    (MirComparisonPredicate::NotEqual, "!=", "ne"),
+    (MirComparisonPredicate::LessThan, "<", "lt"),
+    (MirComparisonPredicate::LessEqual, "<=", "le"),
+    (MirComparisonPredicate::GreaterThan, ">", "gt"),
+    (MirComparisonPredicate::GreaterEqual, ">=", "ge"),
+];
+
+const INTEGER_TYPES: &[(MirIntegerType, &str, &str, &str)] = &[
+    (MirIntegerType::I64, "i64", "1", "2"),
+    (MirIntegerType::U64, "u64", "1u", "2u"),
+    (MirIntegerType::U8, "u8", "1u8", "2u8"),
+];
+
+#[test]
+fn lowers_and_verifies_every_integer_comparison_operation() {
+    for &(integer, type_name, left, right) in INTEGER_TYPES {
+        for &(predicate, spelling, mnemonic) in OPERATORS {
+            let source = format!(
+                "fn compare() -> bool {{ return {left} {spelling} {right}; }} \
+                 fn main() -> i64 {{ return 0; }}"
+            );
+            let mir = lower_text(&source);
+            verify_mir(&mir).unwrap();
+            let comparison = mir
+                .definitions
+                .get(FunctionId::new(0))
+                .unwrap()
+                .body
+                .blocks
+                .iter()
+                .flat_map(|block| &block.instructions)
+                .find_map(|instruction| match instruction {
+                    MirInstruction::Assign(MirAssignment {
+                        rvalue:
+                            MirRvalue {
+                                kind:
+                                    MirRvalueKind::IntegerComparison {
+                                        operation,
+                                        left,
+                                        right,
+                                    },
+                                ty,
+                            },
+                        ..
+                    }) => Some((*operation, *left, *right, *ty)),
+                    _ => None,
+                })
+                .expect("comparison source must lower to a comparison rvalue");
+
+            assert_eq!(
+                comparison.0,
+                MirIntegerComparison {
+                    predicate,
+                    operand: integer,
+                }
+            );
+            assert_eq!(comparison.0.operand_type(), integer.operand_type());
+            assert_eq!(comparison.0.result_type(), MirType::Bool);
+            assert_eq!(comparison.3, MirType::Bool);
+            assert_ne!(comparison.1, comparison.2);
+            assert!(
+                dump_mir(&mir).contains(&format!("{mnemonic}.{type_name}")),
+                "{type_name} comparison {spelling} has an unstable MIR dump"
+            );
+        }
+    }
+}
+
+#[test]
+fn spills_the_left_operand_before_a_control_affecting_right_operand() {
+    let mir = lower_text(concat!(
+        "fn compare(left: u64, values: u64[]) -> bool {\n",
+        "  return left < values[0];\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    verify_mir(&mir).unwrap();
+
+    let function = mir.definitions.get(FunctionId::new(0)).unwrap();
+    let spill = function
+        .storage
+        .iter()
+        .find(|storage| storage.kind == MirStorageKind::ScalarSpill)
+        .expect("the left operand must survive the right operand's block split");
+    assert_eq!(spill.ty, MirType::U64);
+
+    let dump = dump_mir(&mir);
+    let spill_store = dump
+        .find(&format!("store {}", spill.id))
+        .expect("left operand must be stored before checked array access");
+    let position_check = dump
+        .find("array-position-check")
+        .expect("right operand must retain checked array access");
+    let spill_reload = dump
+        .rfind(&format!("load {}", spill.id))
+        .expect("left operand must be reloaded in the continuation block");
+    let comparison = dump
+        .find("lt.u64")
+        .expect("continuation must perform the comparison");
+
+    assert!(spill_store < position_check);
+    assert!(position_check < spill_reload);
+    assert!(spill_reload < comparison);
+    assert_eq!(dump, dump_mir(&mir));
+}

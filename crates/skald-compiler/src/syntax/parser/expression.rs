@@ -5,6 +5,13 @@ use super::*;
 impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expression> {
         let source = self.parse_additive()?;
+        self.parse_expression_suffix(source)
+    }
+
+    fn parse_expression_suffix(&mut self, mut source: Expression) -> Option<Expression> {
+        if comparison_operator(self.peek().kind).is_some() {
+            source = self.parse_comparison_suffix(source)?;
+        }
         if !self.at_contextual("is") {
             return Some(source);
         }
@@ -55,6 +62,41 @@ impl Parser<'_> {
             return None;
         }
         Some(expression)
+    }
+
+    fn parse_comparison_suffix(&mut self, left: Expression) -> Option<Expression> {
+        let operator = comparison_operator(self.peek().kind)
+            .expect("comparison suffix must start at a comparison operator");
+        let operator_token = self.advance();
+        let right = self.parse_additive()?;
+        let span = self.cover(left.span(), right.span());
+        let expression = Expression::Binary(BinaryExpr {
+            left: Box::new(left),
+            operator,
+            operator_span: operator_token.span,
+            right: Box::new(right),
+            span,
+        });
+
+        let Some(_) = comparison_operator(self.peek().kind) else {
+            return Some(expression);
+        };
+        let chained = self.advance();
+        self.report(
+            INVALID_COMPARISON,
+            "comparison operators cannot be chained",
+            chained.span,
+            "group separate comparisons explicitly",
+        );
+
+        // Consume the rest of this chain so statement-level recovery resumes
+        // after the complete invalid expression rather than at each operator.
+        let _ = self.parse_additive();
+        while comparison_operator(self.peek().kind).is_some() {
+            self.advance();
+            let _ = self.parse_additive();
+        }
+        None
     }
 
     fn parse_additive(&mut self) -> Option<Expression> {
@@ -489,5 +531,17 @@ impl Parser<'_> {
             distance += 2;
         }
         Some(distance)
+    }
+}
+
+const fn comparison_operator(kind: TokenKind) -> Option<BinaryOperator> {
+    match kind {
+        TokenKind::EqualEqual => Some(BinaryOperator::Equal),
+        TokenKind::BangEqual => Some(BinaryOperator::NotEqual),
+        TokenKind::Less => Some(BinaryOperator::LessThan),
+        TokenKind::LessEqual => Some(BinaryOperator::LessEqual),
+        TokenKind::Greater => Some(BinaryOperator::GreaterThan),
+        TokenKind::GreaterEqual => Some(BinaryOperator::GreaterEqual),
+        _ => None,
     }
 }

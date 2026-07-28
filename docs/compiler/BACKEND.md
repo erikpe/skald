@@ -68,6 +68,10 @@ illegal-instruction trap on failure. Shared-owner casts use the same metadata
 membership test, retain or transfer the source handle on success, preserve the
 existing allocation header, and never call the allocator.
 
+Verified primitive integer comparison rvalues are intentionally rejected with
+a structured target error until their x86-64 instruction selection lands.
+They never reach an unreachable selector arm or masquerade as malformed MIR.
+
 Producer invariants already established by MIR verification may be asserted
 inside later private steps. Arbitrary mutated MIR is supported only through
 the verifier and structured backend-error boundary, not as a valid lowering

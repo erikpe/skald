@@ -104,11 +104,11 @@ or an array construction. Both remain ordinary identifiers elsewhere.
 The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
-( ) { } [ ] , : :: ; . -> + - * = ? !
+( ) { } [ ] , : :: ; . -> + - * = == != < <= > >= ? !
 ```
 
-Double quotes delimit one string-literal token. There are no character,
-comparison, or division tokens in the implemented grammar.
+Double quotes delimit one string-literal token. There are no character or
+division tokens in the implemented grammar.
 
 ## Literals
 
@@ -362,9 +362,15 @@ parenthesized expression and a block.
 ## Expressions
 
 ```text
-expression       = additive-expression
+expression       = comparison-expression
                    ["is" (view-target | "some" | "none")]
 view-target      = declaration-path
+
+comparison-expression
+                 = additive-expression
+                   [comparison-operator additive-expression]
+comparison-operator
+                 = "==" | "!=" | "<" | "<=" | ">" | ">="
 
 additive-expression
                  = multiplicative-expression
@@ -437,20 +443,21 @@ From tightest to loosest binding, precedence is:
 2. unary `-`, unary `*`, and object casts;
 3. binary `*`;
 4. binary `+` and `-`;
-5. contextual `is`.
+5. integer comparisons `==`, `!=`, `<`, `<=`, `>`, and `>=`;
+6. contextual `is`.
 
-Postfix and binary operators associate left to right. Unary `-` and `*`
-associate right to left. `is` is non-associative, so chained tests are syntax
-errors. Grouping overrides precedence and remains represented in the
-source-shaped syntax tree. `*owner.field` therefore means `*(owner.field)`;
-use `(*owner).field` or `owner->field` to select a member from `owner`'s
-pointee. Binary multiplication remains distinct by operator position, as in
-`value * *owner`. Allocation and `none` are primary expressions. Calls,
-postfix `!`, `.`, `->`, indexing, and slicing may participate in the same
-postfix chain; type checking rejects chains that are not meaningful for the
-operand type. `owner->[index]` and `owner->[start:end]` preserve a distinct
-shared-projection operator from ordinary `owner[index]` and explicit
-`(*owner)[index]`.
+Postfix and arithmetic binary operators associate left to right. Unary `-`
+and `*` associate right to left. Comparisons and `is` are non-associative, so
+ungrouped chained comparisons or tests are syntax errors. Grouping overrides
+precedence and remains represented in the source-shaped syntax tree.
+`*owner.field` therefore means `*(owner.field)`; use `(*owner).field` or
+`owner->field` to select a member from `owner`'s pointee. Binary multiplication
+remains distinct by operator position, as in `value * *owner`. Allocation and
+`none` are primary expressions. Calls, postfix `!`, `.`, `->`, indexing, and
+slicing may participate in the same postfix chain; type checking rejects
+chains that are not meaningful for the operand type. `owner->[index]` and
+`owner->[start:end]` preserve a distinct shared-projection operator from
+ordinary `owner[index]` and explicit `(*owner)[index]`.
 These spellings are semantically distinct: `.` remains within an already
 selected inline place, while `->` crosses exactly one shared edge. There is no
 implicit shared dereference.
@@ -466,22 +473,13 @@ stored/result types. `new` is contextual only when followed by an identifier
 and allocation argument list; `new()` remains an ordinary call to a binding
 named `new`.
 
-### Frozen integer expression extension
+### Frozen primitive integer cast extension
 
-Integer comparisons and primitive integer casts have frozen syntax but are not
-accepted by the current compiler. When implemented, the expression grammar
-above gains exactly these replacements and additions:
+Primitive integer casts have frozen syntax but are not accepted by the current
+compiler. When implemented, the unary grammar above gains exactly these
+replacements and additions:
 
 ```text
-expression       = comparison-expression
-                   ["is" (view-target | "some" | "none")]
-
-comparison-expression
-                 = additive-expression
-                   [comparison-operator additive-expression]
-comparison-operator
-                 = "==" | "!=" | "<" | "<=" | ">" | ">="
-
 unary-expression = "-" unary-expression
                  | "*" unary-expression
                  | cast-expression
@@ -493,17 +491,12 @@ primitive-integer-type
                  = "i64" | "u64" | "u8"
 ```
 
-The comparison level follows arithmetic and is non-associative: one
-`comparison-expression` contains at most one comparison operator. Contextual
-`is` remains weaker. Primitive and object casts retain the existing unary
-precedence and right-associative operand shape; a primitive keyword
-unambiguously selects a primitive cast target, while a declaration path or
-`shared` declaration path selects the existing object-cast syntax. Postfix use
-of either cast still requires grouping.
-
-The six comparison spellings will be added to the punctuation set only when
-their complete compiler path is implemented. Their exact-type semantics and
-the closed primitive cast matrix are defined by
+Primitive and object casts retain the existing unary precedence and
+right-associative operand shape. A primitive keyword unambiguously selects a
+primitive cast target, while a declaration path or `shared` declaration path
+selects the existing object-cast syntax. Postfix use of either cast still
+requires grouping. The exact-type comparison semantics and closed primitive
+cast matrix are defined by
 [Types, Values, and Expressions](TYPES_AND_VALUES.md#frozen-primitive-integer-comparisons-and-casts).
 
 ## Syntax errors and nesting

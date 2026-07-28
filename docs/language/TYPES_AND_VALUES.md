@@ -170,10 +170,13 @@ access.
 
 ## Frozen primitive integer comparisons and casts
 
-This section freezes a source-visible integer-only extension. The current
-compiler does not yet accept comparison operators or primitive-keyword cast
-targets; the [status matrix](STATUS.md#not-implemented) records that
-availability separately from this contract.
+This section freezes the complete source-visible integer-only profile.
+Comparison syntax, exact-type checking, typed HIR, and verified
+target-independent MIR are implemented. The x86-64 target currently rejects
+comparison MIR until backend realization lands, and primitive-keyword cast
+targets remain unaccepted. The
+[status matrix](STATUS.md#not-implemented) records availability separately
+from the language contract.
 
 ### Integer comparisons
 
@@ -193,8 +196,8 @@ must cast one operand explicitly before comparing different integer types.
 The two operands evaluate exactly once from left to right. All six operators
 share one non-associative precedence level below arithmetic and above
 contextual `is`; consequently an ungrouped chain such as `a < b < c` is a
-syntax error. The [grammar](GRAMMAR.md#frozen-integer-expression-extension)
-records the exact planned source shape.
+syntax error. The [grammar](GRAMMAR.md#expressions) records the exact accepted
+source shape.
 
 ### Explicit integer casts
 
@@ -254,11 +257,12 @@ implied by the total integer cast syntax.
 ## Other conversions and future value families
 
 The current compiler performs no primitive casts or user-defined conversions.
-The integer-only behavior above is frozen for implementation; all other
-numeric conversion behavior remains deferred. Object casts are defined
-separately in [Object Casts](OBJECT_CASTS.md): implemented plain casts select
-checked object places, while shared casts preserve existing allocations.
-Neither form reinterprets bytes.
+Integer comparisons are implemented through verified target-independent MIR;
+native execution and the frozen integer-cast matrix remain later roadmap
+steps. All other numeric conversion behavior remains deferred. Object casts
+are defined separately in [Object Casts](OBJECT_CASTS.md): implemented plain
+casts select checked object places, while shared casts preserve existing
+allocations. Neither form reinterprets bytes.
 
 Optional values have an [implemented contract](OPTIONAL_VALUES.md) for
 representing absence without making every value nullable. Primitive and

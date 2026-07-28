@@ -518,6 +518,12 @@ impl AstDumper {
                     BinaryOperator::Add => "Add",
                     BinaryOperator::Subtract => "Subtract",
                     BinaryOperator::Multiply => "Multiply",
+                    BinaryOperator::Equal => "Equal",
+                    BinaryOperator::NotEqual => "NotEqual",
+                    BinaryOperator::LessThan => "LessThan",
+                    BinaryOperator::LessEqual => "LessEqual",
+                    BinaryOperator::GreaterThan => "GreaterThan",
+                    BinaryOperator::GreaterEqual => "GreaterEqual",
                 };
                 self.line(&format!("Binary {operator}"), binary.span);
                 self.indented(|dumper| {

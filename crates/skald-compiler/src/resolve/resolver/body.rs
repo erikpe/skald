@@ -332,6 +332,22 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                                 syntax::BinaryOperator::Multiply => {
                                     ResolvedBinaryOperator::Multiply
                                 }
+                                syntax::BinaryOperator::Equal => ResolvedBinaryOperator::Equal,
+                                syntax::BinaryOperator::NotEqual => {
+                                    ResolvedBinaryOperator::NotEqual
+                                }
+                                syntax::BinaryOperator::LessThan => {
+                                    ResolvedBinaryOperator::LessThan
+                                }
+                                syntax::BinaryOperator::LessEqual => {
+                                    ResolvedBinaryOperator::LessEqual
+                                }
+                                syntax::BinaryOperator::GreaterThan => {
+                                    ResolvedBinaryOperator::GreaterThan
+                                }
+                                syntax::BinaryOperator::GreaterEqual => {
+                                    ResolvedBinaryOperator::GreaterEqual
+                                }
                             },
                             operator_span: binary.operator_span,
                             right: Box::new(right),

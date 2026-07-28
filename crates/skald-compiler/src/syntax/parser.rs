@@ -30,6 +30,7 @@ pub const INVALID_OPTIONAL_TYPE: &str = "PAR010";
 pub const INVALID_IMPORT: &str = "PAR011";
 pub const MISPLACED_IMPORT: &str = "PAR012";
 pub const INVALID_VISIBILITY: &str = "PAR013";
+pub const INVALID_COMPARISON: &str = "PAR014";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///

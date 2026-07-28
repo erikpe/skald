@@ -320,6 +320,12 @@ pub enum ResolvedBinaryOperator {
     Add,
     Subtract,
     Multiply,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

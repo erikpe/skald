@@ -764,6 +764,12 @@ impl ResolvedDumper {
                     ResolvedBinaryOperator::Add => "Add",
                     ResolvedBinaryOperator::Subtract => "Subtract",
                     ResolvedBinaryOperator::Multiply => "Multiply",
+                    ResolvedBinaryOperator::Equal => "Equal",
+                    ResolvedBinaryOperator::NotEqual => "NotEqual",
+                    ResolvedBinaryOperator::LessThan => "LessThan",
+                    ResolvedBinaryOperator::LessEqual => "LessEqual",
+                    ResolvedBinaryOperator::GreaterThan => "GreaterThan",
+                    ResolvedBinaryOperator::GreaterEqual => "GreaterEqual",
                 };
                 self.line(&format!("Binary {operator}"), binary.span);
                 self.indented(|dumper| {

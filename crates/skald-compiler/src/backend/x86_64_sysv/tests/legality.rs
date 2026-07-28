@@ -22,6 +22,21 @@ fn malformed_f64_mir_is_a_structured_backend_error() {
 }
 
 #[test]
+fn verified_integer_comparisons_are_structured_target_errors_until_int2() {
+    let program = lower_source_to_mir(
+        "fn compare() -> bool { return 1u < 2u; } fn main() -> i64 { return 0; }",
+    );
+    verify_mir(&program).unwrap();
+
+    let error = emit_assembly(Target::X86_64SysV, &program).unwrap_err();
+    assert_eq!(error.target(), Target::X86_64SysV);
+    assert_eq!(
+        error.message(),
+        "integer comparisons are not yet supported by the x86-64 target"
+    );
+}
+
+#[test]
 fn uses_no_unpreserved_callee_saved_scratch_registers() {
     let output = assembly("fn main() -> i64 { return (2 + 3) * 4; }");
 

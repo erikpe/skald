@@ -41,6 +41,11 @@ pub enum HirExpressionKind {
         left: Box<HirExpression>,
         right: Box<HirExpression>,
     },
+    IntegerComparison {
+        operation: HirIntegerComparison,
+        left: Box<HirExpression>,
+        right: Box<HirExpression>,
+    },
     DirectCall {
         function: FunctionId,
         arguments: Vec<HirCallArgument>,
@@ -171,6 +176,79 @@ pub enum HirUnaryOperation {
     NegateF64,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum HirIntegerType {
+    I64,
+    U64,
+    U8,
+}
+
+impl HirIntegerType {
+    pub const fn from_type(ty: Type) -> Option<Self> {
+        match ty {
+            Type::I64 => Some(Self::I64),
+            Type::U64 => Some(Self::U64),
+            Type::U8 => Some(Self::U8),
+            _ => None,
+        }
+    }
+
+    pub const fn operand_type(self) -> Type {
+        match self {
+            Self::I64 => Type::I64,
+            Self::U64 => Type::U64,
+            Self::U8 => Type::U8,
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::I64 => "i64",
+            Self::U64 => "u64",
+            Self::U8 => "u8",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum HirComparisonPredicate {
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
+}
+
+impl HirComparisonPredicate {
+    pub const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::Equal => "eq",
+            Self::NotEqual => "ne",
+            Self::LessThan => "lt",
+            Self::LessEqual => "le",
+            Self::GreaterThan => "gt",
+            Self::GreaterEqual => "ge",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct HirIntegerComparison {
+    pub predicate: HirComparisonPredicate,
+    pub operand: HirIntegerType,
+}
+
+impl HirIntegerComparison {
+    pub const fn operand_type(self) -> Type {
+        self.operand.operand_type()
+    }
+
+    pub const fn result_type(self) -> Type {
+        Type::Bool
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HirBinaryOperation {
     AddI64,
@@ -185,4 +263,19 @@ pub enum HirBinaryOperation {
     AddF64,
     SubtractF64,
     MultiplyF64,
+}
+
+impl HirBinaryOperation {
+    pub const fn operand_type(self) -> Type {
+        match self {
+            Self::AddI64 | Self::SubtractI64 | Self::MultiplyI64 => Type::I64,
+            Self::AddU64 | Self::SubtractU64 | Self::MultiplyU64 => Type::U64,
+            Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => Type::U8,
+            Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => Type::F64,
+        }
+    }
+
+    pub const fn result_type(self) -> Type {
+        self.operand_type()
+    }
 }

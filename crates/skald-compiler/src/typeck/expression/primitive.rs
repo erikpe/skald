@@ -3,7 +3,10 @@
 use super::*;
 use crate::{
     diagnostics::format_type_list,
-    hir::{HirBinaryOperation, HirExpressionKind, HirUnaryOperation},
+    hir::{
+        HirBinaryOperation, HirComparisonPredicate, HirExpressionKind, HirIntegerComparison,
+        HirIntegerType, HirUnaryOperation,
+    },
     resolve::{ResolvedBinaryOperator, ResolvedUnaryOperator},
 };
 
@@ -13,6 +16,7 @@ use crate::typeck::{
 };
 
 const NUMERIC_TYPE_NAMES: &[&str] = &["i64", "u64", "u8", "f64"];
+const INTEGER_TYPE_NAMES: &[&str] = &["i64", "u64", "u8"];
 const NEGATABLE_TYPE_NAMES: &[&str] = &["i64", "f64"];
 
 impl CallableChecker<'_, '_> {
@@ -122,8 +126,12 @@ impl CallableChecker<'_, '_> {
             (Some(left), Some(right)) => (left, right),
             _ => return None,
         };
+        if let Some(predicate) = comparison_predicate(binary.operator) {
+            return self.check_integer_comparison(binary, predicate, left, right);
+        }
+
         let operation = (left.ty == right.ty)
-            .then(|| select_binary_operation(binary.operator, left.ty))
+            .then(|| select_arithmetic_operation(binary.operator, left.ty))
             .flatten();
         let Some(operation) = operation else {
             self.diagnostics.push(
@@ -158,6 +166,53 @@ impl CallableChecker<'_, '_> {
                 right: Box::new(right),
             },
             ty,
+            span: binary.span,
+        })
+    }
+
+    fn check_integer_comparison(
+        &mut self,
+        binary: &crate::resolve::ResolvedBinaryExpr,
+        predicate: HirComparisonPredicate,
+        left: HirExpression,
+        right: HirExpression,
+    ) -> Option<HirExpression> {
+        let operand = (left.ty == right.ty)
+            .then(|| HirIntegerType::from_type(left.ty))
+            .flatten();
+        let Some(operand) = operand else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    TYPE_MISMATCH,
+                    "integer comparison requires operands of the same primitive integer type",
+                )
+                .with_primary_label(
+                    binary.operator_span,
+                    "operator cannot be applied to these operand types",
+                )
+                .with_secondary_label(
+                    left.span,
+                    format!("left operand has type `{}`", left.ty.name()),
+                )
+                .with_secondary_label(
+                    right.span,
+                    format!("right operand has type `{}`", right.ty.name()),
+                )
+                .with_note(format!(
+                    "integer operand types are {}",
+                    format_type_list(INTEGER_TYPE_NAMES)
+                )),
+            );
+            return None;
+        };
+        let operation = HirIntegerComparison { predicate, operand };
+        Some(HirExpression {
+            kind: HirExpressionKind::IntegerComparison {
+                operation,
+                left: Box::new(left),
+                right: Box::new(right),
+            },
+            ty: operation.result_type(),
             span: binary.span,
         })
     }
@@ -203,7 +258,21 @@ impl CallableChecker<'_, '_> {
     }
 }
 
-fn select_binary_operation(
+const fn comparison_predicate(operator: ResolvedBinaryOperator) -> Option<HirComparisonPredicate> {
+    match operator {
+        ResolvedBinaryOperator::Equal => Some(HirComparisonPredicate::Equal),
+        ResolvedBinaryOperator::NotEqual => Some(HirComparisonPredicate::NotEqual),
+        ResolvedBinaryOperator::LessThan => Some(HirComparisonPredicate::LessThan),
+        ResolvedBinaryOperator::LessEqual => Some(HirComparisonPredicate::LessEqual),
+        ResolvedBinaryOperator::GreaterThan => Some(HirComparisonPredicate::GreaterThan),
+        ResolvedBinaryOperator::GreaterEqual => Some(HirComparisonPredicate::GreaterEqual),
+        ResolvedBinaryOperator::Add
+        | ResolvedBinaryOperator::Subtract
+        | ResolvedBinaryOperator::Multiply => None,
+    }
+}
+
+fn select_arithmetic_operation(
     operator: ResolvedBinaryOperator,
     operand_type: Type,
 ) -> Option<HirBinaryOperation> {
@@ -220,6 +289,15 @@ fn select_binary_operation(
         (ResolvedBinaryOperator::Add, Type::F64) => Some(HirBinaryOperation::AddF64),
         (ResolvedBinaryOperator::Subtract, Type::F64) => Some(HirBinaryOperation::SubtractF64),
         (ResolvedBinaryOperator::Multiply, Type::F64) => Some(HirBinaryOperation::MultiplyF64),
+        (
+            ResolvedBinaryOperator::Equal
+            | ResolvedBinaryOperator::NotEqual
+            | ResolvedBinaryOperator::LessThan
+            | ResolvedBinaryOperator::LessEqual
+            | ResolvedBinaryOperator::GreaterThan
+            | ResolvedBinaryOperator::GreaterEqual,
+            _,
+        ) => None,
         (
             _,
             Type::Bool

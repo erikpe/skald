@@ -60,6 +60,7 @@ pub use strings::{
     MirStringInitialize, MirStringLanguageItem,
 };
 pub use value::{
-    MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,
-    MirType, MirUnaryOperation, MirValue,
+    MirBinaryOperation, MirComparisonPredicate, MirIntegerComparison, MirIntegerType, MirPlace,
+    MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind, MirType, MirUnaryOperation,
+    MirValue,
 };

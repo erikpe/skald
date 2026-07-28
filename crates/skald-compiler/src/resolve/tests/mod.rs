@@ -34,6 +34,7 @@ fn return_value(statement: &ResolvedStatement) -> &ResolvedExpression {
 mod alias_parameters;
 mod arrays;
 mod bindings;
+mod comparisons;
 mod control_flow;
 mod declarations;
 mod diagnostics;

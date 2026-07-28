@@ -1,7 +1,10 @@
 //! Exhaustive scalar-expression dispatch and primitive operations.
 
 use super::*;
-use crate::hir::{HirBinaryOperation, HirExpression, HirExpressionKind, HirUnaryOperation};
+use crate::hir::{
+    HirBinaryOperation, HirComparisonPredicate, HirExpression, HirExpressionKind,
+    HirIntegerComparison, HirIntegerType, HirUnaryOperation,
+};
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_expression(&mut self, expression: &HirExpression) -> Option<ValueId> {
@@ -47,6 +50,11 @@ impl BodyLowerer<'_> {
                 left,
                 right,
             } => self.lower_binary(expression, *operation, left, right),
+            HirExpressionKind::IntegerComparison {
+                operation,
+                left,
+                right,
+            } => self.lower_integer_comparison(expression, *operation, left, right),
             HirExpressionKind::DirectCall {
                 function,
                 arguments,
@@ -136,20 +144,12 @@ impl BodyLowerer<'_> {
         left: &HirExpression,
         right: &HirExpression,
     ) -> Option<ValueId> {
-        // This order is semantic: left is fully lowered before right.
-        let left = self
-            .lower_expression(left)
-            .expect("typed binary operand must produce a value");
-        let spilled_left = super::control_effect::expression_contains_control_effect(right)
-            .then(|| self.spill_scalar(left, lower_type(left_ty(operation)), expression.span));
-        let right = self
-            .lower_expression(right)
-            .expect("typed binary operand must produce a value");
-        let left = spilled_left
-            .map(|(storage, ty)| {
-                self.assign(MirRvalueKind::Load(storage.into()), ty, expression.span)
-            })
-            .unwrap_or(left);
+        let (left, right) = self.lower_binary_operands(
+            left,
+            right,
+            lower_type(operation.operand_type()),
+            expression,
+        );
         Some(self.assign(
             MirRvalueKind::Binary {
                 operation: match operation {
@@ -172,6 +172,65 @@ impl BodyLowerer<'_> {
             lower_type(expression.ty),
             expression.span,
         ))
+    }
+
+    fn lower_integer_comparison(
+        &mut self,
+        expression: &HirExpression,
+        operation: HirIntegerComparison,
+        left: &HirExpression,
+        right: &HirExpression,
+    ) -> Option<ValueId> {
+        let operation = MirIntegerComparison {
+            predicate: match operation.predicate {
+                HirComparisonPredicate::Equal => MirComparisonPredicate::Equal,
+                HirComparisonPredicate::NotEqual => MirComparisonPredicate::NotEqual,
+                HirComparisonPredicate::LessThan => MirComparisonPredicate::LessThan,
+                HirComparisonPredicate::LessEqual => MirComparisonPredicate::LessEqual,
+                HirComparisonPredicate::GreaterThan => MirComparisonPredicate::GreaterThan,
+                HirComparisonPredicate::GreaterEqual => MirComparisonPredicate::GreaterEqual,
+            },
+            operand: match operation.operand {
+                HirIntegerType::I64 => MirIntegerType::I64,
+                HirIntegerType::U64 => MirIntegerType::U64,
+                HirIntegerType::U8 => MirIntegerType::U8,
+            },
+        };
+        let (left, right) =
+            self.lower_binary_operands(left, right, operation.operand_type(), expression);
+        Some(self.assign(
+            MirRvalueKind::IntegerComparison {
+                operation,
+                left,
+                right,
+            },
+            operation.result_type(),
+            expression.span,
+        ))
+    }
+
+    fn lower_binary_operands(
+        &mut self,
+        left: &HirExpression,
+        right: &HirExpression,
+        operand_type: MirType,
+        expression: &HirExpression,
+    ) -> (ValueId, ValueId) {
+        // This order is semantic: left is fully lowered before right.
+        let left = self
+            .lower_expression(left)
+            .expect("typed binary operand must produce a value");
+        let spilled_left = super::control_effect::expression_contains_control_effect(right)
+            .then(|| self.spill_scalar(left, operand_type, expression.span));
+        let right = self
+            .lower_expression(right)
+            .expect("typed binary operand must produce a value");
+        let left = spilled_left
+            .map(|(storage, ty)| {
+                self.assign(MirRvalueKind::Load(storage.into()), ty, expression.span)
+            })
+            .unwrap_or(left);
+        (left, right)
     }
 
     pub(super) fn spill_scalar(
@@ -211,22 +270,5 @@ impl BodyLowerer<'_> {
             span,
         }));
         result
-    }
-}
-
-fn left_ty(operation: HirBinaryOperation) -> Type {
-    match operation {
-        HirBinaryOperation::AddI64
-        | HirBinaryOperation::SubtractI64
-        | HirBinaryOperation::MultiplyI64 => Type::I64,
-        HirBinaryOperation::AddU64
-        | HirBinaryOperation::SubtractU64
-        | HirBinaryOperation::MultiplyU64 => Type::U64,
-        HirBinaryOperation::AddU8
-        | HirBinaryOperation::SubtractU8
-        | HirBinaryOperation::MultiplyU8 => Type::U8,
-        HirBinaryOperation::AddF64
-        | HirBinaryOperation::SubtractF64
-        | HirBinaryOperation::MultiplyF64 => Type::F64,
     }
 }

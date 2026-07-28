@@ -792,6 +792,12 @@ pub enum BinaryOperator {
     Add,
     Subtract,
     Multiply,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

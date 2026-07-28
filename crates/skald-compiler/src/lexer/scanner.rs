@@ -11,6 +11,15 @@ use super::{
     Token, TokenKind,
 };
 
+const COMPOUND_PUNCTUATION: &[(&str, TokenKind)] = &[
+    ("->", TokenKind::Arrow),
+    ("::", TokenKind::DoubleColon),
+    ("==", TokenKind::EqualEqual),
+    ("!=", TokenKind::BangEqual),
+    ("<=", TokenKind::LessEqual),
+    (">=", TokenKind::GreaterEqual),
+];
+
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";
 pub const MALFORMED_NUMERIC_LITERAL: &str = "LEX002";
 pub const MALFORMED_STRING_LITERAL: &str = "LEX003";
@@ -241,16 +250,12 @@ impl<'source> Lexer<'source> {
     }
 
     fn lex_punctuation_or_invalid(&mut self, start: usize, character: char) {
-        if self.remaining().starts_with("->") {
-            self.advance();
-            self.advance();
-            self.push_token(TokenKind::Arrow, start);
-            return;
-        }
-        if self.remaining().starts_with("::") {
-            self.advance();
-            self.advance();
-            self.push_token(TokenKind::DoubleColon, start);
+        if let Some((spelling, kind)) = COMPOUND_PUNCTUATION
+            .iter()
+            .find(|(spelling, _)| self.remaining().starts_with(spelling))
+        {
+            self.offset += spelling.len();
+            self.push_token(*kind, start);
             return;
         }
 
@@ -268,6 +273,8 @@ impl<'source> Lexer<'source> {
             '-' => TokenKind::Minus,
             '*' => TokenKind::Star,
             '=' => TokenKind::Equal,
+            '<' => TokenKind::Less,
+            '>' => TokenKind::Greater,
             '.' => TokenKind::Dot,
             '?' => TokenKind::Question,
             '!' => TokenKind::Bang,

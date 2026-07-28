@@ -77,6 +77,9 @@ impl InstructionSelector<'_, '_> {
                 left,
                 right,
             } => self.select_binary(*operation, *left, *right, ty, destination),
+            MirRvalueKind::IntegerComparison { .. } => {
+                unreachable!("integer comparisons are rejected by target legality")
+            }
             MirRvalueKind::TypeTest { .. } => {
                 unreachable!("runtime type tests are selected before ordinary rvalues")
             }

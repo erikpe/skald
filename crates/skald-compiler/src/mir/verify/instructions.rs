@@ -606,6 +606,22 @@ impl Verifier<'_> {
                 self.verify_arithmetic_operand(function, block, *left, expected, defined);
                 self.verify_arithmetic_operand(function, block, *right, expected, defined);
             }
+            MirRvalueKind::IntegerComparison {
+                operation,
+                left,
+                right,
+            } => {
+                if rvalue.ty != operation.result_type() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "integer comparison result must be `bool`",
+                    );
+                }
+                let expected = operation.operand_type();
+                self.verify_comparison_operand(function, block, *left, expected, defined);
+                self.verify_comparison_operand(function, block, *right, expected, defined);
+            }
             MirRvalueKind::TypeTest { source, target } => {
                 self.verify_type_test(function, block, rvalue, source, *target)
             }
@@ -649,6 +665,25 @@ impl Verifier<'_> {
                     function.callable(),
                     block.id,
                     format!("arithmetic operand is not `{expected}`"),
+                );
+            }
+        }
+    }
+
+    fn verify_comparison_operand(
+        &mut self,
+        function: MirDefinitionRef<'_>,
+        block: &MirBasicBlock,
+        value: ValueId,
+        expected: MirType,
+        defined: &HashSet<ValueId>,
+    ) {
+        if let Some(ty) = self.verify_value_use(function, block, value, defined) {
+            if ty != expected {
+                self.block_error(
+                    function.callable(),
+                    block.id,
+                    format!("comparison operand is not `{expected}`"),
                 );
             }
         }

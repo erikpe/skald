@@ -223,6 +223,11 @@ pub enum MirRvalueKind {
         left: ValueId,
         right: ValueId,
     },
+    IntegerComparison {
+        operation: MirIntegerComparison,
+        left: ValueId,
+        right: ValueId,
+    },
     /// A runtime metadata query. Statically known outcomes are constants.
     TypeTest {
         source: super::instruction::MirObjectView,
@@ -277,5 +282,69 @@ impl MirBinaryOperation {
             Self::AddU8 | Self::SubtractU8 | Self::MultiplyU8 => MirType::U8,
             Self::AddF64 | Self::SubtractF64 | Self::MultiplyF64 => MirType::F64,
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirIntegerType {
+    I64,
+    U64,
+    U8,
+}
+
+impl MirIntegerType {
+    pub const fn operand_type(self) -> MirType {
+        match self {
+            Self::I64 => MirType::I64,
+            Self::U64 => MirType::U64,
+            Self::U8 => MirType::U8,
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::I64 => "i64",
+            Self::U64 => "u64",
+            Self::U8 => "u8",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MirComparisonPredicate {
+    Equal,
+    NotEqual,
+    LessThan,
+    LessEqual,
+    GreaterThan,
+    GreaterEqual,
+}
+
+impl MirComparisonPredicate {
+    pub const fn mnemonic(self) -> &'static str {
+        match self {
+            Self::Equal => "eq",
+            Self::NotEqual => "ne",
+            Self::LessThan => "lt",
+            Self::LessEqual => "le",
+            Self::GreaterThan => "gt",
+            Self::GreaterEqual => "ge",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct MirIntegerComparison {
+    pub predicate: MirComparisonPredicate,
+    pub operand: MirIntegerType,
+}
+
+impl MirIntegerComparison {
+    pub const fn operand_type(self) -> MirType {
+        self.operand.operand_type()
+    }
+
+    pub const fn result_type(self) -> MirType {
+        MirType::Bool
     }
 }

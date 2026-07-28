@@ -871,6 +871,24 @@ impl HirDumper {
                     dumper.expression(right);
                 });
             }
+            HirExpressionKind::IntegerComparison {
+                operation,
+                left,
+                right,
+            } => {
+                self.typed_line(
+                    &format!(
+                        "IntegerComparison {}.{}",
+                        operation.predicate.mnemonic(),
+                        operation.operand.name()
+                    ),
+                    expression,
+                );
+                self.indented(|dumper| {
+                    dumper.expression(left);
+                    dumper.expression(right);
+                });
+            }
             HirExpressionKind::DirectCall {
                 function,
                 arguments,

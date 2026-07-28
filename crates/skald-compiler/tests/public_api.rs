@@ -12,8 +12,9 @@ use skald_compiler::{
     },
     external::{ExternalLink, ExternalLinkTable},
     hir::{
-        dump_hir, HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration,
-        HirObjectSlice, HirObjectView, HirProgram, HirViewTarget, ObjectProjection,
+        dump_hir, HirComparisonPredicate, HirIntegerComparison, HirIntegerType,
+        HirInterfaceCallTarget, HirInterfaceConformance, HirInterfaceDeclaration, HirObjectSlice,
+        HirObjectView, HirProgram, HirViewTarget, ObjectProjection, Type,
     },
     identity::{
         ArrayTypeId, CallableId, ExternalLinkId, InterfaceId, InterfaceRequirementId, ModuleId,
@@ -23,9 +24,10 @@ use skald_compiler::{
     literal::NumericLiteralKind,
     mir::{
         dump_mir, lower_hir, verify_mir, MirArrayInstruction, MirArrayLifecycle, MirArrayType,
-        MirArrayTypeTable, MirBaseCopy, MirCallReceiver, MirDirectBase, MirInterfaceCallTarget,
-        MirInterfaceConformance, MirInterfaceDeclaration, MirObjectView, MirPlaceProjection,
-        MirProgram, MirViewTarget,
+        MirArrayTypeTable, MirBaseCopy, MirCallReceiver, MirComparisonPredicate, MirDirectBase,
+        MirIntegerComparison, MirIntegerType, MirInterfaceCallTarget, MirInterfaceConformance,
+        MirInterfaceDeclaration, MirObjectView, MirPlaceProjection, MirProgram, MirType,
+        MirViewTarget,
     },
     module::{
         dump_module_graph, load_module_graph, normalize_provider_roots, CandidateResolution,
@@ -147,6 +149,12 @@ fn intentional_phase_and_dump_paths_compose() {
     let _interface: Option<HirInterfaceDeclaration> = None;
     let _conformance: Option<HirInterfaceConformance> = None;
     let _interface_call: Option<HirInterfaceCallTarget> = None;
+    let hir_comparison = HirIntegerComparison {
+        predicate: HirComparisonPredicate::LessThan,
+        operand: HirIntegerType::U64,
+    };
+    assert_eq!(hir_comparison.operand_type(), Type::U64);
+    assert_eq!(hir_comparison.result_type(), Type::Bool);
     let mir: MirProgram = lower_hir(hir);
     assert_eq!(mir.modules, hir.modules);
     let _mir_base: Option<MirDirectBase> = None;
@@ -163,6 +171,12 @@ fn intentional_phase_and_dump_paths_compose() {
     let _mir_array_type: Option<MirArrayType> = None;
     let _mir_array_lifecycle: Option<MirArrayLifecycle> = None;
     let _mir_array_instruction: Option<MirArrayInstruction> = None;
+    let mir_comparison = MirIntegerComparison {
+        predicate: MirComparisonPredicate::LessThan,
+        operand: MirIntegerType::U64,
+    };
+    assert_eq!(mir_comparison.operand_type(), MirType::U64);
+    assert_eq!(mir_comparison.result_type(), MirType::Bool);
     verify_mir(&mir).unwrap();
     let mir = run_mir_pipeline(mir).unwrap();
     let _mir_dump = dump_mir(&mir);

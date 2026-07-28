@@ -43,6 +43,25 @@ fn expressions_immediately_below_and_at_the_nesting_limit_parse() {
 }
 
 #[test]
+fn grouped_comparisons_use_the_common_expression_nesting_budget() {
+    let allowed = format!(
+        "{}1 < 2{}",
+        "(".repeat(MAX_SYNTAX_NESTING - 2),
+        ")".repeat(MAX_SYNTAX_NESTING - 2)
+    );
+    assert!(parse_text(source_with_return(&allowed))
+        .diagnostics
+        .is_empty());
+
+    let excessive = format!(
+        "{}1 < 2{}",
+        "(".repeat(MAX_SYNTAX_NESTING),
+        ")".repeat(MAX_SYNTAX_NESTING)
+    );
+    assert_single_nesting_error(&parse_text(source_with_return(&excessive)));
+}
+
+#[test]
 fn expression_above_the_limit_is_omitted_and_recovers_at_a_later_declaration() {
     let source = format!(
         "{} fn recovered() -> i64 {{ return 0; }}",

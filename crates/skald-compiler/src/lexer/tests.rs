@@ -64,6 +64,51 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
+fn comparison_punctuation_uses_longest_match_and_preserves_existing_tokens() {
+    let (sources, source_id, output) = lex_text("== = != ! < <= > >= -> :: &");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::EqualEqual,
+            TokenKind::Equal,
+            TokenKind::BangEqual,
+            TokenKind::Bang,
+            TokenKind::Less,
+            TokenKind::LessEqual,
+            TokenKind::Greater,
+            TokenKind::GreaterEqual,
+            TokenKind::Arrow,
+            TokenKind::DoubleColon,
+            TokenKind::Invalid,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["==", "=", "!=", "!", "<", "<=", ">", ">=", "->", "::", "&", ""]
+    );
+    assert_eq!(output.diagnostics.len(), 1);
+    assert_eq!(
+        output.diagnostics.iter().next().unwrap().code,
+        UNEXPECTED_CHARACTER
+    );
+    let dump = dump_tokens(source, &output.tokens);
+    assert_eq!(dump, dump_tokens(source, &output.tokens));
+    assert!(dump.contains("LESS_EQUAL"));
+    assert!(dump.contains("GREATER_EQUAL"));
+}
+
+#[test]
 fn recognizes_string_literals_as_single_full_span_tokens() {
     let (sources, source_id, output) = lex_text("\"plain\" \"a\\n\\x42\\0\"");
     let source = sources.get(source_id).unwrap();

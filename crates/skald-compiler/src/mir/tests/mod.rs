@@ -16,6 +16,7 @@ mod alias_fixtures;
 mod alias_lowering;
 mod aliases;
 mod arrays;
+mod comparisons;
 mod copy;
 mod interface_dispatch;
 mod interface_fixtures;

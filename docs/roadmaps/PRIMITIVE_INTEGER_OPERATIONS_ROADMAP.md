@@ -1,6 +1,6 @@
 # Primitive Integer Casts and Comparisons Roadmap
 
-Status: in progress; INT0 is complete and INT1 is next.
+Status: in progress; INT0–INT1 are complete and INT2 is next.
 
 This roadmap establishes a coherent integer-only operator profile before
 ordinary standard-library strings depend on isolated numeric operations. It
@@ -86,7 +86,7 @@ public ABI remains unchanged.
 ## Progress
 
 - [x] INT0 — Freeze the integer operation contract
-- [ ] INT1 — Establish verified target-independent integer comparisons
+- [x] INT1 — Establish verified target-independent integer comparisons
 - [ ] INT2 — Execute integer comparisons on x86-64
 - [ ] INT3 — Establish verified target-independent integer casts
 - [ ] INT4 — Execute integer casts on x86-64
@@ -126,24 +126,24 @@ describes it as not yet implemented.
 **Purpose:** Carry every same-type integer comparison from source syntax into
 verified MIR before any target chooses condition codes.
 
-- [ ] Lex `==`, `!=`, `<`, `<=`, `>`, and `>=` by longest match without
+- [x] Lex `==`, `!=`, `<`, `<=`, `>`, and `>=` by longest match without
       disturbing assignment `=`, postfix `!`, arrows, or malformed-token
       recovery.
-- [ ] Parse one non-associative comparison level below arithmetic and above
+- [x] Parse one non-associative comparison level below arithmetic and above
       contextual `is`; retain operator and operand spans, deterministic dumps,
       common nesting limits, and focused recovery.
-- [ ] Preserve comparison shape through resolution without name lookup or
+- [x] Preserve comparison shape through resolution without name lookup or
       target assumptions.
-- [ ] Require two identical `i64`, `u64`, or `u8` operands, report both actual
+- [x] Require two identical `i64`, `u64`, or `u8` operands, report both actual
       types for invalid pairs, and produce typed `bool` HIR for every valid
       predicate.
-- [ ] Represent predicate and integer operand kind cohesively rather than
+- [x] Represent predicate and integer operand kind cohesively rather than
       adding string-motivated special cases. Expose explicit operand and result
       type queries to HIR/MIR consumers and public facades.
-- [ ] Lower left then right into a target-independent MIR comparison rvalue,
+- [x] Lower left then right into a target-independent MIR comparison rvalue,
       preserve existing spill rules for a control-affecting right operand, and
       dump stable signedness-independent operation names such as `lt.u64`.
-- [ ] Verify predicate legality, matching operand definitions and types,
+- [x] Verify predicate legality, matching operand definitions and types,
       canonical `bool` result type, block-local value use, and deterministic
       error accumulation under one-invariant MIR mutations.
 
