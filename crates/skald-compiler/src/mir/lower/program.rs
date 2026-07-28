@@ -8,15 +8,24 @@ use crate::hir::{
 };
 
 pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
+    let string_language_item = hir
+        .string_language_item
+        .as_ref()
+        .map(|item| lower_string_language_item(hir, item));
     let classes = hir.classes.iter().map(lower_class_declaration).collect();
     let declarations = hir.declarations.iter().map(lower_declaration).collect();
     let definitions = hir
         .declarations
         .iter()
         .map(|declaration| {
-            hir.definitions
-                .get(declaration.id)
-                .map(|definition| lower_function_definition(declaration, definition))
+            hir.definitions.get(declaration.id).map(|definition| {
+                lower_function_definition(
+                    declaration,
+                    definition,
+                    string_language_item,
+                    &hir.literal_data,
+                )
+            })
         })
         .collect();
     let member_definitions = hir
@@ -31,12 +40,32 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
                 .chain(class.destructor.iter())
                 .chain(class.methods.iter())
         })
-        .map(|definition| lower_member_definition(hir, definition))
+        .map(|definition| lower_member_definition(hir, definition, string_language_item))
         .collect();
     MirProgram {
         modules: hir.modules.clone(),
         external_links: hir.external_links.clone(),
         array_types: MirArrayTypeTable::new(hir.array_types.iter().map(lower_array_type).collect()),
+        string_language_item,
+        literal_data: MirLiteralDataTable::new(
+            hir.literal_data
+                .iter()
+                .map(|literal| {
+                    let item = string_language_item
+                        .expect("typed literal data requires string language-item metadata");
+                    MirLiteralData {
+                        id: literal.id,
+                        bytes: literal.bytes.clone(),
+                        array: item.storage_array,
+                        length: u64::try_from(literal.bytes.len())
+                            .expect("literal byte length must fit the language u64 length"),
+                        mutability: MirStaticDataMutability::Immutable,
+                        origin: MirStaticAllocationOrigin::Immortal,
+                        span: literal.span,
+                    }
+                })
+                .collect(),
+        ),
         classes: MirClassDeclarationTable::new(classes),
         interfaces: MirInterfaceDeclarationTable::new(
             hir.interfaces
@@ -84,6 +113,25 @@ pub(super) fn lower_program(hir: &HirProgram) -> MirProgram {
         member_definitions: MirMemberDefinitionTable::new(member_definitions),
         entry_function: hir.entry_function,
         span: hir.span,
+    }
+}
+
+fn lower_string_language_item(
+    hir: &HirProgram,
+    item: &crate::hir::HirStringLanguageItem,
+) -> MirStringLanguageItem {
+    let storage = hir
+        .field(item.storage_field)
+        .expect("typed string language-item field must be declared");
+    let Type::Shared(crate::hir::HirSharedTarget::Array(storage_array)) = storage.ty else {
+        unreachable!("typed string storage field must be shared u8[]");
+    };
+    MirStringLanguageItem {
+        class: item.class,
+        storage_field: item.storage_field,
+        start_field: item.start_field,
+        length_field: item.length_field,
+        storage_array,
     }
 }
 
@@ -408,6 +456,8 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
 fn lower_function_definition(
     declaration: &HirFunctionDeclaration,
     definition: &HirFunctionDefinition,
+    string_language_item: Option<MirStringLanguageItem>,
+    literal_data: &crate::hir::HirLiteralDataTable,
 ) -> MirFunctionDefinition {
     let lowered = BodyLowerer::lower(BodyLoweringInput {
         callable: declaration.id.into(),
@@ -416,6 +466,8 @@ fn lower_function_definition(
         source_body: &definition.body,
         return_type: declaration.return_type,
         receiver_class: None,
+        string_language_item,
+        literal_data,
     });
     MirFunctionDefinition {
         function: declaration.id,
@@ -431,6 +483,7 @@ fn lower_function_definition(
 fn lower_member_definition(
     hir: &HirProgram,
     definition: &HirMemberDefinition,
+    string_language_item: Option<MirStringLanguageItem>,
 ) -> MirMemberDefinition {
     debug_assert_eq!(definition.callable.class(), Some(definition.class_owner));
     let signature = hir
@@ -443,6 +496,8 @@ fn lower_member_definition(
         source_body: &definition.body,
         return_type: signature.return_type,
         receiver_class: definition.receiver_class,
+        string_language_item,
+        literal_data: &hir.literal_data,
     });
     MirMemberDefinition {
         callable: definition.callable,

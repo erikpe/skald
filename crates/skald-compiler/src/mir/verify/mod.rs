@@ -25,6 +25,7 @@ mod optional;
 mod place;
 mod shared;
 mod sink;
+mod strings;
 mod type_operations;
 mod view;
 

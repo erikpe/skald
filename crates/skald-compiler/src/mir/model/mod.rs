@@ -9,6 +9,7 @@ mod instruction;
 mod interface;
 mod optional;
 mod shared;
+mod strings;
 mod value;
 
 pub use array::{
@@ -52,7 +53,11 @@ pub use shared::{
     MirSharedAdopt, MirSharedAllocate, MirSharedAllocationMode, MirSharedAllocationOrigin,
     MirSharedCast, MirSharedCastSource, MirSharedCastTransfer, MirSharedCopy, MirSharedFieldCopy,
     MirSharedFieldInitialize, MirSharedFieldReplace, MirSharedInitialize, MirSharedMove,
-    MirSharedPublish, MirSharedRelease, MirSharedTarget,
+    MirSharedPublish, MirSharedRelease, MirSharedStatic, MirSharedTarget,
+};
+pub use strings::{
+    MirLiteralData, MirLiteralDataTable, MirStaticAllocationOrigin, MirStaticDataMutability,
+    MirStringInitialize, MirStringLanguageItem,
 };
 pub use value::{
     MirBinaryOperation, MirPlace, MirPlaceBase, MirPlaceProjection, MirRvalue, MirRvalueKind,

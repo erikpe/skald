@@ -19,15 +19,58 @@ impl BodyLowerer<'_> {
         destination: MirPlace,
     ) {
         match producer {
-            // Literal descriptor materialization is introduced by the next
-            // MIR milestone. The driver rejects literal-bearing HIR before
-            // this boundary until that representation exists.
-            HirObjectProducer::StringLiteral(_) => {}
+            HirObjectProducer::StringLiteral(literal) => {
+                self.lower_string_literal(literal, destination)
+            }
             HirObjectProducer::Construct(construction) => {
                 self.lower_construction(construction, destination);
             }
             HirObjectProducer::Call(call) => self.lower_object_call(call, destination),
         }
+    }
+
+    fn lower_string_literal(
+        &mut self,
+        literal: &crate::hir::HirStringLiteral,
+        destination: MirPlace,
+    ) {
+        let item = self
+            .input
+            .string_language_item
+            .expect("typed string literal requires language-item metadata");
+        debug_assert_eq!(literal.class, item.class);
+        let target = crate::hir::HirSharedTarget::Array(item.storage_array);
+        let backing = self.new_shared_temporary(target, literal.span);
+        self.emit(MirInstruction::SharedStatic(MirSharedStatic {
+            destination: backing,
+            data: literal.data,
+            target: MirSharedTarget::Array(item.storage_array),
+            origin: MirStaticAllocationOrigin::Immortal,
+            span: literal.span,
+        }));
+        self.consume_shared_temporary(backing);
+        let length = self
+            .input
+            .literal_data
+            .get(literal.data)
+            .map(|data| {
+                u64::try_from(data.bytes.len())
+                    .expect("literal byte length must fit the language u64 length")
+            })
+            .expect("typed literal must reference declared data");
+        self.emit(MirInstruction::StringInitialize(MirStringInitialize {
+            destination,
+            data: literal.data,
+            backing,
+            class: item.class,
+            storage_field: item.storage_field,
+            start_field: item.start_field,
+            length_field: item.length_field,
+            start: 0,
+            length,
+            span: literal.span,
+        }));
+        self.full_expression_has_shared_effect = true;
     }
 
     pub(super) fn lower_construction(

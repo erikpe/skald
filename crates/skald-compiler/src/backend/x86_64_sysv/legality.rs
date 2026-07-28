@@ -19,6 +19,13 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
             format!("input MIR failed verification:\n{errors}"),
         )
     })?;
+    if !program.literal_data.is_empty() {
+        return Err(BackendError::new(
+            Target::X86_64SysV,
+            None,
+            "string literal target emission is not implemented",
+        ));
+    }
     array_legality::check(program)?;
     let dispatch = DispatchMetadata::compute(program)?;
     let data_layout = DataLayout::compute(program)?;
@@ -105,6 +112,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::Store(_)
                     | MirInstruction::EndFullExpression(_) => {}
                     MirInstruction::SharedPublish(_)
+                    | MirInstruction::SharedStatic(_)
                     | MirInstruction::SharedAdopt(_)
                     | MirInstruction::SharedCopy(_)
                     | MirInstruction::SharedFieldCopy(_)
@@ -117,6 +125,7 @@ pub(super) fn check(program: &MirProgram) -> Result<(DataLayout, DispatchMetadat
                     | MirInstruction::OptionalSharedAssign(_)
                     | MirInstruction::OptionalSharedCleanup(_)
                     | MirInstruction::SharedFieldReplace(_)
+                    | MirInstruction::StringInitialize(_)
                     | MirInstruction::OptionalAssign(_)
                     | MirInstruction::ClassOptionalInitialize(_)
                     | MirInstruction::ClassOptionalAssign(_)

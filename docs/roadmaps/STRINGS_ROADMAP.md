@@ -1,6 +1,6 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR1 are implemented and STR2 is next.
+Status: in progress; STR0–STR2 are implemented and STR3 is next.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -39,7 +39,7 @@ emission, and ordinary standard-library behavior.
 
 - [x] STR0 — Recognize literals and discover the canonical language item
 - [x] STR1 — Validate and type intrinsic `Str` production
-- [ ] STR2 — Verify literal descriptors and immortal shared backing
+- [x] STR2 — Verify literal descriptors and immortal shared backing
 - [ ] STR3 — Emit deterministic immortal literal data on x86-64
 - [ ] STR4 — Provide ordinary standard-library string behavior
 - [ ] STR5 — Harden, document, and promote strings as implemented
@@ -124,21 +124,21 @@ method-name convention.
 **Purpose:** Make target-independent literal materialization and lifetime
 state explicit before a backend can emit static storage.
 
-- [ ] Add deterministic MIR literal-data declarations with exact decoded
+- [x] Add deterministic MIR literal-data declarations with exact decoded
       bytes, `u8[]` target identity, length, and static immortal origin.
-- [ ] Lower a literal into complete identity-selected initialization of
+- [x] Lower a literal into complete identity-selected initialization of
       `storage`, `start`, and `length`, followed by ordinary `Str` lifecycle.
-- [ ] Introduce an explicit static-allocation producer distinct from dynamic
+- [x] Introduce an explicit static-allocation producer distinct from dynamic
       unpublished allocation and count-one publication.
-- [ ] Extend shared-owner copy, assignment, result, temporary, cleanup, and
+- [x] Extend shared-owner copy, assignment, result, temporary, cleanup, and
       anchor effects without adding a string-specific ownership path.
-- [ ] Verify data-table density/identity, immutable payload, exact array
+- [x] Verify data-table density/identity, immutable payload, exact array
       metadata and length, legal descriptor fields, one complete publication,
       ownership accounting, and absence of dynamic immortal publication.
-- [ ] Reject malformed descriptors, mismatched data or target identities,
+- [x] Reject malformed descriptors, mismatched data or target identities,
       mutable static payloads, leaked unpublished states, and immortal origins
       on unsupported layouts.
-- [ ] Extend public MIR facades and dumps minimally; keep verifier structure
+- [x] Extend public MIR facades and dumps minimally; keep verifier structure
       split by declaration, instruction, ownership, and cleanup responsibility.
 
 **Tests:** HIR-to-MIR order and lifecycle tests; exact MIR dumps; one-invariant

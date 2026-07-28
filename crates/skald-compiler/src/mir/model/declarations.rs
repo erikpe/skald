@@ -29,6 +29,8 @@ pub struct MirProgram {
     pub modules: ProgramModuleTable,
     pub external_links: ExternalLinkTable,
     pub array_types: MirArrayTypeTable,
+    pub string_language_item: Option<super::MirStringLanguageItem>,
+    pub literal_data: super::MirLiteralDataTable,
     pub classes: MirClassDeclarationTable,
     pub interfaces: MirInterfaceDeclarationTable,
     pub virtual_families: MirVirtualFamilyTable,

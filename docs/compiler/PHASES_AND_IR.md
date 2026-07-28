@@ -51,6 +51,14 @@ the enclosing class or interface. These additions preserve the existing flat
 whole-program declaration and definition tables. Lower phases use typed
 identities and never repeat module-path or source-name lookup.
 
+String literals retain deterministic decoded-data identities from resolution
+through HIR. MIR adds program-local immutable literal-data declarations, a
+distinct immortal static shared-owner producer, and identity-selected complete
+`Str` descriptor publication. Verification proves the data, array, and field
+identities and consumes the temporary backing owner before ordinary class
+lifecycle continues; target offsets and static section layout remain backend
+responsibilities.
+
 `resolve::resolve(&CompilationUnit)` remains a single-source adapter. It
 synthesizes one request-local logical `main` module around the AST's `SourceId`
 and otherwise uses the normal program resolver.

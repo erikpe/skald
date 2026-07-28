@@ -455,6 +455,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                         "shared field replacement destination",
                     );
                 }
+                MirInstruction::StringInitialize(initialize) => {
+                    self.initialize_place(block, state, &initialize.destination);
+                }
                 MirInstruction::CopyConstruct(copy)
                     if matches!(
                         copy.destination.base,

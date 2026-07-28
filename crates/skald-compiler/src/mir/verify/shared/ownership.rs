@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::identity::CallableId;
+use crate::identity::{CallableId, LiteralDataId};
 
 use super::super::{
     super::model::{
@@ -35,6 +35,8 @@ struct SharedState {
     allocations: HashMap<StorageId, AllocationState>,
     live_owners: HashSet<StorageId>,
     owner_origins: HashMap<StorageId, StorageId>,
+    /// Static literal owners may only be consumed by exact string publication.
+    static_owners: HashMap<StorageId, LiteralDataId>,
     released_owners: HashSet<StorageId>,
     /// Checked-view carrier to the shared owner that keeps its payload live.
     active_checked_views: HashMap<StorageId, StorageId>,
@@ -264,6 +266,25 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                         "shared publication requires completed initialization",
                     );
                 }
+                MirInstruction::SharedStatic(static_owner) => {
+                    if state.live_owners.contains(&static_owner.destination)
+                        || state.released_owners.contains(&static_owner.destination)
+                    {
+                        self.error(
+                            block.id,
+                            "static shared owner destination is already initialized",
+                        );
+                    } else {
+                        state.live_owners.insert(static_owner.destination);
+                        state
+                            .owner_origins
+                            .insert(static_owner.destination, static_owner.destination);
+                        state
+                            .static_owners
+                            .insert(static_owner.destination, static_owner.data);
+                    }
+                    state.pending_full_expression_boundary = true;
+                }
                 MirInstruction::SharedAdopt(adopt) => {
                     let produced = if state.allocations.get(&adopt.allocation)
                         == Some(&AllocationState::Published)
@@ -293,6 +314,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     state.pending_full_expression_boundary = produced;
                 }
                 MirInstruction::SharedCopy(copy) => {
+                    self.reject_static_owner(block.id, state, copy.source, "shared copy");
                     let source_origin = state.owner_origins.get(&copy.source).copied();
                     if source_origin.is_none() || !state.live_owners.contains(&copy.source) {
                         self.error(block.id, "shared copy source is not a live owner");
@@ -325,6 +347,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     self.apply_shared_cast(block.id, state, cast);
                 }
                 MirInstruction::SharedMove(transfer) => {
+                    self.reject_static_owner(block.id, state, transfer.source, "shared move");
                     let source_origin = state.owner_origins.get(&transfer.source).copied();
                     if source_origin.is_none() || !state.live_owners.remove(&transfer.source) {
                         self.error(block.id, "shared move source is not a live owner");
@@ -345,6 +368,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                     }
                 }
                 MirInstruction::SharedRelease(release) => {
+                    self.reject_static_owner(block.id, state, release.owner, "shared release");
                     if state
                         .active_checked_views
                         .values()
@@ -373,6 +397,20 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 }
                 MirInstruction::SharedFieldReplace(replace) => {
                     self.consume_field_transfer_source(block.id, state, replace.source);
+                }
+                MirInstruction::StringInitialize(initialize) => {
+                    if state.static_owners.get(&initialize.backing) != Some(&initialize.data) {
+                        self.error(
+                            block.id,
+                            "string initialization requires its exact live static literal owner",
+                        );
+                    } else {
+                        state.static_owners.remove(&initialize.backing);
+                        state.live_owners.remove(&initialize.backing);
+                        state.owner_origins.remove(&initialize.backing);
+                        state.released_owners.insert(initialize.backing);
+                    }
+                    state.pending_full_expression_boundary = true;
                 }
                 MirInstruction::OptionalSharedInitialize(initialize) => {
                     if let crate::mir::MirOptionalSharedSource::Present(owner) = initialize.source {
@@ -487,6 +525,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
     ) {
         match &cast.source {
             MirSharedCastSource::Owner { storage, .. } => {
+                self.reject_static_owner(block, state, *storage, "shared cast");
                 if !state.live_owners.contains(storage)
                     || !state.owner_origins.contains_key(storage)
                 {
@@ -663,6 +702,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         state: &mut SharedState,
         source: StorageId,
     ) {
+        self.reject_static_owner(block, state, source, "shared field transfer");
         if !state.live_owners.remove(&source) {
             self.error(block, "shared field transfer source is not a live owner");
         } else {
@@ -690,6 +730,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 continue;
             }
             transferred = true;
+            self.reject_static_owner(block, state, *owner, "shared call argument");
             if !state.live_owners.remove(owner) {
                 self.error(block, "shared call argument is not a live owner");
             } else {
@@ -706,6 +747,7 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         state: &mut SharedState,
         source: StorageId,
     ) {
+        self.reject_static_owner(block, state, source, "optional shared injection");
         if !state.live_owners.remove(&source) {
             self.error(
                 block,
@@ -714,6 +756,23 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         } else {
             state.owner_origins.remove(&source);
             state.released_owners.insert(source);
+        }
+    }
+
+    fn reject_static_owner(
+        &mut self,
+        block: BlockId,
+        state: &SharedState,
+        owner: StorageId,
+        operation: &'static str,
+    ) {
+        if state.static_owners.contains_key(&owner) {
+            self.error(
+                block,
+                format!(
+                    "{operation} cannot consume static literal backing before string initialization"
+                ),
+            );
         }
     }
 
@@ -757,6 +816,12 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
             self.error(
                 block.id,
                 "shared allocation is not published and adopted on normal return",
+            );
+        }
+        if !state.static_owners.is_empty() {
+            self.error(
+                block.id,
+                "static literal owner is not consumed by string initialization",
             );
         }
         if !state.active_checked_views.is_empty() {
@@ -846,6 +911,7 @@ impl SharedState {
         self.allocations == other.allocations
             && self.live_owners == other.live_owners
             && self.owner_origins == other.owner_origins
+            && self.static_owners == other.static_owners
             && self.active_checked_views == other.active_checked_views
             && self.initialized_fields == other.initialized_fields
             && self.pending_full_expression_boundary == other.pending_full_expression_boundary

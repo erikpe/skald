@@ -273,7 +273,7 @@ impl BodyLowerer<'_> {
         }));
     }
 
-    fn new_shared_temporary(
+    pub(super) fn new_shared_temporary(
         &mut self,
         target: HirSharedTarget,
         span: crate::source::Span,
@@ -313,7 +313,7 @@ impl BodyLowerer<'_> {
         storage
     }
 
-    fn consume_shared_temporary(&mut self, storage: StorageId) {
+    pub(super) fn consume_shared_temporary(&mut self, storage: StorageId) {
         let index = self
             .full_expression_temporaries
             .iter()

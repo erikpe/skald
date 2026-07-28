@@ -1,11 +1,12 @@
 # Strings Compiler Contract
 
-Status: **frozen design, implemented through STR1**. The lexer, AST, and module
+Status: **frozen design, implemented through STR2**. The lexer, AST, and module
 graph implement literal recognition, decoded bytes, and conditional
 `std::str` reachability. Resolution validates the exact language item, and HIR
 represents literals as intrinsic produced `Str` values with deterministic data
-identities. MIR materialization, immortal allocation, backend emission, and
-execution remain future work. This document is authoritative for compiler
+identities. MIR declares and verifies immutable immortal backing and exact
+descriptor publication. Backend emission and execution remain future work.
+This document is authoritative for compiler
 handling of the source-visible [string contract](../language/STRINGS.md).
 
 The generic ownership header and generated count machinery are owned by
@@ -92,9 +93,9 @@ call, allocation call, or opaque standard-library invocation. Ordinary
 expected-type, destination, argument, result, temporary, copy, assignment, and
 cleanup machinery handles the resulting `Str`.
 
-The complete compiler driver currently stops after this typed boundary with
-structured diagnostic `CMP001`; it does not pass literal-bearing HIR to MIR
-lowering until STR2 defines and verifies descriptor materialization.
+Literal-bearing HIR passes through MIR lowering and verification. The complete
+compiler driver then stops before target emission with structured diagnostic
+`CMP001`, because STR3 owns static data layout and machine-code materialization.
 
 ### MIR and verification
 
@@ -113,7 +114,13 @@ publication, and every later ownership use. Dynamic allocation publication
 cannot manufacture immortality, and malformed literal descriptors or leaked
 unpublished states fail verification.
 
-### Backend
+Static backing production is a distinct MIR operation, not a dynamic
+allocation with a special count. It produces one short-lived exact
+`shared u8[]` owner that only the matching descriptor publication may consume.
+The completed `Str` then uses the ordinary class copy, assignment, result,
+temporary, and cleanup machinery.
+
+### Backend (STR3)
 
 The x86-64 backend pools decoded byte blocks deterministically, emits stable
 collision-proof private symbols, and places bytes and relocations in immutable

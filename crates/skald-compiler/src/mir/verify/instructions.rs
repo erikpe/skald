@@ -92,6 +92,9 @@ impl Verifier<'_> {
             MirInstruction::SharedPublish(publish) => {
                 self.verify_shared_publish(function, block, publish)
             }
+            MirInstruction::SharedStatic(static_owner) => {
+                self.verify_shared_static(function, block, static_owner)
+            }
             MirInstruction::SharedAdopt(adopt) => self.verify_shared_adopt(function, block, adopt),
             MirInstruction::SharedCopy(copy) => self.verify_shared_copy(function, block, copy),
             MirInstruction::SharedFieldCopy(copy) => {
@@ -111,6 +114,9 @@ impl Verifier<'_> {
             }
             MirInstruction::SharedFieldReplace(replace) => {
                 self.verify_shared_field_replace(function, block, replace)
+            }
+            MirInstruction::StringInitialize(initialize) => {
+                self.verify_string_initialize(function, block, initialize)
             }
             MirInstruction::OptionalInitialize(initialize) => self.verify_optional_initialize(
                 function,

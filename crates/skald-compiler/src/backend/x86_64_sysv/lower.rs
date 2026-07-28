@@ -200,6 +200,9 @@ impl<'program, 'output> InstructionSelector<'program, 'output> {
                 self.select_shared_initialize(initialize)?
             }
             MirInstruction::SharedPublish(publish) => self.select_shared_publish(publish)?,
+            MirInstruction::SharedStatic(_) | MirInstruction::StringInitialize(_) => {
+                unreachable!("literal-bearing MIR is rejected before instruction selection")
+            }
             MirInstruction::SharedAdopt(adopt) => self.select_shared_adopt(adopt),
             MirInstruction::SharedCopy(copy) => self.select_shared_copy(copy),
             MirInstruction::SharedMove(transfer) => self.select_shared_move(transfer),

@@ -52,6 +52,28 @@ pub fn dump_mir(program: &MirProgram) -> String {
             );
         }
     }
+    if let Some(item) = program.string_language_item {
+        let _ = writeln!(
+            output,
+            "  StringLanguageItem class {} storage {} start {} length {} storage-array {}",
+            item.class, item.storage_field, item.start_field, item.length_field, item.storage_array
+        );
+    }
+    if !program.literal_data.is_empty() {
+        output.push_str("  LiteralData\n");
+        for data in program.literal_data.iter() {
+            let _ = write!(
+                output,
+                "    Literal {} array {} length {} {:?} {:?} bytes",
+                data.id, data.array, data.length, data.mutability, data.origin
+            );
+            for byte in &data.bytes {
+                let _ = write!(output, " {byte:02x}");
+            }
+            write_span(&mut output, data.span);
+            output.push('\n');
+        }
+    }
     if !program.virtual_families.is_empty() {
         output.push_str("  VirtualFamilies\n");
         for family in program.virtual_families.iter() {
@@ -574,6 +596,17 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 let _ = write!(output, "shared-publish {}", publish.allocation);
                 write_span(output, publish.span);
             }
+            MirInstruction::SharedStatic(static_owner) => {
+                let _ = write!(
+                    output,
+                    "shared-static {} from {} : {} {:?}",
+                    static_owner.destination,
+                    static_owner.data,
+                    static_owner.target,
+                    static_owner.origin
+                );
+                write_span(output, static_owner.span);
+            }
             MirInstruction::SharedAdopt(adopt) => {
                 let _ = write!(
                     output,
@@ -623,6 +656,23 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
                 dump_place(output, &replace.destination);
                 let _ = write!(output, " from {}", replace.source);
                 write_span(output, replace.span);
+            }
+            MirInstruction::StringInitialize(initialize) => {
+                output.push_str("string-initialize ");
+                dump_place(output, &initialize.destination);
+                let _ = write!(
+                    output,
+                    " from {} backing {} : class {} fields [{}, {}, {}] start {} length {}",
+                    initialize.data,
+                    initialize.backing,
+                    initialize.class,
+                    initialize.storage_field,
+                    initialize.start_field,
+                    initialize.length_field,
+                    initialize.start,
+                    initialize.length
+                );
+                write_span(output, initialize.span);
             }
             MirInstruction::OptionalInitialize(initialize) => {
                 output.push_str("optional-initialize ");

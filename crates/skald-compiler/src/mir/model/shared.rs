@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::{
-    identity::{ClassId, InitializerId, InterfaceId},
+    identity::{ClassId, InitializerId, InterfaceId, LiteralDataId},
     source::Span,
 };
 
@@ -79,6 +79,17 @@ pub struct MirSharedInitialize {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MirSharedPublish {
     pub allocation: StorageId,
+    pub span: Span,
+}
+
+/// Produces one ordinary shared owner for verified immutable static backing.
+/// Unlike dynamic allocation, the backing is already complete and published.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MirSharedStatic {
+    pub destination: StorageId,
+    pub data: LiteralDataId,
+    pub target: MirSharedTarget,
+    pub origin: super::MirStaticAllocationOrigin,
     pub span: Span,
 }
 

@@ -23,6 +23,7 @@ impl<'mir> Verifier<'mir> {
         self.verify_external_links();
         self.verify_array_declarations();
         self.verify_classes();
+        self.verify_string_declarations();
         self.verify_virtual_families();
         self.verify_interfaces();
         let entry_declaration = self.program.declarations.get(self.program.entry_function);
