@@ -1,6 +1,6 @@
 # Private Members and Static Methods Roadmap
 
-Status: in progress; PSM4 is next.
+Status: complete.
 
 This roadmap adds declaring-class privacy and receiverless class-owned methods
 without creating a second callable, member-lookup, ownership, or backend
@@ -94,7 +94,7 @@ last class-member prerequisite from the
 - [x] PSM1 — Implement declaring-class member privacy
 - [x] PSM2 — Establish receiverless static-method IR and execution
 - [x] PSM3 — Expose static methods through the complete source pipeline
-- [ ] PSM4 — Confirm and promote the unblocked string design
+- [x] PSM4 — Confirm and promote the unblocked string design
 
 ## PR-sized implementation sequence
 
@@ -324,35 +324,35 @@ living documentation describes the complete implemented contract.
 that its member prerequisites have stable implemented contracts, without
 implementing string literals or string execution.
 
-- [ ] Re-read the implemented modifier grammar, privacy boundary, static-call
+- [x] Re-read the implemented modifier grammar, privacy boundary, static-call
       model, module visibility, ownership rules, and the complete
       [string proposal](STRINGS_DESIGN_PROPOSAL.md); record any discrepancy as
       a blocking design correction rather than silently changing the string
       representation.
-- [ ] Replace illustrative string declarations with the exact implemented
+- [x] Replace illustrative string declarations with the exact implemented
       private-field, ordinary-method, static-method, and private-static-method
       spellings.
-- [ ] Confirm that compiler language-item validation and future intrinsic
+- [x] Confirm that compiler language-item validation and future intrinsic
       descriptor materialization may inspect private field metadata without
       granting ordinary source access.
-- [ ] Confirm that ordinary public static factories and private instance/static
+- [x] Confirm that ordinary public static factories and private instance/static
       helpers can express all proposed dynamic string construction paths
       without compiler-selected method names.
-- [ ] Promote source-visible string rules into a focused
+- [x] Promote source-visible string rules into a focused
       `docs/language/STRINGS.md` contract and phase, immortality, verification,
       layout, compiler/standard-library boundary, and runtime rules into
       `docs/compiler/STRINGS.md` plus the existing shared-ownership authorities
       where applicable.
-- [ ] Update the documentation index, language overview, compiler overview,
+- [x] Update the documentation index, language overview, compiler overview,
       status matrix, and cross-links so one authoritative location owns each
       promoted fact. Mark strings as frozen design, not implemented behavior.
-- [ ] Move the completed proposal to `docs/archive/`, add it to the archive
+- [x] Move the completed proposal to `docs/archive/`, add it to the archive
       index, remove its active design-proposal entry, and repair every incoming
       relative link without rewriting its historical content.
-- [ ] Create and index a separate PR-sized string implementation roadmap that
+- [x] Create and index a separate PR-sized string implementation roadmap that
       begins with language-item discovery and literal syntax; do not expand
       this roadmap into string implementation.
-- [ ] Audit touched compiler modules by responsibility, preserve concise
+- [x] Audit touched compiler modules by responsibility, preserve concise
       facades and cohesive tests, remove rollout vocabulary from living
       documentation, and place any unrelated actionable discovery in a
       separately indexed roadmap document.

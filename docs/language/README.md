@@ -121,6 +121,9 @@ makes a result source-observable.
 - The [implemented grammar](GRAMMAR.md) is the exact accepted syntax authority.
 - [Types, values, and expressions](TYPES_AND_VALUES.md) defines the implemented
   type model, literals, exact-type rules, and operator availability.
+- [Strings](STRINGS.md) freezes the unimplemented raw-byte
+  `std::str::Str` descriptor, literal syntax, logical immutability, and
+  compiler/standard-library boundary.
 - [Arrays](ARRAYS.md) freezes the syntax-parsed inline/shared array type,
   construction, copying, adoption, indexing, slicing, nesting, alias, lifetime,
   and failure contract.

@@ -1,7 +1,7 @@
 # String Types Design Proposal
 
-Status: proposed design complete; freezing is blocked only on implemented
-private fields, private methods, and static methods.
+Status: confirmed and promoted to frozen living contracts; retained here as
+the historical design record.
 
 This proposal defines the intended first string model for Skald. It combines
 the ordinary standard-library-class direction established during the Niflheim
@@ -11,9 +11,10 @@ implementation sketch so that, once its three member-feature prerequisites
 exist, it can be checked against their implemented contracts and promoted
 without reopening the string representation.
 
-Until that promotion, the
-[status matrix](../language/STATUS.md#not-implemented) remains authoritative:
-strings are not accepted source syntax or an executable language contract.
+The promoted [language contract](../language/STRINGS.md) and
+[compiler contract](../compiler/STRINGS.md) are authoritative. Strings remain
+unimplemented; this archived proposal records the reasoning behind the frozen
+design.
 
 ## Intended outcome
 
@@ -39,7 +40,7 @@ The proposal treats `Str` as logically immutable. An existing string's
 observable byte sequence never changes, while an owning variable containing a
 `Str` remains assignable to another complete `Str` value.
 
-## Prerequisites and freeze gate
+## Prerequisites and confirmation result
 
 The proposal depends on these general class-member features:
 
@@ -54,23 +55,26 @@ The proposal depends on these general class-member features:
    parameter, result, evaluation-order, and ownership rules, and can access
    private members under the declaring-class rule.
 
-Their exact accepted modifier order and diagnostics belong to their own
-language and grammar contracts. The string proposal relies on their semantics,
-not on provisional parser spellings.
+The implemented grammar accepts `private name: T`, `private fn`,
+`static fn`, and `private static fn` in the forms required here. Resolution
+applies one exact declaring-class privacy rule and erases visibility before
+HIR. Compiler language-item validation can therefore inspect resolved private
+field metadata and future literal materialization can name selected `FieldId`
+values without creating a source-visible access path.
 
-Once all three features are implemented, this proposal should receive one
-focused confirmation pass:
+The confirmation pass found one API-shape discrepancy: Skald lifecycle
+declarations do not have private visibility, so a trusted-backing constructor
+cannot be hidden behind `private init`. The representation does not need to
+change. A public initializer or factory accepts caller bytes only through a
+copying path, while private instance/static helpers create slices by
+copy-constructing an existing valid `Str` and changing its private bounds.
+Helpers that install a backing may receive only freshly allocated,
+standard-library-owned storage. The exact method names remain ordinary
+standard-library choices and are never selected by the compiler.
 
-- update illustrative declarations to the implemented modifier grammar;
-- confirm that language-item validation and intrinsic literal construction do
-  not create a source-visible privacy escape;
-- confirm that ordinary static factories and private helpers can express the
-  dynamic construction paths described below; and
-- promote the source and compiler rules into focused frozen string contracts.
-
-No intentional string-design question remains after that pass. `final` fields,
-static fields, loops, additional operators, and a complete standard-library
-API are explicitly not freeze prerequisites.
+No intentional string-design question remains. `final` fields, static fields,
+loops, additional operators, and a complete standard-library API are not
+freeze prerequisites.
 
 ## Canonical language item
 
@@ -122,8 +126,8 @@ library may change its ordinary API without changing literal lowering.
 
 ## Conceptual class shape
 
-The modifier ordering below is illustrative until the prerequisites freeze
-their grammar:
+This example uses the implemented modifier and call grammar. Method names are
+illustrative standard-library API, not compiler contracts:
 
 ```ska
 public class Str {
@@ -131,11 +135,41 @@ public class Str {
     private start: u64;
     private length: u64;
 
-    // Ordinary public instance methods.
-    // Ordinary public static factories.
-    // Private instance and static implementation helpers.
+    init(ref bytes: u8[]) {
+        self.storage = new u8[](copy bytes);
+        self.start = 0u;
+        self.length = bytes.len();
+    }
+
+    fn len() -> u64 {
+        return self.length;
+    }
+
+    private fn trusted_slice(start: u64, length: u64) -> Str {
+        return Str.slice_trusted(self, start, length);
+    }
+
+    static fn from_bytes(ref bytes: u8[]) -> Str {
+        return Str(bytes);
+    }
+
+    private static fn slice_trusted(
+        ref source: Str,
+        start: u64,
+        length: u64
+    ) -> Str {
+        var result: Str = Str(copy source);
+        result.start = start;
+        result.length = length;
+        return result;
+    }
 }
 ```
+
+The illustrative initializer copies caller bytes. The private helper starts
+from an already valid descriptor and preserves its trusted backing. Bounds
+validation and the broader public method surface remain standard-library
+responsibilities.
 
 The fields mean:
 
@@ -540,18 +574,6 @@ required to freeze or implement this proposal.
 
 ## Promotion and implementation ordering
 
-After the three member prerequisites are implemented and the confirmation pass
-succeeds:
-
-1. promote source-visible rules into `docs/language/STRINGS.md`;
-2. promote phase, immortality, layout, verification, and runtime rules into
-   `docs/compiler/STRINGS.md` and the shared-ownership contracts;
-3. mark strings as **frozen design** in the status matrix;
-4. archive this proposal as the historical design record; and
-5. create a PR-sized implementation roadmap without changing the frozen
-   representation or literal contract.
-
-The later implementation should proceed from syntax and language-item
-resolution through typed production, verified immortal backing, target
-emission, and standard-library behavior. That ordering belongs to the
-implementation roadmap rather than this design proposal.
+The design is promoted to [Strings](../language/STRINGS.md) and the
+[Strings Compiler Contract](../compiler/STRINGS.md), with implementation
+ordered by the active [string implementation roadmap](../roadmaps/STRINGS_ROADMAP.md).

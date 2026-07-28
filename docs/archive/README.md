@@ -45,6 +45,11 @@ Archived plans:
 - [Explicit optional values](OPTIONAL_VALUES_ROADMAP.md)
 - [Arrays](ARRAYS_ROADMAP.md)
 - [Initial whole-program module system](MODULE_SYSTEM_ROADMAP.md)
+- [Private members and static methods](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
+
+Resolved string-design inputs:
+
+- [String types design proposal](STRINGS_DESIGN_PROPOSAL.md)
 
 Resolved module-system design inputs:
 

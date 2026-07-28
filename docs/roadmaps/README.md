@@ -6,25 +6,18 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Private Members and Static Methods Roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
-  — **in progress; string-design confirmation is next**. Declaring-class
-  privacy and public/private receiverless static methods now execute through
-  x86-64 lowering. PSM4 confirms and promotes the unblocked string design.
-  Source-visible static fields remain separate future work.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **planned; literal
+  syntax and canonical language-item discovery are next**. Implements the
+  frozen raw-byte `std::str::Str` contracts through typed production, verified
+  immortal backing, x86-64 emission, and ordinary standard-library behavior.
 
 ## Design proposals
 
-- [String Types Design Proposal](STRINGS_DESIGN_PROPOSAL.md) — **proposed
-  design complete**. Defines raw-byte `std::str::Str` values, compiler-emitted
-  immortal shared-array literal backing, the compiler/standard-library
-  boundary, and the freeze criteria. Next action: complete the
-  [private-members and static-methods roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md),
-  whose final task confirms and promotes this proposal to frozen language and
-  compiler contracts. No other feature is a freeze dependency.
+No design proposals are currently pending confirmation.
 
 ## Pending discoveries
 

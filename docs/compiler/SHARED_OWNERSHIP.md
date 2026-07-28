@@ -363,6 +363,22 @@ sharing contract. Overflow uses the same class of backend-owned unrecoverable
 termination as a failed checked cast and guarantees neither diagnostic
 text nor remaining cleanup.
 
+### Frozen immortal-allocation extension
+
+The frozen, unimplemented
+[string compiler contract](STRINGS.md#immortal-shared-storage) reserves
+`u64::MAX` for verified compiler-emitted program-lifetime allocations. Once
+that producer exists, retain and release of a proven immortal handle are
+successful no-ops, while retaining an ordinary dynamic count of
+`u64::MAX - 1` terminates before colliding with the sentinel.
+
+This is a general compiler-private shared-allocation state, not a source
+ownership qualifier or string-specific header. Only verified static allocation
+may publish it. The current implemented backend still follows the ordinary
+rules above and treats `u64::MAX` as overflow; the string implementation
+roadmap must add explicit MIR origin and verification before changing generated
+count operations.
+
 ## Hidden anchor lowering
 
 Anchors use ordinary owning shared storage in HIR and MIR, marked hidden only

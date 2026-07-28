@@ -61,7 +61,8 @@ Start at the [documentation index](docs/README.md). Principal references are:
 - [language overview](docs/language/README.md),
   [status](docs/language/STATUS.md),
   [implemented grammar](docs/language/GRAMMAR.md), and frozen
-  [module-system language contract](docs/language/MODULES_AND_INTEROP.md);
+  [module-system](docs/language/MODULES_AND_INTEROP.md) and
+  [string](docs/language/STRINGS.md) language contracts;
 - [compiler architecture](docs/compiler/README.md),
   [phases and IR](docs/compiler/PHASES_AND_IR.md),
   [module-system contract](docs/compiler/MODULE_SYSTEM.md),

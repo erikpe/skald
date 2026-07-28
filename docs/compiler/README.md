@@ -81,6 +81,12 @@ ownership and selection are defined by
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
+The frozen, unimplemented [strings compiler contract](STRINGS.md) defines
+canonical `std::str::Str` discovery and validation, intrinsic produced-value
+lowering, verified immortal shared-array backing, deterministic literal data,
+and the compiler/standard-library/runtime boundary. Its implementation order
+is tracked separately from current phase products.
+
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the
 [optional-values compiler contract](OPTIONAL_VALUES.md). Syntax and flat
