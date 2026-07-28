@@ -16,6 +16,7 @@ mod class_body;
 mod hierarchy;
 mod interface;
 mod resolver;
+mod string_language_item;
 mod virtuals;
 
 use super::{
@@ -31,6 +32,7 @@ use resolver::{
     resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
     ProgramResolver,
 };
+use string_language_item::validate_string_language_item;
 use virtuals::resolve_virtual_families;
 
 pub(super) fn resolve_singleton(ast: &syntax::CompilationUnit) -> ResolveOutput {

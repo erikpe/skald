@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     backend::{emit_assembly, BackendError, Target},
-    diagnostics::Diagnostics,
+    diagnostics::{Diagnostic, Diagnostics},
     lexer::lex,
     mir::lower_hir,
     module::{
@@ -18,6 +18,8 @@ use crate::{
 };
 
 use super::CompilationRequest;
+
+pub const STRING_LITERAL_MIR_UNAVAILABLE: &str = "CMP001";
 
 #[derive(Debug)]
 pub struct CompilationReport {
@@ -122,6 +124,20 @@ fn finish_compilation(
     let hir = checked
         .hir
         .expect("type checking without errors must produce typed HIR");
+    if let Some(literal) = hir.literal_data.iter().next() {
+        diagnostics.push(
+            Diagnostic::error(
+                STRING_LITERAL_MIR_UNAVAILABLE,
+                "string literal execution is not implemented",
+            )
+            .with_primary_label(
+                literal.span,
+                "the typed literal cannot yet be materialized in MIR",
+            )
+            .with_note("literal syntax, language-item validation, and typed HIR are available"),
+        );
+        return Err(diagnostic_failure(sources, diagnostics));
+    }
     let mir = lower_hir(&hir);
     let mir = run_mir_pipeline(mir).map_err(CompilationError::MirVerification)?;
     let assembly = emit_assembly(target, &mir).map_err(CompilationError::Backend)?;

@@ -5,7 +5,8 @@ use crate::{
     hir::{
         HirClassDeclarationTable, HirClassDefinitionTable, HirFunctionDeclaration,
         HirFunctionDeclarationTable, HirFunctionDefinitionTable, HirFunctionLinkage,
-        HirInterfaceDeclarationTable, HirParameter, HirParameterMode, HirProgram, HirVirtualFamily,
+        HirInterfaceDeclarationTable, HirLiteralData, HirLiteralDataTable, HirParameter,
+        HirParameterMode, HirProgram, HirStringLanguageItem, HirVirtualFamily,
         HirVirtualFamilyTable, Type,
     },
     identity::FunctionId,
@@ -118,6 +119,25 @@ pub fn type_check(program: &ResolvedProgram) -> TypeCheckOutput {
             modules: program.modules.clone(),
             external_links: program.external_links.clone(),
             array_types: copy_capabilities.array_types(),
+            string_language_item: program.string_language_item.as_ref().map(|item| {
+                HirStringLanguageItem {
+                    class: item.class,
+                    storage_field: item.storage_field,
+                    start_field: item.start_field,
+                    length_field: item.length_field,
+                }
+            }),
+            literal_data: HirLiteralDataTable::new(
+                program
+                    .literal_data
+                    .iter()
+                    .map(|literal| HirLiteralData {
+                        id: literal.id,
+                        bytes: literal.bytes.clone(),
+                        span: literal.span,
+                    })
+                    .collect(),
+            ),
             classes: HirClassDeclarationTable::new(classes),
             interfaces: HirInterfaceDeclarationTable::new(interface_analysis.declarations),
             virtual_families: HirVirtualFamilyTable::new(

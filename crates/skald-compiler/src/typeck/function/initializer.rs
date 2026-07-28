@@ -333,6 +333,12 @@ impl CallableChecker<'_, '_> {
         ) {
             return self.check_direct_field_construction(place, class, field_name, assignment);
         }
+        if matches!(
+            &assignment.value,
+            crate::resolve::ResolvedExpression::StringLiteral(_)
+        ) {
+            return self.check_field_copy_construction(place, class, assignment);
+        }
         if super::copy::is_checked_object_source_expression(&assignment.value) {
             return self.check_field_copy_construction(place, class, assignment);
         }

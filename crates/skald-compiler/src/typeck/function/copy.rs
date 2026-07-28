@@ -153,6 +153,16 @@ impl CallableChecker<'_, '_> {
         class: ClassId,
         context: &'static str,
     ) -> Option<HirObjectSource> {
+        if let crate::resolve::ResolvedExpression::StringLiteral(literal) = expression {
+            let source = HirObjectSource::Produced(HirObjectProducer::StringLiteral(
+                crate::hir::HirStringLiteral {
+                    data: literal.data,
+                    class: literal.class,
+                    span: literal.span,
+                },
+            ));
+            return self.convert_object_source(source, class, context);
+        }
         match expression {
             crate::resolve::ResolvedExpression::ArrayProjection(_) => {
                 let checked = self.check_expression(expression)?;
@@ -399,6 +409,7 @@ impl CallableChecker<'_, '_> {
                 }
             }
             crate::resolve::ResolvedExpression::Construct(construction) => Some(construction.class),
+            crate::resolve::ResolvedExpression::StringLiteral(literal) => Some(literal.class),
             crate::resolve::ResolvedExpression::DirectCall(call) => self
                 .program
                 .declarations
@@ -565,7 +576,8 @@ pub(in crate::typeck) fn is_checked_object_source_expression(
     expression: &crate::resolve::ResolvedExpression,
 ) -> bool {
     match expression {
-        crate::resolve::ResolvedExpression::Dereference(_)
+        crate::resolve::ResolvedExpression::StringLiteral(_)
+        | crate::resolve::ResolvedExpression::Dereference(_)
         | crate::resolve::ResolvedExpression::Unwrap(_)
         | crate::resolve::ResolvedExpression::ObjectCast(_) => true,
         crate::resolve::ResolvedExpression::Grouped(grouped) => {

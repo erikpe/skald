@@ -34,6 +34,8 @@ const OPTIONAL_HELPER_OUTPUT: &str = "SKALD_OPTIONAL_DETERMINISM_OUTPUT";
 const OPTIONAL_TEST_NAME: &str = "optional_value_phase_products_are_deterministic_across_processes";
 const ARRAY_HELPER_OUTPUT: &str = "SKALD_ARRAY_DETERMINISM_OUTPUT";
 const ARRAY_TEST_NAME: &str = "array_phase_products_are_deterministic_across_processes";
+const STRING_HELPER_OUTPUT: &str = "SKALD_STRING_DETERMINISM_OUTPUT";
+const STRING_TEST_NAME: &str = "string_typed_phase_products_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
 const MODULE_HELPER_VARIANT: &str = "SKALD_MODULE_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
@@ -87,6 +89,16 @@ fn array_phase_products_are_deterministic_across_processes() {
         ARRAY_HELPER_OUTPUT,
         ARRAY_TEST_NAME,
         array_phase_dump,
+    );
+}
+
+#[test]
+fn string_typed_phase_products_are_deterministic_across_processes() {
+    assert_cross_process_determinism(
+        "strings",
+        STRING_HELPER_OUTPUT,
+        STRING_TEST_NAME,
+        string_typed_phase_dump,
     );
 }
 
@@ -423,6 +435,56 @@ fn optional_phase_dump() -> String {
 
 fn array_phase_dump() -> String {
     complete_phase_dump(include_str!("../../../tests/golden/run/array_aliases.ska"))
+}
+
+fn string_typed_phase_dump() -> String {
+    let fixture = ModuleFixture::new("string-products", 0);
+    let root = fixture.path.join("modules");
+    write_source(
+        &root.join("app.ska"),
+        concat!(
+            "from std::str import Str;\n",
+            "fn produce() -> Str { return \"first\\0\"; }\n",
+            "fn main() -> i64 { var value: Str = \"\\x73econd\"; return 0; }\n",
+        ),
+    );
+    write_source(
+        &root.join("std/str.ska"),
+        concat!(
+            "public class Str {\n",
+            "  private storage: shared u8[];\n",
+            "  private start: u64;\n",
+            "  private length: u64;\n",
+            "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
+            "}\n",
+        ),
+    );
+    let providers = normalize_provider_roots(
+        &fixture.path,
+        &[ProviderRootConfiguration::module_root(root)],
+    )
+    .unwrap();
+    let graph = load_module_graph(
+        &EntrySelector::Module("app".parse().unwrap()),
+        &fixture.path,
+        &providers,
+    )
+    .unwrap();
+    let resolved = resolve_module_graph(&graph);
+    assert!(resolved.diagnostics.is_empty());
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty());
+    let hir = checked.hir.unwrap();
+
+    normalize_fixture_paths(
+        &fixture.path,
+        format!(
+            "GRAPH\n{}RESOLVED\n{}HIR\n{}",
+            dump_module_graph(&graph),
+            dump_resolved(&resolved.program),
+            dump_hir(&hir),
+        ),
+    )
 }
 
 fn complete_phase_dump(text: &str) -> String {

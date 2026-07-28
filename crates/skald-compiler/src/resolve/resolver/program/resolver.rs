@@ -1,10 +1,12 @@
 //! Deterministic multi-module declaration collection and body resolution.
 
+use super::super::body::StringLiteralResolutionEnvironment;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{CallableId, InterfaceId, ModuleId, ParameterId},
-    module::{ModuleGraph, ProgramModuleTable},
+    identity::{CallableId, InterfaceId, LiteralDataId, ModuleId, ParameterId},
+    lexer::decode_string_literal,
+    module::{ModuleGraph, ModulePath, ProgramModuleTable},
 };
 
 pub(super) const fn resolved_visibility(visibility: syntax::Visibility) -> ResolvedVisibility {
@@ -29,6 +31,44 @@ struct ModuleUnit<'ast> {
     class_work: Vec<(ClassId, usize)>,
     interface_work: Vec<(InterfaceId, usize)>,
     declarations: Vec<ResolvedModuleDeclaration>,
+}
+
+fn collect_literal_data(
+    graph: &ModuleGraph,
+) -> (Vec<ResolvedLiteralData>, HashMap<Span, LiteralDataId>) {
+    let path = ModulePath::try_from("std::str").expect("canonical string module path is valid");
+    let Some(target) = graph
+        .find(&path)
+        .map(|module| module.provenance().module_id())
+    else {
+        return (Vec::new(), HashMap::new());
+    };
+    let spans = graph.modules().iter().flat_map(|module| {
+        module
+            .imports()
+            .iter()
+            .filter(move |edge| edge.target() == target)
+            .flat_map(|edge| edge.string_literal_spans().iter().copied())
+    });
+    let mut data = Vec::new();
+    let mut ids = HashMap::new();
+    for span in spans {
+        let source = graph
+            .sources()
+            .get(span.source_id())
+            .expect("literal evidence must reference a loaded source");
+        let lexeme = source
+            .slice(span.range())
+            .expect("literal evidence must lie within its source");
+        let id = LiteralDataId::new(data.len());
+        ids.insert(span, id);
+        data.push(ResolvedLiteralData {
+            id,
+            bytes: decode_string_literal(lexeme),
+            span,
+        });
+    }
+    (data, ids)
 }
 
 impl<'ast> ModuleUnit<'ast> {
@@ -86,6 +126,8 @@ pub(super) struct ProgramResolver<'ast> {
     modules: ProgramModuleTable,
     has_module_context: bool,
     array_types: ArrayTypeInterner,
+    literal_data: Vec<ResolvedLiteralData>,
+    literal_ids: HashMap<Span, LiteralDataId>,
     diagnostics: Diagnostics,
 }
 
@@ -96,11 +138,14 @@ impl<'ast> ProgramResolver<'ast> {
             modules: ProgramModuleTable::singleton(ast.span.source_id()),
             has_module_context: false,
             array_types: ArrayTypeInterner::default(),
+            literal_data: Vec::new(),
+            literal_ids: HashMap::new(),
             diagnostics: Diagnostics::new(),
         }
     }
 
     pub(super) fn from_graph(graph: &'ast ModuleGraph) -> Self {
+        let (literal_data, literal_ids) = collect_literal_data(graph);
         Self {
             units: graph
                 .modules()
@@ -110,6 +155,8 @@ impl<'ast> ProgramResolver<'ast> {
             modules: ProgramModuleTable::from_graph(graph),
             has_module_context: true,
             array_types: ArrayTypeInterner::default(),
+            literal_data,
+            literal_ids,
             diagnostics: Diagnostics::new(),
         }
     }
@@ -196,6 +243,14 @@ impl<'ast> ProgramResolver<'ast> {
             &hierarchy,
             &mut self.diagnostics,
         );
+        let string_language_item = validate_string_language_item(
+            &self.modules,
+            &module_declarations,
+            &class_declarations,
+            &self.array_types,
+            &self.literal_data,
+            &mut self.diagnostics,
+        );
 
         let function_definitions = self.resolve_function_bodies(
             lookups,
@@ -203,6 +258,7 @@ impl<'ast> ProgramResolver<'ast> {
             &class_declarations,
             &hierarchy,
             &interfaces,
+            string_language_item.as_ref(),
         );
         let mut class_definitions = Vec::with_capacity(class_declarations.len());
         for unit in &self.units {
@@ -223,6 +279,10 @@ impl<'ast> ProgramResolver<'ast> {
                     &interfaces,
                     &hierarchy,
                     self.has_module_context,
+                    StringLiteralResolutionEnvironment::new(
+                        string_language_item.as_ref(),
+                        &self.literal_ids,
+                    ),
                 ),
                 &mut self.array_types,
                 &mut self.diagnostics,
@@ -248,6 +308,8 @@ impl<'ast> ProgramResolver<'ast> {
                 ordinary_bindings,
                 module_declarations,
                 array_types: self.array_types.finish(),
+                string_language_item,
+                literal_data: ResolvedLiteralDataTable::new(self.literal_data),
                 declarations: function_declarations,
                 definitions: ResolvedFunctionDefinitionTable::new(function_definitions),
                 classes: class_declarations,
@@ -534,6 +596,7 @@ impl<'ast> ProgramResolver<'ast> {
         classes: &ResolvedClassDeclarationTable,
         hierarchy: &ResolvedClassHierarchy,
         interfaces: &ResolvedInterfaceDeclarationTable,
+        string_language_item: Option<&ResolvedStringLanguageItem>,
     ) -> Vec<Option<ResolvedFunctionDefinition>> {
         let mut definitions = Vec::with_capacity(functions.len());
         for unit in &self.units {
@@ -559,6 +622,10 @@ impl<'ast> ProgramResolver<'ast> {
                         interfaces,
                         hierarchy,
                         self.has_module_context,
+                        StringLiteralResolutionEnvironment::new(
+                            string_language_item,
+                            &self.literal_ids,
+                        ),
                     ),
                     &mut self.array_types,
                     &mut self.diagnostics,

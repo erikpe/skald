@@ -12,6 +12,7 @@ mod expression;
 mod object;
 mod optional;
 mod shared;
+mod strings;
 
 pub use array::{
     HirArrayAliasArgument, HirArrayAliasSource, HirArrayAnchor, HirArrayAssignElement,
@@ -66,6 +67,7 @@ pub use shared::{
     HirSharedCast, HirSharedCastKind, HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace,
     HirSharedProducer, HirSharedSource, HirSharedTarget, HirSharedTransfer,
 };
+pub use strings::{HirLiteralData, HirLiteralDataTable, HirStringLanguageItem, HirStringLiteral};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {

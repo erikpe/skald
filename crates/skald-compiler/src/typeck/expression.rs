@@ -79,6 +79,19 @@ impl CallableChecker<'_, '_> {
             ResolvedExpression::Unwrap(unwrap) => self.check_optional_unwrap(unwrap),
             ResolvedExpression::Binding(binding) => self.check_binding_expression(binding),
             ResolvedExpression::NumericLiteral(literal) => self.check_numeric_literal(literal),
+            ResolvedExpression::StringLiteral(literal) => {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        INVALID_OBJECT_CONTEXT,
+                        "a string literal must be consumed as an object value",
+                    )
+                    .with_primary_label(
+                        literal.span,
+                        "store, pass, return, or otherwise consume this produced `Str`",
+                    ),
+                );
+                None
+            }
             ResolvedExpression::Boolean(boolean) => self.check_boolean_expression(boolean),
             ResolvedExpression::Unary(unary) => self.check_unary_expression(unary),
             ResolvedExpression::Dereference(dereference) => {

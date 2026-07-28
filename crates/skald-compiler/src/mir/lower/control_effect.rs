@@ -199,6 +199,7 @@ fn view_source_contains_control_effect(source: &HirViewSource) -> bool {
 
 fn producer_contains_control_effect(producer: &HirObjectProducer) -> bool {
     match producer {
+        HirObjectProducer::StringLiteral(_) => false,
         HirObjectProducer::Construct(construction) => match &construction.mode {
             crate::hir::HirConstructionMode::Initialize { arguments, .. } => {
                 arguments.iter().any(call_argument_contains_control_effect)

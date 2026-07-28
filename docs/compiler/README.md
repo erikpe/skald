@@ -81,13 +81,14 @@ ownership and selection are defined by
 prerequisites and validation are defined by the
 [development workflow](../development/README.md).
 
-The frozen [strings compiler contract](STRINGS.md), implemented through STR0,
+The frozen [strings compiler contract](STRINGS.md), implemented through STR1,
 defines
 canonical `std::str::Str` discovery and validation, intrinsic produced-value
 lowering, verified immortal shared-array backing, deterministic literal data,
 and the compiler/standard-library/runtime boundary. Literal syntax and
-conditional `std::str` reachability are current phase products; typed
-production and execution remain tracked by its roadmap.
+conditional `std::str` reachability, exact validation, and typed HIR production
+are current phase products; MIR materialization and execution remain tracked
+by its roadmap.
 
 The implemented optional representation, IR, verification, x86-64 layout,
 checked-view, and internal calling-convention decisions are owned by the

@@ -74,6 +74,49 @@ fn request_pipeline_ignores_malformed_sources_outside_the_reachable_closure() {
 }
 
 #[test]
+fn literal_program_stops_at_the_typed_hir_boundary_before_mir() {
+    let directory = TemporaryDirectory::new("request-string-hir-boundary").unwrap();
+    let root = directory.join("modules");
+    fs::create_dir_all(root.join("std")).unwrap();
+    fs::write(
+        root.join("app.ska"),
+        concat!(
+            "from std::str import Str;\n",
+            "fn main() -> i64 { var value: Str = \"typed\"; return 0; }\n",
+        ),
+    )
+    .unwrap();
+    fs::write(
+        root.join("std/str.ska"),
+        concat!(
+            "public class Str {\n",
+            "  private storage: shared u8[];\n",
+            "  private start: u64;\n",
+            "  private length: u64;\n",
+            "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
+            "}\n",
+        ),
+    )
+    .unwrap();
+    let request = module_request(
+        &directory,
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![root],
+    );
+
+    let CompilationError::Diagnostics(report) = compile_request_to_assembly(&request).unwrap_err()
+    else {
+        panic!("STR1 must stop with a structured pre-MIR diagnostic");
+    };
+    let diagnostics = report.diagnostics.iter().collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].code, STRING_LITERAL_MIR_UNAVAILABLE);
+    assert!(diagnostics[0]
+        .message
+        .contains("string literal execution is not implemented"));
+}
+
+#[test]
 fn request_pipeline_accepts_a_positional_entry_outside_all_roots() {
     let directory = TemporaryDirectory::new("request-singleton").unwrap();
     let spaced_directory = directory.join("directory with spaces");

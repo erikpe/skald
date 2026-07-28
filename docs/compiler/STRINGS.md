@@ -1,11 +1,12 @@
 # Strings Compiler Contract
 
-Status: **frozen design, implemented through STR0**. The lexer, AST, and module
+Status: **frozen design, implemented through STR1**. The lexer, AST, and module
 graph implement literal recognition, decoded bytes, and conditional
-`std::str` reachability. Resolution deliberately rejects literals before typed
-HIR; language-item validation, typed production, immortal allocation, and
-literal-data nodes remain future work. This document is authoritative for
-compiler handling of the source-visible [string contract](../language/STRINGS.md).
+`std::str` reachability. Resolution validates the exact language item, and HIR
+represents literals as intrinsic produced `Str` values with deterministic data
+identities. MIR materialization, immortal allocation, backend emission, and
+execution remain future work. This document is authoritative for compiler
+handling of the source-visible [string contract](../language/STRINGS.md).
 
 The generic ownership header and generated count machinery are owned by
 [Shared Ownership](SHARED_OWNERSHIP.md). Module-provider behavior is owned by
@@ -60,8 +61,9 @@ module identity:
 The synthetic edge affects reachability but creates no source import binding.
 The provider-less source-text adapter has no hidden standard-library context
 and reports structured diagnostic `RES032` that the language item cannot be
-provided. Provider-aware resolution currently reports `RES033` at the
-intentional STR0-to-STR1 boundary rather than constructing typed HIR.
+provided. Provider-aware resolution reports `RES033` when the reached
+canonical declaration is missing, has the wrong kind or visibility, inherits,
+has the wrong representation, or declares forbidden lifecycle members.
 
 ## Phase responsibilities
 
@@ -89,6 +91,10 @@ decoded-data identity. It is not a construction, initializer call, static
 call, allocation call, or opaque standard-library invocation. Ordinary
 expected-type, destination, argument, result, temporary, copy, assignment, and
 cleanup machinery handles the resulting `Str`.
+
+The complete compiler driver currently stops after this typed boundary with
+structured diagnostic `CMP001`; it does not pass literal-bearing HIR to MIR
+lowering until STR2 defines and verifies descriptor materialization.
 
 ### MIR and verification
 

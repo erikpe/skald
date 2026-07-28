@@ -27,6 +27,26 @@ pub fn dump_hir(program: &HirProgram) -> String {
                 ));
             }
         });
+        if let Some(item) = &program.string_language_item {
+            dumper.raw_line(&format!(
+                "StringLanguageItem class {} fields {} {} {}",
+                item.class, item.storage_field, item.start_field, item.length_field
+            ));
+        }
+        if !program.literal_data.is_empty() {
+            dumper.heading("LiteralData");
+            dumper.indented(|dumper| {
+                for literal in program.literal_data.iter() {
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "{} bytes=", literal.id);
+                    for byte in &literal.bytes {
+                        let _ = write!(dumper.output, "{byte:02x}");
+                    }
+                    write_span(&mut dumper.output, literal.span);
+                    dumper.output.push('\n');
+                }
+            });
+        }
         if !program.external_links.is_empty() {
             dumper.heading("ExternalLinks");
             dumper.indented(|dumper| {
@@ -1675,6 +1695,12 @@ impl HirDumper {
 
     fn object_producer(&mut self, producer: &crate::hir::HirObjectProducer) {
         match producer {
+            crate::hir::HirObjectProducer::StringLiteral(literal) => {
+                self.line(
+                    &format!("StringLiteral {} class {}", literal.data, literal.class),
+                    literal.span,
+                );
+            }
             crate::hir::HirObjectProducer::Construct(construction) => {
                 self.construction(construction)
             }

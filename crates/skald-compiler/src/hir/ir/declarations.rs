@@ -23,6 +23,8 @@ pub struct HirProgram {
     pub modules: ProgramModuleTable,
     pub external_links: ExternalLinkTable,
     pub array_types: super::HirArrayTypeTable,
+    pub string_language_item: Option<super::HirStringLanguageItem>,
+    pub literal_data: super::HirLiteralDataTable,
     pub classes: HirClassDeclarationTable,
     pub interfaces: HirInterfaceDeclarationTable,
     pub virtual_families: HirVirtualFamilyTable,

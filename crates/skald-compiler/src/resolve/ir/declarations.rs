@@ -30,6 +30,8 @@ pub struct ResolvedProgram {
     pub ordinary_bindings: ResolvedOrdinaryBindingTable,
     pub module_declarations: ResolvedModuleDeclarationTable,
     pub array_types: ResolvedArrayTypeTable,
+    pub string_language_item: Option<super::ResolvedStringLanguageItem>,
+    pub literal_data: super::ResolvedLiteralDataTable,
     pub declarations: ResolvedFunctionDeclarationTable,
     pub definitions: ResolvedFunctionDefinitionTable,
     pub classes: ResolvedClassDeclarationTable,

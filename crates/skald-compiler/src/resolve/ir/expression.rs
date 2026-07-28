@@ -2,7 +2,8 @@
 
 use crate::{
     identity::{
-        BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId, MethodId,
+        BindingId, ClassId, FieldId, FunctionId, InterfaceId, InterfaceRequirementId,
+        LiteralDataId, MethodId,
     },
     literal::NumericLiteralKind,
     source::Span,
@@ -15,6 +16,7 @@ pub enum ResolvedExpression {
     Absent(ResolvedAbsentExpr),
     Binding(ResolvedBindingExpr),
     NumericLiteral(ResolvedNumericLiteralExpr),
+    StringLiteral(ResolvedStringLiteralExpr),
     Boolean(ResolvedBooleanExpr),
     Unary(ResolvedUnaryExpr),
     Dereference(ResolvedDereferenceExpr),
@@ -42,6 +44,7 @@ impl ResolvedExpression {
             Self::Absent(expression) => expression.span,
             Self::Binding(expression) => expression.span,
             Self::NumericLiteral(expression) => expression.span,
+            Self::StringLiteral(expression) => expression.span,
             Self::Boolean(expression) => expression.span,
             Self::Unary(expression) => expression.span,
             Self::Dereference(expression) => expression.span,
@@ -139,6 +142,13 @@ pub enum ResolvedArrayProjectionBounds {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ResolvedAbsentExpr {
+    pub span: Span,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedStringLiteralExpr {
+    pub data: LiteralDataId,
+    pub class: ClassId,
     pub span: Span,
 }
 

@@ -119,6 +119,7 @@ global_id!(ExternalLinkId, "ext");
 global_id!(ClassId, "c");
 global_id!(InterfaceId, "i");
 global_id!(ArrayTypeId, "a");
+global_id!(LiteralDataId, "str");
 global_id!(VirtualFamilyId, "vf");
 global_id!(VirtualSlotId, "vs");
 

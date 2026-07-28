@@ -133,6 +133,7 @@ pub struct HirObjectInitialization {
 pub enum HirObjectProducer {
     Construct(HirConstruction),
     Call(HirObjectCall),
+    StringLiteral(super::HirStringLiteral),
 }
 
 impl HirObjectProducer {
@@ -140,6 +141,7 @@ impl HirObjectProducer {
         match self {
             Self::Construct(construction) => construction.class,
             Self::Call(call) => call.class,
+            Self::StringLiteral(literal) => literal.class,
         }
     }
 
@@ -147,6 +149,7 @@ impl HirObjectProducer {
         match self {
             Self::Construct(construction) => construction.span,
             Self::Call(call) => call.span,
+            Self::StringLiteral(literal) => literal.span,
         }
     }
 }

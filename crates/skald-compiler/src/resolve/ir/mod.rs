@@ -7,6 +7,7 @@ mod expression;
 mod hierarchy;
 mod modules;
 mod object_place;
+mod strings;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
 pub use body::{
@@ -39,8 +40,8 @@ pub use expression::{
     ResolvedFieldAccessExpr, ResolvedGroupedExpr, ResolvedInterfaceCallExpr,
     ResolvedInterfaceReceiver, ResolvedMethodCallExpr, ResolvedNumericLiteralExpr,
     ResolvedObjectCastExpr, ResolvedObjectCastTargetMode, ResolvedPresenceTestExpr,
-    ResolvedPresenceTestKind, ResolvedStaticCallExpr, ResolvedTypeTestExpr, ResolvedUnaryExpr,
-    ResolvedUnaryOperator, ResolvedUnwrapExpr,
+    ResolvedPresenceTestKind, ResolvedStaticCallExpr, ResolvedStringLiteralExpr,
+    ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator, ResolvedUnwrapExpr,
 };
 pub use hierarchy::{ResolvedClassHierarchy, ResolvedClassMember};
 pub use modules::{
@@ -50,5 +51,6 @@ pub use modules::{
     ResolvedTopLevelId, ResolvedVisibility,
 };
 pub use object_place::{ResolvedObjectPlace, ResolvedObjectReceiver};
+pub use strings::{ResolvedLiteralData, ResolvedLiteralDataTable, ResolvedStringLanguageItem};
 
 pub(crate) use hierarchy::ResolvedClassHierarchyEntry;

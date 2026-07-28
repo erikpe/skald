@@ -1,10 +1,12 @@
 //! Callable-body resolution facade and shared expression/name resolution.
 
+use std::collections::HashMap;
+
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId},
-    source::TextRange,
+    identity::{BindingId, CallableId, ClassId, LiteralDataId},
+    source::{Span, TextRange},
 };
 
 mod allocation;
@@ -26,6 +28,22 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     hierarchy: &'program ResolvedClassHierarchy,
     has_module_context: bool,
+    string_literals: StringLiteralResolutionEnvironment<'program>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct StringLiteralResolutionEnvironment<'program> {
+    language_item: Option<&'program ResolvedStringLanguageItem>,
+    ids: &'program HashMap<Span, LiteralDataId>,
+}
+
+impl<'program> StringLiteralResolutionEnvironment<'program> {
+    pub(super) const fn new(
+        language_item: Option<&'program ResolvedStringLanguageItem>,
+        ids: &'program HashMap<Span, LiteralDataId>,
+    ) -> Self {
+        Self { language_item, ids }
+    }
 }
 
 impl<'program> BodyResolutionEnvironment<'program> {
@@ -36,6 +54,7 @@ impl<'program> BodyResolutionEnvironment<'program> {
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         hierarchy: &'program ResolvedClassHierarchy,
         has_module_context: bool,
+        string_literals: StringLiteralResolutionEnvironment<'program>,
     ) -> Self {
         Self {
             lookup,
@@ -44,6 +63,7 @@ impl<'program> BodyResolutionEnvironment<'program> {
             interfaces,
             hierarchy,
             has_module_context,
+            string_literals,
         }
     }
 }
@@ -241,25 +261,31 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                 {
                     return None;
                 }
-                let (code, message, note) = if self.environment.has_module_context {
-                    (
-                        STRING_LITERAL_NOT_TYPED,
-                        "string literal typing is not implemented",
-                        "the canonical module is loaded; STR1 will validate `std::str::Str` and produce typed literals",
-                    )
-                } else {
-                    (
-                        MISSING_STRING_LANGUAGE_ITEM,
-                        "string literal requires the `std::str::Str` language item",
-                        "the source-text convenience API has no module providers",
-                    )
-                };
-                self.diagnostics.push(
-                    Diagnostic::error(code, message)
+                if !self.environment.has_module_context {
+                    self.diagnostics.push(
+                        Diagnostic::error(
+                            MISSING_STRING_LANGUAGE_ITEM,
+                            "string literal requires the `std::str::Str` language item",
+                        )
                         .with_primary_label(literal.span, "required by this string literal")
-                        .with_note(note),
-                );
-                None
+                        .with_note("the source-text convenience API has no module providers"),
+                    );
+                    return None;
+                }
+                let item = self.environment.string_literals.language_item?;
+                let data = *self
+                    .environment
+                    .string_literals
+                    .ids
+                    .get(&literal.span)
+                    .expect("loaded string literal must have a canonical data identity");
+                Some(ResolvedExpression::StringLiteral(
+                    ResolvedStringLiteralExpr {
+                        data,
+                        class: item.class,
+                        span: literal.span,
+                    },
+                ))
             }
             syntax::Expression::Boolean(boolean) => {
                 Some(ResolvedExpression::Boolean(ResolvedBooleanExpr {

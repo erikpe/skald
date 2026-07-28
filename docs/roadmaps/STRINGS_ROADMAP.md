@@ -1,6 +1,6 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0 is implemented and STR1 is next.
+Status: in progress; STR0–STR1 are implemented and STR2 is next.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -38,7 +38,7 @@ emission, and ordinary standard-library behavior.
 ## Progress
 
 - [x] STR0 — Recognize literals and discover the canonical language item
-- [ ] STR1 — Validate and type intrinsic `Str` production
+- [x] STR1 — Validate and type intrinsic `Str` production
 - [ ] STR2 — Verify literal descriptors and immortal shared backing
 - [ ] STR3 — Emit deterministic immortal literal data on x86-64
 - [ ] STR4 — Provide ordinary standard-library string behavior
@@ -89,24 +89,24 @@ literal is yet accepted into typed HIR.
 **Purpose:** Resolve the language item once and introduce string literals at
 the typed identity boundary without method-name or layout reconstruction.
 
-- [ ] Add a resolution-owned language-item result that records the canonical
+- [x] Add a resolution-owned language-item result that records the canonical
       `ClassId`, three selected `FieldId` values, declaration evidence, and
       requiring literal spans.
-- [ ] Validate public exact module ownership, root-class shape, exact ordered
+- [x] Validate public exact module ownership, root-class shape, exact ordered
       private field types/count, and absence of explicit copy, assignment, and
       destruction lifecycle before HIR.
-- [ ] Report missing/private/wrong-kind/inherited declarations and every
+- [x] Report missing/private/wrong-kind/inherited declarations and every
       structural mismatch with declaration-linked deterministic diagnostics.
-- [ ] Treat private-field inspection as compiler metadata validation only;
+- [x] Treat private-field inspection as compiler metadata validation only;
       ordinary source selection continues through the existing
       declaring-class privacy boundary.
-- [ ] Add resolved and HIR literal nodes carrying exact class and decoded-data
+- [x] Add resolved and HIR literal nodes carrying exact class and decoded-data
       identity. Do not encode a constructor, initializer, factory, or static
       call.
-- [ ] Integrate literals as produced exact-class values through expected-type,
+- [x] Integrate literals as produced exact-class values through expected-type,
       local/field initialization, arguments, results, assignment,
       conditionals, temporaries, and ordinary synthesized lifecycle.
-- [ ] Allocate literal-data identities in deterministic canonical order and
+- [x] Allocate literal-data identities in deterministic canonical order and
       expose them only through narrow resolved/HIR facades and dumps.
 
 **Tests:** Resolver structural-validation and exact-identity tests, including

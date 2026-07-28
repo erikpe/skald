@@ -19,6 +19,10 @@ impl BodyLowerer<'_> {
         destination: MirPlace,
     ) {
         match producer {
+            // Literal descriptor materialization is introduced by the next
+            // MIR milestone. The driver rejects literal-bearing HIR before
+            // this boundary until that representation exists.
+            HirObjectProducer::StringLiteral(_) => {}
             HirObjectProducer::Construct(construction) => {
                 self.lower_construction(construction, destination);
             }

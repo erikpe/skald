@@ -216,6 +216,7 @@ impl CallableChecker<'_, '_> {
                 NumericLiteralKind::U8 => Type::U8,
                 NumericLiteralKind::F64 => Type::F64,
             },
+            ResolvedExpression::StringLiteral(literal) => Type::Class(literal.class),
             ResolvedExpression::Boolean(_) | ResolvedExpression::TypeTest(_) => Type::Bool,
             ResolvedExpression::Unary(unary) => self.static_expression_type(&unary.operand),
             ResolvedExpression::Dereference(dereference) => match dereference.target {
@@ -335,6 +336,7 @@ impl CallableChecker<'_, '_> {
                 source: ObjectArgumentSource::CheckedPlace,
             }),
             ResolvedExpression::Construct(_)
+            | ResolvedExpression::StringLiteral(_)
             | ResolvedExpression::DirectCall(_)
             | ResolvedExpression::StaticCall(_)
             | ResolvedExpression::MethodCall(_)
