@@ -19,6 +19,25 @@ fn numeric_literals_preserve_their_lexical_kind_spelling_and_span() {
 }
 
 #[test]
+fn string_literals_preserve_decoded_bytes_full_span_and_stable_dump() {
+    let (sources, output) = parse_text("fn value() -> i64 { return \"A\\n\\x42\\0\\\"\\\\\"; }");
+    let Expression::StringLiteral(literal) = return_value(function(&output.ast, 0)) else {
+        panic!("expected a string literal");
+    };
+
+    assert_eq!(literal.bytes, b"A\nB\0\"\\");
+    assert_eq!(
+        sources
+            .get(literal.span.source_id())
+            .unwrap()
+            .slice(literal.span.range()),
+        Some("\"A\\n\\x42\\0\\\"\\\\\"")
+    );
+    assert!(dump_ast(&output.ast).contains("StringBytes \"410a4200225c\""));
+    assert_eq!(dump_ast(&output.ast), dump_ast(&output.ast));
+}
+
+#[test]
 fn parses_u64_types_and_preserves_suffixed_literal_spelling() {
     let (_, output) = parse_text(
         "fn identity(value: u64) -> u64 { var result: u64 = value; return 42u; } fn main() -> i64 { return 0; }",

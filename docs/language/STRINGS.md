@@ -1,9 +1,10 @@
 # Skald Strings
 
-Status: **frozen design, not implemented**. This document is authoritative for
-the future source-visible string and string-literal contract. The
-[status matrix](STATUS.md) remains authoritative for compiler availability,
-and the [implemented grammar](GRAMMAR.md) does not yet accept string literals.
+Status: **frozen design, partially implemented through STR0**. The compiler
+accepts and decodes string-literal syntax and conditionally discovers
+`std::str`; typed `Str` values and execution remain unimplemented. This
+document is authoritative for the source-visible string contract, while the
+[status matrix](STATUS.md) remains authoritative for compiler availability.
 
 The [compiler string contract](../compiler/STRINGS.md) owns language-item
 discovery, intrinsic materialization, immortal backing, verification, and

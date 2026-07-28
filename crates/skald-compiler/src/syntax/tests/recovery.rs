@@ -19,6 +19,23 @@ fn disabled_numeric_literal_recovery_keeps_the_following_statement() {
 }
 
 #[test]
+fn malformed_string_does_not_create_an_expression_or_hide_following_statements() {
+    let mut sources = SourceDatabase::new();
+    let source_id = sources.add(
+        "test.ska",
+        "fn main() -> i64 { var value: i64 = \"bad\\q\"; return 0; }",
+    );
+    let source = sources.get(source_id).unwrap();
+    let lexed = lex(source);
+    assert!(lexed.has_errors());
+
+    let parsed = parse(source, &lexed.tokens);
+    let main = function(&parsed.ast, 0);
+    assert_eq!(main.body.statements.len(), 1);
+    assert!(matches!(main.body.statements[0], Statement::Return(_)));
+}
+
+#[test]
 fn malformed_function_does_not_hide_the_next_declaration() {
     let (_, output) = parse_text(concat!(
         "fn broken(value: unit) -> i64 { return value; }\n",

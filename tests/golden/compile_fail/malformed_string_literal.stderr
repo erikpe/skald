@@ -1,0 +1,5 @@
+error[LEX003]: unknown string escape
+ --> tests/golden/compile_fail/malformed_string_literal.ska:2:12
+   |
+2 |     return "bad\q";
+   |            ^^^^^^^ use one of `\"`, `\\`, `\n`, `\r`, `\t`, `\0`, or `\xNN`

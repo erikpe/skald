@@ -8,12 +8,15 @@
 mod dump;
 mod numeric;
 mod scanner;
+mod string;
 mod token;
 
 pub use dump::dump_tokens;
 pub use scanner::{
-    lex, LexOutput, MALFORMED_INTEGER_LITERAL, MALFORMED_NUMERIC_LITERAL, UNEXPECTED_CHARACTER,
+    lex, LexOutput, MALFORMED_INTEGER_LITERAL, MALFORMED_NUMERIC_LITERAL, MALFORMED_STRING_LITERAL,
+    UNEXPECTED_CHARACTER,
 };
+pub(crate) use string::decode_string_literal;
 pub use token::{Token, TokenKind};
 
 #[cfg(test)]

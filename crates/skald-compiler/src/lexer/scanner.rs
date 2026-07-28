@@ -5,10 +5,15 @@ use crate::{
     source::{SourceFile, Span},
 };
 
-use super::{numeric::scan_numeric_literal, Token, TokenKind};
+use super::{
+    numeric::scan_numeric_literal,
+    string::{scan_string_literal, StringLiteralError},
+    Token, TokenKind,
+};
 
 pub const UNEXPECTED_CHARACTER: &str = "LEX001";
 pub const MALFORMED_NUMERIC_LITERAL: &str = "LEX002";
+pub const MALFORMED_STRING_LITERAL: &str = "LEX003";
 /// Compatibility name retained for clients of the earlier integer-only lexer.
 pub const MALFORMED_INTEGER_LITERAL: &str = MALFORMED_NUMERIC_LITERAL;
 
@@ -57,6 +62,8 @@ impl<'source> Lexer<'source> {
 
             if is_identifier_start(character) {
                 self.lex_identifier(start);
+            } else if character == '"' {
+                self.lex_string_literal(start);
             } else if character.is_ascii_digit() {
                 self.lex_numeric_literal(start);
             } else if character == '.'
@@ -167,6 +174,53 @@ impl<'source> Lexer<'source> {
             self.advance();
         }
         self.report_malformed_numeric(start);
+    }
+
+    fn lex_string_literal(&mut self, start: usize) {
+        let scan = scan_string_literal(self.remaining());
+        self.offset += scan.byte_len;
+        if let Some(error) = scan.error {
+            let span = self.span(start, self.offset);
+            self.tokens.push(Token {
+                kind: TokenKind::Invalid,
+                span,
+            });
+            let (message, label) = match error {
+                StringLiteralError::UnknownEscape => (
+                    "unknown string escape",
+                    "use one of `\\\"`, `\\\\`, `\\n`, `\\r`, `\\t`, `\\0`, or `\\xNN`",
+                ),
+                StringLiteralError::IncompleteEscape => (
+                    "incomplete string escape",
+                    "expected an escape code after `\\`",
+                ),
+                StringLiteralError::IncompleteHexEscape => (
+                    "malformed hexadecimal string escape",
+                    "expected exactly two hexadecimal digits after `\\x`",
+                ),
+                StringLiteralError::NonPrintableAscii => (
+                    "non-printable byte in string literal",
+                    "encode this byte with a supported escape",
+                ),
+                StringLiteralError::NonAscii => (
+                    "non-ASCII content in string literal",
+                    "encode bytes outside printable ASCII with `\\xNN` escapes",
+                ),
+                StringLiteralError::UnescapedNewline => (
+                    "unescaped newline in string literal",
+                    "use `\\n` or terminate the literal before this line",
+                ),
+                StringLiteralError::Unterminated => {
+                    ("unterminated string literal", "expected a closing `\"`")
+                }
+            };
+            self.diagnostics.push(
+                Diagnostic::error(MALFORMED_STRING_LITERAL, message)
+                    .with_primary_label(span, label),
+            );
+            return;
+        }
+        self.push_token(TokenKind::StringLiteral, start);
     }
 
     fn report_malformed_numeric(&mut self, start: usize) {

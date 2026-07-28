@@ -153,6 +153,7 @@ impl Parser<'_> {
             TokenKind::Identifier
                 | TokenKind::SelfValue
                 | TokenKind::NumericLiteral(_)
+                | TokenKind::StringLiteral
                 | TokenKind::True
                 | TokenKind::False
                 | TokenKind::None
@@ -404,6 +405,13 @@ impl Parser<'_> {
             return Some(Expression::NumericLiteral(NumericLiteralExpr {
                 kind,
                 spelling: self.lexeme(token).to_owned(),
+                span: token.span,
+            }));
+        }
+
+        if let Some(token) = self.consume(TokenKind::StringLiteral) {
+            return Some(Expression::StringLiteral(StringLiteralExpr {
+                bytes: decode_string_literal(self.lexeme(token)),
                 span: token.span,
             }));
         }

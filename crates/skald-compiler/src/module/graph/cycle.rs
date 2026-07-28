@@ -50,7 +50,7 @@ pub(super) fn find_cycle(imports: &[Vec<ModuleImportEdge>]) -> Option<ImportCycl
                     cycle_edges.push(CycleEdge {
                         source,
                         target: edge.target(),
-                        span: edge.import_spans()[0],
+                        span: edge.first_evidence_span(),
                     });
                     return Some(ImportCycle { edges: cycle_edges });
                 }
@@ -73,7 +73,7 @@ fn edge_between(
     CycleEdge {
         source,
         target,
-        span: edge.import_spans()[0],
+        span: edge.first_evidence_span(),
     }
 }
 

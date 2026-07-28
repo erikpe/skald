@@ -83,6 +83,7 @@ impl Parser<'_> {
                 TokenKind::NumericLiteral(NumericLiteralKind::U64),
                 TokenKind::NumericLiteral(NumericLiteralKind::U8),
                 TokenKind::NumericLiteral(NumericLiteralKind::F64),
+                TokenKind::StringLiteral,
                 TokenKind::True,
                 TokenKind::False,
                 TokenKind::Minus,
@@ -136,6 +137,7 @@ impl Parser<'_> {
                 | TokenKind::NumericLiteral(NumericLiteralKind::U64)
                 | TokenKind::NumericLiteral(NumericLiteralKind::U8)
                 | TokenKind::NumericLiteral(NumericLiteralKind::F64)
+                | TokenKind::StringLiteral
                 | TokenKind::True
                 | TokenKind::False
                 | TokenKind::None

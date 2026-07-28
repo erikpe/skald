@@ -25,6 +25,7 @@ pub(super) struct BodyResolutionEnvironment<'program> {
     classes: &'program ResolvedClassDeclarationTable,
     interfaces: &'program ResolvedInterfaceDeclarationTable,
     hierarchy: &'program ResolvedClassHierarchy,
+    has_module_context: bool,
 }
 
 impl<'program> BodyResolutionEnvironment<'program> {
@@ -34,6 +35,7 @@ impl<'program> BodyResolutionEnvironment<'program> {
         classes: &'program ResolvedClassDeclarationTable,
         interfaces: &'program ResolvedInterfaceDeclarationTable,
         hierarchy: &'program ResolvedClassHierarchy,
+        has_module_context: bool,
     ) -> Self {
         Self {
             lookup,
@@ -41,6 +43,7 @@ impl<'program> BodyResolutionEnvironment<'program> {
             classes,
             interfaces,
             hierarchy,
+            has_module_context,
         }
     }
 }
@@ -229,6 +232,35 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
                     span: literal.span,
                 }),
             ),
+            syntax::Expression::StringLiteral(literal) => {
+                if !self.environment.has_module_context
+                    && self
+                        .diagnostics
+                        .iter()
+                        .any(|diagnostic| diagnostic.code == MISSING_STRING_LANGUAGE_ITEM)
+                {
+                    return None;
+                }
+                let (code, message, note) = if self.environment.has_module_context {
+                    (
+                        STRING_LITERAL_NOT_TYPED,
+                        "string literal typing is not implemented",
+                        "the canonical module is loaded; STR1 will validate `std::str::Str` and produce typed literals",
+                    )
+                } else {
+                    (
+                        MISSING_STRING_LANGUAGE_ITEM,
+                        "string literal requires the `std::str::Str` language item",
+                        "the source-text convenience API has no module providers",
+                    )
+                };
+                self.diagnostics.push(
+                    Diagnostic::error(code, message)
+                        .with_primary_label(literal.span, "required by this string literal")
+                        .with_note(note),
+                );
+                None
+            }
             syntax::Expression::Boolean(boolean) => {
                 Some(ResolvedExpression::Boolean(ResolvedBooleanExpr {
                     value: boolean.value,

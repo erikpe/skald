@@ -1,6 +1,6 @@
 # String Types Implementation Roadmap
 
-Status: planned; STR0 is next.
+Status: in progress; STR0 is implemented and STR1 is next.
 
 This roadmap implements the frozen
 [string language contract](../language/STRINGS.md) and
@@ -37,7 +37,7 @@ emission, and ordinary standard-library behavior.
 
 ## Progress
 
-- [ ] STR0 — Recognize literals and discover the canonical language item
+- [x] STR0 — Recognize literals and discover the canonical language item
 - [ ] STR1 — Validate and type intrinsic `Str` production
 - [ ] STR2 — Verify literal descriptors and immortal shared backing
 - [ ] STR3 — Emit deterministic immortal literal data on x86-64
@@ -51,25 +51,25 @@ emission, and ordinary standard-library behavior.
 **Purpose:** Establish the complete source and module reachability boundary
 before later phases depend on string identity.
 
-- [ ] Add a dedicated lexer token and AST expression carrying decoded bytes,
+- [x] Add a dedicated lexer token and AST expression carrying decoded bytes,
       full source span, and deterministic syntax dump output.
-- [ ] Implement printable-ASCII content and the exact frozen escapes. Diagnose
+- [x] Implement printable-ASCII content and the exact frozen escapes. Diagnose
       unknown/incomplete escapes, non-ASCII content, unescaped newlines, and
       unterminated literals without manufacturing a valid expression.
-- [ ] Keep nesting/resource limits and parser recovery deterministic at
+- [x] Keep nesting/resource limits and parser recovery deterministic at
       expression, statement, and declaration boundaries.
-- [ ] Extend the module graph loader's parsed dependency discovery so any
+- [x] Extend the module graph loader's parsed dependency discovery so any
       module containing a valid literal contributes one synthetic
       `std::str` dependency with requiring-literal evidence.
-- [ ] Coalesce synthetic and explicit reachability by canonical module path
+- [x] Coalesce synthetic and explicit reachability by canonical module path
       while preserving ordinary ambiguity, exact-case, unreadable-source,
       malformed-source, cycle, provider-order, replacement-root, and
       `--no-stdlib` behavior.
-- [ ] Ensure the synthetic dependency creates no source binding and modules
+- [x] Ensure the synthetic dependency creates no source binding and modules
       without literals remain independent of `std::str`.
-- [ ] Give the provider-less source-text adapter one structured
+- [x] Give the provider-less source-text adapter one structured
       missing-language-item result instead of synthesizing a built-in class.
-- [ ] Keep `module/graph/mod.rs`, `syntax/mod.rs`, and other facades concise;
+- [x] Keep `module/graph/mod.rs`, `syntax/mod.rs`, and other facades concise;
       place literal scanning/decoding and synthetic-dependency policy with
       their cohesive owners.
 

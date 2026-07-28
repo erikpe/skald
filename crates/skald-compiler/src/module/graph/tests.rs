@@ -15,7 +15,7 @@ use super::{
     cycle::find_cycle,
     diagnostic::{
         AMBIGUOUS_ENTRY_IDENTITY, AMBIGUOUS_MODULE, IMPORT_CYCLE, INVALID_ENTRY, MISSING_MODULE,
-        MODULE_SOURCE_FAILURE,
+        MODULE_LOOKUP_FAILURE, MODULE_SOURCE_FAILURE,
     },
     dump_module_graph, load_module_graph,
     model::ModuleImportEdge,
@@ -377,6 +377,124 @@ fn repeated_import_sources_share_one_edge_and_one_parsed_module() {
 }
 
 #[test]
+fn string_literals_add_one_synthetic_std_str_dependency_with_all_evidence() {
+    let workspace = directory("graph-string-dependency");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "fn main() -> i64 { var first: i64 = \"a\"; return \"b\"; }\n",
+    );
+    source(&root, "std/str.ska", "public class Str {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let app = graph.find(&"app".parse().unwrap()).unwrap();
+
+    assert_eq!(graph.modules().len(), 2);
+    assert!(graph.find(&"std::str".parse().unwrap()).is_some());
+    assert_eq!(app.imports().len(), 1);
+    assert!(app.imports()[0].import_spans().is_empty());
+    assert_eq!(app.imports()[0].string_literal_spans().len(), 2);
+}
+
+#[test]
+fn explicit_and_synthetic_std_str_dependencies_coalesce_without_losing_kind() {
+    let workspace = directory("graph-string-coalescing");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "import std::str;\nfn main() -> i64 { return \"a\"; }\n",
+    );
+    source(&root, "std/str.ska", "public class Str {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let edge = &graph.find(&"app".parse().unwrap()).unwrap().imports()[0];
+
+    assert_eq!(edge.import_spans().len(), 1);
+    assert_eq!(edge.string_literal_spans().len(), 1);
+}
+
+#[test]
+fn modules_without_literals_do_not_require_std_str() {
+    let workspace = directory("graph-no-string-dependency");
+    let root = workspace.join("modules");
+    source(&root, "app.ska", "fn main() -> i64 { return 0; }\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+
+    assert_eq!(graph.modules().len(), 1);
+    assert!(graph.find(&"std::str".parse().unwrap()).is_none());
+}
+
+#[test]
+fn synthetic_std_str_dependency_uses_ordinary_missing_ambiguity_and_case_rules() {
+    let workspace = directory("graph-string-provider-rules");
+    let first = workspace.join("first");
+    let second = workspace.join("second");
+    source(&first, "app.ska", "fn main() -> i64 { return \"a\"; }\n");
+
+    let missing = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&first),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&missing), [MISSING_MODULE]);
+
+    source(&first, "Std/str.ska", "public class Str {}\n");
+    let wrong_case = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&first),
+    )
+    .unwrap_err();
+    assert_eq!(codes(&wrong_case), [MODULE_LOOKUP_FAILURE]);
+
+    source(&first, "std/str.ska", "public class Str {}\n");
+    source(&second, "std/str.ska", "public class Str {}\n");
+    let ambiguous = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[first, second],
+    )
+    .unwrap_err();
+    assert_eq!(codes(&ambiguous), [AMBIGUOUS_MODULE]);
+}
+
+#[test]
+fn synthetic_dependencies_participate_in_cycle_detection() {
+    let workspace = directory("graph-string-cycle");
+    let root = workspace.join("modules");
+    source(&root, "app.ska", "fn main() -> i64 { return \"a\"; }\n");
+    source(&root, "std/str.ska", "import app;\npublic class Str {}\n");
+
+    let failure = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap_err();
+
+    assert_eq!(codes(&failure), [IMPORT_CYCLE]);
+}
+
+#[test]
 fn common_physical_source_has_distinct_logical_source_and_module_instances() {
     let workspace = directory("graph-physical-instances");
     let root = workspace.join("modules");
@@ -520,14 +638,18 @@ fn cycle_detection_handles_deep_graphs_without_recursive_stack_growth() {
     let mut imports = (0..depth)
         .map(|index| {
             (index + 1 < depth)
-                .then(|| ModuleImportEdge::new(ModuleId::new(index + 1), vec![span]))
+                .then(|| ModuleImportEdge::new(ModuleId::new(index + 1), vec![span], Vec::new()))
                 .into_iter()
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
 
     assert!(find_cycle(&imports).is_none());
-    imports[depth - 1].push(ModuleImportEdge::new(ModuleId::new(depth / 2), vec![span]));
+    imports[depth - 1].push(ModuleImportEdge::new(
+        ModuleId::new(depth / 2),
+        vec![span],
+        Vec::new(),
+    ));
     assert_eq!(find_cycle(&imports).unwrap().edges.len(), depth / 2);
 }
 
@@ -569,12 +691,12 @@ fn identities_and_dump_follow_canonical_module_order_not_discovery_order() {
             "  relative y.ska\n",
             "  display <workspace>/modules/y.ska\n",
             "  canonical <workspace>/modules/y.ska\n",
-            "  import m0 a occurrences=1\n",
+            "  dependency m0 a imports=1 string_literals=0\n",
             "module m2 z source2 provider0 package0\n",
             "  relative z.ska\n",
             "  display <workspace>/modules/z.ska\n",
             "  canonical <workspace>/modules/z.ska\n",
-            "  import m1 y occurrences=1\n",
+            "  dependency m1 y imports=1 string_literals=0\n",
         )
     );
 }

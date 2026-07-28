@@ -45,10 +45,11 @@ pub fn dump_module_graph(graph: &ModuleGraph) -> String {
                 .expect("a graph edge references a loaded module");
             let _ = writeln!(
                 output,
-                "  import {} {} occurrences={}",
+                "  dependency {} {} imports={} string_literals={}",
                 import.target(),
                 target.provenance().module_path(),
-                import.import_spans().len()
+                import.import_spans().len(),
+                import.string_literal_spans().len()
             );
         }
     }

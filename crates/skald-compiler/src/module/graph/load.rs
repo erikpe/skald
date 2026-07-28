@@ -4,7 +4,7 @@ use crate::{
     diagnostics::Diagnostics,
     driver::EntrySelector,
     identity::ModuleId,
-    lexer::lex,
+    lexer::{lex, TokenKind},
     source::{SourceDatabase, SourceId, Span, TextRange},
     syntax::{parse, CompilationUnit, ImportDeclaration},
 };
@@ -64,24 +64,25 @@ pub fn load_module_graph(
                 continue;
             }
         };
-        let discovered = discover_imports(candidate.display_source_path(), &text);
-        let imports = discovered
+        let discovered = discover_dependencies(candidate.display_source_path(), &text);
+        let dependencies = discovered
             .as_ref()
-            .map(import_occurrences)
+            .map(|parsed| dependency_occurrences(&parsed.ast, &parsed.string_literal_ranges))
             .unwrap_or_default();
         staged.insert(module_path.clone(), StagedModule { candidate, text });
 
-        for (target, occurrences) in imports {
+        for (target, occurrences) in dependencies {
+            let first_range = occurrences.first_range();
             match lookup.resolve(&target) {
                 Ok(candidate) => {
                     if !staged.contains_key(&target) {
-                        let imported_from = Some((module_path.clone(), occurrences[0]));
+                        let imported_from = Some((module_path.clone(), first_range));
                         pending_modules
                             .entry(target)
                             .and_modify(|pending: &mut PendingModule| {
                                 let should_replace = pending.imported_from.as_ref().is_none_or(
                                     |(current_module, current_range)| {
-                                        (&module_path, occurrences[0].start())
+                                        (&module_path, first_range.start())
                                             < (current_module, current_range.start())
                                     },
                                 );
@@ -97,7 +98,7 @@ pub fn load_module_graph(
                 }
                 Err(error) => pending_errors.push(PendingLoadError::Resolution {
                     importing_module: module_path.clone(),
-                    import_range: occurrences[0],
+                    import_range: first_range,
                     target,
                     error,
                 }),
@@ -118,7 +119,7 @@ struct PendingModule {
     imported_from: Option<(ModulePath, TextRange)>,
 }
 
-fn discover_imports(path: &Path, text: &str) -> Option<CompilationUnit> {
+fn discover_dependencies(path: &Path, text: &str) -> Option<ParsedModule> {
     let mut sources = SourceDatabase::new();
     let source_id = sources.add(path, text);
     parse_source(&sources, source_id).0
@@ -127,7 +128,7 @@ fn discover_imports(path: &Path, text: &str) -> Option<CompilationUnit> {
 fn parse_source(
     sources: &SourceDatabase,
     source_id: SourceId,
-) -> (Option<CompilationUnit>, Diagnostics) {
+) -> (Option<ParsedModule>, Diagnostics) {
     let source = sources
         .get(source_id)
         .expect("the loader parses an inserted source");
@@ -137,16 +138,52 @@ fn parse_source(
         return (None, diagnostics);
     }
     let parsed = parse(source, &lexed.tokens);
+    let string_literal_ranges = lexed
+        .tokens
+        .iter()
+        .filter(|token| token.kind == TokenKind::StringLiteral)
+        .map(|token| token.span.range())
+        .collect();
     diagnostics.append(parsed.diagnostics);
     if diagnostics.has_errors() {
         (None, diagnostics)
     } else {
-        (Some(parsed.ast), diagnostics)
+        (
+            Some(ParsedModule {
+                ast: parsed.ast,
+                string_literal_ranges,
+            }),
+            diagnostics,
+        )
     }
 }
 
-fn import_occurrences(ast: &CompilationUnit) -> BTreeMap<ModulePath, Vec<TextRange>> {
-    let mut imports = BTreeMap::<ModulePath, Vec<TextRange>>::new();
+struct ParsedModule {
+    ast: CompilationUnit,
+    string_literal_ranges: Vec<TextRange>,
+}
+
+#[derive(Default)]
+struct DependencyOccurrences {
+    import_ranges: Vec<TextRange>,
+    string_literal_ranges: Vec<TextRange>,
+}
+
+impl DependencyOccurrences {
+    fn first_range(&self) -> TextRange {
+        self.import_ranges
+            .first()
+            .or_else(|| self.string_literal_ranges.first())
+            .copied()
+            .expect("a discovered dependency has source evidence")
+    }
+}
+
+fn dependency_occurrences(
+    ast: &CompilationUnit,
+    string_literal_ranges: &[TextRange],
+) -> BTreeMap<ModulePath, DependencyOccurrences> {
+    let mut dependencies = BTreeMap::<ModulePath, DependencyOccurrences>::new();
     for import in &ast.imports {
         let name = match import {
             ImportDeclaration::Module(import) => &import.module,
@@ -156,9 +193,23 @@ fn import_occurrences(ast: &CompilationUnit) -> BTreeMap<ModulePath, Vec<TextRan
             name.components().map(|component| component.text.to_owned()),
         )
         .expect("parsed import components are valid source identifiers");
-        imports.entry(path).or_default().push(name.span.range());
+        dependencies
+            .entry(path)
+            .or_default()
+            .import_ranges
+            .push(name.span.range());
     }
-    imports
+    if !string_literal_ranges.is_empty() {
+        dependencies
+            .entry(
+                ModulePath::from_components(["std".to_owned(), "str".to_owned()])
+                    .expect("the canonical string module path is valid"),
+            )
+            .or_default()
+            .string_literal_ranges
+            .extend(string_literal_ranges.iter().copied());
+    }
+    dependencies
 }
 
 fn finalize_graph(
@@ -177,14 +228,15 @@ fn finalize_graph(
     let mut finalized = Vec::new();
     for (path, module) in staged {
         let source_id = source_ids[&path];
-        let (ast, source_diagnostics) = parse_source(&sources, source_id);
+        let (parsed, source_diagnostics) = parse_source(&sources, source_id);
         diagnostics.append(source_diagnostics);
-        if let Some(ast) = ast {
+        if let Some(parsed) = parsed {
             finalized.push(FinalizedModule {
                 path,
                 candidate: module.candidate,
                 source_id,
-                ast,
+                ast: parsed.ast,
+                string_literal_ranges: parsed.string_literal_ranges,
             });
         }
     }
@@ -201,7 +253,7 @@ fn finalize_graph(
         .collect::<BTreeMap<_, _>>();
     let imports = finalized
         .iter()
-        .map(|module| finalized_imports(&module.ast, &ids))
+        .map(|module| finalized_dependencies(module, &ids))
         .collect::<Vec<_>>();
     if let Some(cycle) = find_cycle(&imports) {
         let paths = finalized
@@ -242,22 +294,29 @@ struct FinalizedModule {
     candidate: ModuleCandidate,
     source_id: SourceId,
     ast: CompilationUnit,
+    string_literal_ranges: Vec<TextRange>,
 }
 
-fn finalized_imports(
-    ast: &CompilationUnit,
+fn finalized_dependencies(
+    module: &FinalizedModule,
     ids: &BTreeMap<ModulePath, ModuleId>,
 ) -> Vec<ModuleImportEdge> {
-    import_occurrences(ast)
+    dependency_occurrences(&module.ast, &module.string_literal_ranges)
         .into_iter()
-        .map(|(path, ranges)| {
+        .map(|(path, occurrences)| {
             let target = ids[&path];
-            let source_id = ast.span.source_id();
-            let spans = ranges
+            let source_id = module.ast.span.source_id();
+            let import_spans = occurrences
+                .import_ranges
                 .into_iter()
                 .map(|range| Span::new(source_id, range))
                 .collect();
-            ModuleImportEdge::new(target, spans)
+            let string_literal_spans = occurrences
+                .string_literal_ranges
+                .into_iter()
+                .map(|range| Span::new(source_id, range))
+                .collect();
+            ModuleImportEdge::new(target, import_spans, string_literal_spans)
         })
         .collect()
 }

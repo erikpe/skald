@@ -1,9 +1,11 @@
 # Strings Compiler Contract
 
-Status: **frozen design, not implemented**. This document is authoritative for
-future compiler handling of the source-visible
-[string contract](../language/STRINGS.md). Current phase products contain no
-string literal, language-item, immortal-allocation, or literal-data nodes.
+Status: **frozen design, implemented through STR0**. The lexer, AST, and module
+graph implement literal recognition, decoded bytes, and conditional
+`std::str` reachability. Resolution deliberately rejects literals before typed
+HIR; language-item validation, typed production, immortal allocation, and
+literal-data nodes remain future work. This document is authoritative for
+compiler handling of the source-visible [string contract](../language/STRINGS.md).
 
 The generic ownership header and generated count machinery are owned by
 [Shared Ownership](SHARED_OWNERSHIP.md). Module-provider behavior is owned by
@@ -38,9 +40,9 @@ privacy rule.
 
 ## Conditional module discovery
 
-The module graph loader already parses each reached module while discovering
-its explicit imports. Once literal syntax exists, a parsed module containing
-at least one valid literal contributes one synthetic dependency on
+The module graph loader parses each reached module while discovering explicit
+imports. A parsed module containing at least one valid literal contributes one
+synthetic dependency on
 `std::str`, retaining deterministic literal evidence for diagnostics. Invalid
 literal syntax contributes no usable expression or synthetic dependency.
 
@@ -57,7 +59,9 @@ module identity:
 
 The synthetic edge affects reachability but creates no source import binding.
 The provider-less source-text adapter has no hidden standard-library context
-and reports that the language item cannot be provided.
+and reports structured diagnostic `RES032` that the language item cannot be
+provided. Provider-aware resolution currently reports `RES033` at the
+intentional STR0-to-STR1 boundary rather than constructing typed HIR.
 
 ## Phase responsibilities
 

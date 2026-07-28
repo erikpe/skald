@@ -488,6 +488,13 @@ impl AstDumper {
                 };
                 self.named(name, &literal.spelling, literal.span);
             }
+            Expression::StringLiteral(literal) => {
+                let mut bytes = String::with_capacity(literal.bytes.len() * 2);
+                for byte in &literal.bytes {
+                    let _ = write!(bytes, "{byte:02x}");
+                }
+                self.named("StringBytes", &bytes, literal.span);
+            }
             Expression::Boolean(boolean) => {
                 self.line(
                     if boolean.value {

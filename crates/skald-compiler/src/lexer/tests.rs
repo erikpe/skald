@@ -64,6 +64,73 @@ fn lexes_the_complete_supported_token_surface() {
 }
 
 #[test]
+fn recognizes_string_literals_as_single_full_span_tokens() {
+    let (sources, source_id, output) = lex_text("\"plain\" \"a\\n\\x42\\0\"");
+    let source = sources.get(source_id).unwrap();
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [
+            TokenKind::StringLiteral,
+            TokenKind::StringLiteral,
+            TokenKind::Eof,
+        ]
+    );
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| source.slice(token.span.range()).unwrap())
+            .collect::<Vec<_>>(),
+        ["\"plain\"", "\"a\\n\\x42\\0\"", ""]
+    );
+    assert!(!output.has_errors());
+}
+
+#[test]
+fn malformed_string_categories_are_single_invalid_tokens() {
+    for (text, message) in [
+        ("\"bad\\q\"", "unknown string escape"),
+        ("\"bad\\x4\"", "malformed hexadecimal string escape"),
+        ("\"café\"", "non-ASCII content"),
+        ("\"bad\t\"", "non-printable byte"),
+        ("\"unterminated", "unterminated string literal"),
+    ] {
+        let (_, _, output) = lex_text(text);
+        assert_eq!(output.tokens[0].kind, TokenKind::Invalid, "{text:?}");
+        assert_eq!(output.diagnostics.len(), 1, "{text:?}");
+        let diagnostic = output.diagnostics.iter().next().unwrap();
+        assert_eq!(diagnostic.code, MALFORMED_STRING_LITERAL);
+        assert!(diagnostic.message.contains(message), "{text:?}");
+    }
+}
+
+#[test]
+fn unescaped_string_newline_recovers_at_the_next_line() {
+    let (_, _, output) = lex_text("\"bad\nfn");
+
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .map(|token| token.kind)
+            .collect::<Vec<_>>(),
+        [TokenKind::Invalid, TokenKind::Fn, TokenKind::Eof]
+    );
+    assert!(output
+        .diagnostics
+        .iter()
+        .next()
+        .unwrap()
+        .message
+        .contains("unescaped newline"));
+}
+
+#[test]
 fn recognizes_unit_as_a_keyword() {
     let (_, _, output) = lex_text("unit unit_value");
 

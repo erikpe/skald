@@ -23,6 +23,22 @@ fn source_text_resolution_requires_a_module_context_for_imports() {
 }
 
 #[test]
+fn source_text_string_use_reports_the_missing_language_item() {
+    let (_, parsed) = crate::test_support::parse_source(concat!(
+        "fn first() -> i64 { return \"first\"; }\n",
+        "fn main() -> i64 { return \"provider required\"; }\n",
+    ));
+    assert!(!parsed.has_errors());
+
+    let output = resolve(&parsed.ast);
+    let diagnostics = output.diagnostics.iter().collect::<Vec<_>>();
+
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].code, MISSING_STRING_LANGUAGE_ITEM);
+    assert!(diagnostics[0].message.contains("std::str::Str"));
+}
+
+#[test]
 fn qualified_uses_do_not_panic_or_degrade_to_unknown_name_diagnostics() {
     let output = resolve_text(
         "fn main() -> unit {\n\

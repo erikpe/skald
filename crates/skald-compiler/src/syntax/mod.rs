@@ -22,7 +22,7 @@ pub use ast::{
     NameComponent, NameComponentRef, NameComponents, NameQualification, NameText,
     NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
     OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind,
-    ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr, Statement,
+    ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr, Statement, StringLiteralExpr,
     TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr,
     Visibility,
 };

@@ -101,14 +101,14 @@ or an array construction. Both remain ordinary identifiers elsewhere.
 
 ## Punctuation
 
-The complete punctuation and operator token set is:
+The complete punctuation and operator token set outside literal delimiters is:
 
 ```text
 ( ) { } [ ] , : :: ; . -> + - * = ? !
 ```
 
-There are no string, character, comparison, or division tokens in the
-implemented grammar.
+Double quotes delimit one string-literal token. There are no character,
+comparison, or division tokens in the implemented grammar.
 
 ## Literals
 
@@ -126,7 +126,10 @@ f64-literal     = decimal-digits "." decimal-digits [exponent]
 
 bool-literal    = "true" | "false"
 numeric-literal = i64-literal | u64-literal | u8-literal | f64-literal
-literal         = numeric-literal | bool-literal
+string-literal  = double-quote { printable-ascii | string-escape } double-quote
+string-escape   = backslash ( double-quote | backslash | "n" | "r" | "t"
+                             | "0" | "x" hex-digit hex-digit )
+literal         = numeric-literal | bool-literal | string-literal
 ```
 
 Leading `-` is a separate unary token. A decimal point requires digits on both
@@ -136,6 +139,13 @@ examples include `1_000`, `0xff`, `1.`, `1e+`, `1.2.3`, and `42u64`. A leading
 dot is punctuation, so `.5` tokenizes as `.` followed by `5` and is not a
 floating literal. Literal ranges and value interpretation are semantic rules,
 not grammar.
+
+Unescaped string content is printable ASCII other than double quote and
+backslash. The exact escapes, decoded bytes, and invalid-content behavior are
+defined by [Skald Strings](STRINGS.md#string-literals). A physical newline,
+direct non-ASCII content, unknown or incomplete escape, or missing closing
+quote invalidates the complete literal token; parser recovery does not create
+a string expression for it.
 
 ## Compilation unit and declarations
 

@@ -2,7 +2,7 @@
 
 use crate::{
     diagnostics::{format_type_list, Diagnostic, Diagnostics},
-    lexer::{Token, TokenKind},
+    lexer::{decode_string_literal, Token, TokenKind},
     source::{SourceFile, Span},
 };
 

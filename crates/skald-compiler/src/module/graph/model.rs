@@ -7,21 +7,29 @@ use crate::{
 
 use super::super::{ModulePath, ModuleProvenance};
 
-/// One canonical direct-import edge in a loaded module graph.
+/// One canonical direct dependency edge in a loaded module graph.
 ///
 /// Repeated source declarations of the same imported module share one edge
-/// while retaining every source span that requested it.
+/// while retaining explicit-import and compiler-owned literal evidence
+/// separately. Only explicit imports participate in source name binding.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModuleImportEdge {
     target: ModuleId,
     import_spans: Vec<Span>,
+    string_literal_spans: Vec<Span>,
 }
 
 impl ModuleImportEdge {
-    pub(super) fn new(target: ModuleId, import_spans: Vec<Span>) -> Self {
+    pub(super) fn new(
+        target: ModuleId,
+        import_spans: Vec<Span>,
+        string_literal_spans: Vec<Span>,
+    ) -> Self {
+        debug_assert!(!import_spans.is_empty() || !string_literal_spans.is_empty());
         Self {
             target,
             import_spans,
+            string_literal_spans,
         }
     }
 
@@ -31,6 +39,18 @@ impl ModuleImportEdge {
 
     pub fn import_spans(&self) -> &[Span] {
         &self.import_spans
+    }
+
+    pub fn string_literal_spans(&self) -> &[Span] {
+        &self.string_literal_spans
+    }
+
+    pub(super) fn first_evidence_span(&self) -> Span {
+        self.import_spans
+            .first()
+            .or_else(|| self.string_literal_spans.first())
+            .copied()
+            .expect("a dependency edge retains source evidence")
     }
 }
 

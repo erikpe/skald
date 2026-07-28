@@ -6,14 +6,13 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0
+  implemented; STR1 is next**. Literal syntax now decodes into the AST and
+  conditionally reaches `std::str`; typed intrinsic `Str` production is next.
 
 ## Planned
 
-- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **planned; literal
-  syntax and canonical language-item discovery are next**. Implements the
-  frozen raw-byte `std::str::Str` contracts through typed production, verified
-  immortal backing, x86-64 emission, and ordinary standard-library behavior.
+No implementation roadmaps are currently only planned.
 
 ## Design proposals
 
