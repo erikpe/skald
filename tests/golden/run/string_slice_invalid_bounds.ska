@@ -1,0 +1,7 @@
+from std::str import Str;
+
+fn main() -> i64 {
+    var value: Str = "x";
+    var invalid: Str = value.slice(0u, 18446744073709551615u);
+    return (i64) invalid.len();
+}

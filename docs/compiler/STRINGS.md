@@ -1,13 +1,15 @@
 # Strings Compiler Contract
 
-Status: **frozen design, implemented through STR3**. The lexer, AST, and module
+Status: **frozen design, implemented through STR4**. The lexer, AST, and module
 graph implement literal recognition, decoded bytes, and conditional
 `std::str` reachability. Resolution validates the exact language item, and HIR
 represents literals as intrinsic produced `Str` values with deterministic data
 identities. MIR declares and verifies immutable immortal backing and exact
 descriptor publication. The x86-64 backend emits deterministic immutable
-backing and literals execute through ordinary class lifecycle. Standard-library
-string operations remain future work. This document is authoritative for compiler
+backing and literals execute through ordinary class lifecycle. The canonical
+standard-library module implements representative dynamic string behavior
+entirely through ordinary class, array, and ownership operations. This
+document is authoritative for compiler
 handling of the source-visible [string contract](../language/STRINGS.md).
 
 The generic ownership header and generated count machinery are owned by
@@ -202,6 +204,13 @@ Dynamic strings use ordinary shared-array allocation and the existing generic
 allocator/free boundary. No public runtime symbol, runtime ABI version, native
 string object, interning service, or external `Str` calling convention is
 added.
+
+The installed `std/std/str.ska` implementation copies caller arrays into fresh
+shared backing, observes length and checked bytes, creates `O(1)` slices by
+copying and adjusting a descriptor through private helpers, converts to an
+independent inline array, and concatenates into fresh backing. Synthesized
+class lifecycle and generic shared-array retain/release reclaim dynamic
+backing after its last descriptor owner.
 
 ## Diagnostics and test obligations
 

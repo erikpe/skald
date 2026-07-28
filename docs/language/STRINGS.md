@@ -1,11 +1,11 @@
 # Skald Strings
 
-Status: **frozen design, partially implemented through STR3**. The compiler
+Status: **frozen design, partially implemented through STR4**. The compiler
 accepts and decodes string-literal syntax, conditionally discovers and
 validates `std::str::Str`, and represents literals as exact typed produced
 values through verified MIR descriptor materialization and deterministic
-x86-64 execution. Ordinary standard-library string operations remain
-unimplemented.
+x86-64 execution. The installed standard library provides representative
+construction, observation, slicing, conversion, and concatenation behavior.
 This document is authoritative for the source-visible string contract, while
 the [status matrix](STATUS.md) remains authoritative for compiler availability.
 
@@ -166,6 +166,23 @@ String operations are ordinary Skald standard-library code. The compiler does
 not select an initializer, factory, `from_bytes`, `concat`, or any other method
 by spelling.
 
+The installed representative public surface is:
+
+| Member | Behavior |
+|---|---|
+| `init()` | Construct an empty dynamic string. |
+| `static fn from_bytes(ref bytes: u8[]) -> Str` | Copy caller bytes into fresh shared storage. |
+| `fn len() -> u64` | Return the descriptor length. |
+| `fn byte(index: u64) -> u8` | Return one checked byte. |
+| `fn slice(start: u64, length: u64) -> Str` | Return an `O(1)` shared-backing slice after checked bounds validation. |
+| `fn to_bytes() -> u8[]` | Return an independent mutable byte array. |
+| `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
+
+Invalid byte and slice bounds terminate through ordinary checked array
+behavior. The library uses private static helpers to install newly allocated
+backing and to adjust copied descriptors; neither helper is a compiler
+convention.
+
 The required asymptotic behavior is:
 
 | Operation | Required behavior |
@@ -180,7 +197,8 @@ The required asymptotic behavior is:
 | Convert to independent `u8[]` | `O(n)` byte copy |
 | Concatenation | `O(n + m)` fresh allocation and byte copies |
 
-The exact public method and builder APIs are standard-library design. Indexing,
+The broader public method and builder APIs remain standard-library design.
+Indexing,
 slicing, equality, comparison, hashing, concatenation, formatting, and parsing
 are not string-specific operators in this contract. In particular, `+` is not
 lowered by searching for a method named `concat`. Public checked byte/range

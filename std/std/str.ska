@@ -1,0 +1,86 @@
+public class Str {
+    private storage: shared u8[];
+    private start: u64;
+    private length: u64;
+
+    init() {
+        self.storage = new u8[]();
+        self.start = 0u;
+        self.length = 0u;
+    }
+
+    fn len() -> u64 {
+        return self.length;
+    }
+
+    fn byte(index: u64) -> u8 {
+        if (index < self.length) {
+            return self.storage->[(i64) (self.start + index)];
+        }
+        Str.fail_bounds_check();
+        return 0u8;
+    }
+
+    fn slice(start: u64, length: u64) -> Str {
+        if (start <= self.length) {
+            if (length <= self.length - start) {
+                return Str.slice_trusted(self, start, length);
+            }
+        }
+        Str.fail_bounds_check();
+        return Str();
+    }
+
+    static fn from_bytes(ref bytes: u8[]) -> Str {
+        var storage: shared u8[] = new u8[](bytes.len());
+        storage->[:] = bytes;
+        return Str.from_fresh_storage(storage);
+    }
+
+    fn to_bytes() -> u8[] {
+        var result: u8[] = u8[](self.length);
+        var source_start: i64 = (i64) self.start;
+        var source_end: i64 = (i64) (self.start + self.length);
+        result[:] = self.storage->[source_start:source_end];
+        return result;
+    }
+
+    fn concat(ref other: Str) -> Str {
+        var combined_length: u64 = self.length + other.length;
+        var result: shared u8[] = new u8[](combined_length);
+        var middle: i64 = (i64) self.length;
+        var end: i64 = (i64) combined_length;
+        var self_start: i64 = (i64) self.start;
+        var self_end: i64 = (i64) (self.start + self.length);
+        var other_start: i64 = (i64) other.start;
+        var other_end: i64 = (i64) (other.start + other.length);
+        result->[:middle] = self.storage->[self_start:self_end];
+        result->[middle:end] = other.storage->[other_start:other_end];
+        return Str.from_fresh_storage(result);
+    }
+
+    private static fn slice_trusted(
+        ref source: Str,
+        start: u64,
+        length: u64
+    ) -> Str {
+        var result: Str = Str(copy source);
+        result.start = source.start + start;
+        result.length = length;
+        return result;
+    }
+
+    private static fn from_fresh_storage(storage: shared u8[]) -> Str {
+        var result: Str = Str();
+        result.storage = storage;
+        result.start = 0u;
+        result.length = storage->len();
+        return result;
+    }
+
+    private static fn fail_bounds_check() -> unit {
+        var empty: u8[] = u8[]();
+        var ignored: u8 = empty[0];
+        return;
+    }
+}

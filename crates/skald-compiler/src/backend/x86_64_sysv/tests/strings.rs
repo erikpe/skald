@@ -18,10 +18,15 @@ const VALID_STR: &str = concat!(
     "  }\n",
     "}\n",
 );
+const CANONICAL_STR: &str = include_str!("../../../../../../std/std/str.ska");
 
 fn string_program(app: &str) -> MirProgram {
+    string_program_with_item(app, VALID_STR)
+}
+
+fn string_program_with_item(app: &str, string_item: &str) -> MirProgram {
     let (_workspace, graph) =
-        load_module_sources("app", &[("app.ska", app), ("std/str.ska", VALID_STR)]);
+        load_module_sources("app", &[("app.ska", app), ("std/str.ska", string_item)]);
     let resolved = resolve_module_graph(&graph);
     assert!(
         resolved.diagnostics.is_empty(),
@@ -152,4 +157,60 @@ fn string_emission_does_not_change_the_public_runtime_abi() {
     assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)"));
     assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5"));
     assert!(!header.contains("string"));
+}
+
+#[test]
+fn dynamic_standard_library_strings_reclaim_their_last_backing_owner() {
+    let program = string_program_with_item(
+        concat!(
+            "from std::str import Str;\n",
+            "extern fn report() -> i64;\n",
+            "fn main() -> i64 {\n",
+            "  if (true) {\n",
+            "    var bytes: u8[] = u8[](3u);\n",
+            "    bytes[0] = 1u8;\n",
+            "    var value: Str = Str.from_bytes(bytes);\n",
+            "    var slice: Str = value.slice(0u, 1u);\n",
+            "    var observed: u8 = slice.byte(0u);\n",
+            "  }\n",
+            "  return report();\n",
+            "}\n",
+        ),
+        CANONICAL_STR,
+    );
+    let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    output.push_str(concat!(
+        "\n.bss\n",
+        ".p2align 3\n",
+        ".Lstring_allocations: .quad 0\n",
+        ".Lstring_frees: .quad 0\n",
+        "\n.text\n",
+        ".globl ska_rt_alloc\n",
+        ".type ska_rt_alloc, @function\n",
+        "ska_rt_alloc:\n",
+        "    inc qword ptr [rip + .Lstring_allocations]\n",
+        "    jmp malloc@PLT\n",
+        ".size ska_rt_alloc, .-ska_rt_alloc\n",
+        ".globl ska_rt_free\n",
+        ".type ska_rt_free, @function\n",
+        "ska_rt_free:\n",
+        "    inc qword ptr [rip + .Lstring_frees]\n",
+        "    jmp free@PLT\n",
+        ".size ska_rt_free, .-ska_rt_free\n",
+        ".globl report\n",
+        ".type report, @function\n",
+        "report:\n",
+        "    mov rax, 1\n",
+        "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
+        "    cmp rcx, 3\n",
+        "    jne .Lstring_report_done\n",
+        "    cmp rcx, qword ptr [rip + .Lstring_frees]\n",
+        "    jne .Lstring_report_done\n",
+        "    xor rax, rax\n",
+        ".Lstring_report_done:\n",
+        "    ret\n",
+        ".size report, .-report\n",
+    ));
+
+    assert_eq!(run_native_assembly(&output).code(), Some(0));
 }

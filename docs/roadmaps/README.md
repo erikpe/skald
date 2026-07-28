@@ -6,13 +6,12 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR3 are
-  implemented and STR4 is next**. Literal
+- [String Types Implementation Roadmap](STRINGS_ROADMAP.md) — **STR0–STR4 are
+  implemented and STR5 is next**. Literal
   syntax and conditional discovery feed exact language-item validation,
   intrinsic typed `Str` production, verified target-independent descriptor
-  materialization, and deterministic x86-64 immortal backing. Ordinary
-  standard-library behavior now has the complete
-  [primitive integer prerequisite](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md).
+  materialization, deterministic x86-64 immortal backing, and ordinary
+  canonical standard-library behavior. Broad hardening and promotion are next.
 
 ## Planned
 

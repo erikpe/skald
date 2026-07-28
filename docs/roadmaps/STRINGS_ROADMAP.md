@@ -1,6 +1,6 @@
 # String Types Implementation Roadmap
 
-Status: in progress; STR0–STR3 are implemented and STR4 is next. The
+Status: in progress; STR0–STR4 are implemented and STR5 is next. The
 [primitive integer operations prerequisite](../archive/PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
 is complete.
 
@@ -43,7 +43,7 @@ emission, and ordinary standard-library behavior.
 - [x] STR1 — Validate and type intrinsic `Str` production
 - [x] STR2 — Verify literal descriptors and immortal shared backing
 - [x] STR3 — Emit deterministic immortal literal data on x86-64
-- [ ] STR4 — Provide ordinary standard-library string behavior
+- [x] STR4 — Provide ordinary standard-library string behavior
 - [ ] STR5 — Harden, document, and promote strings as implemented
 
 ## PR-sized implementation sequence
@@ -187,19 +187,19 @@ no runtime ABI change.
 **Purpose:** Demonstrate that the frozen compiler/library boundary supports
 useful dynamic strings without compiler-selected method spellings.
 
-- [ ] Add the canonical `std/str.ska` module with the exact public `Str`
+- [x] Add the canonical `std/str.ska` module with the exact public `Str`
       descriptor and safe ordinary initializer(s).
-- [ ] Implement a representative public static factory that copies caller
+- [x] Implement a representative public static factory that copies caller
       bytes into fresh shared storage.
-- [ ] Implement length and checked byte observation as ordinary instance
+- [x] Implement length and checked byte observation as ordinary instance
       methods.
-- [ ] Implement `O(1)` slicing through private instance/static helpers that
+- [x] Implement `O(1)` slicing through private instance/static helpers that
       copy an existing descriptor and adjust validated private bounds.
-- [ ] Implement independent byte-array conversion and concatenation with fresh
+- [x] Implement independent byte-array conversion and concatenation with fresh
       backing through ordinary array construction and slice assignment.
-- [ ] Prove synthesized copy, assignment, destruction, shared retain/release,
+- [x] Prove synthesized copy, assignment, destruction, shared retain/release,
       dynamic last-owner reclamation, arguments, results, and temporaries.
-- [ ] Keep exact API names beyond the representative tested surface owned by
+- [x] Keep exact API names beyond the representative tested surface owned by
       the standard library; add no compiler lookup by those names.
 
 **Tests:** Standard-library resolution/type-check tests; native goldens for

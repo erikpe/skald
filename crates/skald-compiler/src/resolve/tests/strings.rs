@@ -18,6 +18,7 @@ const VALID_STR: &str = concat!(
     "  }\n",
     "}\n",
 );
+const CANONICAL_STR: &str = include_str!("../../../../../std/std/str.ska");
 
 fn resolve_modules(entry: &str, sources: &[(&str, &str)]) -> ResolveOutput {
     let (_workspace, graph) = load_module_sources(entry, sources);
@@ -26,6 +27,71 @@ fn resolve_modules(entry: &str, sources: &[(&str, &str)]) -> ResolveOutput {
 
 fn source_with_str(app: &str) -> ResolveOutput {
     resolve_modules("app", &[("app.ska", app), ("std/str.ska", VALID_STR)])
+}
+
+#[test]
+fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_members() {
+    let resolved = resolve_modules(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "from std::str import Str;\n",
+                    "fn main() -> i64 {\n",
+                    "  var bytes: u8[] = u8[](2u);\n",
+                    "  var value: Str = Str.from_bytes(bytes);\n",
+                    "  var part: Str = value.slice(0u, value.len());\n",
+                    "  var copy: u8[] = part.to_bytes();\n",
+                    "  var combined: Str = value.concat(part);\n",
+                    "  return (i64) combined.len();\n",
+                    "}\n",
+                ),
+            ),
+            ("std/str.ska", CANONICAL_STR),
+        ],
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "canonical library must resolve: {:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(
+        checked.diagnostics.is_empty(),
+        "canonical library API must type-check: {:?}",
+        checked.diagnostics
+    );
+}
+
+#[test]
+fn literal_materialization_does_not_depend_on_standard_library_method_names() {
+    let renamed = concat!(
+        "public class Str {\n",
+        "  private storage: shared u8[];\n",
+        "  private start: u64;\n",
+        "  private length: u64;\n",
+        "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
+        "  fn renamed_observer() -> u64 { return self.length; }\n",
+        "  private static fn renamed_helper(ref source: Str) -> Str { return Str(copy source); }\n",
+        "}\n",
+    );
+    let resolved = resolve_modules(
+        "app",
+        &[
+            (
+                "app.ska",
+                "from std::str import Str;\nfn main() -> i64 { var value: Str = \"names are ordinary\"; return 0; }\n",
+            ),
+            ("std/str.ska", renamed),
+        ],
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "renamed ordinary methods must not affect the language item: {:?}",
+        resolved.diagnostics
+    );
+    assert!(type_check(&resolved.program).diagnostics.is_empty());
 }
 
 #[test]

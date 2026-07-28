@@ -1,0 +1,60 @@
+from std::str import Str;
+
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+
+fn observe(value: Str) -> unit {
+    ska_rt_println_u64(value.len());
+    ska_rt_println_u8(value.byte(0u));
+    return;
+}
+
+fn concatenated_byte(left: Str, right: Str, index: u64) -> u8 {
+    var combined: Str = left.concat(right);
+    return combined.byte(index);
+}
+
+fn main() -> i64 {
+    var literal: Str = "a\0\x80\xff";
+    observe(literal);
+    ska_rt_println_u8(literal.byte(1u));
+    ska_rt_println_u8(literal.byte(2u));
+    ska_rt_println_u8(literal.byte(3u));
+
+    var copied: Str = literal;
+    var reassigned: Str = "";
+    reassigned = copied;
+    observe(reassigned);
+
+    var middle: Str = literal.slice(1u, 2u);
+    ska_rt_println_u64(middle.len());
+    ska_rt_println_u8(middle.byte(0u));
+    ska_rt_println_u8(middle.byte(1u));
+
+    var caller: u8[] = u8[](2u);
+    caller[0] = 65u8;
+    caller[1] = 66u8;
+    var frozen: Str = Str.from_bytes(caller);
+    caller[0] = 90u8;
+    observe(frozen);
+
+    var independent: u8[] = middle.to_bytes();
+    independent[0] = 33u8;
+    ska_rt_println_u8(middle.byte(0u));
+    ska_rt_println_u8(independent[0]);
+
+    var combined: Str = frozen.concat(middle);
+    ska_rt_println_u64(combined.len());
+    ska_rt_println_u8(combined.byte(0u));
+    ska_rt_println_u8(combined.byte(1u));
+    ska_rt_println_u8(combined.byte(2u));
+    ska_rt_println_u8(combined.byte(3u));
+
+    var temporary: u8 = concatenated_byte(
+        Str.from_bytes(caller),
+        literal.slice(2u, 1u),
+        2u
+    );
+    ska_rt_println_u8(temporary);
+    return 0;
+}
