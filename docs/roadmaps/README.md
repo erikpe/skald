@@ -10,17 +10,23 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [Private Members and Static Methods Roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
+  — **planned; receiver-model groundwork is next**. Implements exact
+  declaring-class privacy, public and private receiverless static methods,
+  verified receiver presence, complete x86-64 execution, and the documentation
+  confirmation that clears the string-design freeze gate. It builds on the
+  completed module, polymorphism, ownership, optional-value, and array
+  contracts. Source-visible static fields remain separate future work.
 
 ## Design proposals
 
 - [String Types Design Proposal](STRINGS_DESIGN_PROPOSAL.md) — **proposed
   design complete**. Defines raw-byte `std::str::Str` values, compiler-emitted
   immortal shared-array literal backing, the compiler/standard-library
-  boundary, and the freeze criteria. Next action: implement private fields,
-  private methods, and static methods, then confirm and promote the proposal
-  to frozen language and compiler contracts. No other feature is a freeze
-  dependency.
+  boundary, and the freeze criteria. Next action: complete the
+  [private-members and static-methods roadmap](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md),
+  whose final task confirms and promotes this proposal to frozen language and
+  compiler contracts. No other feature is a freeze dependency.
 
 ## Pending discoveries
 
