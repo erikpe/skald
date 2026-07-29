@@ -94,7 +94,7 @@ pub(super) fn validate_string_language_item(
 
     let expected = [
         ("_storage", ExpectedFieldType::SharedU8Array),
-        ("_start", ExpectedFieldType::U64),
+        ("_start", ExpectedFieldType::I64),
         ("_length", ExpectedFieldType::U64),
     ];
     for (index, (name, expected_type)) in expected.into_iter().enumerate() {
@@ -206,12 +206,14 @@ pub(super) fn validate_string_language_item(
 #[derive(Clone, Copy)]
 enum ExpectedFieldType {
     SharedU8Array,
+    I64,
     U64,
 }
 
 impl ExpectedFieldType {
     fn matches(self, actual: ResolvedTypeKind, arrays: &ArrayTypeInterner) -> bool {
         match self {
+            Self::I64 => actual == ResolvedTypeKind::I64,
             Self::U64 => actual == ResolvedTypeKind::U64,
             Self::SharedU8Array => {
                 let ResolvedTypeKind::Shared(ResolvedSharedTarget::Array(array)) = actual else {
@@ -227,6 +229,7 @@ impl ExpectedFieldType {
     const fn name(self) -> &'static str {
         match self {
             Self::SharedU8Array => "shared u8[]",
+            Self::I64 => "i64",
             Self::U64 => "u64",
         }
     }

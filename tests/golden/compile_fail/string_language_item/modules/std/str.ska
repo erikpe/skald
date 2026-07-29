@@ -1,11 +1,11 @@
 public class Str {
     private _storage: shared u64[];
-    private _start: u64;
+    private _start: i64;
     private _length: u64;
 
     init() {
         self._storage = new u64[]();
-        self._start = 0u;
+        self._start = 0;
         self._length = 0u;
     }
 }

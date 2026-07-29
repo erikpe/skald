@@ -9,11 +9,11 @@ use crate::{
 const VALID_STR: &str = concat!(
     "public class Str {\n",
     "  private _storage: shared u8[];\n",
-    "  private _start: u64;\n",
+    "  private _start: i64;\n",
     "  private _length: u64;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
-    "    self._start = 0u;\n",
+    "    self._start = 0;\n",
     "    self._length = 0u;\n",
     "  }\n",
     "}\n",
@@ -172,7 +172,7 @@ fn rejects_malformed_literal_declarations_one_invariant_at_a_time() {
         let item = program.string_language_item.as_mut().unwrap();
         std::mem::swap(&mut item.start_field, &mut item.length_field);
     });
-    assert!(wrong_fields.contains("fields must be the exact shared u8[]/u64/u64 descriptor"));
+    assert!(wrong_fields.contains("fields must be the exact shared u8[]/i64/u64 descriptor"));
 
     let wrong_element = errors_after(|program| {
         let array = program.string_language_item.unwrap().storage_array;

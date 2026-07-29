@@ -9,11 +9,11 @@ use crate::{
 const VALID_STR: &str = concat!(
     "public class Str {\n",
     "  private _storage: shared u8[];\n",
-    "  private _start: u64;\n",
+    "  private _start: i64;\n",
     "  private _length: u64;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
-    "    self._start = 0u;\n",
+    "    self._start = 0;\n",
     "    self._length = 0u;\n",
     "  }\n",
     "}\n",
@@ -74,6 +74,8 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
     assert!(class.initializers[0].parameters.is_empty());
     assert_eq!(class.initializers[1].parameters.len(), 3);
     assert!(class.fields.iter().all(|field| field.name.starts_with('_')));
+    assert_eq!(class.fields[1].type_syntax.kind, ResolvedTypeKind::I64);
+    assert_eq!(class.fields[2].type_syntax.kind, ResolvedTypeKind::U64);
     assert!(class
         .methods
         .iter()
@@ -136,9 +138,9 @@ fn literal_materialization_does_not_select_private_initializers_or_method_names(
     let renamed = concat!(
         "public class Str {\n",
         "  private _storage: shared u8[];\n",
-        "  private _start: u64;\n",
+        "  private _start: i64;\n",
         "  private _length: u64;\n",
-        "  private init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; }\n",
+        "  private init() { self._storage = new u8[](); self._start = 0; self._length = 0u; }\n",
         "  fn renamed_observer() -> u64 { return self._length; }\n",
         "  private static fn _renamed_helper(ref source: Str) -> Str { return Str(copy source); }\n",
         "}\n",
@@ -173,7 +175,7 @@ fn canonical_descriptor_initializer_is_not_source_accessible() {
                     "fn main() -> i64 {\n",
                     "  var empty: Str = Str();\n",
                     "  var storage: shared u8[] = new u8[]();\n",
-                    "  var forbidden: Str = Str(storage, 0u, 0u);\n",
+                    "  var forbidden: Str = Str(storage, 0, 0u);\n",
                     "  return 0;\n",
                     "}\n",
                 ),
@@ -257,59 +259,59 @@ fn rejects_every_structural_language_item_mismatch_before_hir() {
         ("wrong kind", "public fn Str() -> unit {}\n"),
         (
             "private class",
-            "class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "base class",
-            "class Base { init() {} }\npublic class Str extends Base { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { super(); self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "class Base { init() {} }\npublic class Str extends Base { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { super(); self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "missing field",
-            "public class Str { private _storage: shared u8[]; private _start: u64; init() { self._storage = new u8[](); self._start = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; init() { self._storage = new u8[](); self._start = 0; } }\n",
         ),
         (
             "extra field",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; private _extra: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; self._extra = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; private _extra: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; self._extra = 0u; } }\n",
         ),
         (
             "reordered field",
-            "public class Str { private _start: u64; private _storage: shared u8[]; private _length: u64; init() { self._start = 0u; self._storage = new u8[](); self._length = 0u; } }\n",
+            "public class Str { private _start: i64; private _storage: shared u8[]; private _length: u64; init() { self._start = 0; self._storage = new u8[](); self._length = 0u; } }\n",
         ),
         (
             "public storage field",
-            "public class Str { _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "public class Str { _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "public start field",
-            "public class Str { private _storage: shared u8[]; _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "public length field",
-            "public class Str { private _storage: shared u8[]; private _start: u64; _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "wrong storage type",
-            "public class Str { private _storage: shared u64[]; private _start: u64; private _length: u64; init() { self._storage = new u64[](); self._start = 0u; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u64[]; private _start: i64; private _length: u64; init() { self._storage = new u64[](); self._start = 0; self._length = 0u; } }\n",
         ),
         (
             "wrong start type",
-            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } }\n",
         ),
         (
             "wrong length type",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u8; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u8; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u8; init() { self._storage = new u8[](); self._start = 0; self._length = 0u8; } }\n",
         ),
         (
             "copy constructor",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } copy(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } copy(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
         ),
         (
             "copy assignment",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } assign(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } assign(ref other: Str) { self._storage = other._storage; self._start = other._start; self._length = other._length; } }\n",
         ),
         (
             "destructor",
-            "public class Str { private _storage: shared u8[]; private _start: u64; private _length: u64; init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; } destroy {} }\n",
+            "public class Str { private _storage: shared u8[]; private _start: i64; private _length: u64; init() { self._storage = new u8[](); self._start = 0; self._length = 0u; } destroy {} }\n",
         ),
     ];
 

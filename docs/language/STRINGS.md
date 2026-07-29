@@ -38,7 +38,7 @@ three direct fields, in order, and no additional direct fields:
 ```ska
 public class Str {
     private _storage: shared u8[];
-    private _start: u64;
+    private _start: i64;
     private _length: u64;
 
     // At least one safe ordinary initializer and the library's methods.
@@ -54,13 +54,16 @@ the owner.
 Every valid descriptor satisfies:
 
 ```text
-start <= storage.len()
-length <= storage.len() - start
+0 <= start
+(u64) start <= storage.len()
+length <= storage.len() - (u64) start
 ```
 
-The standard library is trusted to preserve this invariant. Public source
-cannot select the private fields. Interfaces and ordinary instance or static
-methods do not alter the representation and remain permitted.
+The signed start uses the same position type as array and string indices while
+the length remains an unsigned count. The standard library is trusted to
+preserve the non-negative, in-bounds descriptor invariant. Public source cannot
+select the private fields. Interfaces and ordinary instance or static methods
+do not alter the representation and remain permitted.
 
 The source contract does not freeze physical size, alignment, field offsets,
 shared-header layout, or literal-data placement.

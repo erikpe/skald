@@ -9,11 +9,11 @@ use crate::{
 const VALID_STR: &str = concat!(
     "public class Str {\n",
     "  private _storage: shared u8[];\n",
-    "  private _start: u64;\n",
+    "  private _start: i64;\n",
     "  private _length: u64;\n",
     "  init() {\n",
     "    self._storage = new u8[]();\n",
-    "    self._start = 0u;\n",
+    "    self._start = 0;\n",
     "    self._length = 0u;\n",
     "  }\n",
     "}\n",

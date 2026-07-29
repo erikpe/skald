@@ -28,7 +28,7 @@ The selected declaration must be:
 - a public concrete class declared directly as `Str` in module `std::str`;
 - without a direct base;
 - composed of exactly three direct private fields, in order:
-  `_storage: shared u8[]`, `_start: u64`, and `_length: u64`;
+  `_storage: shared u8[]`, `_start: i64`, and `_length: u64`;
 - without an explicit copy constructor, copy assignment, or destructor; and
 - eligible for ordinary synthesized field-wise lifecycle.
 
@@ -199,10 +199,11 @@ Checked public range APIs accept exact `i64` positions and implement the same
 one-time negative normalization as arrays, relative to the descriptor length.
 Every backing-array length is at most `i64::MAX`, so converting the descriptor
 length to `i64` before adding a negative bound cannot overflow, including for
-`i64::MIN`. Only a checked non-negative normalized position is converted to
-`u64` and combined with the descriptor start. The descriptor invariant keeps
-the resulting absolute position within the backing. No checked cast or
-string-specific numeric intrinsic is required.
+`i64::MIN`. The checked non-negative normalized position and the descriptor
+start are both `i64`, so deriving an absolute backing position needs no numeric
+conversion. The descriptor invariant keeps the resulting absolute position
+within the backing. No checked cast or string-specific numeric intrinsic is
+required.
 
 Dynamic strings use ordinary shared-array allocation and the existing generic
 allocator/free boundary. No public runtime symbol, runtime ABI version, native

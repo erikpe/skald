@@ -31,7 +31,7 @@ impl Verifier<'_> {
                 item.storage_field,
                 MirType::Shared(MirSharedTarget::Array(item.storage_array)),
             ),
-            (item.start_field, MirType::U64),
+            (item.start_field, MirType::I64),
             (item.length_field, MirType::U64),
         ];
         if class.fields.len() != expected.len()
@@ -42,7 +42,7 @@ impl Verifier<'_> {
                 .any(|(field, (id, ty))| field.id != id || field.ty != ty)
         {
             self.program_error(
-                "string language-item fields must be the exact shared u8[]/u64/u64 descriptor",
+                "string language-item fields must be the exact shared u8[]/i64/u64 descriptor",
             );
         }
         if self

@@ -91,9 +91,9 @@ fn literal_program_reaches_target_emission() {
         concat!(
             "public class Str {\n",
             "  private _storage: shared u8[];\n",
-            "  private _start: u64;\n",
+            "  private _start: i64;\n",
             "  private _length: u64;\n",
-            "  init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; }\n",
+            "  init() { self._storage = new u8[](); self._start = 0; self._length = 0u; }\n",
             "}\n",
         ),
     )

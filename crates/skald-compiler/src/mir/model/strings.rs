@@ -83,7 +83,7 @@ pub struct MirStringInitialize {
     pub storage_field: FieldId,
     pub start_field: FieldId,
     pub length_field: FieldId,
-    pub start: u64,
+    pub start: i64,
     pub length: u64,
     pub span: Span,
 }

@@ -31,7 +31,8 @@ impl InstructionSelector<'_, '_> {
         self.store_descriptor_word(initialize.storage_field, Register::Rax);
 
         self.output.push(Instruction::MoveImmediate64 {
-            bits: initialize.start,
+            bits: u64::try_from(initialize.start)
+                .expect("verified literal string start must be nonnegative"),
             destination: Register::Rax,
         });
         self.store_descriptor_word(initialize.start_field, Register::Rax);

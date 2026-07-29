@@ -1,15 +1,15 @@
 public class Str {
     private _storage: shared u8[];
-    private _start: u64;
+    private _start: i64;
     private _length: u64;
 
     init() {
         self._storage = new u8[]();
-        self._start = 0u;
+        self._start = 0;
         self._length = 0u;
     }
 
-    private init(storage: shared u8[], start: u64, length: u64) {
+    private init(storage: shared u8[], start: i64, length: u64) {
         self._storage = storage;
         self._start = start;
         self._length = length;
@@ -20,10 +20,13 @@ public class Str {
     }
 
     fn byte(index: i64) -> u8 {
-        var normalized: i64 = self._normalize_position(index);
-        if (normalized >= 0) {
-            if ((u64) normalized < self._length) {
-                return self._storage->[(i64) self._start + normalized];
+        var normalized_index: i64 = index;
+        if (normalized_index < 0) {
+            normalized_index = (i64) self._length + normalized_index;
+        }
+        if (normalized_index >= 0) {
+            if ((u64) normalized_index < self._length) {
+                return self._storage->[self._start + normalized_index];
             }
         }
         Str._fail_bounds_check();
@@ -31,14 +34,20 @@ public class Str {
     }
 
     fn slice(start: i64, end: i64) -> Str {
-        var normalized_start: i64 = self._normalize_position(start);
-        var normalized_end: i64 = self._normalize_position(end);
+        var normalized_start: i64 = start;
+        if (normalized_start < 0) {
+            normalized_start = normalized_start + (i64) self._length;
+        }
+        var normalized_end: i64 = end;
+        if (normalized_end < 0) {
+            normalized_end = normalized_end + (i64) self._length;
+        }
         if (normalized_start >= 0) {
             if (normalized_start <= normalized_end) {
                 if ((u64) normalized_end <= self._length) {
                     return Str(
                         self._storage,
-                        self._start + (u64) normalized_start,
+                        self._start + normalized_start,
                         (u64) (normalized_end - normalized_start)
                     );
                 }
@@ -49,36 +58,22 @@ public class Str {
     }
 
     static fn from_bytes(ref bytes: u8[]) -> Str {
-        return Str(new u8[](copy bytes), 0u, bytes.len());
+        return Str(new u8[](copy bytes), 0, bytes.len());
     }
 
     fn to_bytes() -> u8[] {
-        var result: u8[] = u8[](self._length);
-        var source_start: i64 = (i64) self._start;
-        var source_end: i64 = (i64) (self._start + self._length);
-        result[:] = self._storage->[source_start:source_end];
-        return result;
+        return self._storage->[self._start:(self._start + (i64) self._length)];
     }
 
     fn concat(ref other: Str) -> Str {
         var combined_length: u64 = self._length + other._length;
         var result: shared u8[] = new u8[](combined_length);
-        var middle: i64 = (i64) self._length;
-        var end: i64 = (i64) combined_length;
-        var self_start: i64 = (i64) self._start;
-        var self_end: i64 = (i64) (self._start + self._length);
-        var other_start: i64 = (i64) other._start;
-        var other_end: i64 = (i64) (other._start + other._length);
-        result->[:middle] = self._storage->[self_start:self_end];
-        result->[middle:end] = other._storage->[other_start:other_end];
-        return Str(result, 0u, combined_length);
-    }
 
-    private fn _normalize_position(position: i64) -> i64 {
-        if (position < 0) {
-            return (i64) self._length + position;
-        }
-        return position;
+        var middle: i64 = (i64) self._length;
+        result->[:middle] = self._storage->[self._start:(self._start + (i64) self._length)];
+        result->[middle:] = other._storage->[other._start:(other._start + (i64) other._length)];
+
+        return Str(result, 0, combined_length);
     }
 
     private static fn _fail_bounds_check() -> unit {
