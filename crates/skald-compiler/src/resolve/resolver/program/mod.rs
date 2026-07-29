@@ -15,6 +15,7 @@ mod class;
 mod class_body;
 mod hierarchy;
 mod interface;
+mod panic_intrinsic;
 mod resolver;
 mod string_language_item;
 mod virtuals;
@@ -28,6 +29,7 @@ use class::{collect_class, ClassWorkItem};
 use class_body::resolve_class_bodies;
 use hierarchy::build_class_hierarchy;
 use interface::{collect_interface_declarations, resolve_interface_claims};
+use panic_intrinsic::validate_panic_intrinsic;
 use resolver::{
     resolve_parameter_binding_mode, resolve_parameters, resolve_result_type, resolved_visibility,
     ProgramResolver,

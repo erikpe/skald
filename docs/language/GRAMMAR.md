@@ -98,7 +98,9 @@ and forms either an absent expression or the target of a presence test.
 types and inside a cast target. `new` is contextual before a class allocation
 or an array construction. Both remain ordinary identifiers elsewhere.
 `import`, `from`, and `as` are contextual in file-leading import declarations;
-`public` is contextual before a top-level declaration.
+`public` is contextual before a top-level declaration. `intrinsic` is
+contextual only before `fn` in a top-level intrinsic-function declaration.
+All four spellings remain ordinary identifiers outside those positions.
 
 ## Punctuation
 
@@ -164,6 +166,7 @@ declaration-path              = identifier {"::" identifier}
 
 top-level-declaration         = ["public"] (
                                   function-definition
+                                | intrinsic-function-declaration
                                 | external-function-declaration
                                 | class-declaration
                                 | interface-declaration
@@ -173,6 +176,9 @@ function-definition           = "fn" identifier parameter-list
                                 "->" result-type block
 
 external-function-declaration = "extern" "fn" identifier parameter-list
+                                "->" result-type ";"
+
+intrinsic-function-declaration = "intrinsic" "fn" identifier parameter-list
                                 "->" result-type ";"
 
 parameter-list                = "(" [parameter {"," parameter}] ")"

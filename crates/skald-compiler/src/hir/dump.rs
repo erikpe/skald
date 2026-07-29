@@ -472,6 +472,9 @@ impl HirDumper {
             HirFunctionLinkage::External { link } => {
                 let _ = write!(self.output, " external {link}");
             }
+            HirFunctionLinkage::Intrinsic { intrinsic } => {
+                let _ = write!(self.output, " intrinsic {intrinsic:?}");
+            }
         }
         write_span(&mut self.output, declaration.span);
         self.output.push('\n');

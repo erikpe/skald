@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 and P1 are complete, and P2 is next.
+Status: in progress; P0 through P2 are complete, and P3 is next.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -83,7 +83,7 @@ duplicate its exact bytes.
 
 - [x] P0 — Freeze panic and unrecoverable-failure contracts
 - [x] P1 — Establish runtime reporting and stderr observability
-- [ ] P2 — Introduce the canonical intrinsic declaration
+- [x] P2 — Introduce the canonical intrinsic declaration
 - [ ] P3 — Execute explicit source panic end to end
 - [ ] P4 — Report target-independent static failures
 - [ ] P5 — Separate ownership overflow from compiler-defect traps
@@ -169,29 +169,29 @@ compiler-generated path calls the reporter yet.
 semantic identity without widening the foreign ABI or recognizing a source
 name in lower phases.
 
-- [ ] Add contextual `intrinsic fn` parsing as a bodyless top-level function
+- [x] Add contextual `intrinsic fn` parsing as a bodyless top-level function
       declaration with ordinary visibility, name, parameter, result, module,
       and source-span information.
-- [ ] Preserve intrinsic declarations distinctly from Skald definitions and
+- [x] Preserve intrinsic declarations distinctly from Skald definitions and
       external declarations through AST and resolved IR; they have neither a
       Skald body nor an external link symbol.
-- [ ] Add `std/std/error.ska` with the exact public
+- [x] Add `std/std/error.ska` with the exact public
       `panic(message: std::str::Str) -> unit` intrinsic declaration and an
       ordinary explicit dependency on `std::str`.
-- [ ] Resolve direct, selective-imported, aliased-module, and fully qualified
+- [x] Resolve direct, selective-imported, aliased-module, and fully qualified
       uses to one stable function and intrinsic identity.
-- [ ] Validate the canonical module, declaration name, public visibility,
+- [x] Validate the canonical module, declaration name, public visibility,
       single by-value exact `Str` parameter, `unit` result, and absence of a
       body or external linkage.
-- [ ] Reject intrinsic declarations at every unrecognized path and diagnose
+- [x] Reject intrinsic declarations at every unrecognized path and diagnose
       every malformed canonical signature before HIR.
-- [ ] Prevent an intrinsic declaration from serving as `main`, a method,
+- [x] Prevent an intrinsic declaration from serving as `main`, a method,
       initializer, lifecycle member, interface requirement, override, or
       external ABI declaration.
-- [ ] Retain a focused temporary diagnostic for a valid panic call until
+- [x] Retain a focused temporary diagnostic for a valid panic call until
       executable lowering lands; do not allow accepted source to reach
       incomplete HIR or MIR.
-- [ ] Update implemented grammar, module/interoperation documentation, phase
+- [x] Update implemented grammar, module/interoperation documentation, phase
       dumps, and debugging guidance for the declaration shape without claiming
       executable panic support.
 

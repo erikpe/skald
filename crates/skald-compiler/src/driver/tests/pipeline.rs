@@ -127,6 +127,58 @@ fn request_pipeline_accepts_a_positional_entry_outside_all_roots() {
 }
 
 #[test]
+fn replacement_standard_library_validates_the_canonical_panic_intrinsic() {
+    let directory = TemporaryDirectory::new("request-panic-intrinsic").unwrap();
+    let root = directory.join("modules");
+    let standard_library = directory.join("replacement-std");
+    fs::create_dir_all(&root).unwrap();
+    fs::create_dir_all(standard_library.join("std")).unwrap();
+    fs::write(
+        root.join("app.ska"),
+        "import std::error;\nfn main() -> i64 { return 0; }\n",
+    )
+    .unwrap();
+    fs::write(
+        standard_library.join("std/error.ska"),
+        concat!(
+            "import std::str;\n",
+            "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
+        ),
+    )
+    .unwrap();
+    fs::write(
+        standard_library.join("std/str.ska"),
+        "public class Str { init() {} }\n",
+    )
+    .unwrap();
+    let request = CompilationRequest::new(
+        EntrySelector::Module("app".parse().unwrap()),
+        vec![root],
+        StandardLibrarySelection::Replacement(standard_library.clone()),
+        Target::X86_64SysV,
+        ArtifactOptions::new(ArtifactKind::Assembly, None),
+        CompilationEnvironment::new(directory.path().to_owned(), directory.join("unused-std")),
+    );
+
+    let artifact = compile_request_to_assembly(&request).unwrap();
+    assert!(artifact.report.diagnostics.is_empty());
+
+    fs::write(
+        standard_library.join("std/error.ska"),
+        "public fn panic(message: i64) -> unit {}\n",
+    )
+    .unwrap();
+    let CompilationError::Diagnostics(report) = compile_request_to_assembly(&request).unwrap_err()
+    else {
+        panic!("expected canonical intrinsic diagnostics");
+    };
+    assert!(report
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == crate::resolve::INVALID_INTRINSIC_DECLARATION));
+}
+
+#[test]
 fn request_pipeline_preserves_configuration_and_source_failure_categories() {
     let directory = TemporaryDirectory::new("request-failures").unwrap();
     let invalid_root = directory.join("missing-root");

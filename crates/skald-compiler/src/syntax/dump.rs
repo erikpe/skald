@@ -22,6 +22,9 @@ pub fn dump_ast(ast: &CompilationUnit) -> String {
                 TopLevelDeclaration::ExternalFunction(function) => {
                     dumper.external_function(function)
                 }
+                TopLevelDeclaration::IntrinsicFunction(function) => {
+                    dumper.intrinsic_function(function)
+                }
                 TopLevelDeclaration::Class(class) => dumper.class(class),
                 TopLevelDeclaration::Interface(interface) => dumper.interface(interface),
             }
@@ -241,6 +244,16 @@ impl AstDumper {
         self.line("ExternalFunction", function.span);
         self.indented(|dumper| {
             dumper.visibility(function.visibility);
+            dumper.named("Name", &function.name.text, function.name.span);
+            dumper.parameters_and_return(&function.parameters, &function.return_type);
+        });
+    }
+
+    fn intrinsic_function(&mut self, function: &IntrinsicFunctionDecl) {
+        self.line("IntrinsicFunction", function.span);
+        self.indented(|dumper| {
+            dumper.visibility(function.visibility);
+            dumper.line("Intrinsic", function.intrinsic_span);
             dumper.named("Name", &function.name.text, function.name.span);
             dumper.parameters_and_return(&function.parameters, &function.return_type);
         });

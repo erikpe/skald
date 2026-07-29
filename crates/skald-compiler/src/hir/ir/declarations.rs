@@ -8,6 +8,7 @@ use crate::{
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
         ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
+    intrinsic::Intrinsic,
     module::ProgramModuleTable,
     source::Span,
 };
@@ -526,6 +527,7 @@ impl HirFunctionDeclaration {
 pub enum HirFunctionLinkage {
     Internal,
     External { link: ExternalLinkId },
+    Intrinsic { intrinsic: Intrinsic },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

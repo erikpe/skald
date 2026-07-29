@@ -327,6 +327,9 @@ fn dump_declaration(output: &mut String, declaration: &MirFunctionDeclaration) {
         MirFunctionLinkage::External { link } => {
             let _ = write!(output, " external {link}");
         }
+        MirFunctionLinkage::Intrinsic { intrinsic } => {
+            let _ = write!(output, " intrinsic {intrinsic:?}");
+        }
     }
     write_span(output, declaration.span);
     output.push('\n');

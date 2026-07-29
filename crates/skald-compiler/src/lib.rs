@@ -14,6 +14,7 @@ pub mod external;
 pub mod hir;
 mod id_table;
 pub mod identity;
+pub mod intrinsic;
 pub mod lexer;
 mod lexical_policy;
 pub mod literal;

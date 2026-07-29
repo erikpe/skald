@@ -13,7 +13,8 @@ use crate::{
 
 use crate::typeck::function::MemberBodyKind;
 use crate::typeck::program::{
-    lower_type, INVALID_INITIALIZER_BODY, READ_ONLY_RECEIVER, WRONG_ARGUMENT_COUNT,
+    lower_type, INTRINSIC_NOT_EXECUTABLE, INVALID_INITIALIZER_BODY, READ_ONLY_RECEIVER,
+    WRONG_ARGUMENT_COUNT,
 };
 
 impl CallableChecker<'_, '_> {
@@ -26,6 +27,23 @@ impl CallableChecker<'_, '_> {
             .declarations
             .get(call.function)
             .expect("resolved direct-call target must exist");
+        if matches!(
+            target.linkage,
+            crate::resolve::ResolvedFunctionLinkage::Intrinsic { .. }
+        ) {
+            self.diagnostics.push(
+                crate::diagnostics::Diagnostic::error(
+                    INTRINSIC_NOT_EXECUTABLE,
+                    "`std::error::panic` is declared but not executable yet",
+                )
+                .with_primary_label(
+                    call.span,
+                    "panic lowering is deferred to the next roadmap phase",
+                )
+                .with_note("the intrinsic declaration and name resolution are implemented"),
+            );
+            return None;
+        }
         let arguments = self.check_arguments(
             &call.arguments,
             &target.parameters,

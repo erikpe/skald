@@ -134,6 +134,9 @@ impl<'source> Parser<'source> {
             let declaration = if self.at(TokenKind::Fn) {
                 self.parse_function(visibility)
                     .map(TopLevelDeclaration::Function)
+            } else if self.at_contextual("intrinsic") {
+                self.parse_intrinsic_function(visibility)
+                    .map(TopLevelDeclaration::IntrinsicFunction)
             } else if self.at(TokenKind::Extern) {
                 self.parse_external_function(visibility)
                     .map(TopLevelDeclaration::ExternalFunction)
@@ -147,7 +150,7 @@ impl<'source> Parser<'source> {
                     INVALID_VISIBILITY,
                     "`public` applies only to top-level declarations",
                     self.peek().span,
-                    "expected `fn`, `extern fn`, `class`, or `interface`",
+                    "expected `fn`, `intrinsic fn`, `extern fn`, `class`, or `interface`",
                 );
                 None
             } else if self.at_any(&[TokenKind::Mut, TokenKind::Ref]) {
@@ -155,7 +158,7 @@ impl<'source> Parser<'source> {
                     EXPECTED_DECLARATION,
                     "alias binding modifiers are valid only on parameters",
                     self.peek().span,
-                    "expected a top-level `fn`, `extern fn`, or `class` declaration",
+                    "expected a top-level `fn`, `intrinsic fn`, `extern fn`, or `class` declaration",
                 );
                 None
             } else {
@@ -163,7 +166,7 @@ impl<'source> Parser<'source> {
                     EXPECTED_DECLARATION,
                     "expected a top-level declaration",
                     self.peek().span,
-                    "expected `fn`, `extern fn`, `class`, or `interface` at file scope",
+                    "expected `fn`, `intrinsic fn`, `extern fn`, `class`, or `interface` at file scope",
                 );
                 None
             };

@@ -178,7 +178,7 @@ impl<'mir> Verifier<'mir> {
             if !matches!(declaration.linkage, MirFunctionLinkage::Internal) {
                 self.function_error(
                     definition.function,
-                    "external function must not have a Skald definition",
+                    "non-internal function must not have a Skald definition",
                 );
             }
             self.verify_definition(
@@ -197,6 +197,9 @@ impl<'mir> Verifier<'mir> {
                     self.function_error(declaration.id, "internal function has no definition");
                 }
                 (MirFunctionLinkage::External { .. }, Some(_)) => {
+                    // Reported while walking definition slots above.
+                }
+                (MirFunctionLinkage::Intrinsic { .. }, Some(_)) => {
                     // Reported while walking definition slots above.
                 }
                 _ => {}
@@ -341,6 +344,15 @@ impl<'mir> Verifier<'mir> {
                         );
                     }
                 }
+                MirFunctionLinkage::Intrinsic { .. }
+                    if linked_declarations.contains(&declaration.id) =>
+                {
+                    self.function_error(
+                        declaration.id,
+                        "intrinsic function must not occur in an external link",
+                    );
+                }
+                MirFunctionLinkage::Intrinsic { .. } => {}
                 MirFunctionLinkage::Internal => {}
             }
         }

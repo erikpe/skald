@@ -8,4 +8,4 @@ error[PAR001]: expected a top-level declaration
  --> tests/golden/compile_fail/module_import_trailing_comma.ska:1:30
    |
 1 | from dependency import value,;
-   |                              ^ expected `fn`, `extern fn`, `class`, or `interface` at file scope
+   |                              ^ expected `fn`, `intrinsic fn`, `extern fn`, `class`, or `interface` at file scope

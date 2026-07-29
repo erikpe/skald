@@ -43,6 +43,7 @@ mod expressions;
 mod external_links;
 mod integer_casts;
 mod interfaces;
+mod intrinsics;
 mod modules;
 mod objects;
 mod optional_values;

@@ -448,6 +448,9 @@ fn lower_declaration(declaration: &HirFunctionDeclaration) -> MirFunctionDeclara
         linkage: match &declaration.linkage {
             HirFunctionLinkage::Internal => MirFunctionLinkage::Internal,
             HirFunctionLinkage::External { link } => MirFunctionLinkage::External { link: *link },
+            HirFunctionLinkage::Intrinsic { intrinsic } => MirFunctionLinkage::Intrinsic {
+                intrinsic: *intrinsic,
+            },
         },
         span: declaration.span,
     }

@@ -6,6 +6,12 @@ safe byte-copying construction, checked observation and slicing, independent
 array conversion, and concatenation. Current output operations remain
 bootstrap C runtime functions rather than the final I/O API.
 
+The `std::error` module declares the compiler-known
+`panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
+explicitly. The declaration and ordinary module lookup are implemented;
+calling it currently produces a compile-time diagnostic until executable
+panic lowering lands. It is not an external function or an exception API.
+
 Named private standard-library members begin with `_` by convention, including
 private fields and private instance or static methods. Declarations without a
 member name, such as `private init(...)`, are unchanged. Parameters and local

@@ -8,6 +8,7 @@ use crate::{
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, LocalId, MethodId,
         ModuleId, ParameterId, VirtualFamilyId, VirtualSlotId,
     },
+    intrinsic::Intrinsic,
     module::ProgramModuleTable,
     source::Span,
 };
@@ -528,6 +529,7 @@ impl ResolvedFunctionDeclaration {
 pub enum ResolvedFunctionLinkage {
     Internal,
     External { link: ExternalLinkId },
+    Intrinsic { intrinsic: Intrinsic },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

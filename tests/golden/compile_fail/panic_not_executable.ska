@@ -1,0 +1,6 @@
+from std::error import panic;
+
+fn main() -> i64 {
+    panic("not yet");
+    return 0;
+}

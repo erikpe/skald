@@ -20,6 +20,9 @@ pub(super) fn callable(program: &MirProgram, callable: CallableId) -> String {
                     .expect("verified external function must reference a link entry")
                     .symbol
                     .clone(),
+                MirFunctionLinkage::Intrinsic { .. } => {
+                    unreachable!("verified MIR must not call an intrinsic declaration")
+                }
             }
         }
         CallableId::Initializer(initializer) => format!(

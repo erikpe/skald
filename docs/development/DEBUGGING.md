@@ -48,6 +48,14 @@ later products are not created after diagnostics from an earlier source phase.
 For successful typed HIR, inspect MIR before assembly so semantic lowering and
 target realization remain distinguishable.
 
+For `std::error::panic`, the AST dump prints `IntrinsicFunction` and the
+resolved dump prints `intrinsic Panic` beside its stable `FunctionId`.
+Direct, selective, renamed-selective, aliased-module, and qualified uses must
+all select that same ID. An unused declaration may appear as intrinsic
+metadata in HIR and MIR without a definition or external link. An attempted
+call should stop at `TYP041`; executable panic statements and reporter calls
+must not appear before the next roadmap phase.
+
 For primitive integer comparisons, AST and resolved dumps retain the source
 predicate, HIR records the exact integer operand type, and MIR prints an
 operation such as `lt.u64` with a `bool` result. Signed versus unsigned target

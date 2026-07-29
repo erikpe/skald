@@ -122,6 +122,38 @@ impl Parser<'_> {
         })
     }
 
+    pub(super) fn parse_intrinsic_function(
+        &mut self,
+        visibility: Visibility,
+    ) -> Option<IntrinsicFunctionDecl> {
+        let intrinsic_token = self.advance();
+        self.expect(TokenKind::Fn, "`fn` after `intrinsic`")?;
+        let name = self.parse_name("expected a function name after `intrinsic fn`");
+        let parameters = self.parse_parameter_list();
+        self.expect(TokenKind::Arrow, "`->` after the parameter list");
+        let return_type = self.parse_type(TypeContext::Result, "expected a return type after `->`");
+        let semicolon = self.expect(
+            TokenKind::Semicolon,
+            "`;` after the intrinsic function declaration",
+        );
+
+        let (name, parameters, return_type) = match (name, parameters, return_type) {
+            (Some(name), Some(parameters), Some(return_type)) => (name, parameters, return_type),
+            _ => return None,
+        };
+        let end_span = semicolon
+            .map(|token| token.span)
+            .unwrap_or(return_type.span);
+        Some(IntrinsicFunctionDecl {
+            visibility,
+            intrinsic_span: intrinsic_token.span,
+            name,
+            parameters,
+            return_type,
+            span: self.cover(visibility.start_span(intrinsic_token.span), end_span),
+        })
+    }
+
     pub(super) fn parse_parameter_list(&mut self) -> Option<Vec<Parameter>> {
         self.expect(TokenKind::LeftParen, "`(` after the function name");
         let mut parameters = Vec::new();

@@ -33,6 +33,7 @@ mod dumps;
 mod expressions;
 mod integer_casts;
 mod interfaces;
+mod intrinsics;
 mod modules;
 mod objects;
 mod optional_values;

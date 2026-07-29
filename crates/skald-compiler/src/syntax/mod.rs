@@ -17,14 +17,14 @@ pub use ast::{
     CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm, ConditionalStatement,
     CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression, ExpressionStatement,
     ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr,
-    IdentifierExpr, ImportDeclaration, InitializerDecl, IntegerCastExpr, LocalDecl,
-    MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl, MethodModifier,
-    ModuleImport, Name, NameComponent, NameComponentRef, NameComponents, NameQualification,
-    NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
-    OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind,
-    PrimitiveIntegerType, ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr,
-    Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr,
-    UnaryExpr, UnaryOperator, UnwrapExpr, Visibility,
+    IdentifierExpr, ImportDeclaration, InitializerDecl, IntegerCastExpr, IntrinsicFunctionDecl,
+    LocalDecl, MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl,
+    MethodModifier, ModuleImport, Name, NameComponent, NameComponentRef, NameComponents,
+    NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr,
+    ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr,
+    PresenceTestKind, PrimitiveIntegerType, ReturnStatement, SelectiveImport, SelectiveImportItem,
+    SelfExpr, Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax,
+    TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility,
 };
 pub use dump::dump_ast;
 pub use parser::{

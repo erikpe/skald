@@ -89,6 +89,7 @@ impl MemberVisibility {
 pub enum TopLevelDeclaration {
     Function(FunctionDecl),
     ExternalFunction(ExternalFunctionDecl),
+    IntrinsicFunction(IntrinsicFunctionDecl),
     Class(ClassDecl),
     Interface(InterfaceDecl),
 }
@@ -98,6 +99,7 @@ impl TopLevelDeclaration {
         match self {
             Self::Function(function) => &function.name,
             Self::ExternalFunction(function) => &function.name,
+            Self::IntrinsicFunction(function) => &function.name,
             Self::Class(class) => &class.name,
             Self::Interface(interface) => &interface.name,
         }
@@ -107,6 +109,7 @@ impl TopLevelDeclaration {
         match self {
             Self::Function(function) => function.visibility,
             Self::ExternalFunction(function) => function.visibility,
+            Self::IntrinsicFunction(function) => function.visibility,
             Self::Class(class) => class.visibility,
             Self::Interface(interface) => interface.visibility,
         }
@@ -116,6 +119,7 @@ impl TopLevelDeclaration {
         match self {
             Self::Function(function) => function.span,
             Self::ExternalFunction(function) => function.span,
+            Self::IntrinsicFunction(function) => function.span,
             Self::Class(class) => class.span,
             Self::Interface(interface) => interface.span,
         }
@@ -252,6 +256,16 @@ pub struct FunctionDecl {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExternalFunctionDecl {
     pub visibility: Visibility,
+    pub name: Name,
+    pub parameters: Vec<Parameter>,
+    pub return_type: TypeSyntax,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IntrinsicFunctionDecl {
+    pub visibility: Visibility,
+    pub intrinsic_span: Span,
     pub name: Name,
     pub parameters: Vec<Parameter>,
     pub return_type: TypeSyntax,

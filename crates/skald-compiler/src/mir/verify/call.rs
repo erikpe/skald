@@ -153,6 +153,17 @@ impl<'mir> Verifier<'mir> {
                     );
                     return None;
                 };
+                if matches!(
+                    target.linkage,
+                    super::super::model::MirFunctionLinkage::Intrinsic { .. }
+                ) {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "intrinsic function must not remain as an ordinary MIR call",
+                    );
+                    return None;
+                }
                 Some(CallSignature {
                     parameters: &target.parameters,
                     return_type: target.return_type,

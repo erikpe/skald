@@ -64,6 +64,7 @@ pub const INVALID_COPY_CONSTRUCTION: &str = "TYP032";
 pub const INVALID_SHARED_CONVERSION: &str = "TYP033";
 pub const IMPLICIT_SHARED_DEREFERENCE: &str = "TYP034";
 pub const PRIVATE_INITIALIZER_ACCESS: &str = "TYP040";
+pub const INTRINSIC_NOT_EXECUTABLE: &str = "TYP041";
 
 #[derive(Debug)]
 pub struct TypeCheckOutput {
@@ -410,6 +411,9 @@ fn lower_declaration(function: &ResolvedFunctionDeclaration) -> HirFunctionDecla
             ResolvedFunctionLinkage::External { link } => {
                 HirFunctionLinkage::External { link: *link }
             }
+            ResolvedFunctionLinkage::Intrinsic { intrinsic } => HirFunctionLinkage::Intrinsic {
+                intrinsic: *intrinsic,
+            },
         },
         span: function.span,
     }

@@ -29,8 +29,11 @@ than source-language exceptions.
 
 ## Current runtime failures
 
-The implemented source language has no `panic`, `throw`, `try`, `catch`, or
-other runtime-failure construct. Checked object casts, optionals, arrays,
+The compiler implements the canonical `std::error::panic` declaration and
+resolves calls to its stable intrinsic identity, but deliberately rejects
+those calls before HIR with a temporary diagnostic. The implemented source
+language therefore still has no executable `panic`, `throw`, `try`, `catch`,
+or other runtime-failure construct. Checked object casts, optionals, arrays,
 shared allocation, and ownership-count overflow have focused unrecoverable
 failure rules. They do not yet use the frozen common reporting policy below.
 
@@ -86,7 +89,12 @@ module declaration: source must import it, import its module, or qualify it
 through the normal module system. It is not in a prelude, and lower phases
 must recognize its resolved intrinsic identity rather than the leaf name
 `panic`. The declaration form and validation rules are owned by
-[Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#frozen-intrinsic-function-declarations).
+[Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#intrinsic-function-declarations).
+
+The declaration grammar, canonical validation, ordinary import and
+qualification behavior, and identity are implemented. Execution described
+below remains frozen design: a valid call currently produces `TYP041` and no
+HIR or MIR program.
 
 A valid panic invocation is a call statement and does not return. It
 satisfies definite return because its reachable path cannot reach the

@@ -10,6 +10,7 @@ use crate::{
         FieldId, FunctionId, InitializerId, InterfaceId, InterfaceRequirementId, MethodId,
         ModuleId, VirtualFamilyId, VirtualSlotId,
     },
+    intrinsic::Intrinsic,
     module::ProgramModuleTable,
     source::Span,
 };
@@ -640,4 +641,5 @@ pub struct MirFunctionDeclaration {
 pub enum MirFunctionLinkage {
     Internal,
     External { link: ExternalLinkId },
+    Intrinsic { intrinsic: Intrinsic },
 }

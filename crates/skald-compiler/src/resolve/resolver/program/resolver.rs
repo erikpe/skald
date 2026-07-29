@@ -208,6 +208,7 @@ impl<'ast> ProgramResolver<'ast> {
                         Some(function.name.text.as_str())
                     }
                     syntax::TopLevelDeclaration::Function(_)
+                    | syntax::TopLevelDeclaration::IntrinsicFunction(_)
                     | syntax::TopLevelDeclaration::Class(_)
                     | syntax::TopLevelDeclaration::Interface(_) => None,
                 }
@@ -221,6 +222,12 @@ impl<'ast> ProgramResolver<'ast> {
         let (class_declarations, class_symbols, class_work) =
             self.collect_class_declarations(lookups);
         let function_declarations = ResolvedFunctionDeclarationTable::new(function_declarations);
+        validate_panic_intrinsic(
+            &self.modules,
+            &module_declarations,
+            &function_declarations,
+            &mut self.diagnostics,
+        );
         let mut class_declarations = ResolvedClassDeclarationTable::new(class_declarations);
         for unit in &self.units {
             let lookup = lookups.for_unit(unit, &self.modules);
@@ -343,7 +350,8 @@ impl<'ast> ProgramResolver<'ast> {
                 }
                 let kind = match declaration {
                     syntax::TopLevelDeclaration::Function(_)
-                    | syntax::TopLevelDeclaration::ExternalFunction(_) => {
+                    | syntax::TopLevelDeclaration::ExternalFunction(_)
+                    | syntax::TopLevelDeclaration::IntrinsicFunction(_) => {
                         TopLevelSymbolKind::Function(FunctionId::new(function_count))
                     }
                     syntax::TopLevelDeclaration::Class(_) => {
@@ -518,6 +526,32 @@ impl<'ast> ProgramResolver<'ast> {
                             ),
                             linkage: ResolvedFunctionLinkage::External {
                                 link: external_links.link_for(function.name.text.as_str()),
+                            },
+                            span: function.span,
+                        }
+                    }
+                    syntax::TopLevelDeclaration::IntrinsicFunction(function) => {
+                        ResolvedFunctionDeclaration {
+                            id: item.id,
+                            module: unit.module,
+                            visibility: resolved_visibility(function.visibility),
+                            name: function.name.text.to_string(),
+                            name_span: function.name.span,
+                            parameters: resolve_parameters(
+                                item.id.into(),
+                                &function.parameters,
+                                lookup,
+                                &mut self.array_types,
+                                &mut self.diagnostics,
+                            ),
+                            return_type: resolve_result_type(
+                                &function.return_type,
+                                lookup,
+                                &mut self.array_types,
+                                &mut self.diagnostics,
+                            ),
+                            linkage: ResolvedFunctionLinkage::Intrinsic {
+                                intrinsic: crate::intrinsic::Intrinsic::Panic,
                             },
                             span: function.span,
                         }

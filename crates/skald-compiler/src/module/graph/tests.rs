@@ -443,6 +443,39 @@ fn modules_without_literals_do_not_require_std_str() {
 }
 
 #[test]
+fn canonical_error_module_reaches_string_module_through_an_ordinary_import() {
+    let workspace = directory("graph-error-dependency");
+    let root = workspace.join("modules");
+    source(
+        &root,
+        "app.ska",
+        "import std::error;\nfn main() -> i64 { return 0; }\n",
+    );
+    source(
+        &root,
+        "std/error.ska",
+        concat!(
+            "import std::str;\n",
+            "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
+        ),
+    );
+    source(&root, "std/str.ska", "public class Str {}\n");
+
+    let graph = load(
+        EntrySelector::Module("app".parse().unwrap()),
+        workspace.path(),
+        &[root],
+    )
+    .unwrap();
+    let error = graph.find(&"std::error".parse().unwrap()).unwrap();
+
+    assert!(graph.find(&"std::str".parse().unwrap()).is_some());
+    assert_eq!(error.imports().len(), 1);
+    assert_eq!(error.imports()[0].import_spans().len(), 1);
+    assert!(error.imports()[0].string_literal_spans().is_empty());
+}
+
+#[test]
 fn synthetic_std_str_dependency_uses_ordinary_missing_ambiguity_and_case_rules() {
     let workspace = directory("graph-string-provider-rules");
     let first = workspace.join("first");
