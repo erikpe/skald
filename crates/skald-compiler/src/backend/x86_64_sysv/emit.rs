@@ -38,14 +38,7 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
             writeln!(output, "    .quad {}", backing.metadata_symbol).unwrap();
             writeln!(output, "    .quad {}", backing.bytes.len()).unwrap();
             if !backing.bytes.is_empty() {
-                output.push_str("    .byte ");
-                for (index, byte) in backing.bytes.iter().enumerate() {
-                    if index != 0 {
-                        output.push_str(", ");
-                    }
-                    write!(output, "0x{byte:02x}").unwrap();
-                }
-                output.push('\n');
+                emit_ascii_bytes(&mut output, &backing.bytes);
             }
             writeln!(output, ".size {}, .-{}", backing.symbol, backing.symbol).unwrap();
         }
@@ -81,6 +74,22 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
     }
     output.push_str("\n.section .note.GNU-stack,\"\",@progbits\n");
     output
+}
+
+fn emit_ascii_bytes(output: &mut String, bytes: &[u8]) {
+    output.push_str("    .ascii \"");
+    for byte in bytes {
+        match byte {
+            b'"' => output.push_str("\\\""),
+            b'\\' => output.push_str("\\\\"),
+            b'\n' => output.push_str("\\n"),
+            b'\r' => output.push_str("\\r"),
+            b'\t' => output.push_str("\\t"),
+            0x20..=0x7e => output.push(char::from(*byte)),
+            _ => write!(output, "\\{byte:03o}").unwrap(),
+        }
+    }
+    output.push_str("\"\n");
 }
 
 fn emit_instruction(output: &mut String, instruction: &Instruction) {

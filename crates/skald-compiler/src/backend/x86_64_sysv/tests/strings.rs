@@ -77,12 +77,13 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
         "fn ascii() -> Str { return \"abc\"; }\n",
         "fn duplicate() -> Str { return \"abc\"; }\n",
         "fn binary() -> Str { return \"a\\0\\x80\\xff\"; }\n",
+        "fn escaped() -> Str { return \"\\\"\\\\\\n\\r\\t\\x01\\x7f\"; }\n",
         "fn main() -> i64 { return 0; }\n",
     );
     let output = string_assembly(source);
     assert_eq!(output, string_assembly(source));
 
-    assert_eq!(output.matches(".type .Lska_literal_").count(), 3);
+    assert_eq!(output.matches(".type .Lska_literal_").count(), 4);
     assert!(output.contains(concat!(
         ".section .data.rel.ro.local,\"aw\",@progbits\n",
         ".p2align 3\n",
@@ -93,15 +94,16 @@ fn emits_pooled_aligned_immutable_literal_backings_with_exact_bytes() {
         "    .quad 0\n",
         ".size .Lska_literal_0_backing, .-.Lska_literal_0_backing\n",
     )));
-    assert!(output.contains("    .quad 3\n    .byte 0x61, 0x62, 0x63\n"));
-    assert!(output.contains("    .quad 4\n    .byte 0x61, 0x00, 0x80, 0xff\n"));
+    assert!(output.contains("    .quad 3\n    .ascii \"abc\"\n"));
+    assert!(output.contains("    .quad 4\n    .ascii \"a\\000\\200\\377\"\n"));
+    assert!(output.contains("    .quad 7\n    .ascii \"\\\"\\\\\\n\\r\\t\\001\\177\"\n"));
     let ascii = function_assembly(&output, ".Lska_fn_1");
     assert!(ascii.contains("lea rax, [rip + .Lska_literal_1_backing]"));
     assert!(ascii.contains("mov qword ptr [rdx], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 8], rax"));
     assert!(ascii.contains("mov qword ptr [rdx + 16], rax"));
     assert!(!ascii.contains("call .Lska_array_0_copy_element"));
-    for function in 0..4 {
+    for function in 0..5 {
         assert!(
             !function_assembly(&output, &format!(".Lska_fn_{function}"))
                 .contains("call ska_rt_alloc"),
