@@ -7,9 +7,10 @@ progress. Completed roadmaps and resolved discovery records move to
 ## In progress
 
 - [While Loops and Loop Exits Roadmap](WHILE_LOOPS_ROADMAP.md) — **in
-  progress; source `while` is implemented and targeted `break` is next**.
-  Delivers cycle-safe storage and verification foundations, executable source
-  `while`, then `break` and `continue` as separate slices.
+  progress; source `while` and targeted `break` are implemented, and
+  `continue` is next**. Delivers cycle-safe storage and verification
+  foundations, executable source `while`, then `break` and `continue` as
+  separate slices.
 
 ## Planned
 

@@ -29,6 +29,7 @@ impl BodyLowerer<'_> {
             }
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
+            HirStatement::Break(statement) => self.lower_break(statement),
             HirStatement::Panic(statement) => self.lower_panic(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),

@@ -46,7 +46,7 @@ would depend.
 Loops, `break`, `continue`, and their cleanup behavior remain unimplemented.
 Their source design is now frozen in the living
 [control-flow contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
-[implemented grammar](../language/GRAMMAR.md#while-loops-and-reserved-loop-exits),
+[implemented grammar](../language/GRAMMAR.md#while-loops-and-loop-exits),
 and [status matrix](../language/STATUS.md#not-implemented). The frozen
 [phase and IR representation](../compiler/PHASES_AND_IR.md#while-loop-representation)
 owns loop identity, structured HIR effects, repeatable MIR lifetime epochs,

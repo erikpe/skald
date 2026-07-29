@@ -183,6 +183,7 @@ pub enum HirStatement {
     BaseInitialization(HirBaseInitialization),
     Local(HirLocalDecl),
     Return(HirReturn),
+    Break(HirBreak),
     Panic(HirPanic),
     Call(HirCallStatement),
     Conditional(HirConditional),
@@ -211,6 +212,7 @@ impl HirStatement {
             Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Break(statement) => statement.span,
             Self::Panic(statement) => statement.span,
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
@@ -264,6 +266,12 @@ pub enum HirLocalInitializer {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirReturn {
     pub value: Option<HirReturnValue>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirBreak {
+    pub target: LoopId,
     pub span: Span,
 }
 

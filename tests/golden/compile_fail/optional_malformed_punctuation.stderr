@@ -44,7 +44,7 @@ error[PAR003]: expected a statement
  --> tests/golden/compile_fail/optional_malformed_punctuation.ska:10:30
     |
 10 |     var cast: Value? = (Value?) optional_value;
-    |                              ^ expected `var`, `return`, `if`, `while`, an expression, a field assignment, or a nested block
+    |                              ^ expected `var`, `return`, `if`, `while`, `break`, an expression, a field assignment, or a nested block
 
 error[PAR002]: expected `;` after the return statement
  --> tests/golden/compile_fail/optional_malformed_punctuation.ska:11:18
@@ -56,4 +56,4 @@ error[PAR003]: expected a statement
  --> tests/golden/compile_fail/optional_malformed_punctuation.ska:11:18
     |
 11 |     return value!?;
-    |                  ^ expected `var`, `return`, `if`, `while`, an expression, a field assignment, or a nested block
+    |                  ^ expected `var`, `return`, `if`, `while`, `break`, an expression, a field assignment, or a nested block

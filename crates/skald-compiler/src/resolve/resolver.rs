@@ -59,6 +59,7 @@ pub const PRIVATE_MEMBER_ACCESS: &str = "RES031";
 pub const MISSING_STRING_LANGUAGE_ITEM: &str = "RES032";
 pub const INVALID_STRING_LANGUAGE_ITEM: &str = "RES033";
 pub const INVALID_INTRINSIC_DECLARATION: &str = "RES034";
+pub const LOOP_EXIT_OUTSIDE_LOOP: &str = "RES035";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

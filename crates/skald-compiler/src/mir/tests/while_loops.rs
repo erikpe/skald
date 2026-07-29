@@ -93,6 +93,123 @@ fn source_while_reaches_the_canonical_mir_graph_deterministically() {
 }
 
 #[test]
+fn break_targets_the_nearest_exit_and_cleans_every_exited_scope() {
+    let source = concat!(
+        "class Trace { init() {} destroy {} }\n",
+        "fn main() -> i64 {\n",
+        "  while (true) {\n",
+        "    var outer: Trace = Trace();\n",
+        "    while (true) { break; }\n",
+        "    { var inner: Trace = Trace(); break; }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    );
+    let mir = lower_text(source);
+    verify_mir(&mir).expect("break cleanup edges must verify");
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    let break_targets: Vec<_> = main
+        .body
+        .blocks
+        .iter()
+        .filter_map(|block| match block.terminator {
+            Some(MirTerminator::Goto { target, span })
+                if &source[span.range().start()..span.range().end()] == "break;" =>
+            {
+                Some(target)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(break_targets.len(), 2);
+    let [inner_exit, outer_exit] = break_targets.as_slice() else {
+        unreachable!();
+    };
+    assert_ne!(inner_exit, outer_exit);
+
+    let outer = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "outer")
+        .unwrap()
+        .id;
+    let inner = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "inner")
+        .unwrap()
+        .id;
+    let outer_break = main
+        .body
+        .blocks
+        .iter()
+        .find(|block| {
+            matches!(
+                block.terminator,
+                Some(MirTerminator::Goto { target, span })
+                    if target == *outer_exit
+                        && &source[span.range().start()..span.range().end()] == "break;"
+            )
+        })
+        .unwrap();
+    let cleanup: Vec<_> = outer_break
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Cleanup(cleanup)
+                if matches!(
+                    cleanup.destination.base.storage(),
+                    storage if storage == inner || storage == outer
+                ) =>
+            {
+                Some(cleanup.destination.base.storage())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(cleanup, [inner, outer]);
+    let dead: Vec<_> = outer_break
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::StorageDead(event)
+                if event.storage == inner || event.storage == outer =>
+            {
+                Some(event.storage)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(dead, [inner, outer]);
+}
+
+#[test]
+fn verifier_rejects_break_cleanup_that_leaves_body_storage_live_at_the_exit() {
+    let mut mir = lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  while (true) { var local: i64 = 1; break; }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    let entry = mir.entry_function;
+    let main = mir.definitions.get_mut_for_test(entry).unwrap();
+    let local = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "local")
+        .unwrap()
+        .id;
+    for block in &mut main.body.blocks {
+        block.instructions.retain(|instruction| {
+            !matches!(instruction, MirInstruction::StorageDead(event) if event.storage == local)
+        });
+    }
+
+    let errors = verify_mir(&mir).unwrap_err().to_string();
+    assert!(errors.contains("storage lifetime state disagrees at control-flow join"));
+}
+
+#[test]
 fn lowers_the_canonical_loop_graph_with_a_backward_generic_edge() {
     let mir = counting_loop();
     verify_mir(&mir).expect("internally constructed while MIR must verify");
@@ -278,7 +395,7 @@ fn loop_dump_pipeline_backend_and_native_execution_accept_the_backedge() {
 }
 
 #[test]
-fn lowers_nested_loops_and_a_returning_loop_body_without_special_mir_terminators() {
+fn lowers_nested_loops_and_omits_an_unreachable_latch_after_a_returning_body() {
     let checked = type_check_source(concat!(
         "fn main() -> i64 {\n",
         "  var outer: i64 = 0;\n",
@@ -323,15 +440,16 @@ fn lowers_nested_loops_and_a_returning_loop_body_without_special_mir_terminators
         "fn main() -> i64 { if (true) { return 7; } return 3; }\n",
         0,
     );
-    verify_mir(&returning).expect("an unreachable canonical latch must remain valid MIR");
+    verify_mir(&returning).expect("a returning loop body must not create an invalid latch edge");
     let main = returning.definitions.get(returning.entry_function).unwrap();
+    assert_eq!(main.body.blocks.len(), 4);
     assert!(matches!(
         main.body.blocks[2].terminator,
         Some(MirTerminator::Return { .. })
     ));
     assert!(matches!(
         main.body.blocks[3].terminator,
-        Some(MirTerminator::Goto { target, .. }) if target == main.body.blocks[1].id
+        Some(MirTerminator::Return { .. })
     ));
     let assembly = emit_assembly(Target::X86_64SysV, &returning).unwrap();
     assert_eq!(run_native_assembly(&assembly).code(), Some(7));

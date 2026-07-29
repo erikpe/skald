@@ -3,15 +3,15 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        HirAccess, HirBaseInitialization, HirBlock, HirCallArgument, HirCallStatement,
+        HirAccess, HirBaseInitialization, HirBlock, HirBreak, HirCallArgument, HirCallStatement,
         HirConditional, HirConditionalArm, HirControlEffects, HirLocalDecl, HirLocalInitializer,
         HirObjectReturn, HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage,
         HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue,
         HirSharedAssignment, HirStatement, HirWhile, Type,
     },
     resolve::{
-        ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
-        ResolvedReturn, ResolvedStatement, ResolvedWhile,
+        ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedExpressionStatement,
+        ResolvedLocalDecl, ResolvedReturn, ResolvedStatement, ResolvedWhile,
     },
 };
 
@@ -68,6 +68,7 @@ impl CallableChecker<'_, '_> {
             }
             ResolvedStatement::Local(local) => self.check_local_statement(local),
             ResolvedStatement::Return(statement) => self.check_return_statement(statement),
+            ResolvedStatement::Break(statement) => self.check_break_statement(statement),
             ResolvedStatement::Expression(statement) => self.check_call_statement(statement),
             ResolvedStatement::Conditional(conditional) => {
                 self.check_conditional_statement(conditional)
@@ -667,6 +668,16 @@ impl CallableChecker<'_, '_> {
             span: conditional.span,
         }));
         CheckedStatement { hir, effects }
+    }
+
+    fn check_break_statement(&self, statement: &ResolvedBreak) -> CheckedStatement {
+        CheckedStatement {
+            hir: Some(HirStatement::Break(HirBreak {
+                target: statement.target,
+                span: statement.span,
+            })),
+            effects: HirControlEffects::break_to(statement.target),
+        }
     }
 
     fn check_while_statement(&mut self, statement: &ResolvedWhile) -> CheckedStatement {

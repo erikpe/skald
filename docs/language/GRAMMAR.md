@@ -339,6 +339,7 @@ statement             = local-declaration
                       | return-statement
                       | conditional-statement
                       | while-statement
+                      | break-statement
                       | assignment-statement
                       | expression-statement
                       | block
@@ -353,6 +354,7 @@ conditional-statement = "if" "(" expression ")" block
                         {"elif" "(" expression ")" block}
                         ["else" block]
 while-statement       = "while" "(" expression ")" block
+break-statement       = "break" ";"
 
 assignment-statement  = place "=" expression ";"
 place                 = place-atom {"." identifier}
@@ -381,26 +383,27 @@ for exactly typed initialized primitive `var` locals and value parameters.
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
 parenthesized expression and a block.
 
-### While loops and reserved loop exits
+### While loops and loop exits
 
-The implemented loop syntax is:
+The implemented loop and exit syntax is:
 
 ```text
 while-statement    = "while" "(" expression ")" block
+break-statement    = "break" ";"
 ```
 
-The following loop-exit spellings are frozen and reserved, but not yet
-accepted as statements:
+The following loop-exit spelling is frozen and reserved, but not yet accepted
+as a statement:
 
 ```text
-break-statement    = "break" ";"
 continue-statement = "continue" ";"
 ```
 
 The parentheses and body block are mandatory. `while` is not an expression,
-`break` carries no value, and labels are not part of the frozen exit syntax.
-Using `break` or `continue` currently produces a focused unsupported-feature
-diagnostic. The corresponding semantics are owned by
+`break` carries no value, and labels are not part of the exit syntax. A
+`break` must end with `;` and may appear only inside a loop. Using `continue`
+currently produces a focused unsupported-feature diagnostic. The
+corresponding semantics are owned by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
 ## Expressions

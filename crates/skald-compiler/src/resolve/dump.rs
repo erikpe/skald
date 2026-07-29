@@ -647,6 +647,9 @@ impl ResolvedDumper {
                     self.indented(|dumper| dumper.expression(value));
                 }
             }
+            ResolvedStatement::Break(statement) => {
+                self.line(&format!("Break {}", statement.target), statement.span);
+            }
             ResolvedStatement::Expression(statement) => {
                 self.line("ExpressionStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.expression));

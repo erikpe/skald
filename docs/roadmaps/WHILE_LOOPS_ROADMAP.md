@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 through L4 are complete and L5 is next.
+Status: in progress; L0 through L5 are complete and L6 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -12,7 +12,7 @@ ordinary verified control-flow edges mechanically.
 
 The frozen source and representation contracts live in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
-the [grammar](../language/GRAMMAR.md#while-loops-and-reserved-loop-exits), and
+the [grammar](../language/GRAMMAR.md#while-loops-and-loop-exits), and
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#while-loop-representation).
 The historical decision rationale is retained in the archived
 [while-loop design proposal](../archive/WHILE_LOOPS_DESIGN_PROPOSAL.md).
@@ -27,7 +27,8 @@ This roadmap includes:
 - cleanup planning to an explicit retained lexical depth;
 - structured HIR `while` statements lowered to ordinary MIR branches and
   jumps;
-- the canonical initial preheader, header, body, latch, and exit shape;
+- the canonical initial preheader, header, body, reachable latch, and exit
+  shape, omitting only a latch that no body path can reach;
 - source activation of `while`, followed by separate `break` and `continue`
   slices;
 - exact-`bool` conditions, per-attempt condition cleanup, and fresh body
@@ -88,7 +89,7 @@ Explicitly excluded from this roadmap:
 - [x] L2 — Add structured loop identities and control effects
 - [x] L3 — Lower internal HIR `while` loops through generic MIR
 - [x] L4 — Activate source `while` end to end
-- [ ] L5 — Add targeted `break` statements
+- [x] L5 — Add targeted `break` statements
 - [ ] L6 — Add targeted `continue` statements
 - [ ] L7 — Harden loop lifecycles and optimization boundaries
 
@@ -299,22 +300,22 @@ the living documentation describes the actual implemented boundary.
 **Purpose:** Add the first loop-local exit by reusing stable loop identity,
 effect composition, and cleanup-to-depth foundations.
 
-- [ ] Parse exactly `break;` as a statement with deterministic recovery and
+- [x] Parse exactly `break;` as a statement with deterministic recovery and
       spans.
-- [ ] Resolve it to the nearest enclosing `LoopId` and reject use outside a
+- [x] Resolve it to the nearest enclosing `LoopId` and reject use outside a
       loop before type checking.
-- [ ] Represent `Break(LoopId)` in HIR and propagate it through nested blocks
+- [x] Represent `Break(LoopId)` in HIR and propagate it through nested blocks
       and conditional arms without treating it as function termination.
-- [ ] Stop ordinary block fallthrough on the break path while retaining other
+- [x] Stop ordinary block fallthrough on the break path while retaining other
       effects from sibling conditional paths.
-- [ ] Plan and emit cleanup for every scope exited between the statement and
+- [x] Plan and emit cleanup for every scope exited between the statement and
       the target loop boundary, followed by a generic jump to that loop's exit
       block.
-- [ ] Preserve enclosing-loop storage and avoid cleaning scopes outside the
+- [x] Preserve enclosing-loop storage and avoid cleaning scopes outside the
       targeted loop.
-- [ ] Cover nearest-loop behavior in nested loops and nested conditionals; do
+- [x] Cover nearest-loop behavior in nested loops and nested conditionals; do
       not add labels or multi-level syntax.
-- [ ] Update living grammar, control-flow, status, phase/IR, and testing
+- [x] Update living grammar, control-flow, status, phase/IR, and testing
       documentation in the same change.
 
 **Tests:** Parser/recovery tests; outside-loop and nearest-loop resolution
@@ -423,8 +424,9 @@ from the next. L1 precedes loop IR consumers because otherwise an ordinary
 backedge can make verification diverge or falsely report repeated
 initialization. L2 then establishes semantic identity and targeted cleanup
 without parser pressure. L3 uses internal HIR fixtures to prove the complete
-downstream path. Only L4 changes accepted source, so there is no intermediate
-release that parses a loop which later phases cannot safely compile.
+downstream path. L4 first activates source loops only after that path is safe;
+L5 and L6 then add their targeted exits on the already-proven identity,
+effect, cleanup, and CFG foundations.
 
 `break` and `continue` remain separate PRs because they have different target
 blocks and observable cleanup edges even though they share resolution and HIR

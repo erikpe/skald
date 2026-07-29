@@ -58,6 +58,9 @@ impl CallableResolver<'_, '_> {
                     span: statement.span,
                 }))
             }
+            syntax::Statement::Break(statement) => {
+                self.resolve_break(statement).map(ResolvedStatement::Break)
+            }
             syntax::Statement::Expression(statement) => {
                 let expression = self.resolve_expression(&statement.expression)?;
                 Some(ResolvedStatement::Expression(ResolvedExpressionStatement {
@@ -179,11 +182,31 @@ impl CallableResolver<'_, '_> {
         let loop_id = LoopId::new(self.callable, self.next_loop_index);
         self.next_loop_index += 1;
         let condition = self.resolve_expression(&statement.condition);
+        self.active_loops.push(loop_id);
         let body = self.resolve_block(&statement.body, true);
+        let active = self
+            .active_loops
+            .pop()
+            .expect("resolving a loop body requires an active loop");
+        debug_assert_eq!(active, loop_id);
         condition.map(|condition| ResolvedWhile {
             loop_id,
             condition,
             body,
+            span: statement.span,
+        })
+    }
+
+    fn resolve_break(&mut self, statement: &syntax::BreakStatement) -> Option<ResolvedBreak> {
+        let Some(target) = self.active_loops.last().copied() else {
+            self.diagnostics.push(
+                Diagnostic::error(LOOP_EXIT_OUTSIDE_LOOP, "`break` requires an enclosing loop")
+                    .with_primary_label(statement.break_span, "no enclosing loop is active here"),
+            );
+            return None;
+        };
+        Some(ResolvedBreak {
+            target,
             span: statement.span,
         })
     }

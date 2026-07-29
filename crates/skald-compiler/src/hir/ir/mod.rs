@@ -27,10 +27,10 @@ pub use array::{
     HirArrayTypeTable,
 };
 pub use body::{
-    HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable, HirConditional,
-    HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable, HirLocalDecl,
-    HirLocalInitializer, HirMemberDefinition, HirPanic, HirPrimitiveBindingAssignment, HirReturn,
-    HirReturnValue, HirStatement, HirWhile,
+    HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
+    HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
+    HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirStatement, HirWhile,
 };
 pub use control_flow::HirControlEffects;
 pub use declarations::{

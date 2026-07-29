@@ -8,7 +8,7 @@ use super::cleanup::RetainedScopeDepth;
 pub(super) struct LoopContext {
     loop_id: LoopId,
     exit_target: BlockId,
-    latch_target: BlockId,
+    latch_target: Option<BlockId>,
     retained_scope_depth: RetainedScopeDepth,
 }
 
@@ -16,11 +16,13 @@ impl LoopContext {
     pub(super) fn new(
         loop_id: LoopId,
         exit_target: BlockId,
-        latch_target: BlockId,
+        latch_target: Option<BlockId>,
         retained_scope_depth: RetainedScopeDepth,
     ) -> Option<Self> {
         (exit_target.callable() == loop_id.callable()
-            && latch_target.callable() == loop_id.callable())
+            && latch_target
+                .map(|target| target.callable() == loop_id.callable())
+                .unwrap_or(true))
         .then_some(Self {
             loop_id,
             exit_target,
@@ -37,7 +39,7 @@ impl LoopContext {
         self.exit_target
     }
 
-    pub(super) const fn latch_target(self) -> BlockId {
+    pub(super) const fn latch_target(self) -> Option<BlockId> {
         self.latch_target
     }
 
@@ -106,14 +108,14 @@ mod tests {
         let outer = LoopContext::new(
             outer_id,
             BlockId::new(function, 4),
-            BlockId::new(function, 3),
+            Some(BlockId::new(function, 3)),
             outer_depth,
         )
         .unwrap();
         let inner = LoopContext::new(
             inner_id,
             BlockId::new(function, 8),
-            BlockId::new(function, 7),
+            Some(BlockId::new(function, 7)),
             inner_depth,
         )
         .unwrap();
@@ -121,7 +123,7 @@ mod tests {
         assert!(LoopContext::new(
             outer_id,
             BlockId::new(foreign, 0),
-            BlockId::new(function, 0),
+            Some(BlockId::new(function, 0)),
             outer_depth,
         )
         .is_none());
@@ -139,5 +141,9 @@ mod tests {
         );
         assert_eq!(stack.pop(inner_id), inner);
         assert_eq!(stack.pop(outer_id), outer);
+
+        assert!(
+            LoopContext::new(outer_id, BlockId::new(function, 4), None, outer_depth,).is_some()
+        );
     }
 }

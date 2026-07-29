@@ -19,7 +19,7 @@ pub use ir::{
     HirArrayLifecycle, HirArrayOwnership, HirArrayPlace, HirArrayProvenance, HirArrayReceiver,
     HirArrayReceiverOwnership, HirArrayReceiverSource, HirArrayRuntimeFailure, HirArraySlice,
     HirArraySliceAssignment, HirArraySliceBounds, HirArraySource, HirArrayTransfer, HirArrayType,
-    HirArrayTypeTable, HirBaseCopy, HirBaseInitialization, HirBinaryOperation, HirBlock,
+    HirArrayTypeTable, HirBaseCopy, HirBaseInitialization, HirBinaryOperation, HirBlock, HirBreak,
     HirCallArgument, HirCallStatement, HirCallableSignature, HirCheckedObjectView,
     HirCheckedObjectViewKind, HirCheckedOptionalView, HirClassDeclaration,
     HirClassDeclarationTable, HirClassDefinition, HirClassDefinitionTable,

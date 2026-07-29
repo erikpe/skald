@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     diagnostics::Diagnostic,
-    identity::{BindingId, CallableId, ClassId, LiteralDataId},
+    identity::{BindingId, CallableId, ClassId, LiteralDataId, LoopId},
     source::{Span, TextRange},
 };
 
@@ -153,6 +153,7 @@ struct CallableResolver<'program, 'state> {
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
     next_loop_index: usize,
+    active_loops: Vec<LoopId>,
 }
 
 impl<'program, 'state> CallableResolver<'program, 'state> {
@@ -187,6 +188,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             scopes: vec![parameters],
             locals: Vec::new(),
             next_loop_index: 0,
+            active_loops: Vec::new(),
         }
     }
 

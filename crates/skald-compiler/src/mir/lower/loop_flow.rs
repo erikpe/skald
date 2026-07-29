@@ -1,16 +1,33 @@
 //! Structured loop lowering into target-independent MIR control flow.
 
 use super::*;
-use crate::hir::HirWhile;
+use crate::hir::{HirBreak, HirWhile};
 
 impl BodyLowerer<'_> {
+    pub(super) fn lower_break(&mut self, statement: &HirBreak) {
+        let context = self
+            .loop_contexts
+            .find(statement.target)
+            .expect("resolved break target must have an active lowering context");
+        let cleanup = self
+            .cleanup
+            .for_scopes_exiting_to(context.retained_scope_depth(), statement.span);
+        self.emit_scope_exit(cleanup);
+        self.terminate(MirTerminator::Goto {
+            target: context.exit_target(),
+            span: statement.span,
+        });
+    }
+
     pub(super) fn lower_while(&mut self, statement: &HirWhile) {
-        // Allocate the complete canonical shape before emitting any edge.
-        // The current block is the preheader, followed by header, body, latch,
-        // and exit in source order.
+        // Allocate the loop shape before emitting any edge.
+        // The current block is the preheader, followed by header, body, an
+        // optional reachable latch, and exit in source order.
         let header = self.body.allocate_block(statement.condition.span);
         let body = self.body.allocate_block(statement.body.span);
-        let latch = self.body.allocate_block(statement.span);
+        let reaches_latch = statement.body.effects.can_fall_through()
+            || statement.body.effects.can_continue_to(statement.loop_id);
+        let latch = reaches_latch.then(|| self.body.allocate_block(statement.span));
         let exit = self.body.allocate_block(statement.span);
 
         self.terminate(MirTerminator::Goto {
@@ -44,20 +61,22 @@ impl BodyLowerer<'_> {
         self.lower_block(&statement.body);
         if !self.body.is_current_terminated() {
             self.terminate(MirTerminator::Goto {
-                target: latch,
+                target: latch.expect("a falling-through loop body requires a latch"),
                 span: statement.body.span,
             });
         }
 
         self.loop_contexts.pop(statement.loop_id);
 
-        self.body
-            .select_block(latch)
-            .expect("allocated loop latch must be selectable");
-        self.terminate(MirTerminator::Goto {
-            target: header,
-            span: statement.span,
-        });
+        if let Some(latch) = latch {
+            self.body
+                .select_block(latch)
+                .expect("allocated loop latch must be selectable");
+            self.terminate(MirTerminator::Goto {
+                target: header,
+                span: statement.span,
+            });
+        }
 
         self.body
             .select_block(exit)

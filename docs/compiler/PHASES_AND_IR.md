@@ -662,8 +662,8 @@ somehow reached after the trust boundary.
 
 ## While-loop representation
 
-The source behavior of `while` and the frozen behavior of `break` and
-`continue` are specified in
+The source behavior of `while` and `break`, and the frozen behavior of
+`continue`, are specified in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 Source `while` is represented end to end. Callable-local `LoopId`, composable
 HIR control effects, and structured `HirWhile` are current representations.
@@ -671,8 +671,8 @@ MIR storage lifetime epochs and cycle-safe verification are implemented:
 every stateful verifier uses deterministic finite forward dataflow, checks
 disconnected cyclic components, and resets per-epoch ownership and
 initialization facts at storage lifetime boundaries. HIR-to-MIR lowering emits
-the generic canonical graph described below. Source `break` and `continue`
-remain reserved but unsupported.
+the generic graph described below. Source `break` is represented end to end;
+`continue` remains reserved but unsupported.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete
@@ -682,11 +682,11 @@ container types, exact instruction names, or basic-block numbering.
 
 Resolution assigns every source loop one deterministic callable-local loop
 identity in source order. A resolved `while` retains its condition, body,
-identity, and source spans. Resolved `break` and `continue` statements carry
-the identity of the nearest lexically enclosing loop. Lower phases do not
-recover an exit target from source names or a nesting-depth count. Future
-labels, if separately frozen, may resolve to the same identity model without
-changing lower phases.
+identity, and source spans. A resolved `break` carries the identity of the
+nearest lexically enclosing loop. The frozen resolved `continue` form will do
+the same. Lower phases do not recover an exit target from source names or a
+nesting-depth count. Future labels, if separately frozen, may resolve to the
+same identity model without changing lower phases.
 
 Typed HIR retains a structured loop operation containing:
 
@@ -725,8 +725,9 @@ MIR cleanup planning exposes an opaque retained lexical-scope depth. Planning
 an edge to that depth is non-consuming and returns cleanup and storage-dead
 work for precisely the exited scopes. The lowering loop context binds a
 `LoopId` to exit and latch block targets plus that retained depth. Current
-`while` lowering installs this context around the body; later targeted-exit
-lowering will query it to select cleanup and jump targets.
+`while` lowering installs this context around the body. `break` lowering
+queries it to select cleanup and the exit target; later `continue` lowering
+will reuse it for the latch target.
 
 ### Repeatable MIR storage lifetimes
 
@@ -789,13 +790,15 @@ boolean branches, and jumps. It does not introduce a source-specific loop
 terminator and does not reuse the generated array-loop terminator, whose array
 storage and lifecycle invariants are unrelated to source control flow.
 
-Current lowering applies this representation to typed `HirWhile` fixtures.
-It allocates the complete canonical shape before emitting its edges, evaluates
-and finishes the condition full expression in the header, lowers the body as a
-child lexical scope, routes normal completion through the latch, and selects
-the exit as the continuation regardless of literal condition or body effects.
-This has been verified through the MIR pass boundary and native backend for
-zero, repeated, nested, returning, and ownership-heavy internal fixtures.
+Current lowering applies this representation to source `while` and `break`.
+It allocates the loop regions before emitting their edges, evaluates and
+finishes the condition full expression in the header, lowers the body as a
+child lexical scope, routes normal completion through a latch, and selects the
+exit as the continuation regardless of literal condition. When every body
+path transfers elsewhere, lowering omits the unreachable latch rather than
+inventing an edge with incompatible enclosing-storage state. The
+representation is verified through the MIR pass boundary and native backend
+for zero, repeated, nested, returning, breaking, and ownership-heavy cases.
 
 The initial lowering form has these semantic regions:
 
@@ -810,17 +813,17 @@ return -> function exit
 
 The condition may expand into additional blocks for checked operations. Its
 final successful path preserves the boolean result and completes
-full-expression cleanup before branching. A dedicated latch gives normal body
-completion and every cleaned continue edge one continuation destination. A
-unique exit joins condition-false and cleaned break edges.
+full-expression cleanup before branching. A reachable dedicated latch gives
+normal body completion and every future cleaned continue edge one continuation
+destination. A unique exit joins condition-false and cleaned break edges.
 
-Lowering tracks a break destination, continue destination, and retained
+Lowering tracks a break destination, future continue destination, and retained
 lexical cleanup depth for every active loop. Before transferring control,
-normal body completion, `break`, and `continue` emit the source-defined
-cleanup for every exited scope. Planning is depth-oriented and does not
-consume lexical cleanup state, so multiple outgoing edges can receive the same
-required sequence. `return` retains all-scope cleanup, and panic retains its
-non-unwinding terminator.
+normal body completion and `break` emit the source-defined cleanup for every
+exited scope; future `continue` uses the same plan. Planning is depth-oriented
+and does not consume lexical cleanup state, so multiple outgoing edges can
+receive the same required sequence. `return` retains all-scope cleanup, and
+panic retains its non-unwinding terminator.
 
 After targeted exits become ordinary CFG edges, MIR need not retain the source
 loop identity for correctness. Optional loop metadata may later support

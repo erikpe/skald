@@ -1,0 +1,87 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn immediate() -> i64 {
+    var value: i64 = 0;
+    while (true) {
+        value = 1;
+        break;
+        value = 99;
+    }
+    return value;
+}
+
+fn conditional(limit: i64) -> i64 {
+    var value: i64 = 0;
+    while (value < limit) {
+        value = value + 1;
+        if (value == 2) {
+            break;
+        }
+    }
+    return value;
+}
+
+fn nested() -> i64 {
+    var outer: i64 = 0;
+    var total: i64 = 0;
+    while (outer < 3) {
+        outer = outer + 1;
+        var inner: i64 = 0;
+        while (inner < 3) {
+            inner = inner + 1;
+            if (inner == 2) {
+                break;
+            }
+            total = total + outer * 10 + inner;
+        }
+        total = total + inner;
+        if (outer == 2) {
+            break;
+        }
+    }
+    return total;
+}
+
+fn nested_cleanup() -> i64 {
+    var preserved: Trace = Trace(10);
+    while (true) {
+        var body: Trace = Trace(20);
+        {
+            var nested: Trace = Trace(30);
+            break;
+        }
+    }
+    return 4;
+}
+
+fn owned_cleanup() -> i64 {
+    var preserved: shared Trace = new Trace(40);
+    while (true) {
+        var owner: shared Trace = new Trace(50);
+        var optional: shared? Trace = owner;
+        var values: i64[] = i64[](2u);
+        break;
+    }
+    return 6;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(immediate());
+    ska_rt_println_i64(conditional(5));
+    ska_rt_println_i64(nested());
+    ska_rt_println_i64(nested_cleanup());
+    ska_rt_println_i64(owned_cleanup());
+    return 0;
+}

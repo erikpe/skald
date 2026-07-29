@@ -67,16 +67,56 @@ fn while_recovery_requires_parentheses_and_a_body_then_keeps_later_statements() 
 }
 
 #[test]
-fn reserved_loop_exits_receive_focused_temporary_diagnostics() {
+fn parses_break_with_complete_spans_and_recovers_from_non_semicolon_forms() {
+    let source = "fn main() -> i64 { while (true) { break; } return 0; }";
+    let (_, output) = parse_text(source);
+    assert!(!output.has_errors());
+    let Statement::While(statement) = &function(&output.ast, 0).body.statements[0] else {
+        panic!("expected while statement");
+    };
+    let [Statement::Break(statement)] = statement.body.statements.as_slice() else {
+        panic!("expected break statement");
+    };
+    assert_eq!(
+        &source[statement.break_span.range().start()..statement.break_span.range().end()],
+        "break"
+    );
+    assert_eq!(
+        &source[statement.span.range().start()..statement.span.range().end()],
+        "break;"
+    );
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Break @34..40"));
+    assert!(dump.contains("BreakKeyword @34..39"));
+
+    for malformed in [
+        "fn main() -> i64 { while (true) { break return 0; } return 1; }",
+        "fn main() -> i64 { while (true) { break 7; } return 1; }",
+    ] {
+        let (_, output) = parse_text(malformed);
+        assert!(output.has_errors());
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == EXPECTED_TOKEN
+                && diagnostic.message == "expected `;` after the `break` statement"
+        }));
+        assert!(
+            function(&output.ast, 0)
+                .body
+                .statements
+                .iter()
+                .any(|statement| matches!(statement, Statement::Return(_))),
+            "recovery must preserve a later statement: {malformed}"
+        );
+    }
+}
+
+#[test]
+fn reserved_continue_receives_a_focused_temporary_diagnostic() {
     let (_, output) =
         parse_text("fn main() -> i64 { while (true) { break; continue; } return 0; }");
 
     let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-    assert_eq!(diagnostics.len(), 2);
-    assert!(diagnostics.iter().all(|diagnostic| {
-        diagnostic.code == UNSUPPORTED_LOOP_EXIT
-            && diagnostic.message.ends_with("is not supported yet")
-    }));
-    assert_eq!(diagnostics[0].message, "`break` is not supported yet");
-    assert_eq!(diagnostics[1].message, "`continue` is not supported yet");
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].code, UNSUPPORTED_LOOP_EXIT);
+    assert_eq!(diagnostics[0].message, "`continue` is not supported yet");
 }

@@ -59,3 +59,39 @@ fn every_while_conservatively_falls_through_for_definite_return() {
             .any(|diagnostic| diagnostic.code == MISSING_RETURN));
     }
 }
+
+#[test]
+fn break_effects_stop_their_path_and_preserve_sibling_outcomes() {
+    let output = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  while (true) {\n",
+        "    if (true) { break; return 1; } else { return 2; }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors());
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::While(statement) = &main.body.statements[0] else {
+        panic!("expected typed loop");
+    };
+    let HirStatement::Conditional(conditional) = &statement.body.statements[0] else {
+        panic!("expected typed conditional");
+    };
+    let target = statement.loop_id;
+    assert!(conditional.effects.can_break_to(target));
+    assert!(conditional.effects.can_exit_function());
+    assert!(!conditional.effects.can_fall_through());
+    assert!(statement.effects.can_fall_through());
+    assert!(statement.effects.can_exit_function());
+    assert!(!statement.effects.can_break_to(target));
+
+    let break_arm = &conditional.arms[0].body;
+    assert!(break_arm.effects.can_break_to(target));
+    assert!(!break_arm.effects.can_exit_function());
+    assert!(!break_arm.effects.can_fall_through());
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Break f0:loop0"));
+}

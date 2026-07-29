@@ -137,7 +137,7 @@ makes a result source-observable.
   access, lifecycle, failure, and the remaining aliasing exclusions.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
   declarations, bindings and scopes, statements, returns, evaluation order,
-  implemented `while` loops, and the frozen but unimplemented `break` and
+  implemented `while` loops and `break`, and the frozen but unimplemented
   `continue` contract.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,

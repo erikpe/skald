@@ -633,6 +633,9 @@ impl HirDumper {
                     });
                 }
             }
+            HirStatement::Break(statement) => {
+                self.line(&format!("Break {}", statement.target), statement.span);
+            }
             HirStatement::Call(statement) => {
                 self.line("CallStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.call));

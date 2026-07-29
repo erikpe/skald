@@ -492,6 +492,7 @@ pub enum Statement {
     BaseInitialization(BaseInitializationStatement),
     Local(LocalDecl),
     Return(ReturnStatement),
+    Break(BreakStatement),
     Expression(ExpressionStatement),
     Conditional(ConditionalStatement),
     While(WhileStatement),
@@ -506,6 +507,7 @@ impl Statement {
             Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Break(statement) => statement.span,
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
@@ -550,6 +552,12 @@ pub struct LocalDecl {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReturnStatement {
     pub value: Option<Expression>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BreakStatement {
+    pub break_span: Span,
     pub span: Span,
 }
 

@@ -152,8 +152,9 @@ The target boundary requires:
 
 - a condition to arrive as an ordinary verified boolean branch;
 - normal repetition to arrive as an ordinary backward jump;
-- `break` and `continue` to arrive as ordinary jumps to already selected
-  targets;
+- `break` to arrive as an ordinary jump to its already selected exit target;
+- future `continue` to arrive as an ordinary jump to its already selected
+  latch target;
 - return and panic to retain their existing terminator forms;
 - source-ordered condition cleanup and every exited-scope cleanup to be
   explicit before the corresponding edge;

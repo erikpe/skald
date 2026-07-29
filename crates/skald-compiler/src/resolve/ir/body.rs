@@ -165,6 +165,7 @@ pub enum ResolvedStatement {
     BaseInitialization(ResolvedBaseInitialization),
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
+    Break(ResolvedBreak),
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
     While(ResolvedWhile),
@@ -183,6 +184,7 @@ impl ResolvedStatement {
             Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Break(statement) => statement.span,
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
@@ -202,6 +204,12 @@ pub struct ResolvedPrimitiveBindingAssignment {
     pub destination: BindingId,
     pub equal_span: Span,
     pub source: ResolvedExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedBreak {
+    pub target: LoopId,
     pub span: Span,
 }
 

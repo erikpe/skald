@@ -71,12 +71,15 @@ For `while`, the AST must retain the keyword, condition, body, and complete
 statement span. The resolved dump assigns source-ordered callable-local
 `LoopId`s, and HIR retains the structured loop plus its conservative
 fallthrough effect. MIR then expands the statement into generic preheader,
-condition, body, latch, and exit blocks. Inspect condition full-expression
-cleanup before the header branch, body-local `storage-live` and
-`storage-dead` operations before the latch, and the ordinary backward `goto`
-from latch to header. Assembly should contain only the corresponding generic
-branches and jumps. `break` and `continue` stop at parser diagnostic `PAR015`
-until their later roadmap slices.
+condition, body, reachable latch, and exit blocks. Inspect condition
+full-expression cleanup before the header branch, body-local `storage-live`
+and `storage-dead` operations before the latch, and the ordinary backward
+`goto` from latch to header. A `break` appears in resolved and HIR dumps with
+its selected `LoopId`; MIR must clean each scope above that loop's retained
+depth before an ordinary `goto` to the exit. A body with no latch-reaching
+path omits the unreachable latch. Assembly should contain only the
+corresponding generic branches and jumps. `continue` still stops at parser
+diagnostic `PAR015`.
 
 For `T(copy source)`, the AST and resolved dumps must retain a distinct copy
 mode rather than an ordinary argument. HIR must show one selected copy

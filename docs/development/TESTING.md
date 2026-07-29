@@ -176,16 +176,19 @@ Because array failures promise only non-return, `.exit` sidecars use
 
 While-loop coverage follows the phase boundary that owns each invariant.
 Lexer tests keep `while`, `break`, and `continue` reserved without reserving
-identifier prefixes. Syntax tests own the mandatory parentheses and block,
-recovery, spans, and unsupported loop-exit diagnostics. Resolution and
-type-check tests own source-ordered `LoopId`s, enclosing-condition and child
-body scopes, exact-`bool` conditions, conservative fallthrough, and structured
-HIR dumps. Source-to-MIR tests prove the canonical generic cyclic graph, while
-the internal-HIR lifecycle matrix and verifier mutations cover every current
-storage family without duplicating those cases at the parser boundary. Native
-goldens own zero, one, and repeated iterations, nesting, mutation, condition
-and body cleanup, and return from a body. The golden runner's repeated assembly
-comparison remains the source-to-target determinism check.
+identifier prefixes. Syntax tests own mandatory loop punctuation, `break;`
+recovery and spans, and the unsupported `continue` diagnostic. Resolution and
+type-check tests own source-ordered `LoopId`s, nearest-loop exit selection,
+outside-loop rejection, enclosing-condition and child body scopes,
+exact-`bool` conditions, conservative fallthrough, targeted effects, and
+structured HIR dumps. Source-to-MIR tests prove generic cyclic graphs and
+cleanup-to-exit edges, while the internal-HIR lifecycle matrix and verifier
+mutations cover every current storage family without duplicating those cases
+at the parser boundary. Native goldens own zero, one, and repeated iterations,
+immediate and conditional breaks, nested blocks and loops, enclosing mutation,
+condition/body/break cleanup, ownership-heavy exits, and return from a body.
+The golden runner's repeated assembly comparison remains the source-to-target
+determinism check.
 
 Primitive integer operation coverage keeps the closed matrices explicit.
 Type-check and MIR tests enumerate all eighteen same-type comparisons and all

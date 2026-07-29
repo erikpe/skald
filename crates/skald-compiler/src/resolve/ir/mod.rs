@@ -11,12 +11,13 @@ mod strings;
 
 pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
 pub use body::{
-    ResolvedArrayAssignment, ResolvedBaseInitialization, ResolvedBlock, ResolvedClassDefinition,
-    ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
-    ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
-    ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
-    ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedPrimitiveBindingAssignment,
-    ResolvedReturn, ResolvedSharedAssignment, ResolvedStatement, ResolvedWhile,
+    ResolvedArrayAssignment, ResolvedBaseInitialization, ResolvedBlock, ResolvedBreak,
+    ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedConditional,
+    ResolvedConditionalArm, ResolvedExpressionStatement, ResolvedFieldAssignment,
+    ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedLocalDecl,
+    ResolvedMemberDefinition, ResolvedObjectAssignment, ResolvedOptionalAssignment,
+    ResolvedPrimitiveBindingAssignment, ResolvedReturn, ResolvedSharedAssignment,
+    ResolvedStatement, ResolvedWhile,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,
