@@ -52,6 +52,7 @@ Archived plans:
 - [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md)
 - [Panic and unrecoverable failure reporting](PANIC_ROADMAP.md)
 - [While loops and loop exits](WHILE_LOOPS_ROADMAP.md)
+- [Cyclic module imports](CYCLIC_IMPORTS_ROADMAP.md)
 
 Resolved string-design inputs:
 

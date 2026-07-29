@@ -1,5 +1,11 @@
 use super::*;
 
+fn write_canonical_standard_library(root: &Path) {
+    fs::create_dir_all(root.join("std")).unwrap();
+    fs::write(root.join("std/str.ska"), CANONICAL_STR_SOURCE).unwrap();
+    fs::write(root.join("std/error.ska"), CANONICAL_ERROR_SOURCE).unwrap();
+}
+
 fn module_request(
     directory: &TemporaryDirectory,
     entry: EntrySelector,
@@ -134,23 +140,10 @@ fn replacement_standard_library_validates_the_canonical_panic_intrinsic() {
     let root = directory.join("modules");
     let standard_library = directory.join("replacement-std");
     fs::create_dir_all(&root).unwrap();
-    fs::create_dir_all(standard_library.join("std")).unwrap();
+    write_canonical_standard_library(&standard_library);
     fs::write(
         root.join("app.ska"),
         "import std::error;\nfn main() -> i64 { return 0; }\n",
-    )
-    .unwrap();
-    fs::write(
-        standard_library.join("std/error.ska"),
-        concat!(
-            "import std::str;\n",
-            "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
-        ),
-    )
-    .unwrap();
-    fs::write(
-        standard_library.join("std/str.ska"),
-        include_str!("../../../../../std/std/str.ska"),
     )
     .unwrap();
     let request = CompilationRequest::new(
@@ -178,6 +171,78 @@ fn replacement_standard_library_validates_the_canonical_panic_intrinsic() {
         .diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code == crate::resolve::INVALID_INTRINSIC_DECLARATION));
+}
+
+#[test]
+fn canonical_standard_library_cycle_obeys_default_replacement_and_disabled_selection() {
+    let directory = TemporaryDirectory::new("request-standard-library-cycle").unwrap();
+    let application = directory.join("application");
+    let installed = directory.join("installed");
+    let replacement = directory.join("replacement");
+    let self_contained = directory.join("self-contained");
+    fs::create_dir_all(&application).unwrap();
+    fs::write(
+        application.join("app.ska"),
+        "from std::str import Str;\nfn main() -> i64 { var value: Str = \"ok\"; return (i64) value.len(); }\n",
+    )
+    .unwrap();
+    write_canonical_standard_library(&installed);
+    write_canonical_standard_library(&replacement);
+    fs::create_dir_all(&self_contained).unwrap();
+    fs::write(
+        self_contained.join("app.ska"),
+        "from std::str import Str;\nfn main() -> i64 { var value: Str = \"ok\"; return (i64) value.len(); }\n",
+    )
+    .unwrap();
+    write_canonical_standard_library(&self_contained);
+
+    let compile = |roots, standard_library, installed_root| {
+        let request = CompilationRequest::new(
+            EntrySelector::Module("app".parse().unwrap()),
+            roots,
+            standard_library,
+            Target::X86_64SysV,
+            ArtifactOptions::new(ArtifactKind::Assembly, None),
+            CompilationEnvironment::new(directory.path().to_owned(), installed_root),
+        );
+        compile_request_to_assembly(&request)
+    };
+
+    for artifact in [
+        compile(
+            vec![application.clone()],
+            StandardLibrarySelection::Default,
+            installed.clone(),
+        )
+        .unwrap(),
+        compile(
+            vec![application.clone()],
+            StandardLibrarySelection::Replacement(replacement),
+            directory.join("unused-installed"),
+        )
+        .unwrap(),
+        compile(
+            vec![self_contained],
+            StandardLibrarySelection::Disabled,
+            directory.join("unused-installed"),
+        )
+        .unwrap(),
+    ] {
+        assert!(artifact.report.diagnostics.is_empty());
+        assert_eq!(artifact.report.sources.len(), 3);
+        assert!(artifact.assembly.contains("call ska_rt_panic"));
+    }
+
+    let CompilationError::Diagnostics(report) = compile(
+        vec![application],
+        StandardLibrarySelection::Disabled,
+        directory.join("unused-installed"),
+    )
+    .unwrap_err() else {
+        panic!("disabled lookup without a provider-owned standard library must fail");
+    };
+    assert!(render_diagnostics(&report.sources, &report.diagnostics)
+        .contains("module `std::str` was not found"));
 }
 
 #[test]

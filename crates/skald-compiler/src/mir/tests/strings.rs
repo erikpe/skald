@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     identity::{ArrayTypeId, ClassId, LiteralDataId},
     resolve::resolve_module_graph,
-    test_support::load_module_sources,
+    test_support::{load_module_sources, load_module_sources_with_standard_library},
     typeck::type_check,
 };
 
@@ -45,22 +45,12 @@ fn one_literal_mir() -> MirProgram {
 }
 
 fn panic_mir() -> MirProgram {
-    let (_workspace, graph) = load_module_sources(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                "from std::error import panic;\nfn main() -> i64 { panic(\"failure\"); }\n",
-            ),
-            (
-                "std/str.ska",
-                include_str!("../../../../../std/std/str.ska"),
-            ),
-            (
-                "std/error.ska",
-                "import std::str;\npublic intrinsic fn panic(message: std::str::Str) -> unit;\n",
-            ),
-        ],
+        &[(
+            "app.ska",
+            "from std::error import panic;\nfn main() -> i64 { panic(\"failure\"); }\n",
+        )],
     );
     let resolved = resolve_module_graph(&graph);
     assert!(

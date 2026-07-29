@@ -193,10 +193,14 @@ A valid byte position satisfies `0 <= index < len`; a valid slice satisfies
 [array length, indices, and bounds](ARRAYS.md#length-indices-and-bounds) and
 [array slices](ARRAYS.md#slices).
 
-Invalid byte and slice bounds terminate through ordinary checked array
-behavior. The library's dynamic factories and slicing method call a private
-ordinary initializer to install a trusted backing owner and range. The
-initializer is not a compiler convention.
+Invalid byte and slice bounds call the imported
+`std::error::panic("array index out of bounds")` declaration as a standalone
+non-returning statement. `std::str` therefore has an ordinary explicit import
+of `std::error`, while the panic signature gives `std::error` its ordinary
+explicit import of `std::str`. This two-module cycle grants no implicit
+bindings or visibility exceptions. The library's dynamic factories and
+slicing method call a private ordinary initializer to install a trusted
+backing owner and range. The initializer is not a compiler convention.
 
 The implemented panic API accepts the exact `std::str::Str` value described here.
 Generated code passes only its logical backing-byte address and length to the

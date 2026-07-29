@@ -12,6 +12,11 @@ explicitly. Call statements execute through the compiler's non-returning panic
 terminator and the length-delimited runtime reporter. It is not an external
 function or an exception API.
 
+`std::str` selectively imports that panic declaration for invalid byte and
+slice bounds, forming an ordinary two-module import cycle with `std::error`.
+The cycle has no initialization-order consequences because modules contain no
+executable top-level state.
+
 Import and call it as a standalone statement:
 
 ```ska

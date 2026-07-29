@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     mir::{lower_hir, MirStaticAllocationOrigin},
     resolve::resolve_module_graph,
-    test_support::load_module_sources,
+    test_support::{load_module_sources, load_module_sources_with_standard_library},
     typeck::type_check,
 };
 
@@ -18,8 +18,6 @@ const VALID_STR: &str = concat!(
     "  }\n",
     "}\n",
 );
-const CANONICAL_STR: &str = include_str!("../../../../../../std/std/str.ska");
-
 fn string_program(app: &str) -> MirProgram {
     string_program_with_item(app, VALID_STR)
 }
@@ -43,17 +41,11 @@ fn string_program_with_item(app: &str, string_item: &str) -> MirProgram {
 }
 
 fn panic_program(app: &str) -> MirProgram {
-    let (_workspace, graph) = load_module_sources(
-        "app",
-        &[
-            ("app.ska", app),
-            ("std/str.ska", CANONICAL_STR),
-            (
-                "std/error.ska",
-                "import std::str;\npublic intrinsic fn panic(message: std::str::Str) -> unit;\n",
-            ),
-        ],
-    );
+    canonical_string_program(app)
+}
+
+fn canonical_string_program(app: &str) -> MirProgram {
+    let (_workspace, graph) = load_module_sources_with_standard_library("app", &[("app.ska", app)]);
     let resolved = resolve_module_graph(&graph);
     assert!(
         resolved.diagnostics.is_empty(),
@@ -208,23 +200,20 @@ fn panic_extracts_the_exact_descriptor_slice_and_uses_the_common_reporter() {
 
 #[test]
 fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
-    let program = string_program_with_item(
-        concat!(
-            "from std::str import Str;\n",
-            "extern fn report() -> i64;\n",
-            "fn main() -> i64 {\n",
-            "  if (true) {\n",
-            "    var bytes: u8[] = u8[](3u);\n",
-            "    bytes[0] = 1u8;\n",
-            "    var value: Str = Str.from_bytes(bytes);\n",
-            "    var slice: Str = value.slice(0, 1);\n",
-            "    var observed: u8 = slice.byte(-1);\n",
-            "  }\n",
-            "  return report();\n",
-            "}\n",
-        ),
-        CANONICAL_STR,
-    );
+    let program = canonical_string_program(concat!(
+        "from std::str import Str;\n",
+        "extern fn report() -> i64;\n",
+        "fn main() -> i64 {\n",
+        "  if (true) {\n",
+        "    var bytes: u8[] = u8[](3u);\n",
+        "    bytes[0] = 1u8;\n",
+        "    var value: Str = Str.from_bytes(bytes);\n",
+        "    var slice: Str = value.slice(0, 1);\n",
+        "    var observed: u8 = slice.byte(-1);\n",
+        "  }\n",
+        "  return report();\n",
+        "}\n",
+    ));
     let mut output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     output.push_str(concat!(
         "\n.bss\n",

@@ -1,3 +1,5 @@
+from std::error import panic;
+
 public class Str {
     private _storage: shared u8[];
     private _start: i64;
@@ -29,8 +31,7 @@ public class Str {
                 return self._storage->[self._start + normalized_index];
             }
         }
-        Str._fail_bounds_check();
-        return 0u8;
+        panic("array index out of bounds");
     }
 
     fn slice(start: i64, end: i64) -> Str {
@@ -53,8 +54,7 @@ public class Str {
                 }
             }
         }
-        Str._fail_bounds_check();
-        return Str();
+        panic("array index out of bounds");
     }
 
     static fn from_bytes(ref bytes: u8[]) -> Str {
@@ -74,11 +74,5 @@ public class Str {
         result->[middle:] = other._storage->[other._start:(other._start + (i64) other._length)];
 
         return Str(result, 0, combined_length);
-    }
-
-    private static fn _fail_bounds_check() -> unit {
-        var empty: u8[] = u8[]();
-        var ignored: u8 = empty[0];
-        return;
     }
 }

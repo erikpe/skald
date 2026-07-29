@@ -2,15 +2,9 @@ use super::*;
 use crate::{
     intrinsic::Intrinsic,
     mir::{lower_hir, verify_mir, MirFunctionLinkage},
-    test_support::load_module_sources,
+    test_support::{load_module_sources, CANONICAL_ERROR_SOURCE, CANONICAL_STR_SOURCE},
     typeck::type_check,
 };
-
-const STRING_MODULE: &str = include_str!("../../../../../std/std/str.ska");
-const ERROR_MODULE: &str = concat!(
-    "import std::str;\n",
-    "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
-);
 
 fn direct_call(statement: &ResolvedStatement) -> &ResolvedDirectCallExpr {
     let ResolvedStatement::Expression(statement) = statement else {
@@ -49,7 +43,7 @@ fn all_supported_spellings_resolve_to_one_panic_intrinsic_identity() {
                     "public fn direct(message: std::str::Str) -> unit { panic(message); }\n",
                 ),
             ),
-            ("std/str.ska", STRING_MODULE),
+            ("std/str.ska", CANONICAL_STR_SOURCE),
         ],
     );
 
@@ -99,8 +93,8 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
                 "app.ska",
                 "import std::error;\nfn main() -> i64 { return 0; }\n",
             ),
-            ("std/error.ska", ERROR_MODULE),
-            ("std/str.ska", STRING_MODULE),
+            ("std/error.ska", CANONICAL_ERROR_SOURCE),
+            ("std/str.ska", CANONICAL_STR_SOURCE),
         ],
     );
     let resolved = resolve_module_graph(&graph);
@@ -155,8 +149,8 @@ fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
                     "fn main() -> i64 { return 0; }\n",
                 ),
             ),
-            ("std/error.ska", ERROR_MODULE),
-            ("std/str.ska", STRING_MODULE),
+            ("std/error.ska", CANONICAL_ERROR_SOURCE),
+            ("std/str.ska", CANONICAL_STR_SOURCE),
         ],
     );
     let resolved = resolve_module_graph(&graph);
@@ -217,7 +211,7 @@ fn rejects_noncanonical_and_malformed_panic_intrinsics_during_resolution() {
                     "import std::error;\nfn main() -> i64 { return 0; }\n",
                 ),
                 ("std/error.ska", &error_module),
-                ("std/str.ska", STRING_MODULE),
+                ("std/str.ska", CANONICAL_STR_SOURCE),
             ],
         );
         let output = resolve_module_graph(&graph);

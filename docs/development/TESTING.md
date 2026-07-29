@@ -272,8 +272,9 @@ String coverage follows the
   standard-library lookup;
 - resolver and type-check tests own exact language-item identity, the complete
   descriptor/privacy/lifecycle rejection matrix, produced-value contexts,
-  canonical private descriptor construction, and the rule that ordinary
-  initializer and method names have no compiler meaning;
+  canonical private descriptor construction, the canonical
+  `std::str`/`std::error` cycle and panic statements, and the rule that
+  ordinary initializer and method names have no compiler meaning;
 - MIR tests mutate each string declaration, literal-data, static-owner,
   descriptor-publication, and ownership invariant independently;
 - backend tests own immutable bytes, pooling, alignment, relocations,
@@ -287,9 +288,12 @@ String coverage follows the
   verified MIR, and assembly across independent processes and provider/source
   permutations.
 
-The canonical standard-library source is included directly by focused
-resolver/backend tests so its public surface and lifecycle behavior cannot
-drift independently of compiler coverage.
+Focused resolver, MIR, and backend tests use one shared test-only helper that
+loads the canonical `std::str` and `std::error` sources as a complete
+dependency closure. Cross-process determinism and driver provider tests copy
+both real sources into their filesystem fixtures. This keeps the public
+surface, panic dependency, and lifecycle behavior from drifting independently
+of compiler coverage.
 
 ## Determinism and process isolation
 

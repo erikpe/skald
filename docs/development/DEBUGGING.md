@@ -237,7 +237,10 @@ last-owner reclamation. For byte or slice-bound failures, inspect the
 array-compatible one-time negative normalization relative to the descriptor
 length, then the normalized signed ordering/bounds checks. Conversion to the
 internal `u64` descriptor range occurs only after the normalized position is
-known to be non-negative.
+known to be non-negative. The failing branch should end in `Panic` HIR and a
+`panic` MIR terminator selected through the imported
+`std::error::panic` identity; an array projection used only to provoke failure
+indicates stale standard-library source.
 
 Use the string-focused tests for the nearest reproduction:
 

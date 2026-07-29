@@ -222,6 +222,11 @@ The installed `std/std/str.ska` implementation copies caller arrays into fresh
 shared backing, observes length and checked bytes, creates `O(1)` slices by
 passing shared backing and a checked subrange to a private initializer,
 converts to an independent inline array, and concatenates into fresh backing.
+Its invalid byte and slice checks lower ordinary calls to the selectively
+imported canonical panic identity using the frozen `array index out of bounds`
+message. The reciprocal `std::str -> std::error` and
+`std::error -> std::str` imports are an ordinary module cycle; no string,
+panic, or standard-library exception exists in graph loading or resolution.
 Its dynamic factories pass fresh shared backing and the complete range to the
 same initializer under exact-class lexical ownership. Synthesized class
 lifecycle and generic shared-array retain/release reclaim dynamic backing
@@ -232,8 +237,8 @@ after its last descriptor owner.
 Structured diagnostics cover:
 
 - every malformed literal category and recovery boundary;
-- missing, ambiguous, unreadable, malformed, cyclic, or exact-case language
-  item modules;
+- missing, ambiguous, unreadable, malformed, wrong-case, or directly
+  self-importing language-item modules;
 - private, missing, wrong-kind, inherited, or otherwise invalid `Str`;
 - missing, reordered, extra, public, or wrongly typed representation fields;
 - forbidden explicit copy/assignment/destruction lifecycle;
@@ -250,8 +255,8 @@ Implementation coverage belongs at the narrowest owner:
 - module tests for synthetic reachability, provider permutations, cyclic
   dependencies, imports, replacement roots, `--no-stdlib`, and the source-text
   adapter;
-- resolver/type-check tests for exact identities, validation, produced-value
-  typing, destinations, calls, and lifecycle;
+- resolver/type-check tests for exact identities, canonical cyclic imports,
+  validation, produced-value typing, destinations, calls, and lifecycle;
 - HIR/MIR dump and verifier-mutation tests for deterministic data identities,
   descriptor construction, static publication, and immortality;
 - backend tests for bytes, zeroes, alignment, relocations, pooling, symbols,

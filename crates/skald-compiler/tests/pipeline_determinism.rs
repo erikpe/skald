@@ -601,8 +601,12 @@ fn string_phase_dump(variant: usize) -> String {
             standard_library.join("std/str.ska"),
             include_str!("../../../std/std/str.ska"),
         ),
+        (
+            standard_library.join("std/error.ska"),
+            include_str!("../../../std/std/error.ska"),
+        ),
     ];
-    for index in if variant == 0 { [0, 1] } else { [1, 0] } {
+    for index in if variant == 0 { [0, 1, 2] } else { [2, 1, 0] } {
         write_source(&sources[index].0, sources[index].1);
     }
     let configurations = if variant == 0 {

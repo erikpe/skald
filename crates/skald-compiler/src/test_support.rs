@@ -25,6 +25,9 @@ use crate::{
 
 static NEXT_TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
+pub(crate) const CANONICAL_STR_SOURCE: &str = include_str!("../../../std/std/str.ska");
+pub(crate) const CANONICAL_ERROR_SOURCE: &str = include_str!("../../../std/std/error.ska");
+
 pub(crate) const INLINE_FIELD_SOURCE: &str = concat!(
     "class Root {\n",
     "  flag: bool; left: Branch; right: Branch;\n",
@@ -136,6 +139,19 @@ pub(crate) fn load_module_sources(
     )
     .unwrap();
     (workspace, graph)
+}
+
+pub(crate) fn load_module_sources_with_standard_library(
+    entry: &str,
+    sources: &[(&str, &str)],
+) -> (TemporaryDirectory, ModuleGraph) {
+    let mut complete_sources = Vec::with_capacity(sources.len() + 2);
+    complete_sources.extend_from_slice(sources);
+    complete_sources.extend([
+        ("std/str.ska", CANONICAL_STR_SOURCE),
+        ("std/error.ska", CANONICAL_ERROR_SOURCE),
+    ]);
+    load_module_sources(entry, &complete_sources)
 }
 
 pub(crate) fn assert_system_assembler_accepts(output: &str) {

@@ -8,7 +8,7 @@ use crate::{
     backend::Target,
     diagnostics::render_diagnostics,
     syntax::{EXCESSIVE_NESTING, MAX_SYNTAX_NESTING},
-    test_support::TemporaryDirectory,
+    test_support::{TemporaryDirectory, CANONICAL_ERROR_SOURCE, CANONICAL_STR_SOURCE},
 };
 
 use super::*;

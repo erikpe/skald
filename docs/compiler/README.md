@@ -64,7 +64,8 @@ driver request model are implemented foundations. Deterministic filesystem
 provider normalization and exact candidate lookup are available behind the
 `module` facade. The facade also provides positional/logical entry selection,
 reachable parsed graph loading, deterministic graph identities and dumps, and
-cycle rejection. The resolver can collect a loaded graph into deterministic
+multi-module cycles with focused direct self-import rejection. The resolver
+can collect a loaded graph into deterministic
 per-module declaration indexes and one flat whole-program IR; unqualified
 uses see owned declarations plus explicit selective ordinary bindings. Direct
 module imports create exact default or aliased qualified bindings, and
@@ -90,7 +91,8 @@ target-independent descriptor materialization, deterministic x86-64 backing
 emission, and ordinary literal lifecycle are compiler phase products.
 Copying construction, observation, slicing, byte-array conversion, and
 concatenation remain ordinary source in the canonical standard-library
-module.
+module. Its invalid byte and slice bounds call the canonical panic intrinsic
+through the ordinary `std::str` and `std::error` import cycle.
 
 Primitive integer comparisons and casts are complete source-to-native phase
 products. Type checking selects exact same-type comparison signedness or one

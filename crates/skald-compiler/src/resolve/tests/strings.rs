@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     hir::{dump_hir, HirObjectProducer},
     identity::LiteralDataId,
-    test_support::load_module_sources,
+    test_support::{load_module_sources, load_module_sources_with_standard_library},
     typeck::{type_check, PRIVATE_INITIALIZER_ACCESS},
 };
 
@@ -18,8 +18,6 @@ const VALID_STR: &str = concat!(
     "  }\n",
     "}\n",
 );
-const CANONICAL_STR: &str = include_str!("../../../../../std/std/str.ska");
-
 fn resolve_modules(entry: &str, sources: &[(&str, &str)]) -> ResolveOutput {
     let (_workspace, graph) = load_module_sources(entry, sources);
     resolve_module_graph(&graph)
@@ -31,26 +29,28 @@ fn source_with_str(app: &str) -> ResolveOutput {
 
 #[test]
 fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_members() {
-    let resolved = resolve_modules(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                concat!(
-                    "from std::str import Str;\n",
-                    "fn main() -> i64 {\n",
-                    "  var bytes: u8[] = u8[](2u);\n",
-                    "  var value: Str = Str.from_bytes(bytes);\n",
-                    "  var part: Str = value.slice(0, 2);\n",
-                    "  var copy: u8[] = part.to_bytes();\n",
-                    "  var combined: Str = value.concat(part);\n",
-                    "  return (i64) combined.len();\n",
-                    "}\n",
-                ),
+        &[(
+            "app.ska",
+            concat!(
+                "from std::str import Str;\n",
+                "fn main() -> i64 {\n",
+                "  var bytes: u8[] = u8[](2u);\n",
+                "  var value: Str = Str.from_bytes(bytes);\n",
+                "  var part: Str = value.slice(0, 2);\n",
+                "  var copy: u8[] = part.to_bytes();\n",
+                "  var combined: Str = value.concat(part);\n",
+                "  return (i64) combined.len();\n",
+                "}\n",
             ),
-            ("std/str.ska", CANONICAL_STR),
-        ],
+        )],
     );
+    let string = graph.find(&"std::str".parse().unwrap()).unwrap();
+    let error = graph.find(&"std::error".parse().unwrap()).unwrap();
+    assert_eq!(string.imports()[0].target(), error.provenance().module_id());
+    assert_eq!(error.imports()[0].target(), string.provenance().module_id());
+    let resolved = resolve_module_graph(&graph);
     assert!(
         resolved.diagnostics.is_empty(),
         "canonical library must resolve: {:?}",
@@ -113,6 +113,10 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         .methods
         .iter()
         .any(|method| method.name == "_normalize_position"));
+    assert!(!class
+        .methods
+        .iter()
+        .any(|method| method.name == "_fail_bounds_check"));
     let descriptor_initializer = class.initializers[1].id;
 
     let checked = type_check(&resolved.program);
@@ -122,6 +126,13 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         checked.diagnostics
     );
     let dump = dump_hir(checked.hir.as_ref().unwrap());
+    assert_eq!(
+        dump.lines()
+            .filter(|line| line.trim_start().starts_with("Panic @"))
+            .count(),
+        2,
+        "{dump}"
+    );
     assert_eq!(
         dump.matches(&format!(
             "Construct {} via {descriptor_initializer}",
@@ -165,24 +176,22 @@ fn literal_materialization_does_not_select_private_initializers_or_method_names(
 
 #[test]
 fn canonical_descriptor_initializer_is_not_source_accessible() {
-    let resolved = resolve_modules(
+    let (_workspace, graph) = load_module_sources_with_standard_library(
         "app",
-        &[
-            (
-                "app.ska",
-                concat!(
-                    "from std::str import Str;\n",
-                    "fn main() -> i64 {\n",
-                    "  var empty: Str = Str();\n",
-                    "  var storage: shared u8[] = new u8[]();\n",
-                    "  var forbidden: Str = Str(storage, 0, 0u);\n",
-                    "  return 0;\n",
-                    "}\n",
-                ),
+        &[(
+            "app.ska",
+            concat!(
+                "from std::str import Str;\n",
+                "fn main() -> i64 {\n",
+                "  var empty: Str = Str();\n",
+                "  var storage: shared u8[] = new u8[]();\n",
+                "  var forbidden: Str = Str(storage, 0, 0u);\n",
+                "  return 0;\n",
+                "}\n",
             ),
-            ("std/str.ska", CANONICAL_STR),
-        ],
+        )],
     );
+    let resolved = resolve_module_graph(&graph);
     assert!(
         resolved.diagnostics.is_empty(),
         "canonical library must resolve: {:?}",

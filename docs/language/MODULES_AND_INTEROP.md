@@ -140,6 +140,12 @@ spell `public`. Source uses reach the same declaration identity through direct
 qualification, a module import, or a selective import. There is no automatic
 prelude binding.
 
+The canonical `std::str` implementation selectively imports `panic` for its
+bounds failures, so the installed `std::error` and `std::str` modules form an
+ordinary two-module cycle. Both directions retain their exact source import
+and declaration identities; neither direction is compiler-special
+reachability or a re-export.
+
 The implemented intrinsic registry contains only that canonical identity. The
 compiler validates the declaration while module ownership, visibility,
 parameter modes, exact type identities, result type, body absence, and source

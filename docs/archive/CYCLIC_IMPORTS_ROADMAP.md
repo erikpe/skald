@@ -1,6 +1,6 @@
 # Cyclic Module Imports Roadmap
 
-Status: in progress; C0–C1 are complete. C2 is next.
+Status: complete.
 
 This roadmap permits mutually dependent modules without weakening import
 visibility, semantic-cycle validation, deterministic identity allocation, or
@@ -47,7 +47,7 @@ bounds failure.
 
 - [x] C0 — Admit cyclic module graphs
 - [x] C1 — Prove semantic resolution across cycles
-- [ ] C2 — Migrate string failures and harden the feature
+- [x] C2 — Migrate string failures and harden the feature
 
 ## PR-sized implementation sequence
 
@@ -130,26 +130,26 @@ diagnostics.
 the motivating workaround, and close stale cycle assumptions across the
 repository.
 
-- [ ] Import `panic` from `std::error` in `std/std/str.ska`, replace
+- [x] Import `panic` from `std::error` in `std/std/str.ska`, replace
       `_fail_bounds_check` calls with non-returning panic statements using the
       existing frozen bounds message, and remove the helper and unreachable
       fallback returns.
-- [ ] Preserve the `std::error -> std::str` signature dependency so the
+- [x] Preserve the `std::error -> std::str` signature dependency so the
       canonical standard library itself exercises an ordinary two-module
       cycle rather than a compiler-owned exception.
-- [ ] Consolidate canonical standard-library test fixtures where practical so
+- [x] Consolidate canonical standard-library test fixtures where practical so
       tests that include the real `Str` source also provide its complete
       reachable dependency closure.
-- [ ] Keep exact native stderr and unsuccessful status for string byte and
+- [x] Keep exact native stderr and unsuccessful status for string byte and
       slice bounds failures, and prove valid string operations and explicit
       source panic remain unchanged.
-- [ ] Test default, replacement, and disabled standard-library configurations
+- [x] Test default, replacement, and disabled standard-library configurations
       so cyclic reachability does not bypass provider selection or language
       item validation.
-- [ ] Audit code, tests, samples, and living documentation for stale claims
+- [x] Audit code, tests, samples, and living documentation for stale claims
       that all import cycles are rejected or that string bounds failures are
       manufactured through array access.
-- [ ] Run the complete repository gate and supported Rust-version check from
+- [x] Run the complete repository gate and supported Rust-version check from
       an artifact-free snapshot, then inspect links, status, and diff hygiene
       before closeout.
 
