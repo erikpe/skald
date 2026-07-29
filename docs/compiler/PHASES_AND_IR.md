@@ -667,7 +667,11 @@ The source behavior of `while`, `break`, and `continue` is frozen in
 The structured loop representation below remains frozen for implementation
 and is not present in current resolved IR or HIR. MIR storage lifetime epochs
 and their structural verification are implemented as the first representation
-foundation; source loops and cyclic ownership verification remain later work.
+foundation. Generic cyclic MIR verification is also implemented: every
+stateful verifier uses deterministic finite forward dataflow, checks
+disconnected cyclic components, and resets per-epoch ownership and
+initialization facts at storage lifetime boundaries. Source loops and
+structured HIR loop representation remain later work.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete

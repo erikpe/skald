@@ -1,6 +1,6 @@
 //! Path-sensitive definite initialization for optional storage.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use super::super::{
     super::model::{
@@ -9,6 +9,7 @@ use super::super::{
         MirType,
     },
     context::Verifier,
+    dataflow::ForwardDataflow,
 };
 
 impl Verifier<'_> {
@@ -16,52 +17,44 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
     ) {
-        if function.body().entry.index() >= function.body().blocks.len() {
-            return;
-        }
-        let mut incoming: Vec<Option<HashSet<MirPlace>>> = vec![None; function.body().blocks.len()];
-        incoming[function.body().entry.index()] = Some(initialized_at_entry(function));
-        let mut pending = VecDeque::from([function.body().entry]);
-
-        while let Some(block_id) = pending.pop_front() {
-            let Some(block) = function.block(block_id) else {
-                continue;
-            };
-            let Some(mut state) = incoming[block_id.index()].clone() else {
-                continue;
-            };
-            apply_initializations(self.program, function, block, &mut state);
-            for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
-                let Some(slot) = incoming.get_mut(successor.index()) else {
+        let entry_state = initialized_at_entry(function);
+        let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
+        flow.seed(function.body().entry, entry_state.clone());
+        loop {
+            while let Some((block_id, mut state)) = flow.pop() {
+                let Some(block) = function.block(block_id) else {
                     continue;
                 };
-                let changed = match slot {
-                    Some(existing) => {
-                        let merged: HashSet<_> = existing.intersection(&state).cloned().collect();
+                apply_initializations(self.program, function, block, &mut state);
+                for successor in block.terminator.iter().flat_map(MirTerminator::successors) {
+                    flow.merge(successor, &state, |existing, incoming| {
+                        let merged: HashSet<_> = existing.intersection(incoming).cloned().collect();
                         if *existing == merged {
                             false
                         } else {
                             *existing = merged;
                             true
                         }
-                    }
-                    None => {
-                        *slot = Some(state.clone());
-                        true
-                    }
-                };
-                if changed {
-                    pending.push_back(successor);
+                    });
                 }
+            }
+            if !flow.seed_next_component(&function.body().blocks, entry_state.clone()) {
+                break;
             }
         }
 
         for block in &function.body().blocks {
-            let Some(Some(mut state)) = incoming.get(block.id.index()).cloned() else {
+            let Some(mut state) = flow.state(block.id).cloned() else {
                 continue;
             };
             for instruction in &block.instructions {
                 match instruction {
+                    MirInstruction::StorageLive(operation) => {
+                        reset_storage_places(&mut state, operation.storage);
+                    }
+                    MirInstruction::StorageDead(operation) => {
+                        reset_storage_places(&mut state, operation.storage);
+                    }
                     MirInstruction::OptionalInitialize(initialize) => {
                         require_initialized_source(
                             self,
@@ -412,6 +405,12 @@ fn apply_initializations(
 ) {
     for instruction in &block.instructions {
         match instruction {
+            MirInstruction::StorageLive(operation) => {
+                reset_storage_places(state, operation.storage);
+            }
+            MirInstruction::StorageDead(operation) => {
+                reset_storage_places(state, operation.storage);
+            }
             MirInstruction::OptionalInitialize(initialize) => {
                 state.insert(initialize.destination.clone());
             }
@@ -460,6 +459,10 @@ fn apply_initializations(
             _ => {}
         }
     }
+}
+
+fn reset_storage_places(state: &mut HashSet<MirPlace>, storage: crate::mir::StorageId) {
+    state.retain(|place| place.base.storage() != storage);
 }
 
 fn complete_class_storage(

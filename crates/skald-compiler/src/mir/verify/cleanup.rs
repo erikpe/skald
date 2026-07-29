@@ -1,6 +1,6 @@
 //! Definite object-liveness analysis for cleanup verification.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use crate::identity::{CallableId, ClassId};
 
@@ -11,6 +11,7 @@ use super::{
         MirPlaceProjection, MirProgram, MirStorageKind, MirTerminator, MirType,
     },
     context::Verifier,
+    dataflow::ForwardDataflow,
     place::{is_ancestor, places_overlap},
     sink::ErrorSink,
 };
@@ -160,161 +161,143 @@ impl CleanupLivenessAnalysis<'_, '_> {
             initial.live.insert(place);
         }
 
-        let mut incoming = vec![None; self.function.body().blocks.len()];
-        if self.function.body().entry.index() >= incoming.len() {
-            return;
-        }
-        incoming[self.function.body().entry.index()] = Some(initial);
-        let mut pending = VecDeque::from([self.function.body().entry]);
+        let mut flow =
+            ForwardDataflow::new(self.function.callable(), self.function.body().blocks.len());
+        flow.seed(self.function.body().entry, initial.clone());
 
-        while let Some(block_id) = pending.pop_front() {
-            let Some(block) = self.function.block(block_id) else {
-                continue;
-            };
-            let Some(mut state) = incoming[block_id.index()].clone() else {
-                continue;
-            };
-            self.apply_block(block, &mut state);
-
-            match &block.terminator {
-                Some(MirTerminator::Goto { target, .. }) => {
-                    self.merge_state(*target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::Branch {
-                    true_target,
-                    false_target,
-                    ..
-                }) => {
-                    for target in [*true_target, *false_target] {
-                        self.merge_state(target, &state, &mut incoming, &mut pending);
-                    }
-                }
-                Some(MirTerminator::CheckedCast {
-                    binding,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.require_live_place(
-                        block,
-                        &state,
-                        &binding.view.source,
-                        "checked-cast source",
-                    );
-                    self.require_live_origin(
-                        block,
-                        &state,
-                        &binding.view.origin,
-                        "checked-cast origin",
-                    );
-                    let mut success_state = state.clone();
-                    success_state
-                        .live
-                        .insert(MirPlace::checked_view(binding.destination));
-                    self.merge_state(*success_target, &success_state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::SharedCast {
-                    cast,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    if let super::super::model::MirSharedCastSource::Field { place, .. } =
-                        &cast.source
-                    {
-                        self.require_live_place(block, &state, place, "shared-cast field source");
-                    }
-                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::OptionalUnwrap {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::OptionalSharedUnwrap {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::BeginOptionalView {
-                    success_target,
-                    absent_target,
-                    overflow_target,
-                    ..
-                }) => {
-                    for target in [*success_target, *absent_target, *overflow_target] {
-                        self.merge_state(target, &state, &mut incoming, &mut pending);
-                    }
-                }
-                Some(MirTerminator::CheckOptionalMutation {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::ArrayPositionCheck {
-                    success_target,
-                    failure_target,
-                    ..
-                })
-                | Some(MirTerminator::ArrayOperationCheck {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge_state(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::ArrayLoop {
-                    body_target,
-                    complete_target,
-                    ..
-                }) => {
-                    self.merge_state(*body_target, &state, &mut incoming, &mut pending);
-                    self.merge_state(*complete_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::Return { .. })
-                | Some(MirTerminator::ReturnShared { .. })
-                | Some(MirTerminator::ReturnOptionalShared { .. }) => {
-                    self.check_normal_return(block, &state)
-                }
-                Some(MirTerminator::Panic { message, .. }) => {
-                    self.require_live_place(block, &state, message, "panic message");
-                }
-                Some(MirTerminator::Terminate { .. }) => {}
-                None => {}
-            }
-        }
-
-        // Unreachable blocks remain structurally checked and must not be able
-        // to hide an invalid cleanup operation.
-        for block in &self.function.body().blocks {
-            if incoming
-                .get(block.id.index())
-                .is_none_or(|state| state.is_none())
-            {
-                let mut state = ObjectState::default();
+        loop {
+            while let Some((block_id, mut state)) = flow.pop() {
+                let Some(block) = self.function.block(block_id) else {
+                    continue;
+                };
                 self.apply_block(block, &mut state);
-                if matches!(
-                    block.terminator,
-                    Some(
-                        MirTerminator::Return { .. }
-                            | MirTerminator::ReturnShared { .. }
-                            | MirTerminator::ReturnOptionalShared { .. }
-                    )
-                ) {
-                    self.check_normal_return(block, &state);
+
+                match &block.terminator {
+                    Some(MirTerminator::Goto { target, .. }) => {
+                        self.merge_state(*target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::Branch {
+                        true_target,
+                        false_target,
+                        ..
+                    }) => {
+                        for target in [*true_target, *false_target] {
+                            self.merge_state(target, &state, &mut flow);
+                        }
+                    }
+                    Some(MirTerminator::CheckedCast {
+                        binding,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.require_live_place(
+                            block,
+                            &state,
+                            &binding.view.source,
+                            "checked-cast source",
+                        );
+                        self.require_live_origin(
+                            block,
+                            &state,
+                            &binding.view.origin,
+                            "checked-cast origin",
+                        );
+                        let mut success_state = state.clone();
+                        success_state
+                            .live
+                            .insert(MirPlace::checked_view(binding.destination));
+                        self.merge_state(*success_target, &success_state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::SharedCast {
+                        cast,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        if let super::super::model::MirSharedCastSource::Field { place, .. } =
+                            &cast.source
+                        {
+                            self.require_live_place(
+                                block,
+                                &state,
+                                place,
+                                "shared-cast field source",
+                            );
+                        }
+                        self.merge_state(*success_target, &state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::OptionalUnwrap {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge_state(*success_target, &state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::OptionalSharedUnwrap {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge_state(*success_target, &state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::BeginOptionalView {
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        for target in [*success_target, *absent_target, *overflow_target] {
+                            self.merge_state(target, &state, &mut flow);
+                        }
+                    }
+                    Some(MirTerminator::CheckOptionalMutation {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge_state(*success_target, &state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::ArrayPositionCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    })
+                    | Some(MirTerminator::ArrayOperationCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge_state(*success_target, &state, &mut flow);
+                        self.merge_state(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::ArrayLoop {
+                        body_target,
+                        complete_target,
+                        ..
+                    }) => {
+                        self.merge_state(*body_target, &state, &mut flow);
+                        self.merge_state(*complete_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::Return { .. })
+                    | Some(MirTerminator::ReturnShared { .. })
+                    | Some(MirTerminator::ReturnOptionalShared { .. }) => {
+                        self.check_normal_return(block, &state)
+                    }
+                    Some(MirTerminator::Panic { message, .. }) => {
+                        self.require_live_place(block, &state, message, "panic message");
+                    }
+                    Some(MirTerminator::Terminate { .. }) => {}
+                    None => {}
                 }
+            }
+            if !flow.seed_next_component(&self.function.body().blocks, initial.clone()) {
+                break;
             }
         }
     }
@@ -357,60 +340,96 @@ impl CleanupLivenessAnalysis<'_, '_> {
         &mut self,
         target: BlockId,
         state: &ObjectState,
-        incoming: &mut [Option<ObjectState>],
-        pending: &mut VecDeque<BlockId>,
+        flow: &mut ForwardDataflow<ObjectState>,
     ) {
-        if target.callable() != self.function.callable() || target.index() >= incoming.len() {
-            return;
-        }
-        match &mut incoming[target.index()] {
-            None => {
-                incoming[target.index()] = Some(state.clone());
-                pending.push_back(target);
+        flow.merge(target, state, |existing, incoming| {
+            let merged = ObjectState {
+                live: existing
+                    .live
+                    .intersection(&incoming.live)
+                    .cloned()
+                    .collect(),
+                cleaned: existing.cleaned.union(&incoming.cleaned).cloned().collect(),
+                outstanding_local_cleanup: existing
+                    .outstanding_local_cleanup
+                    .union(&incoming.outstanding_local_cleanup)
+                    .cloned()
+                    .collect(),
+                outstanding_parameter_cleanup: existing
+                    .outstanding_parameter_cleanup
+                    .union(&incoming.outstanding_parameter_cleanup)
+                    .cloned()
+                    .collect(),
+                live_arguments: existing
+                    .live_arguments
+                    .union(&incoming.live_arguments)
+                    .cloned()
+                    .collect(),
+                live_temporaries: if existing.live_temporaries == incoming.live_temporaries {
+                    existing.live_temporaries.clone()
+                } else {
+                    self.block_error(
+                        target,
+                        "owning temporary liveness differs across control-flow paths",
+                    );
+                    // Keep one concrete ordering so later checks remain
+                    // conservative instead of silently forgetting live
+                    // temporaries at the join.
+                    existing.live_temporaries.clone()
+                },
+            };
+            if *existing != merged {
+                *existing = merged;
+                true
+            } else {
+                false
             }
-            Some(existing) => {
-                let merged = ObjectState {
-                    live: existing.live.intersection(&state.live).cloned().collect(),
-                    cleaned: existing.cleaned.union(&state.cleaned).cloned().collect(),
-                    outstanding_local_cleanup: existing
-                        .outstanding_local_cleanup
-                        .union(&state.outstanding_local_cleanup)
-                        .cloned()
-                        .collect(),
-                    outstanding_parameter_cleanup: existing
-                        .outstanding_parameter_cleanup
-                        .union(&state.outstanding_parameter_cleanup)
-                        .cloned()
-                        .collect(),
-                    live_arguments: existing
-                        .live_arguments
-                        .union(&state.live_arguments)
-                        .cloned()
-                        .collect(),
-                    live_temporaries: if existing.live_temporaries == state.live_temporaries {
-                        existing.live_temporaries.clone()
-                    } else {
-                        self.block_error(
-                            target,
-                            "owning temporary liveness differs across control-flow paths",
-                        );
-                        // Keep one concrete ordering so later checks remain
-                        // conservative instead of silently forgetting live
-                        // temporaries at the join.
-                        existing.live_temporaries.clone()
-                    },
-                };
-                if *existing != merged {
-                    *existing = merged;
-                    pending.push_back(target);
-                }
-            }
-        }
+        });
     }
 
     fn apply_block(&mut self, block: &MirBasicBlock, state: &mut ObjectState) {
         for instruction in &block.instructions {
             match instruction {
+                MirInstruction::StorageLive(operation) => {
+                    state.reset_storage(operation.storage);
+                }
+                MirInstruction::StorageDead(operation) => {
+                    if self
+                        .function
+                        .storage(operation.storage)
+                        .is_some_and(|storage| {
+                            matches!(storage.kind, MirStorageKind::CheckedView(_))
+                        })
+                        && state.has_live_place(operation.storage)
+                    {
+                        self.block_error(
+                            block.id,
+                            "checked-view carrier remains active at storage-dead",
+                        );
+                    }
+                    if state.has_outstanding_local(operation.storage) {
+                        self.block_error(block.id, "owning local remains live on normal return");
+                    }
+                    if state.has_outstanding_parameter(operation.storage) {
+                        self.block_error(
+                            block.id,
+                            "owning value parameter remains live on normal return",
+                        );
+                    }
+                    if state.has_live_argument(operation.storage) {
+                        self.block_error(
+                            block.id,
+                            "caller argument storage remains live without ownership transfer",
+                        );
+                    }
+                    if state.has_live_temporary(operation.storage) {
+                        self.block_error(
+                            block.id,
+                            "owning temporary remains live on normal return",
+                        );
+                    }
+                    state.finish_storage_epoch(operation.storage);
+                }
                 MirInstruction::Initialize(initialize)
                     if self.is_owning_class_place(
                         &initialize.destination,
@@ -898,4 +917,49 @@ impl CleanupLivenessAnalysis<'_, '_> {
     fn block_error(&mut self, block: BlockId, message: impl Into<String>) {
         self.errors.block(self.function.callable(), block, message);
     }
+}
+
+impl ObjectState {
+    fn has_live_place(&self, storage: crate::mir::StorageId) -> bool {
+        contains_storage(&self.live, storage)
+    }
+
+    fn has_outstanding_local(&self, storage: crate::mir::StorageId) -> bool {
+        contains_storage(&self.outstanding_local_cleanup, storage)
+    }
+
+    fn has_outstanding_parameter(&self, storage: crate::mir::StorageId) -> bool {
+        contains_storage(&self.outstanding_parameter_cleanup, storage)
+    }
+
+    fn has_live_argument(&self, storage: crate::mir::StorageId) -> bool {
+        contains_storage(&self.live_arguments, storage)
+    }
+
+    fn has_live_temporary(&self, storage: crate::mir::StorageId) -> bool {
+        self.live_temporaries
+            .iter()
+            .any(|place| place.base.storage() == storage)
+    }
+
+    fn reset_storage(&mut self, storage: crate::mir::StorageId) {
+        self.finish_storage_epoch(storage);
+        self.cleaned.retain(|place| place.base.storage() != storage);
+    }
+
+    fn finish_storage_epoch(&mut self, storage: crate::mir::StorageId) {
+        self.live.retain(|place| place.base.storage() != storage);
+        self.outstanding_local_cleanup
+            .retain(|place| place.base.storage() != storage);
+        self.outstanding_parameter_cleanup
+            .retain(|place| place.base.storage() != storage);
+        self.live_arguments
+            .retain(|place| place.base.storage() != storage);
+        self.live_temporaries
+            .retain(|place| place.base.storage() != storage);
+    }
+}
+
+fn contains_storage(places: &HashSet<MirPlace>, storage: crate::mir::StorageId) -> bool {
+    places.iter().any(|place| place.base.storage() == storage)
 }

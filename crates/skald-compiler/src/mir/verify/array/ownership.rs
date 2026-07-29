@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use super::super::{
     super::model::{
@@ -7,6 +7,7 @@ use super::super::{
         MirTerminator, MirType, StorageId,
     },
     context::Verifier,
+    dataflow::ForwardDataflow,
 };
 
 impl Verifier<'_> {
@@ -16,158 +17,10 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
     ) {
-        let mut allocated = HashSet::new();
-        let mut published = HashMap::<StorageId, StorageId>::new();
-        let mut consumed = HashSet::new();
-        let mut anchors = HashSet::new();
-        let mut slice_checks = HashSet::new();
-
-        for block in &function.body().blocks {
-            for instruction in &block.instructions {
-                if let MirInstruction::Call(call) = instruction {
-                    if let Some(destination) = &call.destination {
-                        let storage = destination.base.storage();
-                        if function
-                            .storage(storage)
-                            .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
-                        {
-                            published.insert(storage, storage);
-                        }
-                    }
-                }
-                let MirInstruction::Array(instruction) = instruction else {
-                    continue;
-                };
-                match instruction {
-                    MirArrayInstruction::Allocate { backing, .. } => {
-                        if !allocated.insert(*backing) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "array backing is allocated more than once",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::Publish {
-                        backing,
-                        destination,
-                        ..
-                    } => {
-                        if !allocated.remove(backing)
-                            || published.insert(*destination, *backing).is_some()
-                        {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "array publication requires one unpublished backing",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::PublishShared { backing, .. } => {
-                        if !allocated.remove(backing) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "shared array publication requires one unpublished backing",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::SliceCopy { destination, .. } => {
-                        if published.insert(*destination, *destination).is_some() {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "slice temporary is completed more than once",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::Adopt { source, .. }
-                    | MirArrayInstruction::Replace { source, .. } => {
-                        if published.remove(source).is_none() || !consumed.insert(*source) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "produced array storage must be consumed exactly once",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::AnchorBegin { anchor, .. } => {
-                        if !anchors.insert(*anchor) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "array anchor begins more than once",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::AnchorEnd { anchor, .. } => {
-                        if !anchors.remove(anchor) {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "array anchor ends without being live",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::SliceLengthCheck {
-                        destination_start,
-                        destination_end,
-                        ..
-                    } => {
-                        slice_checks.insert((*destination_start, *destination_end));
-                    }
-                    MirArrayInstruction::SliceAssignNext {
-                        destination_index, ..
-                    } => {
-                        if !slice_checks
-                            .iter()
-                            .any(|(start, _)| start == destination_index)
-                        {
-                            self.block_error(
-                                function.callable(),
-                                block.id,
-                                "slice assignment writes before its length check",
-                            );
-                        }
-                    }
-                    MirArrayInstruction::Release { owner, .. } => {
-                        let storage = owner.base.storage();
-                        published.remove(&storage);
-                        consumed.insert(storage);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        for backing in allocated {
-            self.function_error(
-                function.callable(),
-                format!("unpublished array backing {backing} escapes its definition"),
-            );
-        }
-        for produced in published.keys() {
-            if function.storage(*produced).is_some_and(|storage| {
-                matches!(
-                    storage.kind,
-                    MirStorageKind::ArrayProduced | MirStorageKind::ArraySlice
-                )
-            }) {
-                self.function_error(
-                    function.callable(),
-                    format!("produced array storage {produced} is never consumed"),
-                );
-            }
-        }
-        for anchor in anchors {
-            self.function_error(
-                function.callable(),
-                format!("array anchor {anchor} is not ended"),
-            );
-        }
-        self.verify_array_owner_joins(function);
+        self.verify_array_owner_cfg(function);
     }
 
-    fn verify_array_owner_joins(&mut self, function: MirDefinitionRef<'_>) {
+    fn verify_array_owner_cfg(&mut self, function: MirDefinitionRef<'_>) {
         let anchor_owners: HashMap<_, _> = function
             .body()
             .blocks
@@ -180,140 +33,141 @@ impl Verifier<'_> {
                 _ => None,
             })
             .collect();
-        let mut incoming = vec![None; function.body().blocks.len()];
-        if function.body().entry.index() >= incoming.len() {
-            return;
-        }
-        incoming[function.body().entry.index()] = Some(ArrayOwnerState::default());
-        let mut pending = VecDeque::from([function.body().entry]);
+        let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
+        flow.seed(function.body().entry, ArrayOwnerState::default());
+        let mut reported_joins = HashSet::new();
 
-        while let Some(block_id) = pending.pop_front() {
-            let Some(block) = function.block(block_id) else {
-                continue;
-            };
-            let Some(mut state) = incoming[block_id.index()].clone() else {
-                continue;
-            };
-            for instruction in &block.instructions {
-                if let MirInstruction::Call(call) = instruction {
-                    self.verify_array_alias_dependencies(
-                        function,
-                        block.id,
-                        call,
-                        &state,
-                        &anchor_owners,
-                    );
-                }
-                if let MirInstruction::Array(MirArrayInstruction::AliasBind {
-                    anchor,
-                    source,
-                    ..
-                }) = instruction
-                {
-                    let compatible = state.anchors.contains(anchor)
-                        && anchor_owners
-                            .get(anchor)
-                            .is_some_and(|owner| array_anchor_covers(*anchor, owner, source));
-                    if !compatible {
-                        self.block_error(
+        loop {
+            while let Some((block_id, mut state)) = flow.pop() {
+                let Some(block) = function.block(block_id) else {
+                    continue;
+                };
+                for instruction in &block.instructions {
+                    if let MirInstruction::Call(call) = instruction {
+                        self.verify_array_alias_dependencies(
+                            function,
+                            block.id,
+                            call,
+                            &state,
+                            &anchor_owners,
+                        );
+                    }
+                    if let MirInstruction::Array(MirArrayInstruction::AliasBind {
+                        anchor,
+                        source,
+                        ..
+                    }) = instruction
+                    {
+                        let compatible = state.anchors.contains(anchor)
+                            && anchor_owners
+                                .get(anchor)
+                                .is_some_and(|owner| array_anchor_covers(*anchor, owner, source));
+                        if !compatible {
+                            self.block_error(
                             function.callable(),
                             block.id,
                             "array alias binding requires one compatible live backing or owner anchor",
                         );
+                        }
                     }
+                    state.apply(self, function, block.id, instruction);
                 }
-                state.apply(function, instruction);
-            }
 
-            let Some(terminator) = &block.terminator else {
-                continue;
-            };
-            match terminator {
-                MirTerminator::ArrayOperationCheck {
-                    failure: MirArrayFailure::AllocationSize,
-                    success_target,
-                    failure_target,
-                    ..
-                } => {
-                    self.merge_array_owner_state(
-                        function,
-                        block.id,
-                        *success_target,
-                        &state,
-                        &mut incoming,
-                        &mut pending,
-                    );
-                    let mut failure_state = state.clone();
-                    if let Some(MirInstruction::Array(MirArrayInstruction::Allocate {
-                        backing,
+                let Some(terminator) = &block.terminator else {
+                    continue;
+                };
+                match terminator {
+                    MirTerminator::ArrayOperationCheck {
+                        failure: MirArrayFailure::AllocationSize,
+                        success_target,
+                        failure_target,
                         ..
-                    })) = block.instructions.last()
-                    {
-                        failure_state.backings.remove(backing);
-                        failure_state.completed_backings.remove(backing);
-                    }
-                    self.merge_array_owner_state(
-                        function,
-                        block.id,
-                        *failure_target,
-                        &failure_state,
-                        &mut incoming,
-                        &mut pending,
-                    );
-                }
-                MirTerminator::ArrayLoop {
-                    backing,
-                    body_target,
-                    complete_target,
-                    ..
-                } => {
-                    self.merge_array_owner_state(
-                        function,
-                        block.id,
-                        *body_target,
-                        &state,
-                        &mut incoming,
-                        &mut pending,
-                    );
-                    let mut complete_state = state.clone();
-                    complete_state.completed_backings.insert(*backing);
-                    self.merge_array_owner_state(
-                        function,
-                        block.id,
-                        *complete_target,
-                        &complete_state,
-                        &mut incoming,
-                        &mut pending,
-                    );
-                }
-                MirTerminator::Return { .. }
-                | MirTerminator::ReturnShared { .. }
-                | MirTerminator::ReturnOptionalShared { .. } => {
-                    if !state.backings.is_empty()
-                        || !state.completed_backings.is_empty()
-                        || !state.produced.is_empty()
-                        || !state.anchors.is_empty()
-                    {
-                        self.block_error(
-                            function.callable(),
-                            block.id,
-                            "array owner state must be fully consumed at normal return",
-                        );
-                    }
-                }
-                MirTerminator::Terminate { .. } => {}
-                _ => {
-                    for target in terminator.successors() {
+                    } => {
                         self.merge_array_owner_state(
                             function,
                             block.id,
-                            target,
+                            *success_target,
                             &state,
-                            &mut incoming,
-                            &mut pending,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                        let mut failure_state = state.clone();
+                        if let Some(MirInstruction::Array(MirArrayInstruction::Allocate {
+                            backing,
+                            ..
+                        })) = block.instructions.last()
+                        {
+                            failure_state.backings.remove(backing);
+                            failure_state.completed_backings.remove(backing);
+                        }
+                        self.merge_array_owner_state(
+                            function,
+                            block.id,
+                            *failure_target,
+                            &failure_state,
+                            &mut flow,
+                            &mut reported_joins,
                         );
                     }
+                    MirTerminator::ArrayLoop {
+                        backing,
+                        body_target,
+                        complete_target,
+                        ..
+                    } => {
+                        self.merge_array_owner_state(
+                            function,
+                            block.id,
+                            *body_target,
+                            &state,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                        let mut complete_state = state.clone();
+                        complete_state.completed_backings.insert(*backing);
+                        self.merge_array_owner_state(
+                            function,
+                            block.id,
+                            *complete_target,
+                            &complete_state,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                    }
+                    MirTerminator::Return { .. }
+                    | MirTerminator::ReturnShared { .. }
+                    | MirTerminator::ReturnOptionalShared { .. } => {
+                        if !state.backings.is_empty()
+                            || !state.completed_backings.is_empty()
+                            || !state.produced.is_empty()
+                            || !state.anchors.is_empty()
+                            || !state.aliases.is_empty()
+                            || !state.slice_checks.is_empty()
+                        {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "array owner state must be fully consumed at normal return",
+                            );
+                        }
+                    }
+                    MirTerminator::Terminate { .. } => {}
+                    _ => {
+                        for target in terminator.successors() {
+                            self.merge_array_owner_state(
+                                function,
+                                block.id,
+                                target,
+                                &state,
+                                &mut flow,
+                                &mut reported_joins,
+                            );
+                        }
+                    }
                 }
+            }
+            if !flow.seed_next_component(&function.body().blocks, ArrayOwnerState::default()) {
+                break;
             }
         }
     }
@@ -367,24 +221,19 @@ impl Verifier<'_> {
         predecessor: crate::mir::BlockId,
         target: crate::mir::BlockId,
         state: &ArrayOwnerState,
-        incoming: &mut [Option<ArrayOwnerState>],
-        pending: &mut VecDeque<crate::mir::BlockId>,
+        flow: &mut ForwardDataflow<ArrayOwnerState>,
+        reported_joins: &mut HashSet<crate::mir::BlockId>,
     ) {
-        let Some(slot) = incoming.get_mut(target.index()) else {
-            return;
-        };
-        match slot {
-            None => {
-                *slot = Some(state.clone());
-                pending.push_back(target);
+        flow.merge(target, state, |existing, incoming| {
+            if existing != incoming && reported_joins.insert(target) {
+                self.block_error(
+                    function.callable(),
+                    predecessor,
+                    format!("array owner state disagrees at control-flow join {target}"),
+                );
             }
-            Some(existing) if existing != state => self.block_error(
-                function.callable(),
-                predecessor,
-                format!("array owner state disagrees at control-flow join {target}"),
-            ),
-            Some(_) => {}
-        }
+            false
+        });
     }
 }
 
@@ -418,29 +267,85 @@ struct ArrayOwnerState {
     backings: HashSet<StorageId>,
     completed_backings: HashSet<StorageId>,
     produced: HashSet<StorageId>,
+    consumed: HashSet<StorageId>,
     anchors: HashSet<StorageId>,
     aliases: HashMap<StorageId, StorageId>,
+    slice_checks: HashSet<(StorageId, StorageId)>,
 }
 
 impl ArrayOwnerState {
-    fn apply(&mut self, function: MirDefinitionRef<'_>, instruction: &MirInstruction) {
+    fn apply(
+        &mut self,
+        verifier: &mut Verifier<'_>,
+        function: MirDefinitionRef<'_>,
+        block: crate::mir::BlockId,
+        instruction: &MirInstruction,
+    ) {
         if let MirInstruction::Call(call) = instruction {
             if let Some(destination) = &call.destination {
                 let storage = destination.base.storage();
                 if function
                     .storage(storage)
                     .is_some_and(|entry| entry.kind == MirStorageKind::ArrayProduced)
+                    && (!self.produced.insert(storage) || self.consumed.contains(&storage))
                 {
-                    self.produced.insert(storage);
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "produced array call destination is initialized more than once",
+                    );
                 }
             }
+        }
+        match instruction {
+            MirInstruction::StorageLive(operation) => {
+                self.reset_storage(operation.storage);
+                return;
+            }
+            MirInstruction::StorageDead(operation) => {
+                if self.has_active_storage(operation.storage) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array owner state remains active at storage-dead",
+                    );
+                }
+                if self.produced.contains(&operation.storage)
+                    && !self.consumed.contains(&operation.storage)
+                {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        format!(
+                            "produced array storage {} is never consumed",
+                            operation.storage
+                        ),
+                    );
+                }
+                if self.anchors.contains(&operation.storage) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        format!("array anchor {} is not ended", operation.storage),
+                    );
+                }
+                self.reset_storage(operation.storage);
+                return;
+            }
+            _ => {}
         }
         let MirInstruction::Array(instruction) = instruction else {
             return;
         };
         match instruction {
             MirArrayInstruction::Allocate { backing, .. } => {
-                self.backings.insert(*backing);
+                if !self.backings.insert(*backing) || self.completed_backings.contains(backing) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array backing is allocated more than once",
+                    );
+                }
                 self.completed_backings.remove(backing);
             }
             MirArrayInstruction::Publish {
@@ -448,36 +353,120 @@ impl ArrayOwnerState {
                 destination,
                 ..
             } => {
-                if self.completed_backings.remove(backing) {
-                    self.backings.remove(backing);
+                if !self.completed_backings.remove(backing)
+                    || !self.backings.remove(backing)
+                    || !self.produced.insert(*destination)
+                    || self.consumed.contains(destination)
+                {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array publication requires one completed unpublished backing",
+                    );
                 }
-                self.produced.insert(*destination);
             }
             MirArrayInstruction::PublishShared { backing, .. } => {
-                if self.completed_backings.remove(backing) {
-                    self.backings.remove(backing);
+                if !self.completed_backings.remove(backing) || !self.backings.remove(backing) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "shared array publication requires one completed unpublished backing",
+                    );
                 }
             }
             MirArrayInstruction::SliceCopy { destination, .. } => {
-                self.produced.insert(*destination);
+                if !self.produced.insert(*destination) || self.consumed.contains(destination) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "slice temporary is completed more than once",
+                    );
+                }
             }
             MirArrayInstruction::Adopt { source, .. }
             | MirArrayInstruction::Replace { source, .. } => {
-                self.produced.remove(source);
+                if !self.produced.remove(source) || !self.consumed.insert(*source) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "produced array storage must be consumed exactly once",
+                    );
+                }
             }
             MirArrayInstruction::Release { owner, .. } => {
-                self.produced.remove(&owner.base.storage());
+                let storage = owner.base.storage();
+                self.produced.remove(&storage);
+                if function.storage(storage).is_some_and(|storage| {
+                    matches!(
+                        storage.kind,
+                        MirStorageKind::ArrayProduced | MirStorageKind::ArraySlice
+                    )
+                }) {
+                    self.consumed.insert(storage);
+                }
             }
             MirArrayInstruction::AnchorBegin { anchor, .. } => {
-                self.anchors.insert(*anchor);
+                if !self.anchors.insert(*anchor) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array anchor begins more than once",
+                    );
+                }
             }
             MirArrayInstruction::AnchorEnd { anchor, .. } => {
-                self.anchors.remove(anchor);
+                if !self.anchors.remove(anchor) {
+                    verifier.block_error(
+                        function.callable(),
+                        block,
+                        "array anchor ends without being live",
+                    );
+                }
             }
             MirArrayInstruction::AliasBind { alias, anchor, .. } => {
                 self.aliases.insert(*alias, *anchor);
             }
+            MirArrayInstruction::SliceLengthCheck {
+                destination_start,
+                destination_end,
+                ..
+            } => {
+                self.slice_checks
+                    .insert((*destination_start, *destination_end));
+            }
+            MirArrayInstruction::SliceAssignNext {
+                destination_index, ..
+            } if !self
+                .slice_checks
+                .iter()
+                .any(|(start, _)| start == destination_index) =>
+            {
+                verifier.block_error(
+                    function.callable(),
+                    block,
+                    "slice assignment writes before its length check",
+                );
+            }
             _ => {}
         }
+    }
+
+    fn has_active_storage(&self, storage: StorageId) -> bool {
+        self.backings.contains(&storage)
+            || self.completed_backings.contains(&storage)
+            || self.produced.contains(&storage)
+            || self.anchors.contains(&storage)
+    }
+
+    fn reset_storage(&mut self, storage: StorageId) {
+        self.backings.remove(&storage);
+        self.completed_backings.remove(&storage);
+        self.produced.remove(&storage);
+        self.consumed.remove(&storage);
+        self.anchors.remove(&storage);
+        self.aliases
+            .retain(|alias, anchor| *alias != storage && *anchor != storage);
+        self.slice_checks
+            .retain(|(start, end)| *start != storage && *end != storage);
     }
 }

@@ -1,6 +1,6 @@
 //! Path-sensitive allocation, owner, checked-view, and anchor verification.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use crate::identity::{CallableId, LiteralDataId};
 
@@ -12,6 +12,7 @@ use super::super::{
         MirSharedCastTransfer, MirStorageKind, MirTerminator, MirType, StorageId,
     },
     context::Verifier,
+    dataflow::ForwardDataflow,
 };
 
 impl<'mir> Verifier<'mir> {
@@ -60,10 +61,6 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
     }
 
     fn analyze(&mut self) {
-        let mut incoming = vec![None; self.function.body().blocks.len()];
-        if self.function.body().entry.index() >= incoming.len() {
-            return;
-        }
         let mut initial = SharedState::default();
         for parameter in self.function.parameters() {
             if self
@@ -75,135 +72,138 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 initial.owner_origins.insert(*parameter, *parameter);
             }
         }
-        incoming[self.function.body().entry.index()] = Some(initial);
-        let mut pending = VecDeque::from([self.function.body().entry]);
+        let mut flow =
+            ForwardDataflow::new(self.function.callable(), self.function.body().blocks.len());
+        flow.seed(self.function.body().entry, initial.clone());
 
-        while let Some(block_id) = pending.pop_front() {
-            let Some(block) = self.function.block(block_id) else {
-                continue;
-            };
-            let Some(mut state) = incoming[block_id.index()].clone() else {
-                continue;
-            };
-            self.apply_block(block, &mut state);
-            match &block.terminator {
-                Some(MirTerminator::Goto { target, .. }) => {
-                    self.merge(*target, &state, &mut incoming, &mut pending)
-                }
-                Some(MirTerminator::Branch {
-                    true_target,
-                    false_target,
-                    ..
-                }) => {
-                    self.merge(*true_target, &state, &mut incoming, &mut pending);
-                    self.merge(*false_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::CheckedCast {
-                    binding,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.require_live_pointee(block.id, &state, &binding.view.source);
-                    self.require_live_shared_origin(block.id, &state, &binding.view.origin);
-                    let mut success = state.clone();
-                    self.begin_checked_view(block.id, &mut success, binding);
-                    self.merge(*success_target, &success, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::SharedCast {
-                    cast,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.require_shared_cast_source(block.id, &state, cast);
-                    let mut success = state.clone();
-                    self.apply_shared_cast(block.id, &mut success, cast);
-                    self.merge(*success_target, &success, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::OptionalUnwrap {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::OptionalSharedUnwrap {
-                    unwrap,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    let mut success = state.clone();
-                    if success.live_owners.contains(&unwrap.destination)
-                        || success.released_owners.contains(&unwrap.destination)
-                    {
-                        self.error(
-                            block.id,
-                            "optional shared unwrap destination is already initialized",
-                        );
-                    } else {
-                        success.live_owners.insert(unwrap.destination);
-                        success
-                            .owner_origins
-                            .insert(unwrap.destination, unwrap.destination);
-                        success.pending_full_expression_boundary = true;
+        loop {
+            while let Some((block_id, mut state)) = flow.pop() {
+                let Some(block) = self.function.block(block_id) else {
+                    continue;
+                };
+                self.apply_block(block, &mut state);
+                match &block.terminator {
+                    Some(MirTerminator::Goto { target, .. }) => {
+                        self.merge(*target, &state, &mut flow)
                     }
-                    self.merge(*success_target, &success, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
+                    Some(MirTerminator::Branch {
+                        true_target,
+                        false_target,
+                        ..
+                    }) => {
+                        self.merge(*true_target, &state, &mut flow);
+                        self.merge(*false_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::CheckedCast {
+                        binding,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.require_live_pointee(block.id, &state, &binding.view.source);
+                        self.require_live_shared_origin(block.id, &state, &binding.view.origin);
+                        let mut success = state.clone();
+                        self.begin_checked_view(block.id, &mut success, binding);
+                        self.merge(*success_target, &success, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::SharedCast {
+                        cast,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.require_shared_cast_source(block.id, &state, cast);
+                        let mut success = state.clone();
+                        self.apply_shared_cast(block.id, &mut success, cast);
+                        self.merge(*success_target, &success, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::OptionalUnwrap {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge(*success_target, &state, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::OptionalSharedUnwrap {
+                        unwrap,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        let mut success = state.clone();
+                        if success.live_owners.contains(&unwrap.destination)
+                            || success.released_owners.contains(&unwrap.destination)
+                        {
+                            self.error(
+                                block.id,
+                                "optional shared unwrap destination is already initialized",
+                            );
+                        } else {
+                            success.live_owners.insert(unwrap.destination);
+                            success
+                                .owner_origins
+                                .insert(unwrap.destination, unwrap.destination);
+                            success.pending_full_expression_boundary = true;
+                        }
+                        self.merge(*success_target, &success, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::BeginOptionalView {
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        self.merge(*success_target, &state, &mut flow);
+                        self.merge(*absent_target, &state, &mut flow);
+                        self.merge(*overflow_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::CheckOptionalMutation {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge(*success_target, &state, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::ArrayPositionCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    })
+                    | Some(MirTerminator::ArrayOperationCheck {
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.merge(*success_target, &state, &mut flow);
+                        self.merge(*failure_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::ArrayLoop {
+                        body_target,
+                        complete_target,
+                        ..
+                    }) => {
+                        self.merge(*body_target, &state, &mut flow);
+                        self.merge(*complete_target, &state, &mut flow);
+                    }
+                    Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
+                    Some(MirTerminator::ReturnShared { owner, .. }) => {
+                        self.check_return(block, &state, Some(*owner))
+                    }
+                    Some(MirTerminator::ReturnOptionalShared { .. }) => {
+                        self.check_return(block, &state, None)
+                    }
+                    Some(MirTerminator::Panic { .. })
+                    | Some(MirTerminator::Terminate { .. })
+                    | None => {}
                 }
-                Some(MirTerminator::BeginOptionalView {
-                    success_target,
-                    absent_target,
-                    overflow_target,
-                    ..
-                }) => {
-                    self.merge(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge(*absent_target, &state, &mut incoming, &mut pending);
-                    self.merge(*overflow_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::CheckOptionalMutation {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::ArrayPositionCheck {
-                    success_target,
-                    failure_target,
-                    ..
-                })
-                | Some(MirTerminator::ArrayOperationCheck {
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.merge(*success_target, &state, &mut incoming, &mut pending);
-                    self.merge(*failure_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::ArrayLoop {
-                    body_target,
-                    complete_target,
-                    ..
-                }) => {
-                    self.merge(*body_target, &state, &mut incoming, &mut pending);
-                    self.merge(*complete_target, &state, &mut incoming, &mut pending);
-                }
-                Some(MirTerminator::Return { .. }) => self.check_return(block, &state, None),
-                Some(MirTerminator::ReturnShared { owner, .. }) => {
-                    self.check_return(block, &state, Some(*owner))
-                }
-                Some(MirTerminator::ReturnOptionalShared { .. }) => {
-                    self.check_return(block, &state, None)
-                }
-                Some(MirTerminator::Panic { .. })
-                | Some(MirTerminator::Terminate { .. })
-                | None => {}
+            }
+            if !flow.seed_next_component(&self.function.body().blocks, initial.clone()) {
+                break;
             }
         }
     }
@@ -212,7 +212,38 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         for instruction in &block.instructions {
             self.check_pointee_uses(block.id, state, instruction);
             match instruction {
-                MirInstruction::StorageLive(_) | MirInstruction::StorageDead(_) => {}
+                MirInstruction::StorageLive(operation) => {
+                    state.reset_storage(operation.storage);
+                }
+                MirInstruction::StorageDead(operation) => {
+                    if state.allocations.contains_key(&operation.storage) {
+                        self.error(
+                            block.id,
+                            "shared allocation is not published and adopted on normal return",
+                        );
+                    }
+                    if state.live_owners.contains(&operation.storage) {
+                        self.error(block.id, "shared owner remains live on normal return");
+                    }
+                    if state.static_owners.contains_key(&operation.storage) {
+                        self.error(
+                            block.id,
+                            "static literal owner is not consumed by string initialization",
+                        );
+                    }
+                    if state.active_checked_views.contains_key(&operation.storage)
+                        || state
+                            .active_checked_views
+                            .values()
+                            .any(|owner| *owner == operation.storage)
+                    {
+                        self.error(
+                            block.id,
+                            "shared-backed checked view remains live on normal return",
+                        );
+                    }
+                    state.reset_storage(operation.storage);
+                }
                 MirInstruction::SharedAllocate(allocation) => {
                     if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
                         self.require_live_pointee(block.id, state, source);
@@ -871,36 +902,29 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
         &mut self,
         target: BlockId,
         state: &SharedState,
-        incoming: &mut [Option<SharedState>],
-        pending: &mut VecDeque<BlockId>,
+        flow: &mut ForwardDataflow<SharedState>,
     ) {
-        if target.callable() != self.function.callable() || target.index() >= incoming.len() {
-            return;
-        }
-        match &incoming[target.index()] {
-            None => {
-                incoming[target.index()] = Some(state.clone());
-                pending.push_back(target);
-            }
-            Some(existing) if !existing.same_live_state(state) => {
+        flow.merge(target, state, |existing, incoming| {
+            if !existing.same_live_state(incoming) {
                 if self.reported_joins.insert(target) {
                     self.error(
                         target,
                         "shared ownership state differs across control-flow paths",
                     );
                 }
+                return false;
             }
-            Some(existing) => {
-                let mut merged = existing.clone();
-                merged
-                    .released_owners
-                    .extend(state.released_owners.iter().copied());
-                if &merged != existing {
-                    incoming[target.index()] = Some(merged);
-                    pending.push_back(target);
-                }
+            let mut merged = existing.clone();
+            merged
+                .released_owners
+                .extend(incoming.released_owners.iter().copied());
+            if &merged != existing {
+                *existing = merged;
+                true
+            } else {
+                false
             }
-        }
+        });
     }
 
     fn error(&mut self, block: BlockId, message: impl Into<String>) {
@@ -910,6 +934,18 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
 }
 
 impl SharedState {
+    fn reset_storage(&mut self, storage: StorageId) {
+        self.allocations.remove(&storage);
+        self.live_owners.remove(&storage);
+        self.owner_origins.remove(&storage);
+        self.static_owners.remove(&storage);
+        self.released_owners.remove(&storage);
+        self.active_checked_views
+            .retain(|carrier, owner| *carrier != storage && *owner != storage);
+        self.initialized_fields
+            .retain(|place| place.base.storage() != storage);
+    }
+
     fn same_live_state(&self, other: &Self) -> bool {
         self.allocations == other.allocations
             && self.live_owners == other.live_owners

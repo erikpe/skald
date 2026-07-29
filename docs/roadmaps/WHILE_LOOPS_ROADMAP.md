@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 is complete and L1 is next.
+Status: in progress; L0 and L1 are complete and L2 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -84,7 +84,7 @@ Explicitly excluded from this roadmap:
 ## Progress
 
 - [x] L0 — Add repeatable MIR storage lifetime epochs
-- [ ] L1 — Make MIR verification cycle-safe
+- [x] L1 — Make MIR verification cycle-safe
 - [ ] L2 — Add structured loop identities and control effects
 - [ ] L3 — Lower internal HIR `while` loops through generic MIR
 - [ ] L4 — Activate source `while` end to end
@@ -145,27 +145,27 @@ are unchanged, and no source loop syntax is accepted.
 **Purpose:** Establish finite verifier behavior and stable backedge state before
 source or HIR lowering can introduce generic cyclic control flow.
 
-- [ ] Audit every verifier domain that carries state across CFG edges,
+- [x] Audit every verifier domain that carries state across CFG edges,
       including object initialization and cleanup, shared ownership and
       release, optional initialization and guards, arrays and anchors, checked
       views, and full-expression state.
-- [ ] Give each state domain a finite merge and convergence rule over cyclic
+- [x] Give each state domain a finite merge and convergence rule over cyclic
       CFGs; share a small worklist abstraction only where repeated ownership
       and behavior justify it.
-- [ ] Reset per-lifetime facts at live/dead epoch boundaries so re-entering a
+- [x] Reset per-lifetime facts at live/dead epoch boundaries so re-entering a
       body can initialize, use, clean, and end the same static storage identity
       again.
-- [ ] Require compatible state at ordinary joins and backedges, including
+- [x] Require compatible state at ordinary joins and backedges, including
       agreement that no condition temporary or body-local lifetime leaks onto
       the next attempted iteration.
-- [ ] Verify every represented block, including unreachable cyclic components,
+- [x] Verify every represented block, including unreachable cyclic components,
       without treating optimization or dead-block removal as a correctness
       prerequisite.
-- [ ] Bound diagnostic emission so malformed cycles terminate verification and
+- [x] Bound diagnostic emission so malformed cycles terminate verification and
       report deterministic, non-duplicated errors.
-- [ ] Preserve verification at the MIR pass boundary and confirm pass
+- [x] Preserve verification at the MIR pass boundary and confirm pass
       round-trips do not assume an acyclic block order.
-- [ ] Extract large verifier state machines into descriptive private modules
+- [x] Extract large verifier state machines into descriptive private modules
       and keep the verifier facade focused on orchestration.
 
 **Tests:** Hand-built generic self-loops and multi-block cycles; a valid

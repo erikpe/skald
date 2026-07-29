@@ -1,6 +1,6 @@
 //! Path-sensitive optional payload guards and pinned-mutation permits.
 
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet};
 
 use super::super::{
     super::model::{
@@ -8,6 +8,7 @@ use super::super::{
         OptionalGuardId,
     },
     context::Verifier,
+    dataflow::ForwardDataflow,
 };
 
 impl Verifier<'_> {
@@ -15,219 +16,225 @@ impl Verifier<'_> {
         &mut self,
         function: MirDefinitionRef<'_>,
     ) {
-        if function.body().entry.index() >= function.body().blocks.len() {
-            return;
-        }
-        let mut incoming = vec![None; function.body().blocks.len()];
-        incoming[function.body().entry.index()] = Some(OptionalGuardState::default());
-        let mut pending = VecDeque::from([function.body().entry]);
+        let mut flow = ForwardDataflow::new(function.callable(), function.body().blocks.len());
+        flow.seed(function.body().entry, OptionalGuardState::default());
         let mut reported_joins = HashSet::new();
 
-        while let Some(block_id) = pending.pop_front() {
-            let Some(block) = function.block(block_id) else {
-                continue;
-            };
-            let Some(mut state) = incoming[block_id.index()].clone() else {
-                continue;
-            };
-            for instruction in &block.instructions {
-                self.verify_guarded_payload_instruction(function, block, instruction, &state);
-                if !state.mutation_permits.is_empty()
-                    && !matches!(
-                        instruction,
-                        MirInstruction::ClassOptionalAssign(_)
-                            | MirInstruction::ClassOptionalCleanup(_)
-                    )
-                {
-                    self.block_error(
-                        function.callable(),
-                        block.id,
-                        "optional mutation check is not immediately followed by its transition",
-                    );
-                    state.mutation_permits.clear();
-                }
-                match instruction {
-                    MirInstruction::EndOptionalView(end) => {
-                        let expected = (end.source.clone(), end.class);
-                        let ordered = state.order.last() == Some(&end.guard);
-                        if !ordered || state.active.remove(&end.guard) != Some(expected) {
-                            self.block_error(
+        loop {
+            while let Some((block_id, mut state)) = flow.pop() {
+                let Some(block) = function.block(block_id) else {
+                    continue;
+                };
+                for instruction in &block.instructions {
+                    self.verify_guarded_payload_instruction(function, block, instruction, &state);
+                    if !state.mutation_permits.is_empty()
+                        && !matches!(
+                            instruction,
+                            MirInstruction::ClassOptionalAssign(_)
+                                | MirInstruction::ClassOptionalCleanup(_)
+                        )
+                    {
+                        self.block_error(
+                            function.callable(),
+                            block.id,
+                            "optional mutation check is not immediately followed by its transition",
+                        );
+                        state.mutation_permits.clear();
+                    }
+                    match instruction {
+                        MirInstruction::StorageLive(operation) => {
+                            state.reset_storage(operation.storage);
+                        }
+                        MirInstruction::StorageDead(operation) => {
+                            if state.references_storage(operation.storage) {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "optional payload guard remains active on normal return",
+                                );
+                            }
+                            state.reset_storage(operation.storage);
+                        }
+                        MirInstruction::EndOptionalView(end) => {
+                            let expected = (end.source.clone(), end.class);
+                            let ordered = state.order.last() == Some(&end.guard);
+                            if !ordered || state.active.remove(&end.guard) != Some(expected) {
+                                self.block_error(
                                 function.callable(),
                                 block.id,
                                 "optional view must end its matching active guard in reverse begin order",
                             );
+                            }
+                            if ordered {
+                                state.order.pop();
+                            }
                         }
-                        if ordered {
-                            state.order.pop();
+                        MirInstruction::ClassOptionalAssign(assignment) => {
+                            let self_copy = matches!(
+                                &assignment.source,
+                                crate::mir::MirClassOptionalSource::Copy(source)
+                                    if source == &assignment.destination
+                            );
+                            let array_element =
+                                assignment.destination.projections.iter().any(|projection| {
+                                    matches!(
+                                        projection,
+                                        crate::mir::MirPlaceProjection::ArrayElement { .. }
+                                    )
+                                });
+                            if !self_copy
+                                && !array_element
+                                && !state.mutation_permits.remove(&assignment.destination)
+                            {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "class optional assignment lacks a matching mutation check",
+                                );
+                            }
                         }
-                    }
-                    MirInstruction::ClassOptionalAssign(assignment) => {
-                        let self_copy = matches!(
-                            &assignment.source,
-                            crate::mir::MirClassOptionalSource::Copy(source)
-                                if source == &assignment.destination
-                        );
-                        let array_element =
-                            assignment.destination.projections.iter().any(|projection| {
+                        MirInstruction::ClassOptionalCleanup(cleanup) => {
+                            if !state.mutation_permits.remove(&cleanup.destination) {
+                                self.block_error(
+                                    function.callable(),
+                                    block.id,
+                                    "class optional cleanup lacks a matching mutation check",
+                                );
+                            }
+                        }
+                        MirInstruction::SharedRelease(release)
+                            if state.active.values().any(|(source, _)| {
                                 matches!(
-                                    projection,
-                                    crate::mir::MirPlaceProjection::ArrayElement { .. }
+                                    source.base,
+                                    crate::mir::MirPlaceBase::SharedPointee(owner)
+                                        if owner == release.owner
                                 )
-                            });
-                        if !self_copy
-                            && !array_element
-                            && !state.mutation_permits.remove(&assignment.destination)
+                            }) =>
                         {
                             self.block_error(
                                 function.callable(),
                                 block.id,
-                                "class optional assignment lacks a matching mutation check",
+                                "optional payload guard outlives its shared container anchor",
                             );
                         }
+                        _ => {}
                     }
-                    MirInstruction::ClassOptionalCleanup(cleanup) => {
-                        if !state.mutation_permits.remove(&cleanup.destination) {
+                }
+                if !state.mutation_permits.is_empty() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "optional mutation check has no immediate transition",
+                    );
+                    state.mutation_permits.clear();
+                }
+
+                match &block.terminator {
+                    Some(MirTerminator::BeginOptionalView {
+                        begin,
+                        success_target,
+                        absent_target,
+                        overflow_target,
+                        ..
+                    }) => {
+                        self.require_active_payload_guards(function, block, &begin.source, &state);
+                        let mut success = state.clone();
+                        if success
+                            .active
+                            .insert(begin.guard, (begin.source.clone(), begin.class))
+                            .is_some()
+                        {
                             self.block_error(
                                 function.callable(),
                                 block.id,
-                                "class optional cleanup lacks a matching mutation check",
+                                "optional guard begins more than once",
+                            );
+                        } else {
+                            success.order.push(begin.guard);
+                        }
+                        merge_optional_guard_state(
+                            self,
+                            function,
+                            *success_target,
+                            &success,
+                            &mut flow,
+                            &mut reported_joins,
+                        );
+                        for target in [*absent_target, *overflow_target] {
+                            merge_optional_guard_state(
+                                self,
+                                function,
+                                target,
+                                &state,
+                                &mut flow,
+                                &mut reported_joins,
                             );
                         }
                     }
-                    MirInstruction::SharedRelease(release)
-                        if state.active.values().any(|(source, _)| {
-                            matches!(
-                                source.base,
-                                crate::mir::MirPlaceBase::SharedPointee(owner)
-                                    if owner == release.owner
-                            )
-                        }) =>
-                    {
-                        self.block_error(
-                            function.callable(),
-                            block.id,
-                            "optional payload guard outlives its shared container anchor",
-                        );
-                    }
-                    _ => {}
-                }
-            }
-            if !state.mutation_permits.is_empty() {
-                self.block_error(
-                    function.callable(),
-                    block.id,
-                    "optional mutation check has no immediate transition",
-                );
-                state.mutation_permits.clear();
-            }
-
-            match &block.terminator {
-                Some(MirTerminator::BeginOptionalView {
-                    begin,
-                    success_target,
-                    absent_target,
-                    overflow_target,
-                    ..
-                }) => {
-                    self.require_active_payload_guards(function, block, &begin.source, &state);
-                    let mut success = state.clone();
-                    if success
-                        .active
-                        .insert(begin.guard, (begin.source.clone(), begin.class))
-                        .is_some()
-                    {
-                        self.block_error(
-                            function.callable(),
-                            block.id,
-                            "optional guard begins more than once",
-                        );
-                    } else {
-                        success.order.push(begin.guard);
-                    }
-                    merge_optional_guard_state(
-                        self,
-                        function,
-                        *success_target,
-                        &success,
-                        &mut incoming,
-                        &mut pending,
-                        &mut reported_joins,
-                    );
-                    for target in [*absent_target, *overflow_target] {
+                    Some(MirTerminator::CheckOptionalMutation {
+                        source,
+                        success_target,
+                        failure_target,
+                        ..
+                    }) => {
+                        self.require_active_payload_guards(function, block, source, &state);
+                        let mut success = state.clone();
+                        success.mutation_permits.insert(source.clone());
                         merge_optional_guard_state(
                             self,
                             function,
-                            target,
-                            &state,
-                            &mut incoming,
-                            &mut pending,
+                            *success_target,
+                            &success,
+                            &mut flow,
                             &mut reported_joins,
                         );
-                    }
-                }
-                Some(MirTerminator::CheckOptionalMutation {
-                    source,
-                    success_target,
-                    failure_target,
-                    ..
-                }) => {
-                    self.require_active_payload_guards(function, block, source, &state);
-                    let mut success = state.clone();
-                    success.mutation_permits.insert(source.clone());
-                    merge_optional_guard_state(
-                        self,
-                        function,
-                        *success_target,
-                        &success,
-                        &mut incoming,
-                        &mut pending,
-                        &mut reported_joins,
-                    );
-                    merge_optional_guard_state(
-                        self,
-                        function,
-                        *failure_target,
-                        &state,
-                        &mut incoming,
-                        &mut pending,
-                        &mut reported_joins,
-                    );
-                }
-                Some(
-                    MirTerminator::Return { .. }
-                    | MirTerminator::ReturnShared { .. }
-                    | MirTerminator::ReturnOptionalShared { .. },
-                ) => {
-                    if !state.active.is_empty() {
-                        self.block_error(
-                            function.callable(),
-                            block.id,
-                            "optional payload guard remains active on normal return",
-                        );
-                    }
-                }
-                Some(terminator) => {
-                    if let MirTerminator::CheckedCast { binding, .. } = terminator {
-                        self.require_active_payload_guards(
-                            function,
-                            block,
-                            &binding.view.source,
-                            &state,
-                        );
-                    }
-                    for target in terminator.successors() {
                         merge_optional_guard_state(
                             self,
                             function,
-                            target,
+                            *failure_target,
                             &state,
-                            &mut incoming,
-                            &mut pending,
+                            &mut flow,
                             &mut reported_joins,
                         );
                     }
+                    Some(
+                        MirTerminator::Return { .. }
+                        | MirTerminator::ReturnShared { .. }
+                        | MirTerminator::ReturnOptionalShared { .. },
+                    ) => {
+                        if !state.active.is_empty() {
+                            self.block_error(
+                                function.callable(),
+                                block.id,
+                                "optional payload guard remains active on normal return",
+                            );
+                        }
+                    }
+                    Some(terminator) => {
+                        if let MirTerminator::CheckedCast { binding, .. } = terminator {
+                            self.require_active_payload_guards(
+                                function,
+                                block,
+                                &binding.view.source,
+                                &state,
+                            );
+                        }
+                        for target in terminator.successors() {
+                            merge_optional_guard_state(
+                                self,
+                                function,
+                                target,
+                                &state,
+                                &mut flow,
+                                &mut reported_joins,
+                            );
+                        }
+                    }
+                    None => {}
                 }
-                None => {}
+            }
+            if !flow.seed_next_component(&function.body().blocks, OptionalGuardState::default()) {
+                break;
             }
         }
     }
@@ -358,32 +365,46 @@ struct OptionalGuardState {
     mutation_permits: HashSet<MirPlace>,
 }
 
+impl OptionalGuardState {
+    fn references_storage(&self, storage: crate::mir::StorageId) -> bool {
+        self.active
+            .values()
+            .any(|(source, _)| source.base.storage() == storage)
+            || self
+                .mutation_permits
+                .iter()
+                .any(|source| source.base.storage() == storage)
+    }
+
+    fn reset_storage(&mut self, storage: crate::mir::StorageId) {
+        let removed: HashSet<_> = self
+            .active
+            .iter()
+            .filter_map(|(guard, (source, _))| (source.base.storage() == storage).then_some(*guard))
+            .collect();
+        self.active.retain(|guard, _| !removed.contains(guard));
+        self.order.retain(|guard| !removed.contains(guard));
+        self.mutation_permits
+            .retain(|source| source.base.storage() != storage);
+    }
+}
+
 fn merge_optional_guard_state(
     verifier: &mut Verifier<'_>,
     function: MirDefinitionRef<'_>,
     target: crate::mir::BlockId,
     state: &OptionalGuardState,
-    incoming: &mut [Option<OptionalGuardState>],
-    pending: &mut VecDeque<crate::mir::BlockId>,
+    flow: &mut ForwardDataflow<OptionalGuardState>,
     reported_joins: &mut HashSet<crate::mir::BlockId>,
 ) {
-    if target.callable() != function.callable() || target.index() >= incoming.len() {
-        return;
-    }
-    match &incoming[target.index()] {
-        None => {
-            incoming[target.index()] = Some(state.clone());
-            pending.push_back(target);
+    flow.merge(target, state, |existing, incoming| {
+        if existing != incoming && reported_joins.insert(target) {
+            verifier.block_error(
+                function.callable(),
+                target,
+                "optional guard state differs across control-flow paths",
+            );
         }
-        Some(existing) if existing != state => {
-            if reported_joins.insert(target) {
-                verifier.block_error(
-                    function.callable(),
-                    target,
-                    "optional guard state differs across control-flow paths",
-                );
-            }
-        }
-        Some(_) => {}
-    }
+        false
+    });
 }
