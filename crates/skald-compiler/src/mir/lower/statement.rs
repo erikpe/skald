@@ -32,9 +32,7 @@ impl BodyLowerer<'_> {
             HirStatement::Panic(statement) => self.lower_panic(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
-            HirStatement::While(_) => {
-                unreachable!("structured HIR loops must be lowered by the loop CFG owner")
-            }
+            HirStatement::While(statement) => self.lower_while(statement),
             HirStatement::Block(block) => self.lower_block(block),
             HirStatement::PrimitiveBindingAssignment(assignment) => {
                 let value = self

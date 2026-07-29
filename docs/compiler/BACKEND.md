@@ -143,11 +143,11 @@ publication; ordinary dynamic publication writes count one.
 The frozen
 [loop representation contract](PHASES_AND_IR.md#frozen-loop-representation-extension)
 keeps all source loop meaning and cleanup planning target-independent. Source
-loops are not currently produced, but cyclic control flow using the existing
-generic branch and jump forms is already representable. Repeatable lifetime
-epochs are implemented as verified no-code MIR markers. Once source loop
-lowering is implemented, a backend will continue to consume only the resulting
-verified generic MIR.
+loops are not currently accepted, but typed internal HIR loops already lower
+to cyclic control flow using the existing generic branch and jump forms.
+Repeatable lifetime epochs are implemented as verified no-code MIR markers.
+The backend consumes only the resulting verified generic MIR and has no
+source-loop-specific operation or state.
 
 The target boundary requires:
 

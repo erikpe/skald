@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 through L2 are complete and L3 is next.
+Status: in progress; L0 through L3 are complete and L4 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -86,7 +86,7 @@ Explicitly excluded from this roadmap:
 - [x] L0 — Add repeatable MIR storage lifetime epochs
 - [x] L1 — Make MIR verification cycle-safe
 - [x] L2 — Add structured loop identities and control effects
-- [ ] L3 — Lower internal HIR `while` loops through generic MIR
+- [x] L3 — Lower internal HIR `while` loops through generic MIR
 - [ ] L4 — Activate source `while` end to end
 - [ ] L5 — Add targeted `break` statements
 - [ ] L6 — Add targeted `continue` statements
@@ -223,27 +223,27 @@ loop-specific scope popping.
 and backend behavior against manually constructed typed HIR before accepting
 the source form.
 
-- [ ] Lower HIR `while` to deterministic preheader, condition header, body,
+- [x] Lower HIR `while` to deterministic preheader, condition header, body,
       latch, and exit blocks using only generic MIR `Goto` and `Branch`
       terminators.
-- [ ] Evaluate the exact boolean condition once in the header on every
+- [x] Evaluate the exact boolean condition once in the header on every
       attempted iteration, preserve its scalar result, and finish all
       full-expression cleanup before branching.
-- [ ] Enter the body as a child lexical scope, emit fresh storage-live epochs
+- [x] Enter the body as a child lexical scope, emit fresh storage-live epochs
       on each dynamic entry, and emit cleanup followed by storage-dead
       boundaries on normal completion before reaching the latch.
-- [ ] Route body fallthrough through the dedicated latch and route the latch
+- [x] Route body fallthrough through the dedicated latch and route the latch
       back to the condition header.
-- [ ] Preserve enclosing locals and their assignments across the loop and keep
+- [x] Preserve enclosing locals and their assignments across the loop and keep
       the exit-state compatible with zero iterations.
-- [ ] Treat every HIR `while` as potentially falling through regardless of
+- [x] Treat every HIR `while` as potentially falling through regardless of
       literal conditions or body effects.
-- [ ] Extend MIR and backend dumps with deterministic backward targets without
+- [x] Extend MIR and backend dumps with deterministic backward targets without
       introducing a dedicated loop opcode or target-owned loop structure.
-- [ ] Exercise the same generic lowering with primitive, inline object,
+- [x] Exercise the same generic lowering with primitive, inline object,
       shared, optional, array, checked-view, anchor, and control-effectful
       condition/body fixtures.
-- [ ] Confirm the verified MIR pass pipeline and x86-64 backend mechanically
+- [x] Confirm the verified MIR pass pipeline and x86-64 backend mechanically
       accept the canonical graph and its backward edge.
 
 **Tests:** HIR-to-MIR unit tests for zero and repeated iterations, condition

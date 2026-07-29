@@ -664,14 +664,15 @@ somehow reached after the trust boundary.
 
 The source behavior of `while`, `break`, and `continue` is frozen in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
-The semantic foundation is partially implemented ahead of source syntax.
+The semantic and executable-IR foundation is implemented ahead of source syntax.
 Callable-local `LoopId`, composable HIR control effects, and structured
 `HirWhile` are current representations. MIR storage lifetime epochs and
 cycle-safe verification are also implemented: every stateful verifier uses
 deterministic finite forward dataflow, checks disconnected cyclic components,
 and resets per-epoch ownership and initialization facts at storage lifetime
-boundaries. Resolution does not yet produce loops, and HIR-to-MIR loop CFG
-lowering remains later work.
+boundaries. HIR-to-MIR lowering accepts internally constructed typed loops and
+emits the generic canonical graph described below. Resolution does not yet
+produce loops, so source `while`, `break`, and `continue` remain unavailable.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete
@@ -723,8 +724,9 @@ panic, preserving the established callable-completeness diagnostics.
 MIR cleanup planning exposes an opaque retained lexical-scope depth. Planning
 an edge to that depth is non-consuming and returns cleanup and storage-dead
 work for precisely the exited scopes. The lowering loop context binds a
-`LoopId` to exit and latch block targets plus that retained depth; executable
-loop CFG construction does not yet consume the context.
+`LoopId` to exit and latch block targets plus that retained depth. Current
+`while` lowering installs this context around the body; later targeted-exit
+lowering will query it to select cleanup and jump targets.
 
 ### Repeatable MIR storage lifetimes
 
@@ -786,6 +788,14 @@ HIR-to-MIR lowering represents source loops with ordinary basic blocks,
 boolean branches, and jumps. It does not introduce a source-specific loop
 terminator and does not reuse the generated array-loop terminator, whose array
 storage and lifecycle invariants are unrelated to source control flow.
+
+Current lowering applies this representation to typed `HirWhile` fixtures.
+It allocates the complete canonical shape before emitting its edges, evaluates
+and finishes the condition full expression in the header, lowers the body as a
+child lexical scope, routes normal completion through the latch, and selects
+the exit as the continuation regardless of literal condition or body effects.
+This has been verified through the MIR pass boundary and native backend for
+zero, repeated, nested, returning, and ownership-heavy internal fixtures.
 
 The initial lowering form has these semantic regions:
 

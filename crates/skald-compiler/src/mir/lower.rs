@@ -17,6 +17,7 @@ mod control_flow;
 mod expression;
 #[allow(dead_code)]
 mod loop_context;
+mod loop_flow;
 mod object_values;
 mod optional;
 mod places;
@@ -98,7 +99,6 @@ struct BodyLowerer<'hir> {
     values: Vec<MirValue>,
     body: MirBodyBuilder,
     cleanup: CleanupPlanner,
-    #[allow(dead_code)]
     loop_contexts: LoopContextStack,
     full_expression_temporaries: Vec<FullExpressionTemporary>,
     full_expression_storage: Vec<StorageId>,
