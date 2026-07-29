@@ -10,7 +10,10 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently only planned.
+- [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md) —
+  **planned**. Add exact-type reassignment for initialized primitive `var`
+  bindings by reusing the verified scalar-store pipeline. PLR0 is next. It has
+  no dependency on another active roadmap.
 
 ## Design proposals
 
