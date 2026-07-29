@@ -10,19 +10,24 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently planned.
+- [While Loops and Loop Exits Roadmap](WHILE_LOOPS_ROADMAP.md) — **planned;
+  repeatable MIR storage lifetime epochs are next**. Delivers cycle-safe
+  storage and verification foundations before activating source `while`, then
+  adds `break` and `continue` as separate slices. It depends on the current
+  deterministic-cleanup, ownership, optional, array, generic-CFG, pass, and
+  x86-64 backend baselines; it requires no runtime ABI change.
 
 ## Design proposals
 
 - [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **confirmed;
-  contract promotion complete, implementation roadmap pending**. Defines the
-  source semantics, control effects,
+  contract promotion and implementation roadmapping complete, final validation
+  and archival pending**. Defines the source semantics, control effects,
   cleanup boundaries, repeatable MIR storage lifetimes, generic CFG lowering,
   and optimization invariants for `while` and future `break` and `continue`.
   Decisions W1 through W13 adopt their recommended choices, and living language
   and compiler documents now own the frozen source, representation, runtime,
-  and backend boundaries. The next action is creating the PR-sized
-  implementation roadmap.
+  and backend boundaries. The next action is final documentation validation and
+  archival of the proposal.
 
 ## Pending discoveries
 

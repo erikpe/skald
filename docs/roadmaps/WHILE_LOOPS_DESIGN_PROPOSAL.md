@@ -1,10 +1,12 @@
 # While Loops Design Proposal
 
-Status: confirmed on 2026-07-29; contract promotion complete, implementation
-roadmap pending. W1 through W13 adopt their recommended decisions. The living
-language, phase/IR, runtime ABI, and backend documents now own the frozen
-source, representation, and target-boundary behavior; this proposal retains
-the decision rationale and remaining promotion work.
+Status: confirmed on 2026-07-29; contract promotion and implementation
+roadmapping complete, final validation and archival pending. W1 through W13
+adopt their recommended decisions. The living language, phase/IR, runtime ABI,
+and backend documents now own the frozen source, representation, and
+target-boundary behavior; the
+[implementation roadmap](WHILE_LOOPS_ROADMAP.md) owns delivery order, and this
+proposal retains the decision rationale and remaining promotion work.
 
 This proposal defines a first `while` loop for Skald and the compiler
 boundaries needed to add `break`, `continue`, other loop forms, and
@@ -752,7 +754,7 @@ still requires:
       numbering.
 - [x] Confirm in the runtime ABI and backend contracts that the feature
       requires no new runtime service or backend-owned loop semantics.
-- [ ] Create a PR-sized implementation roadmap that orders repeatable storage
+- [x] Create a PR-sized implementation roadmap that orders repeatable storage
       lifetimes and cyclic verifier foundations before source acceptance.
 - [ ] Run final documentation link and index validation after the promotion,
       archive move, and roadmap addition.
