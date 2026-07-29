@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{CallableId, ClassId, FunctionId, LocalId},
+    identity::{BindingId, CallableId, ClassId, FunctionId, LocalId},
     source::Span,
 };
 
@@ -198,7 +198,7 @@ pub enum HirStatement {
     Call(HirCallStatement),
     Conditional(HirConditional),
     Block(HirBlock),
-    PrimitiveLocalAssignment(HirPrimitiveLocalAssignment),
+    PrimitiveBindingAssignment(HirPrimitiveBindingAssignment),
     FieldAssignment(HirFieldAssignment),
     FieldConstruction(HirFieldConstruction),
     FieldCopyConstruction(HirFieldCopyConstruction),
@@ -224,7 +224,7 @@ impl HirStatement {
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
-            Self::PrimitiveLocalAssignment(statement) => statement.span,
+            Self::PrimitiveBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::FieldConstruction(statement) => statement.span,
             Self::FieldCopyConstruction(statement) => statement.span,
@@ -244,8 +244,8 @@ impl HirStatement {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HirPrimitiveLocalAssignment {
-    pub destination: LocalId,
+pub struct HirPrimitiveBindingAssignment {
+    pub destination: BindingId,
     pub source: HirExpression,
     pub span: Span,
 }

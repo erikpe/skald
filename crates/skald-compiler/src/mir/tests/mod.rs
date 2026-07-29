@@ -26,7 +26,7 @@ mod object_results;
 mod object_temporaries;
 mod objects;
 mod optional_values;
-mod primitive_local_assignment;
+mod primitive_binding_assignment;
 mod robustness;
 mod shared;
 mod static_inheritance;

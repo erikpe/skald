@@ -1,7 +1,7 @@
 # Skald Functions and Control Flow
 
 Status: authoritative for implemented callable, binding, scope, statement,
-control-flow, return, evaluation-order, and primitive-local-reassignment
+control-flow, return, evaluation-order, and primitive-binding-reassignment
 semantics. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
@@ -109,37 +109,45 @@ Leaving a block destroys successfully initialized owning class locals from
 last completed initialization to first. Primitive locals require no lifetime
 cleanup. Detailed destruction behavior is owned by class lifecycle semantics.
 
-### Primitive local reassignment
+### Primitive binding reassignment
 
-An initialized primitive `var` local is replaceable with an exactly typed
-value:
+An initialized primitive `var` local or primitive value parameter is
+replaceable with an exactly typed value:
 
 ```text
 var count: i64 = 1;
 count = count + 1;
+
+fn advance(value: i64) -> i64 {
+    value = value + 1;
+    return value;
+}
 ```
 
 This contract applies to `i64`, `u64`, `u8`, `f64`, and `bool`. The
 left-hand identifier resolves before the right-hand expression and must select
-an already-declared `var` local. Parenthesizing the complete destination is
-transparent: `(count) = 2;` selects the same local identity. Normal lexical
-lookup applies, so an assignment inside a nested scope updates the innermost
-visible declaration and an outer declaration becomes visible again when that
-scope ends.
+an already-declared `var` local or value parameter. Parenthesizing the complete
+destination is transparent: `(count) = 2;` selects the same binding identity.
+Normal lexical lookup applies, so an assignment inside a nested scope updates
+the innermost visible declaration and an outer local or parameter becomes
+visible again when that scope ends. Parameters are callee-local value storage;
+reassignment does not mutate the caller's argument.
 
-The right-hand expression must have exactly the local's declared primitive
+The right-hand expression must have exactly the binding's declared primitive
 type. It is evaluated exactly once, and its value is stored only after that
 evaluation succeeds. Any full-expression temporaries created while evaluating
 the source are cleaned after the store under their existing lifetime rules.
-Reassignment neither begins a new local lifetime nor changes cleanup
-registration; primitive locals remain initialized from declaration through
-the end of their scope.
+Reassignment neither begins a new lifetime nor changes cleanup registration;
+primitive locals remain initialized from declaration through the end of their
+scope, and primitive value parameters remain initialized from callable entry
+through callable exit.
 
-Primitive local reassignment is a statement and produces no value. Assignment
+Primitive binding reassignment is a statement and produces no value. Assignment
 expressions, chaining, compound assignment, increment and decrement,
-destructuring, alias locals, and primitive value-parameter rebinding are not
-part of this contract. Existing primitive-field, object, shared-owner,
-optional, array, and array-element assignment retain their own rules.
+destructuring, local aliases, alias-parameter rebinding, and non-primitive
+value-parameter rebinding are not part of this contract. Existing
+primitive-field, object, shared-owner, optional, array, and array-element
+assignment retain their own rules.
 Initializer and copy-constructor bodies that admit only direct receiver-field
 initialization do not gain local reassignment.
 
@@ -156,7 +164,7 @@ The implemented general body forms are:
 - `if`/`elif`/`else` conditionals;
 - returns;
 - call statements;
-- primitive local reassignment;
+- primitive binding reassignment;
 - assignment-shaped class and field operations.
 
 Assignment operation selection and initializer-body restrictions are
@@ -238,8 +246,8 @@ Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
 
-Primitive local reassignment uses item 4 without introducing
-an effectful destination computation: resolution selects the local identity,
+Primitive binding reassignment uses item 4 without introducing
+an effectful destination computation: resolution selects the binding identity,
 the source evaluates once, the completed scalar is stored, and source
 full-expression cleanup follows the store.
 

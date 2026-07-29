@@ -1,7 +1,8 @@
 use super::*;
+use crate::identity::{BindingId, ParameterId};
 
 #[test]
-fn checks_all_primitive_local_assignment_types_exactly() {
+fn checks_all_primitive_binding_assignment_types_exactly() {
     let output = check_text(concat!(
         "fn next(value: i64) -> i64 { return value + 1; }\n",
         "fn main() -> i64 {\n",
@@ -28,7 +29,7 @@ fn checks_all_primitive_local_assignment_types_exactly() {
         .statements
         .iter()
         .filter_map(|statement| match statement {
-            HirStatement::PrimitiveLocalAssignment(assignment) => Some(assignment),
+            HirStatement::PrimitiveBindingAssignment(assignment) => Some(assignment),
             _ => None,
         })
         .collect();
@@ -49,19 +50,64 @@ fn checks_all_primitive_local_assignment_types_exactly() {
     assert_eq!(
         assignments
             .iter()
-            .map(|assignment| assignment.destination.index())
+            .map(|assignment| {
+                let BindingId::Local(local) = assignment.destination else {
+                    panic!("expected local destination");
+                };
+                local.index()
+            })
             .collect::<Vec<_>>(),
         [0, 1, 2, 3, 4, 0]
     );
 
     let dump = dump_hir(&hir);
     assert_eq!(dump, dump_hir(&hir));
-    assert!(dump.contains("PrimitiveLocalAssignment f1:l0"));
-    assert!(!dump.contains("PrimitiveLocalAssignment \"signed\""));
+    assert!(dump.contains("PrimitiveBindingAssignment f1:l0"));
+    assert!(!dump.contains("PrimitiveBindingAssignment \"signed\""));
 }
 
 #[test]
-fn rejects_each_cross_primitive_assignment_without_conversion() {
+fn checks_all_primitive_parameter_assignment_types_exactly() {
+    let output = check_text(concat!(
+        "fn update(signed: i64, unsigned: u64, byte: u8, float: f64, flag: bool) -> i64 {\n",
+        "  signed = signed + 1;\n",
+        "  unsigned = 2u;\n",
+        "  byte = 3u8;\n",
+        "  float = 4.0;\n",
+        "  flag = true;\n",
+        "  return signed;\n",
+        "}\n",
+        "fn main() -> i64 { return update(0, 0u, 0u8, 0.0, false); }\n",
+    ));
+
+    assert!(output.diagnostics.is_empty());
+    let hir = output.hir.unwrap();
+    let update = hir.definitions.get(FunctionId::new(0)).unwrap();
+    let assignments: Vec<_> = update
+        .body
+        .statements
+        .iter()
+        .filter_map(|statement| match statement {
+            HirStatement::PrimitiveBindingAssignment(assignment) => Some(assignment),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        assignments
+            .iter()
+            .map(|assignment| assignment.source.ty)
+            .collect::<Vec<_>>(),
+        [Type::I64, Type::U64, Type::U8, Type::F64, Type::Bool]
+    );
+    assert!(assignments
+        .iter()
+        .enumerate()
+        .all(|(index, assignment)| assignment.destination
+            == BindingId::Parameter(ParameterId::new(FunctionId::new(0), index))));
+}
+
+#[test]
+fn rejects_each_cross_primitive_binding_assignment_without_conversion() {
     let output = check_text(concat!(
         "fn main() -> i64 {\n",
         "  var signed: i64 = 0;\n",
@@ -87,11 +133,11 @@ fn rejects_each_cross_primitive_assignment_without_conversion() {
     assert_eq!(mismatches.len(), 5);
     assert!(mismatches
         .iter()
-        .all(|diagnostic| diagnostic.message.contains("primitive local assignment")));
+        .all(|diagnostic| diagnostic.message.contains("primitive binding assignment")));
 }
 
 #[test]
-fn initializer_only_bodies_do_not_admit_primitive_local_assignment() {
+fn initializer_only_bodies_do_not_admit_primitive_binding_assignment() {
     let output = check_text(concat!(
         "class Value {\n",
         "  field: i64;\n",

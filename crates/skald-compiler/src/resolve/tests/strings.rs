@@ -107,6 +107,10 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         .methods
         .iter()
         .any(|method| method.name == "_slice_trusted"));
+    assert!(!class
+        .methods
+        .iter()
+        .any(|method| method.name == "_normalize_position"));
     let descriptor_initializer = class.initializers[1].id;
 
     let checked = type_check(&resolved.program);

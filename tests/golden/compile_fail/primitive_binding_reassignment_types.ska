@@ -12,3 +12,7 @@ fn main() -> i64 {
     flag = 1.0;
     return 0;
 }
+
+fn invalid_parameter(value: i64) -> unit {
+    value = 1u;
+}

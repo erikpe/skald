@@ -361,10 +361,10 @@ mutability. An index or slice projection is likewise retained as an
 assignment-shaped statement for later semantic classification.
 Consequently, both `name = value;` and `(name) = value;` are accepted
 assignment-shaped syntax without the parser deciding whether `name` denotes a
-primitive local, object, shared owner, optional, or array. Primitive local
+primitive binding, object, shared owner, optional, or array. Primitive binding
 reassignment has
-[implemented semantics](FUNCTIONS_AND_CONTROL_FLOW.md#primitive-local-reassignment)
-for exactly typed initialized primitive `var` bindings.
+[implemented semantics](FUNCTIONS_AND_CONTROL_FLOW.md#primitive-binding-reassignment)
+for exactly typed initialized primitive `var` locals and value parameters.
 
 `elif` is its own keyword and continuation form. `else if` and standalone
 `elif` or `else` are not part of the grammar. Every conditional arm requires a

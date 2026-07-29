@@ -32,7 +32,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                     };
                     assert_expression_is_fully_typed(initializer);
                 }
-                HirStatement::PrimitiveLocalAssignment(assignment) => {
+                HirStatement::PrimitiveBindingAssignment(assignment) => {
                     assert_expression_is_fully_typed(&assignment.source);
                 }
                 HirStatement::Return(statement) => {

@@ -2,7 +2,7 @@
 
 Status: authoritative for implemented type, value, literal, and expression
 semantics, the primitive integer comparison and cast contract, and the exact
-type rule for primitive local reassignment. The
+type rule for primitive binding reassignment. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -94,12 +94,13 @@ actual and expected types to be identical:
 - return values;
 - assignment to primitive fields;
 - assignment to primitive `var` locals;
+- assignment to primitive value parameters;
 - both operands of a binary arithmetic operator.
 
-Primitive local reassignment applies the same rule: the
-right-hand expression's actual type must be identical to the `var` local's
-declared primitive type. A literal keeps the type selected by its spelling;
-the destination does not reinterpret it.
+Primitive binding reassignment applies the same rule: the right-hand
+expression's actual type must be identical to the `var` local or value
+parameter's declared primitive type. A literal keeps the type selected by its
+spelling; the destination does not reinterpret it.
 
 `bool` is not an integer type. It has no numeric operations or implicit
 truthiness. A condition must already have type `bool`; integer, floating,

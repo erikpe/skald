@@ -37,7 +37,7 @@ fn lowers_each_primitive_assignment_to_the_existing_local_storage() {
             .iter()
             .map(|store| {
                 let MirPlaceBase::Storage(storage) = store.destination.base else {
-                    panic!("primitive local assignment must target storage");
+                    panic!("primitive binding assignment must target storage");
                 };
                 storage.index()
             })
@@ -56,6 +56,33 @@ fn lowers_each_primitive_assignment_to_the_existing_local_storage() {
             MirType::F64,
             MirType::Bool
         ]
+    );
+}
+
+#[test]
+fn lowers_primitive_parameter_assignment_to_the_parameter_storage() {
+    let program = lower_text(concat!(
+        "fn update(value: i64) -> i64 {\n",
+        "  value = value + 1;\n",
+        "  return value;\n",
+        "}\n",
+        "fn main() -> i64 { return update(41); }\n",
+    ));
+    verify_mir(&program).unwrap();
+    let update = program.definitions.get(FunctionId::new(0)).unwrap();
+    let store = update.body.blocks[0]
+        .instructions
+        .iter()
+        .find_map(|instruction| match instruction {
+            MirInstruction::Store(store) => Some(store),
+            _ => None,
+        })
+        .expect("parameter assignment must emit a store");
+
+    assert_eq!(store.destination, MirPlace::base(update.parameters[0]));
+    assert_eq!(
+        update.storage[update.parameters[0].index()].kind,
+        MirStorageKind::Parameter
     );
 }
 

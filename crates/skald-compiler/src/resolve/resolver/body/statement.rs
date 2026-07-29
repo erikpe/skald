@@ -295,26 +295,11 @@ impl CallableResolver<'_, '_> {
                         | ResolvedTypeKind::F64
                         | ResolvedTypeKind::Bool
                 ) {
-                    let BindingId::Local(destination) = binding.id else {
-                        self.diagnostics.push(
-                            Diagnostic::error(
-                                INVALID_LOCAL_ASSIGNMENT,
-                                "a primitive value parameter cannot be reassigned",
-                            )
-                            .with_primary_label(
-                                identifier.name.span,
-                                "only a primitive `var` local is replaceable",
-                            )
-                            .with_secondary_label(binding.name_span, "parameter declared here"),
-                        );
-                        let _ = self.resolve_expression(&assignment.value);
-                        return None;
-                    };
                     let source = self.resolve_expression(&assignment.value);
                     return source.map(|source| {
-                        ResolvedStatement::PrimitiveLocalAssignment(
-                            ResolvedPrimitiveLocalAssignment {
-                                destination,
+                        ResolvedStatement::PrimitiveBindingAssignment(
+                            ResolvedPrimitiveBindingAssignment {
+                                destination: binding.id,
                                 equal_span: assignment.equal_span,
                                 source,
                                 span: assignment.span,

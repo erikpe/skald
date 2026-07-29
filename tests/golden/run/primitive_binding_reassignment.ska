@@ -9,6 +9,25 @@ fn produce_signed() -> i64 {
     return 41;
 }
 
+fn reassign_parameters(
+    signed: i64,
+    unsigned: u64,
+    byte: u8,
+    float: f64,
+    flag: bool
+) -> unit {
+    signed = signed + 1;
+    unsigned = unsigned + 1u;
+    byte = byte + 1u8;
+    float = float + 0.5;
+    flag = true;
+    ska_rt_println_i64(signed);
+    ska_rt_println_u64(unsigned);
+    ska_rt_println_u8(byte);
+    ska_rt_println_f64_bits(float);
+    ska_rt_println_bool(flag);
+}
+
 fn main() -> i64 {
     var signed: i64 = 0;
     var unsigned: u64 = 0u;
@@ -16,6 +35,7 @@ fn main() -> i64 {
     var float: f64 = 0.0;
     var flag: bool = false;
 
+    reassign_parameters(10, 11u, 12u8, 2.0, false);
     signed = 1;
     (signed) = produce_signed() + 1;
     unsigned = 18446744073709551615u;

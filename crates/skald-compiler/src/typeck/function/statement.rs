@@ -6,10 +6,9 @@ use crate::{
         BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
         HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
         HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
-        HirPrimitiveLocalAssignment, HirReturn, HirReturnValue, HirSharedAssignment, HirStatement,
-        Type,
+        HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirSharedAssignment,
+        HirStatement, Type,
     },
-    identity::BindingId,
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
         ResolvedReturn, ResolvedStatement,
@@ -73,8 +72,8 @@ impl CallableChecker<'_, '_> {
                 self.check_conditional_statement(conditional)
             }
             ResolvedStatement::Block(block) => self.check_nested_block_statement(block),
-            ResolvedStatement::PrimitiveLocalAssignment(assignment) => {
-                self.check_primitive_local_assignment(assignment)
+            ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
+                self.check_primitive_binding_assignment(assignment)
             }
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.check_field_assignment(assignment)
@@ -94,11 +93,11 @@ impl CallableChecker<'_, '_> {
         }
     }
 
-    fn check_primitive_local_assignment(
+    fn check_primitive_binding_assignment(
         &mut self,
-        assignment: &crate::resolve::ResolvedPrimitiveLocalAssignment,
+        assignment: &crate::resolve::ResolvedPrimitiveBindingAssignment,
     ) -> CheckedStatement {
-        let expected = self.binding_type(BindingId::Local(assignment.destination));
+        let expected = self.binding_type(assignment.destination);
         debug_assert!(matches!(
             expected,
             Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
@@ -110,12 +109,12 @@ impl CallableChecker<'_, '_> {
                     source.ty,
                     expected,
                     source.span,
-                    "primitive local assignment",
+                    "primitive binding assignment",
                     self.diagnostics,
                 )
             })
             .map(|source| {
-                HirStatement::PrimitiveLocalAssignment(HirPrimitiveLocalAssignment {
+                HirStatement::PrimitiveBindingAssignment(HirPrimitiveBindingAssignment {
                     destination: assignment.destination,
                     source,
                     span: assignment.span,

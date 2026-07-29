@@ -40,7 +40,7 @@ pub use ir::{
     HirOptionalSharedAssignment, HirOptionalSharedInitialize, HirOptionalSharedPlace,
     HirOptionalSharedSource, HirOptionalSource, HirOptionalStorage, HirOptionalWriteKind,
     HirOwnerTransfer, HirParameter, HirParameterMode, HirPresenceTestKind,
-    HirPrimitiveLocalAssignment, HirPrimitiveType, HirProgram, HirRequirementImplementation,
+    HirPrimitiveBindingAssignment, HirPrimitiveType, HirProgram, HirRequirementImplementation,
     HirReturn, HirReturnValue, HirSelectedCopyOperation, HirSharedAllocation,
     HirSharedAllocationMode, HirSharedAssignment, HirSharedCast, HirSharedCastKind,
     HirSharedFieldWrite, HirSharedFieldWriteKind, HirSharedPlace, HirSharedProducer,

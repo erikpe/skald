@@ -1,10 +1,10 @@
 use super::*;
 
 #[test]
-fn primitive_local_reassignment_executes_for_every_scalar_storage_class() {
+fn primitive_binding_reassignment_executes_for_every_scalar_storage_class() {
     let mut output = assembly(concat!(
         "extern fn validate_f64(value: f64) -> bool;\n",
-        "fn next(value: i64) -> i64 { return value + 1; }\n",
+        "fn next(value: i64) -> i64 { value = value + 1; value = value + 1; return value; }\n",
         "fn main() -> i64 {\n",
         "  var signed: i64 = 0;\n",
         "  var unsigned: u64 = 0u;\n",
@@ -12,7 +12,6 @@ fn primitive_local_reassignment_executes_for_every_scalar_storage_class() {
         "  var float: f64 = 0.0;\n",
         "  var flag: bool = false;\n",
         "  signed = next(6);\n",
-        "  signed = signed + 1;\n",
         "  unsigned = 18446744073709551615u;\n",
         "  (byte) = 255u8;\n",
         "  float = 2.5;\n",

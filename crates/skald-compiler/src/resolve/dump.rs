@@ -650,9 +650,9 @@ impl ResolvedDumper {
             }
             ResolvedStatement::Conditional(statement) => self.conditional(statement),
             ResolvedStatement::Block(block) => self.block(block),
-            ResolvedStatement::PrimitiveLocalAssignment(assignment) => {
+            ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
                 self.line(
-                    &format!("PrimitiveLocalAssignment {}", assignment.destination),
+                    &format!("PrimitiveBindingAssignment {}", assignment.destination),
                     assignment.span,
                 );
                 self.indented(|dumper| {

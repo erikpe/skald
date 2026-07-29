@@ -124,10 +124,10 @@ container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxed, nested, and optional-reference shapes remain diagnosed before
 HIR.
 
-## Primitive local reassignment boundary
+## Primitive binding reassignment boundary
 
 The source contract for
-[primitive local reassignment](../language/FUNCTIONS_AND_CONTROL_FLOW.md#primitive-local-reassignment)
+[primitive binding reassignment](../language/FUNCTIONS_AND_CONTROL_FLOW.md#primitive-binding-reassignment)
 extends the existing pipeline without adding a new place family:
 
 - Syntax already retains an identifier or grouped identifier followed by `=`
@@ -135,33 +135,32 @@ extends the existing pipeline without adding a new place family:
   source expression, and complete statement span. Parsing chooses no binding
   identity, type, mutability, or semantic assignment category.
 - Resolution recognizes this meaning only when lexical lookup selects a
-  primitive `BindingId::Local(LocalId)`. It will emit a dedicated
-  `ResolvedPrimitiveLocalAssignment` containing the destination `LocalId`,
-  equality span, resolved source, and statement span. Grouping does not alter
-  lookup, and the destination lookup is completed before resolving the source.
-  A primitive parameter or another excluded root receives a focused
-  diagnostic rather than falling through to object-place resolution.
+  primitive `BindingId::Local(LocalId)` or `BindingId::Parameter(ParameterId)`.
+  It emits a dedicated `ResolvedPrimitiveBindingAssignment` containing that
+  destination `BindingId`, equality span, resolved source, and statement span.
+  Grouping does not alter lookup, and destination lookup completes before
+  resolving the source.
 - Type checking requires the source expression to have exactly the
-  destination local's declared type and accepts only `i64`, `u64`, `u8`,
+  destination binding's declared type and accepts only `i64`, `u64`, `u8`,
   `f64`, or `bool`. HIR uses a dedicated
-  `HirPrimitiveLocalAssignment` containing the destination `LocalId`, one
+  `HirPrimitiveBindingAssignment` containing the destination `BindingId`, one
   typed source expression, and the statement span. The operation type remains
-  available from the local table and `HirExpression::ty`; it is not duplicated
-  in the statement where the two copies could drift.
+  available from the binding table and `HirExpression::ty`; it is not
+  duplicated in the statement where the two copies could drift.
 - MIR lowering evaluates the HIR source once, emits the existing
-  `MirStore` to the local's already allocated storage, and then emit the
-  ordinary full-expression boundary. No initialization, liveness, ownership,
-  or cleanup registration changes.
+  `MirStore` to the binding's already allocated local or parameter storage,
+  and then emits the ordinary full-expression boundary. No initialization,
+  liveness, ownership, or cleanup registration changes.
 - MIR verification already requires a scalar, exactly typed, mutable store
   destination and a defined value operand. Backends consume the verified
   store mechanically. The x86-64 target already handles canonical integer,
   byte, boolean, and floating stores, so this feature adds no layout, ABI,
   runtime, or target-specific semantic rule.
 
-Assignment remains a statement with no HIR expression result. Primitive value
-parameters, invalid or non-local roots, compound and chained assignment,
-destructuring, and every existing non-primitive assignment family remain
-outside this boundary.
+Assignment remains a statement with no HIR expression result. Alias
+parameters, invalid roots, compound and chained assignment, destructuring,
+and every existing non-primitive assignment family remain outside this
+boundary.
 
 ## Primitive integer operation boundary
 

@@ -32,12 +32,12 @@ impl BodyLowerer<'_> {
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
             HirStatement::Block(block) => self.lower_block(block),
-            HirStatement::PrimitiveLocalAssignment(assignment) => {
+            HirStatement::PrimitiveBindingAssignment(assignment) => {
                 let value = self
                     .lower_expression(&assignment.source)
-                    .expect("typed primitive local assignment must produce a scalar value");
+                    .expect("typed primitive binding assignment must produce a scalar value");
                 self.emit(MirInstruction::Store(MirStore {
-                    destination: self.local_storage[assignment.destination.index()].into(),
+                    destination: self.lower_binding_place(assignment.destination),
                     value,
                     span: assignment.span,
                 }));

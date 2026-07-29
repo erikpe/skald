@@ -636,9 +636,9 @@ impl HirDumper {
             }
             HirStatement::Conditional(statement) => self.conditional(statement),
             HirStatement::Block(block) => self.block(block),
-            HirStatement::PrimitiveLocalAssignment(assignment) => {
+            HirStatement::PrimitiveBindingAssignment(assignment) => {
                 self.line(
-                    &format!("PrimitiveLocalAssignment {}", assignment.destination),
+                    &format!("PrimitiveBindingAssignment {}", assignment.destination),
                     assignment.span,
                 );
                 self.indented(|dumper| dumper.expression(&assignment.source));

@@ -55,13 +55,14 @@ complete rendered diagnostic is part of the regression. Backend tests should
 prefer assembly shape or legality assertions; native goldens are for behavior
 that assembly text alone does not establish.
 
-Primitive local reassignment is covered at each owning boundary: syntax tests
+Primitive binding reassignment is covered at each owning boundary: syntax tests
 retain direct and grouped assignment shapes; resolver tests pin `LocalId`
-selection, shadowing, parameter rejection, and source-diagnostic recovery;
+and `ParameterId` selection, shadowing, and source-diagnostic recovery;
 type-check and HIR tests cover all five exact primitive types and deterministic
-identity-only dumps; MIR tests establish source-before-store ordering and
-post-store temporary cleanup; backend and native goldens exercise canonical
-integer, byte, boolean, and floating storage plus exact rendered failures.
+identity-only dumps for locals and value parameters; MIR tests establish
+binding-storage selection, source-before-store ordering, and post-store
+temporary cleanup; backend and native goldens exercise canonical integer,
+byte, boolean, and floating storage plus exact rendered failures.
 
 ## Focused commands
 

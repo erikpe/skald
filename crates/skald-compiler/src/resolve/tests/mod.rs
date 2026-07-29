@@ -46,7 +46,7 @@ mod interfaces;
 mod modules;
 mod objects;
 mod optional_values;
-mod primitive_local_assignment;
+mod primitive_binding_assignment;
 mod shared_ownership;
 mod static_methods;
 mod strings;
