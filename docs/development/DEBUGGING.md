@@ -251,7 +251,8 @@ Inspect optional frontend behavior at the narrowest owner defined by the
   blocks, checked-view begin/end operations, guarded-mutation branches, and
   exact non-returning failure reasons;
 - assembly uses the documented state/payload offsets, recursive field layout,
-  hidden destination ABI, inline guard counts, and trap-only failures; and
+  hidden destination ABI, inline guard counts, static failure reporting, and
+  defensive traps for impossible verified state; and
 - optional-container alias dumps use indirect optional places without object
   origin metadata; reserved boxed/nested optional forms and aliases to
   optional shared owners remain frontend diagnostics.

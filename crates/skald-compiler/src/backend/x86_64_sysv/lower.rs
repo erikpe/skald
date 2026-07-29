@@ -35,7 +35,6 @@ pub(super) fn lower(
     dispatch: &DispatchMetadata,
 ) -> Result<AssemblyProgram, BackendError> {
     let literal_pool = LiteralPool::build(program);
-    let panic_messages = terminator::PanicMessagePool::build(program);
     let context = LoweringContext {
         program,
         data_layout,
@@ -59,6 +58,7 @@ pub(super) fn lower(
         .get(program.entry_function)
         .expect("verified entry declaration must exist");
     functions.push(entry_wrapper(program, entry.id.into()));
+    let panic_messages = terminator::PanicMessagePool::build(&functions);
     Ok(AssemblyProgram {
         functions,
         dispatch_tables: dispatch.assembly_tables(program),

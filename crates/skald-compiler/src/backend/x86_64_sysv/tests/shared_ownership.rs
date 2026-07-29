@@ -111,8 +111,13 @@ fn synthesized_shared_field_copy_and_self_assignment_lower_to_balanced_owners() 
     ));
 
     assert!(output.contains("field_copy_construct"));
+    assert!(output.contains("field_copy_construct_overflow"));
     assert!(output.contains("field_copy_assign_retain"));
+    assert!(output.contains("field_copy_assign_retain_overflow"));
     assert!(output.contains("field_copy_assign_release"));
+    assert!(output.contains("field_copy_construct_invalid"));
+    assert!(output.contains("call ska_rt_panic"));
+    assert!(output.contains("    ud2"));
     assert_system_assembler_accepts(&output);
 }
 
@@ -195,6 +200,8 @@ fn lowers_the_current_handle_header_and_runtime_call_contract() {
     assert!(output.contains("mov qword ptr [r11], rax"));
     assert!(output.contains("lea rdi, [rax + 16]\n    call r11"));
     assert!(output.contains("call ska_rt_free"));
+    assert!(output.contains("ownership_release_invalid"));
+    assert!(output.contains("    ud2"));
     assert!(output.contains(".Lska_class_1_dispatch:\n    .quad .Lska_class_1_finalize_complete"));
     assert_system_assembler_accepts(&output);
 }
@@ -270,10 +277,57 @@ fn verified_copy_fixture_contains_checked_count_overflow_termination() {
 
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     assert!(output.contains("mov r11, 0xffffffffffffffff"));
+    assert!(output.contains("mov r11, 0xfffffffffffffffe"));
     assert!(output.contains("ownership_retain_invalid"));
-    assert!(output.contains("ownership_retain_invalid_"));
+    assert!(output.contains("ownership_retain_overflow"));
+    assert!(output.contains(".Lska_panic_message_8"));
+    assert!(output.contains("call ska_rt_panic"));
     assert!(output.contains("    ud2"));
     assert_system_assembler_accepts(&output);
+}
+
+#[test]
+fn checked_retain_distinguishes_invalid_dynamic_and_immortal_counts() {
+    let source = concat!(
+        "class Widget { init() {} }\n",
+        "fn main() -> i64 {\n",
+        "  var first: shared Widget = new Widget();\n",
+        "  var second: shared Widget = first;\n",
+        "  return 0;\n",
+        "}\n",
+    );
+
+    for (count, expected_code, expected_stderr) in [
+        (0, None, &b""[..]),
+        (1, Some(0), &b""[..]),
+        (7, Some(0), &b""[..]),
+        (
+            u64::MAX - 1,
+            Some(1),
+            &b"panic: ownership count overflow\n"[..],
+        ),
+        (u64::MAX, Some(0), &b""[..]),
+    ] {
+        let mut output = assembly(source);
+        let overflow = output
+            .find("ownership_retain_overflow")
+            .expect("direct retain must expose its overflow edge");
+        let count_load = "    mov rcx, qword ptr [rax]\n";
+        let load = output[..overflow]
+            .rfind(count_load)
+            .expect("direct retain must load its dynamic count");
+        output.replace_range(
+            load..load + count_load.len(),
+            &format!("    mov rcx, {count:#x}\n    mov qword ptr [rax], rcx\n"),
+        );
+        output.push_str(simple_ownership_stubs());
+        output.push_str(native_panic_reporter());
+
+        let result = run_native_assembly_output(&output);
+        assert_eq!(result.status.code(), expected_code, "count {count:#x}");
+        assert!(result.stdout.is_empty(), "count {count:#x}");
+        assert_eq!(result.stderr, expected_stderr, "count {count:#x}");
+    }
 }
 
 #[test]
@@ -360,6 +414,8 @@ fn shared_call_anchor_survives_later_argument_replacement_until_call_completion(
         "  return holder.edge->read(replace(holder));\n",
         "}\n",
     ));
+    assert!(output.contains("ownership_field_retain_overflow"));
+    assert!(output.contains("ownership_field_retain_invalid"));
     output.push_str(anchor_observer_stubs());
     assert_eq!(run_native_assembly(&output).code(), Some(9));
 }
@@ -417,6 +473,8 @@ fn shared_casts_execute_named_retain_produced_transfer_and_cross_view_checks() {
         "  return leaf->value() + right->value() + root->value();\n",
         "}\n",
     ));
+    assert!(output.contains("ownership_cast_retain_overflow"));
+    assert!(output.contains("ownership_cast_retain_invalid"));
     output.push_str(simple_ownership_stubs());
     assert_eq!(run_native_assembly(&output).code(), Some(21));
 }

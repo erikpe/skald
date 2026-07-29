@@ -292,6 +292,10 @@ failure block may not continue into ordinary cleanup or payload use.
 The frozen [common reporting policy](../language/ERRORS.md#frozen-panic-design)
 maps these reasons to one reporter without collapsing them in MIR. This
 document deliberately does not repeat the exact message bytes.
+Copying or unwrapping a present optional shared owner also uses the generic
+shared retain contract: legal count exhaustion reports through that reporter,
+while a non-null zero-count handle is corrupted state and hard-traps. Absence
+branches around retain and release and therefore remains the zero niche.
 
 Future recoverable exceptions must add explicit exceptional edges that end
 active guards and clean initialized optional temporaries. They cannot reinterpret

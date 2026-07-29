@@ -31,10 +31,10 @@ than source-language exceptions.
 
 The compiler implements executable `std::error::panic` call statements and
 routes checked object casts, optional failures, array failures, and valid
-host-allocation exhaustion through the common reporter below. Ownership-count
-overflow remains scheduled separately because its current backend edge also
-covers invalid ownership state. Skald has no `throw`, `try`, `catch`, or other
-recoverable runtime-failure construct.
+host-allocation exhaustion through the common reporter below. Legal shared
+and inline-backing ownership-count exhaustion uses that same reporter, while
+invalid ownership state remains a hard compiler-defect trap. Skald has no
+`throw`, `try`, `catch`, or other recoverable runtime-failure construct.
 
 The repository's bootstrap output functions are ordinary external calls. Their
 current runtime contract terminates the process unsuccessfully when a write or

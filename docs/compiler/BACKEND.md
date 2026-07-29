@@ -63,10 +63,10 @@ The target accepts verified static single inheritance, base projections,
 owning slices, class/interface/`Obj` alias views, virtual-family calls, and
 interface calls. Runtime class/interface tests compare the forwarded dynamic
 class metadata identity against the verified target set. Checked object casts
-use the same check, materialize a successful full-expression view, and emit an
-illegal-instruction trap on failure. Shared-owner casts use the same metadata
-membership test, retain or transfer the source handle on success, preserve the
-existing allocation header, and never call the allocator.
+use the same check, materialize a successful full-expression view, and report
+the cast failure on the verified failure edge. Shared-owner casts use the same
+metadata membership test, retain or transfer the source handle on success,
+preserve the existing allocation header, and never call the allocator.
 
 Verified primitive integer comparison rvalues lower inline. The selector
 compares canonical full-register operands, chooses signed conditions for
@@ -92,7 +92,7 @@ Inline optional owning values follow the implemented layout in
 eight-byte state word precedes the payload at its required alignment. The
 backend writes a present payload before publishing state, branches before
 reading a copied or unwrapped payload, and lowers verified absent-access
-failure to `ud2`. Exact-class payloads use the same state prefix with aligned
+failure to the common reporter. Exact-class payloads use the same state prefix with aligned
 reserved class bytes and conditional lifecycle calls. State zero is absent,
 one is present and unguarded, and greater values count active views. Begin,
 end, overflow, and pinned-mutation checks lower inline without runtime helpers.
@@ -131,7 +131,8 @@ through ordinary class layout; it performs no allocation or byte copy.
 
 Generated shared retain/release recognizes `u64::MAX` as the verified immortal
 sentinel and returns without storing, finalizing, or freeing. Dynamic retain
-traps at `u64::MAX - 1` before it could collide with the sentinel. MIR
+reports ownership-count exhaustion at `u64::MAX - 1` before it could collide
+with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
 
@@ -139,8 +140,9 @@ publication; ordinary dynamic publication writes count one.
 
 The version-6 runtime reporter and explicit source-panic lowering are
 implemented. Compiler-known optional, array, and cast failures use the same
-reporter while retaining distinct target-independent MIR reasons. Ownership
-overflow remains on its separately scheduled backend boundary.
+reporter while retaining distinct target-independent MIR reasons. Legal
+ownership-count exhaustion enters the same static-message pool from its
+backend retain edge; corrupted ownership state remains a separate hard trap.
 
 Instruction selection centrally lowers the explicit-panic and static
 termination forms described in
@@ -148,7 +150,9 @@ termination forms described in
 Explicit panic extracts the logical byte address and length from the verified
 exact `std::str::Str` descriptor. Static termination selects the corresponding
 bytes from one deterministic target-private pool, with each used message
-emitted once in stable reason order. Both call the sole public
+emitted once in stable catalog order. The pool is derived from final selected
+instructions so backend-owned ownership-overflow edges and MIR termination
+reasons share one exact mechanism. Both call the sole public
 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point. Array,
 optional, cast, string, and ownership lowering must not grow private reporter
 calls or duplicate the authoritative

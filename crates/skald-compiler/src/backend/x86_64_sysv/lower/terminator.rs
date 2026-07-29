@@ -1,9 +1,11 @@
 //! Centralized non-returning failure selection and ordinary MIR terminators.
 
-use crate::mir::{MirProgram, MirTerminationReason, MirTerminator, MirType};
+use crate::mir::{MirTerminationReason, MirTerminator, MirType};
 
 use super::{
-    super::machine::{AssemblyPanicMessage, Instruction, Label, Register, XmmRegister},
+    super::machine::{
+        AssemblyFunction, AssemblyPanicMessage, Instruction, Label, Register, XmmRegister,
+    },
     block_label, value, FrameLayout, InstructionSelector,
 };
 
@@ -18,10 +20,11 @@ enum PanicMessage {
     ArrayIndexOutOfBounds,
     ArrayInvalidSliceBounds,
     ArraySliceLengthMismatch,
+    OwnershipCountOverflow,
 }
 
 impl PanicMessage {
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::ObjectCastFailure,
         Self::OptionalAccessFailure,
         Self::OptionalGuardOverflow,
@@ -30,6 +33,7 @@ impl PanicMessage {
         Self::ArrayIndexOutOfBounds,
         Self::ArrayInvalidSliceBounds,
         Self::ArraySliceLengthMismatch,
+        Self::OwnershipCountOverflow,
     ];
 
     const fn for_reason(reason: MirTerminationReason) -> Self {
@@ -59,6 +63,7 @@ impl PanicMessage {
             Self::ArrayIndexOutOfBounds => b"array index out of bounds",
             Self::ArrayInvalidSliceBounds => b"array slice bounds are invalid",
             Self::ArraySliceLengthMismatch => b"array slice length mismatch",
+            Self::OwnershipCountOverflow => b"ownership count overflow",
         }
     }
 
@@ -72,12 +77,18 @@ pub(super) struct PanicMessagePool {
 }
 
 impl PanicMessagePool {
-    pub(super) fn build(program: &MirProgram) -> Self {
+    pub(super) fn build(functions: &[AssemblyFunction]) -> Self {
         let mut used = [false; PanicMessage::ALL.len()];
-        for definition in program.executable_definitions() {
-            for block in &definition.body().blocks {
-                if let Some(MirTerminator::Terminate { reason, .. }) = block.terminator {
-                    used[PanicMessage::for_reason(reason).index()] = true;
+        for function in functions {
+            for instruction in &function.instructions {
+                let Instruction::LoadSymbolAddress { symbol, .. } = instruction else {
+                    continue;
+                };
+                if let Some(message) = PanicMessage::ALL
+                    .into_iter()
+                    .find(|message| message.symbol() == *symbol)
+                {
+                    used[message.index()] = true;
                 }
             }
         }
@@ -94,6 +105,10 @@ impl PanicMessagePool {
             })
             .collect()
     }
+}
+
+pub(super) fn emit_ownership_overflow(output: &mut Vec<Instruction>) {
+    emit_static_panic(PanicMessage::OwnershipCountOverflow, output);
 }
 
 impl InstructionSelector<'_, '_> {
@@ -165,21 +180,25 @@ impl InstructionSelector<'_, '_> {
     }
 
     fn select_static_panic(&mut self, message: PanicMessage) {
-        self.output.push(Instruction::LoadSymbolAddress {
-            symbol: message.symbol(),
-            destination: Register::Rdi,
-        });
-        self.output.push(Instruction::MoveImmediate64 {
-            bits: message.bytes().len() as u64,
-            destination: Register::Rsi,
-        });
-        self.call_reporter();
+        emit_static_panic(message, self.output);
     }
 
     fn call_reporter(&mut self) {
         self.output
             .push(Instruction::Call("ska_rt_panic".to_owned()));
     }
+}
+
+fn emit_static_panic(message: PanicMessage, output: &mut Vec<Instruction>) {
+    output.push(Instruction::LoadSymbolAddress {
+        symbol: message.symbol(),
+        destination: Register::Rdi,
+    });
+    output.push(Instruction::MoveImmediate64 {
+        bits: message.bytes().len() as u64,
+        destination: Register::Rsi,
+    });
+    output.push(Instruction::Call("ska_rt_panic".to_owned()));
 }
 
 pub(super) fn select(

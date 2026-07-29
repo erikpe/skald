@@ -176,11 +176,16 @@ fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {
     // Backend execution tests deliberately avoid depending on a prebuilt C
     // runtime. Supply only the link guard; driver and golden tests exercise
     // the real archive boundary.
+    let panic_link_guard = if output.contains("\nska_rt_panic:\n") {
+        ""
+    } else {
+        ".globl ska_rt_panic\n.type ska_rt_panic, @function\n\
+         ska_rt_panic:\n    ud2\n.size ska_rt_panic, .-ska_rt_panic\n"
+    };
     let linkable_output = format!(
         "{output}\n.text\n\
          .globl {0}\n.type {0}, @function\n{0}:\n    ret\n.size {0}, .-{0}\n\
-         .globl ska_rt_panic\n.type ska_rt_panic, @function\n\
-         ska_rt_panic:\n    ud2\n.size ska_rt_panic, .-ska_rt_panic\n",
+         {panic_link_guard}",
         RUNTIME_ABI_MARKER_SYMBOL,
     );
     let mut child = Command::new("cc")

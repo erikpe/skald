@@ -71,6 +71,10 @@ fn optional_shared_lifecycle_fields_calls_copy_self_assignment_and_unwrap_execut
     assert!(mir_dump.contains("return-optional-shared"));
 
     let mut output = assembly(source);
+    assert!(output.contains("shared_copy_overflow"));
+    assert!(output.contains("shared_copy_invalid"));
+    assert!(output.contains("shared_unwrap_overflow"));
+    assert!(output.contains("shared_unwrap_invalid"));
     output.push_str(optional_ownership_stubs());
     output.push_str(println_i64_stub());
     let result = run_native_assembly_output(&output);

@@ -339,7 +339,8 @@ fn emit_shared_copy(
         field.index()
     );
     let absent = Label::new(format!("{stem}_absent"));
-    let failure = Label::new(format!("{stem}_invalid"));
+    let invalid = Label::new(format!("{stem}_invalid"));
+    let overflow = Label::new(format!("{stem}_overflow"));
     let complete = Label::new(format!("{stem}_complete"));
     load_home_address(SOURCE_HOME, offset, Register::R11, output);
     value::load_rax(memory(Register::R11, 0), output);
@@ -347,7 +348,7 @@ fn emit_shared_copy(
         output.push(Instruction::Test(Register::Rax));
         output.push(Instruction::JumpIfEqual(absent.clone()));
     }
-    emit_retain_loaded_handle(failure.clone(), output);
+    emit_retain_loaded_handle(invalid.clone(), overflow.clone(), output);
     load_home_address(DESTINATION_HOME, offset, Register::R11, output);
     value::store_rax(memory(Register::R11, 0), output);
     output.push(Instruction::Jump(complete.clone()));
@@ -357,7 +358,10 @@ fn emit_shared_copy(
         value::store_rax(memory(Register::R11, 0), output);
         output.push(Instruction::Jump(complete.clone()));
     }
-    output.push(Instruction::Label(failure));
+    output.push(Instruction::Label(overflow));
+    super::super::terminator::emit_ownership_overflow(output);
+    output.push(Instruction::Label(invalid));
+    // Generated field lifecycle code receives only verified live handles.
     output.push(Instruction::Trap);
     output.push(Instruction::Label(complete));
 }

@@ -343,7 +343,7 @@ A generated retain:
 1. loads the `u64` count;
 2. returns without storing if it is the verified immortal sentinel
    `u64::MAX`;
-3. terminates unsuccessfully if it is `u64::MAX - 1`; and
+3. reports `ownership count overflow` if it is `u64::MAX - 1`; and
 4. otherwise stores the incremented count.
 
 A generated release:
@@ -363,9 +363,7 @@ into shared owners, and a last release cannot occur while another valid strong
 owner exists.
 
 Counts are non-atomic. The initial implementation provides no cross-thread
-sharing contract. Overflow uses the same class of backend-owned unrecoverable
-termination as a failed checked cast and guarantees neither diagnostic
-text nor remaining cleanup.
+sharing contract.
 The frozen [common reporting policy](../language/ERRORS.md#frozen-panic-design)
 turns source-reachable count overflow into the shared reporter's ownership
 reason. Underflow, invalid handles, zero live counts, incompatible metadata or
@@ -386,7 +384,7 @@ This is a general compiler-private shared-allocation state, not a source
 ownership qualifier or string-specific header. Only verified static allocation
 may publish it. The backend implements the sentinel-aware rules above;
 ordinary dynamic publication writes one and cannot reach the reserved value
-because retain traps at `u64::MAX - 1`.
+because retain reports exhaustion at `u64::MAX - 1`.
 
 ## Hidden anchor lowering
 

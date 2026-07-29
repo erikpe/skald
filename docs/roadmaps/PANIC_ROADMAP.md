@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 through P4 are complete.
+Status: in progress; P0 through P5 are complete. P6 is next.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -86,7 +86,7 @@ duplicate its exact bytes.
 - [x] P2 — Introduce the canonical intrinsic declaration
 - [x] P3 — Execute explicit source panic end to end
 - [x] P4 — Report target-independent static failures
-- [ ] P5 — Separate ownership overflow from compiler-defect traps
+- [x] P5 — Separate ownership overflow from compiler-defect traps
 - [ ] P6 — Harden the completed panic boundary
 
 ## PR-sized implementation sequence
@@ -299,29 +299,29 @@ trap.
 **Purpose:** Report legal runtime count exhaustion without turning corrupted
 or impossible ownership states into user-facing panics.
 
-- [ ] Refactor shared retain lowering to expose separate overflow and invalid
+- [x] Refactor shared retain lowering to expose separate overflow and invalid
       edges instead of the current combined failure label.
-- [ ] Route a dynamic count of `u64::MAX - 1` to
+- [x] Route a dynamic count of `u64::MAX - 1` to
       the catalog's ownership-overflow reason, preserve verified immortal
       `u64::MAX` as a no-op, and hard-trap null handles or zero counts.
-- [ ] Apply the split retain contract to direct shared copies, casts, fields,
+- [x] Apply the split retain contract to direct shared copies, casts, fields,
       assignments, optional-owner copies and unwrap, generated array element
       lifecycle helpers, and hidden anchors.
-- [ ] Split inline-array backing retain checks so maximum-count exhaustion
+- [x] Split inline-array backing retain checks so maximum-count exhaustion
       reports the catalog's ownership-overflow reason while zero or otherwise
       invalid live counts hard-trap.
-- [ ] Keep release underflow, null release, missing dynamic metadata,
+- [x] Keep release underflow, null release, missing dynamic metadata,
       missing finalizers, invalid optional-owner state, and repeated
       finalization on hard-trap paths.
-- [ ] Keep redundant backend checks after verified optional-mutation guards as
+- [x] Keep redundant backend checks after verified optional-mutation guards as
       defensive hard traps; the source-reachable guarded-mutation edge must
       already terminate through its MIR reason.
-- [ ] Give reporter and hard-trap labels distinct semantic names so later
+- [x] Give reporter and hard-trap labels distinct semantic names so later
       maintenance cannot merge overflow and corruption accidentally.
-- [ ] Audit every generated `Instruction::Trap` site and record its
+- [x] Audit every generated `Instruction::Trap` site and record its
       verifier-defended or corrupted-runtime-state invariant in the owning
       code and focused tests.
-- [ ] Update shared-ownership, array, optional, string, error, backend, and
+- [x] Update shared-ownership, array, optional, string, error, backend, and
       debugging contracts to distinguish reported exhaustion from compiler
       defects consistently.
 

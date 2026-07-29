@@ -78,13 +78,17 @@ impl InstructionSelector<'_, '_> {
                 value::load_rax(operand, self.output);
                 if retain_copy {
                     let absent = self.next_optional_label("shared_copy_absent");
-                    let failure = self.next_optional_label("shared_copy_invalid");
+                    let invalid = self.next_optional_label("shared_copy_invalid");
+                    let overflow = self.next_optional_label("shared_copy_overflow");
                     let complete = self.next_optional_label("shared_copy_complete");
                     self.output.push(Instruction::Test(Register::Rax));
                     self.output.push(Instruction::JumpIfEqual(absent.clone()));
-                    emit_retain_loaded_handle(failure.clone(), self.output);
+                    emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
                     self.output.push(Instruction::Jump(complete.clone()));
-                    self.output.push(Instruction::Label(failure));
+                    self.output.push(Instruction::Label(overflow));
+                    super::terminator::emit_ownership_overflow(self.output);
+                    self.output.push(Instruction::Label(invalid));
+                    // A present optional owner must contain a verified live handle.
                     self.output.push(Instruction::Trap);
                     self.output.push(Instruction::Label(absent));
                     self.output.push(Instruction::Label(complete));
@@ -397,15 +401,19 @@ impl InstructionSelector<'_, '_> {
                 self.output.push(Instruction::Test(Register::Rax));
                 self.output
                     .push(Instruction::JumpIfEqual(block_label(*failure_target)));
-                let failure = self.next_optional_label("shared_unwrap_invalid");
-                emit_retain_loaded_handle(failure.clone(), self.output);
+                let invalid = self.next_optional_label("shared_unwrap_invalid");
+                let overflow = self.next_optional_label("shared_unwrap_overflow");
+                emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
                 value::store_rax(
                     value::frame_storage(self.frame, unwrap.destination),
                     self.output,
                 );
                 self.output
                     .push(Instruction::Jump(block_label(*success_target)));
-                self.output.push(Instruction::Label(failure));
+                self.output.push(Instruction::Label(overflow));
+                super::terminator::emit_ownership_overflow(self.output);
+                self.output.push(Instruction::Label(invalid));
+                // The presence branch proves a non-null verified live handle.
                 self.output.push(Instruction::Trap);
                 Ok(true)
             }
@@ -537,6 +545,8 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rax,
         });
         self.output.push(Instruction::JumpIfEqual(allowed.clone()));
+        // MIR routes source-reachable guarded mutation through its static
+        // termination reason; reaching this redundant check is a backend defect.
         self.output.push(Instruction::Trap);
         self.output.push(Instruction::Label(allowed));
         Ok(())

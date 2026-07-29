@@ -107,27 +107,27 @@ impl InstructionSelector<'_, '_> {
     }
 
     pub(super) fn select_shared_copy(&mut self, copy: &MirSharedCopy) {
-        let (failure, complete) = self.ownership_labels("retain");
+        let (invalid, overflow, complete) = self.retain_labels("retain");
         self.load_shared_handle(copy.source, Register::Rax);
-        emit_retain_loaded_handle(failure.clone(), self.output);
+        emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
         value::store_rax(
             value::frame_storage(self.frame, copy.destination),
             self.output,
         );
-        emit_trap_block(failure, complete.clone(), self.output);
+        emit_retain_outcome_blocks(invalid, overflow, complete.clone(), self.output);
         self.output.push(Instruction::Label(complete));
     }
 
     pub(super) fn select_shared_cast(&mut self, cast: &MirSharedCast) -> Result<(), BackendError> {
         self.load_shared_cast_source(&cast.source)?;
         if cast.transfer == MirSharedCastTransfer::Copy {
-            let (failure, complete) = self.ownership_labels("cast_retain");
-            emit_retain_loaded_handle(failure.clone(), self.output);
+            let (invalid, overflow, complete) = self.retain_labels("cast_retain");
+            emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
             value::store_rax(
                 value::frame_storage(self.frame, cast.destination),
                 self.output,
             );
-            emit_trap_block(failure, complete.clone(), self.output);
+            emit_retain_outcome_blocks(invalid, overflow, complete.clone(), self.output);
             self.output.push(Instruction::Label(complete));
         } else {
             value::store_rax(
@@ -193,13 +193,13 @@ impl InstructionSelector<'_, '_> {
         copy: &MirSharedFieldCopy,
     ) -> Result<(), BackendError> {
         self.load_shared_place(&copy.source)?;
-        let (failure, complete) = self.ownership_labels("field_retain");
-        emit_retain_loaded_handle(failure.clone(), self.output);
+        let (invalid, overflow, complete) = self.retain_labels("field_retain");
+        emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
         value::store_rax(
             value::frame_storage(self.frame, copy.destination),
             self.output,
         );
-        emit_trap_block(failure, complete.clone(), self.output);
+        emit_retain_outcome_blocks(invalid, overflow, complete.clone(), self.output);
         self.output.push(Instruction::Label(complete));
         Ok(())
     }
@@ -227,10 +227,10 @@ impl InstructionSelector<'_, '_> {
         source: &MirPlace,
     ) -> Result<(), BackendError> {
         self.load_shared_place(source)?;
-        let (failure, complete) = self.ownership_labels("field_copy_construct");
-        emit_retain_loaded_handle(failure.clone(), self.output);
+        let (invalid, overflow, complete) = self.retain_labels("field_copy_construct");
+        emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
         self.store_shared_place(destination)?;
-        emit_trap_block(failure, complete.clone(), self.output);
+        emit_retain_outcome_blocks(invalid, overflow, complete.clone(), self.output);
         self.output.push(Instruction::Label(complete));
         Ok(())
     }
@@ -241,12 +241,12 @@ impl InstructionSelector<'_, '_> {
         source: &MirPlace,
     ) -> Result<(), BackendError> {
         self.load_shared_place(source)?;
-        let (failure, retained) = self.ownership_labels("field_copy_assign_retain");
-        emit_retain_loaded_handle(failure.clone(), self.output);
+        let (invalid, overflow, retained) = self.retain_labels("field_copy_assign_retain");
+        emit_retain_loaded_handle(invalid.clone(), overflow.clone(), self.output);
         self.output
             .push(Instruction::ReserveStack(PRESERVED_HANDLE_STACK_SIZE));
         value::store_rax(value::memory(Register::Rsp, 0), self.output);
-        emit_trap_block(failure, retained.clone(), self.output);
+        emit_retain_outcome_blocks(invalid, overflow, retained.clone(), self.output);
         self.output.push(Instruction::Label(retained));
 
         self.release_shared_place(destination, "field_copy_assign_release")?;
@@ -309,6 +309,14 @@ impl InstructionSelector<'_, '_> {
         )
     }
 
+    fn retain_labels(&self, operation: &str) -> (Label, Label, Label) {
+        (
+            self.ownership_label(&format!("{operation}_invalid")),
+            self.ownership_label(&format!("{operation}_overflow")),
+            self.ownership_label(&format!("{operation}_complete")),
+        )
+    }
+
     fn ownership_label(&self, purpose: &str) -> Label {
         Label::new(format!(
             ".Lska_{}_ownership_{}_{}",
@@ -323,8 +331,16 @@ impl InstructionSelector<'_, '_> {
     }
 }
 
-fn emit_trap_block(failure: Label, complete: Label, output: &mut Vec<Instruction>) {
+fn emit_retain_outcome_blocks(
+    invalid: Label,
+    overflow: Label,
+    complete: Label,
+    output: &mut Vec<Instruction>,
+) {
     output.push(Instruction::Jump(complete));
-    output.push(Instruction::Label(failure));
+    output.push(Instruction::Label(overflow));
+    super::terminator::emit_ownership_overflow(output);
+    output.push(Instruction::Label(invalid));
+    // Verified shared retain operations always carry a non-null, live owner.
     output.push(Instruction::Trap);
 }

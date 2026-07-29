@@ -630,8 +630,8 @@ check succeeds.
 
 ### Frozen panic and termination representation
 
-The common reporting design is frozen but not implemented. Typed HIR will
-represent an invocation of the validated canonical panic intrinsic as a
+The common reporting design is implemented. Typed HIR
+represents an invocation of the validated canonical panic intrinsic as a
 dedicated non-returning statement carrying one fully produced exact
 `std::str::Str` value and source span. It does not retain an ordinary call
 selected by the spelling `panic`.
@@ -647,8 +647,11 @@ Both forms have no successor. A static termination reason remains distinct
 until instruction selection so verification, mutation tests, and dumps can
 identify the failed rule without depending on message bytes or a target ABI.
 Neither form is an exceptional edge and neither may join ordinary cleanup.
-Target lowering owns deterministic used-message pooling, descriptor
-extraction, and the sole call to the public reporter.
+Target lowering owns deterministic used-message pooling after instruction
+selection, descriptor extraction, and the sole public reporter call. Backend
+ownership retains reference the same static pool directly for legal count
+exhaustion; invalid handles and impossible count/header states retain separate
+hard-trap edges.
 
 Malformed public MIR and impossible states proven absent by verification do
 not acquire a termination reason. They remain structured verifier errors

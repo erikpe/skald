@@ -450,6 +450,13 @@ aliases use a hidden inline-layout-compatible descriptor pointing into the
 already-secured shared allocation; the strong owner anchor remains responsible
 for lifetime.
 
+Inline-backing anchor retain reports `ownership count overflow` when the
+account is already `u64::MAX`. A zero count on a nonempty backing contradicts
+verified lifetime state and remains a hard trap. Shared-owner array elements
+use the generic shared retain contract: `u64::MAX - 1` reports exhaustion,
+the verified `u64::MAX` immortal sentinel is a no-op, and null or zero-count
+live handles hard-trap.
+
 ### Initial x86-64 shared-outer layout
 
 A `shared T[]` or present `shared? T[]` owner is one non-null handle word.

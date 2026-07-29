@@ -183,7 +183,7 @@ fn string_emission_does_not_change_the_public_runtime_abi() {
 }
 
 #[test]
-fn panic_extracts_the_exact_descriptor_slice_and_calls_the_reporter_once() {
+fn panic_extracts_the_exact_descriptor_slice_and_uses_the_common_reporter() {
     let program = panic_program(concat!(
         "from std::error import panic;\n",
         "fn main() -> i64 { panic(\"failure\"); }\n",
@@ -191,7 +191,9 @@ fn panic_extracts_the_exact_descriptor_slice_and_calls_the_reporter_once() {
     verify_mir(&program).unwrap();
     let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
     let main = function_assembly(&output, ".Lska_fn_0");
-    assert_eq!(main.matches("call ska_rt_panic").count(), 1);
+    // One call is the explicit panic and one is the generic retain-overflow
+    // edge used while copying its string argument.
+    assert_eq!(main.matches("call ska_rt_panic").count(), 2);
     assert!(main.contains("lea rdi, [rdi + 24]"));
     assert!(main.contains("add rdi, rax"));
     assert!(main.contains("mov rsi, qword ptr [rdx + 16]"));

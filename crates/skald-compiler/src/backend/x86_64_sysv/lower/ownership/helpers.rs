@@ -27,15 +27,18 @@ pub(super) fn lower_all(
 }
 
 fn lower_retain() -> AssemblyFunction {
-    let failure = Label::new(".Lska_shared_handle_retain_invalid".to_owned());
+    let invalid = Label::new(".Lska_shared_handle_retain_invalid".to_owned());
+    let overflow = Label::new(".Lska_shared_handle_retain_overflow".to_owned());
     let mut instructions = vec![Instruction::Move {
         source: Register::Rdi.into(),
         destination: Register::Rax.into(),
     }];
-    emit_retain_loaded_handle(failure.clone(), &mut instructions);
+    emit_retain_loaded_handle(invalid.clone(), overflow.clone(), &mut instructions);
+    instructions.extend([Instruction::Return, Instruction::Label(overflow)]);
+    super::super::terminator::emit_ownership_overflow(&mut instructions);
     instructions.extend([
-        Instruction::Return,
-        Instruction::Label(failure),
+        Instruction::Label(invalid),
+        // Array lifecycle helpers pass only verified live shared handles.
         Instruction::Trap,
     ]);
     AssemblyFunction {

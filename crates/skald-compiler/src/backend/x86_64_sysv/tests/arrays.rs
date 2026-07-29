@@ -178,8 +178,8 @@ fn dynamic_length_overflow_terminates_before_allocation() {
 }
 
 #[test]
-fn array_owner_count_overflow_terminates_natively() {
-    for (source, failure_label, saturated_count) in [
+fn array_owner_count_overflow_reports_exact_message_natively() {
+    for (source, overflow_label, saturated_count) in [
         (
             concat!(
                 "fn main() -> i64 {\n",
@@ -188,7 +188,7 @@ fn array_owner_count_overflow_terminates_natively() {
                 "  return second->[0];\n",
                 "}\n",
             ),
-            "ownership_retain_invalid",
+            "ownership_retain_overflow",
             "0xfffffffffffffffe",
         ),
         (
@@ -200,18 +200,18 @@ fn array_owner_count_overflow_terminates_natively() {
                 "  return observe(items[0]);\n",
                 "}\n",
             ),
-            "anchor_retain_failure",
+            "anchor_retain_overflow",
             "0xffffffffffffffff",
         ),
     ] {
         let mut output = assembly(source);
-        let mut failures = output.match_indices(failure_label).map(|(index, _)| index);
-        let first_failure = failures
+        let mut overflows = output.match_indices(overflow_label).map(|(index, _)| index);
+        let first_overflow = overflows
             .next()
-            .expect("the checked retain must expose its failure edge");
-        let failure = failures.next().unwrap_or(first_failure);
+            .expect("the checked retain must expose its overflow edge");
+        let overflow = overflows.next().unwrap_or(first_overflow);
         let count_load = "    mov rcx, qword ptr [rax]\n";
-        let load = output[..failure]
+        let load = output[..overflow]
             .rfind(count_load)
             .expect("the checked retain must load its owner count");
         output.replace_range(
@@ -219,11 +219,12 @@ fn array_owner_count_overflow_terminates_natively() {
             &format!("    mov rcx, {saturated_count}\n"),
         );
         output.push_str(native_allocator());
+        output.push_str(native_panic_reporter());
 
-        assert!(
-            !run_native_assembly(&output).success(),
-            "{failure_label} unexpectedly returned normally"
-        );
+        let result = run_native_assembly_output(&output);
+        assert_eq!(result.status.code(), Some(1));
+        assert!(result.stdout.is_empty());
+        assert_eq!(result.stderr, b"panic: ownership count overflow\n");
     }
 }
 
@@ -725,6 +726,8 @@ fn slice_lifecycle_uses_class_nested_and_shared_element_operations() {
         "}\n",
     );
     let mut output = assembly(source);
+    assert!(output.contains(".Lska_shared_handle_retain_overflow"));
+    assert!(output.contains(".Lska_shared_handle_retain_invalid"));
     output.push_str(native_allocator());
 
     assert_eq!(run_native_assembly(&output).code(), Some(96));

@@ -7,16 +7,20 @@ use crate::backend::x86_64_sysv::{
 
 use super::{super::value, PRESERVED_HANDLE_STACK_SIZE, RUNTIME_FREE, STRONG_COUNT_OFFSET};
 
-pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut Vec<Instruction>) {
-    let immortal = Label::new(format!("{}_immortal", failure.name()));
+pub(in super::super) fn emit_retain_loaded_handle(
+    invalid: Label,
+    overflow: Label,
+    output: &mut Vec<Instruction>,
+) {
+    let immortal = Label::new(format!("{}_immortal", overflow.name()));
     output.push(Instruction::Test(Register::Rax));
-    output.push(Instruction::JumpIfEqual(failure.clone()));
+    output.push(Instruction::JumpIfEqual(invalid.clone()));
     output.push(Instruction::Move {
         source: value::memory(Register::Rax, STRONG_COUNT_OFFSET),
         destination: Register::Rcx.into(),
     });
     output.push(Instruction::Test(Register::Rcx));
-    output.push(Instruction::JumpIfEqual(failure.clone()));
+    output.push(Instruction::JumpIfEqual(invalid));
     output.push(Instruction::MoveImmediate64 {
         bits: u64::MAX,
         destination: Register::R11,
@@ -34,7 +38,7 @@ pub(in super::super) fn emit_retain_loaded_handle(failure: Label, output: &mut V
         source: Register::R11,
         destination: Register::Rcx,
     });
-    output.push(Instruction::JumpIfEqual(failure.clone()));
+    output.push(Instruction::JumpIfEqual(overflow));
     output.push(Instruction::MoveImmediate64 {
         bits: 1,
         destination: Register::R11,
@@ -136,6 +140,8 @@ pub(in super::super) fn emit_release_loaded_handle(
     output.push(Instruction::Jump(complete));
 
     output.push(Instruction::Label(failure));
+    // Null, zero-count, missing-metadata, and missing-finalizer release states
+    // contradict verified ownership or a published allocation's header.
     output.push(Instruction::Trap);
 }
 

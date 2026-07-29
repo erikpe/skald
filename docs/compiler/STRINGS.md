@@ -158,7 +158,8 @@ for verified program-lifetime storage. Generated operations behave as follows:
 - retaining or releasing `IMMORTAL` succeeds without storing, finalizing, or
   freeing;
 - ordinary positive dynamic counts retain and release normally;
-- retaining `u64::MAX - 1` terminates before producing the reserved value; and
+- retaining `u64::MAX - 1` reports ownership-count exhaustion before producing
+  the reserved value; and
 - zero remains invalid for non-optional handles and remains the optional-owner
   absence niche.
 
@@ -211,7 +212,7 @@ string object, interning service, or external `Str` calling convention is
 added.
 
 Runtime ABI version 6 includes one common length-delimited reporter, not a
-string ABI. Future panic lowering validates the canonical `Str` identity, then
+string ABI. Panic lowering validates the canonical `Str` identity, then
 extracts its logical backing-byte address and length through the existing
 field identities and target layout. The C reporter never receives a
 descriptor or owner, and this document does not duplicate the

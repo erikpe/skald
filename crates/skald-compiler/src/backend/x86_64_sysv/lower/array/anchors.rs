@@ -116,7 +116,8 @@ impl InstructionSelector<'_, '_> {
 
     fn retain_inline_array_backing(&mut self) {
         let empty = self.next_array_label("anchor_retain_empty");
-        let failure = self.next_array_label("anchor_retain_failure");
+        let invalid = self.next_array_label("anchor_retain_invalid");
+        let overflow = self.next_array_label("anchor_retain_overflow");
         let complete = self.next_array_label("anchor_retain_complete");
         self.output.push(Instruction::Test(Register::Rax));
         self.output.push(Instruction::JumpIfEqual(empty.clone()));
@@ -125,7 +126,7 @@ impl InstructionSelector<'_, '_> {
             destination: Register::Rcx.into(),
         });
         self.output.push(Instruction::Test(Register::Rcx));
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
+        self.output.push(Instruction::JumpIfEqual(invalid.clone()));
         self.output.push(Instruction::MoveImmediate64 {
             bits: u64::MAX,
             destination: Register::R11,
@@ -134,7 +135,7 @@ impl InstructionSelector<'_, '_> {
             source: Register::R11,
             destination: Register::Rcx,
         });
-        self.output.push(Instruction::JumpIfEqual(failure.clone()));
+        self.output.push(Instruction::JumpIfEqual(overflow.clone()));
         self.output.push(Instruction::MoveImmediate64 {
             bits: 1,
             destination: Register::R11,
@@ -148,7 +149,10 @@ impl InstructionSelector<'_, '_> {
             destination: value::memory(Register::Rax, ARRAY_OWNER_COUNT_OFFSET),
         });
         self.output.push(Instruction::Jump(complete.clone()));
-        self.output.push(Instruction::Label(failure));
+        self.output.push(Instruction::Label(overflow));
+        super::super::terminator::emit_ownership_overflow(self.output);
+        self.output.push(Instruction::Label(invalid));
+        // A non-empty inline backing has a positive owner count.
         self.output.push(Instruction::Trap);
         self.output.push(Instruction::Label(empty));
         self.output.push(Instruction::Label(complete));

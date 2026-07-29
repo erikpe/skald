@@ -14,7 +14,8 @@ progress. Completed roadmaps and resolved discovery records move to
   identity, and temporary pre-HIR call diagnostic. P3 implemented executable
   source panic from type checking through exact native reporting. P4 routed
   static MIR failures and valid host-allocation exhaustion through the same
-  reporter. P5 is next.
+  reporter, and P5 separated legal ownership overflow from invalid-state
+  traps. P6 is next.
 
 ## Planned
 
