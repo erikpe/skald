@@ -19,15 +19,7 @@ No implementation roadmaps are currently in progress.
 
 ## Design proposals
 
-- [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **confirmed;
-  contract promotion and implementation roadmapping complete, final validation
-  and archival pending**. Defines the source semantics, control effects,
-  cleanup boundaries, repeatable MIR storage lifetimes, generic CFG lowering,
-  and optimization invariants for `while` and future `break` and `continue`.
-  Decisions W1 through W13 adopt their recommended choices, and living language
-  and compiler documents now own the frozen source, representation, runtime,
-  and backend boundaries. The next action is final documentation validation and
-  archival of the proposal.
+No design proposals are currently awaiting decisions or promotion.
 
 ## Pending discoveries
 

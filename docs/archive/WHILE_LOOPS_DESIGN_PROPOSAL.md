@@ -1,12 +1,12 @@
 # While Loops Design Proposal
 
-Status: confirmed on 2026-07-29; contract promotion and implementation
-roadmapping complete, final validation and archival pending. W1 through W13
-adopt their recommended decisions. The living language, phase/IR, runtime ABI,
-and backend documents now own the frozen source, representation, and
+Status: confirmed, promoted, and archived on 2026-07-29. W1 through W13 adopt
+their recommended decisions. The living language, phase/IR, runtime ABI, and
+backend documents now own the frozen source, representation, and
 target-boundary behavior; the
-[implementation roadmap](WHILE_LOOPS_ROADMAP.md) owns delivery order, and this
-proposal retains the decision rationale and remaining promotion work.
+[implementation roadmap](../roadmaps/WHILE_LOOPS_ROADMAP.md) owns delivery
+order, and this archived proposal retains the decision rationale and promotion
+record.
 
 This proposal defines a first `while` loop for Skald and the compiler
 boundaries needed to add `break`, `continue`, other loop forms, and
@@ -741,8 +741,8 @@ appropriate, not to define their source behavior prematurely.
 
 ## Promotion criteria
 
-Decision confirmation is complete. Promotion into frozen living contracts
-still requires:
+Decision confirmation and promotion into frozen living contracts are
+complete:
 
 - [x] W1 through W13 have explicit confirmed decisions.
 - [x] The selected decisions have been checked for contradictory assumptions.
@@ -756,10 +756,9 @@ still requires:
       requires no new runtime service or backend-owned loop semantics.
 - [x] Create a PR-sized implementation roadmap that orders repeatable storage
       lifetimes and cyclic verifier foundations before source acceptance.
-- [ ] Run final documentation link and index validation after the promotion,
+- [x] Run final documentation link and index validation after the promotion,
       archive move, and roadmap addition.
 
-After promotion, the living language and compiler documents become
-authoritative. This proposal should move to `docs/archive/` as the historical
-decision record, and the implementation roadmap should remain in
-`docs/roadmaps/` until complete.
+The living language and compiler documents are authoritative. This proposal is
+retained in `docs/archive/` as the historical decision record, and the
+implementation roadmap remains in `docs/roadmaps/` until complete.

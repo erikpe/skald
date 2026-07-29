@@ -56,6 +56,10 @@ Resolved string-design inputs:
 
 - [String types design proposal](STRINGS_DESIGN_PROPOSAL.md)
 
+Resolved loop-design inputs:
+
+- [While loops design proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md)
+
 Resolved module-system design inputs:
 
 - [Niflheim module-system audit](MODULE_SYSTEM_NIFLHEIM_AUDIT.md)

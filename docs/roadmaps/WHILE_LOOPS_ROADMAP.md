@@ -14,9 +14,8 @@ The frozen source and representation contracts live in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
 the [grammar](../language/GRAMMAR.md#frozen-while-loop-extension), and
 [Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-loop-representation-extension).
-The historical decision rationale remains in the
-[while-loop design proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) until its
-promotion checklist is complete.
+The historical decision rationale is retained in the archived
+[while-loop design proposal](../archive/WHILE_LOOPS_DESIGN_PROPOSAL.md).
 
 ## Scope and invariants
 
