@@ -247,8 +247,9 @@ Implementation coverage belongs at the narrowest owner:
 
 - lexer/parser tests for bytes, escapes, errors, spans, recovery, and resource
   limits;
-- module tests for synthetic reachability, provider permutations, cycles,
-  imports, replacement roots, `--no-stdlib`, and the source-text adapter;
+- module tests for synthetic reachability, provider permutations, cyclic
+  dependencies, imports, replacement roots, `--no-stdlib`, and the source-text
+  adapter;
 - resolver/type-check tests for exact identities, validation, produced-value
   typing, destinations, calls, and lifecycle;
 - HIR/MIR dump and verifier-mutation tests for deterministic data identities,

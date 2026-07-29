@@ -1,6 +1,6 @@
 # Cyclic Module Imports Roadmap
 
-Status: planned; C0 is next.
+Status: in progress; C0 is complete. C1 is next.
 
 This roadmap permits mutually dependent modules without weakening import
 visibility, semantic-cycle validation, deterministic identity allocation, or
@@ -45,7 +45,7 @@ bounds failure.
 
 ## Progress
 
-- [ ] C0 — Admit cyclic module graphs
+- [x] C0 — Admit cyclic module graphs
 - [ ] C1 — Prove semantic resolution across cycles
 - [ ] C2 — Migrate string failures and harden the feature
 
@@ -57,24 +57,24 @@ bounds failure.
 to accepting multi-module cycles while preserving deterministic graph
 construction and a focused self-import error.
 
-- [ ] Update the language module contract, compiler module contract, phase
+- [x] Update the language module contract, compiler module contract, phase
       documentation, and status matrix to permit multi-module import cycles,
       reject direct self-imports, and keep initialization ordering absent.
-- [ ] Remove complete-cycle rejection from graph finalization and update
+- [x] Remove complete-cycle rejection from graph finalization and update
       `ModuleGraph` ownership documentation so cyclic direct edges are an
       ordinary valid graph shape.
-- [ ] Replace the old cycle-chain diagnostic machinery with a direct
+- [x] Replace the old cycle-chain diagnostic machinery with a direct
       self-import check and one exact diagnostic owned by graph construction.
-- [ ] Preserve iterative reachable-closure loading, one parsed module instance
+- [x] Preserve iterative reachable-closure loading, one parsed module instance
       per canonical path, canonical dense identities, and unchanged dependency
       evidence in graph dumps.
-- [ ] Convert the existing multi-module compile-failure golden into a
+- [x] Convert the existing multi-module compile-failure golden into a
       successful cyclic-import fixture without weakening missing, ambiguous,
       malformed, or case-sensitive provider failures.
-- [ ] Remove obsolete cycle-finder tests and add graph tests for two-module,
+- [x] Remove obsolete cycle-finder tests and add graph tests for two-module,
       longer, selected-entry, and string-literal dependency cycles plus direct
       self-import rejection.
-- [ ] Retain a bounded deep-cycle regression that proves graph loading and
+- [x] Retain a bounded deep-cycle regression that proves graph loading and
       finalization do not depend on recursive stack growth.
 
 **Tests:** Focused module graph and driver tests, the converted golden fixture,

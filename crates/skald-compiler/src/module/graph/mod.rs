@@ -1,6 +1,5 @@
 //! Entry selection and deterministic reachable parsed-module loading.
 
-mod cycle;
 mod diagnostic;
 mod dump;
 mod entry;

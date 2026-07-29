@@ -123,7 +123,8 @@ have explicit owners:
 |---|---|
 | Entry selectors, logical spelling, root/standard-library options, suffixes, output defaults, and process status | driver CLI unit tests and `crates/skac/tests/cli.rs` through the real binary |
 | Root equivalence, provider ambiguity independent of contents or physical target, symlink traversal and failure, exact case, unreadable/non-regular candidates, and positional containment | `module::provider::tests` and `module::graph::tests` filesystem matrices |
-| Missing and ambiguous imports, import-source aliases, cycles, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | exact single- and multi-file snapshots under `tests/golden/compile_fail/`, plus structured resolver tests |
+| Missing and ambiguous imports, import-source aliases, direct self-imports, malformed reached sources, binding conflicts, privacy, direct-import enforcement, unknown/wrong-kind declarations, selected `main`, and incompatible external ABI declarations | exact single- and multi-file snapshots under `tests/golden/compile_fail/`, plus structured graph and resolver tests |
+| Two-module, longer, selected-entry, synthetic string, and deep cyclic dependency graphs | successful native goldens plus structured `module::graph::tests` coverage |
 | Multi-segment aliases, wildcard imports, and trailing selective-import commas | exact parser goldens and syntax recovery tests |
 | Ordering and independent-process stability | `pipeline_determinism`, graph/provider permutation tests, and the two-process golden runner |
 
@@ -256,7 +257,8 @@ String coverage follows the
   category, spans, recovery, and nesting limits;
 - module/provider tests own synthetic `std::str` reachability, explicit-edge
   coalescing, missing/ambiguous/exact-case lookup, malformed and non-UTF-8
-  providers, cycles, replacement roots, and disabled standard-library lookup;
+  providers, cyclic dependencies, replacement roots, and disabled
+  standard-library lookup;
 - resolver and type-check tests own exact language-item identity, the complete
   descriptor/privacy/lifecycle rejection matrix, produced-value contexts,
   canonical private descriptor construction, and the rule that ordinary

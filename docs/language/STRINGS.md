@@ -147,8 +147,9 @@ language does not promise whether distinct occurrences share storage.
 A module containing a valid string literal acquires a compiler-owned
 dependency on logical module `std::str`. Source does not need an import merely
 to evaluate a literal. The dependency participates in ordinary deterministic
-provider discovery, ambiguity handling, cycle detection, and exact-case
-matching.
+provider discovery, ambiguity handling, cyclic graph construction, and
+exact-case matching. It may point back to `std::str` itself without creating a
+source self-import.
 
 The dependency grants only compiler access to validate and materialize the
 language item. It creates no unqualified binding, import, or re-export and

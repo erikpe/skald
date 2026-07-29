@@ -93,7 +93,8 @@ resolves one exact logical path to missing, unique, ambiguous, or structured
 filesystem failure. It can then select a logical or positional entry, create
 an isolated outside-root singleton when required, acquire and parse only the
 reachable import closure, assign dense module/source identities in canonical
-logical-path order, reject cycles, and return an inspectable `ModuleGraph`.
+logical-path order, accept cyclic multi-module edges while rejecting direct
+self-imports, and return an inspectable `ModuleGraph`.
 Discovery caches source text before canonical final parsing, so recursive
 discovery order does not determine final identities. The graph resolver
 preserves that canonical module order when allocating all semantic identities.

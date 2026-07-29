@@ -44,14 +44,6 @@ impl ModuleImportEdge {
     pub fn string_literal_spans(&self) -> &[Span] {
         &self.string_literal_spans
     }
-
-    pub(super) fn first_evidence_span(&self) -> Span {
-        self.import_spans
-            .first()
-            .or_else(|| self.string_literal_spans.first())
-            .copied()
-            .expect("a dependency edge retains source evidence")
-    }
 }
 
 /// One parsed source instance in canonical module-path order.
@@ -88,10 +80,11 @@ impl LoadedModule {
     }
 }
 
-/// A complete, parsed, reachable, and acyclic module graph.
+/// A complete, parsed, and reachable module graph.
 ///
 /// Modules and sources are dense in the same canonical logical-path order.
-/// The selected entry is metadata and does not influence allocation order.
+/// Direct dependency edges may be cyclic. The selected entry and graph shape
+/// are metadata and do not influence allocation order.
 #[derive(Debug)]
 pub struct ModuleGraph {
     sources: SourceDatabase,

@@ -397,13 +397,22 @@ their modules reachable. Multiple bindings or selective imports from the same
 module contribute one reachability edge. Unrelated source files are not
 compiled.
 
-Every import cycle is invalid, including self-import. A diagnostic reports the
-complete cycle in import order. A module importing the selected entry through
-the reachable graph therefore creates a cycle and is rejected.
+Two or more modules may import each other directly or through a longer cycle.
+The compiler loads the complete reachable graph, collects all top-level
+declarations and public surfaces, and then resolves imports and uses across
+the whole program. A cycle does not create transitive bindings or re-exports:
+each qualified or selective use still requires its own exact direct import.
 
-This rule is source semantics, not an incidental recursive-loader limitation.
-There is no module initialization order because the initial language has no
-top-level executable state.
+A direct self-import is invalid because it adds no reachability and creates a
+redundant qualified path to declarations already owned by the current module.
+Compiler-owned dependencies, such as a string literal in `std::str`, may point
+back to their owning module because they create no source binding.
+
+Modules have no executable top-level state and an import cycle therefore has
+no initialization order. Any future top-level initialization feature must
+define cyclic initialization independently or reject it. Cyclic imports do
+not permit inheritance cycles, recursive inline containment, or any other
+semantic structure rejected by its owning language rule.
 
 ### Selected entry module
 

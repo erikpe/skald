@@ -1,8 +1,0 @@
-error[MOD007]: import cycle: first -> second -> first
- --> modules/first.ska:1:8
-   |
-1 | import second;
-   |        ^^^^^^ `first` imports `second` here
-   |
-1 | import first;
-   |        ----- `second` imports `first` here

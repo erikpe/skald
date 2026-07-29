@@ -10,8 +10,9 @@ use crate::{
 };
 
 use super::{
-    cycle::find_cycle,
-    diagnostic::{append_pending_diagnostics, cycle_diagnostic, entry_failure, PendingLoadError},
+    diagnostic::{
+        append_pending_diagnostics, entry_failure, self_import_diagnostic, PendingLoadError,
+    },
     entry::{select_entry, LoaderProviders},
     model::{LoadedModule, ModuleGraph, ModuleGraphLoadFailure, ModuleImportEdge},
 };
@@ -255,12 +256,17 @@ fn finalize_graph(
         .iter()
         .map(|module| finalized_dependencies(module, &ids))
         .collect::<Vec<_>>();
-    if let Some(cycle) = find_cycle(&imports) {
-        let paths = finalized
+    for (index, (module, dependencies)) in finalized.iter().zip(&imports).enumerate() {
+        if let Some(span) = dependencies
             .iter()
-            .map(|module| module.path.clone())
-            .collect::<Vec<_>>();
-        diagnostics.push(cycle_diagnostic(&cycle, &paths));
+            .filter(|dependency| dependency.target().index() == index)
+            .flat_map(|dependency| dependency.import_spans())
+            .next()
+        {
+            diagnostics.push(self_import_diagnostic(&module.path, *span));
+        }
+    }
+    if diagnostics.has_errors() {
         return Err(ModuleGraphLoadFailure::new(sources, diagnostics));
     }
 

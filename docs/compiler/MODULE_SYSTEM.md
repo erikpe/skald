@@ -5,9 +5,10 @@ whole-program compilation, module providers, filesystem resolution, entry
 selection, identities, loading, diagnostics, determinism, and linkage. The
 module layer selects logical or positional entries, constructs outside-root
 singletons, loads and parses only the reachable closure, allocates canonical
-graph and semantic identities, rejects cycles, enforces imports and
-visibility, and coalesces compatible cross-module external declarations. The
-request pipeline and CLI compile either entry form through this graph. The
+graph and semantic identities, accepts cyclic multi-module dependencies,
+rejects direct self-imports, enforces imports and visibility, and coalesces
+compatible cross-module external declarations. The request pipeline and CLI
+compile either entry form through this graph. The
 in-memory source-text convenience API remains available without filesystem
 discovery; module-bearing sources require a `CompilationRequest`. Driver and
 artifact behavior remains authoritative in
@@ -192,9 +193,9 @@ my_main -> /tmp/my_main.ska
 
 It does not expose `/tmp/keso.ska`. The stem must be a valid module component.
 The singleton participates in ordinary resolution and may be named by an
-import. When it is the selected entry, any reachable import back to it
-completes a cycle and is rejected. A distinct provider of `my_main` is
-ambiguous.
+import. A distinct provider of `my_main` is ambiguous. The singleton cannot
+import itself directly, but another reachable module may import it as part of
+an ordinary multi-module cycle.
 
 Selecting a rooted file and selecting its logical path intern the same
 `ModuleId`. Importing the selected module later does not load it twice.
@@ -292,7 +293,7 @@ The compilation proceeds as follows:
 normalize providers and select the entry
   -> lex and parse the entry
   -> resolve imports and parse newly reached modules to graph closure
-  -> reject import cycles
+  -> reject direct self-imports
   -> collect per-module declarations and public surfaces
   -> resolve bindings and uses to dense identities
   -> type check one whole program
@@ -305,10 +306,11 @@ Resolution is the only import-aware declaration-selection phase. Type checking
 and lower phases consume selected identities rather than repeat path or name
 lookup.
 
-`SourceDatabase` remains request-local and stores every loaded source.
-The module graph records the selected entry, canonical path and provenance of
-each module, its direct imports and local bindings, and deterministic graph
-order.
+`SourceDatabase` remains request-local and stores every loaded source. The
+module graph records the selected entry, canonical path and provenance of each
+module, its possibly cyclic direct imports and local bindings, and
+deterministic graph order. Graph shape does not affect dense identity
+allocation: modules remain ordered by canonical logical path.
 
 Lexing and parsing produce one retained phase product per module instance. An
 unreadable or malformed imported module is an ordinary source failure with
@@ -395,15 +397,15 @@ Implementation must cover at least:
 - private cross-module access and qualified use without a direct import;
 - missing or wrong-kind qualified declarations;
 - unreadable or malformed imported sources as source diagnostics;
-- self-imports and complete import-cycle chains;
+- direct self-imports;
 - incompatible cross-module external ABI declarations, with every declaration
   labeled and the signature difference described; and
 - an invalid or missing selected entry function.
 
 Diagnostics and identity allocation are deterministic. Ambiguity and
 visibility diagnostics label the importing use and every relevant provider
-candidate or private declaration across source files. Cycle diagnostics show
-the complete chain in import order. ABI diagnostics label every conflicting
+candidate or private declaration across source files. Self-import diagnostics
+label the redundant direct import. ABI diagnostics label every conflicting
 declaration.
 
 ## Complete example

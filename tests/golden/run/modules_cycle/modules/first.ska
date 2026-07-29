@@ -1,5 +1,5 @@
 import second;
 
 public fn value() -> i64 {
-    return 1;
+    return second::value();
 }

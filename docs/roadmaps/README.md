@@ -6,15 +6,16 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Cyclic Module Imports](CYCLIC_IMPORTS_ROADMAP.md) — **in progress**. C0
+  admits deterministic multi-module cycles while retaining direct self-import
+  rejection. C1 is next: prove semantic resolution and diagnostics across
+  cyclic components before migrating canonical string bounds failures to
+  `std::error::panic`. It has no dependency on separate compilation or module
+  initialization.
 
 ## Planned
 
-- [Cyclic Module Imports](CYCLIC_IMPORTS_ROADMAP.md) — **planned**. C0 is next:
-  admit deterministic multi-module cycles while retaining direct self-import
-  rejection. Later tasks prove semantic resolution across cycles and migrate
-  canonical string bounds failures to `std::error::panic`. It has no
-  dependency on separate compilation or module initialization.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

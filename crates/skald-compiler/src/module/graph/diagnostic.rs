@@ -6,7 +6,6 @@ use crate::{
 };
 
 use super::{
-    cycle::ImportCycle,
     entry::{EntryError, ModuleResolutionError},
     model::ModuleGraphLoadFailure,
 };
@@ -18,7 +17,7 @@ pub(super) const MISSING_MODULE: &str = "MOD003";
 pub(super) const AMBIGUOUS_MODULE: &str = "MOD004";
 pub(super) const MODULE_LOOKUP_FAILURE: &str = "MOD005";
 pub(super) const MODULE_SOURCE_FAILURE: &str = "MOD006";
-pub(super) const IMPORT_CYCLE: &str = "MOD007";
+pub(super) const SELF_IMPORT: &str = "MOD007";
 
 pub(super) enum PendingLoadError {
     Resolution {
@@ -179,26 +178,11 @@ fn resolution_diagnostic(error: ModuleResolutionError, span: Option<Span>) -> Di
     diagnostic
 }
 
-pub(super) fn cycle_diagnostic(cycle: &ImportCycle, module_paths: &[ModulePath]) -> Diagnostic {
-    let mut chain = cycle
-        .edges
-        .iter()
-        .map(|edge| module_paths[edge.source.index()].to_string())
-        .collect::<Vec<_>>();
-    chain.push(module_paths[cycle.edges[0].source.index()].to_string());
-    let mut diagnostic = Diagnostic::error(
-        IMPORT_CYCLE,
-        format!("import cycle: {}", chain.join(" -> ")),
-    );
-    for (index, edge) in cycle.edges.iter().enumerate() {
-        let source = &module_paths[edge.source.index()];
-        let target = &module_paths[edge.target.index()];
-        let message = format!("`{source}` imports `{target}` here");
-        diagnostic = if index == 0 {
-            diagnostic.with_primary_label(edge.span, message)
-        } else {
-            diagnostic.with_secondary_label(edge.span, message)
-        };
-    }
-    diagnostic
+pub(super) fn self_import_diagnostic(module: &ModulePath, span: Span) -> Diagnostic {
+    Diagnostic::error(
+        SELF_IMPORT,
+        format!("module `{module}` cannot import itself"),
+    )
+    .with_primary_label(span, "remove this redundant import")
+    .with_note("a module's own declarations are available without importing it")
 }

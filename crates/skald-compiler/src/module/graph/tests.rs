@@ -5,21 +5,16 @@ use std::{
 
 use crate::{
     driver::EntrySelector,
-    identity::ModuleId,
     module::{normalize_provider_roots, ProviderRootConfiguration},
-    source::SourceDatabase,
     test_support::TemporaryDirectory,
 };
 
 use super::{
-    cycle::find_cycle,
     diagnostic::{
-        AMBIGUOUS_ENTRY_IDENTITY, AMBIGUOUS_MODULE, IMPORT_CYCLE, INVALID_ENTRY, MISSING_MODULE,
-        MODULE_LOOKUP_FAILURE, MODULE_SOURCE_FAILURE,
+        AMBIGUOUS_ENTRY_IDENTITY, AMBIGUOUS_MODULE, INVALID_ENTRY, MISSING_MODULE,
+        MODULE_LOOKUP_FAILURE, MODULE_SOURCE_FAILURE, SELF_IMPORT,
     },
-    dump_module_graph, load_module_graph,
-    model::ModuleImportEdge,
-    ModuleGraph, ModuleGraphLoadFailure,
+    dump_module_graph, load_module_graph, ModuleGraph, ModuleGraphLoadFailure,
 };
 
 fn directory(label: &str) -> TemporaryDirectory {
@@ -309,7 +304,7 @@ fn outside_entry_is_a_singleton_and_does_not_expose_its_parent() {
 }
 
 #[test]
-fn singleton_participates_in_ambiguity_and_cycle_rules() {
+fn singleton_participates_in_ambiguity_and_self_import_rules() {
     let workspace = directory("graph-singleton-rules");
     let root = workspace.join("modules");
     source(&root, "main.ska", "fn other() -> i64 { return 1; }\n");
@@ -328,15 +323,12 @@ fn singleton_participates_in_ambiguity_and_cycle_rules() {
     .unwrap_err();
     assert_eq!(codes(&ambiguous), [AMBIGUOUS_MODULE]);
 
-    let cycle = load(EntrySelector::File(main), workspace.path(), &[]).unwrap_err();
-    assert_eq!(codes(&cycle), [IMPORT_CYCLE]);
-    assert!(cycle
-        .diagnostics()
-        .iter()
-        .next()
-        .unwrap()
-        .message
-        .contains("main -> main"));
+    let self_import = load(EntrySelector::File(main), workspace.path(), &[]).unwrap_err();
+    assert_eq!(codes(&self_import), [SELF_IMPORT]);
+    assert_eq!(
+        self_import.diagnostics().iter().next().unwrap().message,
+        "module `main` cannot import itself"
+    );
 }
 
 #[test]
@@ -540,20 +532,49 @@ fn synthetic_std_str_dependency_reports_malformed_and_non_utf8_sources() {
 }
 
 #[test]
-fn synthetic_dependencies_participate_in_cycle_detection() {
+fn synthetic_string_dependencies_may_participate_in_cycles() {
     let workspace = directory("graph-string-cycle");
     let root = workspace.join("modules");
     source(&root, "app.ska", "fn main() -> i64 { return \"a\"; }\n");
     source(&root, "std/str.ska", "import app;\npublic class Str {}\n");
 
-    let failure = load(
+    let graph = load(
         EntrySelector::Module("app".parse().unwrap()),
         workspace.path(),
         &[root],
     )
-    .unwrap_err();
+    .unwrap();
 
-    assert_eq!(codes(&failure), [IMPORT_CYCLE]);
+    assert_eq!(graph.modules().len(), 2);
+    let app = graph.find(&"app".parse().unwrap()).unwrap();
+    let string = graph.find(&"std::str".parse().unwrap()).unwrap();
+    assert_eq!(app.imports().len(), 1);
+    assert!(app.imports()[0].import_spans().is_empty());
+    assert_eq!(app.imports()[0].string_literal_spans().len(), 1);
+    assert_eq!(app.imports()[0].target(), string.provenance().module_id());
+    assert_eq!(string.imports()[0].target(), app.provenance().module_id());
+
+    let self_workspace = directory("graph-string-self-dependency");
+    let self_root = self_workspace.join("modules");
+    source(
+        &self_root,
+        "std/str.ska",
+        "fn main() -> i64 { \"self\"; return 0; }\n",
+    );
+    let self_graph = load(
+        EntrySelector::Module("std::str".parse().unwrap()),
+        self_workspace.path(),
+        std::slice::from_ref(&self_root),
+    )
+    .unwrap();
+    let string = self_graph.find(&"std::str".parse().unwrap()).unwrap();
+    assert_eq!(string.imports().len(), 1);
+    assert_eq!(
+        string.imports()[0].target(),
+        string.provenance().module_id()
+    );
+    assert!(string.imports()[0].import_spans().is_empty());
+    assert_eq!(string.imports()[0].string_literal_spans().len(), 1);
 }
 
 #[test]
@@ -661,7 +682,7 @@ fn malformed_and_non_utf8_imported_sources_stop_graph_construction() {
 }
 
 #[test]
-fn self_and_longer_cycles_report_complete_ordered_edges() {
+fn direct_self_import_is_rejected_but_multi_module_cycles_are_loaded() {
     let workspace = directory("graph-cycles");
     let root = workspace.join("modules");
     source(&root, "self_cycle.ska", "import self_cycle;\n");
@@ -673,46 +694,101 @@ fn self_and_longer_cycles_report_complete_ordered_edges() {
     )
     .unwrap_err();
     let self_diagnostic = self_failure.diagnostics().iter().next().unwrap();
-    assert_eq!(self_diagnostic.code, IMPORT_CYCLE);
+    assert_eq!(self_diagnostic.code, SELF_IMPORT);
+    assert_eq!(
+        self_diagnostic.message,
+        "module `self_cycle` cannot import itself"
+    );
     assert_eq!(self_diagnostic.labels.len(), 1);
+    assert_eq!(
+        self_diagnostic.labels[0].message,
+        "remove this redundant import"
+    );
+    assert_eq!(
+        self_diagnostic.notes,
+        ["a module's own declarations are available without importing it"]
+    );
+
+    source(&root, "pair_a.ska", "import pair_b;\n");
+    source(&root, "pair_b.ska", "import pair_a;\n");
+    let pair = load(
+        EntrySelector::Module("pair_a".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&root),
+    )
+    .unwrap();
+    assert_eq!(pair.modules().len(), 2);
 
     source(&root, "a.ska", "import b;\n");
     source(&root, "b.ska", "import c;\n");
     source(&root, "c.ska", "import a;\n");
-    let longer = load(
+    let graph = load(
         EntrySelector::Module("a".parse().unwrap()),
         workspace.path(),
-        &[root],
+        std::slice::from_ref(&root),
     )
-    .unwrap_err();
-    let diagnostic = longer.diagnostics().iter().next().unwrap();
-    assert_eq!(diagnostic.code, IMPORT_CYCLE);
-    assert_eq!(diagnostic.message, "import cycle: a -> b -> c -> a");
-    assert_eq!(diagnostic.labels.len(), 3);
+    .unwrap();
+    assert_eq!(module_id(&graph, "a"), 0);
+    assert_eq!(module_id(&graph, "b"), 1);
+    assert_eq!(module_id(&graph, "c"), 2);
+
+    let dump = dump_module_graph(&graph).replace(workspace.path().to_str().unwrap(), "<workspace>");
+    assert_eq!(
+        dump,
+        concat!(
+            "entry m0 a\n",
+            "module m0 a source0 provider0 package0\n",
+            "  relative a.ska\n",
+            "  display <workspace>/modules/a.ska\n",
+            "  canonical <workspace>/modules/a.ska\n",
+            "  dependency m1 b imports=1 string_literals=0\n",
+            "module m1 b source1 provider0 package0\n",
+            "  relative b.ska\n",
+            "  display <workspace>/modules/b.ska\n",
+            "  canonical <workspace>/modules/b.ska\n",
+            "  dependency m2 c imports=1 string_literals=0\n",
+            "module m2 c source2 provider0 package0\n",
+            "  relative c.ska\n",
+            "  display <workspace>/modules/c.ska\n",
+            "  canonical <workspace>/modules/c.ska\n",
+            "  dependency m0 a imports=1 string_literals=0\n",
+        )
+    );
 }
 
 #[test]
-fn cycle_detection_handles_deep_graphs_without_recursive_stack_growth() {
-    let mut sources = SourceDatabase::new();
-    let source_id = sources.add("deep.ska", "");
-    let span = sources.get(source_id).unwrap().span(0, 0).unwrap();
-    let depth = 10_000;
-    let mut imports = (0..depth)
-        .map(|index| {
-            (index + 1 < depth)
-                .then(|| ModuleImportEdge::new(ModuleId::new(index + 1), vec![span], Vec::new()))
-                .into_iter()
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
+fn deep_cyclic_closure_loads_without_recursive_stack_growth() {
+    let workspace = directory("graph-deep-cycle");
+    let root = workspace.join("modules");
+    let depth = 512;
+    for index in 0..depth {
+        let target = if index + 1 == depth {
+            depth / 2
+        } else {
+            index + 1
+        };
+        source(
+            &root,
+            &format!("module_{index:04}.ska"),
+            &format!("import module_{target:04};\n"),
+        );
+    }
 
-    assert!(find_cycle(&imports).is_none());
-    imports[depth - 1].push(ModuleImportEdge::new(
-        ModuleId::new(depth / 2),
-        vec![span],
-        Vec::new(),
-    ));
-    assert_eq!(find_cycle(&imports).unwrap().edges.len(), depth / 2);
+    let graph = load(
+        EntrySelector::Module("module_0000".parse().unwrap()),
+        workspace.path(),
+        std::slice::from_ref(&root),
+    )
+    .unwrap();
+
+    assert_eq!(graph.modules().len(), depth);
+    assert_eq!(module_id(&graph, "module_0000"), 0);
+    assert_eq!(module_id(&graph, "module_0511"), depth - 1);
+    let last = graph.find(&"module_0511".parse().unwrap()).unwrap();
+    assert_eq!(
+        last.imports()[0].target().index(),
+        module_id(&graph, "module_0256")
+    );
 }
 
 #[test]
