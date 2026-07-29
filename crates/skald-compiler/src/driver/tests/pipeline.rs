@@ -90,10 +90,10 @@ fn literal_program_reaches_target_emission() {
         root.join("std/str.ska"),
         concat!(
             "public class Str {\n",
-            "  private storage: shared u8[];\n",
-            "  private start: u64;\n",
-            "  private length: u64;\n",
-            "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
+            "  private _storage: shared u8[];\n",
+            "  private _start: u64;\n",
+            "  private _length: u64;\n",
+            "  init() { self._storage = new u8[](); self._start = 0u; self._length = 0u; }\n",
             "}\n",
         ),
     )

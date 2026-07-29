@@ -93,9 +93,9 @@ pub(super) fn validate_string_language_item(
     }
 
     let expected = [
-        ("storage", ExpectedFieldType::SharedU8Array),
-        ("start", ExpectedFieldType::U64),
-        ("length", ExpectedFieldType::U64),
+        ("_storage", ExpectedFieldType::SharedU8Array),
+        ("_start", ExpectedFieldType::U64),
+        ("_length", ExpectedFieldType::U64),
     ];
     for (index, (name, expected_type)) in expected.into_iter().enumerate() {
         let Some(field) = class.fields.get(index) else {

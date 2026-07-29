@@ -214,7 +214,7 @@ String coverage follows the
   providers, cycles, replacement roots, and disabled standard-library lookup;
 - resolver and type-check tests own exact language-item identity, the complete
   descriptor/privacy/lifecycle rejection matrix, produced-value contexts,
-  canonical private-fresh-backing construction, and the rule that ordinary
+  canonical private descriptor construction, and the rule that ordinary
   initializer and method names have no compiler meaning;
 - MIR tests mutate each string declaration, literal-data, static-owner,
   descriptor-publication, and ownership invariant independently;

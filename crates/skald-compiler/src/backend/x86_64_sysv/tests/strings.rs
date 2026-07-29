@@ -8,13 +8,13 @@ use crate::{
 
 const VALID_STR: &str = concat!(
     "public class Str {\n",
-    "  private storage: shared u8[];\n",
-    "  private start: u64;\n",
-    "  private length: u64;\n",
+    "  private _storage: shared u8[];\n",
+    "  private _start: u64;\n",
+    "  private _length: u64;\n",
     "  init() {\n",
-    "    self.storage = new u8[]();\n",
-    "    self.start = 0u;\n",
-    "    self.length = 0u;\n",
+    "    self._storage = new u8[]();\n",
+    "    self._start = 0u;\n",
+    "    self._length = 0u;\n",
     "  }\n",
     "}\n",
 );

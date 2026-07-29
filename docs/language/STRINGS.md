@@ -37,9 +37,9 @@ three direct fields, in order, and no additional direct fields:
 
 ```ska
 public class Str {
-    private storage: shared u8[];
-    private start: u64;
-    private length: u64;
+    private _storage: shared u8[];
+    private _start: u64;
+    private _length: u64;
 
     // At least one safe ordinary initializer and the library's methods.
 }
@@ -89,10 +89,10 @@ copying.
 Ordinary initializers may be private; copy construction, assignment, and
 destruction remain visibility-free lifecycle slots. The canonical `Str`
 implementation keeps its empty initializer public and uses a private ordinary
-initializer to install fresh backing created by trusted standard-library code.
-Its private static slice helper copies an already valid descriptor before
-adjusting its private bounds. These paths use the ordinary declaring-class
-privacy rules; they are not string-specific capabilities.
+initializer to install a trusted backing owner, start, and length. Dynamic
+factories pass fresh backing and its complete range, while slicing passes the
+existing backing and a checked subrange. These paths use the ordinary
+declaring-class privacy rules; they are not string-specific capabilities.
 
 ## String literals
 
@@ -179,9 +179,9 @@ The installed representative public surface is:
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 
 Invalid byte and slice bounds terminate through ordinary checked array
-behavior. The library's dynamic factories call a private ordinary initializer
-to install newly allocated backing, while a private static helper adjusts
-copied slice descriptors. Neither member is a compiler convention.
+behavior. The library's dynamic factories and slicing method call a private
+ordinary initializer to install a trusted backing owner and range. The
+initializer is not a compiler convention.
 
 The required asymptotic behavior is:
 

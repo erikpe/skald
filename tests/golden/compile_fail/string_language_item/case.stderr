@@ -1,8 +1,8 @@
-error[RES033]: string descriptor field `storage` must have type `shared u8[]`
- --> modules/std/str.ska:2:22
+error[RES033]: string descriptor field `_storage` must have type `shared u8[]`
+ --> modules/std/str.ska:2:23
    |
-2 |     private storage: shared u64[];
-   |                      ^^^^^^^^^^^^ field has the wrong type
+2 |     private _storage: shared u64[];
+   |                       ^^^^^^^^^^^^ field has the wrong type
    |
 2 |     "requires Str";
    |     -------------- string language item required here
