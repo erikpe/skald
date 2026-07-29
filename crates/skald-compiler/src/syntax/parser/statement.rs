@@ -351,9 +351,9 @@ impl Parser<'_> {
             }
             self.report(
                 EXPECTED_STATEMENT,
-                "only an object or field place may be assigned",
+                "only a place may be assigned",
                 equal.span,
-                "primitive local and other expression assignment is not supported",
+                "this expression does not have assignment-place syntax",
             );
             return None;
         };

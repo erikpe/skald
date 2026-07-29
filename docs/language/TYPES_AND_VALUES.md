@@ -1,7 +1,8 @@
 # Skald Types, Values, and Expressions
 
 Status: authoritative for implemented type, value, literal, and expression
-semantics and for the primitive integer comparison and cast contract. The
+semantics, the primitive integer comparison and cast contract, and the exact
+type rule for frozen primitive local reassignment. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -93,6 +94,11 @@ actual and expected types to be identical:
 - return values;
 - assignment to primitive fields;
 - both operands of a binary arithmetic operator.
+
+The frozen primitive-local-reassignment design applies the same rule: the
+right-hand expression's actual type must be identical to the `var` local's
+declared primitive type. A literal keeps the type selected by its spelling;
+the destination does not reinterpret it.
 
 `bool` is not an integer type. It has no numeric operations or implicit
 truthiness. A condition must already have type `bool`; integer, floating,

@@ -937,6 +937,48 @@ fn parses_whole_object_assignment_without_performing_type_lookup() {
 }
 
 #[test]
+fn identifier_and_grouped_identifier_assignments_reach_semantic_classification() {
+    let (sources, output) = parse_text(concat!(
+        "fn main() -> i64 {\n",
+        "    var value: i64 = 0;\n",
+        "    value = 1;\n",
+        "    (value) = 2;\n",
+        "    return value;\n",
+        "}\n",
+    ));
+
+    assert!(output.diagnostics.is_empty(), "{:?}", output.diagnostics);
+    let main = function(&output.ast, 0);
+    let Statement::ObjectAssignment(direct) = &main.body.statements[1] else {
+        panic!("expected direct assignment-shaped syntax");
+    };
+    let Statement::ObjectAssignment(grouped) = &main.body.statements[2] else {
+        panic!("expected grouped assignment-shaped syntax");
+    };
+    assert_eq!(source_text(&sources, direct.place.span()), "value");
+    assert_eq!(source_text(&sources, grouped.place.span()), "(value)");
+    assert!(matches!(direct.place, Expression::Identifier(_)));
+    assert!(matches!(grouped.place, Expression::Grouped(_)));
+}
+
+#[test]
+fn non_place_assignment_diagnostic_does_not_guess_semantic_types() {
+    let (_, output) = parse_text("fn main() -> i64 { make() = 1; return 0; }");
+
+    assert_eq!(output.diagnostics.len(), 1);
+    let diagnostic = output.diagnostics.iter().next().unwrap();
+    assert_eq!(diagnostic.code, EXPECTED_STATEMENT);
+    assert_eq!(diagnostic.message, "only a place may be assigned");
+    assert_eq!(
+        diagnostic.labels[0].message,
+        "this expression does not have assignment-place syntax"
+    );
+    let main = function(&output.ast, 0);
+    assert_eq!(main.body.statements.len(), 1);
+    assert!(matches!(main.body.statements[0], Statement::Return(_)));
+}
+
+#[test]
 fn object_ast_dump_is_exact_and_source_shaped() {
     let (_, output) =
         parse_text("class Box { value: i64; init(value: i64) { self.value = value; } }");

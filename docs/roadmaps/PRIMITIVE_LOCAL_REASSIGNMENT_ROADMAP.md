@@ -1,6 +1,6 @@
 # Primitive Local Reassignment Roadmap
 
-Status: planned; PLR0 is next.
+Status: in progress; PLR1 is next.
 
 Primitive locals are already initialized, read, shadowed, and carried through
 typed HIR and verified MIR, while the assignment grammar and scalar MIR store
@@ -40,7 +40,7 @@ language's place model or creating a second backend store path.
 
 ## Progress
 
-- [ ] PLR0 — Freeze the primitive local reassignment contract
+- [x] PLR0 — Freeze the primitive local reassignment contract
 - [ ] PLR1 — Implement and execute primitive local reassignment
 
 ## PR-sized implementation sequence
@@ -50,23 +50,23 @@ language's place model or creating a second backend store path.
 **Purpose:** Settle the source-visible rule and its phase ownership before
 introducing a new resolved and typed statement category.
 
-- [ ] Specify primitive `var` reassignment in the bindings, statement,
+- [x] Specify primitive `var` reassignment in the bindings, statement,
       exact-type, and evaluation-order language contracts, including grouped
       destinations, lexical shadowing, evaluate-once behavior, and the absence
       of a produced value.
-- [ ] Record the rule as a frozen design in the status matrix while retaining
+- [x] Record the rule as a frozen design in the status matrix while retaining
       the current implementation boundary until execution lands.
-- [ ] Confirm that the existing `place = expression;` grammar and AST
+- [x] Confirm that the existing `place = expression;` grammar and AST
       assignment shape cover an identifier or grouped identifier without a
       syntax extension; clarify documentation or parser diagnostics where
       wording incorrectly implies that every primitive-local-shaped statement
       is rejected syntactically.
-- [ ] Document phase ownership: resolution classifies a primitive `var`
+- [x] Document phase ownership: resolution classifies a primitive `var`
       destination by `LocalId`; type checking selects an exact primitive
       assignment; HIR preserves the selected destination and typed source; MIR
       evaluates the source then emits a verified store; targets consume that
       store mechanically.
-- [ ] State explicit exclusions for primitive value parameters, invalid or
+- [x] State explicit exclusions for primitive value parameters, invalid or
       non-local roots, compound and expression-valued assignment, and all
       existing non-primitive assignment families so later implementation does
       not broaden the place model accidentally.
@@ -96,9 +96,9 @@ pipeline.
       diagnostics.
 - [ ] Type-check all five primitive destination types with the ordinary exact
       type requirement. Add a dedicated HIR statement carrying the destination
-      binding, typed source expression, type, and source span; expose it in
-      deterministic HIR dumps without retaining source names or backend
-      details.
+      binding, typed source expression, and source span; expose it in
+      deterministic HIR dumps without retaining source names, redundant type
+      metadata, or backend details.
 - [ ] Lower the typed statement by evaluating its source once, emitting
       `MirStore` to the local's existing storage, and ending the full
       expression after the store. Reuse the current MIR place/type verifier,

@@ -124,6 +124,46 @@ container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxed, nested, and optional-reference shapes remain diagnosed before
 HIR.
 
+## Frozen primitive local reassignment boundary
+
+The source contract for
+[primitive local reassignment](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-primitive-local-reassignment)
+is frozen, while semantic classification and execution remain unimplemented.
+It extends the existing pipeline without adding a new place family:
+
+- Syntax already retains an identifier or grouped identifier followed by `=`
+  in the existing assignment-shaped AST node, including the equality span,
+  source expression, and complete statement span. Parsing chooses no binding
+  identity, type, mutability, or semantic assignment category.
+- Resolution will recognize this meaning only when lexical lookup selects a
+  primitive `BindingId::Local(LocalId)`. It will emit a dedicated
+  `ResolvedPrimitiveLocalAssignment` containing the destination `LocalId`,
+  equality span, resolved source, and statement span. Grouping does not alter
+  lookup, and the destination lookup is completed before resolving the source.
+  A primitive parameter or another excluded root receives a focused
+  diagnostic rather than falling through to object-place resolution.
+- Type checking will require the source expression to have exactly the
+  destination local's declared type and will accept only `i64`, `u64`, `u8`,
+  `f64`, or `bool`. HIR will use a dedicated
+  `HirPrimitiveLocalAssignment` containing the destination `LocalId`, one
+  typed source expression, and the statement span. The operation type remains
+  available from the local table and `HirExpression::ty`; it is not duplicated
+  in the statement where the two copies could drift.
+- MIR lowering will evaluate the HIR source once, emit the existing
+  `MirStore` to the local's already allocated storage, and then emit the
+  ordinary full-expression boundary. No initialization, liveness, ownership,
+  or cleanup registration changes.
+- MIR verification already requires a scalar, exactly typed, mutable store
+  destination and a defined value operand. Backends consume the verified
+  store mechanically. The x86-64 target already handles canonical integer,
+  byte, boolean, and floating stores, so this feature adds no layout, ABI,
+  runtime, or target-specific semantic rule.
+
+Assignment remains a statement with no HIR expression result. Primitive value
+parameters, invalid or non-local roots, compound and chained assignment,
+destructuring, and every existing non-primitive assignment family remain
+outside this boundary.
+
 ## Primitive integer operation boundary
 
 Primitive integer comparisons and casts have a

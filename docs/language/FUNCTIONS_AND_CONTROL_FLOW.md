@@ -1,7 +1,8 @@
 # Skald Functions and Control Flow
 
 Status: authoritative for implemented callable, binding, scope, statement,
-control-flow, return, and evaluation-order semantics. The
+control-flow, return, and evaluation-order semantics, and for the frozen
+primitive-local-reassignment design. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -108,6 +109,45 @@ Leaving a block destroys successfully initialized owning class locals from
 last completed initialization to first. Primitive locals require no lifetime
 cleanup. Detailed destruction behavior is owned by class lifecycle semantics.
 
+### Frozen primitive local reassignment
+
+An initialized primitive `var` local is replaceable with an exactly typed
+value:
+
+```text
+var count: i64 = 1;
+count = count + 1;
+```
+
+This contract applies to `i64`, `u64`, `u8`, `f64`, and `bool`. The
+left-hand identifier resolves before the right-hand expression and must select
+an already-declared `var` local. Parenthesizing the complete destination is
+transparent: `(count) = 2;` selects the same local identity. Normal lexical
+lookup applies, so an assignment inside a nested scope updates the innermost
+visible declaration and an outer declaration becomes visible again when that
+scope ends.
+
+The right-hand expression must have exactly the local's declared primitive
+type. It is evaluated exactly once, and its value is stored only after that
+evaluation succeeds. Any full-expression temporaries created while evaluating
+the source are cleaned after the store under their existing lifetime rules.
+Reassignment neither begins a new local lifetime nor changes cleanup
+registration; primitive locals remain initialized from declaration through
+the end of their scope.
+
+Primitive local reassignment is a statement and produces no value. Assignment
+expressions, chaining, compound assignment, increment and decrement,
+destructuring, alias locals, and primitive value-parameter rebinding are not
+part of this contract. Existing primitive-field, object, shared-owner,
+optional, array, and array-element assignment retain their own rules.
+Initializer and copy-constructor bodies that admit only direct receiver-field
+initialization do not gain local reassignment.
+
+The parser already retains an identifier or grouped identifier followed by
+`=` as assignment-shaped syntax. Compiler support for classifying and
+executing the primitive-local meaning is not yet implemented; its maturity is
+tracked in the [status matrix](STATUS.md#not-implemented).
+
 ## Statements and blocks
 
 The implemented general body forms are:
@@ -121,6 +161,9 @@ The implemented general body forms are:
 
 Assignment operation selection and initializer-body restrictions are
 [class semantics](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-contract).
+The frozen primitive-local statement above uses the same parsed assignment
+shape but remains outside the implemented body forms until its semantic
+pipeline lands.
 Arbitrary expression statements are not supported. An expression
 statement is valid only when its outer operation, through any grouping, is a
 function or method call returning `unit`. A value-returning call cannot be
@@ -197,6 +240,11 @@ calls:
 Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
+
+The frozen primitive-local-reassignment rule uses item 4 without introducing
+an effectful destination computation: resolution selects the local identity,
+the source evaluates once, the completed scalar is stored, and source
+full-expression cleanup follows the store.
 
 The frozen [object-cast profile](OBJECT_CASTS.md) evaluates its source once,
 establishes any required lifetime anchor, performs a dynamic check when needed,
