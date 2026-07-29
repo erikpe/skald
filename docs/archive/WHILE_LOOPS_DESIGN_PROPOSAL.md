@@ -46,15 +46,15 @@ would depend.
 Loops, `break`, `continue`, and their cleanup behavior remain unimplemented.
 Their source design is now frozen in the living
 [control-flow contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
-[planned grammar extension](../language/GRAMMAR.md#frozen-while-loop-extension),
+[implemented grammar](../language/GRAMMAR.md#while-loops-and-reserved-loop-exits),
 and [status matrix](../language/STATUS.md#not-implemented). The frozen
-[phase and IR extension](../compiler/PHASES_AND_IR.md#frozen-loop-representation-extension)
+[phase and IR representation](../compiler/PHASES_AND_IR.md#while-loop-representation)
 owns loop identity, structured HIR effects, repeatable MIR lifetime epochs,
 generic CFG lowering, cyclic verification, transformation invariants, and
 private implementation freedom. The
-[runtime ABI](../compiler/RUNTIME_ABI.md#frozen-loop-abi-boundary) confirms no
+[runtime ABI](../compiler/RUNTIME_ABI.md#loop-abi-boundary) confirms no
 new service or version, while the
-[backend contract](../compiler/BACKEND.md#frozen-loop-target-boundary) requires
+[backend contract](../compiler/BACKEND.md#while-loop-target-boundary) requires
 only mechanical realization of verified generic MIR.
 
 Skald already has useful foundations:

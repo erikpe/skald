@@ -1,0 +1,5 @@
+error[TYP005]: while condition has type `i64` but `bool` is required
+ --> tests/golden/compile_fail/while_condition_type.ska:2:12
+   |
+2 |     while (1) {}
+   |            ^ type mismatch

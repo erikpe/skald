@@ -138,16 +138,15 @@ with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
 
-## Frozen loop target boundary
+## While-loop target boundary
 
-The frozen
-[loop representation contract](PHASES_AND_IR.md#frozen-loop-representation-extension)
-keeps all source loop meaning and cleanup planning target-independent. Source
-loops are not currently accepted, but typed internal HIR loops already lower
-to cyclic control flow using the existing generic branch and jump forms.
-Repeatable lifetime epochs are implemented as verified no-code MIR markers.
-The backend consumes only the resulting verified generic MIR and has no
-source-loop-specific operation or state.
+The
+[loop representation contract](PHASES_AND_IR.md#while-loop-representation)
+keeps all source loop meaning and cleanup planning target-independent.
+Implemented source `while` loops lower to cyclic control flow using the
+existing generic branch and jump forms. Repeatable lifetime epochs are
+verified no-code MIR markers. The backend consumes only the resulting
+verified generic MIR and has no source-loop-specific operation or state.
 
 The target boundary requires:
 
@@ -189,7 +188,7 @@ runtime entry point, hidden iteration counter, per-iteration frame allocation,
 or process-entry behavior. The existing fixed-frame strategy may reuse one
 physical home across verified non-overlapping lifetime epochs. Runtime ABI
 compatibility remains owned by the
-[unchanged loop ABI boundary](RUNTIME_ABI.md#frozen-loop-abi-boundary).
+[unchanged loop ABI boundary](RUNTIME_ABI.md#loop-abi-boundary).
 
 Focused target tests must cover deterministic forward and backward edges,
 fixed-home loop-carried values, calls across backedges, nested CFG, assembler

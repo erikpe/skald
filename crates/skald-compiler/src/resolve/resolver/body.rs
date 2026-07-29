@@ -152,6 +152,7 @@ struct CallableResolver<'program, 'state> {
     base_initialization: BaseInitializationPolicy,
     scopes: Vec<HashMap<String, BindingSymbol>>,
     locals: Vec<ResolvedLocal>,
+    next_loop_index: usize,
 }
 
 impl<'program, 'state> CallableResolver<'program, 'state> {
@@ -185,6 +186,7 @@ impl<'program, 'state> CallableResolver<'program, 'state> {
             base_initialization: context.base_initialization,
             scopes: vec![parameters],
             locals: Vec::new(),
+            next_loop_index: 0,
         }
     }
 

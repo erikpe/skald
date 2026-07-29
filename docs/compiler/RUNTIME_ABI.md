@@ -246,11 +246,11 @@ The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
 marker remains version 6.
 
-## Frozen loop ABI boundary
+## Loop ABI boundary
 
-The frozen `while`, `break`, and `continue`
+The implemented `while` and frozen `break` and `continue`
 [source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
-and [phase representation](PHASES_AND_IR.md#frozen-loop-representation-extension)
+and [phase representation](PHASES_AND_IR.md#while-loop-representation)
 add no public C symbol, runtime state, or ABI-version change. The runtime marker
 remains `ska_rt_abi_v6`.
 

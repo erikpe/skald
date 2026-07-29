@@ -440,6 +440,15 @@ impl AstDumper {
                 self.indented(|dumper| dumper.expression(&statement.expression));
             }
             Statement::Conditional(statement) => self.conditional(statement),
+            Statement::While(statement) => {
+                self.line("While", statement.span);
+                self.indented(|dumper| {
+                    dumper.line("WhileKeyword", statement.while_span);
+                    dumper.heading("Condition");
+                    dumper.indented(|dumper| dumper.expression(&statement.condition));
+                    dumper.block(&statement.body);
+                });
+            }
             Statement::Block(block) => self.block(block),
             Statement::FieldAssignment(statement) => {
                 self.line("FieldAssignment", statement.span);

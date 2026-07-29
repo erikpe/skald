@@ -67,6 +67,17 @@ as `cast.u64.i64`. A cast has no failure edge. When a total cast feeds a signed
 array position, inspect the preceding source-level unsigned comparison and its
 control-flow branch rather than looking for a hidden checked conversion.
 
+For `while`, the AST must retain the keyword, condition, body, and complete
+statement span. The resolved dump assigns source-ordered callable-local
+`LoopId`s, and HIR retains the structured loop plus its conservative
+fallthrough effect. MIR then expands the statement into generic preheader,
+condition, body, latch, and exit blocks. Inspect condition full-expression
+cleanup before the header branch, body-local `storage-live` and
+`storage-dead` operations before the latch, and the ordinary backward `goto`
+from latch to header. Assembly should contain only the corresponding generic
+branches and jumps. `break` and `continue` stop at parser diagnostic `PAR015`
+until their later roadmap slices.
+
 For `T(copy source)`, the AST and resolved dumps must retain a distinct copy
 mode rather than an ordinary argument. HIR must show one selected copy
 operation and checked exact-`T` source. MIR then shows any `checked_cast`

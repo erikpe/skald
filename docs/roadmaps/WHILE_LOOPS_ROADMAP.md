@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 through L3 are complete and L4 is next.
+Status: in progress; L0 through L4 are complete and L5 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -12,8 +12,8 @@ ordinary verified control-flow edges mechanically.
 
 The frozen source and representation contracts live in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
-the [grammar](../language/GRAMMAR.md#frozen-while-loop-extension), and
-[Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#frozen-loop-representation-extension).
+the [grammar](../language/GRAMMAR.md#while-loops-and-reserved-loop-exits), and
+[Compiler Phases and Intermediate Representations](../compiler/PHASES_AND_IR.md#while-loop-representation).
 The historical decision rationale is retained in the archived
 [while-loop design proposal](../archive/WHILE_LOOPS_DESIGN_PROPOSAL.md).
 
@@ -87,7 +87,7 @@ Explicitly excluded from this roadmap:
 - [x] L1 — Make MIR verification cycle-safe
 - [x] L2 — Add structured loop identities and control effects
 - [x] L3 — Lower internal HIR `while` loops through generic MIR
-- [ ] L4 — Activate source `while` end to end
+- [x] L4 — Activate source `while` end to end
 - [ ] L5 — Add targeted `break` statements
 - [ ] L6 — Add targeted `continue` statements
 - [ ] L7 — Harden loop lifecycles and optimization boundaries
@@ -262,22 +262,22 @@ family, while the lexer/parser still do not accept source `while`.
 **Purpose:** Expose the frozen `while` statement only after every downstream
 phase already supports its complete semantics.
 
-- [ ] Reserve `while`, `break`, and `continue` as keywords together, preserving
+- [x] Reserve `while`, `break`, and `continue` as keywords together, preserving
       stable token spans, dumps, recovery, and focused diagnostics for the two
       not-yet-supported statements.
-- [ ] Parse exactly `while (expression) block`, with mandatory parentheses and
+- [x] Parse exactly `while (expression) block`, with mandatory parentheses and
       braces, as a statement-only AST node.
-- [ ] Resolve the condition in the enclosing scope, allocate a stable
+- [x] Resolve the condition in the enclosing scope, allocate a stable
       callable-local `LoopId`, and resolve the body as an ordinary child block.
-- [ ] Type-check the condition as exact `bool`, reject truthiness and other
+- [x] Type-check the condition as exact `bool`, reject truthiness and other
       types, and lower the resolved loop to the structured HIR representation.
-- [ ] Preserve conservative fallthrough and existing callable
+- [x] Preserve conservative fallthrough and existing callable
       return-completeness diagnostics, including for `while (true)`.
-- [ ] Extend AST, resolved, HIR, MIR, and assembly dumps deterministically.
-- [ ] Add source-to-native coverage for zero, one, and many iterations,
+- [x] Extend AST, resolved, HIR, MIR, and assembly dumps deterministically.
+- [x] Add source-to-native coverage for zero, one, and many iterations,
       enclosing mutations, nesting, body-local cleanup, condition cleanup, and
       return from a loop body.
-- [ ] Update the grammar, language status, control-flow, phase/IR, backend, and
+- [x] Update the grammar, language status, control-flow, phase/IR, backend, and
       debugging/test documents from frozen planned `while` behavior to current
       implemented behavior while retaining `break` and `continue` as frozen
       but unimplemented statements.

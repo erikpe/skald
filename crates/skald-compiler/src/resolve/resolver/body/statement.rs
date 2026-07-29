@@ -1,7 +1,7 @@
 //! Statement sequencing, lexical scopes, and binding declarations.
 
 use super::*;
-use crate::identity::LocalId;
+use crate::identity::{LocalId, LoopId};
 
 impl CallableResolver<'_, '_> {
     pub(super) fn resolve_block(&mut self, block: &syntax::Block, nested: bool) -> ResolvedBlock {
@@ -68,6 +68,9 @@ impl CallableResolver<'_, '_> {
             syntax::Statement::Conditional(conditional) => self
                 .resolve_conditional(conditional)
                 .map(ResolvedStatement::Conditional),
+            syntax::Statement::While(statement) => {
+                self.resolve_while(statement).map(ResolvedStatement::While)
+            }
             syntax::Statement::Block(block) => {
                 Some(ResolvedStatement::Block(self.resolve_block(block, true)))
             }
@@ -169,6 +172,19 @@ impl CallableResolver<'_, '_> {
             arms,
             else_block,
             span: conditional.span,
+        })
+    }
+
+    fn resolve_while(&mut self, statement: &syntax::WhileStatement) -> Option<ResolvedWhile> {
+        let loop_id = LoopId::new(self.callable, self.next_loop_index);
+        self.next_loop_index += 1;
+        let condition = self.resolve_expression(&statement.condition);
+        let body = self.resolve_block(&statement.body, true);
+        condition.map(|condition| ResolvedWhile {
+            loop_id,
+            condition,
+            body,
+            span: statement.span,
         })
     }
 

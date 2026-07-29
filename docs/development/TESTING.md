@@ -174,6 +174,19 @@ Golden cases own complete successful and unsuccessful process observations.
 Because array failures promise only non-return, `.exit` sidecars use
 `failure`; tests must not depend on a particular signal or numeric status.
 
+While-loop coverage follows the phase boundary that owns each invariant.
+Lexer tests keep `while`, `break`, and `continue` reserved without reserving
+identifier prefixes. Syntax tests own the mandatory parentheses and block,
+recovery, spans, and unsupported loop-exit diagnostics. Resolution and
+type-check tests own source-ordered `LoopId`s, enclosing-condition and child
+body scopes, exact-`bool` conditions, conservative fallthrough, and structured
+HIR dumps. Source-to-MIR tests prove the canonical generic cyclic graph, while
+the internal-HIR lifecycle matrix and verifier mutations cover every current
+storage family without duplicating those cases at the parser boundary. Native
+goldens own zero, one, and repeated iterations, nesting, mutation, condition
+and body cleanup, and return from a body. The golden runner's repeated assembly
+comparison remains the source-to-target determinism check.
+
 Primitive integer operation coverage keeps the closed matrices explicit.
 Type-check and MIR tests enumerate all eighteen same-type comparisons and all
 nine casts, while rejection tests enumerate every ordered mixed integer pair,

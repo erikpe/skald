@@ -59,6 +59,7 @@ fn extern var return
 i64 u64 u8 f64 bool unit
 true false
 if elif else
+while break continue
 none
 ```
 
@@ -337,6 +338,7 @@ statement             = local-declaration
                       | base-initialization
                       | return-statement
                       | conditional-statement
+                      | while-statement
                       | assignment-statement
                       | expression-statement
                       | block
@@ -350,6 +352,7 @@ expression-statement  = expression ";"
 conditional-statement = "if" "(" expression ")" block
                         {"elif" "(" expression ")" block}
                         ["else" block]
+while-statement       = "while" "(" expression ")" block
 
 assignment-statement  = place "=" expression ";"
 place                 = place-atom {"." identifier}
@@ -378,25 +381,26 @@ for exactly typed initialized primitive `var` locals and value parameters.
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
 parenthesized expression and a block.
 
-### Frozen while-loop extension
+### While loops and reserved loop exits
 
-The first loop syntax is frozen but not accepted by the current compiler. Its
-selected grammar is:
+The implemented loop syntax is:
 
 ```text
 while-statement    = "while" "(" expression ")" block
+```
+
+The following loop-exit spellings are frozen and reserved, but not yet
+accepted as statements:
+
+```text
 break-statement    = "break" ";"
 continue-statement = "continue" ";"
 ```
 
-When implemented, `while-statement` becomes an ordinary `statement`
-alternative. The first implementation need not accept `break-statement` or
-`continue-statement`, but `while`, `break`, and `continue` become reserved
-words together when `while` enters the implemented grammar.
-
 The parentheses and body block are mandatory. `while` is not an expression,
-`break` carries no value, and labels are not part of the frozen syntax. The
-corresponding frozen semantics are owned by
+`break` carries no value, and labels are not part of the frozen exit syntax.
+Using `break` or `continue` currently produces a focused unsupported-feature
+diagnostic. The corresponding semantics are owned by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
 ## Expressions

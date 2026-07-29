@@ -494,6 +494,7 @@ pub enum Statement {
     Return(ReturnStatement),
     Expression(ExpressionStatement),
     Conditional(ConditionalStatement),
+    While(WhileStatement),
     Block(Block),
     FieldAssignment(FieldAssignmentStatement),
     ObjectAssignment(ObjectAssignmentStatement),
@@ -507,6 +508,7 @@ impl Statement {
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
+            Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
@@ -567,6 +569,14 @@ pub struct ConditionalStatement {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConditionalArm {
+    pub condition: Expression,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WhileStatement {
+    pub while_span: Span,
     pub condition: Expression,
     pub body: Block,
     pub span: Span,

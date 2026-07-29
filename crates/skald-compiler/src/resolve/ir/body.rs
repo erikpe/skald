@@ -2,7 +2,7 @@
 
 use crate::{
     id_table::{DenseIdTable, SparseFunctionTable},
-    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId},
+    identity::{BindingId, CallableId, ClassId, FieldId, FunctionId, LocalId, LoopId},
     source::Span,
 };
 
@@ -167,6 +167,7 @@ pub enum ResolvedStatement {
     Return(ResolvedReturn),
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
+    While(ResolvedWhile),
     Block(ResolvedBlock),
     PrimitiveBindingAssignment(ResolvedPrimitiveBindingAssignment),
     FieldAssignment(ResolvedFieldAssignment),
@@ -184,6 +185,7 @@ impl ResolvedStatement {
             Self::Return(statement) => statement.span,
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
+            Self::While(statement) => statement.span,
             Self::Block(block) => block.span,
             Self::PrimitiveBindingAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
@@ -200,6 +202,14 @@ pub struct ResolvedPrimitiveBindingAssignment {
     pub destination: BindingId,
     pub equal_span: Span,
     pub source: ResolvedExpression,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedWhile {
+    pub loop_id: LoopId,
+    pub condition: ResolvedExpression,
+    pub body: ResolvedBlock,
     pub span: Span,
 }
 

@@ -41,3 +41,4 @@ mod recovery;
 mod shared_ownership;
 mod static_methods;
 mod type_operations;
+mod while_loops;

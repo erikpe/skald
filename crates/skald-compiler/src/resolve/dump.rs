@@ -652,6 +652,14 @@ impl ResolvedDumper {
                 self.indented(|dumper| dumper.expression(&statement.expression));
             }
             ResolvedStatement::Conditional(statement) => self.conditional(statement),
+            ResolvedStatement::While(statement) => {
+                self.line(&format!("While {}", statement.loop_id), statement.span);
+                self.indented(|dumper| {
+                    dumper.heading("Condition");
+                    dumper.indented(|dumper| dumper.expression(&statement.condition));
+                    dumper.block(&statement.body);
+                });
+            }
             ResolvedStatement::Block(block) => self.block(block),
             ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
                 self.line(

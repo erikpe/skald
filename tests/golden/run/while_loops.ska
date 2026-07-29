@@ -1,0 +1,61 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn under(value: i64, limit: i64, condition_resource: Trace) -> bool {
+    return value < limit;
+}
+
+fn count(limit: i64) -> i64 {
+    var value: i64 = 0;
+    var sum: i64 = 0;
+    while (under(value, limit, Trace(90))) {
+        value = value + 1;
+        var body_resource: Trace = Trace(value);
+        sum = sum + value;
+    }
+    return sum;
+}
+
+fn nested() -> unit {
+    var outer: i64 = 0;
+    while (outer < 2) {
+        outer = outer + 1;
+        var inner: i64 = 0;
+        while (inner < 2) {
+            inner = inner + 1;
+            ska_rt_println_i64(outer * 10 + inner);
+        }
+    }
+}
+
+fn early_return() -> i64 {
+    var value: i64 = 0;
+    while (value < 3) {
+        value = value + 1;
+        var body_resource: Trace = Trace(40 + value);
+        if (value == 2) {
+            return value;
+        }
+    }
+    return 0;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(count(0));
+    ska_rt_println_i64(count(1));
+    ska_rt_println_i64(count(3));
+    nested();
+    ska_rt_println_i64(early_return());
+    return 0;
+}

@@ -126,12 +126,3 @@ fn lowers_explicit_epochs_for_every_current_storage_family() {
         );
     }
 }
-
-#[test]
-fn lifetime_epochs_do_not_activate_source_loop_syntax() {
-    let (_, parsed) = parse_source("fn main() -> i64 { while (true) { return 0; } return 1; }\n");
-    assert!(
-        !parsed.diagnostics.is_empty(),
-        "storage lifetime support must not activate source while syntax"
-    );
-}

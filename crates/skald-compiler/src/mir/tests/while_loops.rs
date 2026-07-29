@@ -58,6 +58,41 @@ fn counting_loop() -> MirProgram {
 }
 
 #[test]
+fn source_while_reaches_the_canonical_mir_graph_deterministically() {
+    let mir = lower_text(concat!(
+        "fn main() -> i64 {\n",
+        "  var iterations: i64 = 0;\n",
+        "  while (iterations < 3) { iterations = iterations + 1; }\n",
+        "  return iterations;\n",
+        "}\n",
+    ));
+    verify_mir(&mir).expect("source while MIR must verify");
+    assert_eq!(dump_mir(&mir), dump_mir(&mir));
+
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    let [preheader, header, body, latch, exit] = main.body.blocks.as_slice() else {
+        unreachable!("source while lowering must allocate the canonical five blocks");
+    };
+    assert!(
+        matches!(preheader.terminator, Some(MirTerminator::Goto { target, .. }) if target == header.id)
+    );
+    assert!(matches!(
+        header.terminator,
+        Some(MirTerminator::Branch {
+            true_target,
+            false_target,
+            ..
+        }) if true_target == body.id && false_target == exit.id
+    ));
+    assert!(
+        matches!(body.terminator, Some(MirTerminator::Goto { target, .. }) if target == latch.id)
+    );
+    assert!(
+        matches!(latch.terminator, Some(MirTerminator::Goto { target, .. }) if target == header.id)
+    );
+}
+
+#[test]
 fn lowers_the_canonical_loop_graph_with_a_backward_generic_edge() {
     let mir = counting_loop();
     verify_mir(&mir).expect("internally constructed while MIR must verify");

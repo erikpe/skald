@@ -42,6 +42,7 @@ pub use ir::{
     ResolvedStringLanguageItem, ResolvedStringLiteralExpr, ResolvedTopLevelId, ResolvedType,
     ResolvedTypeKind, ResolvedTypeTestExpr, ResolvedUnaryExpr, ResolvedUnaryOperator,
     ResolvedUnwrapExpr, ResolvedVirtualFamily, ResolvedVirtualFamilyTable, ResolvedVisibility,
+    ResolvedWhile,
 };
 pub use resolver::{
     resolve, resolve_module_graph, ResolveOutput, DUPLICATE_BINDING, DUPLICATE_MEMBER,

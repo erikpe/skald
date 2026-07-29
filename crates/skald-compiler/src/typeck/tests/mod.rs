@@ -157,3 +157,4 @@ mod shared_ownership;
 mod static_methods;
 mod type_operations;
 mod value_parameters;
+mod while_loops;

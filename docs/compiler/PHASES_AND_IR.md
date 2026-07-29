@@ -660,19 +660,19 @@ not acquire a termination reason. They remain structured verifier errors
 before target lowering, or hard compiler-defect traps if an invalid state is
 somehow reached after the trust boundary.
 
-## Frozen loop representation extension
+## While-loop representation
 
-The source behavior of `while`, `break`, and `continue` is frozen in
+The source behavior of `while` and the frozen behavior of `break` and
+`continue` are specified in
 [Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
-The semantic and executable-IR foundation is implemented ahead of source syntax.
-Callable-local `LoopId`, composable HIR control effects, and structured
-`HirWhile` are current representations. MIR storage lifetime epochs and
-cycle-safe verification are also implemented: every stateful verifier uses
-deterministic finite forward dataflow, checks disconnected cyclic components,
-and resets per-epoch ownership and initialization facts at storage lifetime
-boundaries. HIR-to-MIR lowering accepts internally constructed typed loops and
-emits the generic canonical graph described below. Resolution does not yet
-produce loops, so source `while`, `break`, and `continue` remain unavailable.
+Source `while` is represented end to end. Callable-local `LoopId`, composable
+HIR control effects, and structured `HirWhile` are current representations.
+MIR storage lifetime epochs and cycle-safe verification are implemented:
+every stateful verifier uses deterministic finite forward dataflow, checks
+disconnected cyclic components, and resets per-epoch ownership and
+initialization facts at storage lifetime boundaries. HIR-to-MIR lowering emits
+the generic canonical graph described below. Source `break` and `continue`
+remain reserved but unsupported.
 
 The contract fixes which phase owns each decision and the invariants visible
 across phase boundaries. It does not fix private Rust organization, concrete
@@ -688,7 +688,7 @@ recover an exit target from source names or a nesting-depth count. Future
 labels, if separately frozen, may resolve to the same identity model without
 changing lower phases.
 
-Typed HIR can retain a structured loop operation containing:
+Typed HIR retains a structured loop operation containing:
 
 - the resolved loop identity;
 - the exact-`bool` condition;

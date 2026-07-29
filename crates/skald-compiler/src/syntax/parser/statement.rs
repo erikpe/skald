@@ -84,6 +84,13 @@ impl Parser<'_> {
         if self.at(TokenKind::If) {
             return self.parse_conditional().map(Statement::Conditional);
         }
+        if self.at(TokenKind::While) {
+            return self.parse_while().map(Statement::While);
+        }
+        if self.at_any(&[TokenKind::Break, TokenKind::Continue]) {
+            self.parse_unsupported_loop_exit();
+            return None;
+        }
         if self.at_any(&[TokenKind::Elif, TokenKind::Else]) {
             self.parse_misplaced_conditional_continuation();
             return None;
@@ -110,9 +117,58 @@ impl Parser<'_> {
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, `if`, an expression, a field assignment, or a nested block",
+            "expected `var`, `return`, `if`, `while`, an expression, a field assignment, or a nested block",
         );
         None
+    }
+
+    fn parse_while(&mut self) -> Option<WhileStatement> {
+        let while_token = self.advance();
+        self.expect(TokenKind::LeftParen, "`(` after `while`");
+        let condition = if self.at_any(&[
+            TokenKind::RightParen,
+            TokenKind::LeftBrace,
+            TokenKind::RightBrace,
+            TokenKind::Eof,
+        ]) {
+            self.report(
+                EXPECTED_EXPRESSION,
+                "expected a condition after `while (`",
+                self.peek().span,
+                "expected a boolean expression here",
+            );
+            None
+        } else {
+            self.parse_expression()
+        };
+        self.expect(TokenKind::RightParen, "`)` after the `while` condition");
+        let body = self.parse_block();
+
+        match (condition, body) {
+            (Some(condition), Some(body)) => Some(WhileStatement {
+                while_span: while_token.span,
+                span: self.cover(while_token.span, body.span),
+                condition,
+                body,
+            }),
+            _ => None,
+        }
+    }
+
+    fn parse_unsupported_loop_exit(&mut self) {
+        let keyword = self.advance();
+        let name = match keyword.kind {
+            TokenKind::Break => "break",
+            TokenKind::Continue => "continue",
+            _ => unreachable!("loop-exit parser requires a loop-exit keyword"),
+        };
+        self.report(
+            UNSUPPORTED_LOOP_EXIT,
+            format!("`{name}` is not supported yet"),
+            keyword.span,
+            "only ordinary completion and `return` can currently leave a loop body",
+        );
+        self.expect(TokenKind::Semicolon, "`;` after the loop-exit statement");
     }
 
     fn parse_base_initialization(&mut self) -> Option<BaseInitializationStatement> {

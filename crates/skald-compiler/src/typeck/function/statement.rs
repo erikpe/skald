@@ -7,11 +7,11 @@ use crate::{
         HirConditional, HirConditionalArm, HirControlEffects, HirLocalDecl, HirLocalInitializer,
         HirObjectReturn, HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage,
         HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue,
-        HirSharedAssignment, HirStatement, Type,
+        HirSharedAssignment, HirStatement, HirWhile, Type,
     },
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
-        ResolvedReturn, ResolvedStatement,
+        ResolvedReturn, ResolvedStatement, ResolvedWhile,
     },
 };
 
@@ -72,6 +72,7 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::Conditional(conditional) => {
                 self.check_conditional_statement(conditional)
             }
+            ResolvedStatement::While(statement) => self.check_while_statement(statement),
             ResolvedStatement::Block(block) => self.check_nested_block_statement(block),
             ResolvedStatement::PrimitiveBindingAssignment(assignment) => {
                 self.check_primitive_binding_assignment(assignment)
@@ -665,6 +666,31 @@ impl CallableChecker<'_, '_> {
             effects: effects.clone(),
             span: conditional.span,
         }));
+        CheckedStatement { hir, effects }
+    }
+
+    fn check_while_statement(&mut self, statement: &ResolvedWhile) -> CheckedStatement {
+        let condition = self.check_expression(&statement.condition);
+        let body = self.check_block(&statement.body);
+        let effects = body.effects.clone().through_loop(statement.loop_id);
+        let hir = condition
+            .filter(|condition| {
+                require_type(
+                    condition.ty,
+                    Type::Bool,
+                    condition.span,
+                    "while condition",
+                    self.diagnostics,
+                )
+            })
+            .map(|condition| {
+                HirStatement::While(HirWhile::new(
+                    statement.loop_id,
+                    condition,
+                    body,
+                    statement.span,
+                ))
+            });
         CheckedStatement { hir, effects }
     }
 

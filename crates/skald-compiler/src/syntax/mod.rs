@@ -24,14 +24,14 @@ pub use ast::{
     ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr,
     PresenceTestKind, PrimitiveIntegerType, ReturnStatement, SelectiveImport, SelectiveImportItem,
     SelfExpr, Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax,
-    TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility,
+    TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
     EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_HEADER, INVALID_CLASS_MEMBER,
     INVALID_COMPARISON, INVALID_IMPORT, INVALID_OPTIONAL_TYPE, INVALID_TYPE_TEST,
-    INVALID_VISIBILITY, MAX_SYNTAX_NESTING, MISPLACED_IMPORT,
+    INVALID_VISIBILITY, MAX_SYNTAX_NESTING, MISPLACED_IMPORT, UNSUPPORTED_LOOP_EXIT,
 };
 
 #[cfg(test)]
