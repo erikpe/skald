@@ -14,12 +14,13 @@ No implementation roadmaps are currently planned.
 
 ## Design proposals
 
-- [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **pending
-  confirmation**. Defines the proposed source semantics, control effects,
+- [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **confirmed;
+  promotion pending**. Defines the source semantics, control effects,
   cleanup boundaries, repeatable MIR storage lifetimes, generic CFG lowering,
   and optimization invariants for `while` and future `break` and `continue`.
-  Decisions W1 through W13 are open; review begins with source form and keyword
-  reservation. A later implementation roadmap depends on confirming the
+  Decisions W1 through W13 adopt their recommended choices. The next action is
+  promotion into the living language and compiler contracts, followed by a
+  PR-sized implementation roadmap. Implementation depends on the confirmed
   repeatable-storage and cyclic-verification design.
 
 ## Pending discoveries

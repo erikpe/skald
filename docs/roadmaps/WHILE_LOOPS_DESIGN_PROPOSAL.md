@@ -1,9 +1,9 @@
 # While Loops Design Proposal
 
-Status: pending confirmation. Every decision marked **Open** remains
-non-normative. The implemented grammar and living language and compiler
-documents remain authoritative until the confirmed design is promoted into
-them.
+Status: confirmed on 2026-07-29; promotion pending. W1 through W13 adopt their
+recommended decisions. The implemented grammar and living language and
+compiler documents remain authoritative until the confirmed design is
+promoted into them.
 
 This proposal defines a first `while` loop for Skald and the compiler
 boundaries needed to add `break`, `continue`, other loop forms, and
@@ -13,7 +13,7 @@ deterministic cleanup.
 The proposal deliberately separates:
 
 - source-visible behavior that should become a frozen language contract;
-- representation invariants that should be confirmed before implementation;
+- confirmed representation invariants required before implementation;
 - private implementation details that may continue to evolve; and
 - later features that the first implementation need not expose.
 
@@ -40,8 +40,9 @@ would depend.
 
 ## Current boundary
 
-Loops, `break`, `continue`, and their cleanup behavior are currently
-unimplemented and unfrozen. The current
+Loops, `break`, `continue`, and their cleanup behavior remain unimplemented.
+Their design is confirmed by this proposal but is not yet promoted into the
+living frozen contracts. The current
 [control-flow contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#unsupported-control-flow-and-callability)
 and [status matrix](../language/STATUS.md#not-implemented) remain authoritative.
 
@@ -74,25 +75,25 @@ restricting loop bodies to primitive operations.
 The decisions are ordered so that source meaning is settled before compiler
 representation and representation before implementation scheduling.
 
-| ID | Decision | Recommendation | State |
+| ID | Decision | Confirmed decision | State |
 |---|---|---|---|
-| [W1](#w1--source-form-and-keywords) | Source form and keyword reservation | `while (condition) block`; reserve `while`, `break`, and `continue` | **Open** |
-| [W2](#w2--loop-result-and-future-exit-values) | Statement or expression loop | Statement only; future `break` has no value | **Open** |
-| [W3](#w3--condition-type-order-and-full-expression-boundary) | Condition semantics | Exact `bool`, evaluated once before each attempted iteration, then cleaned | **Open** |
-| [W4](#w4--lexical-scope-and-per-iteration-lifetimes) | Scope and body lifetime | Condition in enclosing scope; body is a fresh child scope per iteration | **Open** |
-| [W5](#w5--definite-return-and-literal-conditions) | Definite return | Every `while` conservatively permits fallthrough | **Open** |
-| [W6](#w6--break-continue-and-loop-targeting) | Future exit targeting | Nearest loop, resolved to a stable internal loop identity; labels deferred | **Open** |
-| [W7](#w7--cleanup-on-loop-control-edges) | Exit cleanup | Clean every exited lexical scope to the target loop boundary | **Open** |
-| [W8](#w8--structured-control-effect-summary) | HIR flow representation | A composable set of fallthrough, function exit, and targeted loop effects | **Open** |
-| [W9](#w9--repeatable-mir-storage-lifetimes) | Repeated storage lifetime | Explicit dynamic live/dead epochs for static MIR storage identities | **Open** |
-| [W10](#w10--hir-and-mir-loop-representation) | Executable representation | Structured HIR; generic MIR branches and jumps | **Open** |
-| [W11](#w11--canonical-initial-cfg-shape) | Initial CFG shape | Dedicated condition entry, latch, and exit | **Open** |
-| [W12](#w12--verification-and-optimization-contract) | Pass invariants | Verify cyclic lifetime state; keep source legality independent of optimization | **Open** |
-| [W13](#w13--first-implementation-scope) | Delivery scope | Implement `while` first; implement `break` and `continue` as later slices | **Open** |
+| [W1](#w1--source-form-and-keywords) | Source form and keyword reservation | `while (condition) block`; reserve `while`, `break`, and `continue` | **Confirmed** |
+| [W2](#w2--loop-result-and-future-exit-values) | Statement or expression loop | Statement only; future `break` has no value | **Confirmed** |
+| [W3](#w3--condition-type-order-and-full-expression-boundary) | Condition semantics | Exact `bool`, evaluated once before each attempted iteration, then cleaned | **Confirmed** |
+| [W4](#w4--lexical-scope-and-per-iteration-lifetimes) | Scope and body lifetime | Condition in enclosing scope; body is a fresh child scope per iteration | **Confirmed** |
+| [W5](#w5--definite-return-and-literal-conditions) | Definite return | Every `while` conservatively permits fallthrough | **Confirmed** |
+| [W6](#w6--break-continue-and-loop-targeting) | Future exit targeting | Nearest loop, resolved to a stable internal loop identity; labels deferred | **Confirmed** |
+| [W7](#w7--cleanup-on-loop-control-edges) | Exit cleanup | Clean every exited lexical scope to the target loop boundary | **Confirmed** |
+| [W8](#w8--structured-control-effect-summary) | HIR flow representation | A composable set of fallthrough, function exit, and targeted loop effects | **Confirmed** |
+| [W9](#w9--repeatable-mir-storage-lifetimes) | Repeated storage lifetime | Explicit dynamic live/dead epochs for static MIR storage identities | **Confirmed** |
+| [W10](#w10--hir-and-mir-loop-representation) | Executable representation | Structured HIR; generic MIR branches and jumps | **Confirmed** |
+| [W11](#w11--canonical-initial-cfg-shape) | Initial CFG shape | Dedicated condition entry, latch, and exit | **Confirmed** |
+| [W12](#w12--verification-and-optimization-contract) | Pass invariants | Verify cyclic lifetime state; keep source legality independent of optimization | **Confirmed** |
+| [W13](#w13--first-implementation-scope) | Delivery scope | Implement `while` first; implement `break` and `continue` as later slices | **Confirmed** |
 
-Confirming a recommendation may include wording changes that preserve its
-meaning. Selecting an alternative should update every dependent decision
-before this proposal is promoted.
+On 2026-07-29, W1 through W13 were confirmed exactly as recommended. The
+alternatives remain below as decision rationale and are not active design
+choices.
 
 ## Proposed source behavior
 
@@ -101,7 +102,7 @@ before this proposal is promoted.
 **Question:** What is the exact source shape, and which future control words
 should become unavailable as identifiers when `while` is introduced?
 
-**Recommendation:**
+**Confirmed decision:**
 
 ```text
 statement       = ... | while-statement
@@ -141,15 +142,17 @@ are plausible future features.
 3. Permit an unparenthesized condition or unbraced body. This adds grammar
    variants without improving the semantic model.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W2 — Loop result and future exit values
 
 **Question:** Is `while` a statement or an expression, and can a future
 `break` carry a value?
 
-**Recommendation:** `while` is a statement producing no value. Future first
-versions of the exit statements have exactly these shapes:
+**Confirmed decision:**
+
+`while` is a statement producing no value. Future first versions of the exit
+statements have exactly these shapes:
 
 ```text
 break-statement    = "break" ";"
@@ -174,13 +177,13 @@ meaning of statement `while`.
    discarded. This creates an unused semantic feature and weakens Skald's rule
    against silently discarded values.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W3 — Condition type, order, and full-expression boundary
 
 **Question:** When is the condition evaluated and when do its temporaries end?
 
-**Recommendation:**
+**Confirmed decision:**
 
 1. Evaluate the condition before the first possible iteration.
 2. Require its static type to be exactly `bool`; do not add truthiness.
@@ -203,14 +206,14 @@ releases, allocation failure, and panic may be observable.
 That may retain resources longer, complicates every backedge state, and gives
 loops a different full-expression boundary from conditionals.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W4 — Lexical scope and per-iteration lifetimes
 
 **Question:** Which bindings are visible to the condition and body, and when
 does body-local storage begin and end?
 
-**Recommendation:**
+**Confirmed decision:**
 
 - The condition resolves in the scope containing the complete `while`
   statement.
@@ -241,16 +244,17 @@ The proposal does not add declarations to the loop header.
 loop. That conflicts with executing the declaration repeatedly and cannot
 represent zero iterations naturally.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W5 — Definite return and literal conditions
 
 **Question:** Can a loop satisfy definite return merely because its condition
 is written as `true`?
 
-**Recommendation:** Every `while` conservatively has a condition-false
-fallthrough path for source-level definite-return analysis, including
-`while (true)`.
+**Confirmed decision:**
+
+Every `while` conservatively has a condition-false fallthrough path for
+source-level definite-return analysis, including `while (true)`.
 
 Consequences:
 
@@ -274,7 +278,7 @@ effects.
    loop feature and risks making diagnostics dependent on optimization-like
    reasoning.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ## Future loop exits
 
@@ -283,7 +287,7 @@ effects.
 **Question:** How should future exit statements select a loop, and how much of
 that model should be established with the first `while`?
 
-**Recommendation:**
+**Confirmed decision:**
 
 - Unlabeled `break` and `continue` select the nearest lexically enclosing loop.
 - Resolution assigns each loop a deterministic callable-local `LoopId` in
@@ -312,17 +316,19 @@ another.
 3. Freeze labels now. This requires choosing label declaration syntax,
    namespaces, shadowing, and diagnostics without an immediate use.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W7 — Cleanup on loop-control edges
 
 **Question:** Which values are cleaned before `break` and `continue` transfer
 control?
 
-**Recommendation:** Each loop context records the lexical cleanup depth that
-remains active at its destination. An exit performs full-expression cleanup,
-then cleans every live owning scope between its source and that retained
-depth, in the ordinary inner-to-outer and reverse-declaration order.
+**Confirmed decision:**
+
+Each loop context records the lexical cleanup depth that remains active at its
+destination. An exit performs full-expression cleanup, then cleans every live
+owning scope between its source and that retained depth, in the ordinary
+inner-to-outer and reverse-declaration order.
 
 For `while`:
 
@@ -348,7 +354,7 @@ separate repair pass. This makes correctness depend on reconstructing lexical
 ownership from CFG shape and obscures the existing source-ordered cleanup
 contract.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ## Compiler representation
 
@@ -357,8 +363,10 @@ contract.
 **Question:** How should type checking compose fallthrough, function exits,
 and targeted loop exits?
 
-**Recommendation:** Replace the current two-state block-flow concept with a
-composable summary whose conceptual outcomes are:
+**Confirmed decision:**
+
+Replace the current two-state block-flow concept with a composable summary
+whose conceptual outcomes are:
 
 ```text
 FallThrough
@@ -397,15 +405,17 @@ them.
    That recreates the duplicated control-flow reasoning the current HIR summary
    was introduced to avoid.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W9 — Repeatable MIR storage lifetimes
 
 **Question:** How can one static MIR storage identity represent a body local or
 temporary whose dynamic lifetime repeats?
 
-**Recommendation:** Keep one static `StorageId` and storage declaration, but
-make each dynamic lifetime epoch explicit in MIR with operations equivalent to:
+**Confirmed decision:**
+
+Keep one static `StorageId` and storage declaration, but make each dynamic
+lifetime epoch explicit in MIR with operations equivalent to:
 
 ```text
 StorageLive(storage)
@@ -449,14 +459,14 @@ temporaries, anchors, and checked views all need coherent epoch behavior.
    loop. This loses the distinction between a valid new lifetime and an
    invalid repeated initialization within one lifetime.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W10 — HIR and MIR loop representation
 
 **Question:** Where should the source loop remain structured, and where should
 it become ordinary control flow?
 
-**Recommendation:**
+**Confirmed decision:**
 
 - AST and resolved IR retain the source `while` shape.
 - HIR contains a typed `HirWhile` with its `LoopId`, exact-`bool` condition,
@@ -483,14 +493,14 @@ uniform CFG rather than a growing family of source-specific terminators.
 3. Lower directly from resolved syntax to CFG and omit typed `HirWhile`. This
    moves exact condition typing and structured flow meaning out of HIR.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W11 — Canonical initial CFG shape
 
 **Question:** What initial MIR shape best supports cleanup, `continue`, and
 later loop analysis without becoming a language guarantee?
 
-**Recommendation:**
+**Confirmed decision:**
 
 ```text
 preheader -> condition-entry
@@ -522,14 +532,14 @@ remove blocks while preserving verified semantics.
    skipped on the backedge or preceding source statements would accidentally
    repeat.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ### W12 — Verification and optimization contract
 
 **Question:** Which invariants must hold across cyclic MIR and future
 transformations?
 
-**Recommendation:**
+**Confirmed decision:**
 
 Verification must:
 
@@ -571,7 +581,7 @@ phi nodes in a derived IR without changing source or HIR loop meaning.
 for repairing malformed lifetime state. That makes correctness depend on
 optimization being enabled and violates the existing pass boundary.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ## Delivery boundary
 
@@ -580,8 +590,9 @@ optimization being enabled and violates the existing pass boundary.
 **Question:** Should `while`, `break`, and `continue` ship in one implementation
 slice?
 
-**Recommendation:** Confirm their shared semantics together, but implement
-them in ordered slices:
+**Confirmed decision:**
+
+Confirm their shared semantics together, but implement them in ordered slices:
 
 1. repeatable MIR storage lifetimes and cyclic verifier invariants;
 2. `while` from tokens through native execution, including all implemented
@@ -605,7 +616,7 @@ under W1 is independent of accepting their statement grammar.
 3. Implement `while` before deciding future exits. This risks hard-coding the
    backedge and cleanup behavior that this proposal is intended to settle.
 
-**State:** **Open**
+**State:** **Confirmed**
 
 ## Diagnostics
 
@@ -719,20 +730,23 @@ appropriate, not to define their source behavior prematurely.
 
 ## Promotion criteria
 
-This proposal is ready to become a frozen design only when:
+Decision confirmation is complete. Promotion into frozen living contracts
+still requires:
 
-1. W1 through W13 have explicit confirmed decisions;
-2. no selected decision contradicts another decision's assumptions;
-3. source-visible rules can be promoted into the implemented grammar's planned
-   direction, the focused control-flow contract, and the status matrix without
-   referring back to this proposal;
-4. compiler representation invariants can be promoted into the phase and IR
-   contract without freezing private Rust organization or exact CFG numbering;
-5. the runtime ABI and backend contracts either require no change or state the
-   confirmed no-new-service boundary;
-6. a PR-sized implementation roadmap orders lifetime and verifier foundations
-   before source acceptance; and
-7. documentation link and index validation passes.
+- [x] W1 through W13 have explicit confirmed decisions.
+- [x] The selected decisions have been checked for contradictory assumptions.
+- [ ] Promote source-visible rules into the implemented grammar's planned
+      direction, the focused control-flow contract, and the status matrix
+      without requiring readers to consult this proposal.
+- [ ] Promote compiler representation invariants into the phase and IR
+      contract without freezing private Rust organization or exact CFG
+      numbering.
+- [ ] Confirm in the runtime ABI and backend contracts that the feature
+      requires no new runtime service or backend-owned loop semantics.
+- [ ] Create a PR-sized implementation roadmap that orders repeatable storage
+      lifetimes and cyclic verifier foundations before source acceptance.
+- [ ] Run final documentation link and index validation after the promotion,
+      archive move, and roadmap addition.
 
 After promotion, the living language and compiler documents become
 authoritative. This proposal should move to `docs/archive/` as the historical
