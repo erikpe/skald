@@ -7,8 +7,7 @@ use crate::{
         MirArrayFailure, MirArrayInstruction, MirArrayOwnership, MirArrayPositionKind,
         MirClassOptionalCleanup, MirClassOptionalInitialize, MirClassOptionalSource, MirInitialize,
         MirOptionalSharedCleanup, MirOptionalSharedInitialize, MirOptionalSharedSource,
-        MirOptionalSource, MirPlace, MirPlaceProjection, MirTerminationReason, MirTerminator,
-        MirType,
+        MirOptionalSource, MirPlace, MirPlaceProjection, MirTerminator, MirType,
     },
 };
 
@@ -493,17 +492,6 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::JumpIfNotZero(block_label(*success_target)));
                 self.output
                     .push(Instruction::Jump(block_label(*failure_target)));
-                Ok(true)
-            }
-            MirTerminator::Terminate {
-                reason:
-                    MirTerminationReason::ArrayAllocationFailure
-                    | MirTerminationReason::ArrayIndexOutOfBounds
-                    | MirTerminationReason::ArrayInvalidSliceBounds
-                    | MirTerminationReason::ArraySliceLengthMismatch,
-                ..
-            } => {
-                self.output.push(Instruction::Trap);
                 Ok(true)
             }
             _ => Ok(false),

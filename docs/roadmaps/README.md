@@ -12,7 +12,9 @@ progress. Completed roadmaps and resolved discovery records move to
   stderr expectations without adding compiler-generated reporter calls. P2
   implemented the canonical intrinsic declaration, validation, stable
   identity, and temporary pre-HIR call diagnostic. P3 implemented executable
-  source panic from type checking through exact native reporting. P4 is next.
+  source panic from type checking through exact native reporting. P4 routed
+  static MIR failures and valid host-allocation exhaustion through the same
+  reporter. P5 is next.
 
 ## Planned
 

@@ -3,8 +3,8 @@
 use crate::{
     backend::BackendError,
     mir::{
-        BlockId, MirCheckedViewBinding, MirObjectOrigin, MirObjectView, MirTerminationReason,
-        MirTerminator, MirType, MirViewTarget, ValueId,
+        BlockId, MirCheckedViewBinding, MirObjectOrigin, MirObjectView, MirTerminator, MirType,
+        MirViewTarget, ValueId,
     },
 };
 
@@ -101,13 +101,6 @@ impl InstructionSelector<'_, '_> {
                 self.select_shared_cast(cast)?;
                 self.output
                     .push(Instruction::Jump(block_label(*success_target)));
-                Ok(true)
-            }
-            MirTerminator::Terminate {
-                reason: MirTerminationReason::ObjectCastFailure,
-                ..
-            } => {
-                self.output.push(Instruction::Trap);
                 Ok(true)
             }
             _ => Ok(false),

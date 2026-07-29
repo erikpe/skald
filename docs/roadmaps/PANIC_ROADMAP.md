@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 through P3 are complete.
+Status: in progress; P0 through P4 are complete.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -84,8 +84,8 @@ duplicate its exact bytes.
 - [x] P0 — Freeze panic and unrecoverable-failure contracts
 - [x] P1 — Establish runtime reporting and stderr observability
 - [x] P2 — Introduce the canonical intrinsic declaration
-- [ ] P3 — Execute explicit source panic end to end
-- [ ] P4 — Report target-independent static failures
+- [x] P3 — Execute explicit source panic end to end
+- [x] P4 — Report target-independent static failures
 - [ ] P5 — Separate ownership overflow from compiler-defect traps
 - [ ] P6 — Harden the completed panic boundary
 
@@ -257,30 +257,30 @@ spelling.
 **Purpose:** Route every existing MIR-level language failure through the same
 reporter while retaining its exact target-independent reason.
 
-- [ ] Add one target-private panic-message enum and deterministic static byte
+- [x] Add one target-private panic-message enum and deterministic static byte
       pool owned by termination lowering; emit every used message once in
       stable enum order.
-- [ ] Centralize `MirTerminator::Panic` and `MirTerminator::Terminate`
+- [x] Centralize `MirTerminator::Panic` and `MirTerminator::Terminate`
       instruction selection in a cohesive termination module rather than
       retaining reason-specific traps in array, optional, and type-operation
       selectors.
-- [ ] Map every `MirTerminationReason` exhaustively to the frozen static
+- [x] Map every `MirTerminationReason` exhaustively to the frozen static
       catalog and emit the same `ska_rt_panic` ABI call used by explicit panic.
-- [ ] Keep object-cast, optional-access, guard-overflow, pinned-mutation,
+- [x] Keep object-cast, optional-access, guard-overflow, pinned-mutation,
       array-allocation, array-index, slice-bound, and slice-length reasons
       distinct in MIR, verification, and dumps.
-- [ ] Route host allocation failure for a valid `ska_rt_alloc` request through
+- [x] Route host allocation failure for a valid `ska_rt_alloc` request through
       the reporter with the catalog's host-allocation message.
-- [ ] Keep zero-byte or host-unrepresentable allocator inputs on the private
+- [x] Keep zero-byte or host-unrepresentable allocator inputs on the private
       runtime contract-defect path; correct generated code must never pass
       them.
-- [ ] Preserve output-write failure as its existing immediate unsuccessful
+- [x] Preserve output-write failure as its existing immediate unsuccessful
       runtime boundary; it is not a compiler-known source failure and must not
       recursively invoke the panic reporter.
-- [ ] Replace existing failure goldens' signal-only expectations with exact
+- [x] Replace existing failure goldens' signal-only expectations with exact
       static stderr sidecars while retaining `failure` as the process-status
       expectation.
-- [ ] Update focused language/compiler contracts and test guidance in the same
+- [x] Update focused language/compiler contracts and test guidance in the same
       change; link them to the central catalog rather than duplicating text.
 
 **Tests:** MIR dump and verifier tests proving reasons remain exact; backend

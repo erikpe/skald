@@ -269,6 +269,7 @@ pub(super) struct AssemblyProgram {
     pub functions: Vec<AssemblyFunction>,
     pub dispatch_tables: Vec<AssemblyDispatchTable>,
     pub literal_backings: Vec<AssemblyLiteralBacking>,
+    pub panic_messages: Vec<AssemblyPanicMessage>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -282,4 +283,10 @@ pub(super) struct AssemblyLiteralBacking {
     pub symbol: String,
     pub metadata_symbol: String,
     pub bytes: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct AssemblyPanicMessage {
+    pub symbol: String,
+    pub bytes: &'static [u8],
 }

@@ -93,10 +93,11 @@ primitive values to these C types as described in the
 
 `ska_rt_alloc(byte_count)` requires a nonzero byte count representable by C
 `size_t`. It converts the count exactly, calls `malloc`, and returns suitably
-aligned non-null storage of at least the requested size. A zero count, a count
-that cannot be represented by `size_t`, or allocation failure terminates the
-process unsuccessfully without returning. The ABI promises neither diagnostic
-text nor an exact exit status.
+aligned non-null storage of at least the requested size. A zero count or a
+count that cannot be represented by `size_t` is a runtime contract defect and
+uses the private hard-failure path. Host allocation failure for a valid
+request calls `ska_rt_panic` with the catalog message `memory allocation
+failed`. None of these paths returns.
 
 `ska_rt_free(allocation)` requires the exact non-null base pointer returned by
 one successful `ska_rt_alloc` call that has not already been freed. It passes

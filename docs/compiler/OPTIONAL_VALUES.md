@@ -382,17 +382,15 @@ The x86-64 backend:
 - executes verified state transitions and conditional lifecycle operations;
 - preserves state and payload homes across calls according to the frame model;
 - implements checked unwrap and guarded mutation as explicit branches;
-- lowers every optional failure termination to the existing non-returning
-  `ud2` boundary;
+- leaves every optional failure as a distinct MIR termination reason selected
+  by the centralized reporter path;
 - conditionally emits existing copy, assignment, destruction, retain, release,
   anchor, cast, and finalization sequences; and
 - never calls a C helper for optional tags, guards, or unwrap.
 
 Backend legality rejects an optional operation whose MIR type, layout, source,
 destination, failure edge, guard, or ownership effect is inconsistent.
-The current `ud2` rule remains in force. Once the frozen panic design is
-implemented, centralized termination lowering routes these verified reasons
-through the
+Centralized termination lowering routes these verified reasons through the
 [common backend path](BACKEND.md#panic-and-hard-trap-boundary);
 optional lowering does not own a private reporter.
 
@@ -400,9 +398,9 @@ optional lowering does not own a private reporter.
 
 The currently implemented optional profile adds no C runtime symbol and
 requires no runtime ABI version bump. Optional state, guard counts,
-conditional ownership, checked access, and current trap lowering remain
-compiler-owned. The version-6 reporter is a common termination ABI, not an
-optional-specific helper; current optional lowering does not call it.
+conditional ownership, and checked access remain compiler-owned. The
+version-6 reporter is a common termination ABI, not an optional-specific
+helper.
 
 The current allocator and deallocator continue to receive only the same valid
 nonzero sizes and exact non-null allocation bases required by the

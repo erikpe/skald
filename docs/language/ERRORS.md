@@ -29,13 +29,12 @@ than source-language exceptions.
 
 ## Current runtime failures
 
-The compiler implements the canonical `std::error::panic` declaration and
-resolves calls to its stable intrinsic identity, but deliberately rejects
-those calls before HIR with a temporary diagnostic. The implemented source
-language therefore still has no executable `panic`, `throw`, `try`, `catch`,
-or other runtime-failure construct. Checked object casts, optionals, arrays,
-shared allocation, and ownership-count overflow have focused unrecoverable
-failure rules. They do not yet use the frozen common reporting policy below.
+The compiler implements executable `std::error::panic` call statements and
+routes checked object casts, optional failures, array failures, and valid
+host-allocation exhaustion through the common reporter below. Ownership-count
+overflow remains scheduled separately because its current backend edge also
+covers invalid ownership state. Skald has no `throw`, `try`, `catch`, or other
+recoverable runtime-failure construct.
 
 The repository's bootstrap output functions are ordinary external calls. Their
 current runtime contract terminates the process unsuccessfully when a write or
@@ -169,12 +168,12 @@ unrecoverable failures:
 
 Checked access to an absent primitive, exact-class, or optional shared owning
 value—including a local, field, parameter, or call result—is implemented and
-lowers to the compiler's non-returning illegal-instruction boundary. Guard
+lowers to the common non-returning reporter. Guard
 overflow and guarded mutation are also executable for checked inline-class
 payload views. Every failure occurs before producing an invalid payload or
 changing guarded presence, does not return to Skald, and does not guarantee
-remaining source-level cleanup. The frozen design routes each reason through
-the [common panic reporter and catalog](#frozen-panic-design).
+remaining source-level cleanup. Each reason remains distinct through MIR and
+selects its message from the [common panic reporter and catalog](#frozen-panic-design).
 
 ## Cleanup and abrupt termination
 

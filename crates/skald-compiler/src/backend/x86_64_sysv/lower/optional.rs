@@ -7,8 +7,7 @@ use crate::{
         MirClassOptionalPublish, MirClassOptionalSource, MirOptionalAssign, MirOptionalInitialize,
         MirOptionalSharedAssign, MirOptionalSharedCleanup, MirOptionalSharedInitialize,
         MirOptionalSharedSource, MirOptionalSource, MirOptionalViewEnd, MirPlace,
-        MirPresenceTestKind, MirPrimitiveType, MirTerminationReason, MirTerminator, MirType,
-        StorageId, ValueId,
+        MirPresenceTestKind, MirPrimitiveType, MirTerminator, MirType, StorageId, ValueId,
     },
 };
 
@@ -492,16 +491,6 @@ impl InstructionSelector<'_, '_> {
                     .push(Instruction::JumpIfEqual(block_label(*success_target)));
                 self.output
                     .push(Instruction::Jump(block_label(*failure_target)));
-                Ok(true)
-            }
-            MirTerminator::Terminate {
-                reason:
-                    MirTerminationReason::OptionalAccessFailure
-                    | MirTerminationReason::OptionalGuardOverflow
-                    | MirTerminationReason::OptionalPinnedMutation,
-                ..
-            } => {
-                self.output.push(Instruction::Trap);
                 Ok(true)
             }
             _ => Ok(false),

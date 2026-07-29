@@ -15,8 +15,8 @@ void SKALD_RUNTIME_ABI_MARKER(void);
 /* Runtime inspection hook; link compatibility uses SKALD_RUNTIME_ABI_MARKER. */
 uint64_t ska_rt_abi_version(void);
 
-/* Allocates byte_count suitably aligned bytes. A zero or unrepresentable
-   count, or allocation failure, terminates the process unsuccessfully. */
+/* Allocates byte_count suitably aligned bytes. Zero or unrepresentable counts
+   are runtime defects; host exhaustion reports "memory allocation failed". */
 void* ska_rt_alloc(uint64_t byte_count);
 
 /* Releases the exact base pointer returned by one successful ska_rt_alloc. */

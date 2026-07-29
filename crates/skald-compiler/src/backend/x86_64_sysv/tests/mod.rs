@@ -23,8 +23,8 @@ use crate::{
         MirMethodKind, MirMethodReceiver, MirObjectOrigin, MirParameter, MirParameterMode,
         MirPlace, MirProgram, MirReceiverAccess, MirRvalue, MirRvalueKind,
         MirSelectedCopyOperation, MirSharedCopy, MirSharedRelease, MirSharedTarget, MirStorage,
-        MirStorageKind, MirTerminator, MirType, MirUnaryOperation, MirValue, MirViewTarget,
-        MirVirtualFamilyTable, StorageId, ValueId,
+        MirStorageKind, MirTerminationReason, MirTerminator, MirType, MirUnaryOperation, MirValue,
+        MirViewTarget, MirVirtualFamilyTable, StorageId, ValueId,
     },
     source::SourceDatabase,
     test_support::{lower_source_to_assembly, lower_source_to_mir},
@@ -60,6 +60,7 @@ mod primitive_binding_assignment;
 mod shared_ownership;
 mod static_inheritance;
 mod strings;
+mod termination;
 mod type_operations;
 mod value_parameters;
 mod virtual_dispatch;

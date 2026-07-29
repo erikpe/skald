@@ -18,9 +18,9 @@ The suite contains five focused executables:
   requirements;
 - `test_runtime_allocation.c` checks successful non-null, suitably aligned,
   writable allocations and exact-base deallocation;
-- `test_runtime_allocation_failure.c` uses child processes to verify fatal
-  zero-size, host-unrepresentable-size when applicable, and allocator-failure
-  paths;
+- `test_runtime_allocation_failure.c` uses child processes to verify private
+  hard failure without stderr for invalid sizes and the exact panic record for
+  valid-request host exhaustion;
 - `test_runtime_output.c` captures stdout and compares successful output
   records byte for byte;
 - `test_runtime_output_failure.c` uses child processes to verify that every

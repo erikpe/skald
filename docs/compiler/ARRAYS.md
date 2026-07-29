@@ -553,10 +553,10 @@ normalization, element operations, backing anchors, strong counts, slice
 loops, finalizers, and cleanup. The C runtime must not learn array type
 identities, element kinds, reference scanning, lifecycle callbacks, bounds,
 or slice semantics. The currently implemented design therefore requires no
-new public C symbol or runtime ABI version change. The version-6 panic
-reporter is common to all unrecoverable failures, but current array lowering
-does not call it. It does not expose an array layout or add an array-specific
-helper. Any other implementation that needs a new public symbol must revise
+new public C symbol or runtime ABI version change. Central termination
+lowering calls the version-6 panic reporter for array failure reasons without
+exposing an array layout or adding an array-specific helper. Any other
+implementation that needs a new public symbol must revise
 this contract and the versioned runtime boundary before relying on it.
 
 ## Diagnostics, dumps, and tests

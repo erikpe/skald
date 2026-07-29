@@ -361,10 +361,9 @@ Static impossibility is a compile-time error. Dynamic failure terminates the
 process unsuccessfully without producing a value, returning to Skald, or
 guaranteeing remaining cleanup.
 
-The frozen [common panic policy](ERRORS.md#frozen-panic-design) reports this
+The [common panic policy](ERRORS.md#frozen-panic-design) reports this
 compiler-known failure through the shared reporter while retaining a distinct
-checked-cast reason. Current compiler behavior remains unchanged until that
-design is implemented.
+checked-cast reason.
 
 There is no null result and no unchecked object cast. The frozen initial
 optional profile deliberately does not add failed casts returning optionals;

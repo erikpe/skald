@@ -169,7 +169,7 @@ fn primitive_optionals_execute_present_payloads_for_every_primitive() {
          }\n",
     );
 
-    assert!(output.contains("ud2"));
+    assert!(output.contains("call ska_rt_panic"));
     assert_eq!(run_native_assembly(&output).code(), Some(42));
 }
 

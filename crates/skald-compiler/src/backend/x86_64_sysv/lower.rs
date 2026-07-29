@@ -35,6 +35,7 @@ pub(super) fn lower(
     dispatch: &DispatchMetadata,
 ) -> Result<AssemblyProgram, BackendError> {
     let literal_pool = LiteralPool::build(program);
+    let panic_messages = terminator::PanicMessagePool::build(program);
     let context = LoweringContext {
         program,
         data_layout,
@@ -62,6 +63,7 @@ pub(super) fn lower(
         functions,
         dispatch_tables: dispatch.assembly_tables(program),
         literal_backings: literal_pool.into_backings(),
+        panic_messages: panic_messages.into_assembly(),
     })
 }
 
@@ -105,7 +107,7 @@ fn lower_definition(
             .terminator
             .as_ref()
             .expect("verified block is terminated");
-        if !selector.select_panic_terminator(block_terminator)?
+        if !selector.select_termination(block_terminator)?
             && !selector.select_array_terminator(block_terminator)?
             && !selector.select_optional_terminator(block_terminator)?
             && !selector.select_type_operation_terminator(block_terminator, block.id)?

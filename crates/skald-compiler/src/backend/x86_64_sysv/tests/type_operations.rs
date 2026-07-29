@@ -25,7 +25,7 @@ class Both implements Marker, Extra {\n\
 class Other { init() {} }\n";
 
 #[test]
-fn emits_unique_class_metadata_membership_checks_and_failure_traps() {
+fn emits_unique_class_metadata_membership_checks_and_failure_reports() {
     let output = assembly(&format!(
         "{TYPE_OPERATION_TYPES}\
          fn inspect(ref any: Obj) -> bool {{ return any is Leaf; }}\n\
@@ -39,7 +39,7 @@ fn emits_unique_class_metadata_membership_checks_and_failure_traps() {
         assert!(output.contains(&format!(".Lska_class_{class}_dispatch:")));
     }
     assert!(output.contains("cmp r11, rcx"));
-    assert!(output.contains("ud2"));
+    assert!(output.contains("call ska_rt_panic"));
     assert_system_assembler_accepts(&output);
 }
 

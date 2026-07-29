@@ -138,15 +138,15 @@ publication; ordinary dynamic publication writes count one.
 ## Panic and hard-trap boundary
 
 The version-6 runtime reporter and explicit source-panic lowering are
-implemented. Compiler-known optional, array, cast, and ownership failures
-continue to use their documented private unsuccessful-termination paths,
-including `ud2` where specified.
+implemented. Compiler-known optional, array, and cast failures use the same
+reporter while retaining distinct target-independent MIR reasons. Ownership
+overflow remains on its separately scheduled backend boundary.
 
-Instruction selection lowers the explicit-panic form and reserves the
-static-termination design described in
+Instruction selection centrally lowers the explicit-panic and static
+termination forms described in
 [Phases and IR](PHASES_AND_IR.md#frozen-panic-and-termination-representation).
 Explicit panic extracts the logical byte address and length from the verified
-exact `std::str::Str` descriptor. Future static termination will select the corresponding
+exact `std::str::Str` descriptor. Static termination selects the corresponding
 bytes from one deterministic target-private pool, with each used message
 emitted once in stable reason order. Both call the sole public
 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point. Array,
@@ -372,7 +372,7 @@ interface view. They do not inspect object bytes or traverse the class graph at
 runtime. Runtime object casts and forwarded static views use bounded temporary
 view homes containing the selected address, complete-object address, and unchanged
 metadata; concrete static sources project directly. Cast failure executes the
-same non-returning `ud2` boundary. The backend does not call a runtime cast
+central non-returning reporter path. The backend does not call a runtime cast
 helper, reconstruct metadata, allocate for a cast, retain for a plain place
 cast, or permit a failure edge to continue.
 

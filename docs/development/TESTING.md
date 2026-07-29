@@ -151,8 +151,9 @@ Type-check and MIR tests cover owners in local, field, call, result, cast,
 receiver, alias, ordinary-allocation, and copy-allocation positions. Backend
 tests cover the header, count updates, hidden anchors, dynamic finalization,
 cascading field release, cycles, and malformed-input rejection. Native goldens
-observe destruction order and failure status; direct C runtime tests own
-allocator success and fatal allocation failure. The process-determinism suite
+observe destruction order and exact failure stderr; direct C runtime tests own
+allocator success, invalid-input defects, and reported host exhaustion. The
+process-determinism suite
 compares all phase products for a representative shared copy-allocation
 program.
 

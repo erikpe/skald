@@ -18,7 +18,7 @@ fn lowers_runtime_type_operations_to_explicit_metadata_and_control_flow() {
     let assembly = emit_assembly(Target::X86_64SysV, &program)
         .expect("verified type operations must reach backend lowering");
     assert!(assembly.contains("cmp "));
-    assert!(assembly.contains("ud2"));
+    assert!(assembly.contains("call ska_rt_panic"));
 }
 
 #[test]

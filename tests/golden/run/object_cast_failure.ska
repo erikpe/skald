@@ -1,0 +1,19 @@
+class Root {
+    init() {}
+}
+
+class Leaf extends Root {
+    init() {
+        super();
+    }
+}
+
+fn require_leaf(ref value: Obj) -> i64 {
+    var leaf: Leaf = (Leaf) value;
+    return 0;
+}
+
+fn main() -> i64 {
+    var root: Root = Root();
+    return require_leaf(root);
+}

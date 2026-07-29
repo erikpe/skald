@@ -633,10 +633,10 @@ check succeeds.
 The common reporting design is frozen but not implemented. Typed HIR will
 represent an invocation of the validated canonical panic intrinsic as a
 dedicated non-returning statement carrying one fully produced exact
-`std::str::Str` value and source span. It will not retain an ordinary call
+`std::str::Str` value and source span. It does not retain an ordinary call
 selected by the spelling `panic`.
 
-MIR will preserve two different semantic forms:
+MIR preserves two different semantic forms:
 
 - explicit source panic, carrying its dynamic exact-`Str` message place; and
 - compiler-known unrecoverable termination, carrying one distinct
@@ -647,8 +647,8 @@ Both forms have no successor. A static termination reason remains distinct
 until instruction selection so verification, mutation tests, and dumps can
 identify the failed rule without depending on message bytes or a target ABI.
 Neither form is an exceptional edge and neither may join ordinary cleanup.
-Message pooling, descriptor extraction, and the call to the public reporter
-belong to target lowering.
+Target lowering owns deterministic used-message pooling, descriptor
+extraction, and the sole call to the public reporter.
 
 Malformed public MIR and impossible states proven absent by verification do
 not acquire a termination reason. They remain structured verifier errors

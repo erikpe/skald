@@ -25,7 +25,10 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
         }
         writeln!(output, ".size {}, .-{}", function.symbol, function.symbol).unwrap();
     }
-    if !program.literal_backings.is_empty() || !program.dispatch_tables.is_empty() {
+    if !program.literal_backings.is_empty()
+        || !program.dispatch_tables.is_empty()
+        || !program.panic_messages.is_empty()
+    {
         output.push_str("\n.section .data.rel.ro.local,\"aw\",@progbits\n");
         for backing in &program.literal_backings {
             output.push_str(".p2align 3\n");
@@ -60,6 +63,20 @@ pub(super) fn emit(program: &AssemblyProgram) -> String {
             // dispatch slots, so its address is a unique dynamic identity.
             output.push_str("    .quad 0\n");
             writeln!(output, ".size {}, .-{}", table.symbol, table.symbol).unwrap();
+        }
+        for message in &program.panic_messages {
+            output.push_str(".p2align 0\n");
+            writeln!(output, ".type {}, @object", message.symbol).unwrap();
+            writeln!(output, "{}:", message.symbol).unwrap();
+            output.push_str("    .byte ");
+            for (index, byte) in message.bytes.iter().enumerate() {
+                if index != 0 {
+                    output.push_str(", ");
+                }
+                write!(output, "0x{byte:02x}").unwrap();
+            }
+            output.push('\n');
+            writeln!(output, ".size {}, .-{}", message.symbol, message.symbol).unwrap();
         }
     }
     output.push_str("\n.section .note.GNU-stack,\"\",@progbits\n");
