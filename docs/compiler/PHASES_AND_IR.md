@@ -124,32 +124,31 @@ container aliases use ordinary indirect MIR places plus exact optional types;
 reserved boxed, nested, and optional-reference shapes remain diagnosed before
 HIR.
 
-## Frozen primitive local reassignment boundary
+## Primitive local reassignment boundary
 
 The source contract for
-[primitive local reassignment](../language/FUNCTIONS_AND_CONTROL_FLOW.md#frozen-primitive-local-reassignment)
-is frozen, while semantic classification and execution remain unimplemented.
-It extends the existing pipeline without adding a new place family:
+[primitive local reassignment](../language/FUNCTIONS_AND_CONTROL_FLOW.md#primitive-local-reassignment)
+extends the existing pipeline without adding a new place family:
 
 - Syntax already retains an identifier or grouped identifier followed by `=`
   in the existing assignment-shaped AST node, including the equality span,
   source expression, and complete statement span. Parsing chooses no binding
   identity, type, mutability, or semantic assignment category.
-- Resolution will recognize this meaning only when lexical lookup selects a
+- Resolution recognizes this meaning only when lexical lookup selects a
   primitive `BindingId::Local(LocalId)`. It will emit a dedicated
   `ResolvedPrimitiveLocalAssignment` containing the destination `LocalId`,
   equality span, resolved source, and statement span. Grouping does not alter
   lookup, and the destination lookup is completed before resolving the source.
   A primitive parameter or another excluded root receives a focused
   diagnostic rather than falling through to object-place resolution.
-- Type checking will require the source expression to have exactly the
-  destination local's declared type and will accept only `i64`, `u64`, `u8`,
-  `f64`, or `bool`. HIR will use a dedicated
+- Type checking requires the source expression to have exactly the
+  destination local's declared type and accepts only `i64`, `u64`, `u8`,
+  `f64`, or `bool`. HIR uses a dedicated
   `HirPrimitiveLocalAssignment` containing the destination `LocalId`, one
   typed source expression, and the statement span. The operation type remains
   available from the local table and `HirExpression::ty`; it is not duplicated
   in the statement where the two copies could drift.
-- MIR lowering will evaluate the HIR source once, emit the existing
+- MIR lowering evaluates the HIR source once, emits the existing
   `MirStore` to the local's already allocated storage, and then emit the
   ordinary full-expression boundary. No initialization, liveness, ownership,
   or cleanup registration changes.

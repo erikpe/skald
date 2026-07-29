@@ -350,8 +350,8 @@ place-atom            = identifier | "self" | "(" place ")"
 
 The parser accepts an expression statement before semantic analysis decides
 which expression results may be discarded. It likewise accepts a syntactic
-place on the left of `=` before determining which implemented or frozen
-assignment category that source shape may denote.
+place on the left of `=` before determining which implemented assignment
+category that source shape may denote.
 
 An assignment whose ungrouped outer shape ends in `.member` is retained as a
 field-assignment-shaped statement. Other place roots and explicitly grouped
@@ -362,8 +362,9 @@ assignment-shaped statement for later semantic classification.
 Consequently, both `name = value;` and `(name) = value;` are accepted
 assignment-shaped syntax without the parser deciding whether `name` denotes a
 primitive local, object, shared owner, optional, or array. Primitive local
-reassignment has a [frozen semantic design](FUNCTIONS_AND_CONTROL_FLOW.md#frozen-primitive-local-reassignment)
-but is not yet implemented by the semantic pipeline.
+reassignment has
+[implemented semantics](FUNCTIONS_AND_CONTROL_FLOW.md#primitive-local-reassignment)
+for exactly typed initialized primitive `var` bindings.
 
 `elif` is its own keyword and continuation form. `else if` and standalone
 `elif` or `else` are not part of the grammar. Every conditional arm requires a

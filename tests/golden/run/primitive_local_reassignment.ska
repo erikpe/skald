@@ -1,0 +1,44 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+extern fn ska_rt_println_u64(value: u64) -> unit;
+extern fn ska_rt_println_u8(value: u8) -> unit;
+extern fn ska_rt_println_f64_bits(value: f64) -> unit;
+extern fn ska_rt_println_bool(value: bool) -> unit;
+
+fn produce_signed() -> i64 {
+    ska_rt_println_i64(100);
+    return 41;
+}
+
+fn main() -> i64 {
+    var signed: i64 = 0;
+    var unsigned: u64 = 0u;
+    var byte: u8 = 0u8;
+    var float: f64 = 0.0;
+    var flag: bool = false;
+
+    signed = 1;
+    (signed) = produce_signed() + 1;
+    unsigned = 18446744073709551615u;
+    byte = 255u8;
+    float = 2.5;
+    flag = true;
+
+    ska_rt_println_i64(signed);
+    ska_rt_println_u64(unsigned);
+    ska_rt_println_u8(byte);
+    ska_rt_println_f64_bits(float);
+    ska_rt_println_bool(flag);
+
+    var branch: i64 = 0;
+    if (flag) {
+        branch = 7;
+        {
+            var branch: i64 = 8;
+            branch = 9;
+            ska_rt_println_i64(branch);
+        }
+        branch = 10;
+    }
+    ska_rt_println_i64(branch);
+    return 0;
+}

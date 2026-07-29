@@ -6,11 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md) —
-  **in progress**. Add exact-type reassignment for initialized primitive `var`
-  bindings by reusing the verified scalar-store pipeline. The source and phase
-  contract is frozen; PLR1 is next. It has no dependency on another active
-  roadmap.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

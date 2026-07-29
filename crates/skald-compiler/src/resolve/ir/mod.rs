@@ -15,8 +15,8 @@ pub use body::{
     ResolvedClassDefinitionTable, ResolvedConditional, ResolvedConditionalArm,
     ResolvedExpressionStatement, ResolvedFieldAssignment, ResolvedFunctionDefinition,
     ResolvedFunctionDefinitionTable, ResolvedLocalDecl, ResolvedMemberDefinition,
-    ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedReturn, ResolvedSharedAssignment,
-    ResolvedStatement,
+    ResolvedObjectAssignment, ResolvedOptionalAssignment, ResolvedPrimitiveLocalAssignment,
+    ResolvedReturn, ResolvedSharedAssignment, ResolvedStatement,
 };
 pub use declarations::{
     ResolvedClassDeclaration, ResolvedClassDeclarationTable, ResolvedCopyAssignmentDeclaration,

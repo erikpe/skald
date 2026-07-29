@@ -1,0 +1,29 @@
+error[TYP005]: primitive local assignment has type `u64` but `i64` is required
+ --> tests/golden/compile_fail/primitive_local_reassignment_types.ska:8:14
+   |
+8 |     signed = 1u;
+   |              ^^ type mismatch
+
+error[TYP005]: primitive local assignment has type `u8` but `u64` is required
+ --> tests/golden/compile_fail/primitive_local_reassignment_types.ska:9:16
+   |
+9 |     unsigned = 1u8;
+   |                ^^^ type mismatch
+
+error[TYP005]: primitive local assignment has type `i64` but `u8` is required
+ --> tests/golden/compile_fail/primitive_local_reassignment_types.ska:10:12
+    |
+10 |     byte = 1;
+    |            ^ type mismatch
+
+error[TYP005]: primitive local assignment has type `bool` but `f64` is required
+ --> tests/golden/compile_fail/primitive_local_reassignment_types.ska:11:13
+    |
+11 |     float = true;
+    |             ^^^^ type mismatch
+
+error[TYP005]: primitive local assignment has type `f64` but `bool` is required
+ --> tests/golden/compile_fail/primitive_local_reassignment_types.ska:12:12
+    |
+12 |     flag = 1.0;
+    |            ^^^ type mismatch

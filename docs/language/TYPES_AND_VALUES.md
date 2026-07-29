@@ -2,7 +2,7 @@
 
 Status: authoritative for implemented type, value, literal, and expression
 semantics, the primitive integer comparison and cast contract, and the exact
-type rule for frozen primitive local reassignment. The
+type rule for primitive local reassignment. The
 [status matrix](STATUS.md) is authoritative for feature maturity, and the
 [implemented grammar](GRAMMAR.md) defines accepted source syntax.
 
@@ -93,9 +93,10 @@ actual and expected types to be identical:
 - primitive value arguments;
 - return values;
 - assignment to primitive fields;
+- assignment to primitive `var` locals;
 - both operands of a binary arithmetic operator.
 
-The frozen primitive-local-reassignment design applies the same rule: the
+Primitive local reassignment applies the same rule: the
 right-hand expression's actual type must be identical to the `var` local's
 declared primitive type. A literal keeps the type selected by its spelling;
 the destination does not reinterpret it.

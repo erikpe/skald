@@ -287,6 +287,41 @@ impl CallableResolver<'_, '_> {
 
         if let Some(identifier) = binding_identifier_through_groups(&assignment.place) {
             if let Some(binding) = self.lookup_binding(&identifier.name.text) {
+                if matches!(
+                    binding.ty,
+                    ResolvedTypeKind::I64
+                        | ResolvedTypeKind::U64
+                        | ResolvedTypeKind::U8
+                        | ResolvedTypeKind::F64
+                        | ResolvedTypeKind::Bool
+                ) {
+                    let BindingId::Local(destination) = binding.id else {
+                        self.diagnostics.push(
+                            Diagnostic::error(
+                                INVALID_LOCAL_ASSIGNMENT,
+                                "a primitive value parameter cannot be reassigned",
+                            )
+                            .with_primary_label(
+                                identifier.name.span,
+                                "only a primitive `var` local is replaceable",
+                            )
+                            .with_secondary_label(binding.name_span, "parameter declared here"),
+                        );
+                        let _ = self.resolve_expression(&assignment.value);
+                        return None;
+                    };
+                    let source = self.resolve_expression(&assignment.value);
+                    return source.map(|source| {
+                        ResolvedStatement::PrimitiveLocalAssignment(
+                            ResolvedPrimitiveLocalAssignment {
+                                destination,
+                                equal_span: assignment.equal_span,
+                                source,
+                                span: assignment.span,
+                            },
+                        )
+                    });
+                }
                 if matches!(binding.ty, ResolvedTypeKind::Array(_)) {
                     let destination = self.resolve_expression(&assignment.place)?;
                     let source = self.resolve_expression(&assignment.value)?;

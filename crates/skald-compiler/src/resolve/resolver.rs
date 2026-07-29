@@ -58,6 +58,7 @@ pub const INCOMPATIBLE_EXTERNAL_ABI: &str = "RES030";
 pub const PRIVATE_MEMBER_ACCESS: &str = "RES031";
 pub const MISSING_STRING_LANGUAGE_ITEM: &str = "RES032";
 pub const INVALID_STRING_LANGUAGE_ITEM: &str = "RES033";
+pub const INVALID_LOCAL_ASSIGNMENT: &str = "RES034";
 
 #[derive(Debug)]
 pub struct ResolveOutput {

@@ -1,0 +1,14 @@
+fn main() -> i64 {
+    var signed: i64 = 0;
+    var unsigned: u64 = 0u;
+    var byte: u8 = 0u8;
+    var float: f64 = 0.0;
+    var flag: bool = false;
+
+    signed = 1u;
+    unsigned = 1u8;
+    byte = 1;
+    float = true;
+    flag = 1.0;
+    return 0;
+}

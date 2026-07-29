@@ -650,6 +650,16 @@ impl ResolvedDumper {
             }
             ResolvedStatement::Conditional(statement) => self.conditional(statement),
             ResolvedStatement::Block(block) => self.block(block),
+            ResolvedStatement::PrimitiveLocalAssignment(assignment) => {
+                self.line(
+                    &format!("PrimitiveLocalAssignment {}", assignment.destination),
+                    assignment.span,
+                );
+                self.indented(|dumper| {
+                    dumper.line("Equal", assignment.equal_span);
+                    dumper.expression(&assignment.source);
+                });
+            }
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.line(
                     &format!("FieldAssignment {}", assignment.field),

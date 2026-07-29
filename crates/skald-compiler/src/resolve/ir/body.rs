@@ -168,6 +168,7 @@ pub enum ResolvedStatement {
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
     Block(ResolvedBlock),
+    PrimitiveLocalAssignment(ResolvedPrimitiveLocalAssignment),
     FieldAssignment(ResolvedFieldAssignment),
     ObjectAssignment(ResolvedObjectAssignment),
     SharedAssignment(ResolvedSharedAssignment),
@@ -184,6 +185,7 @@ impl ResolvedStatement {
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
+            Self::PrimitiveLocalAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::ObjectAssignment(statement) => statement.span,
             Self::SharedAssignment(statement) => statement.span,
@@ -191,6 +193,14 @@ impl ResolvedStatement {
             Self::ArrayAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedPrimitiveLocalAssignment {
+    pub destination: LocalId,
+    pub equal_span: Span,
+    pub source: ResolvedExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

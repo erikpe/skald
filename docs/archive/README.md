@@ -49,6 +49,7 @@ Archived plans:
 - [Primitive integer casts and comparisons](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
 - [String types](STRINGS_ROADMAP.md)
 - [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md)
+- [Primitive local reassignment](PRIMITIVE_LOCAL_REASSIGNMENT_ROADMAP.md)
 
 Resolved string-design inputs:
 

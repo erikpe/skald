@@ -6,8 +6,10 @@ use crate::{
         BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
         HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
         HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
-        HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, Type,
+        HirPrimitiveLocalAssignment, HirReturn, HirReturnValue, HirSharedAssignment, HirStatement,
+        Type,
     },
+    identity::BindingId,
     resolve::{
         ResolvedBlock, ResolvedConditional, ResolvedExpressionStatement, ResolvedLocalDecl,
         ResolvedReturn, ResolvedStatement,
@@ -71,6 +73,9 @@ impl CallableChecker<'_, '_> {
                 self.check_conditional_statement(conditional)
             }
             ResolvedStatement::Block(block) => self.check_nested_block_statement(block),
+            ResolvedStatement::PrimitiveLocalAssignment(assignment) => {
+                self.check_primitive_local_assignment(assignment)
+            }
             ResolvedStatement::FieldAssignment(assignment) => {
                 self.check_field_assignment(assignment)
             }
@@ -87,6 +92,36 @@ impl CallableChecker<'_, '_> {
                 CheckedStatement::falls_through(self.check_array_assignment(assignment))
             }
         }
+    }
+
+    fn check_primitive_local_assignment(
+        &mut self,
+        assignment: &crate::resolve::ResolvedPrimitiveLocalAssignment,
+    ) -> CheckedStatement {
+        let expected = self.binding_type(BindingId::Local(assignment.destination));
+        debug_assert!(matches!(
+            expected,
+            Type::I64 | Type::U64 | Type::U8 | Type::F64 | Type::Bool
+        ));
+        let source = self
+            .check_expression(&assignment.source)
+            .filter(|source| {
+                require_type(
+                    source.ty,
+                    expected,
+                    source.span,
+                    "primitive local assignment",
+                    self.diagnostics,
+                )
+            })
+            .map(|source| {
+                HirStatement::PrimitiveLocalAssignment(HirPrimitiveLocalAssignment {
+                    destination: assignment.destination,
+                    source,
+                    span: assignment.span,
+                })
+            });
+        CheckedStatement::falls_through(source)
     }
 
     fn check_shared_assignment(

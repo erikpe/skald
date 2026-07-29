@@ -1,6 +1,6 @@
 # Primitive Local Reassignment Roadmap
 
-Status: in progress; PLR1 is next.
+Status: complete.
 
 Primitive locals are already initialized, read, shadowed, and carried through
 typed HIR and verified MIR, while the assignment grammar and scalar MIR store
@@ -41,7 +41,7 @@ language's place model or creating a second backend store path.
 ## Progress
 
 - [x] PLR0 — Freeze the primitive local reassignment contract
-- [ ] PLR1 — Implement and execute primitive local reassignment
+- [x] PLR1 — Implement and execute primitive local reassignment
 
 ## PR-sized implementation sequence
 
@@ -85,37 +85,37 @@ frozen but not yet implemented.
 typed HIR, verified MIR, and native execution using the existing scalar store
 pipeline.
 
-- [ ] Classify identifier and grouped-identifier assignment destinations during
+- [x] Classify identifier and grouped-identifier assignment destinations during
       resolution. Emit a dedicated resolved primitive-local assignment only
       for a primitive `LocalId`, preserve the exact declaration selected under
       shadowing, resolve the source independently for diagnostic recovery, and
       leave every existing object, shared, optional, array, field, and
       whole-pointee classification unchanged.
-- [ ] Diagnose primitive parameter assignment and other excluded roots at
+- [x] Diagnose primitive parameter assignment and other excluded roots at
       their owning phase without falling through to misleading object-place
       diagnostics.
-- [ ] Type-check all five primitive destination types with the ordinary exact
+- [x] Type-check all five primitive destination types with the ordinary exact
       type requirement. Add a dedicated HIR statement carrying the destination
       binding, typed source expression, and source span; expose it in
       deterministic HIR dumps without retaining source names, redundant type
       metadata, or backend details.
-- [ ] Lower the typed statement by evaluating its source once, emitting
+- [x] Lower the typed statement by evaluating its source once, emitting
       `MirStore` to the local's existing storage, and ending the full
       expression after the store. Reuse the current MIR place/type verifier,
       dump format, x86-64 frame layout, byte canonicalization, floating-point
       movement, and scalar store selection; strengthen verifier or target
       tests only where the new source path reveals an uncovered invariant.
-- [ ] Add focused syntax/regression, resolution, type-check, HIR-dump,
+- [x] Add focused syntax/regression, resolution, type-check, HIR-dump,
       MIR-lowering/verifier, and x86-64 tests for every primitive type,
       grouped destinations, repeated writes, nested shadowing, calls and
       expression sources, source-before-store ordering, and cleanup after a
       source expression with temporaries.
-- [ ] Add source-to-native golden coverage that observes reassigned values for
+- [x] Add source-to-native golden coverage that observes reassigned values for
       `i64`, `u64`, `u8`, `f64`, and `bool`, including reassignment across
       conditional control flow and canonical `u8`/`bool` storage. Add exact
       rejection coverage for type mismatches and excluded primitive parameter
       rebinding where complete rendered diagnostics are part of the contract.
-- [ ] Update the status matrix and living language/compiler/testing
+- [x] Update the status matrix and living language/compiler/testing
       documentation from frozen direction to implemented behavior. Remove
       stale claims that primitive local reassignment is unsupported and avoid
       roadmap task codes in code, tests, or living documentation.

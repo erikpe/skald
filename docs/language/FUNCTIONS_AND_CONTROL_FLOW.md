@@ -1,8 +1,8 @@
 # Skald Functions and Control Flow
 
 Status: authoritative for implemented callable, binding, scope, statement,
-control-flow, return, and evaluation-order semantics, and for the frozen
-primitive-local-reassignment design. The
+control-flow, return, evaluation-order, and primitive-local-reassignment
+semantics. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -109,7 +109,7 @@ Leaving a block destroys successfully initialized owning class locals from
 last completed initialization to first. Primitive locals require no lifetime
 cleanup. Detailed destruction behavior is owned by class lifecycle semantics.
 
-### Frozen primitive local reassignment
+### Primitive local reassignment
 
 An initialized primitive `var` local is replaceable with an exactly typed
 value:
@@ -143,10 +143,9 @@ optional, array, and array-element assignment retain their own rules.
 Initializer and copy-constructor bodies that admit only direct receiver-field
 initialization do not gain local reassignment.
 
-The parser already retains an identifier or grouped identifier followed by
-`=` as assignment-shaped syntax. Compiler support for classifying and
-executing the primitive-local meaning is not yet implemented; its maturity is
-tracked in the [status matrix](STATUS.md#not-implemented).
+The parser retains an identifier or grouped identifier followed by `=` as
+assignment-shaped syntax. Resolution classifies the primitive-local meaning
+and preserves the selected local identity through typed HIR and verified MIR.
 
 ## Statements and blocks
 
@@ -157,13 +156,11 @@ The implemented general body forms are:
 - `if`/`elif`/`else` conditionals;
 - returns;
 - call statements;
+- primitive local reassignment;
 - assignment-shaped class and field operations.
 
 Assignment operation selection and initializer-body restrictions are
 [class semantics](CLASSES_AND_LIFECYCLE.md#ordinary-initializer-contract).
-The frozen primitive-local statement above uses the same parsed assignment
-shape but remains outside the implemented body forms until its semantic
-pipeline lands.
 Arbitrary expression statements are not supported. An expression
 statement is valid only when its outer operation, through any grouping, is a
 function or method call returning `unit`. A value-returning call cannot be
@@ -241,7 +238,7 @@ Grouping does not change the order of the enclosed expression. It can affect
 the limited object-materialization and elision rules, which are class lifecycle
 concerns.
 
-The frozen primitive-local-reassignment rule uses item 4 without introducing
+Primitive local reassignment uses item 4 without introducing
 an effectful destination computation: resolution selects the local identity,
 the source evaluates once, the completed scalar is stored, and source
 full-expression cleanup follows the store.

@@ -198,6 +198,7 @@ pub enum HirStatement {
     Call(HirCallStatement),
     Conditional(HirConditional),
     Block(HirBlock),
+    PrimitiveLocalAssignment(HirPrimitiveLocalAssignment),
     FieldAssignment(HirFieldAssignment),
     FieldConstruction(HirFieldConstruction),
     FieldCopyConstruction(HirFieldCopyConstruction),
@@ -223,6 +224,7 @@ impl HirStatement {
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
+            Self::PrimitiveLocalAssignment(statement) => statement.span,
             Self::FieldAssignment(statement) => statement.span,
             Self::FieldConstruction(statement) => statement.span,
             Self::FieldCopyConstruction(statement) => statement.span,
@@ -239,6 +241,13 @@ impl HirStatement {
             Self::ArraySliceAssignment(statement) => statement.span,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirPrimitiveLocalAssignment {
+    pub destination: LocalId,
+    pub source: HirExpression,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

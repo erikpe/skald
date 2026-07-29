@@ -1,0 +1,8 @@
+error[RES034]: a primitive value parameter cannot be reassigned
+ --> tests/golden/compile_fail/primitive_parameter_reassignment.ska:2:5
+   |
+2 |     value = 1;
+   |     ^^^^^ only a primitive `var` local is replaceable
+   |
+1 | fn update(value: i64) -> i64 {
+   |           ----- parameter declared here
