@@ -202,3 +202,44 @@ fn empty_and_explicit_copy_arrays_do_not_authorize_initializers() {
 
     assert!(!output.has_errors(), "{:?}", output.diagnostics);
 }
+
+#[test]
+fn resolved_visibility_mutations_change_access_without_changing_hir_shape() {
+    let mut program = resolve_text(concat!(
+        "class Choice {\n",
+        "  init(value: i64) {}\n",
+        "  init(flag: bool) {}\n",
+        "}\n",
+        "fn main() -> i64 { var choice: Choice = Choice(42); return 0; }\n",
+    ));
+    let public = crate::typeck::type_check(&program);
+    assert!(!public.has_errors(), "{:?}", public.diagnostics);
+    let public_hir = dump_hir(public.hir.as_ref().unwrap());
+
+    let class = program.classes.get_mut(ClassId::new(0)).unwrap();
+    class.initializers[1].visibility = crate::resolve::ResolvedMemberVisibility::Private {
+        span: class.initializers[1].span,
+    };
+    let unused_private = crate::typeck::type_check(&program);
+    assert!(
+        !unused_private.has_errors(),
+        "{:?}",
+        unused_private.diagnostics
+    );
+    assert_eq!(public_hir, dump_hir(unused_private.hir.as_ref().unwrap()));
+
+    let class = program.classes.get_mut(ClassId::new(0)).unwrap();
+    class.initializers[0].visibility = crate::resolve::ResolvedMemberVisibility::Private {
+        span: class.initializers[0].span,
+    };
+    let selected_private = crate::typeck::type_check(&program);
+    assert_eq!(
+        selected_private
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == PRIVATE_INITIALIZER_ACCESS)
+            .count(),
+        1
+    );
+    assert!(selected_private.hir.is_none());
+}

@@ -9,7 +9,7 @@ fn verifies_class_metadata_nested_places_initialization_and_receiver_calls() {
 #[test]
 fn lowers_complete_source_ordered_initializer_vectors_from_hir() {
     let checked = type_check_source(concat!(
-        "class Empty { init() {} }\n",
+        "class Empty { private init() {} }\n",
         "fn main() -> i64 { return 0; }\n",
     ));
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);

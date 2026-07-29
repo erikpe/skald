@@ -61,6 +61,68 @@ fn class_array_elements_participate_in_copy_assignment() {
 }
 
 #[test]
+fn private_initializer_array_default_plans_reject_identity_mutations() {
+    let mut program = lower_text(concat!(
+        "class Item {\n",
+        "  private init() {}\n",
+        "  static fn arrays() -> unit {\n",
+        "    var inline: Item[] = Item[](1u);\n",
+        "    var shared: (shared Item)[] = (shared Item)[](1u);\n",
+        "    return;\n",
+        "  }\n",
+        "}\n",
+        "fn main() -> i64 { return 0; }\n",
+    ));
+    let initializer = InitializerId::new(ClassId::new(0), 0);
+    assert_eq!(
+        program
+            .array_types
+            .iter()
+            .filter_map(|array| array.lifecycle.default)
+            .filter(|default| {
+                matches!(
+                    default,
+                    MirArrayDefaultElement::Class {
+                        initializer: selected,
+                        ..
+                    } | MirArrayDefaultElement::SharedClass {
+                        initializer: selected,
+                        ..
+                    } if *selected == initializer
+                )
+            })
+            .count(),
+        2
+    );
+    verify_mir(&program).expect("authorized private initializer plans must verify");
+
+    let default = program
+        .array_types
+        .entries_mut_for_test()
+        .iter_mut()
+        .find_map(|array| array.lifecycle.default.as_mut())
+        .expect("fixture must contain a class default plan");
+    match default {
+        MirArrayDefaultElement::Class {
+            initializer: selected,
+            ..
+        }
+        | MirArrayDefaultElement::SharedClass {
+            initializer: selected,
+            ..
+        } => *selected = InitializerId::new(ClassId::new(0), 99),
+        _ => panic!("fixture must select a class initializer"),
+    }
+    let errors = verify_mir(&program)
+        .expect_err("mutated initializer identity must be rejected")
+        .to_string();
+    assert!(
+        errors.contains("array default element names an invalid initializer"),
+        "{errors}"
+    );
+}
+
+#[test]
 fn verifier_rejects_array_table_type_storage_prefix_and_publication_mutations() {
     let errors = error_after(|program| {
         program.array_types.entries_mut_for_test()[0].id = crate::identity::ArrayTypeId::new(7);

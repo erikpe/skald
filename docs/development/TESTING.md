@@ -173,6 +173,34 @@ malformed-MIR rejection. Golden cases own exact diagnostics, extrema and
 modulo observations, and range-check-before-cast composition with array
 positions.
 
+## Private initializer coverage
+
+Private ordinary initializer tests follow the owning phase instead of relying
+on one end-to-end factory case:
+
+- syntax and resolution tests own contextual modifier parsing, recovery,
+  declaration spans, per-overload visibility, and stable initializer
+  identities;
+- type-check tests own unique-most-specific selection followed by access,
+  including the no-public-fallback rule, exact-class body categories,
+  inaccessible derived `super(...)`, direct/shared construction, and inline
+  and shared default-length arrays;
+- HIR tests prove that successful selection retains only the authorized
+  `InitializerId` and erases visibility, including independently mutated
+  resolved declarations;
+- MIR verifier tests mutate selected initializer identities and array default
+  plans independently because lower phases deliberately have no visibility
+  metadata;
+- determinism tests compare mixed public/private selection, rendered `TYP040`
+  diagnostics, HIR, MIR, and assembly across independent processes; and
+- native factory goldens prove exact-class private construction while compile
+  failures cover foreign and derived callers.
+
+When adding a construction form, test its authorization at the type-check
+consumer and its selected identity at the nearest lower-phase verifier. Do not
+make a global array capability table caller-dependent: authorize its stable
+default plan where the source array expression is checked.
+
 ## String coverage
 
 String coverage follows the
@@ -185,8 +213,9 @@ String coverage follows the
   coalescing, missing/ambiguous/exact-case lookup, malformed and non-UTF-8
   providers, cycles, replacement roots, and disabled standard-library lookup;
 - resolver and type-check tests own exact language-item identity, the complete
-  descriptor/privacy/lifecycle rejection matrix, produced-value contexts, and
-  the rule that ordinary method names have no compiler meaning;
+  descriptor/privacy/lifecycle rejection matrix, produced-value contexts,
+  canonical private-fresh-backing construction, and the rule that ordinary
+  initializer and method names have no compiler meaning;
 - MIR tests mutate each string declaration, literal-data, static-owner,
   descriptor-publication, and ownership invariant independently;
 - backend tests own immutable bytes, pooling, alignment, relocations,

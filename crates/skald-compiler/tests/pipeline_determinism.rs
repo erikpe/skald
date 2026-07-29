@@ -50,7 +50,7 @@ const PRIVATE_INITIALIZER_DIAGNOSTIC_HELPER_OUTPUT: &str =
 const PRIVATE_INITIALIZER_DIAGNOSTIC_TEST_NAME: &str =
     "private_initializer_diagnostics_are_deterministic_across_processes";
 const MODULE_HELPER_OUTPUT: &str = "SKALD_MODULE_DETERMINISM_OUTPUT";
-const MODULE_HELPER_VARIANT: &str = "SKALD_MODULE_DETERMINISM_VARIANT";
+const PERMUTATION_HELPER_VARIANT: &str = "SKALD_DETERMINISM_VARIANT";
 const MODULE_TEST_NAME: &str = "module_phase_products_are_deterministic_across_processes";
 const MODULE_DIAGNOSTIC_HELPER_OUTPUT: &str = "SKALD_MODULE_DIAGNOSTIC_DETERMINISM_OUTPUT";
 const MODULE_DIAGNOSTIC_TEST_NAME: &str = "module_diagnostics_are_deterministic_across_processes";
@@ -117,18 +117,30 @@ fn integer_operation_phase_products_are_deterministic_across_processes() {
 
 #[test]
 fn string_phase_products_are_deterministic_across_processes() {
-    assert_cross_process_determinism(
+    if let Some(output) = env::var_os(STRING_HELPER_OUTPUT) {
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
+        fs::write(output, string_phase_dump(variant)).unwrap();
+        return;
+    }
+
+    assert_cross_process_variants(
         "strings",
         STRING_HELPER_OUTPUT,
         STRING_TEST_NAME,
-        string_phase_dump,
+        PERMUTATION_HELPER_VARIANT,
     );
 }
 
 #[test]
 fn string_language_item_diagnostics_are_deterministic_across_processes() {
     if let Some(output) = env::var_os(STRING_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(MODULE_HELPER_VARIANT).unwrap().parse().unwrap();
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
         fs::write(output, string_diagnostic_dump(variant)).unwrap();
         return;
     }
@@ -137,7 +149,7 @@ fn string_language_item_diagnostics_are_deterministic_across_processes() {
         "string-diagnostics",
         STRING_DIAGNOSTIC_HELPER_OUTPUT,
         STRING_DIAGNOSTIC_TEST_NAME,
-        MODULE_HELPER_VARIANT,
+        PERMUTATION_HELPER_VARIANT,
     );
 }
 
@@ -164,7 +176,10 @@ fn private_initializer_diagnostics_are_deterministic_across_processes() {
 #[test]
 fn module_phase_products_are_deterministic_across_processes() {
     if let Some(output) = env::var_os(MODULE_HELPER_OUTPUT) {
-        let variant = env::var(MODULE_HELPER_VARIANT).unwrap().parse().unwrap();
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
         fs::write(output, module_phase_dump(variant)).unwrap();
         return;
     }
@@ -173,14 +188,17 @@ fn module_phase_products_are_deterministic_across_processes() {
         "modules",
         MODULE_HELPER_OUTPUT,
         MODULE_TEST_NAME,
-        MODULE_HELPER_VARIANT,
+        PERMUTATION_HELPER_VARIANT,
     );
 }
 
 #[test]
 fn module_diagnostics_are_deterministic_across_processes() {
     if let Some(output) = env::var_os(MODULE_DIAGNOSTIC_HELPER_OUTPUT) {
-        let variant = env::var(MODULE_HELPER_VARIANT).unwrap().parse().unwrap();
+        let variant = env::var(PERMUTATION_HELPER_VARIANT)
+            .unwrap()
+            .parse()
+            .unwrap();
         fs::write(output, module_diagnostic_dump(variant)).unwrap();
         return;
     }
@@ -189,7 +207,7 @@ fn module_diagnostics_are_deterministic_across_processes() {
         "module-diagnostics",
         MODULE_DIAGNOSTIC_HELPER_OUTPUT,
         MODULE_DIAGNOSTIC_TEST_NAME,
-        MODULE_HELPER_VARIANT,
+        PERMUTATION_HELPER_VARIANT,
     );
 }
 
@@ -504,17 +522,22 @@ fn integer_operation_phase_dump() -> String {
 
 fn private_initializer_phase_dump() -> String {
     complete_phase_dump(concat!(
-        "class Secret { value: i64; private init(value: i64) { self.value = value; } ",
-        "static fn make(value: i64) -> Secret { return Secret(value); } ",
+        "class Secret { value: i64; init(value: i64) { self.value = value; } ",
+        "private init(flag: bool) { self.value = 42; } ",
+        "static fn make(flag: bool) -> Secret { return Secret(flag); } ",
         "fn reveal() -> i64 { return self.value; } }\n",
-        "fn main() -> i64 { var secret: Secret = Secret.make(42); return secret.reveal(); }\n",
+        "fn main() -> i64 { var public: Secret = Secret(1); ",
+        "var private: Secret = Secret.make(true); return public.reveal() + private.reveal(); }\n",
     ))
 }
 
 fn private_initializer_diagnostic_dump() -> String {
     let text = concat!(
-        "class Secret { private init() {} }\n",
-        "fn main() -> i64 { var secret: Secret = Secret(); return 0; }\n",
+        "interface Named {}\n",
+        "class Key implements Named { init() {} }\n",
+        "class Choice { init(ref value: Obj) {} private init(ref value: Named) {} }\n",
+        "fn main() -> i64 { var key: Key = Key(); ",
+        "var choice: Choice = Choice(key); return 0; }\n",
     );
     let mut sources = SourceDatabase::new();
     let source_id = sources.add("private-initializer-diagnostic.ska", text);
@@ -536,22 +559,35 @@ fn private_initializer_diagnostic_dump() -> String {
     )
 }
 
-fn string_phase_dump() -> String {
-    let fixture = ModuleFixture::new("string-products", 0);
-    let root = fixture.path.join("modules");
-    write_source(
-        &root.join("app.ska"),
-        include_str!("../../../tests/golden/run/strings.ska"),
-    );
-    write_source(
-        &root.join("std/str.ska"),
-        include_str!("../../../std/std/str.ska"),
-    );
-    let providers = normalize_provider_roots(
-        &fixture.path,
-        &[ProviderRootConfiguration::module_root(root)],
-    )
-    .unwrap();
+fn string_phase_dump(variant: usize) -> String {
+    let fixture = ModuleFixture::new("string-products", variant);
+    let application = fixture.path.join("application");
+    let standard_library = fixture.path.join("standard-library");
+    let sources = [
+        (
+            application.join("app.ska"),
+            include_str!("../../../tests/golden/run/strings.ska"),
+        ),
+        (
+            standard_library.join("std/str.ska"),
+            include_str!("../../../std/std/str.ska"),
+        ),
+    ];
+    for index in if variant == 0 { [0, 1] } else { [1, 0] } {
+        write_source(&sources[index].0, sources[index].1);
+    }
+    let configurations = if variant == 0 {
+        vec![
+            ProviderRootConfiguration::standard_library(standard_library),
+            ProviderRootConfiguration::module_root(application),
+        ]
+    } else {
+        vec![
+            ProviderRootConfiguration::module_root(application),
+            ProviderRootConfiguration::standard_library(standard_library),
+        ]
+    };
+    let providers = normalize_provider_roots(&fixture.path, &configurations).unwrap();
     let graph = load_module_graph(
         &EntrySelector::Module("app".parse().unwrap()),
         &fixture.path,

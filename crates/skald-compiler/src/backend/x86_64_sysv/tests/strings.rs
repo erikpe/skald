@@ -160,7 +160,7 @@ fn string_emission_does_not_change_the_public_runtime_abi() {
 }
 
 #[test]
-fn dynamic_standard_library_strings_reclaim_their_last_backing_owner() {
+fn private_initializer_dynamic_strings_reclaim_their_last_backing_owner() {
     let program = string_program_with_item(
         concat!(
             "from std::str import Str;\n",
@@ -202,7 +202,7 @@ fn dynamic_standard_library_strings_reclaim_their_last_backing_owner() {
         "report:\n",
         "    mov rax, 1\n",
         "    mov rcx, qword ptr [rip + .Lstring_allocations]\n",
-        "    cmp rcx, 3\n",
+        "    cmp rcx, 2\n",
         "    jne .Lstring_report_done\n",
         "    cmp rcx, qword ptr [rip + .Lstring_frees]\n",
         "    jne .Lstring_report_done\n",

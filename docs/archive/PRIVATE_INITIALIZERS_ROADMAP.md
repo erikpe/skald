@@ -1,6 +1,6 @@
 # Private Ordinary Initializers Roadmap
 
-Status: in progress; PRI2 is next.
+Status: complete; PRI0 through PRI2 are implemented.
 
 This roadmap adds per-overload declaring-class privacy to ordinary `init`
 declarations without turning lifecycle declarations into ordinary named
@@ -68,7 +68,7 @@ remain unchanged.
 
 - [x] PRI0 — Represent and enforce initializer privacy without source exposure
 - [x] PRI1 — Expose private ordinary initializers through the source language
-- [ ] PRI2 — Adopt, harden, document, and close private initializer support
+- [x] PRI2 — Adopt, harden, document, and close private initializer support
 
 ## PR-sized implementation sequence
 
@@ -172,34 +172,34 @@ living language/compiler documentation describes the implemented contract.
 complete adversarial coverage, and remove rollout-only wording before
 archival.
 
-- [ ] Replace the canonical string library's trusted fresh-storage helper with
+- [x] Replace the canonical string library's trusted fresh-storage helper with
       a private ordinary initializer where that reduces indirection, while
       retaining its public empty initializer, exact descriptor representation,
       logical immutability, public API, literal semantics, and synthesized
       lifecycle.
-- [ ] Prove that string literals still use compiler-owned intrinsic
+- [x] Prove that string literals still use compiler-owned intrinsic
       construction rather than calling any public or private initializer, and
       that ordinary dynamic string factories can call the private initializer
       only through exact-class lexical ownership.
-- [ ] Complete malformed and adversarial matrices for visibility metadata,
+- [x] Complete malformed and adversarial matrices for visibility metadata,
       selected initializer identity, array default plans, module/provider
       permutations, and independently mutated resolved/HIR products.
-- [ ] Add independent-process determinism coverage for mixed-visibility
+- [x] Add independent-process determinism coverage for mixed-visibility
       overload selection, rendered privacy diagnostics, HIR, assembly, and the
       canonical string module.
-- [ ] Audit the parser, resolved declarations/dumps, overload selector, array
+- [x] Audit the parser, resolved declarations/dumps, overload selector, array
       capability consumer, standard library, and documentation owners by
       responsibility. Resolve small high-value maintainability issues directly
       and index larger follow-ups in a separate discoveries document.
-- [ ] Update testing/debugging guidance and maintained examples for private
+- [x] Update testing/debugging guidance and maintained examples for private
       factories, overload-selection inspection, inaccessible `super(...)`,
       and array-default authorization.
-- [ ] Remove stale “lifecycle visibility unsupported” language from living
+- [x] Remove stale “lifecycle visibility unsupported” language from living
       code and documentation while preserving the explicit exclusions for
       private copy construction, assignment, and destruction.
-- [ ] Confirm runtime ABI/public header stability and repository artifact
+- [x] Confirm runtime ABI/public header stability and repository artifact
       cleanliness.
-- [ ] Complete and archive this roadmap after all focused and repository gates
+- [x] Complete and archive this roadmap after all focused and repository gates
       pass.
 
 **Tests:** Focused standard-library string, syntax, resolution, type-check,

@@ -48,6 +48,7 @@ Archived plans:
 - [Private members and static methods](PRIVATE_AND_STATIC_MEMBERS_ROADMAP.md)
 - [Primitive integer casts and comparisons](PRIMITIVE_INTEGER_OPERATIONS_ROADMAP.md)
 - [String types](STRINGS_ROADMAP.md)
+- [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md)
 
 Resolved string-design inputs:
 

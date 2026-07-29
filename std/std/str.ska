@@ -9,6 +9,12 @@ public class Str {
         self.length = 0u;
     }
 
+    private init(storage: shared u8[]) {
+        self.storage = storage;
+        self.start = 0u;
+        self.length = storage->len();
+    }
+
     fn len() -> u64 {
         return self.length;
     }
@@ -34,7 +40,7 @@ public class Str {
     static fn from_bytes(ref bytes: u8[]) -> Str {
         var storage: shared u8[] = new u8[](bytes.len());
         storage->[:] = bytes;
-        return Str.from_fresh_storage(storage);
+        return Str(storage);
     }
 
     fn to_bytes() -> u8[] {
@@ -56,7 +62,7 @@ public class Str {
         var other_end: i64 = (i64) (other.start + other.length);
         result->[:middle] = self.storage->[self_start:self_end];
         result->[middle:end] = other.storage->[other_start:other_end];
-        return Str.from_fresh_storage(result);
+        return Str(result);
     }
 
     private static fn slice_trusted(
@@ -67,14 +73,6 @@ public class Str {
         var result: Str = Str(copy source);
         result.start = source.start + start;
         result.length = length;
-        return result;
-    }
-
-    private static fn from_fresh_storage(storage: shared u8[]) -> Str {
-        var result: Str = Str();
-        result.storage = storage;
-        result.start = 0u;
-        result.length = storage->len();
         return result;
     }
 

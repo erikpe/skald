@@ -188,12 +188,13 @@ The compiler owns:
 
 The standard library owns range preservation, public constructors/factories,
 slicing, byte access, conversion, concatenation, and the broader API. It may
-use ordinary public static factories and private instance/static helpers.
-Ordinary initializers may be private, although the canonical implementation
-currently retains its public empty initializer and uses helpers for trusted
-descriptor construction. Caller-provided mutable bytes are accepted only
+use ordinary public static factories, private initializers, and private
+instance/static helpers. The canonical implementation retains its public empty
+initializer and uses a private ordinary initializer for fresh backing created
+inside the exact class. Caller-provided mutable bytes are accepted only
 through copying APIs; trusted slices copy an existing descriptor and update
-private bounds. No initializer or method spelling is compiler-selected.
+private bounds through a private static helper. No initializer or method
+spelling is compiler-selected.
 Checked public range APIs use ordinary exact-type `u64` comparisons before an
 explicit total `u64`-to-`i64` cast supplies an array position. Every array
 length is at most `i64::MAX`, and a valid descriptor range stays within its
@@ -209,10 +210,12 @@ added.
 
 The installed `std/std/str.ska` implementation copies caller arrays into fresh
 shared backing, observes length and checked bytes, creates `O(1)` slices by
-copying and adjusting a descriptor through private helpers, converts to an
-independent inline array, and concatenates into fresh backing. Synthesized
-class lifecycle and generic shared-array retain/release reclaim dynamic
-backing after its last descriptor owner.
+copying and adjusting a descriptor through a private helper, converts to an
+independent inline array, and concatenates into fresh backing. Its dynamic
+factories pass fresh shared backing to a private ordinary initializer selected
+under exact-class lexical ownership. Synthesized class lifecycle and generic
+shared-array retain/release reclaim dynamic backing after its last descriptor
+owner.
 
 ## Diagnostics and test obligations
 

@@ -3,7 +3,7 @@ use crate::{
     hir::{dump_hir, HirObjectProducer},
     identity::LiteralDataId,
     test_support::load_module_sources,
-    typeck::type_check,
+    typeck::{type_check, PRIVATE_INITIALIZER_ACCESS},
 };
 
 const VALID_STR: &str = concat!(
@@ -56,22 +56,55 @@ fn canonical_standard_library_surface_resolves_and_type_checks_as_ordinary_membe
         "canonical library must resolve: {:?}",
         resolved.diagnostics
     );
+    let class = resolved
+        .program
+        .classes
+        .iter()
+        .find(|class| class.name == "Str")
+        .expect("canonical library must declare Str");
+    assert_eq!(class.initializers.len(), 2);
+    assert_eq!(
+        class.initializers[0].visibility,
+        ResolvedMemberVisibility::Public
+    );
+    assert!(matches!(
+        class.initializers[1].visibility,
+        ResolvedMemberVisibility::Private { .. }
+    ));
+    assert!(class.initializers[0].parameters.is_empty());
+    assert_eq!(class.initializers[1].parameters.len(), 1);
+    assert!(!class
+        .methods
+        .iter()
+        .any(|method| method.name == "from_fresh_storage"));
+    let fresh_storage_initializer = class.initializers[1].id;
+
     let checked = type_check(&resolved.program);
     assert!(
         checked.diagnostics.is_empty(),
         "canonical library API must type-check: {:?}",
         checked.diagnostics
     );
+    let dump = dump_hir(checked.hir.as_ref().unwrap());
+    assert_eq!(
+        dump.matches(&format!(
+            "Construct {} via {fresh_storage_initializer}",
+            class.id
+        ))
+        .count(),
+        2,
+        "{dump}"
+    );
 }
 
 #[test]
-fn literal_materialization_does_not_depend_on_standard_library_method_names() {
+fn literal_materialization_does_not_select_private_initializers_or_method_names() {
     let renamed = concat!(
         "public class Str {\n",
         "  private storage: shared u8[];\n",
         "  private start: u64;\n",
         "  private length: u64;\n",
-        "  init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
+        "  private init() { self.storage = new u8[](); self.start = 0u; self.length = 0u; }\n",
         "  fn renamed_observer() -> u64 { return self.length; }\n",
         "  private static fn renamed_helper(ref source: Str) -> Str { return Str(copy source); }\n",
         "}\n",
@@ -92,6 +125,44 @@ fn literal_materialization_does_not_depend_on_standard_library_method_names() {
         resolved.diagnostics
     );
     assert!(type_check(&resolved.program).diagnostics.is_empty());
+}
+
+#[test]
+fn canonical_fresh_storage_initializer_is_not_source_accessible() {
+    let resolved = resolve_modules(
+        "app",
+        &[
+            (
+                "app.ska",
+                concat!(
+                    "from std::str import Str;\n",
+                    "fn main() -> i64 {\n",
+                    "  var empty: Str = Str();\n",
+                    "  var storage: shared u8[] = new u8[]();\n",
+                    "  var forbidden: Str = Str(storage);\n",
+                    "  return 0;\n",
+                    "}\n",
+                ),
+            ),
+            ("std/str.ska", CANONICAL_STR),
+        ],
+    );
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "canonical library must resolve: {:?}",
+        resolved.diagnostics
+    );
+
+    let checked = type_check(&resolved.program);
+    assert_eq!(
+        checked
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == PRIVATE_INITIALIZER_ACCESS)
+            .count(),
+        1
+    );
+    assert!(checked.hir.is_none());
 }
 
 #[test]

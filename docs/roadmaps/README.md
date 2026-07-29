@@ -6,14 +6,7 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-- [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md) — in
-  progress; adds per-overload `private init` access across direct construction,
-  shared allocation, base initialization, and class-element default arrays
-  without changing copy lifecycle or lower-phase execution. Internal
-  visibility representation, authorization, and source syntax are complete;
-  standard-library adoption and final hardening are next. The roadmap depends
-  on the implemented declaring-class privacy and initializer-overload
-  contracts.
+No implementation roadmaps are currently in progress.
 
 ## Planned
 

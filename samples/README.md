@@ -12,6 +12,8 @@ Small Skald programs used for language bring-up and manual experimentation belon
   deterministic cleanup, and the direct constructor-elision cases.
 - `polymorphism.ska` demonstrates inheritance, virtual and interface dispatch,
   an `Obj` type test, and checked object casts.
+- `private_factory.ska` demonstrates a public static factory selecting a
+  private ordinary initializer through exact-class lexical ownership.
 - `strings.ska` demonstrates raw-byte literals, checked observation,
   shared-backing slices, copying construction from mutable bytes, independent
   byte-array conversion, and concatenation through the canonical standard

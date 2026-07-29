@@ -116,6 +116,36 @@ accessors such as `entries_mut_for_test`, `get_mut_for_test`, and
 production callers. Use them to corrupt one invariant at a time rather than
 constructing an accidentally invalid program with unrelated failures.
 
+## Private initializer inspection
+
+For `T(arguments)`, `new T(arguments)`, or `super(arguments)`, inspect the
+resolved class declaration first. Each overload has its own visibility and
+source-ordered `InitializerId`. Type checking determines applicability and a
+unique most-specific identity before checking whether the current callable is
+lexically owned by that initializer's exact declaring class. Consequently,
+`TYP040` on a private overload does not mean the checker should retry a less
+specific public overload.
+
+An authorized HIR construction names the selected initializer but contains no
+visibility metadata. An access failure produces no HIR. If changing only
+resolved visibility changes successful HIR shape, or if private visibility
+reappears in MIR or assembly, the phase boundary has been violated.
+
+A derived initializer's `super(...)` is owned by the derived class, so it
+cannot call a private base initializer. For `T[](length)` and
+`shared T[](length)`, inspect the resolved type's stable zero-argument default
+plan and then the array expression's type-check site: that consumer performs
+the same exact-class authorization. Empty arrays and explicit-copy arrays do
+not consult ordinary initializer visibility.
+
+The focused checks are:
+
+```text
+cargo test --locked -p skald-compiler private_initializer
+cargo test --locked -p skald-compiler --test pipeline_determinism private_initializer
+cargo test --locked -p skac --test golden
+```
+
 ## Inspect assembly and native behavior
 
 Emit assembly without linking:
@@ -175,10 +205,11 @@ In assembly, literal backing appears in immutable or relocation-read-only data
 with the shared `u8[]` metadata relocation, `u64::MAX` strong-count sentinel,
 exact decoded length, and bytes. Literal materialization must not call the
 allocator or copy helper. Dynamic strings created by `std::str::Str` methods
-instead use ordinary shared-array allocation, retain/release, slicing, and
-last-owner reclamation. If a public byte/range operation fails only for very
-large `u64` input, inspect the unsigned comparison branch before the explicit
-total cast to the signed array-position type.
+instead use ordinary shared-array allocation and an exact-class call to the
+private fresh-backing initializer, followed by ordinary retain/release,
+slicing, and last-owner reclamation. If a public byte/range operation fails
+only for very large `u64` input, inspect the unsigned comparison branch before
+the explicit total cast to the signed array-position type.
 
 Use the string-focused tests for the nearest reproduction:
 

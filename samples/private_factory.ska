@@ -1,0 +1,23 @@
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Token {
+    private value: i64;
+
+    private init(value: i64) {
+        self.value = value;
+    }
+
+    static fn create(value: i64) -> Token {
+        return Token(value);
+    }
+
+    fn reveal() -> i64 {
+        return self.value;
+    }
+}
+
+fn main() -> i64 {
+    var token: Token = Token.create(42);
+    ska_rt_println_i64(token.reveal());
+    return 0;
+}

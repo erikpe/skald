@@ -88,12 +88,11 @@ copying.
 
 Ordinary initializers may be private; copy construction, assignment, and
 destruction remain visibility-free lifecycle slots. The canonical `Str`
-implementation currently keeps its empty initializer public and uses private
-instance or static helpers to copy an already valid descriptor and adjust its
-private bounds. A helper may install backing only when that backing is freshly
-created and owned by trusted standard-library code. These paths use the
-implemented `private fn`, `static fn`, and `private static fn` rules; private
-static methods are ordinary composition, not a distinct capability.
+implementation keeps its empty initializer public and uses a private ordinary
+initializer to install fresh backing created by trusted standard-library code.
+Its private static slice helper copies an already valid descriptor before
+adjusting its private bounds. These paths use the ordinary declaring-class
+privacy rules; they are not string-specific capabilities.
 
 ## String literals
 
@@ -180,9 +179,9 @@ The installed representative public surface is:
 | `fn concat(ref other: Str) -> Str` | Return fresh backing containing both byte sequences. |
 
 Invalid byte and slice bounds terminate through ordinary checked array
-behavior. The library uses private static helpers to install newly allocated
-backing and to adjust copied descriptors; neither helper is a compiler
-convention.
+behavior. The library's dynamic factories call a private ordinary initializer
+to install newly allocated backing, while a private static helper adjusts
+copied slice descriptors. Neither member is a compiler convention.
 
 The required asymptotic behavior is:
 
