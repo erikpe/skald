@@ -10,7 +10,13 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently only planned.
+- [Panic and Unrecoverable Failure Reporting](PANIC_ROADMAP.md) — **planned**.
+  Adds canonical `std::error::panic`, one length-delimited runtime reporter,
+  static messages for every compiler-known failure, and a strict partition
+  between reported ownership exhaustion and hard-trapped compiler defects.
+  P0, contract freezing, is next. It has no dependency on another active
+  roadmap; shadow trace stacks, stacktrace printing, and exceptions are
+  explicitly deferred.
 
 ## Design proposals
 
