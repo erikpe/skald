@@ -136,7 +136,8 @@ makes a result source-observable.
   `shared? T` source contract, including presence, checked
   access, lifecycle, failure, and the remaining aliasing exclusions.
 - [Functions and control flow](FUNCTIONS_AND_CONTROL_FLOW.md) defines callable
-  declarations, bindings and scopes, statements, returns, and evaluation order.
+  declarations, bindings and scopes, statements, returns, evaluation order,
+  and the frozen but unimplemented `while`, `break`, and `continue` contract.
 - [Classes and lifecycle](CLASSES_AND_LIFECYCLE.md) defines exact nominal
   classes, inline containment, receivers, ordinary initializer overloads,
   per-overload private factory boundaries, explicit copy construction, and

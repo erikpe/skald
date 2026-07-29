@@ -2,7 +2,9 @@
 
 Status: authoritative grammar for the source syntax accepted by the current
 compiler. [Feature status](STATUS.md) determines whether the syntactic forms
-below have a complete semantic implementation.
+below have a complete semantic implementation. Explicitly marked frozen
+extensions record syntax selected for later implementation and are not
+accepted by the current compiler.
 
 This document defines tokens, concrete source shape, precedence,
 associativity, and syntax-error boundaries. It does not define name lookup,
@@ -375,6 +377,27 @@ for exactly typed initialized primitive `var` locals and value parameters.
 `elif` is its own keyword and continuation form. `else if` and standalone
 `elif` or `else` are not part of the grammar. Every conditional arm requires a
 parenthesized expression and a block.
+
+### Frozen while-loop extension
+
+The first loop syntax is frozen but not accepted by the current compiler. Its
+selected grammar is:
+
+```text
+while-statement    = "while" "(" expression ")" block
+break-statement    = "break" ";"
+continue-statement = "continue" ";"
+```
+
+When implemented, `while-statement` becomes an ordinary `statement`
+alternative. The first implementation need not accept `break-statement` or
+`continue-statement`, but `while`, `break`, and `continue` become reserved
+words together when `while` enters the implemented grammar.
+
+The parentheses and body block are mandatory. `while` is not an expression,
+`break` carries no value, and labels are not part of the frozen syntax. The
+corresponding frozen semantics are owned by
+[Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
 ## Expressions
 

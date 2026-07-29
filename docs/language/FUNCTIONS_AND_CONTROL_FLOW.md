@@ -2,7 +2,8 @@
 
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
-semantics. The
+semantics, plus the frozen but unimplemented `while`, `break`, and `continue`
+contract. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -199,6 +200,64 @@ Each condition resolves in the scope containing the complete conditional.
 Each arm body has its own child scope. A binding declared in one arm is not
 visible in another arm, in a later `elif` condition, or after the conditional.
 
+## While loops and loop exits
+
+`while`, `break`, and `continue` have a frozen source design but are not
+accepted by the current compiler. The selected
+[grammar](GRAMMAR.md#frozen-while-loop-extension) is:
+
+```text
+while (condition) {
+    statements
+}
+
+break;
+continue;
+```
+
+The parentheses and body block are mandatory. `while` is a statement and
+produces no value. `break` and `continue` are statements, and `break` carries
+no value. `while`, `break`, and `continue` become reserved words together when
+`while` is added to the implemented grammar. Labels and labeled exits are not
+part of this contract.
+
+The condition must have type exactly `bool`; loops add no truthiness
+conversion. Execution evaluates the condition before the first possible
+iteration and once before every later attempted iteration. It preserves the
+resulting primitive boolean, completes the condition's full-expression
+cleanup, and only then enters the body for `true` or continues after the loop
+for `false`. No condition temporary, checked view, optional guard, shared
+temporary, or array anchor remains live during the body or after the loop.
+
+The condition resolves in the scope containing the complete `while`
+statement. The statement introduces no additional lexical scope of its own.
+Its body is an ordinary child block scope, and a binding declared there is not
+visible in the condition or after the loop. Each entered iteration begins a
+fresh dynamic lifetime for every body-local binding. Normal body completion
+destroys live owning body locals in the ordinary reverse order before the next
+condition evaluation. Enclosing locals remain live across the loop and retain
+assignments performed by the body.
+
+Unlabeled `break` and `continue` select the nearest lexically enclosing loop.
+Using either statement outside a loop is an error. `continue` cleans every
+live owning local in nested scopes and the loop body scope before beginning the
+next condition test. `break` performs the same body-side cleanup before
+continuing after the selected loop. Neither exit cleans a local declared
+before that loop. Cleanup follows the existing inner-to-outer,
+reverse-declaration order. `return` continues to clean every exited function
+scope, while unrecoverable panic remains non-unwinding.
+
+For definite-return analysis, every `while` conservatively has a
+condition-false fallthrough path, including `while (true)`. A non-`unit`
+callable therefore cannot rely only on such a loop to satisfy its return
+requirement. Later constant folding may remove an executable false edge but
+does not change source acceptance or definite-return diagnostics.
+
+The first implementation slice adds `while`; later slices add `break` and
+`continue` using this already-frozen contract. `for`, `for ... in`, `do while`,
+an unconditional `loop` form, iterator protocols, loop expressions,
+value-carrying `break`, loop `else`, and labels remain unfrozen.
+
 ## Returns and definite return
 
 A callable returning `unit` uses `return;` and may also fall through the end of
@@ -221,8 +280,10 @@ temporaries are then destroyed in reverse completion order, followed by live
 owning locals from inner scopes to outer scopes and owning value parameters in
 reverse parameter order. The preserved result is transferred only after those
 cleanups. Cleanup for exceptions and loop exits is not part of the implemented
-control-flow model. The current abrupt-termination boundary and constraints on
-future exceptional cleanup are owned by
+control-flow model. Loop-exit cleanup has the
+[frozen behavior above](#while-loops-and-loop-exits); exceptional cleanup
+remains exploratory. The current abrupt-termination boundary and constraints
+on future exceptional cleanup are owned by
 [errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
 ## Evaluation order
@@ -276,11 +337,12 @@ the call terminates without performing remaining cleanup.
 
 ## Unsupported control flow and callability
 
-Loops, `break`, `continue`, iteration, function values, closures, lambda
-literals, and calls through expression values are not implemented or frozen.
-Their maturity is recorded in the [status matrix](STATUS.md#not-implemented).
-No loop scope, cleanup, iterator, capture, or callable-type rule should be
-inferred from legacy examples.
+The frozen `while`, `break`, and `continue` contract remains unimplemented.
+Other loop forms, iteration and iterator protocols, function values, closures,
+lambda literals, and calls through expression values are neither implemented
+nor frozen. Their maturity is recorded in the
+[status matrix](STATUS.md#not-implemented). No semantics for those deferred
+features should be inferred from legacy examples.
 
 ## Implementation boundary
 
