@@ -15,14 +15,14 @@ No implementation roadmaps are currently planned.
 ## Design proposals
 
 - [While Loops Design Proposal](WHILE_LOOPS_DESIGN_PROPOSAL.md) — **confirmed;
-  source and compiler contracts promoted, runtime/backend confirmation
-  pending**. Defines the source semantics, control effects,
+  contract promotion complete, implementation roadmap pending**. Defines the
+  source semantics, control effects,
   cleanup boundaries, repeatable MIR storage lifetimes, generic CFG lowering,
   and optimization invariants for `while` and future `break` and `continue`.
   Decisions W1 through W13 adopt their recommended choices, and living language
-  and phase/IR documents now own the frozen source and representation
-  contracts. The next action is confirming the no-new-service and
-  no-backend-owned-loop boundary in the runtime and backend contracts.
+  and compiler documents now own the frozen source, representation, runtime,
+  and backend boundaries. The next action is creating the PR-sized
+  implementation roadmap.
 
 ## Pending discoveries
 

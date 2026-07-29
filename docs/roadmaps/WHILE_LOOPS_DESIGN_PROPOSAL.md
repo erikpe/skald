@@ -1,10 +1,10 @@
 # While Loops Design Proposal
 
-Status: confirmed on 2026-07-29; source and compiler contracts promoted,
-runtime and backend confirmation pending. W1 through W13 adopt their
-recommended decisions. The living language and phase/IR documents now own the
-frozen source and representation behavior; this proposal retains the decision
-rationale and remaining promotion work.
+Status: confirmed on 2026-07-29; contract promotion complete, implementation
+roadmap pending. W1 through W13 adopt their recommended decisions. The living
+language, phase/IR, runtime ABI, and backend documents now own the frozen
+source, representation, and target-boundary behavior; this proposal retains
+the decision rationale and remaining promotion work.
 
 This proposal defines a first `while` loop for Skald and the compiler
 boundaries needed to add `break`, `continue`, other loop forms, and
@@ -49,7 +49,11 @@ and [status matrix](../language/STATUS.md#not-implemented). The frozen
 [phase and IR extension](../compiler/PHASES_AND_IR.md#frozen-loop-representation-extension)
 owns loop identity, structured HIR effects, repeatable MIR lifetime epochs,
 generic CFG lowering, cyclic verification, transformation invariants, and
-private implementation freedom.
+private implementation freedom. The
+[runtime ABI](../compiler/RUNTIME_ABI.md#frozen-loop-abi-boundary) confirms no
+new service or version, while the
+[backend contract](../compiler/BACKEND.md#frozen-loop-target-boundary) requires
+only mechanical realization of verified generic MIR.
 
 Skald already has useful foundations:
 
@@ -746,7 +750,7 @@ still requires:
 - [x] Promote compiler representation invariants into the phase and IR
       contract without freezing private Rust organization or exact CFG
       numbering.
-- [ ] Confirm in the runtime ABI and backend contracts that the feature
+- [x] Confirm in the runtime ABI and backend contracts that the feature
       requires no new runtime service or backend-owned loop semantics.
 - [ ] Create a PR-sized implementation roadmap that orders repeatable storage
       lifetimes and cyclic verifier foundations before source acceptance.

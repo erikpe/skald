@@ -2,7 +2,9 @@
 
 Status: authoritative for the current backend interface, supported target
 registry, target legality, x86-64 System V realization, and generated assembly
-boundary. Source-visible language semantics remain owned by the
+boundary. Explicitly marked frozen additions define selected future target
+boundaries without claiming current backend support.
+Source-visible language semantics remain owned by the
 [language documentation](../language/README.md); the runtime C interface is a
 separate contract. The shared-handle/header layout, generated
 reference-counting realization, and executable shared-field layout are owned by the
@@ -135,6 +137,64 @@ reports ownership-count exhaustion at `u64::MAX - 1` before it could collide
 with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
+
+## Frozen loop target boundary
+
+The frozen
+[loop representation contract](PHASES_AND_IR.md#frozen-loop-representation-extension)
+keeps all source loop meaning and cleanup planning target-independent. Source
+loops are not currently produced, but cyclic control flow using the existing
+generic branch and jump forms is already representable. Once repeatable
+lifetime epochs and source lowering are implemented, a backend consumes only
+the resulting verified generic MIR.
+
+The target boundary requires:
+
+- a condition to arrive as an ordinary verified boolean branch;
+- normal repetition to arrive as an ordinary backward jump;
+- `break` and `continue` to arrive as ordinary jumps to already selected
+  targets;
+- return and panic to retain their existing terminator forms;
+- source-ordered condition cleanup and every exited-scope cleanup to be
+  explicit before the corresponding edge;
+- one static MIR storage declaration to receive one target storage home even
+  when its verified dynamic lifetime repeats; and
+- all ownership, optional, array, checked-view, anchor, and full-expression
+  operations to retain their ordinary lowering on every path and iteration.
+
+A backend does not inspect source loop identities, structured HIR effects,
+lexical nesting, cleanup depths, or source `while`, `break`, and `continue`
+nodes. It does not infer cleanup from a backedge, reconstruct a loop scope, or
+decide whether a source loop falls through. The array-specific generated-loop
+terminator remains separate and is not a source-loop representation.
+
+MIR lifetime-epoch operations are verified target-independent facts and emit
+no machine instruction by themselves. The target-independent pipeline may
+erase them after every consuming analysis, or a backend dispatcher may accept
+them as verified no-code markers. That private choice must not reset
+ownership, synthesize cleanup, or make correctness depend on recognizing a
+loop in target code.
+
+The initial condition, body, latch, and exit regions need not retain their
+unoptimized block numbering or arrangement after valid transformations.
+Instruction selection realizes the remaining generic labels, branches, jumps,
+storage accesses, calls, and lifecycle instructions. Target-private branch
+relaxation, block layout, and register allocation may optimize that realization
+without changing evaluation frequency, ordering, failure, lifetime, or cleanup
+behavior.
+
+Loops add no target calling-convention rule, public symbol, metadata object,
+runtime entry point, hidden iteration counter, per-iteration frame allocation,
+or process-entry behavior. The existing fixed-frame strategy may reuse one
+physical home across verified non-overlapping lifetime epochs. Runtime ABI
+compatibility remains owned by the
+[unchanged loop ABI boundary](RUNTIME_ABI.md#frozen-loop-abi-boundary).
+
+Focused target tests must cover deterministic forward and backward edges,
+fixed-home loop-carried values, calls across backedges, nested CFG, assembler
+acceptance, and observable per-iteration cleanup. Those tests prove mechanical
+realization of verified MIR; they do not establish source legality or repair
+invalid lifetime state.
 
 ## Panic and hard-trap boundary
 

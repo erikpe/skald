@@ -2,7 +2,9 @@
 
 Status: authoritative for the current compiler/runtime compatibility contract,
 public C header, platform requirements, bootstrap output records, and runtime
-responsibility boundary. Source-visible external declarations are owned by
+responsibility boundary. Explicitly marked frozen additions confirm when a
+selected future compiler feature leaves that boundary unchanged.
+Source-visible external declarations are owned by
 [Modules and Foreign Interoperation](../language/MODULES_AND_INTEROP.md), and
 target calling conventions are owned by the
 [Backend and Target Contract](BACKEND.md).
@@ -243,6 +245,42 @@ Primitive integer comparisons likewise add no public C symbol or ABI revision.
 The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
 marker remains version 6.
+
+## Frozen loop ABI boundary
+
+The frozen `while`, `break`, and `continue`
+[source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
+and [phase representation](PHASES_AND_IR.md#frozen-loop-representation-extension)
+add no public C symbol, runtime state, or ABI-version change. The runtime marker
+remains `ska_rt_abi_v6`.
+
+Loop execution is generated control flow. The runtime never receives or
+interprets:
+
+- source loop identities or labels;
+- conditions, body blocks, latches, exits, or backedges;
+- `break` or `continue` destinations;
+- lexical scope or cleanup-depth metadata;
+- MIR storage-lifetime epoch operations;
+- loop-carried primitive values; or
+- iteration counts or optimizer loop metadata.
+
+Condition and body expressions may independently use existing runtime
+allocation, deallocation, panic, or bootstrap-output entry points under their
+ordinary contracts. Deterministic destruction, shared retain/release, optional
+state, array lifecycle, cleanup selection, and storage lifetime transitions
+remain compiler-generated operations. Repetition does not create a runtime
+loop service around those operations.
+
+The loop feature adds no runtime-managed iterator, scheduler, safepoint, stack
+growth, unwinding, tracing, or cancellation mechanism. A future iterator or
+concurrency design may use ordinary Skald calls or may justify a separately
+versioned runtime addition, but neither is implied by this loop contract.
+
+Direct runtime ABI tests continue checking the unchanged header, symbols, and
+version marker. Loop behavior, backward branches, and per-iteration cleanup
+belong to compiler, backend, assembler, and native golden tests rather than a
+new runtime harness.
 
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
