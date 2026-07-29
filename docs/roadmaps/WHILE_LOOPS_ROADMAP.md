@@ -1,6 +1,6 @@
 # While Loops and Loop Exits Roadmap
 
-Status: in progress; L0 through L5 are complete and L6 is next.
+Status: in progress; L0 through L6 are complete and L7 is next.
 
 This roadmap adds executable `while` statements and then the already-designed
 `break` and `continue` statements without making source acceptance the
@@ -90,7 +90,7 @@ Explicitly excluded from this roadmap:
 - [x] L3 — Lower internal HIR `while` loops through generic MIR
 - [x] L4 — Activate source `while` end to end
 - [x] L5 — Add targeted `break` statements
-- [ ] L6 — Add targeted `continue` statements
+- [x] L6 — Add targeted `continue` statements
 - [ ] L7 — Harden loop lifecycles and optimization boundaries
 
 A task is complete only when its checklist, focused tests, exit criteria, and
@@ -333,22 +333,22 @@ has no label or value semantics.
 **Purpose:** Add iteration-local transfer using the already-verified lifetime
 restart and the canonical latch target.
 
-- [ ] Parse exactly `continue;` as a statement with deterministic recovery and
+- [x] Parse exactly `continue;` as a statement with deterministic recovery and
       spans.
-- [ ] Resolve it to the nearest enclosing `LoopId` and reject use outside a
+- [x] Resolve it to the nearest enclosing `LoopId` and reject use outside a
       loop before type checking.
-- [ ] Represent `Continue(LoopId)` in HIR and compose it through nested blocks
+- [x] Represent `Continue(LoopId)` in HIR and compose it through nested blocks
       and conditionals independently from `break` and function exit.
-- [ ] Plan and emit cleanup for every scope exited between the statement and
+- [x] Plan and emit cleanup for every scope exited between the statement and
       the target loop body boundary, followed by a generic jump to that loop's
       latch rather than directly to the body or exit.
-- [ ] Ensure the latch reaches a fresh condition evaluation only after body
+- [x] Ensure the latch reaches a fresh condition evaluation only after body
       cleanup and storage-dead boundaries complete.
-- [ ] Preserve enclosing-loop storage and target the nearest loop in nested
+- [x] Preserve enclosing-loop storage and target the nearest loop in nested
       cases.
-- [ ] Cover mixed `break`, `continue`, `return`, fallthrough, and panic effects
+- [x] Cover mixed `break`, `continue`, `return`, fallthrough, and panic effects
       without adding a generic control-transfer escape hatch to source.
-- [ ] Update living grammar, control-flow, status, phase/IR, and testing
+- [x] Update living grammar, control-flow, status, phase/IR, and testing
       documentation in the same change.
 
 **Tests:** Parser/recovery tests; outside-loop and nearest-loop resolution

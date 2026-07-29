@@ -184,6 +184,7 @@ pub enum HirStatement {
     Local(HirLocalDecl),
     Return(HirReturn),
     Break(HirBreak),
+    Continue(HirContinue),
     Panic(HirPanic),
     Call(HirCallStatement),
     Conditional(HirConditional),
@@ -213,6 +214,7 @@ impl HirStatement {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Break(statement) => statement.span,
+            Self::Continue(statement) => statement.span,
             Self::Panic(statement) => statement.span,
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
@@ -271,6 +273,12 @@ pub struct HirReturn {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirBreak {
+    pub target: LoopId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirContinue {
     pub target: LoopId,
     pub span: Span,
 }

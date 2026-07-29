@@ -2,8 +2,7 @@
 
 Status: authoritative for implemented callable, binding, scope, statement,
 control-flow, return, evaluation-order, and primitive-binding-reassignment
-semantics, including implemented `while` loops and `break`, plus the frozen
-but unimplemented `continue` contract. The
+semantics, including implemented `while` loops, `break`, and `continue`. The
 [status matrix](STATUS.md) is authoritative for feature maturity, the
 [grammar](GRAMMAR.md) defines accepted source syntax, and
 [types and values](TYPES_AND_VALUES.md) defines expression typing.
@@ -202,9 +201,7 @@ visible in another arm, in a later `elif` condition, or after the conditional.
 
 ## While loops and loop exits
 
-`while` and `break` are implemented. `continue` has a frozen source design,
-is a reserved word, and currently receives a focused unsupported-feature
-diagnostic. The selected
+`while`, `break`, and `continue` are implemented. The selected
 [grammar](GRAMMAR.md#while-loops-and-loop-exits) is:
 
 ```text
@@ -218,7 +215,7 @@ continue;
 
 The parentheses and body block are mandatory. `while` is a statement and
 produces no value. `break` is a statement, carries no value, and must end with
-`;`. Under the frozen exit contract, `continue` is also a statement. Labels
+`;`. `continue` is likewise a value-free statement ending with `;`. Labels
 and labeled exits are not part of this contract.
 
 The condition must have type exactly `bool`; loops add no truthiness
@@ -245,9 +242,10 @@ not clean a local declared before the loop. Cleanup follows the existing
 inner-to-outer, reverse-declaration order. `return` continues to clean every
 exited function scope, while unrecoverable panic remains non-unwinding.
 
-Under the frozen `continue` contract, it selects the nearest loop and performs
-the same body-side cleanup before beginning the next condition test. Its
-outside-loop use will likewise be an error.
+An unlabeled `continue` selects the nearest lexically enclosing loop; using it
+outside a loop is an error. It cleans every live owning local in nested scopes
+and the selected loop's body scope, then begins the next condition test. It
+does not clean enclosing locals or jump directly to the body.
 
 For definite-return analysis, every `while` conservatively has a
 condition-false fallthrough path, including `while (true)`. A non-`unit`
@@ -255,8 +253,7 @@ callable therefore cannot rely only on such a loop to satisfy its return
 requirement. Later constant folding may remove an executable false edge but
 does not change source acceptance or definite-return diagnostics.
 
-A later implementation slice adds `continue` using this already-frozen
-contract. `for`, `for ... in`, `do while`, an unconditional `loop` form,
+`for`, `for ... in`, `do while`, an unconditional `loop` form,
 iterator protocols, loop expressions, value-carrying `break`, loop `else`,
 and labels remain unfrozen.
 
@@ -281,11 +278,10 @@ fully constructed or copied into its result object. Full-expression
 temporaries are then destroyed in reverse completion order, followed by live
 owning locals from inner scopes to outer scopes and owning value parameters in
 reverse parameter order. The preserved result is transferred only after those
-cleanups. Normal `while` body completion and `break` perform their implemented
-loop cleanup. Targeted `continue` cleanup has the
-[frozen behavior above](#while-loops-and-loop-exits); exceptional cleanup
-remains exploratory. The current abrupt-termination boundary and constraints
-on future exceptional cleanup are owned by
+cleanups. Normal `while` body completion, `break`, and `continue` perform
+their implemented loop cleanup. Exceptional cleanup remains exploratory. The
+current abrupt-termination boundary and constraints on future exceptional
+cleanup are owned by
 [errors and exceptional control flow](ERRORS.md#cleanup-and-abrupt-termination).
 
 ## Evaluation order
@@ -309,7 +305,8 @@ calls:
 9. conditional conditions are evaluated in arm order and stop after the first
    true result;
 10. a `while` condition is completed and cleaned before its branch, and each
-    normal body completion is cleaned before the next condition evaluation;
+    normal body completion or `continue` is cleaned before the next condition
+    evaluation;
 11. a return result is completed before its cleanup sequence begins.
 
 Grouping does not change the order of the enclosed expression. It can affect
@@ -341,9 +338,9 @@ the call terminates without performing remaining cleanup.
 
 ## Unsupported control flow and callability
 
-The frozen `continue` contract remains unimplemented. Other loop forms,
-iteration and iterator protocols, function values, closures, lambda literals,
-and calls through expression values are neither implemented nor frozen. Their
+Other loop forms, iteration and iterator protocols, function values, closures,
+lambda literals, and calls through expression values are neither implemented
+nor frozen. Their
 maturity is recorded in the
 [status matrix](STATUS.md#not-implemented). No semantics for those deferred
 features should be inferred from legacy examples.

@@ -28,8 +28,8 @@ pub use array::{
 };
 pub use body::{
     HirBlock, HirBreak, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
-    HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
+    HirConditional, HirConditionalArm, HirContinue, HirFunctionDefinition,
+    HirFunctionDefinitionTable, HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
     HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirStatement, HirWhile,
 };
 pub use control_flow::HirControlEffects;

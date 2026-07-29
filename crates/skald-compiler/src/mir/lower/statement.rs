@@ -30,6 +30,7 @@ impl BodyLowerer<'_> {
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
             HirStatement::Break(statement) => self.lower_break(statement),
+            HirStatement::Continue(statement) => self.lower_continue(statement),
             HirStatement::Panic(statement) => self.lower_panic(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
@@ -107,6 +108,7 @@ impl BodyLowerer<'_> {
             message,
             span: statement.span,
         });
+        self.discard_terminated_full_expression_tracking();
     }
 
     fn lower_base_initialization(&mut self, statement: &crate::hir::HirBaseInitialization) {

@@ -84,15 +84,14 @@ impl Parser<'_> {
         if self.at(TokenKind::Break) {
             return Some(Statement::Break(self.parse_break()));
         }
+        if self.at(TokenKind::Continue) {
+            return Some(Statement::Continue(self.parse_continue()));
+        }
         if self.at(TokenKind::If) {
             return self.parse_conditional().map(Statement::Conditional);
         }
         if self.at(TokenKind::While) {
             return self.parse_while().map(Statement::While);
-        }
-        if self.at(TokenKind::Continue) {
-            self.parse_unsupported_continue();
-            return None;
         }
         if self.at_any(&[TokenKind::Elif, TokenKind::Else]) {
             self.parse_misplaced_conditional_continuation();
@@ -120,7 +119,7 @@ impl Parser<'_> {
             EXPECTED_STATEMENT,
             "expected a statement",
             self.peek().span,
-            "expected `var`, `return`, `if`, `while`, `break`, an expression, a field assignment, or a nested block",
+            "expected `var`, `return`, `if`, `while`, `break`, `continue`, an expression, a field assignment, or a nested block",
         );
         None
     }
@@ -156,18 +155,6 @@ impl Parser<'_> {
             }),
             _ => None,
         }
-    }
-
-    fn parse_unsupported_continue(&mut self) {
-        let keyword = self.advance();
-        debug_assert_eq!(keyword.kind, TokenKind::Continue);
-        self.report(
-            UNSUPPORTED_LOOP_EXIT,
-            "`continue` is not supported yet",
-            keyword.span,
-            "ordinary completion, `break`, and `return` are currently supported in a loop body",
-        );
-        self.expect(TokenKind::Semicolon, "`;` after the loop-exit statement");
     }
 
     fn parse_base_initialization(&mut self) -> Option<BaseInitializationStatement> {
@@ -368,6 +355,16 @@ impl Parser<'_> {
         BreakStatement {
             break_span: break_token.span,
             span: self.cover(break_token.span, end_span),
+        }
+    }
+
+    fn parse_continue(&mut self) -> ContinueStatement {
+        let continue_token = self.advance();
+        let semicolon = self.expect(TokenKind::Semicolon, "`;` after the `continue` statement");
+        let end_span = semicolon.map_or(continue_token.span, |token| token.span);
+        ContinueStatement {
+            continue_span: continue_token.span,
+            span: self.cover(continue_token.span, end_span),
         }
     }
 

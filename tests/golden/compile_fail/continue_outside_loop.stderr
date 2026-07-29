@@ -1,0 +1,5 @@
+error[RES035]: `continue` requires an enclosing loop
+ --> tests/golden/compile_fail/continue_outside_loop.ska:2:5
+   |
+2 |     continue;
+   |     ^^^^^^^^ no enclosing loop is active here

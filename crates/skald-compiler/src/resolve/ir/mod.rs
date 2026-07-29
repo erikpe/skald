@@ -13,7 +13,7 @@ pub use array_types::{ResolvedArrayType, ResolvedArrayTypeTable};
 pub use body::{
     ResolvedArrayAssignment, ResolvedBaseInitialization, ResolvedBlock, ResolvedBreak,
     ResolvedClassDefinition, ResolvedClassDefinitionTable, ResolvedConditional,
-    ResolvedConditionalArm, ResolvedExpressionStatement, ResolvedFieldAssignment,
+    ResolvedConditionalArm, ResolvedContinue, ResolvedExpressionStatement, ResolvedFieldAssignment,
     ResolvedFunctionDefinition, ResolvedFunctionDefinitionTable, ResolvedLocalDecl,
     ResolvedMemberDefinition, ResolvedObjectAssignment, ResolvedOptionalAssignment,
     ResolvedPrimitiveBindingAssignment, ResolvedReturn, ResolvedSharedAssignment,

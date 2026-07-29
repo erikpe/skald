@@ -74,12 +74,11 @@ fallthrough effect. MIR then expands the statement into generic preheader,
 condition, body, reachable latch, and exit blocks. Inspect condition
 full-expression cleanup before the header branch, body-local `storage-live`
 and `storage-dead` operations before the latch, and the ordinary backward
-`goto` from latch to header. A `break` appears in resolved and HIR dumps with
-its selected `LoopId`; MIR must clean each scope above that loop's retained
-depth before an ordinary `goto` to the exit. A body with no latch-reaching
-path omits the unreachable latch. Assembly should contain only the
-corresponding generic branches and jumps. `continue` still stops at parser
-diagnostic `PAR015`.
+`goto` from latch to header. `break` and `continue` appear in resolved and HIR
+dumps with their selected `LoopId`; MIR must clean each scope above that
+loop's retained depth before an ordinary `goto` to the exit or latch,
+respectively. A body with no latch-reaching path omits the unreachable latch.
+Assembly should contain only the corresponding generic branches and jumps.
 
 For `T(copy source)`, the AST and resolved dumps must retain a distinct copy
 mode rather than an ordinary argument. HIR must show one selected copy

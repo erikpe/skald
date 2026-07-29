@@ -1,5 +1,0 @@
-error[PAR015]: `continue` is not supported yet
- --> tests/golden/compile_fail/unsupported_continue.ska:3:9
-   |
-3 |         continue;
-   |         ^^^^^^^^ ordinary completion, `break`, and `return` are currently supported in a loop body

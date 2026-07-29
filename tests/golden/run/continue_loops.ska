@@ -1,0 +1,135 @@
+import std::error;
+
+extern fn ska_rt_println_i64(value: i64) -> unit;
+
+class Trace {
+    marker: i64;
+
+    init(marker: i64) {
+        self.marker = marker;
+    }
+
+    destroy {
+        ska_rt_println_i64(self.marker);
+    }
+}
+
+fn immediate() -> i64 {
+    var value: i64 = 0;
+    while (value < 3) {
+        value = value + 1;
+        continue;
+        value = 99;
+    }
+    return value;
+}
+
+fn conditional() -> i64 {
+    var value: i64 = 0;
+    var sum: i64 = 0;
+    while (value < 4) {
+        value = value + 1;
+        if (value == 2) {
+            continue;
+        }
+        sum = sum + value;
+    }
+    return sum;
+}
+
+fn nested_block_cleanup() -> i64 {
+    var value: i64 = 0;
+    while (value < 2) {
+        var body: Trace = Trace(20);
+        {
+            var nested: Trace = Trace(30);
+            value = value + 1;
+            continue;
+        }
+    }
+    return value;
+}
+
+fn nested_loops() -> i64 {
+    var outer: i64 = 0;
+    var total: i64 = 0;
+    while (outer < 2) {
+        outer = outer + 1;
+        var inner: i64 = 0;
+        while (inner < 3) {
+            inner = inner + 1;
+            if (inner == 2) {
+                continue;
+            }
+            total = total + inner;
+        }
+        if (outer == 1) {
+            continue;
+        }
+        total = total + 100;
+    }
+    return total;
+}
+
+fn condition(value: i64, limit: i64) -> bool {
+    ska_rt_println_i64(70 + value);
+    return value < limit;
+}
+
+fn condition_effects() -> i64 {
+    var value: i64 = 0;
+    while (condition(value, 3)) {
+        value = value + 1;
+        continue;
+    }
+    return value;
+}
+
+fn ownership_heavy() -> i64 {
+    var preserved: shared Trace = new Trace(60);
+    var value: i64 = 0;
+    while (value < 2) {
+        var inline: Trace = Trace(40);
+        var owner: shared Trace = new Trace(50);
+        var optional: shared? Trace = owner;
+        var values: i64[] = i64[](1u);
+        values[0] = value;
+        value = value + 1;
+        continue;
+    }
+    return value;
+}
+
+fn mixed(mode: i64) -> i64 {
+    var value: i64 = 0;
+    while (value < 3) {
+        value = value + 1;
+        if (mode == 0) {
+            continue;
+        }
+        if (mode == 1) {
+            break;
+        }
+        if (mode == 2) {
+            return value;
+        }
+        if (mode == 3) {
+            std::error::panic("unreached mixed-exit panic");
+        }
+    }
+    return value;
+}
+
+fn main() -> i64 {
+    ska_rt_println_i64(immediate());
+    ska_rt_println_i64(conditional());
+    ska_rt_println_i64(nested_block_cleanup());
+    ska_rt_println_i64(nested_loops());
+    ska_rt_println_i64(condition_effects());
+    ska_rt_println_i64(ownership_heavy());
+    ska_rt_println_i64(mixed(0));
+    ska_rt_println_i64(mixed(1));
+    ska_rt_println_i64(mixed(2));
+    ska_rt_println_i64(mixed(4));
+    return 0;
+}

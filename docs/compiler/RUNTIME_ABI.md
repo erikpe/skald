@@ -248,7 +248,7 @@ marker remains version 6.
 
 ## Loop ABI boundary
 
-The implemented `while` and `break`, and frozen `continue`,
+The implemented `while`, `break`, and `continue`
 [source contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits)
 and [phase representation](PHASES_AND_IR.md#while-loop-representation)
 add no public C symbol, runtime state, or ABI-version change. The runtime marker

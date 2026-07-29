@@ -390,20 +390,13 @@ The implemented loop and exit syntax is:
 ```text
 while-statement    = "while" "(" expression ")" block
 break-statement    = "break" ";"
-```
-
-The following loop-exit spelling is frozen and reserved, but not yet accepted
-as a statement:
-
-```text
 continue-statement = "continue" ";"
 ```
 
 The parentheses and body block are mandatory. `while` is not an expression,
-`break` carries no value, and labels are not part of the exit syntax. A
-`break` must end with `;` and may appear only inside a loop. Using `continue`
-currently produces a focused unsupported-feature diagnostic. The
-corresponding semantics are owned by
+loop exits carry no value, and labels are not part of the exit syntax.
+`break` and `continue` must end with `;` and may appear only inside a loop.
+The corresponding semantics are owned by
 [Functions and Control Flow](FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
 
 ## Expressions

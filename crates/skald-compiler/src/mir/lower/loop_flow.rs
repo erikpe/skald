@@ -1,7 +1,7 @@
 //! Structured loop lowering into target-independent MIR control flow.
 
 use super::*;
-use crate::hir::{HirBreak, HirWhile};
+use crate::hir::{HirBreak, HirContinue, HirWhile};
 
 impl BodyLowerer<'_> {
     pub(super) fn lower_break(&mut self, statement: &HirBreak) {
@@ -15,6 +15,23 @@ impl BodyLowerer<'_> {
         self.emit_scope_exit(cleanup);
         self.terminate(MirTerminator::Goto {
             target: context.exit_target(),
+            span: statement.span,
+        });
+    }
+
+    pub(super) fn lower_continue(&mut self, statement: &HirContinue) {
+        let context = self
+            .loop_contexts
+            .find(statement.target)
+            .expect("resolved continue target must have an active lowering context");
+        let cleanup = self
+            .cleanup
+            .for_scopes_exiting_to(context.retained_scope_depth(), statement.span);
+        self.emit_scope_exit(cleanup);
+        self.terminate(MirTerminator::Goto {
+            target: context
+                .latch_target()
+                .expect("a typed continue effect must make its loop latch reachable"),
             span: statement.span,
         });
     }

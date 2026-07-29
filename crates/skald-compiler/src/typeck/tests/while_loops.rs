@@ -95,3 +95,46 @@ fn break_effects_stop_their_path_and_preserve_sibling_outcomes() {
     let dump = dump_hir(&hir);
     assert!(dump.contains("Break f0:loop0"));
 }
+
+#[test]
+fn continue_effects_stop_their_path_and_compose_independently() {
+    let output = check_text(concat!(
+        "fn main() -> i64 {\n",
+        "  while (true) {\n",
+        "    if (true) { continue; return 1; }\n",
+        "    elif (false) { break; }\n",
+        "    else { return 2; }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors());
+    let hir = output.hir.unwrap();
+    let main = hir.definitions.get(hir.entry_function).unwrap();
+    let HirStatement::While(statement) = &main.body.statements[0] else {
+        panic!("expected typed loop");
+    };
+    let HirStatement::Conditional(conditional) = &statement.body.statements[0] else {
+        panic!("expected typed conditional");
+    };
+    let target = statement.loop_id;
+    assert!(conditional.effects.can_continue_to(target));
+    assert!(conditional.effects.can_break_to(target));
+    assert!(conditional.effects.can_exit_function());
+    assert!(!conditional.effects.can_fall_through());
+
+    let continue_arm = &conditional.arms[0].body;
+    assert!(continue_arm.effects.can_continue_to(target));
+    assert!(!continue_arm.effects.can_break_to(target));
+    assert!(!continue_arm.effects.can_exit_function());
+    assert!(!continue_arm.effects.can_fall_through());
+
+    assert!(statement.effects.can_fall_through());
+    assert!(statement.effects.can_exit_function());
+    assert!(!statement.effects.can_continue_to(target));
+    assert!(!statement.effects.can_break_to(target));
+
+    let dump = dump_hir(&hir);
+    assert!(dump.contains("Continue f0:loop0"));
+    assert!(dump.contains("Break f0:loop0"));
+}

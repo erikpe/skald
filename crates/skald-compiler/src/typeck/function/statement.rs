@@ -4,14 +4,15 @@ use crate::{
     diagnostics::Diagnostic,
     hir::{
         HirAccess, HirBaseInitialization, HirBlock, HirBreak, HirCallArgument, HirCallStatement,
-        HirConditional, HirConditionalArm, HirControlEffects, HirLocalDecl, HirLocalInitializer,
-        HirObjectReturn, HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage,
-        HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue,
-        HirSharedAssignment, HirStatement, HirWhile, Type,
+        HirConditional, HirConditionalArm, HirContinue, HirControlEffects, HirLocalDecl,
+        HirLocalInitializer, HirObjectReturn, HirOptionalAssignment, HirOptionalPlace,
+        HirOptionalStorage, HirOptionalWriteKind, HirPanic, HirPrimitiveBindingAssignment,
+        HirReturn, HirReturnValue, HirSharedAssignment, HirStatement, HirWhile, Type,
     },
     resolve::{
-        ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedExpressionStatement,
-        ResolvedLocalDecl, ResolvedReturn, ResolvedStatement, ResolvedWhile,
+        ResolvedBlock, ResolvedBreak, ResolvedConditional, ResolvedContinue,
+        ResolvedExpressionStatement, ResolvedLocalDecl, ResolvedReturn, ResolvedStatement,
+        ResolvedWhile,
     },
 };
 
@@ -69,6 +70,7 @@ impl CallableChecker<'_, '_> {
             ResolvedStatement::Local(local) => self.check_local_statement(local),
             ResolvedStatement::Return(statement) => self.check_return_statement(statement),
             ResolvedStatement::Break(statement) => self.check_break_statement(statement),
+            ResolvedStatement::Continue(statement) => self.check_continue_statement(statement),
             ResolvedStatement::Expression(statement) => self.check_call_statement(statement),
             ResolvedStatement::Conditional(conditional) => {
                 self.check_conditional_statement(conditional)
@@ -677,6 +679,16 @@ impl CallableChecker<'_, '_> {
                 span: statement.span,
             })),
             effects: HirControlEffects::break_to(statement.target),
+        }
+    }
+
+    fn check_continue_statement(&self, statement: &ResolvedContinue) -> CheckedStatement {
+        CheckedStatement {
+            hir: Some(HirStatement::Continue(HirContinue {
+                target: statement.target,
+                span: statement.span,
+            })),
+            effects: HirControlEffects::continue_to(statement.target),
         }
     }
 

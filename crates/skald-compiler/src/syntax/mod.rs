@@ -15,23 +15,24 @@ pub use ast::{
     ArrayProjectionBounds, ArrayProjectionExpr, ArrayProjectionOperator,
     BaseInitializationStatement, BinaryExpr, BinaryOperator, Block, BooleanExpr, BreakStatement,
     CallArguments, CallExpr, ClassDecl, ClassMember, CompilationUnit, ConditionalArm,
-    ConditionalStatement, CopyAssignmentDecl, CopyConstructorDecl, DestructorDecl, Expression,
-    ExpressionStatement, ExternalFunctionDecl, FieldAssignmentStatement, FieldDecl, FunctionDecl,
-    GroupedExpr, IdentifierExpr, ImportDeclaration, InitializerDecl, IntegerCastExpr,
-    IntrinsicFunctionDecl, LocalDecl, MemberAccessExpr, MemberAccessOperator, MemberVisibility,
-    MethodDecl, MethodModifier, ModuleImport, Name, NameComponent, NameComponentRef,
-    NameComponents, NameQualification, NameText, NumericLiteralExpr, ObjectAssignmentStatement,
-    ObjectCastExpr, ObjectCastTargetMode, OptionalPayloadKind, Parameter, ParameterBindingMode,
-    PresenceTestExpr, PresenceTestKind, PrimitiveIntegerType, ReturnStatement, SelectiveImport,
-    SelectiveImportItem, SelfExpr, Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind,
-    TypeSyntax, TypeTestExpr, UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
+    ConditionalStatement, ContinueStatement, CopyAssignmentDecl, CopyConstructorDecl,
+    DestructorDecl, Expression, ExpressionStatement, ExternalFunctionDecl,
+    FieldAssignmentStatement, FieldDecl, FunctionDecl, GroupedExpr, IdentifierExpr,
+    ImportDeclaration, InitializerDecl, IntegerCastExpr, IntrinsicFunctionDecl, LocalDecl,
+    MemberAccessExpr, MemberAccessOperator, MemberVisibility, MethodDecl, MethodModifier,
+    ModuleImport, Name, NameComponent, NameComponentRef, NameComponents, NameQualification,
+    NameText, NumericLiteralExpr, ObjectAssignmentStatement, ObjectCastExpr, ObjectCastTargetMode,
+    OptionalPayloadKind, Parameter, ParameterBindingMode, PresenceTestExpr, PresenceTestKind,
+    PrimitiveIntegerType, ReturnStatement, SelectiveImport, SelectiveImportItem, SelfExpr,
+    Statement, StringLiteralExpr, TopLevelDeclaration, TypeKind, TypeSyntax, TypeTestExpr,
+    UnaryExpr, UnaryOperator, UnwrapExpr, Visibility, WhileStatement,
 };
 pub use dump::dump_ast;
 pub use parser::{
     parse, ParseOutput, EXCESSIVE_NESTING, EXPECTED_DECLARATION, EXPECTED_EXPRESSION,
     EXPECTED_STATEMENT, EXPECTED_TOKEN, INVALID_CLASS_HEADER, INVALID_CLASS_MEMBER,
     INVALID_COMPARISON, INVALID_IMPORT, INVALID_OPTIONAL_TYPE, INVALID_TYPE_TEST,
-    INVALID_VISIBILITY, MAX_SYNTAX_NESTING, MISPLACED_IMPORT, UNSUPPORTED_LOOP_EXIT,
+    INVALID_VISIBILITY, MAX_SYNTAX_NESTING, MISPLACED_IMPORT,
 };
 
 #[cfg(test)]

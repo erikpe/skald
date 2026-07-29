@@ -166,6 +166,7 @@ pub enum ResolvedStatement {
     Local(ResolvedLocalDecl),
     Return(ResolvedReturn),
     Break(ResolvedBreak),
+    Continue(ResolvedContinue),
     Expression(ResolvedExpressionStatement),
     Conditional(ResolvedConditional),
     While(ResolvedWhile),
@@ -185,6 +186,7 @@ impl ResolvedStatement {
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
             Self::Break(statement) => statement.span,
+            Self::Continue(statement) => statement.span,
             Self::Expression(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::While(statement) => statement.span,
@@ -209,6 +211,12 @@ pub struct ResolvedPrimitiveBindingAssignment {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedBreak {
+    pub target: LoopId,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResolvedContinue {
     pub target: LoopId,
     pub span: Span,
 }

@@ -1,0 +1,5 @@
+error[PAR002]: expected `;` after the `continue` statement
+ --> tests/golden/compile_fail/continue_malformed.ska:4:5
+   |
+4 |     }
+   |     ^ found RIGHT_BRACE

@@ -210,6 +210,124 @@ fn verifier_rejects_break_cleanup_that_leaves_body_storage_live_at_the_exit() {
 }
 
 #[test]
+fn continue_targets_the_latch_after_cleaning_every_exited_scope() {
+    let source = concat!(
+        "class Trace { init() {} destroy {} }\n",
+        "fn main() -> i64 {\n",
+        "  var count: i64 = 0;\n",
+        "  while (count < 2) {\n",
+        "    var body: Trace = Trace();\n",
+        "    { var nested: Trace = Trace(); count = count + 1; continue; }\n",
+        "  }\n",
+        "  return count;\n",
+        "}\n",
+    );
+    let mir = lower_text(source);
+    verify_mir(&mir).expect("continue cleanup edges must verify");
+    let main = mir.definitions.get(mir.entry_function).unwrap();
+    let continue_block = main
+        .body
+        .blocks
+        .iter()
+        .find(|block| {
+            matches!(
+                block.terminator,
+                Some(MirTerminator::Goto { span, .. })
+                    if &source[span.range().start()..span.range().end()] == "continue;"
+            )
+        })
+        .expect("continue must terminate its source path");
+    let Some(MirTerminator::Goto { target: latch, .. }) = continue_block.terminator else {
+        unreachable!();
+    };
+    let header = match main.body.blocks[latch.index()].terminator {
+        Some(MirTerminator::Goto { target, .. }) => target,
+        _ => panic!("continue target must be the loop latch"),
+    };
+    assert!(matches!(
+        main.body.blocks[header.index()].terminator,
+        Some(MirTerminator::Branch { .. })
+    ));
+
+    let body = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "body")
+        .unwrap()
+        .id;
+    let nested = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "nested")
+        .unwrap()
+        .id;
+    let cleanup: Vec<_> = continue_block
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::Cleanup(cleanup)
+                if matches!(cleanup.destination.base.storage(), storage if storage == nested || storage == body) =>
+            {
+                Some(cleanup.destination.base.storage())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(cleanup, [nested, body]);
+    let dead: Vec<_> = continue_block
+        .instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            MirInstruction::StorageDead(event)
+                if event.storage == nested || event.storage == body =>
+            {
+                Some(event.storage)
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(dead, [nested, body]);
+}
+
+#[test]
+fn verifier_rejects_continue_cleanup_that_leaks_body_storage_to_the_latch() {
+    let source = concat!(
+        "fn main() -> i64 {\n",
+        "  var count: i64 = 0;\n",
+        "  while (count < 1) {\n",
+        "    var local: i64 = count;\n",
+        "    count = count + 1;\n",
+        "    continue;\n",
+        "  }\n",
+        "  return count;\n",
+        "}\n",
+    );
+    let mut mir = lower_text(source);
+    let entry = mir.entry_function;
+    let main = mir.definitions.get_mut_for_test(entry).unwrap();
+    let local = main
+        .storage
+        .iter()
+        .find(|storage| storage.name == "local")
+        .unwrap()
+        .id;
+    for block in &mut main.body.blocks {
+        if matches!(
+            block.terminator,
+            Some(MirTerminator::Goto { span, .. })
+                if &source[span.range().start()..span.range().end()] == "continue;"
+        ) {
+            block.instructions.retain(
+                |instruction| !matches!(instruction, MirInstruction::StorageDead(event) if event.storage == local),
+            );
+        }
+    }
+
+    let errors = verify_mir(&mir).unwrap_err().to_string();
+    assert!(errors.contains("storage lifetime state disagrees at control-flow join"));
+}
+
+#[test]
 fn lowers_the_canonical_loop_graph_with_a_backward_generic_edge() {
     let mir = counting_loop();
     verify_mir(&mir).expect("internally constructed while MIR must verify");

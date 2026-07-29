@@ -98,6 +98,19 @@ impl BodyLowerer<'_> {
             self.end_storage_lifetime(storage, span);
         }
     }
+
+    /// Drop path-local lowering bookkeeping after a non-unwinding terminator.
+    ///
+    /// The represented values intentionally remain live for the terminator;
+    /// only the lowerer's traversal state is reset before it visits another
+    /// independently selected basic block.
+    pub(super) fn discard_terminated_full_expression_tracking(&mut self) {
+        self.full_expression_temporaries.clear();
+        self.full_expression_storage.clear();
+        self.full_expression_checked_views.clear();
+        self.full_expression_has_shared_effect = false;
+        self.active_optional_guards.clear();
+    }
 }
 
 /// Owning storage whose initialization completed on the current path.

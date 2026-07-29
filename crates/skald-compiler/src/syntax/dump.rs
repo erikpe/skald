@@ -439,6 +439,10 @@ impl AstDumper {
                 self.line("Break", statement.span);
                 self.indented(|dumper| dumper.line("BreakKeyword", statement.break_span));
             }
+            Statement::Continue(statement) => {
+                self.line("Continue", statement.span);
+                self.indented(|dumper| dumper.line("ContinueKeyword", statement.continue_span));
+            }
             Statement::Expression(statement) => {
                 self.line("ExpressionStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.expression));

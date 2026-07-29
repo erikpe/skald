@@ -31,7 +31,6 @@ pub const INVALID_IMPORT: &str = "PAR011";
 pub const MISPLACED_IMPORT: &str = "PAR012";
 pub const INVALID_VISIBILITY: &str = "PAR013";
 pub const INVALID_COMPARISON: &str = "PAR014";
-pub const UNSUPPORTED_LOOP_EXIT: &str = "PAR015";
 
 /// Maximum number of simultaneously active recursive syntax constructs.
 ///

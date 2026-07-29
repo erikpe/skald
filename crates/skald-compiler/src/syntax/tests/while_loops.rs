@@ -111,12 +111,45 @@ fn parses_break_with_complete_spans_and_recovers_from_non_semicolon_forms() {
 }
 
 #[test]
-fn reserved_continue_receives_a_focused_temporary_diagnostic() {
-    let (_, output) =
-        parse_text("fn main() -> i64 { while (true) { break; continue; } return 0; }");
+fn parses_continue_with_complete_spans_and_recovers_from_non_semicolon_forms() {
+    let source = "fn main() -> i64 { while (true) { continue; } return 0; }";
+    let (_, output) = parse_text(source);
+    assert!(!output.has_errors());
+    let Statement::While(statement) = &function(&output.ast, 0).body.statements[0] else {
+        panic!("expected while statement");
+    };
+    let [Statement::Continue(statement)] = statement.body.statements.as_slice() else {
+        panic!("expected continue statement");
+    };
+    assert_eq!(
+        &source[statement.continue_span.range().start()..statement.continue_span.range().end()],
+        "continue"
+    );
+    assert_eq!(
+        &source[statement.span.range().start()..statement.span.range().end()],
+        "continue;"
+    );
+    let dump = dump_ast(&output.ast);
+    assert!(dump.contains("Continue @34..43"));
+    assert!(dump.contains("ContinueKeyword @34..42"));
 
-    let diagnostics: Vec<_> = output.diagnostics.iter().collect();
-    assert_eq!(diagnostics.len(), 1);
-    assert_eq!(diagnostics[0].code, UNSUPPORTED_LOOP_EXIT);
-    assert_eq!(diagnostics[0].message, "`continue` is not supported yet");
+    for malformed in [
+        "fn main() -> i64 { while (true) { continue return 0; } return 1; }",
+        "fn main() -> i64 { while (true) { continue 7; } return 1; }",
+    ] {
+        let (_, output) = parse_text(malformed);
+        assert!(output.has_errors());
+        assert!(output.diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == EXPECTED_TOKEN
+                && diagnostic.message == "expected `;` after the `continue` statement"
+        }));
+        assert!(
+            function(&output.ast, 0)
+                .body
+                .statements
+                .iter()
+                .any(|statement| matches!(statement, Statement::Return(_))),
+            "recovery must preserve a later statement: {malformed}"
+        );
+    }
 }

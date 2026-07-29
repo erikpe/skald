@@ -119,3 +119,53 @@ fn resolves_break_to_the_nearest_loop_and_rejects_it_outside_loops() {
     assert_eq!(diagnostics[0].code, LOOP_EXIT_OUTSIDE_LOOP);
     assert_eq!(diagnostics[0].message, "`break` requires an enclosing loop");
 }
+
+#[test]
+fn resolves_continue_to_the_nearest_loop_and_rejects_it_outside_loops() {
+    let output = resolve_text(concat!(
+        "fn main() -> i64 {\n",
+        "  while (true) {\n",
+        "    while (true) { continue; }\n",
+        "    { continue; }\n",
+        "  }\n",
+        "  return 0;\n",
+        "}\n",
+    ));
+    assert!(!output.has_errors());
+    let main = output
+        .program
+        .definitions
+        .get(output.program.entry_function.unwrap())
+        .unwrap();
+    let ResolvedStatement::While(outer) = &main.body.statements[0] else {
+        panic!("expected outer loop");
+    };
+    let ResolvedStatement::While(inner) = &outer.body.statements[0] else {
+        panic!("expected inner loop");
+    };
+    let ResolvedStatement::Continue(inner_continue) = &inner.body.statements[0] else {
+        panic!("expected inner continue");
+    };
+    let ResolvedStatement::Block(block) = &outer.body.statements[1] else {
+        panic!("expected nested block");
+    };
+    let ResolvedStatement::Continue(outer_continue) = &block.statements[0] else {
+        panic!("expected outer continue");
+    };
+    assert_eq!(inner_continue.target, inner.loop_id);
+    assert_eq!(outer_continue.target, outer.loop_id);
+
+    let dump = dump_resolved(&output.program);
+    assert!(dump.contains("Continue f0:loop1"));
+    assert!(dump.contains("Continue f0:loop0"));
+
+    let outside = resolve_text("fn main() -> i64 { continue; return 0; }");
+    assert!(outside.has_errors());
+    let diagnostics: Vec<_> = outside.diagnostics.iter().collect();
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(diagnostics[0].code, LOOP_EXIT_OUTSIDE_LOOP);
+    assert_eq!(
+        diagnostics[0].message,
+        "`continue` requires an enclosing loop"
+    );
+}

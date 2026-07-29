@@ -61,6 +61,9 @@ impl CallableResolver<'_, '_> {
             syntax::Statement::Break(statement) => {
                 self.resolve_break(statement).map(ResolvedStatement::Break)
             }
+            syntax::Statement::Continue(statement) => self
+                .resolve_continue(statement)
+                .map(ResolvedStatement::Continue),
             syntax::Statement::Expression(statement) => {
                 let expression = self.resolve_expression(&statement.expression)?;
                 Some(ResolvedStatement::Expression(ResolvedExpressionStatement {
@@ -198,17 +201,36 @@ impl CallableResolver<'_, '_> {
     }
 
     fn resolve_break(&mut self, statement: &syntax::BreakStatement) -> Option<ResolvedBreak> {
-        let Some(target) = self.active_loops.last().copied() else {
-            self.diagnostics.push(
-                Diagnostic::error(LOOP_EXIT_OUTSIDE_LOOP, "`break` requires an enclosing loop")
-                    .with_primary_label(statement.break_span, "no enclosing loop is active here"),
-            );
-            return None;
-        };
+        let target = self.resolve_loop_exit_target("break", statement.break_span)?;
         Some(ResolvedBreak {
             target,
             span: statement.span,
         })
+    }
+
+    fn resolve_continue(
+        &mut self,
+        statement: &syntax::ContinueStatement,
+    ) -> Option<ResolvedContinue> {
+        let target = self.resolve_loop_exit_target("continue", statement.continue_span)?;
+        Some(ResolvedContinue {
+            target,
+            span: statement.span,
+        })
+    }
+
+    fn resolve_loop_exit_target(&mut self, keyword: &str, span: Span) -> Option<LoopId> {
+        let Some(target) = self.active_loops.last().copied() else {
+            self.diagnostics.push(
+                Diagnostic::error(
+                    LOOP_EXIT_OUTSIDE_LOOP,
+                    format!("`{keyword}` requires an enclosing loop"),
+                )
+                .with_primary_label(span, "no enclosing loop is active here"),
+            );
+            return None;
+        };
+        Some(target)
     }
 
     fn resolve_local(&mut self, local: &syntax::LocalDecl) -> Option<ResolvedLocalDecl> {

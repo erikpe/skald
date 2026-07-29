@@ -51,6 +51,7 @@ fn checks_the_demonstration_program_into_fully_typed_hir() {
                 HirStatement::Block(_) => {}
                 HirStatement::BaseInitialization(_)
                 | HirStatement::Break(_)
+                | HirStatement::Continue(_)
                 | HirStatement::Panic(_)
                 | HirStatement::FieldAssignment(_)
                 | HirStatement::FieldConstruction(_)
