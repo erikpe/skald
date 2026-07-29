@@ -137,16 +137,16 @@ publication; ordinary dynamic publication writes count one.
 
 ## Panic and hard-trap boundary
 
-The version-6 runtime reporter is implemented, but no current compiler-emitted
-path calls it. Compiler-known optional, array, cast, and ownership failures
+The version-6 runtime reporter and explicit source-panic lowering are
+implemented. Compiler-known optional, array, cast, and ownership failures
 continue to use their documented private unsuccessful-termination paths,
 including `ud2` where specified.
 
-Under the frozen design, instruction selection centrally lowers both the
-explicit-panic and static-termination MIR forms described in
+Instruction selection lowers the explicit-panic form and reserves the
+static-termination design described in
 [Phases and IR](PHASES_AND_IR.md#frozen-panic-and-termination-representation).
 Explicit panic extracts the logical byte address and length from the verified
-exact `std::str::Str` descriptor. Static termination selects the corresponding
+exact `std::str::Str` descriptor. Future static termination will select the corresponding
 bytes from one deterministic target-private pool, with each used message
 emitted once in stable reason order. Both call the sole public
 [`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point. Array,

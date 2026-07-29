@@ -28,8 +28,8 @@ pub use array::{
 pub use body::{
     BlockFlow, HirBlock, HirCallStatement, HirClassDefinition, HirClassDefinitionTable,
     HirConditional, HirConditionalArm, HirFunctionDefinition, HirFunctionDefinitionTable,
-    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPrimitiveBindingAssignment,
-    HirReturn, HirReturnValue, HirStatement,
+    HirLocalDecl, HirLocalInitializer, HirMemberDefinition, HirPanic,
+    HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirStatement,
 };
 pub use declarations::{
     HirCallableSignature, HirClassDeclaration, HirClassDeclarationTable,

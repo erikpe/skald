@@ -34,13 +34,13 @@ impl CallableChecker<'_, '_> {
             self.diagnostics.push(
                 crate::diagnostics::Diagnostic::error(
                     INTRINSIC_NOT_EXECUTABLE,
-                    "`std::error::panic` is declared but not executable yet",
+                    "`std::error::panic` can only be used as a call statement",
                 )
                 .with_primary_label(
                     call.span,
-                    "panic lowering is deferred to the next roadmap phase",
+                    "panic cannot be used as a value-producing expression",
                 )
-                .with_note("the intrinsic declaration and name resolution are implemented"),
+                .with_note("write `panic(message);` as a standalone statement"),
             );
             return None;
         }

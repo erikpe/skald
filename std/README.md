@@ -8,9 +8,9 @@ bootstrap C runtime functions rather than the final I/O API.
 
 The `std::error` module declares the compiler-known
 `panic(message: std::str::Str) -> unit` intrinsic and imports `std::str`
-explicitly. The declaration and ordinary module lookup are implemented;
-calling it currently produces a compile-time diagnostic until executable
-panic lowering lands. It is not an external function or an exception API.
+explicitly. Call statements execute through the compiler's non-returning panic
+terminator and the length-delimited runtime reporter. It is not an external
+function or an exception API.
 
 Named private standard-library members begin with `_` by convention, including
 private fields and private instance or static methods. Declarations without a

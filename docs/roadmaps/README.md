@@ -11,7 +11,8 @@ progress. Completed roadmaps and resolved discovery records move to
   contracts. P1 implemented the version-6 runtime reporter and exact native
   stderr expectations without adding compiler-generated reporter calls. P2
   implemented the canonical intrinsic declaration, validation, stable
-  identity, and temporary pre-HIR call diagnostic. P3 is next.
+  identity, and temporary pre-HIR call diagnostic. P3 implemented executable
+  source panic from type checking through exact native reporting. P4 is next.
 
 ## Planned
 

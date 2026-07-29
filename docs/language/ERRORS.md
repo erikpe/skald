@@ -92,9 +92,8 @@ must recognize its resolved intrinsic identity rather than the leaf name
 [Modules and Foreign Interoperation](MODULES_AND_INTEROP.md#intrinsic-function-declarations).
 
 The declaration grammar, canonical validation, ordinary import and
-qualification behavior, and identity are implemented. Execution described
-below remains frozen design: a valid call currently produces `TYP041` and no
-HIR or MIR program.
+qualification behavior, identity, and execution are implemented. `TYP041`
+is reserved for attempts to use panic in expression position.
 
 A valid panic invocation is a call statement and does not return. It
 satisfies definite return because its reachable path cannot reach the

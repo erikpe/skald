@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 through P2 are complete, and P3 is next.
+Status: in progress; P0 through P3 are complete.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -211,31 +211,31 @@ with the documented temporary diagnostic.
 **Purpose:** Make the canonical panic call a fully executable, non-returning
 language operation with a dynamic `Str` message.
 
-- [ ] Recognize the resolved intrinsic identity during call-statement type
+- [x] Recognize the resolved intrinsic identity during call-statement type
       checking and produce a dedicated `HirPanic` statement rather than an
       ordinary call.
-- [ ] Require exactly one ordinary exact-class `Str` value argument, reuse
+- [x] Require exactly one ordinary exact-class `Str` value argument, reuse
       existing value-argument production/copy rules, and reject panic in
       expression position with a focused diagnostic.
-- [ ] Extend `BlockFlow::Terminates` so a panic statement satisfies definite
+- [x] Extend `BlockFlow::Terminates` so a panic statement satisfies definite
       return and later unreachable statements do not change that summary.
-- [ ] Preserve exact once-only message evaluation, failure-before-reporting
+- [x] Preserve exact once-only message evaluation, failure-before-reporting
       order, full message span, and the absence of cleanup after reporting in
       HIR lowering.
-- [ ] Add `MirTerminator::Panic` with one fully initialized exact `Str` message
+- [x] Add `MirTerminator::Panic` with one fully initialized exact `Str` message
       place and source span; it has no successors and is distinct from
       `MirTerminationReason`.
-- [ ] Verify the canonical string language item, message place type,
+- [x] Verify the canonical string language item, message place type,
       initialization/liveness, no-successor shape, and absence of residual
       intrinsic call instructions.
-- [ ] Add deterministic HIR and MIR dump forms that identify panic without
+- [x] Add deterministic HIR and MIR dump forms that identify panic without
       reproducing source spelling or target ABI details.
-- [ ] Lower the message descriptor through verified field identities and
+- [x] Lower the message descriptor through verified field identities and
       target layout, compute backing bytes plus start and length without
       copying into a NUL-terminated buffer, and call `ska_rt_panic`.
-- [ ] Preserve the runtime's ignorance of `Str`, shared-array headers, and
+- [x] Preserve the runtime's ignorance of `Str`, shared-array headers, and
       ownership. Do not add a specialized string or array panic ABI.
-- [ ] Remove the temporary execution diagnostic and update language status,
+- [x] Remove the temporary execution diagnostic and update language status,
       error, function-flow, string, compiler-phase, backend, standard-library,
       and runtime ABI documentation to implemented behavior.
 

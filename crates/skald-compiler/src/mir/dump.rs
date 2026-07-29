@@ -916,6 +916,11 @@ fn dump_block(output: &mut String, block: &MirBasicBlock) {
             let _ = write!(output, "terminate {reason}");
             write_span(output, *span);
         }
+        Some(MirTerminator::Panic { message, span }) => {
+            let _ = write!(output, "panic ");
+            dump_place(output, message);
+            write_span(output, *span);
+        }
         None => output.push_str("<unterminated>"),
     }
     output.push('\n');

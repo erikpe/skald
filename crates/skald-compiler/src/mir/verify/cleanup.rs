@@ -288,6 +288,9 @@ impl CleanupLivenessAnalysis<'_, '_> {
                 | Some(MirTerminator::ReturnOptionalShared { .. }) => {
                     self.check_normal_return(block, &state)
                 }
+                Some(MirTerminator::Panic { message, .. }) => {
+                    self.require_live_place(block, &state, message, "panic message");
+                }
                 Some(MirTerminator::Terminate { .. }) => {}
                 None => {}
             }

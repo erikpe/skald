@@ -165,9 +165,8 @@ impl HirFunctionDefinition {
 
 /// Whether execution can reach the end of a checked block or conditional.
 ///
-/// `Terminates` currently means every path executes a `return`. The type
-/// checker is the authority for this summary; later phases consume it rather
-/// than reconstructing source-level control flow.
+/// `Terminates` means every path exits the current function, either by
+/// returning or by an unrecoverable language operation such as `panic`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BlockFlow {
     FallsThrough,
@@ -195,6 +194,7 @@ pub enum HirStatement {
     BaseInitialization(HirBaseInitialization),
     Local(HirLocalDecl),
     Return(HirReturn),
+    Panic(HirPanic),
     Call(HirCallStatement),
     Conditional(HirConditional),
     Block(HirBlock),
@@ -221,6 +221,7 @@ impl HirStatement {
             Self::BaseInitialization(statement) => statement.span,
             Self::Local(statement) => statement.span,
             Self::Return(statement) => statement.span,
+            Self::Panic(statement) => statement.span,
             Self::Call(statement) => statement.span,
             Self::Conditional(statement) => statement.span,
             Self::Block(block) => block.span,
@@ -289,6 +290,17 @@ pub enum HirReturnValue {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HirCallStatement {
     pub call: HirExpression,
+    pub span: Span,
+}
+
+/// A checked call of the canonical `std::error::panic` intrinsic.
+///
+/// Keeping this separate from ordinary calls makes its abrupt control flow
+/// explicit and prevents later phases from treating the intrinsic declaration
+/// as an executable Skald function.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HirPanic {
+    pub message: super::HirCopyArgument,
     pub span: Span,
 }
 

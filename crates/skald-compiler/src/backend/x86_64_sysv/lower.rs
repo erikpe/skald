@@ -105,7 +105,8 @@ fn lower_definition(
             .terminator
             .as_ref()
             .expect("verified block is terminated");
-        if !selector.select_array_terminator(block_terminator)?
+        if !selector.select_panic_terminator(block_terminator)?
+            && !selector.select_array_terminator(block_terminator)?
             && !selector.select_optional_terminator(block_terminator)?
             && !selector.select_type_operation_terminator(block_terminator, block.id)?
         {

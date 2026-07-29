@@ -201,7 +201,9 @@ impl<'mir, 'verifier> SharedOwnershipAnalysis<'mir, 'verifier> {
                 Some(MirTerminator::ReturnOptionalShared { .. }) => {
                     self.check_return(block, &state, None)
                 }
-                Some(MirTerminator::Terminate { .. }) | None => {}
+                Some(MirTerminator::Panic { .. })
+                | Some(MirTerminator::Terminate { .. })
+                | None => {}
             }
         }
     }

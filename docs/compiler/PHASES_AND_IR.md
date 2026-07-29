@@ -114,10 +114,10 @@ separately from Skald definitions and external links, validates that the only
 recognized identity is the exact public `std::error::panic` signature, and
 resolves every ordinary import/qualification spelling to its `FunctionId`.
 Declaration metadata can pass through HIR and MIR without a definition or
-foreign symbol. A direct call to that identity currently emits `TYP041`
-during type checking, so no executable HIR or MIR containing an ordinary
-intrinsic call is produced. MIR verification independently rejects any
-residual direct call to intrinsic metadata.
+foreign symbol. A call statement becomes a terminating `HirPanic` and then a
+no-successor `MirTerminator::Panic`; using it in expression position emits
+`TYP041`. MIR verification independently rejects any residual direct call to
+intrinsic metadata.
 
 The optional-values contract assigns each decision to these same phase owners.
 Syntax preserves source shape and resolution assigns non-recursive optional

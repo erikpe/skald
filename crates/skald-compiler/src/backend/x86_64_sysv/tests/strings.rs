@@ -42,6 +42,29 @@ fn string_program_with_item(app: &str, string_item: &str) -> MirProgram {
     lower_hir(&checked.hir.expect("valid string source must produce HIR"))
 }
 
+fn panic_program(app: &str) -> MirProgram {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            ("app.ska", app),
+            ("std/str.ska", CANONICAL_STR),
+            (
+                "std/error.ska",
+                "import std::str;\npublic intrinsic fn panic(message: std::str::Str) -> unit;\n",
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    lower_hir(&checked.hir.expect("valid panic source must produce HIR"))
+}
+
 fn string_assembly(app: &str) -> String {
     emit_assembly(Target::X86_64SysV, &string_program(app)).unwrap()
 }
@@ -157,6 +180,23 @@ fn string_emission_does_not_change_the_public_runtime_abi() {
     assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(6)"));
     assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6"));
     assert!(!header.contains("string"));
+}
+
+#[test]
+fn panic_extracts_the_exact_descriptor_slice_and_calls_the_reporter_once() {
+    let program = panic_program(concat!(
+        "from std::error import panic;\n",
+        "fn main() -> i64 { panic(\"failure\"); }\n",
+    ));
+    verify_mir(&program).unwrap();
+    let output = emit_assembly(Target::X86_64SysV, &program).unwrap();
+    let main = function_assembly(&output, ".Lska_fn_0");
+    assert_eq!(main.matches("call ska_rt_panic").count(), 1);
+    assert!(main.contains("lea rdi, [rdi + 24]"));
+    assert!(main.contains("add rdi, rax"));
+    assert!(main.contains("mov rsi, qword ptr [rdx + 16]"));
+    assert!(!main.contains("call ska_rt_free"));
+    assert_system_assembler_accepts(&output);
 }
 
 #[test]

@@ -44,6 +44,35 @@ fn one_literal_mir() -> MirProgram {
     ))
 }
 
+fn panic_mir() -> MirProgram {
+    let (_workspace, graph) = load_module_sources(
+        "app",
+        &[
+            (
+                "app.ska",
+                "from std::error import panic;\nfn main() -> i64 { panic(\"failure\"); }\n",
+            ),
+            (
+                "std/str.ska",
+                include_str!("../../../../../std/std/str.ska"),
+            ),
+            (
+                "std/error.ska",
+                "import std::str;\npublic intrinsic fn panic(message: std::str::Str) -> unit;\n",
+            ),
+        ],
+    );
+    let resolved = resolve_module_graph(&graph);
+    assert!(
+        resolved.diagnostics.is_empty(),
+        "{:?}",
+        resolved.diagnostics
+    );
+    let checked = type_check(&resolved.program);
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    lower_hir(&checked.hir.expect("valid panic source must produce HIR"))
+}
+
 fn errors_after(mutator: impl FnOnce(&mut MirProgram)) -> String {
     let mut program = one_literal_mir();
     mutator(&mut program);
@@ -290,4 +319,38 @@ fn rejects_mismatched_publication_and_static_owner_escape() {
         "shared release cannot consume static literal backing before string initialization"
     ));
     assert!(escaped_backing.contains("static literal owner is not consumed"));
+}
+
+#[test]
+fn verifies_panic_message_identity_and_initialization() {
+    let mut program = panic_mir();
+    verify_mir(&program).unwrap();
+    let entry = program.entry_function;
+    let definition = program.definitions.get_mut_for_test(entry).unwrap();
+    assert!(!definition.body.blocks[0]
+        .instructions
+        .iter()
+        .any(|instruction| {
+            matches!(
+                instruction,
+                MirInstruction::Cleanup(_) | MirInstruction::EndFullExpression(_)
+            )
+        }));
+    let message = match definition.body.blocks[0].terminator.as_ref().unwrap() {
+        MirTerminator::Panic { message, .. } => message.base.storage(),
+        other => panic!("expected panic terminator, got {other:?}"),
+    };
+    definition.storage[message.index()].ty = MirType::I64;
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("panic message must be an exact canonical string place"));
+
+    let mut program = panic_mir();
+    let entry = program.entry_function;
+    let definition = program.definitions.get_mut_for_test(entry).unwrap();
+    definition.body.blocks[0]
+        .instructions
+        .retain(|instruction| !matches!(instruction, MirInstruction::CopyConstruct(_)));
+    let errors = verify_mir(&program).unwrap_err().to_string();
+    assert!(errors.contains("panic message"));
+    assert!(errors.contains("not live"));
 }

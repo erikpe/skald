@@ -47,6 +47,7 @@ pub(super) fn select(
             output.push(Instruction::Jump(block_label(*false_target)));
         }
         MirTerminator::CheckedCast { .. }
+        | MirTerminator::Panic { .. }
         | MirTerminator::SharedCast { .. }
         | MirTerminator::OptionalUnwrap { .. }
         | MirTerminator::OptionalSharedUnwrap { .. }

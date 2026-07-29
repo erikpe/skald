@@ -29,6 +29,7 @@ impl BodyLowerer<'_> {
             }
             HirStatement::Local(local) => self.lower_local(local),
             HirStatement::Return(statement) => self.lower_return(statement),
+            HirStatement::Panic(statement) => self.lower_panic(statement),
             HirStatement::Call(statement) => self.lower_call_statement(statement),
             HirStatement::Conditional(conditional) => self.lower_conditional(conditional),
             HirStatement::Block(block) => self.lower_block(block),
@@ -91,6 +92,19 @@ impl BodyLowerer<'_> {
                 self.finish_full_expression(assignment.span);
             }
         }
+    }
+
+    fn lower_panic(&mut self, statement: &crate::hir::HirPanic) {
+        let argument = crate::hir::HirCallArgument::Copy(statement.message.clone());
+        let mut arguments = self.lower_call_arguments(std::slice::from_ref(&argument));
+        let message = match arguments.pop() {
+            Some(MirArgument::OwnedPlace(message)) if arguments.is_empty() => message,
+            _ => unreachable!("checked panic message must lower to one owned string place"),
+        };
+        self.terminate(MirTerminator::Panic {
+            message,
+            span: statement.span,
+        });
     }
 
     fn lower_base_initialization(&mut self, statement: &crate::hir::HirBaseInitialization) {

@@ -1,6 +1,0 @@
-error[TYP041]: `std::error::panic` is declared but not executable yet
- --> tests/golden/compile_fail/panic_not_executable.ska:4:5
-   |
-4 |     panic("not yet");
-   |     ^^^^^^^^^^^^^^^^ panic lowering is deferred to the next roadmap phase
-  = note: the intrinsic declaration and name resolution are implemented

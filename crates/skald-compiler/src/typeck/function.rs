@@ -17,7 +17,9 @@ use crate::{
 
 use super::{
     capabilities::CopyCapabilities,
-    expression::{is_call_through_groups, require_type, ObjectPlaceUse},
+    expression::{
+        direct_call_through_groups, is_call_through_groups, require_type, ObjectPlaceUse,
+    },
     program::{
         lower_type, COPY_OPERATION_UNAVAILABLE, FIELD_INITIALIZATION, INVALID_CALL_STATEMENT,
         INVALID_CONSTRUCTION, INVALID_INITIALIZER_BODY, INVALID_OBJECT_CONTEXT, INVALID_RETURN,

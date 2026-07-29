@@ -197,7 +197,7 @@ behavior. The library's dynamic factories and slicing method call a private
 ordinary initializer to install a trusted backing owner and range. The
 initializer is not a compiler convention.
 
-The frozen panic API accepts the exact `std::str::Str` value described here.
+The implemented panic API accepts the exact `std::str::Str` value described here.
 Generated code passes only its logical backing-byte address and length to the
 [length-delimited reporter](../compiler/RUNTIME_ABI.md#panic-reporting-abi);
 the runtime does not receive this descriptor or its shared owner. Failures

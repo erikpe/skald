@@ -148,7 +148,7 @@ fn replacement_standard_library_validates_the_canonical_panic_intrinsic() {
     .unwrap();
     fs::write(
         standard_library.join("std/str.ska"),
-        "public class Str { init() {} }\n",
+        include_str!("../../../../../std/std/str.ska"),
     )
     .unwrap();
     let request = CompilationRequest::new(

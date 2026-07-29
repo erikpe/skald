@@ -4,9 +4,10 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     module::{ModulePath, ProgramModuleTable},
     resolve::{
-        ResolvedClassDeclarationTable, ResolvedCopyOperation, ResolvedLiteralData,
-        ResolvedMemberVisibility, ResolvedModuleDeclarationTable, ResolvedSharedTarget,
-        ResolvedStringLanguageItem, ResolvedTopLevelId, ResolvedTypeKind, ResolvedVisibility,
+        ResolvedClassDeclarationTable, ResolvedCopyOperation, ResolvedFunctionDeclarationTable,
+        ResolvedFunctionLinkage, ResolvedLiteralData, ResolvedMemberVisibility,
+        ResolvedModuleDeclarationTable, ResolvedSharedTarget, ResolvedStringLanguageItem,
+        ResolvedTopLevelId, ResolvedTypeKind, ResolvedVisibility,
     },
 };
 
@@ -16,11 +17,31 @@ pub(super) fn validate_string_language_item(
     modules: &ProgramModuleTable,
     module_declarations: &ResolvedModuleDeclarationTable,
     classes: &ResolvedClassDeclarationTable,
+    functions: &ResolvedFunctionDeclarationTable,
     array_types: &ArrayTypeInterner,
     literal_data: &[ResolvedLiteralData],
     diagnostics: &mut Diagnostics,
 ) -> Option<ResolvedStringLanguageItem> {
-    let first_literal = literal_data.first()?.span;
+    let error_path =
+        ModulePath::try_from("std::error").expect("canonical error module path is valid");
+    let requirement_span = literal_data
+        .first()
+        .map(|literal| literal.span)
+        .or_else(|| {
+            functions.iter().find_map(|function| {
+                (modules
+                    .get(function.module)
+                    .is_some_and(|module| module.module_path() == &error_path)
+                    && matches!(
+                        function.linkage,
+                        ResolvedFunctionLinkage::Intrinsic {
+                            intrinsic: crate::intrinsic::Intrinsic::Panic
+                        }
+                    ))
+                .then_some(function.name_span)
+            })
+        })?;
+    let first_literal = requirement_span;
     let path = ModulePath::try_from("std::str").expect("canonical string module path is valid");
     let module = modules
         .find(&path)

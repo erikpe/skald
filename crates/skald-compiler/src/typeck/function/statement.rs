@@ -3,10 +3,10 @@
 use crate::{
     diagnostics::Diagnostic,
     hir::{
-        BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallStatement, HirConditional,
-        HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
+        BlockFlow, HirAccess, HirBaseInitialization, HirBlock, HirCallArgument, HirCallStatement,
+        HirConditional, HirConditionalArm, HirLocalDecl, HirLocalInitializer, HirObjectReturn,
         HirOptionalAssignment, HirOptionalPlace, HirOptionalStorage, HirOptionalWriteKind,
-        HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirSharedAssignment,
+        HirPanic, HirPrimitiveBindingAssignment, HirReturn, HirReturnValue, HirSharedAssignment,
         HirStatement, Type,
     },
     resolve::{
@@ -16,8 +16,9 @@ use crate::{
 };
 
 use super::{
-    is_call_through_groups, lower_type, require_type, CallableChecker, MemberBodyKind,
-    INVALID_CALL_STATEMENT, INVALID_INITIALIZER_BODY, INVALID_RETURN, READ_ONLY_RECEIVER,
+    direct_call_through_groups, is_call_through_groups, lower_type, require_type, CallableChecker,
+    MemberBodyKind, INVALID_CALL_STATEMENT, INVALID_INITIALIZER_BODY, INVALID_RETURN,
+    READ_ONLY_RECEIVER,
 };
 
 impl CallableChecker<'_, '_> {
@@ -553,6 +554,38 @@ impl CallableChecker<'_, '_> {
         &mut self,
         statement: &ResolvedExpressionStatement,
     ) -> CheckedStatement {
+        if let Some(call) = direct_call_through_groups(&statement.expression) {
+            let target = self
+                .program
+                .declarations
+                .get(call.function)
+                .expect("resolved direct-call target must exist");
+            if matches!(
+                target.linkage,
+                crate::resolve::ResolvedFunctionLinkage::Intrinsic {
+                    intrinsic: crate::intrinsic::Intrinsic::Panic,
+                }
+            ) {
+                let arguments = self.check_arguments(
+                    &call.arguments,
+                    &target.parameters,
+                    call.callee_span,
+                    "panic",
+                    Some(&target.name),
+                    Some(target.name_span),
+                );
+                let panic = arguments.and_then(|mut arguments| match arguments.pop() {
+                    Some(HirCallArgument::Copy(message)) if arguments.is_empty() => {
+                        Some(HirStatement::Panic(HirPanic {
+                            message,
+                            span: statement.span,
+                        }))
+                    }
+                    Some(_) | None => None,
+                });
+                return CheckedStatement::terminates(panic);
+            }
+        }
         let Some(expression) = self.check_expression(&statement.expression) else {
             return CheckedStatement::falls_through(None);
         };

@@ -192,3 +192,13 @@ pub(super) fn is_call_through_groups(expression: &ResolvedExpression) -> bool {
         _ => false,
     }
 }
+
+pub(super) fn direct_call_through_groups(
+    expression: &ResolvedExpression,
+) -> Option<&crate::resolve::ResolvedDirectCallExpr> {
+    match expression {
+        ResolvedExpression::DirectCall(call) => Some(call),
+        ResolvedExpression::Grouped(grouped) => direct_call_through_groups(&grouped.expression),
+        _ => None,
+    }
+}

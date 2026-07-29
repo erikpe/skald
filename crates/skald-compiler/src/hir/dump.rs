@@ -637,6 +637,10 @@ impl HirDumper {
                 self.line("CallStatement", statement.span);
                 self.indented(|dumper| dumper.expression(&statement.call));
             }
+            HirStatement::Panic(statement) => {
+                self.line("Panic", statement.span);
+                self.indented(|dumper| dumper.object_source(&statement.message.source));
+            }
             HirStatement::Conditional(statement) => self.conditional(statement),
             HirStatement::Block(block) => self.block(block),
             HirStatement::PrimitiveBindingAssignment(assignment) => {

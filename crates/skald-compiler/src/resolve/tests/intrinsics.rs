@@ -3,10 +3,10 @@ use crate::{
     intrinsic::Intrinsic,
     mir::{lower_hir, verify_mir, MirFunctionLinkage},
     test_support::load_module_sources,
-    typeck::{type_check, INTRINSIC_NOT_EXECUTABLE},
+    typeck::type_check,
 };
 
-const STRING_MODULE: &str = "public class Str { init() {} }\n";
+const STRING_MODULE: &str = include_str!("../../../../../std/std/str.ska");
 const ERROR_MODULE: &str = concat!(
     "import std::str;\n",
     "public intrinsic fn panic(message: std::str::Str) -> unit;\n",
@@ -138,7 +138,7 @@ fn unused_canonical_intrinsic_remains_bodyless_through_verified_mir() {
 }
 
 #[test]
-fn panic_calls_stop_before_hir_with_the_temporary_diagnostic() {
+fn panic_calls_lower_as_terminating_hir_and_mir_statements() {
     let (_workspace, graph) = load_module_sources(
         "app",
         &[
@@ -147,7 +147,11 @@ fn panic_calls_stop_before_hir_with_the_temporary_diagnostic() {
                 concat!(
                     "import std::error;\n",
                     "import std::str;\n",
-                    "fn stop(message: std::str::Str) -> unit { std::error::panic(message); }\n",
+                    "fn later() -> unit {}\n",
+                    "fn stop(message: std::str::Str) -> unit {\n",
+                    "  std::error::panic(message);\n",
+                    "  later();\n",
+                    "}\n",
                     "fn main() -> i64 { return 0; }\n",
                 ),
             ),
@@ -159,17 +163,25 @@ fn panic_calls_stop_before_hir_with_the_temporary_diagnostic() {
     assert!(resolved.diagnostics.is_empty());
 
     let checked = type_check(&resolved.program);
-    assert!(checked.hir.is_none());
-    let diagnostics = checked.diagnostics.iter().collect::<Vec<_>>();
-    assert!(diagnostics
+    assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
+    let hir = checked.hir.expect("panic statement must produce HIR");
+    let stop = hir
+        .definitions
         .iter()
-        .any(|diagnostic| diagnostic.code == INTRINSIC_NOT_EXECUTABLE));
-    assert!(diagnostics
-        .iter()
-        .find(|diagnostic| diagnostic.code == INTRINSIC_NOT_EXECUTABLE)
-        .unwrap()
-        .message
-        .contains("not executable yet"));
+        .find(|definition| hir.declarations.get(definition.function).unwrap().name == "stop")
+        .unwrap();
+    assert_eq!(stop.body.flow, crate::hir::BlockFlow::Terminates);
+    assert!(matches!(
+        stop.body.statements[0],
+        crate::hir::HirStatement::Panic(_)
+    ));
+    let hir_dump = crate::hir::dump_hir(&hir);
+    assert!(hir_dump.contains("Panic"));
+    let mir = lower_hir(&hir);
+    verify_mir(&mir).unwrap();
+    let mir_dump = crate::mir::dump_mir(&mir);
+    assert!(mir_dump.contains("panic "));
+    assert!(!mir_dump.contains("call direct"));
 }
 
 #[test]

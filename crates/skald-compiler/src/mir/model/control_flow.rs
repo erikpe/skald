@@ -38,6 +38,11 @@ pub enum MirTerminator {
         owner: super::ids::StorageId,
         span: Span,
     },
+    /// Reports a language panic message and exits unsuccessfully.
+    Panic {
+        message: super::value::MirPlace,
+        span: Span,
+    },
     Goto {
         target: BlockId,
         span: Span,
@@ -139,6 +144,7 @@ impl MirTerminator {
             Self::Return { span, .. }
             | Self::ReturnShared { span, .. }
             | Self::ReturnOptionalShared { span, .. }
+            | Self::Panic { span, .. }
             | Self::Goto { span, .. }
             | Self::Branch { span, .. }
             | Self::CheckedCast { span, .. }
@@ -158,9 +164,10 @@ impl MirTerminator {
     /// the true edge always precedes the false edge.
     pub fn successors(&self) -> impl Iterator<Item = BlockId> {
         let targets = match self {
-            Self::Return { .. } | Self::ReturnShared { .. } | Self::ReturnOptionalShared { .. } => {
-                [None, None, None]
-            }
+            Self::Return { .. }
+            | Self::ReturnShared { .. }
+            | Self::ReturnOptionalShared { .. }
+            | Self::Panic { .. } => [None, None, None],
             Self::Goto { target, .. } => [Some(*target), None, None],
             Self::Branch {
                 true_target,

@@ -53,8 +53,10 @@ resolved dump prints `intrinsic Panic` beside its stable `FunctionId`.
 Direct, selective, renamed-selective, aliased-module, and qualified uses must
 all select that same ID. An unused declaration may appear as intrinsic
 metadata in HIR and MIR without a definition or external link. An attempted
-call should stop at `TYP041`; executable panic statements and reporter calls
-must not appear before the next roadmap phase.
+call statement should appear as `Panic` in HIR and `panic` in MIR, never as an
+ordinary intrinsic call. `TYP041` indicates an invalid expression-position
+use. Native assembly extracts the verified descriptor slice and calls
+`ska_rt_panic` once.
 
 For primitive integer comparisons, AST and resolved dumps retain the source
 predicate, HIR records the exact integer operand type, and MIR prints an

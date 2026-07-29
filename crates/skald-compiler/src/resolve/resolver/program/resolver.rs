@@ -254,6 +254,7 @@ impl<'ast> ProgramResolver<'ast> {
             &self.modules,
             &module_declarations,
             &class_declarations,
+            &function_declarations,
             &self.array_types,
             &self.literal_data,
             &mut self.diagnostics,

@@ -670,6 +670,28 @@ impl<'mir> Verifier<'mir> {
                     );
                 }
             }
+            Some(MirTerminator::Panic { message, .. }) => {
+                let expected = self
+                    .program
+                    .string_language_item
+                    .map(|item| MirType::Class(item.class));
+                let actual = self
+                    .verify_place(function, block, message)
+                    .map(|place| place.ty);
+                if expected.is_none() {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "panic requires the canonical string language item",
+                    );
+                } else if actual != expected {
+                    self.block_error(
+                        function.callable(),
+                        block.id,
+                        "panic message must be an exact canonical string place",
+                    );
+                }
+            }
             Some(MirTerminator::Goto { target, .. }) => {
                 self.verify_block_target(function, block, *target);
             }

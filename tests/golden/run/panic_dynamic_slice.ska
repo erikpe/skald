@@ -1,0 +1,7 @@
+from std::error import panic;
+from std::str import Str;
+
+fn main() -> i64 {
+    var message: Str = "prefix dynamic failure suffix";
+    panic(message.slice(7, -7));
+}
