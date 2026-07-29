@@ -69,6 +69,18 @@ impl CallableChecker<'_, '_> {
                     );
                     return None;
                 };
+                let initializer = match &element {
+                    crate::hir::HirArrayDefaultElement::Class { initializer, .. }
+                    | crate::hir::HirArrayDefaultElement::SharedClass { initializer, .. } => {
+                        Some(*initializer)
+                    }
+                    _ => None,
+                };
+                if initializer.is_some_and(|initializer| {
+                    !self.check_initializer_access(initializer, construction.array_type.span)
+                }) {
+                    return None;
+                }
                 HirArrayConstructionMode::DefaultLength {
                     length: Box::new(length),
                     element,

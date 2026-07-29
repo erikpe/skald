@@ -102,6 +102,7 @@ impl ClassCollectionState {
         let id = InitializerId::new(self.id, self.lifecycle.initializers.len());
         let declaration = ResolvedInitializerDeclaration {
             id,
+            visibility: resolved_member_visibility(source.visibility),
             parameters: resolve_parameters(
                 id.into(),
                 &source.parameters,

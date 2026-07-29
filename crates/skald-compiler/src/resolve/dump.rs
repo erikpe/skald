@@ -318,8 +318,19 @@ impl ResolvedDumper {
             dumper.heading("OrdinaryInitializers");
             dumper.indented(|dumper| {
                 for initializer in &class.initializers {
-                    dumper.line(&format!("Initializer {}", initializer.id), initializer.span);
-                    dumper.indented(|dumper| dumper.parameters(&initializer.parameters));
+                    dumper.write_indentation();
+                    let _ = write!(dumper.output, "Initializer {}", initializer.id);
+                    if initializer.visibility.private_span().is_some() {
+                        dumper.output.push_str(" private");
+                    }
+                    write_span(&mut dumper.output, initializer.span);
+                    dumper.output.push('\n');
+                    dumper.indented(|dumper| {
+                        if let Some(span) = initializer.visibility.private_span() {
+                            dumper.line("Private", span);
+                        }
+                        dumper.parameters(&initializer.parameters);
+                    });
                 }
             });
             dumper.heading("CopyConstructor");

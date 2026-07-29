@@ -300,6 +300,7 @@ impl ResolvedMemberVisibility {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedInitializerDeclaration {
     pub id: InitializerId,
+    pub visibility: ResolvedMemberVisibility,
     pub parameters: Vec<ResolvedParameter>,
     pub span: Span,
 }

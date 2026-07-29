@@ -182,6 +182,7 @@ pub struct FieldDecl {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InitializerDecl {
+    pub visibility: MemberVisibility,
     pub introducer_span: Span,
     pub parameters: Vec<Parameter>,
     pub body: Block,

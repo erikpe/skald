@@ -4,8 +4,8 @@ use crate::{
         MethodId, ParameterId,
     },
     resolve::{
-        ResolvedCopyOperation, ResolvedExpression, ResolvedStatement, DUPLICATE_MEMBER,
-        INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
+        ResolvedCopyOperation, ResolvedExpression, ResolvedMemberVisibility, ResolvedStatement,
+        DUPLICATE_MEMBER, INVALID_BASE_CLASS, INVALID_LIFECYCLE_SIGNATURE,
     },
     test_support::resolve_source,
 };
@@ -165,6 +165,10 @@ fn source_order_assigns_dense_ids_and_records_every_accepted_body() {
         ResolvedCopyOperation::User(CopyConstructorId::new(class.id, 0))
     );
     assert_eq!(class.initializers[0].id, InitializerId::new(class.id, 0));
+    assert_eq!(
+        class.initializers[0].visibility,
+        ResolvedMemberVisibility::Public
+    );
     assert_eq!(
         class.initializers[0].parameters[0].id,
         ParameterId::new(InitializerId::new(class.id, 0), 0)

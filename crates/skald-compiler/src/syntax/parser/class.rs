@@ -372,6 +372,7 @@ impl Parser<'_> {
         let parameters = self.parse_parameter_list()?;
         let body = self.parse_block()?;
         Some(InitializerDecl {
+            visibility: MemberVisibility::Public,
             introducer_span: introducer.span,
             parameters,
             span: self.cover(introducer.span, body.span),

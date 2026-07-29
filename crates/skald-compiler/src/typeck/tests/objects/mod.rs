@@ -21,6 +21,7 @@ mod explicit_copy;
 mod lifecycle_copy;
 mod lifecycle_inheritance;
 mod object_places;
+mod private_initializers;
 mod receiver_access;
 mod static_inheritance;
 mod virtual_methods;

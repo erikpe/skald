@@ -11,7 +11,9 @@ use crate::{
     source::Span,
     typeck::{
         expression::class_provides_view,
-        program::{lower_type, AMBIGUOUS_INITIALIZER, NO_MATCHING_INITIALIZER},
+        program::{
+            lower_type, AMBIGUOUS_INITIALIZER, NO_MATCHING_INITIALIZER, PRIVATE_INITIALIZER_ACCESS,
+        },
     },
 };
 
@@ -131,7 +133,9 @@ impl CallableChecker<'_, '_> {
             (maximal.len() == 1).then(|| maximal[0])
         };
         if let Some(selected) = selected {
-            return Some(selected.id);
+            return self
+                .check_initializer_access(selected.id, callee_span)
+                .then_some(selected.id);
         }
 
         if applicable.is_empty() {
@@ -152,6 +156,38 @@ impl CallableChecker<'_, '_> {
             );
         }
         None
+    }
+
+    pub(in crate::typeck) fn check_initializer_access(
+        &mut self,
+        initializer: crate::identity::InitializerId,
+        call_span: Span,
+    ) -> bool {
+        let declaration = self
+            .program
+            .initializer(initializer)
+            .expect("selected initializer must have declaration metadata");
+        let Some(private_span) = declaration
+            .visibility
+            .private_span()
+            .filter(|_| self.class_owner != Some(initializer.class()))
+        else {
+            return true;
+        };
+        let class = self
+            .program
+            .class(initializer.class())
+            .expect("initializer owner class must exist");
+        self.diagnostics.push(
+            Diagnostic::error(
+                PRIVATE_INITIALIZER_ACCESS,
+                format!("initializer of class `{}` is private", class.name),
+            )
+            .with_primary_label(call_span, "private initializer is not accessible here")
+            .with_secondary_label(private_span, "declared private here")
+            .with_note("private access is granted only inside the declaring class"),
+        );
+        false
     }
 
     fn analyze_argument(&self, expression: &ResolvedExpression) -> ArgumentAnalysis {

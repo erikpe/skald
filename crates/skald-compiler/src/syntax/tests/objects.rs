@@ -37,6 +37,7 @@ fn parses_the_restricted_class_and_member_surface_without_lookup() {
     let ClassMember::Initializer(initializer) = &counter.members[1] else {
         panic!("expected initializer");
     };
+    assert_eq!(initializer.visibility, MemberVisibility::Public);
     assert_eq!(source_text(&sources, initializer.introducer_span), "init");
     let Statement::FieldAssignment(assignment) = &initializer.body.statements[0] else {
         panic!("expected initializer field assignment");
@@ -63,6 +64,26 @@ fn parses_the_restricted_class_and_member_surface_without_lookup() {
     };
     assert_eq!(name.text, "Counter");
     assert_eq!(source_text(&sources, name.span), "Counter");
+}
+
+#[test]
+fn initializer_visibility_is_explicit_in_the_ast_dump() {
+    let (_, mut output) = parse_text("class Sample { init() {} }\n");
+    let TopLevelDeclaration::Class(class) = &mut output.ast.declarations[0] else {
+        panic!("expected class");
+    };
+    let ClassMember::Initializer(initializer) = &mut class.members[0] else {
+        panic!("expected initializer");
+    };
+    initializer.visibility = MemberVisibility::Private {
+        span: initializer.introducer_span,
+    };
+
+    let dump = dump_ast(&output.ast);
+    assert!(
+        dump.contains("Initializer @15..24\n        Private @15..19\n        Introducer @15..19\n"),
+        "{dump}"
+    );
 }
 
 #[test]

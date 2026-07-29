@@ -161,6 +161,7 @@ impl AstDumper {
             ClassMember::Initializer(initializer) => {
                 self.line("Initializer", initializer.span);
                 self.indented(|dumper| {
+                    dumper.member_visibility(initializer.visibility);
                     dumper.line("Introducer", initializer.introducer_span);
                     dumper.parameters(&initializer.parameters);
                     dumper.block(&initializer.body);

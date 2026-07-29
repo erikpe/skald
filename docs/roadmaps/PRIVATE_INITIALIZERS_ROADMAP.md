@@ -1,6 +1,6 @@
 # Private Ordinary Initializers Roadmap
 
-Status: planned; PRI0 is next.
+Status: in progress; PRI1 is next.
 
 This roadmap adds per-overload declaring-class privacy to ordinary `init`
 declarations without turning lifecycle declarations into ordinary named
@@ -66,7 +66,7 @@ remain unchanged.
 
 ## Progress
 
-- [ ] PRI0 — Represent and enforce initializer privacy without source exposure
+- [x] PRI0 — Represent and enforce initializer privacy without source exposure
 - [ ] PRI1 — Expose private ordinary initializers through the source language
 - [ ] PRI2 — Adopt, harden, document, and close private initializer support
 
@@ -78,33 +78,33 @@ remain unchanged.
 boundary before the parser accepts a source form whose privacy must hold at
 every construction site.
 
-- [ ] Add public-by-default member visibility to syntax and resolved ordinary
+- [x] Add public-by-default member visibility to syntax and resolved ordinary
       initializer declarations, preserving modifier, introducer, signature,
       and complete declaration spans. Keep `private init` rejected by the
       parser during this task.
-- [ ] Preserve visibility in deterministic syntax and resolved dumps and
+- [x] Preserve visibility in deterministic syntax and resolved dumps and
       through stable source-ordered `InitializerId` allocation. Do not carry
       it into HIR, MIR, or backend declarations.
-- [ ] Centralize selected-initializer authorization beside ordinary overload
+- [x] Centralize selected-initializer authorization beside ordinary overload
       selection. Compare the initializer's declaring class with
       `CallableChecker::class_owner`; do not duplicate module or receiver
       access rules.
-- [ ] Apply authorization after unique-most-specific selection for direct
+- [x] Apply authorization after unique-most-specific selection for direct
       inline construction, shared allocation, and direct-base initialization.
       Preserve no-match, ambiguity, and argument-analysis behavior.
-- [ ] Authorize default-length inline and shared arrays at the source call
+- [x] Authorize default-length inline and shared arrays at the source call
       site when their selected element plan names a private zero-argument
       initializer. Reuse the same checker for exact class and `shared` class
       elements without making the global array capability table
       caller-dependent.
-- [ ] Add one stable type-check diagnostic for an inaccessible selected
+- [x] Add one stable type-check diagnostic for an inaccessible selected
       initializer, with the construction site as the primary label, the
       private modifier as a secondary label, and the exact declaring-class
       rule as guidance.
-- [ ] Provide narrow test-only fixture support for changing initializer
+- [x] Provide narrow test-only fixture support for changing initializer
       visibility after ordinary parsing so every authorization path can be
       tested before source exposure.
-- [ ] Confirm that authorized HIR is byte-for-byte visibility-free and lower
+- [x] Confirm that authorized HIR is byte-for-byte visibility-free and lower
       phases, runtime headers, ABI versions, and generated symbols are
       unchanged.
 
