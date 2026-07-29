@@ -2,6 +2,8 @@
 
 Status: authoritative for current compiler phase inputs, products, invariants,
 verification boundaries, deterministic dumps, and phase-facing public paths.
+Explicitly marked frozen extensions define representation invariants selected
+for implementation but not yet present in current phase products.
 Source-visible meaning remains owned by the
 [language documentation](../language/README.md). Shared ownership's
 cross-phase invariants are specified separately in the
@@ -657,6 +659,197 @@ Malformed public MIR and impossible states proven absent by verification do
 not acquire a termination reason. They remain structured verifier errors
 before target lowering, or hard compiler-defect traps if an invalid state is
 somehow reached after the trust boundary.
+
+## Frozen loop representation extension
+
+The source behavior of `while`, `break`, and `continue` is frozen in
+[Functions and Control Flow](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits).
+The representation below is likewise frozen for implementation but is not
+present in current resolved IR, HIR, MIR, or verification.
+
+The contract fixes which phase owns each decision and the invariants visible
+across phase boundaries. It does not fix private Rust organization, concrete
+container types, exact instruction names, or basic-block numbering.
+
+### Resolution and structured HIR
+
+Resolution assigns every source loop one deterministic callable-local loop
+identity in source order. A resolved `while` retains its condition, body,
+identity, and source spans. Resolved `break` and `continue` statements carry
+the identity of the nearest lexically enclosing loop. Lower phases do not
+recover an exit target from source names or a nesting-depth count. Future
+labels, if separately frozen, may resolve to the same identity model without
+changing lower phases.
+
+Typed HIR retains a structured loop operation containing:
+
+- the resolved loop identity;
+- the exact-`bool` condition;
+- the typed body;
+- the source span; and
+- one composable control-effect summary.
+
+The control-effect summary distinguishes these conceptual outcomes:
+
+```text
+FallThrough
+Return
+Diverge
+Break(loop)
+Continue(loop)
+```
+
+It represents a set of possible outcomes rather than forcing a block or
+conditional to have only one. Statement-sequence composition sends only
+fallthrough paths into the next statement and preserves the other effects.
+Conditional arms combine their outcome sets. A loop consumes break and
+continue effects targeting itself: its breaks contribute to loop fallthrough,
+while its continues contribute to another condition test. Function exits,
+divergence, and exits targeting an outer loop propagate. Every `while` also
+retains the source contract's conservative condition-false fallthrough.
+
+Different effects remain distinguishable until the structured operation that
+owns them consumes them. The exact HIR type name, set or bitset
+representation, loop-identity encoding, and checker helper organization remain
+private implementation choices.
+
+### Repeatable MIR storage lifetimes
+
+MIR keeps one static storage identity and declaration for each source local or
+compiler temporary. A storage whose dynamic lifetime can repeat has explicit
+target-independent lifetime epochs with operations equivalent to:
+
+```text
+storage-live storage
+...
+cleanup, release, move, or transfer as required
+storage-dead storage
+```
+
+The exact operation names are not frozen. Their required meaning is:
+
+- initialization, use, projection, and cleanup require live storage;
+- beginning another epoch while storage is live is invalid;
+- ending an epoch while storage is dead is invalid;
+- initialized owned contents must be destroyed, released, moved, or
+  transferred before the epoch ends;
+- ending an epoch clears all per-lifetime initialization, field, ownership,
+  move, release, optional, checked-view, anchor, and temporary state associated
+  with that storage;
+- beginning a later epoch starts from the storage declaration's uninitialized
+  state;
+- loop-body locals and reusable condition or body temporaries are dead at the
+  loop header and after the loop exit;
+- storage declared outside the loop may remain live across its backedge; and
+- parameters, receiver storage, and hidden result storage may use documented
+  entry and exit conventions instead of source-emitted epoch operations.
+
+Primitive storage participates even though it has no destructor. Cleanup
+instructions alone cannot define lifetime epochs because primitive, moved, and
+transferred storage may have no ordinary cleanup. Inline objects and their
+owned fields, optionals, arrays, shared owners, checked views, anchors, and
+full-expression temporaries all use the same epoch boundary rather than
+receiving loop-specific reset exceptions.
+
+Lifetime operations carry no target layout, stack-slot, or register decision.
+Frame planning may map repeated epochs to one physical home, and a later phase
+may erase operations after every analysis that consumes them.
+
+### Generic CFG lowering and cleanup edges
+
+HIR-to-MIR lowering represents source loops with ordinary basic blocks,
+boolean branches, and jumps. It does not introduce a source-specific loop
+terminator and does not reuse the generated array-loop terminator, whose array
+storage and lifecycle invariants are unrelated to source control flow.
+
+The initial lowering form has these semantic regions:
+
+```text
+preheader -> condition-entry
+condition true -> body-entry
+condition false -> exit
+body fallthrough or continue -> latch -> condition-entry
+break -> exit
+return -> function exit
+```
+
+The condition may expand into additional blocks for checked operations. Its
+final successful path preserves the boolean result and completes
+full-expression cleanup before branching. A dedicated latch gives normal body
+completion and every cleaned continue edge one continuation destination. A
+unique exit joins condition-false and cleaned break edges.
+
+Lowering tracks a break destination, continue destination, and retained
+lexical cleanup depth for every active loop. Before transferring control,
+normal body completion, `break`, and `continue` emit the source-defined
+cleanup for every exited scope. Planning is depth-oriented and does not
+consume lexical cleanup state, so multiple outgoing edges can receive the same
+required sequence. `return` retains all-scope cleanup, and panic retains its
+non-unwinding terminator.
+
+After targeted exits become ordinary CFG edges, MIR need not retain the source
+loop identity for correctness. Optional loop metadata may later support
+diagnostics, debugging, or optimization hints, but analyses must remain able
+to recognize loops in generic CFG.
+
+The named regions and their edges are an initial lowering and deterministic
+dump invariant, not a promise of exact block IDs. Checked expression lowering
+may add blocks, and valid transformations may split, merge, redirect, or
+remove blocks while preserving the verified semantics.
+
+### Cyclic verification and transformation invariants
+
+Every MIR dataflow domain must reach a finite fixpoint over cyclic CFG. Its
+state describes the current possible lifetime and ownership state, not whether
+an operation happened during some historical iteration.
+
+Verification requires:
+
+- compatible live storage, initialization, ownership, field, optional,
+  checked-view, anchor, and full-expression state at joins and backedges;
+- completed body-local and temporary epochs before the latch and loop exit;
+- live outer storage to retain compatible state across the backedge;
+- valid live/dead transitions and use only within a live epoch;
+- exactly-once cleanup, release, move, or transfer before an owned epoch ends;
+- structural checking of every block even when unreachable; and
+- deterministic structured-error ordering independent of worklist visitation.
+
+The MIR pass pipeline consumes verified MIR and returns verified MIR.
+Transformations never repair a producer invariant or establish correctness
+required for unoptimized execution. Source acceptance, type diagnostics, and
+definite-return diagnostics are determined before MIR optimization.
+
+Transformations preserve condition evaluation frequency and source ordering.
+Destruction, retain/release, allocation, panic, checked failure, lifetime
+boundaries, and full-expression cleanup remain effects unless a narrower
+analysis proves a particular transformation safe. Dominator, natural-loop,
+liveness, invariant-motion, and induction analyses derive loop structure from
+generic CFG rather than source-only nodes.
+
+Current MIR may continue using mutable storage for loop-carried source values;
+this extension does not require SSA or phi nodes. If a later optimization
+boundary introduces SSA, it may derive header phi nodes without changing
+resolved or HIR loop meaning.
+
+### Determinism and private implementation freedom
+
+Resolved and HIR loop identities are allocated deterministically in callable
+source order. Resolved and HIR dumps retain structured loops and targeted
+effects. MIR dumps expose lifetime epochs, cleanup order, and generic control
+edges in deterministic initial-lowering order. A future optimized dump belongs
+to its named pass stage and need not preserve unoptimized block numbering.
+
+This contract deliberately does not freeze:
+
+- Rust module or file layout;
+- public or private Rust type and helper names;
+- the concrete control-effect collection;
+- the numeric representation of loop or block identities;
+- exact lifetime-operation spelling;
+- worklist, dominator, or loop-analysis algorithms;
+- optional source-loop metadata after MIR lowering;
+- stack-slot, register, or frame assignment; or
+- a future optimization IR boundary.
 
 ## Verification and passes
 

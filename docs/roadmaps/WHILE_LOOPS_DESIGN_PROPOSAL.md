@@ -1,10 +1,10 @@
 # While Loops Design Proposal
 
-Status: confirmed on 2026-07-29; source contract promoted, compiler promotion
-pending. W1 through W13 adopt their recommended decisions. The living language
-documents now own the frozen source behavior; this proposal remains
-authoritative only for representation decisions not yet promoted into the
-compiler contracts.
+Status: confirmed on 2026-07-29; source and compiler contracts promoted,
+runtime and backend confirmation pending. W1 through W13 adopt their
+recommended decisions. The living language and phase/IR documents now own the
+frozen source and representation behavior; this proposal retains the decision
+rationale and remaining promotion work.
 
 This proposal defines a first `while` loop for Skald and the compiler
 boundaries needed to add `break`, `continue`, other loop forms, and
@@ -45,9 +45,11 @@ Loops, `break`, `continue`, and their cleanup behavior remain unimplemented.
 Their source design is now frozen in the living
 [control-flow contract](../language/FUNCTIONS_AND_CONTROL_FLOW.md#while-loops-and-loop-exits),
 [planned grammar extension](../language/GRAMMAR.md#frozen-while-loop-extension),
-and [status matrix](../language/STATUS.md#not-implemented). This proposal
-retains the confirmed rationale and the compiler representation decisions
-awaiting promotion.
+and [status matrix](../language/STATUS.md#not-implemented). The frozen
+[phase and IR extension](../compiler/PHASES_AND_IR.md#frozen-loop-representation-extension)
+owns loop identity, structured HIR effects, repeatable MIR lifetime epochs,
+generic CFG lowering, cyclic verification, transformation invariants, and
+private implementation freedom.
 
 Skald already has useful foundations:
 
@@ -741,7 +743,7 @@ still requires:
 - [x] Promote source-visible rules into the implemented grammar's planned
       direction, the focused control-flow contract, and the status matrix
       without requiring readers to consult this proposal.
-- [ ] Promote compiler representation invariants into the phase and IR
+- [x] Promote compiler representation invariants into the phase and IR
       contract without freezing private Rust organization or exact CFG
       numbering.
 - [ ] Confirm in the runtime ABI and backend contracts that the feature
