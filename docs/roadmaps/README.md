@@ -8,8 +8,9 @@ progress. Completed roadmaps and resolved discovery records move to
 
 - [Panic and Unrecoverable Failure Reporting](PANIC_ROADMAP.md) — **in
   progress**. P0 froze the source, intrinsic, reporting ABI, and hard-trap
-  contracts without changing compiler or runtime behavior. P1, the runtime
-  reporter and stderr observability foundation, is next.
+  contracts. P1 implemented the version-6 runtime reporter and exact native
+  stderr expectations without adding compiler-generated reporter calls. P2,
+  the canonical intrinsic declaration, is next.
 
 ## Planned
 

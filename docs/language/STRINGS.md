@@ -199,7 +199,7 @@ initializer is not a compiler convention.
 
 The frozen panic API accepts the exact `std::str::Str` value described here.
 Generated code passes only its logical backing-byte address and length to the
-[length-delimited reporter](../compiler/RUNTIME_ABI.md#frozen-panic-reporting-abi);
+[length-delimited reporter](../compiler/RUNTIME_ABI.md#panic-reporting-abi);
 the runtime does not receive this descriptor or its shared owner. Failures
 encountered while evaluating or copying the message occur before reporting
 and use the applicable compiler-known reason from the

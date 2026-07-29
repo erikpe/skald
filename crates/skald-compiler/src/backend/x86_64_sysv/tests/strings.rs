@@ -154,8 +154,8 @@ fn backend_rejects_unverified_static_provenance() {
 #[test]
 fn string_emission_does_not_change_the_public_runtime_abi() {
     let header = include_str!("../../../../../../runtime/include/skald_runtime.h");
-    assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)"));
-    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5"));
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_VERSION UINT64_C(6)"));
+    assert!(header.contains("#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6"));
     assert!(!header.contains("string"));
 }
 

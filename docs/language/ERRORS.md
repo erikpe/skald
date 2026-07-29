@@ -140,13 +140,13 @@ metadata or finalizers, double finalization, impossible verified MIR states,
 and violations of runtime ABI preconditions remain hard traps. They must be
 prevented or eliminated as defects rather than converted into user-facing
 panic records. The compiler/runtime hard-trap boundary is specified further
-by the [backend contract](../compiler/BACKEND.md#frozen-panic-and-hard-trap-boundary)
-and [runtime ABI](../compiler/RUNTIME_ABI.md#frozen-panic-reporting-abi).
+by the [backend contract](../compiler/BACKEND.md#panic-and-hard-trap-boundary)
+and [runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi).
 
 The exact reporter signature, stderr bytes, and ABI-version transition are
 implementation contracts rather than portable source representation. They
 are frozen in the
-[runtime ABI](../compiler/RUNTIME_ABI.md#frozen-panic-reporting-abi).
+[runtime ABI](../compiler/RUNTIME_ABI.md#panic-reporting-abi).
 Source locations, a shadow trace stack, rendered stacktraces, trace-related
 command-line policy, and exceptions are deliberately deferred.
 

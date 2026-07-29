@@ -1,11 +1,15 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "skald_runtime.h"
 
+#include <errno.h>
 #include <float.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 enum {
     SKA_RT_I64_DECIMAL_DIGITS = 19,
@@ -86,8 +90,52 @@ static _Noreturn void ska_rt_terminate_unsuccessfully(void) {
     _Exit(EXIT_FAILURE);
 }
 
+static _Noreturn void ska_rt_runtime_defect(void) {
+    abort();
+}
+
+static bool ska_rt_write_u64_bytes(FILE* stream, const uint8_t* bytes, uint64_t length) {
+    while (length != UINT64_C(0)) {
+        size_t chunk_length;
+
+#if SIZE_MAX < UINT64_MAX
+        chunk_length = length > (uint64_t)SIZE_MAX ? SIZE_MAX : (size_t)length;
+#else
+        chunk_length = (size_t)length;
+#endif
+        if (fwrite(bytes, sizeof(bytes[0]), chunk_length, stream) != chunk_length) {
+            return false;
+        }
+        bytes += chunk_length;
+        length -= (uint64_t)chunk_length;
+    }
+    return true;
+}
+
+static bool ska_rt_write_stderr_bytes(const uint8_t* bytes, uint64_t length) {
+    while (length != UINT64_C(0)) {
+        const size_t chunk_length =
+            length > (uint64_t)SSIZE_MAX ? (size_t)SSIZE_MAX : (size_t)length;
+        const ssize_t written = write(STDERR_FILENO, bytes, chunk_length);
+
+        if (written < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return false;
+        }
+        if (written == 0) {
+            return false;
+        }
+        bytes += (size_t)written;
+        length -= (uint64_t)written;
+    }
+    return true;
+}
+
 static void ska_rt_write_stdout_record(const char* record, size_t length) {
-    if (fwrite(record, sizeof(record[0]), length, stdout) != length || fflush(stdout) == EOF) {
+    if (!ska_rt_write_u64_bytes(stdout, (const uint8_t*)record, (uint64_t)length)
+        || fflush(stdout) == EOF) {
         ska_rt_terminate_unsuccessfully();
     }
 }
@@ -122,6 +170,21 @@ void* ska_rt_alloc(uint64_t byte_count) {
 
 void ska_rt_free(void* allocation) {
     free(allocation);
+}
+
+_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length) {
+    static const uint8_t prefix[] = "panic: ";
+    static const uint8_t line_feed[] = "\n";
+
+    if (bytes == NULL && length != UINT64_C(0)) {
+        ska_rt_runtime_defect();
+    }
+    if (!ska_rt_write_stderr_bytes(prefix, (uint64_t)(sizeof(prefix) - 1))
+        || !ska_rt_write_stderr_bytes(bytes, length)
+        || !ska_rt_write_stderr_bytes(line_feed, (uint64_t)(sizeof(line_feed) - 1))) {
+        ska_rt_terminate_unsuccessfully();
+    }
+    ska_rt_terminate_unsuccessfully();
 }
 
 void ska_rt_println_i64(int64_t value) {

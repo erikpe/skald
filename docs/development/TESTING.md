@@ -256,6 +256,10 @@ diagnostic products. The golden runner invokes `skac` twice for every
 successful assembly and every compile failure, comparing assembly or
 diagnostic bytes. It also executes every native case twice and compares
 status, stdout, and stderr before evaluating the checked-in expectations.
+Native `.stdout` and `.stderr` sidecars are exact byte expectations; a missing
+sidecar requires its stream to be empty. The focused
+`make golden-expectations-test` suite owns sidecar loading and escaped
+byte-mismatch rendering independently of compiler execution.
 
 Preserve this process isolation for behavior affected by identity allocation,
 table traversal, filesystem paths, labels, diagnostics, or formatting. A

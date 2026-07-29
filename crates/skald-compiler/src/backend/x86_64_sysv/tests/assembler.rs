@@ -28,7 +28,7 @@ fn emits_a_deterministic_minimal_function() {
         "main:\n",
         "    push rbp\n",
         "    mov rbp, rsp\n",
-        "    call ska_rt_abi_v5\n",
+        "    call ska_rt_abi_v6\n",
         "    call .Lska_fn_0\n",
         "    leave\n",
         "    ret\n",

@@ -163,8 +163,10 @@ runtime selection, artifact publication, diagnostics, and process status.
 For complete behavior, use the golden runner. It keeps deterministic assembly
 or diagnostic checks separate from link and execution observations, compares
 two native executions, and reports stdout, stderr, and exit-status mismatches
-independently. Build artifacts are under `build/golden/`; they are disposable
-debugging output.
+independently. Native `.stdout` and `.stderr` sidecars contain exact bytes; a
+missing sidecar requires an empty stream. Mismatch reports escape non-printing
+bytes and retain length and trailing-line-feed differences. Build artifacts
+are under `build/golden/`; they are disposable debugging output.
 
 ## Symptom to owner
 

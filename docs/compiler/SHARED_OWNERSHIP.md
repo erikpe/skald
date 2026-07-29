@@ -371,7 +371,7 @@ turns source-reachable count overflow into the shared reporter's ownership
 reason. Underflow, invalid handles, zero live counts, incompatible metadata or
 finalizers, and reentrant or double finalization remain compiler defects and
 hard-trap through the
-[backend defect boundary](BACKEND.md#frozen-panic-and-hard-trap-boundary).
+[backend defect boundary](BACKEND.md#panic-and-hard-trap-boundary).
 
 ### Frozen immortal-allocation extension
 
@@ -430,8 +430,8 @@ borrow analysis.
 
 ## Minimal C runtime ABI
 
-Runtime ABI version 5 carries its version-specific marker, retains the existing
-output functions, and provides:
+Runtime ABI version 6 carries its version-specific marker, the common panic
+reporter, the existing output functions, and these allocation operations:
 
 ```c
 void *ska_rt_alloc(uint64_t byte_count);
@@ -452,14 +452,14 @@ defect.
 The C implementation is deliberately a checked wrapper around `malloc` and a
 wrapper around `free`. It does not know the header shape, initialize counts,
 inspect metadata, invoke finalizers, or implement retain and release. Exact C
-termination machinery remains private; the stable current behavior is
-unsuccessful non-returning failure. The frozen version-6 ABI instead reports a
-valid host allocation failure through the common
-[`ska_rt_panic`](RUNTIME_ABI.md#frozen-panic-reporting-abi) entry point.
+allocation-failure termination machinery remains private; the stable current
+behavior is unsuccessful non-returning failure. A later milestone routes
+valid host allocation failure through the version-6
+[`ska_rt_panic`](RUNTIME_ABI.md#panic-reporting-abi) entry point.
 Invalid byte counts and violated deallocation preconditions remain runtime
 contract defects rather than user panic.
 
-ABI version 5 and these symbols are the current shared-ownership runtime
+ABI version 6 and these symbols are the current shared-ownership runtime
 boundary. The header, runtime implementation, every generated process-entry
 marker, direct C harnesses, mismatch tests, and documentation carry the same
 version.

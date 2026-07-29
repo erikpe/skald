@@ -9,8 +9,9 @@ The runner recursively discovers two case families:
 - `run/**/*.ska` requires a same-named `.exit` sidecar containing either an
   exact process status in `0..=255` or `failure` when the contract promises
   only unsuccessful termination. `failure` accepts a nonzero status or signal
-  without freezing platform trap details. An optional `.stdout` sidecar
-  contains exact expected stdout bytes; absence means empty stdout.
+  without freezing platform trap details. Optional `.stdout` and `.stderr`
+  sidecars contain the exact expected bytes for their respective streams;
+  absence means that stream must be empty.
 - `compile_fail/**/*.ska` requires a same-named `.stderr` sidecar containing
   exact rendered diagnostics.
 
@@ -35,17 +36,17 @@ sdk modules
 ```
 
 Use a source path line instead of `--entry` plus a logical path for positional
-entry cases. Multi-file sidecars are named `case.exit`, optional
-`case.stdout`, or `case.stderr`. Keep all module roots and support files below
-the case directory so fixtures remain hermetic and relocatable. In multi-file
-diagnostic snapshots, the runner removes the absolute case-directory prefix;
-source and provider paths therefore begin with the relative fixture path such
-as `modules/app.ska`.
+entry cases. Multi-file sidecars are named `case.exit`, optional `case.stdout`,
+or optional `case.stderr`. Keep all module roots and support files below the
+case directory so fixtures remain hermetic and relocatable. In multi-file
+diagnostic snapshots, the required `case.stderr` contains compiler
+diagnostics; the runner removes the absolute case-directory prefix so source
+and provider paths begin with the relative fixture path such as
+`modules/app.ska`.
 
 Sidecars are byte-for-byte expectations. Whitespace, line endings, trailing
-line feeds, and non-UTF-8 stdout are not normalized. Successful native cases
-must produce empty stderr. Compile failures must produce no stdout and exit
-with compiler status 1.
+line feeds, and non-UTF-8 stream bytes are not normalized. Compile failures
+must produce no stdout and exit with compiler status 1.
 
 The root Makefile builds the runtime before the runner invokes the real `skac`
 binary from the repository root. The runner compiles each run case to assembly

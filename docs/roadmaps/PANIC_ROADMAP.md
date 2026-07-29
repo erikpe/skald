@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: in progress; P0 is complete and P1 is next.
+Status: in progress; P0 and P1 are complete, and P2 is next.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -82,7 +82,7 @@ duplicate its exact bytes.
 ## Progress
 
 - [x] P0 — Freeze panic and unrecoverable-failure contracts
-- [ ] P1 — Establish runtime reporting and stderr observability
+- [x] P1 — Establish runtime reporting and stderr observability
 - [ ] P2 — Introduce the canonical intrinsic declaration
 - [ ] P3 — Execute explicit source panic end to end
 - [ ] P4 — Report target-independent static failures
@@ -133,27 +133,27 @@ boundary. No compiler or runtime behavior has changed.
 **Purpose:** Land and directly test the process-observable reporting
 foundation before generated code depends on it.
 
-- [ ] Extend native golden expectations with an optional exact `.stderr`
+- [x] Extend native golden expectations with an optional exact `.stderr`
       sidecar; a missing sidecar continues to require empty stderr.
-- [ ] Compare stderr as unmodified bytes and report escaped expected/actual
+- [x] Compare stderr as unmodified bytes and report escaped expected/actual
       mismatches, including embedded zero and trailing-LF differences.
-- [ ] Add focused golden-expectation tests for empty stderr, exact stderr,
+- [x] Add focused golden-expectation tests for empty stderr, exact stderr,
       missing or extra bytes, non-UTF-8 data, and combined status/stdout/stderr
       mismatches.
-- [ ] Add
+- [x] Add
       `_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length)` to
-      the public C header and implement allocation-free prefix, payload, LF,
-      flush, and unsuccessful `_Exit` behavior.
-- [ ] Permit a null message pointer only when the length is zero; treat every
+      the public C header and implement allocation-free direct writes of the
+      prefix, payload, and LF followed by unsuccessful `_Exit`.
+- [x] Permit a null message pointer only when the length is zero; treat every
       other invalid reporter input as a private runtime contract defect rather
       than printing a user panic.
-- [ ] Add direct C tests that capture exact stderr and verify empty, ordinary,
+- [x] Add direct C tests that capture exact stderr and verify empty, ordinary,
       embedded-zero, and embedded-newline messages, non-return, and
       reporter-output failure.
-- [ ] Advance the runtime ABI and link marker from version 5 to version 6 in
+- [x] Advance the runtime ABI and link marker from version 5 to version 6 in
       the compiler, public header, documentation, runtime tests, backend
       tests, toolchain mismatch tests, and string/runtime consistency checks.
-- [ ] Update golden and runtime testing guidance with the `.stderr` convention
+- [x] Update golden and runtime testing guidance with the `.stderr` convention
       and reporter harness ownership.
 
 **Tests:** Run `make golden-expectations-test`, `make runtime-test`, relevant

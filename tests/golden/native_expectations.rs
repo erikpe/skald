@@ -6,11 +6,16 @@ use std::{fs, io::ErrorKind, path::Path};
 pub struct NativeExpectations {
     exit_status: ExpectedExitStatus,
     stdout: Vec<u8>,
+    stderr: Vec<u8>,
 }
 
 impl NativeExpectations {
     pub fn stdout(&self) -> &[u8] {
         &self.stdout
+    }
+
+    pub fn stderr(&self) -> &[u8] {
+        &self.stderr
     }
 }
 
@@ -20,30 +25,34 @@ enum ExpectedExitStatus {
     Failure,
 }
 
-/// Loads the required `.exit` sidecar and optional exact `.stdout` sidecar.
+/// Loads the required `.exit` sidecar and optional exact output sidecars.
 ///
 /// An exit sidecar contains either one exact status in `0..=255` or `failure`
-/// when the contract promises only unsuccessful termination. A missing stdout
-/// sidecar means empty stdout.
+/// when the contract promises only unsuccessful termination. A missing
+/// `.stdout` or `.stderr` sidecar means the corresponding stream must be empty.
 pub fn load_native_expectations(source: &Path) -> Result<NativeExpectations, String> {
     let exit_path = source.with_extension("exit");
     let exit_text = fs::read_to_string(&exit_path)
         .map_err(|error| format!("could not read {}: {error}", exit_path.display()))?;
     let exit_status = parse_exit_status(exit_text.trim())?;
 
-    let stdout_path = source.with_extension("stdout");
-    let stdout = match fs::read(&stdout_path) {
-        Ok(stdout) => stdout,
-        Err(error) if error.kind() == ErrorKind::NotFound => Vec::new(),
-        Err(error) => {
-            return Err(format!("could not read {}: {error}", stdout_path.display()));
-        }
-    };
+    let stdout = read_optional_sidecar(source, "stdout")?;
+    let stderr = read_optional_sidecar(source, "stderr")?;
 
     Ok(NativeExpectations {
         exit_status,
         stdout,
+        stderr,
     })
+}
+
+fn read_optional_sidecar(source: &Path, extension: &str) -> Result<Vec<u8>, String> {
+    let path = source.with_extension(extension);
+    match fs::read(&path) {
+        Ok(bytes) => Ok(bytes),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(Vec::new()),
+        Err(error) => Err(format!("could not read {}: {error}", path.display())),
+    }
 }
 
 fn parse_exit_status(text: &str) -> Result<ExpectedExitStatus, String> {
@@ -94,9 +103,11 @@ pub fn verify_native_execution(
         ));
     }
 
-    if !actual_stderr.is_empty() {
+    if actual_stderr != expected.stderr() {
         mismatches.push(format!(
-            "runtime stderr was not empty ({} bytes): {}",
+            "stderr mismatch\nexpected ({} bytes): {}\nactual ({} bytes): {}",
+            expected.stderr().len(),
+            display_bytes(expected.stderr()),
             actual_stderr.len(),
             display_bytes(actual_stderr)
         ));

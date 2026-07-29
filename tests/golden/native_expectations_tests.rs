@@ -15,7 +15,7 @@ static NEXT_TEMPORARY_DIRECTORY: AtomicUsize = AtomicUsize::new(0);
 #[test]
 fn missing_stdout_sidecar_means_empty_output() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"7\n", None);
+    let source = write_case(directory.path(), b"7\n", None, None);
 
     let expected = load_native_expectations(&source).unwrap();
 
@@ -27,7 +27,7 @@ fn missing_stdout_sidecar_means_empty_output() {
 #[test]
 fn failure_accepts_a_nonzero_status_or_signal_without_freezing_either() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"failure\n", None);
+    let source = write_case(directory.path(), b"failure\n", None, None);
     let expected = load_native_expectations(&source).unwrap();
 
     assert!(verify_native_execution(&expected, Some(1), b"", b"").is_ok());
@@ -40,7 +40,7 @@ fn failure_accepts_a_nonzero_status_or_signal_without_freezing_either() {
 #[test]
 fn stdout_sidecar_is_loaded_and_compared_as_exact_bytes() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0\n", Some(b"42\r\n\xff"));
+    let source = write_case(directory.path(), b"0\n", Some(b"42\r\n\xff"), None);
 
     let expected = load_native_expectations(&source).unwrap();
 
@@ -51,7 +51,7 @@ fn stdout_sidecar_is_loaded_and_compared_as_exact_bytes() {
 #[test]
 fn missing_trailing_line_feed_is_reported_unambiguously() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"42\n"));
+    let source = write_case(directory.path(), b"0", Some(b"42\n"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"42", b"").unwrap_err();
@@ -63,7 +63,7 @@ fn missing_trailing_line_feed_is_reported_unambiguously() {
 #[test]
 fn extra_trailing_line_feed_is_reported_unambiguously() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"42"));
+    let source = write_case(directory.path(), b"0", Some(b"42"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"42\n", b"").unwrap_err();
@@ -75,7 +75,7 @@ fn extra_trailing_line_feed_is_reported_unambiguously() {
 #[test]
 fn non_utf8_mismatch_uses_escaped_byte_spelling() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"0", Some(b"\xff\n"));
+    let source = write_case(directory.path(), b"0", Some(b"\xff\n"), None);
     let expected = load_native_expectations(&source).unwrap();
 
     let error = verify_native_execution(&expected, Some(0), b"\xfe\n", b"").unwrap_err();
@@ -85,22 +85,92 @@ fn non_utf8_mismatch_uses_escaped_byte_spelling() {
 }
 
 #[test]
-fn exit_and_stderr_mismatches_are_reported_together() {
+fn missing_stderr_sidecar_means_empty_output() {
     let directory = TemporaryDirectory::new();
-    let source = write_case(directory.path(), b"5", None);
+    let source = write_case(directory.path(), b"0", None, None);
     let expected = load_native_expectations(&source).unwrap();
 
-    let error = verify_native_execution(&expected, Some(6), b"", b"problem\n").unwrap_err();
+    assert_eq!(expected.stderr(), b"");
+    assert!(verify_native_execution(&expected, Some(0), b"", b"").is_ok());
 
-    assert!(error.contains("exit status mismatch: expected 5, found 6"));
-    assert!(error.contains("runtime stderr was not empty (8 bytes): b\"problem\\n\""));
+    let error = verify_native_execution(&expected, Some(0), b"", b"unexpected").unwrap_err();
+    assert!(error.contains("expected (0 bytes): b\"\""));
+    assert!(error.contains("actual (10 bytes): b\"unexpected\""));
 }
 
-fn write_case(directory: &Path, exit: &[u8], stdout: Option<&[u8]>) -> PathBuf {
+#[test]
+fn stderr_sidecar_is_loaded_and_compared_as_exact_bytes() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(
+        directory.path(),
+        b"failure",
+        None,
+        Some(b"panic: bad\x00input\n"),
+    );
+    let expected = load_native_expectations(&source).unwrap();
+
+    assert_eq!(expected.stderr(), b"panic: bad\x00input\n");
+    assert!(verify_native_execution(&expected, Some(1), b"", b"panic: bad\x00input\n").is_ok());
+}
+
+#[test]
+fn stderr_missing_and_extra_bytes_are_reported_unambiguously() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"failure", None, Some(b"panic: bad\n"));
+    let expected = load_native_expectations(&source).unwrap();
+
+    let missing = verify_native_execution(&expected, Some(1), b"", b"panic: bad").unwrap_err();
+    assert!(missing.contains("expected (11 bytes): b\"panic: bad\\n\""));
+    assert!(missing.contains("actual (10 bytes): b\"panic: bad\""));
+
+    let extra = verify_native_execution(&expected, Some(1), b"", b"panic: bad\n\n").unwrap_err();
+    assert!(extra.contains("actual (12 bytes): b\"panic: bad\\n\\n\""));
+}
+
+#[test]
+fn non_utf8_stderr_mismatch_uses_escaped_byte_spelling() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(directory.path(), b"failure", None, Some(b"\xff\n"));
+    let expected = load_native_expectations(&source).unwrap();
+
+    let error = verify_native_execution(&expected, Some(1), b"", b"\xfe\n").unwrap_err();
+
+    assert!(error.contains("expected (2 bytes): b\"\\xff\\n\""));
+    assert!(error.contains("actual (2 bytes): b\"\\xfe\\n\""));
+}
+
+#[test]
+fn exit_stdout_and_stderr_mismatches_are_reported_together() {
+    let directory = TemporaryDirectory::new();
+    let source = write_case(
+        directory.path(),
+        b"5",
+        Some(b"expected stdout\n"),
+        Some(b"expected stderr\n"),
+    );
+    let expected = load_native_expectations(&source).unwrap();
+
+    let error = verify_native_execution(&expected, Some(6), b"actual stdout\n", b"actual stderr\n")
+        .unwrap_err();
+
+    assert!(error.contains("exit status mismatch: expected 5, found 6"));
+    assert!(error.contains("stdout mismatch"));
+    assert!(error.contains("stderr mismatch"));
+}
+
+fn write_case(
+    directory: &Path,
+    exit: &[u8],
+    stdout: Option<&[u8]>,
+    stderr: Option<&[u8]>,
+) -> PathBuf {
     let source = directory.join("case.ska");
     fs::write(source.with_extension("exit"), exit).unwrap();
     if let Some(stdout) = stdout {
         fs::write(source.with_extension("stdout"), stdout).unwrap();
+    }
+    if let Some(stderr) = stderr {
+        fs::write(source.with_extension("stderr"), stderr).unwrap();
     }
     source
 }

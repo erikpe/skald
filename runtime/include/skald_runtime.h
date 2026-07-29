@@ -6,8 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(6)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6
 
 /* Version-specific link guard required by compiler-generated executables. */
 void SKALD_RUNTIME_ABI_MARKER(void);
@@ -21,6 +21,11 @@ void* ska_rt_alloc(uint64_t byte_count);
 
 /* Releases the exact base pointer returned by one successful ska_rt_alloc. */
 void ska_rt_free(void* allocation);
+
+/* Writes "panic: ", exactly length message bytes, and one LF directly to
+   stderr, then terminates unsuccessfully. bytes may be NULL only when length
+   is zero. */
+_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
 
 /* Writes the shortest ASCII decimal representation and one LF to stdout.
    A detected write or flush failure terminates the process unsuccessfully. */

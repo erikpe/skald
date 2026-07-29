@@ -25,14 +25,16 @@ The current public surface is:
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SKALD_RUNTIME_ABI_VERSION UINT64_C(5)
-#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v5
+#define SKALD_RUNTIME_ABI_VERSION UINT64_C(6)
+#define SKALD_RUNTIME_ABI_MARKER ska_rt_abi_v6
 
 void SKALD_RUNTIME_ABI_MARKER(void);
 uint64_t ska_rt_abi_version(void);
 
 void *ska_rt_alloc(uint64_t byte_count);
 void ska_rt_free(void *allocation);
+
+_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
 
 void ska_rt_println_i64(int64_t value);
 void ska_rt_println_u64(uint64_t value);
@@ -48,7 +50,7 @@ and call them through the ordinary restricted external-function mechanism.
 
 ## Version and link compatibility
 
-ABI version 5 uses the exported no-op marker `ska_rt_abi_v5`. Every generated
+ABI version 6 uses the exported no-op marker `ska_rt_abi_v6`. Every generated
 process entry wrapper calls that exact symbol before entering Skald code. A
 runtime archive with an older or otherwise incompatible marker therefore fails
 normal linking with an undefined-symbol error rather than producing an
@@ -73,6 +75,8 @@ incompatible runtime would defeat the link guard.
 The current runtime implementation requires:
 
 - C11 compilation;
+- POSIX `write` and the standard-error file descriptor for allocation-free
+  panic records;
 - eight-bit bytes (`CHAR_BIT == 8`);
 - IEC 60559 / IEEE-754 floating-point semantics;
 - a binary C `double` with 64-bit storage, 53-bit significand, and the
@@ -141,21 +145,13 @@ The current implementation terminates through `_Exit(EXIT_FAILURE)`, avoiding
 another implicit flush of the failed stream. That mechanism is private; the
 stable contract is unsuccessful termination without a normal return.
 
-## Frozen panic-reporting ABI
+## Panic-reporting ABI
 
-Panic reporting is a **frozen version-6 design**, not part of the current
-version-5 public header or runtime. The next incompatible public surface adds
-exactly this reporting entry point:
+ABI version 6 exports this reporting entry point:
 
 ```c
 _Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
 ```
-
-The same transition changes `SKALD_RUNTIME_ABI_VERSION` to `UINT64_C(6)`,
-changes `SKALD_RUNTIME_ABI_MARKER` to `ska_rt_abi_v6`, updates the runtime
-implementation and generated process-entry reference together, and extends
-the direct and link-mismatch tests. Version 5 remains the current ABI until
-all of those changes land atomically.
 
 `ska_rt_panic` receives a length-delimited byte sequence. `bytes` may be null
 only when `length` is zero; otherwise it points to at least `length` readable
@@ -171,13 +167,15 @@ For a valid call, the reporter writes these bytes to C `stderr`, in order:
 3. one line feed (`0x0a`).
 
 Embedded zero and newline bytes are payload data and are written unchanged.
-The reporter performs no allocation. After the complete record and its flush,
-it terminates through `_Exit(EXIT_FAILURE)`. The language guarantees
-unsuccessful termination but does not expose the platform's exact numeric
-status. No Skald code resumes and no Skald cleanup runs after reporting
-begins.
+The reporter performs no allocation. It uses retrying direct writes to the
+standard-error file descriptor, including partial-write and interruption
+handling, so no C stream buffer or separate flush participates. After the
+complete record, it terminates through `_Exit(EXIT_FAILURE)`. The language
+guarantees unsuccessful termination but does not expose the platform's exact
+numeric status. No Skald code resumes and no Skald cleanup runs after
+reporting begins.
 
-If writing or flushing the record fails, the reporter immediately calls
+If writing the record fails, the reporter immediately calls
 `_Exit(EXIT_FAILURE)`. A prefix or other partial record may already be
 visible. The failure path does not call `ska_rt_panic` recursively and does not
 attempt a second diagnostic.
@@ -195,15 +193,15 @@ not carried by this ABI and remain deferred.
 
 ## Responsibility boundary
 
-The runtime currently owns only its version/link guard, checked byte
-allocation/deallocation, and the five output operations above. It has no
-public ABI for:
+The runtime owns its version/link guard, checked byte
+allocation/deallocation, the panic reporter, and the five output operations
+above. It has no public ABI for:
 
 - shared ownership or reference counting;
 - object, class, interface, or dynamic-type metadata;
 - garbage collection, roots, tracing, safepoints, or write barriers;
 - strings, arrays, files, or general I/O;
-- panic reporting or runtime traces; or
+- runtime traces;
 - recoverable or checked exceptions.
 
 Future language designs may require some of these responsibilities, but they
@@ -238,12 +236,12 @@ runtime symbol.
 The frozen [strings compiler contract](STRINGS.md) likewise adds no public C
 symbol or ABI revision. Literal backing, array metadata relocations,
 descriptor materialization, and immortal retain/release behavior are generated
-compiler responsibilities; the runtime marker remains version 5.
+compiler responsibilities; the runtime marker remains version 6.
 
 Primitive integer comparisons likewise add no public C symbol or ABI revision.
 The x86-64 backend selects signed or unsigned target conditions and
 materializes canonical boolean results entirely in generated code; the runtime
-marker remains version 5.
+marker remains version 6.
 
 Any other future addition must first have a source-language contract, then
 define its runtime ownership, failure behavior, ABI representation, version
@@ -252,7 +250,7 @@ transition, and focused tests.
 ## Verification
 
 `make runtime-test` explicitly depends on the runtime archive and then builds
-five directly linked C harnesses:
+six directly linked C harnesses:
 
 - the contract harness checks the marker, numeric version, and platform
   requirements;
@@ -264,7 +262,10 @@ five directly linked C harnesses:
 - the output harness compares successful records byte for byte, including
   range boundaries and exact binary64 patterns; and
 - the failure harness closes child-process stdout and requires every output
-  function to terminate unsuccessfully.
+  function to terminate unsuccessfully; and
+- the panic harness captures exact stderr for empty, ordinary, embedded-zero,
+  and embedded-newline messages, verifies reporter-output failure, and keeps
+  invalid reporter input on a silent private hard-failure path.
 
 [Driver tests](DRIVER_AND_ARTIFACTS.md#verification) prove that an archive
 without the current marker fails linking without replacing an existing output

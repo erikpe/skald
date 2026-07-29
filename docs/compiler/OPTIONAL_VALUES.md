@@ -393,7 +393,7 @@ destination, failure edge, guard, or ownership effect is inconsistent.
 The current `ud2` rule remains in force. Once the frozen panic design is
 implemented, centralized termination lowering routes these verified reasons
 through the
-[common backend path](BACKEND.md#frozen-panic-and-hard-trap-boundary);
+[common backend path](BACKEND.md#panic-and-hard-trap-boundary);
 optional lowering does not own a private reporter.
 
 ## C runtime ABI
@@ -401,8 +401,8 @@ optional lowering does not own a private reporter.
 The currently implemented optional profile adds no C runtime symbol and
 requires no runtime ABI version bump. Optional state, guard counts,
 conditional ownership, checked access, and current trap lowering remain
-compiler-owned. The frozen version-6 reporter is a common termination ABI, not
-an optional-specific helper.
+compiler-owned. The version-6 reporter is a common termination ABI, not an
+optional-specific helper; current optional lowering does not call it.
 
 The current allocator and deallocator continue to receive only the same valid
 nonzero sizes and exact non-null allocation bases required by the
