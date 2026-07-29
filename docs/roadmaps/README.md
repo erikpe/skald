@@ -10,7 +10,12 @@ No implementation roadmaps are currently in progress.
 
 ## Planned
 
-No implementation roadmaps are currently only planned.
+- [Private ordinary initializers](PRIVATE_INITIALIZERS_ROADMAP.md) — planned;
+  adds per-overload `private init` access across direct construction, shared
+  allocation, base initialization, and class-element default arrays without
+  changing copy lifecycle or lower-phase execution. PRI0 is next and depends
+  on the implemented declaring-class privacy and initializer-overload
+  contracts.
 
 ## Design proposals
 
