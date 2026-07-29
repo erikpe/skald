@@ -6,17 +6,14 @@ progress. Completed roadmaps and resolved discovery records move to
 
 ## In progress
 
-No implementation roadmaps are currently in progress.
+- [Panic and Unrecoverable Failure Reporting](PANIC_ROADMAP.md) — **in
+  progress**. P0 froze the source, intrinsic, reporting ABI, and hard-trap
+  contracts without changing compiler or runtime behavior. P1, the runtime
+  reporter and stderr observability foundation, is next.
 
 ## Planned
 
-- [Panic and Unrecoverable Failure Reporting](PANIC_ROADMAP.md) — **planned**.
-  Adds canonical `std::error::panic`, one length-delimited runtime reporter,
-  static messages for every compiler-known failure, and a strict partition
-  between reported ownership exhaustion and hard-trapped compiler defects.
-  P0, contract freezing, is next. It has no dependency on another active
-  roadmap; shadow trace stacks, stacktrace printing, and exceptions are
-  explicitly deferred.
+No implementation roadmaps are currently planned.
 
 ## Design proposals
 

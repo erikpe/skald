@@ -47,8 +47,8 @@ Use the authority closest to the behavior:
 - the current compilation unit, top-level namespace, entry point, external
   declarations, and frozen initial module language belong in
   [modules and foreign interoperation](language/MODULES_AND_INTEROP.md);
-- compile-time rejection, current runtime-failure boundaries, and future
-  exceptional cleanup belong in
+- compile-time rejection, current runtime-failure boundaries, the frozen panic
+  and static-message policy, and future exceptional cleanup belong in
   [errors and exceptional control flow](language/ERRORS.md);
 - durable compiler structure, repository roles, crate API policy, and extension
   policy belong in the [compiler architecture](compiler/README.md);

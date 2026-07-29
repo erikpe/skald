@@ -95,6 +95,8 @@ in [Optional Values](OPTIONAL_VALUES.md): `T?` and `shared? T` make
 absence visible without weakening ordinary types, `none` constructs absence,
 `is some` and `is none` inspect presence, and postfix `!` performs checked
 access. Exceptional control flow remains unimplemented and exploratory.
+The separate uncatchable panic and common unrecoverable-failure reporting
+contract is frozen but not yet implemented.
 
 External function declarations are trusted ABI assertions. They form a focused
 interoperation boundary rather than a proof that foreign code satisfies Skald
@@ -156,7 +158,8 @@ makes a result source-observable.
   implemented module namespaces, imports, visibility, entry selection, and
   trusted primitive external-function boundary.
 - [Errors and exceptional control flow](ERRORS.md) defines compile-time
-  rejection, the current fatal runtime boundary, normal-flow cleanup limits,
-  and the open checked-exception design.
+  rejection, the current fatal runtime boundary, the frozen uncatchable panic
+  design and sole static-message catalog, normal-flow cleanup limits, and the
+  open checked-exception design.
 - [Active roadmaps](../roadmaps/README.md) own implementation ordering and open
   profile decisions; archived roadmaps are history only.

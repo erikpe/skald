@@ -210,6 +210,13 @@ allocator/free boundary. No public runtime symbol, runtime ABI version, native
 string object, interning service, or external `Str` calling convention is
 added.
 
+The frozen panic design adds one common length-delimited reporting ABI, not a
+string ABI. Panic lowering validates the canonical `Str` identity, then
+extracts its logical backing-byte address and length through the existing
+field identities and target layout. The C reporter never receives a
+descriptor or owner, and this document does not duplicate the
+[static failure catalog](../language/ERRORS.md#frozen-panic-design).
+
 The installed `std/std/str.ska` implementation copies caller arrays into fresh
 shared backing, observes length and checked bytes, creates `O(1)` slices by
 passing shared backing and a checked subrange to a private initializer,

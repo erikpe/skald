@@ -398,6 +398,11 @@ guarantee cleanup of remaining live values. Strong-count underflow, invalid
 handles, double finalization, and use after release are compiler or runtime
 defects, not source failure cases.
 
+The frozen [common panic policy](ERRORS.md#frozen-panic-design) reports valid
+host allocation failure and source-reachable ownership-count overflow through
+one reporter. Count underflow and the invalid states above remain hard
+compiler-defect traps; they must not be converted into user-facing reports.
+
 Future checked exceptions may extend allocation and cleanup behavior only by
 explicitly revising this contract. They are not implied by the shared
 ownership design.

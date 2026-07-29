@@ -421,6 +421,10 @@ multiplication, and total allocation size are checked before `ska_rt_alloc`.
 Length never exceeds `i64::MAX`; a stricter arithmetic ceiling applies when
 stride and header cannot fit in `u64`. Allocation failure remains the runtime
 allocator's existing unsuccessful-termination contract.
+The frozen common-reporting policy retains distinct allocation-request,
+bounds, and slice-length termination reasons and maps them centrally to the
+sole [language message catalog](../language/ERRORS.md#frozen-panic-design).
+Array MIR and this contract do not embed copies of those bytes.
 
 Generated initialization, copy-element, whole-clone, destroy-element, release,
 and exact-class copy wrappers have deterministic private symbols specialized
@@ -548,8 +552,10 @@ The compiler and generated code own array headers, length, checked index
 normalization, element operations, backing anchors, strong counts, slice
 loops, finalizers, and cleanup. The C runtime must not learn array type
 identities, element kinds, reference scanning, lifecycle callbacks, bounds,
-or slice semantics. The implemented design therefore requires no new public C
-symbol or runtime ABI version change. An implementation that later needs a
+or slice semantics. The currently implemented design therefore requires no
+new public C symbol or runtime ABI version change. The frozen version-6 panic
+reporter is common to all unrecoverable failures and does not expose an array
+layout or add an array-specific helper. Any other implementation that needs a
 new public symbol must revise this contract and the versioned runtime boundary
 before relying on it.
 

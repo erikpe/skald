@@ -141,6 +141,58 @@ The current implementation terminates through `_Exit(EXIT_FAILURE)`, avoiding
 another implicit flush of the failed stream. That mechanism is private; the
 stable contract is unsuccessful termination without a normal return.
 
+## Frozen panic-reporting ABI
+
+Panic reporting is a **frozen version-6 design**, not part of the current
+version-5 public header or runtime. The next incompatible public surface adds
+exactly this reporting entry point:
+
+```c
+_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length);
+```
+
+The same transition changes `SKALD_RUNTIME_ABI_VERSION` to `UINT64_C(6)`,
+changes `SKALD_RUNTIME_ABI_MARKER` to `ska_rt_abi_v6`, updates the runtime
+implementation and generated process-entry reference together, and extends
+the direct and link-mismatch tests. Version 5 remains the current ABI until
+all of those changes land atomically.
+
+`ska_rt_panic` receives a length-delimited byte sequence. `bytes` may be null
+only when `length` is zero; otherwise it points to at least `length` readable
+bytes. The runtime does not receive or inspect a Skald `Str`, array
+descriptor, ownership header, class layout, or terminating zero. Generated
+code extracts the backing byte address and logical length from the already
+validated `std::str::Str` descriptor before crossing this ABI.
+
+For a valid call, the reporter writes these bytes to C `stderr`, in order:
+
+1. the seven ASCII bytes `panic: `;
+2. exactly `length` bytes beginning at `bytes`; and
+3. one line feed (`0x0a`).
+
+Embedded zero and newline bytes are payload data and are written unchanged.
+The reporter performs no allocation. After the complete record and its flush,
+it terminates through `_Exit(EXIT_FAILURE)`. The language guarantees
+unsuccessful termination but does not expose the platform's exact numeric
+status. No Skald code resumes and no Skald cleanup runs after reporting
+begins.
+
+If writing or flushing the record fails, the reporter immediately calls
+`_Exit(EXIT_FAILURE)`. A prefix or other partial record may already be
+visible. The failure path does not call `ska_rt_panic` recursively and does not
+attempt a second diagnostic.
+
+A nonzero length with a null pointer, an unreadable range, or another violated
+reporter precondition is a compiler/runtime defect. The runtime uses a private
+hard-failure path for preconditions it can check; it must not render such a
+defect as a Skald `panic:` record. The exact hard-failure instruction or
+signal is private, but normal return is forbidden.
+
+The source-level API, flow behavior, and sole static-message catalog are owned
+by the [frozen language panic design](../language/ERRORS.md#frozen-panic-design).
+Source locations, shadow trace state, stacktrace output, and exceptions are
+not carried by this ABI and remain deferred.
+
 ## Responsibility boundary
 
 The runtime currently owns only its version/link guard, checked byte

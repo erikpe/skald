@@ -114,6 +114,50 @@ deliberately preserves this restriction: shared values do not cross the
 external boundary, and the allocator functions remain compiler/runtime
 ABI operations rather than source-visible shared-handle interoperation.
 
+## Frozen intrinsic-function declarations
+
+Intrinsic-function declarations are a **frozen design**, not accepted by the
+current compiler. The planned form is a bodyless top-level declaration:
+
+```ska
+from std::str import Str;
+
+public intrinsic fn panic(message: Str) -> unit;
+```
+
+`intrinsic` is contextual in this declaration position. An intrinsic
+declaration otherwise has ordinary top-level visibility, name, parameter,
+result, module, import, qualification, duplicate, and source-span behavior.
+It has neither a Skald body nor an external link symbol. It is not an external
+declaration and does not widen the trusted foreign ABI.
+
+The canonical standard-library declaration above resolves to the exact
+identity and signature
+`std::error::panic(message: std::str::Str) -> unit`. The `std::error` module
+therefore has an ordinary explicit dependency on `std::str`; it does not rely
+on string-literal reachability or a hidden type alias. `panic` remains
+private-by-default under the ordinary rule, so the canonical declaration must
+spell `public`. Source uses reach the same declaration identity through direct
+qualification, a module import, or a selective import. There is no automatic
+prelude binding.
+
+The frozen intrinsic registry contains only that canonical identity. The
+compiler validates the declaration while module ownership, visibility,
+parameter modes, exact type identities, result type, body absence, and source
+spans are still available. It rejects an intrinsic at any other module path,
+an unrecognized intrinsic name, a private or body-bearing canonical
+declaration, any signature other than one by-value exact
+`std::str::Str` parameter and `unit` result, and any attempt to combine the
+declaration with `extern`. Intrinsics cannot be entry points, methods,
+initializers, lifecycle members, interface requirements, overrides, or native
+exports.
+
+After validation, resolved and typed compiler phases retain a stable intrinsic
+identity rather than matching the source spelling `panic`. The source
+semantics of invoking the canonical identity are owned by the
+[frozen panic design](ERRORS.md#frozen-panic-design). No other intrinsic is
+authorized merely because this declaration form is frozen.
+
 ## Initial module system
 
 The initial module system is implemented for whole-program compilation. This

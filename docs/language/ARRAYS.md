@@ -184,7 +184,11 @@ invoke any `T` initializer.
 The length of every constructed array must be at most the largest `i64` value.
 This keeps every valid element and boundary position expressible by the signed
 index type. Element-count, layout, and allocation-size overflow, or inability
-to allocate the required backing, terminates unsuccessfully.
+to allocate the required backing, terminates unsuccessfully. The frozen
+common-reporting design assigns these source-reachable failures their distinct
+reasons from the sole
+[panic message catalog](ERRORS.md#frozen-panic-design); current compiler
+behavior remains unchanged until that design is implemented.
 
 `T[](copy source)` explicitly produces an inline deep copy.
 `new T[](copy source)` produces a distinct shared allocation containing a deep
@@ -483,6 +487,12 @@ elements, the right-side slice's copy construction, destination assignment,
 and temporary destruction are source-visible operations. An implementation
 may fuse storage operations only when it preserves those operations, their
 order, all checks, and all failure behavior.
+
+Invalid element indices, invalid slice bounds, and unequal slice-assignment
+lengths are distinct compiler-known failures. Under the frozen
+[common panic policy](ERRORS.md#frozen-panic-design), all use one reporter
+without losing those semantic distinctions. This array contract does not
+duplicate the exact messages.
 
 Whole assignment and full-range slice assignment are deliberately different:
 

@@ -135,6 +135,39 @@ traps at `u64::MAX - 1` before it could collide with the sentinel. MIR
 verification remains the trust boundary that restricts static sentinel
 publication; ordinary dynamic publication writes count one.
 
+## Frozen panic and hard-trap boundary
+
+The common panic path is a **frozen design**, not current backend behavior.
+Today, compiler-known optional, array, cast, and ownership failures continue
+to use their documented private unsuccessful-termination paths, including
+`ud2` where specified.
+
+Under the frozen design, instruction selection centrally lowers both the
+explicit-panic and static-termination MIR forms described in
+[Phases and IR](PHASES_AND_IR.md#frozen-panic-and-termination-representation).
+Explicit panic extracts the logical byte address and length from the verified
+exact `std::str::Str` descriptor. Static termination selects the corresponding
+bytes from one deterministic target-private pool, with each used message
+emitted once in stable reason order. Both call the sole public
+[`ska_rt_panic`](RUNTIME_ABI.md#frozen-panic-reporting-abi) entry point. Array,
+optional, cast, string, and ownership lowering must not grow private reporter
+calls or duplicate the authoritative
+[message catalog](../language/ERRORS.md#frozen-panic-design).
+
+The reporter is only for explicit source panic and compiler-known,
+source-reachable failures. Impossible states remain defects: ownership-count
+underflow; null, dangling, or otherwise invalid live handles; zero live counts;
+missing or incompatible dynamic metadata or finalizers; double finalization;
+impossible states after successful MIR verification; and violated private
+lowering invariants. Generated code hard-traps such states with `ud2`.
+Malformed public MIR must still fail structurally at verification instead of
+being compiled into either a panic or a hard trap.
+
+A violated public runtime ABI precondition follows the runtime's private hard
+failure path. It never calls the user-facing reporter and never emits a
+`panic:` record. Source locations, shadow trace maintenance, and stacktrace
+printing are deferred; this target contract allocates no trace state.
+
 ## Data layout
 
 The x86-64 target layout is:

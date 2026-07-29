@@ -617,6 +617,33 @@ instead composes a target-directed checked source with explicit source `new`,
 exact-class allocation, and the selected copy-constructor operation after the
 check succeeds.
 
+### Frozen panic and termination representation
+
+The common reporting design is frozen but not implemented. Typed HIR will
+represent an invocation of the validated canonical panic intrinsic as a
+dedicated non-returning statement carrying one fully produced exact
+`std::str::Str` value and source span. It will not retain an ordinary call
+selected by the spelling `panic`.
+
+MIR will preserve two different semantic forms:
+
+- explicit source panic, carrying its dynamic exact-`Str` message place; and
+- compiler-known unrecoverable termination, carrying one distinct
+  target-independent reason from the closed
+  [language catalog](../language/ERRORS.md#frozen-panic-design).
+
+Both forms have no successor. A static termination reason remains distinct
+until instruction selection so verification, mutation tests, and dumps can
+identify the failed rule without depending on message bytes or a target ABI.
+Neither form is an exceptional edge and neither may join ordinary cleanup.
+Message pooling, descriptor extraction, and the call to the public reporter
+belong to target lowering.
+
+Malformed public MIR and impossible states proven absent by verification do
+not acquire a termination reason. They remain structured verifier errors
+before target lowering, or hard compiler-defect traps if an invalid state is
+somehow reached after the trust boundary.
+
 ## Verification and passes
 
 `mir::verify_mir` checks the structural and type invariants required before

@@ -366,6 +366,12 @@ Counts are non-atomic. The initial implementation provides no cross-thread
 sharing contract. Overflow uses the same class of backend-owned unrecoverable
 termination as a failed checked cast and guarantees neither diagnostic
 text nor remaining cleanup.
+The frozen [common reporting policy](../language/ERRORS.md#frozen-panic-design)
+turns source-reachable count overflow into the shared reporter's ownership
+reason. Underflow, invalid handles, zero live counts, incompatible metadata or
+finalizers, and reentrant or double finalization remain compiler defects and
+hard-trap through the
+[backend defect boundary](BACKEND.md#frozen-panic-and-hard-trap-boundary).
 
 ### Frozen immortal-allocation extension
 
@@ -446,8 +452,12 @@ defect.
 The C implementation is deliberately a checked wrapper around `malloc` and a
 wrapper around `free`. It does not know the header shape, initialize counts,
 inspect metadata, invoke finalizers, or implement retain and release. Exact C
-termination machinery remains private; the stable behavior is unsuccessful
-non-returning failure.
+termination machinery remains private; the stable current behavior is
+unsuccessful non-returning failure. The frozen version-6 ABI instead reports a
+valid host allocation failure through the common
+[`ska_rt_panic`](RUNTIME_ABI.md#frozen-panic-reporting-abi) entry point.
+Invalid byte counts and violated deallocation preconditions remain runtime
+contract defects rather than user panic.
 
 ABI version 5 and these symbols are the current shared-ownership runtime
 boundary. The header, runtime implementation, every generated process-entry

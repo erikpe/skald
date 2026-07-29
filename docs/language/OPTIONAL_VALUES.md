@@ -416,7 +416,10 @@ The frozen profile adds three unrecoverable source-level failure classes:
 Each failure terminates unsuccessfully without returning to Skald, producing
 an invalid value, or guaranteeing remaining source-level cleanup. This is the
 same language boundary as failed dynamic object casts, not a catchable
-exception or a general panic facility.
+exception. The frozen
+[common panic policy](ERRORS.md#frozen-panic-design) reports all three through
+one reporter while preserving their distinct compiler-known reasons; current
+compiler behavior remains unchanged until that design is implemented.
 
 Future recoverable exceptions must end active presence guards on every
 exceptional edge before they can cross optional payload consumers.

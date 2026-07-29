@@ -1,6 +1,6 @@
 # Panic and Unrecoverable Failure Reporting Roadmap
 
-Status: planned; P0 is next.
+Status: in progress; P0 is complete and P1 is next.
 
 This roadmap adds a source-level `std::error::panic` function and replaces
 silent hard traps for every compiler-known, source-reachable unrecoverable
@@ -74,30 +74,14 @@ panic: configuration is missing
 
 ## Frozen static messages
 
-The reporter prefix and trailing LF are added by the runtime. The compiler or
-runtime passes only the message bytes in this table.
-
-| Failure | Static message |
-|---|---|
-| Failed checked object cast | `checked object cast failed` |
-| Absent optional access | `optional value is absent` |
-| Optional presence-guard overflow | `optional presence guard overflow` |
-| Guarded optional mutation | `cannot mutate a guarded optional value` |
-| Invalid or overflowing array allocation request | `array allocation failed` |
-| Array element index failure | `array index out of bounds` |
-| Invalid array slice bounds | `array slice bounds are invalid` |
-| Array slice length mismatch | `array slice length mismatch` |
-| Shared or inline-backing ownership-count overflow | `ownership count overflow` |
-| Host allocation failure for a valid request | `memory allocation failed` |
-
-The message catalog is closed for this profile. Adding a new compiler-known
-failure requires a distinct semantic reason where target-independent
-verification needs one, one catalog entry, focused lowering coverage, and an
-end-to-end stderr expectation.
+The authoritative closed catalog now lives in the
+[language panic contract](../language/ERRORS.md#frozen-panic-design).
+Subsystem documents and this implementation roadmap intentionally do not
+duplicate its exact bytes.
 
 ## Progress
 
-- [ ] P0 — Freeze panic and unrecoverable-failure contracts
+- [x] P0 — Freeze panic and unrecoverable-failure contracts
 - [ ] P1 — Establish runtime reporting and stderr observability
 - [ ] P2 — Introduce the canonical intrinsic declaration
 - [ ] P3 — Execute explicit source panic end to end
@@ -113,27 +97,27 @@ end-to-end stderr expectation.
 boundaries authoritative before several compiler phases and the runtime encode
 them independently.
 
-- [ ] Update the language error contract with the frozen
+- [x] Update the language error contract with the frozen
       `std::error::panic` API, non-returning call-statement behavior,
       left-to-right message evaluation, unsuccessful termination, and absence
       of remaining cleanup.
-- [ ] Specify that panic remains uncatchable and distinct from future checked
+- [x] Specify that panic remains uncatchable and distinct from future checked
       exceptions.
-- [ ] Add the frozen design to the language status matrix without claiming
+- [x] Add the frozen design to the language status matrix without claiming
       compiler availability.
-- [ ] Specify the bodyless intrinsic declaration model, canonical
+- [x] Specify the bodyless intrinsic declaration model, canonical
       `std::error::panic` identity and signature, standard-library dependency
       on `std::str::Str`, and rejection of unrecognized intrinsic
       declarations.
-- [ ] Specify the length-delimited reporter ABI, exact stderr record, embedded
+- [x] Specify the length-delimited reporter ABI, exact stderr record, embedded
       zero behavior, runtime ABI version transition, and failed-report-write
       behavior.
-- [ ] Update the array, optional, shared-ownership, object-cast, string, and
+- [x] Update the array, optional, shared-ownership, object-cast, string, and
       backend contracts so their source-reachable failures name the common
       reporting policy without duplicating the message catalog.
-- [ ] Document the hard-trap boundary for invalid ownership state, impossible
+- [x] Document the hard-trap boundary for invalid ownership state, impossible
       verified MIR, invalid runtime ABI inputs, and other compiler defects.
-- [ ] Keep trace stacks, locations, stacktraces, and exceptions explicitly
+- [x] Keep trace stacks, locations, stacktraces, and exceptions explicitly
       deferred in living documentation.
 
 **Tests:** Run `make docs-check` and `make docs-test`. Manually check that the
@@ -156,9 +140,10 @@ foundation before generated code depends on it.
 - [ ] Add focused golden-expectation tests for empty stderr, exact stderr,
       missing or extra bytes, non-UTF-8 data, and combined status/stdout/stderr
       mismatches.
-- [ ] Add `_Noreturn ska_rt_panic(const uint8_t*, uint64_t)` to the public C
-      header and implement allocation-free prefix, payload, LF, flush, and
-      unsuccessful `_Exit` behavior.
+- [ ] Add
+      `_Noreturn void ska_rt_panic(const uint8_t* bytes, uint64_t length)` to
+      the public C header and implement allocation-free prefix, payload, LF,
+      flush, and unsuccessful `_Exit` behavior.
 - [ ] Permit a null message pointer only when the length is zero; treat every
       other invalid reporter input as a private runtime contract defect rather
       than printing a user panic.
@@ -285,7 +270,7 @@ reporter while retaining its exact target-independent reason.
       array-allocation, array-index, slice-bound, and slice-length reasons
       distinct in MIR, verification, and dumps.
 - [ ] Route host allocation failure for a valid `ska_rt_alloc` request through
-      the reporter with `memory allocation failed`.
+      the reporter with the catalog's host-allocation message.
 - [ ] Keep zero-byte or host-unrepresentable allocator inputs on the private
       runtime contract-defect path; correct generated code must never pass
       them.
@@ -317,14 +302,14 @@ or impossible ownership states into user-facing panics.
 - [ ] Refactor shared retain lowering to expose separate overflow and invalid
       edges instead of the current combined failure label.
 - [ ] Route a dynamic count of `u64::MAX - 1` to
-      `ownership count overflow`, preserve verified immortal
+      the catalog's ownership-overflow reason, preserve verified immortal
       `u64::MAX` as a no-op, and hard-trap null handles or zero counts.
 - [ ] Apply the split retain contract to direct shared copies, casts, fields,
       assignments, optional-owner copies and unwrap, generated array element
       lifecycle helpers, and hidden anchors.
 - [ ] Split inline-array backing retain checks so maximum-count exhaustion
-      reports `ownership count overflow` while zero or otherwise invalid live
-      counts hard-trap.
+      reports the catalog's ownership-overflow reason while zero or otherwise
+      invalid live counts hard-trap.
 - [ ] Keep release underflow, null release, missing dynamic metadata,
       missing finalizers, invalid optional-owner state, and repeated
       finalization on hard-trap paths.

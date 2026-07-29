@@ -289,6 +289,9 @@ MIR uses distinct termination reasons for:
 
 Every reason is non-returning. A success and failure edge must differ, and the
 failure block may not continue into ordinary cleanup or payload use.
+The frozen [common reporting policy](../language/ERRORS.md#frozen-panic-design)
+maps these reasons to one reporter without collapsing them in MIR. This
+document deliberately does not repeat the exact message bytes.
 
 Future recoverable exceptions must add explicit exceptional edges that end
 active guards and clean initialized optional temporaries. They cannot reinterpret
@@ -387,12 +390,19 @@ The x86-64 backend:
 
 Backend legality rejects an optional operation whose MIR type, layout, source,
 destination, failure edge, guard, or ownership effect is inconsistent.
+The current `ud2` rule remains in force. Once the frozen panic design is
+implemented, centralized termination lowering routes these verified reasons
+through the
+[common backend path](BACKEND.md#frozen-panic-and-hard-trap-boundary);
+optional lowering does not own a private reporter.
 
 ## C runtime ABI
 
-The optional profile adds no C runtime symbol and requires no runtime ABI
-version bump. Optional state, guard counts, conditional ownership, checked
-access, and trap lowering remain compiler-owned.
+The currently implemented optional profile adds no C runtime symbol and
+requires no runtime ABI version bump. Optional state, guard counts,
+conditional ownership, checked access, and current trap lowering remain
+compiler-owned. The frozen version-6 reporter is a common termination ABI, not
+an optional-specific helper.
 
 The current allocator and deallocator continue to receive only the same valid
 nonzero sizes and exact non-null allocation bases required by the

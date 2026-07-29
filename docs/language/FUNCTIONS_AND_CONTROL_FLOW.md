@@ -210,6 +210,12 @@ A nested block definitely returns when its reachable execution cannot reach
 that block's closing brace. A conditional definitely returns only when it has
 an `else` body and every `if`, `elif`, and `else` body definitely returns.
 
+The frozen, not-yet-implemented
+[`std::error::panic`](ERRORS.md#frozen-panic-design) call is a non-returning
+call statement. Its reachable path cannot reach the block's closing brace, so
+it satisfies definite return. This special flow result does not add a general
+`never` type or permit the call in expression position.
+
 Return first evaluates and preserves its result. An exact-class result is
 fully constructed or copied into its result object. Full-expression
 temporaries are then destroyed in reverse completion order, followed by live
@@ -263,6 +269,11 @@ consuming context. It evaluates and target-checks the copy source before
 allocating the destination, keeps the source and any anchor live through
 exact-`T` copy construction, and secures the produced owner before
 full-expression cleanup.
+
+The frozen panic call uses these ordinary argument rules: its one exact
+`std::str::Str` value argument is evaluated and copied exactly once. An
+unrecoverable failure during that production wins; after reporting starts,
+the call terminates without performing remaining cleanup.
 
 ## Unsupported control flow and callability
 
